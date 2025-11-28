@@ -3,8 +3,10 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
+import { useRAGStore } from "@/stores/useRAGStore";
 import { EditSuggestion, applyEdit } from "@/lib/ai";
 import { getFileName } from "@/lib/utils";
+import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 import {
   BrainCircuit,
   Send,
@@ -384,7 +386,6 @@ export function RightPanel() {
     referencedFiles,
     pendingEdits,
     config,
-    totalTokensUsed,
     sendMessage, 
     clearChat,
     addFileReference,
@@ -394,6 +395,13 @@ export function RightPanel() {
     setPendingDiff,
   } = useAIStore();
   const { currentFile, currentContent, fileTree } = useFileStore();
+  const { 
+    config: ragConfig, 
+    setConfig: setRAGConfig, 
+    isIndexing: ragIsIndexing,
+    indexStatus,
+    rebuildIndex,
+  } = useRAGStore();
   
   const [inputValue, setInputValue] = useState("");
   const [showSettings, setShowSettings] = useState(false);
@@ -636,67 +644,187 @@ export function RightPanel() {
 
           {/* Settings Panel */}
           {showSettings && (
-            <div className="p-3 border-b border-border bg-muted/30 space-y-2">
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">服务商</label>
-                <select
-                  value={config.provider}
-                  onChange={(e) => {
-                    const provider = e.target.value as "moonshot" | "anthropic" | "openai";
-                    const defaultModels: Record<string, string> = {
-                      moonshot: "kimi-k2-thinking",
-                      anthropic: "claude-3-5-sonnet-20241022",
-                      openai: "gpt-4-turbo-preview",
-                    };
-                    setConfig({ provider, model: defaultModels[provider] });
-                  }}
-                  className="w-full text-xs p-2 rounded border border-border bg-background"
-                >
-                  <option value="moonshot">Moonshot (Kimi K2)</option>
-                  <option value="anthropic">Anthropic (Claude)</option>
-                  <option value="openai">OpenAI (GPT)</option>
-                </select>
+            <div className="p-3 border-b border-border bg-muted/30 space-y-3 max-h-80 overflow-y-auto">
+              {/* AI Provider Settings */}
+              <div className="space-y-2">
+                <div className="text-xs font-medium text-foreground">🤖 AI 对话设置</div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">服务商</label>
+                  <select
+                    value={config.provider}
+                    onChange={(e) => {
+                      const provider = e.target.value as LLMProviderType;
+                      const providerMeta = PROVIDER_REGISTRY[provider];
+                      const defaultModel = providerMeta?.models[0]?.id || "";
+                      setConfig({ provider, model: defaultModel });
+                    }}
+                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                  >
+                    {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
+                      <option key={key} value={key}>
+                        {meta.label} - {meta.description}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">
+                    API Key {config.provider === "ollama" && <span className="text-muted-foreground">(可选)</span>}
+                  </label>
+                  <input
+                    type="password"
+                    value={config.apiKey}
+                    onChange={(e) => setConfig({ apiKey: e.target.value })}
+                    placeholder={
+                      config.provider === "ollama" 
+                        ? "本地模型无需 API Key" 
+                        : config.provider === "anthropic" 
+                          ? "sk-ant-..." 
+                          : "sk-..."
+                    }
+                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">模型</label>
+                  <select
+                    value={config.model}
+                    onChange={(e) => setConfig({ model: e.target.value })}
+                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                  >
+                    {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.name} {model.supportsThinking ? "🧠" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {/* 自定义 Base URL (高级选项) */}
+                {(config.provider === "openai" || config.provider === "ollama") && (
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">
+                      Base URL <span className="text-muted-foreground">(可选)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={config.baseUrl || ""}
+                      onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
+                      placeholder={PROVIDER_REGISTRY[config.provider]?.defaultBaseUrl}
+                      className="w-full text-xs p-2 rounded border border-border bg-background"
+                    />
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">API Key</label>
-                <input
-                  type="password"
-                  value={config.apiKey}
-                  onChange={(e) => setConfig({ apiKey: e.target.value })}
-                  placeholder={config.provider === "moonshot" ? "sk-..." : config.provider === "anthropic" ? "sk-ant-..." : "sk-..."}
-                  className="w-full text-xs p-2 rounded border border-border bg-background"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground block mb-1">模型</label>
-                <select
-                  value={config.model}
-                  onChange={(e) => setConfig({ model: e.target.value })}
-                  className="w-full text-xs p-2 rounded border border-border bg-background"
-                >
-                  {config.provider === "moonshot" && (
-                    <>
-                      <option value="kimi-k2-thinking">Kimi K2 Thinking 🧠</option>
-                      <option value="kimi-k2-0711-preview">Kimi K2 (Preview)</option>
-                      <option value="moonshot-v1-128k">Moonshot v1 128K</option>
-                      <option value="moonshot-v1-32k">Moonshot v1 32K</option>
-                    </>
-                  )}
-                  {config.provider === "anthropic" && (
-                    <>
-                      <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
-                      <option value="claude-3-opus-20240229">Claude 3 Opus</option>
-                      <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
-                    </>
-                  )}
-                  {config.provider === "openai" && (
-                    <>
-                      <option value="gpt-4-turbo-preview">GPT-4 Turbo</option>
-                      <option value="gpt-4">GPT-4</option>
-                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                    </>
-                  )}
-                </select>
+
+              {/* RAG Settings */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <div className="text-xs font-medium text-foreground flex items-center justify-between">
+                  <span>🔍 语义搜索 (RAG)</span>
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ragConfig.enabled}
+                      onChange={(e) => setRAGConfig({ enabled: e.target.checked })}
+                      className="w-3 h-3"
+                    />
+                    <span className="text-xs text-muted-foreground">启用</span>
+                  </label>
+                </div>
+                
+                {ragConfig.enabled && (
+                  <>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Embedding 服务</label>
+                      <select
+                        value={ragConfig.embeddingProvider}
+                        onChange={(e) => {
+                          const provider = e.target.value as "openai" | "ollama";
+                          const defaultModels: Record<string, string> = {
+                            openai: "text-embedding-3-small",
+                            ollama: "nomic-embed-text",
+                          };
+                          setRAGConfig({ 
+                            embeddingProvider: provider, 
+                            embeddingModel: defaultModels[provider] 
+                          });
+                        }}
+                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                      >
+                        <option value="openai">OpenAI</option>
+                        <option value="ollama">Ollama (本地)</option>
+                      </select>
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">
+                        Embedding API Key
+                        {ragConfig.embeddingProvider === "ollama" && (
+                          <span className="text-muted-foreground/60 ml-1">(可选)</span>
+                        )}
+                      </label>
+                      <input
+                        type="password"
+                        value={ragConfig.embeddingApiKey || ""}
+                        onChange={(e) => setRAGConfig({ embeddingApiKey: e.target.value })}
+                        placeholder={ragConfig.embeddingProvider === "openai" ? "sk-..." : "http://localhost:11434"}
+                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Embedding 模型</label>
+                      <select
+                        value={ragConfig.embeddingModel}
+                        onChange={(e) => setRAGConfig({ embeddingModel: e.target.value })}
+                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                      >
+                        {ragConfig.embeddingProvider === "openai" && (
+                          <>
+                            <option value="text-embedding-3-small">text-embedding-3-small</option>
+                            <option value="text-embedding-3-large">text-embedding-3-large</option>
+                            <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                          </>
+                        )}
+                        {ragConfig.embeddingProvider === "ollama" && (
+                          <>
+                            <option value="nomic-embed-text">nomic-embed-text</option>
+                            <option value="mxbai-embed-large">mxbai-embed-large</option>
+                            <option value="all-minilm">all-minilm</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Index Status */}
+                    <div className="bg-muted/50 rounded p-2 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">索引状态</span>
+                        {ragIsIndexing ? (
+                          <span className="text-yellow-500 flex items-center gap-1">
+                            <Loader2 size={10} className="animate-spin" />
+                            索引中...
+                          </span>
+                        ) : indexStatus?.initialized ? (
+                          <span className="text-green-500">✓ 已就绪</span>
+                        ) : (
+                          <span className="text-muted-foreground">未初始化</span>
+                        )}
+                      </div>
+                      {indexStatus && (
+                        <div className="text-xs text-muted-foreground">
+                          {indexStatus.totalFiles} 个文件, {indexStatus.totalChunks} 个块
+                        </div>
+                      )}
+                      <button
+                        onClick={() => rebuildIndex()}
+                        disabled={ragIsIndexing || !ragConfig.embeddingApiKey}
+                        className="w-full text-xs py-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {ragIsIndexing ? "索引中..." : "重建索引"}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

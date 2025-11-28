@@ -12,6 +12,7 @@ import { EditNoteTool } from "./executors/EditNoteTool";
 import { WriteNoteTool } from "./executors/WriteNoteTool";
 import { ListNotesTool } from "./executors/ListNotesTool";
 import { MoveNoteTool } from "./executors/MoveNoteTool";
+import { SearchNotesTool } from "./executors/SearchNotesTool";
 import { AttemptCompletionTool } from "./executors/AttemptCompletionTool";
 
 export class ToolRegistry {
@@ -30,6 +31,7 @@ export class ToolRegistry {
     this.register(WriteNoteTool);
     this.register(ListNotesTool);
     this.register(MoveNoteTool);
+    this.register(SearchNotesTool);
     this.register(AttemptCompletionTool);
   }
 

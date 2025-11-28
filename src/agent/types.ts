@@ -2,12 +2,17 @@
  * Agent 系统类型定义
  */
 
-// ============ 消息类型 ============
+import type { Message, LLMConfig } from "@/services/llm";
 
-export interface Message {
-  role: "user" | "assistant" | "system";
-  content: string;
-}
+// 重新导出 LLM 类型供外部使用
+export type { 
+  Message, 
+  LLMOptions, 
+  LLMResponse, 
+  LLMProvider,
+  LLMConfig,
+  LLMProviderType,
+} from "@/services/llm";
 
 // ============ Agent 状态 ============
 
@@ -109,37 +114,11 @@ export interface AgentEvent {
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
-// ============ LLM Provider ============
-
-export interface LLMProvider {
-  chat(messages: Message[], options?: LLMOptions): Promise<LLMResponse>;
-}
-
-export interface LLMOptions {
-  signal?: AbortSignal;
-  temperature?: number;
-  maxTokens?: number;
-}
-
-export interface LLMResponse {
-  content: string;
-  usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
-}
-
-// ============ 配置 ============
+// ============ Agent 配置 ============
 
 export interface AgentConfig {
-  // AI 提供商配置
-  ai: {
-    provider: "anthropic" | "openai" | "moonshot" | "ollama";
-    apiKey: string;
-    model: string;
-    baseUrl?: string;
-  };
+  // AI 提供商配置 (使用统一的 LLMConfig)
+  ai: LLMConfig;
 
   // Agent 配置
   agent: {

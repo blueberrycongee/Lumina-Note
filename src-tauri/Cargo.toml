@@ -23,9 +23,9 @@ notify = "6.1"
 walkdir = "2.5"
 thiserror = "2.0"
 
-# Phase 3: RAG (uncomment when ready)
-# tantivy = "0.22"
-# lancedb = "0.13"
+# RAG / Vector Storage
+rusqlite = { version = "0.32", features = ["bundled"] }
+bincode = "1.3"
 
 [profile.dev]
 incremental = true

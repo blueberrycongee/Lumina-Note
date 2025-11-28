@@ -1,11 +1,20 @@
 /**
  * AI Service for chat and file modifications
+ * 
+ * 注意：LLM 调用已统一到 @/services/llm
+ * 此文件保留业务逻辑（文件引用解析、编辑建议等）
  */
 
-export interface Message {
-  role: "user" | "assistant" | "system";
-  content: string;
-}
+import { 
+  callLLM, 
+  setLLMConfig, 
+  getLLMConfig,
+  type Message,
+  type LLMConfig,
+} from "@/services/llm";
+
+// 重新导出 Message 类型以保持兼容
+export type { Message };
 
 export interface FileReference {
   path: string;
@@ -20,28 +29,21 @@ export interface EditSuggestion {
   description: string;
 }
 
-export interface AIConfig {
-  provider: "anthropic" | "openai" | "moonshot" | "ollama";
-  apiKey: string;
-  model: string;
-  baseUrl?: string;
-}
+// AIConfig 别名，保持向后兼容
+export type AIConfig = LLMConfig;
 
-// Default config - user will configure their own API key
-const DEFAULT_CONFIG: AIConfig = {
-  provider: "moonshot",
-  apiKey: "",
-  model: "kimi-k2-thinking",
-};
-
-let config: AIConfig = { ...DEFAULT_CONFIG };
-
+/**
+ * 设置 AI 配置 (桥接到统一配置)
+ */
 export function setAIConfig(newConfig: Partial<AIConfig>) {
-  config = { ...config, ...newConfig };
+  setLLMConfig(newConfig);
 }
 
+/**
+ * 获取 AI 配置 (桥接到统一配置)
+ */
 export function getAIConfig(): AIConfig {
-  return { ...config };
+  return getLLMConfig();
 }
 
 // Parse @file references from message
@@ -133,148 +135,31 @@ export interface ChatResponse {
   };
 }
 
-// Call AI API
+/**
+ * Chat API (使用统一的 LLM 服务)
+ */
 export async function chat(
   messages: Message[],
   files: FileReference[] = []
 ): Promise<ChatResponse> {
-  if (!config.apiKey) {
-    throw new Error("请先配置 API Key");
-  }
-
   const systemPrompt = buildSystemPrompt(files);
   
-  if (config.provider === "anthropic") {
-    return callAnthropic(systemPrompt, messages);
-  } else if (config.provider === "openai") {
-    return callOpenAI(systemPrompt, messages);
-  } else if (config.provider === "moonshot") {
-    return callMoonshot(systemPrompt, messages);
-  } else {
-    throw new Error(`不支持的 AI 提供商: ${config.provider}`);
-  }
-}
+  // 构建完整消息列表
+  const fullMessages: Message[] = [
+    { role: "system", content: systemPrompt },
+    ...messages,
+  ];
 
-async function callAnthropic(systemPrompt: string, messages: Message[]): Promise<ChatResponse> {
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": config.apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: messages.map((m) => ({
-        role: m.role === "system" ? "user" : m.role,
-        content: m.content,
-      })),
-    }),
-  });
+  // 使用统一的 LLM 服务
+  const response = await callLLM(fullMessages);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Anthropic API 错误: ${error}`);
-  }
-
-  const data = await response.json();
   return {
-    content: data.content[0]?.text || "",
-    usage: data.usage ? {
-      prompt_tokens: data.usage.input_tokens || 0,
-      completion_tokens: data.usage.output_tokens || 0,
-      total_tokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0),
+    content: response.content,
+    usage: response.usage ? {
+      prompt_tokens: response.usage.promptTokens,
+      completion_tokens: response.usage.completionTokens,
+      total_tokens: response.usage.totalTokens,
     } : undefined,
-  };
-}
-
-async function callOpenAI(systemPrompt: string, messages: Message[]): Promise<ChatResponse> {
-  const baseUrl = config.baseUrl || "https://api.openai.com/v1";
-  
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API 错误: ${error}`);
-  }
-
-  const data = await response.json();
-  return {
-    content: data.choices[0]?.message?.content || "",
-    usage: data.usage,
-  };
-}
-
-// Moonshot (Kimi K2) API - OpenAI compatible
-async function callMoonshot(systemPrompt: string, messages: Message[]): Promise<ChatResponse> {
-  const baseUrl = config.baseUrl || "https://api.moonshot.cn/v1";
-  const isThinkingModel = config.model.includes("thinking");
-  
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
-      // Thinking 模型需要 temperature=1.0 和更大的 max_tokens
-      temperature: isThinkingModel ? 1.0 : 0.7,
-      max_tokens: isThinkingModel ? 16000 : 4096,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    try {
-      const errorJson = JSON.parse(errorText);
-      const msg = errorJson.error?.message || errorText;
-      // 服务器过载时给出更友好的提示
-      if (errorJson.error?.type === "engine_overloaded_error") {
-        throw new Error("服务器繁忙，请稍后重试或切换到其他模型（如 Kimi K2 Preview）");
-      }
-      throw new Error(`Moonshot API 错误: ${msg}`);
-    } catch (e) {
-      if (e instanceof Error && e.message.includes("服务器繁忙")) throw e;
-      throw new Error(`Moonshot API 错误: ${errorText}`);
-    }
-  }
-
-  const data = await response.json();
-  const message = data.choices[0]?.message;
-  
-  // 处理 thinking 模型的 reasoning_content
-  let content = "";
-  if (message) {
-    // 如果有思考过程，添加到输出
-    if (message.reasoning_content) {
-      content += `<thinking>\n${message.reasoning_content}\n</thinking>\n\n`;
-    }
-    content += message.content || "";
-  }
-  
-  return {
-    content,
-    usage: data.usage,
   };
 }
 

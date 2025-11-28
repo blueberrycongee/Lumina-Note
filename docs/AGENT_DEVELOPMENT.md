@@ -1,7 +1,7 @@
 # Lumina Note Agent 开发文档
 
 > **最后更新**: 2024-11-29
-> **当前阶段**: Phase 1 已完成 ✅
+> **当前阶段**: Phase 2 已完成 ✅
 
 ---
 
@@ -27,14 +27,15 @@
 - ✅ `write_note` - 创建笔记
 - ✅ `list_notes` - 列出笔记
 - ✅ `move_note` - 移动笔记
+- ✅ `search_notes` - 语义搜索 (RAG)
 - ✅ `attempt_completion` - 任务完成
 
-### ⏳ Phase 2: RAG 搜索系统 (待开发)
+### ✅ Phase 2: RAG 搜索系统 (已完成)
 
-- [ ] Embedding 服务
-- [ ] 向量存储 (SQLite)
-- [ ] 索引系统
-- [ ] `search_notes` 工具
+- [x] Embedding 服务 (`src/services/rag/embedder.ts`)
+- [x] 向量存储 (SQLite + Rust 后端)
+- [x] 索引系统 (Markdown 分块器 + RAG Manager)
+- [x] `search_notes` 工具
 
 ### ⏳ Phase 3: 高级功能 (待开发)
 
@@ -48,13 +49,9 @@
 
 ### 已知问题
 
-1. **IDE 模块解析警告**: `Cannot find module '../tools/ToolRegistry'` 
-   - 这是 IDE 缓存问题，实际运行正常
-   - 解决: 重启 TypeScript 服务器
+1. **消息历史保留**: 已实现跨任务保留历史，但清空按钮会清除所有
 
-2. **消息历史保留**: 已实现跨任务保留历史，但清空按钮会清除所有
-
-3. **工具审批**: 默认需要用户审批写操作，可在设置中开启自动审批
+2. **工具审批**: 默认需要用户审批写操作，可在设置中开启自动审批
 
 ### 代码结构
 
@@ -81,7 +78,20 @@ src/agent/                    # ← Phase 1 新增
         ├── WriteNoteTool.ts
         ├── ListNotesTool.ts
         ├── MoveNoteTool.ts
+        ├── SearchNotesTool.ts    # ← Phase 2 新增
         └── AttemptCompletionTool.ts
+
+src/services/rag/             # ← Phase 2 新增
+├── types.ts                  # RAG 类型定义
+├── index.ts                  # 模块导出
+├── embedder.ts               # Embedding 服务 (OpenAI/Ollama)
+├── chunker.ts                # Markdown 分块器
+├── vectorStore.ts            # 向量存储 (Tauri wrapper)
+└── manager.ts                # RAG 管理器
+
+src-tauri/src/vector_db/      # ← Phase 2 新增
+├── mod.rs                    # 向量数据库核心
+└── commands.rs               # Tauri 命令
 ```
 
 ### UI 集成

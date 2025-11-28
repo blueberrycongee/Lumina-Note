@@ -202,6 +202,56 @@ export const moveNoteDefinition: ToolDefinition = {
 - 可用于重命名文件（在同一目录内移动）`,
 };
 
+// ============ search_notes ============
+
+export const searchNotesDefinition: ToolDefinition = {
+  name: "search_notes",
+  description: "语义搜索笔记库，基于内容相似性找到相关笔记",
+  parameters: [
+    {
+      name: "query",
+      type: "string",
+      required: true,
+      description: "搜索查询，用自然语言描述要找的内容",
+    },
+    {
+      name: "directory",
+      type: "string",
+      required: false,
+      description: "限定搜索范围的目录",
+    },
+    {
+      name: "limit",
+      type: "number",
+      required: false,
+      description: "返回结果数量，默认 10",
+    },
+  ],
+  definition: `## search_notes
+描述: 语义搜索笔记库。基于内容相似性找到相关笔记，而不是简单的关键词匹配。
+
+参数:
+- query: (必需) 搜索查询，用自然语言描述你要找的内容
+- directory: (可选) 限定搜索范围的目录路径
+- limit: (可选) 返回结果数量，默认 10
+
+用法:
+<search_notes>
+<query>机器学习的反向传播算法</query>
+<directory>notes/tech</directory>
+<limit>5</limit>
+</search_notes>
+
+返回:
+- 相关笔记列表，包含路径、相关度分数、相关片段
+- 结果按相关度从高到低排序
+
+适用场景:
+- 查找与某个主题相关的笔记
+- 发现笔记间的关联
+- 基于描述找到具体内容`,
+};
+
 // ============ attempt_completion ============
 
 export const attemptCompletionDefinition: ToolDefinition = {
@@ -244,6 +294,7 @@ export function getAllToolDefinitions(): ToolDefinition[] {
     writeNoteDefinition,
     listNotesDefinition,
     moveNoteDefinition,
+    searchNotesDefinition,
     attemptCompletionDefinition,
   ];
 }

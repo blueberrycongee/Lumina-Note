@@ -10,6 +10,7 @@ import { SplitEditor } from "@/components/SplitEditor";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
+import { useRAGStore } from "@/stores/useRAGStore";
 import { FolderOpen, Sparkles } from "lucide-react";
 import { CommandPalette, PaletteMode } from "@/components/CommandPalette";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -91,6 +92,7 @@ function App() {
   const { vaultPath, setVaultPath, currentFile, save, createNewFile, tabs, activeTabIndex, fileTree } = useFileStore();
   const { pendingDiff } = useAIStore();
   const { buildIndex } = useNoteIndexStore();
+  const { initialize: initializeRAG, config: ragConfig } = useRAGStore();
   
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -115,6 +117,15 @@ function App() {
       buildIndex(fileTree);
     }
   }, [fileTree, buildIndex]);
+
+  // Initialize RAG system when vault is opened (if enabled and configured)
+  useEffect(() => {
+    if (vaultPath && ragConfig.enabled && ragConfig.embeddingApiKey) {
+      initializeRAG(vaultPath).catch((error) => {
+        console.warn("[RAG] Failed to initialize:", error);
+      });
+    }
+  }, [vaultPath, ragConfig.enabled, ragConfig.embeddingApiKey, initializeRAG]);
 
   // Handle keyboard shortcuts
   useEffect(() => {

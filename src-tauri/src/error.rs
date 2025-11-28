@@ -14,6 +14,9 @@ pub enum AppError {
 
     #[error("File already exists: {0}")]
     FileExists(String),
+
+    #[error("Database error: {0}")]
+    Database(String),
 }
 
 impl Serialize for AppError {
