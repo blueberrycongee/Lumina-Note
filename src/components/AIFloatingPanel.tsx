@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AgentPanel } from "./AgentPanel";
+import { ConversationList } from "./ConversationList";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 
 interface AIFloatingPanelProps {
@@ -40,11 +41,6 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
     error,
     sendMessageStream,
     stopStreaming,
-    sessions,
-    currentSessionId,
-    createSession,
-    deleteSession,
-    switchSession,
   } = useAIStore();
   const { currentFile, currentContent } = useFileStore();
 
@@ -58,16 +54,19 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
 
   // 计算面板位置（在悬浮球旁边）
   const getPanelPosition = () => {
-    const panelWidth = 380;
+    const panelWidth = 420;
     const panelHeight = 500;
     const padding = 16;
+    const ballSize = 56; // 悬浮球大小
+    const gap = 12; // 面板与悬浮球的间距
     
-    let x = ballPosition.x - panelWidth - padding;
-    let y = ballPosition.y - panelHeight / 2 + 28;
+    // 默认显示在悬浮球左侧
+    let x = ballPosition.x - panelWidth - gap;
+    let y = ballPosition.y - panelHeight / 2 + ballSize / 2;
     
-    // 边界检测
+    // 边界检测：如果左侧放不下，显示在右侧
     if (x < padding) {
-      x = ballPosition.x + 70; // 显示在右侧
+      x = ballPosition.x + ballSize + gap;
     }
     if (y < padding) {
       y = padding;
@@ -111,10 +110,16 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
       style={{
         left: position.x,
         top: position.y,
-        width: 380,
+        width: 420,
         height: 500,
       }}
     >
+      <div className="flex h-full">
+        {/* 可折叠对话列表侧栏 */}
+        <ConversationList className="h-full border-r-0" />
+        
+        {/* 主内容区 */}
+        <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-3 border-b border-border flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2">
@@ -145,15 +150,6 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
               对话
             </button>
           </div>
-          {chatMode === "chat" && (
-            <ChatSessionSelector
-              sessions={sessions}
-              currentSessionId={currentSessionId}
-              onCreate={() => createSession()}
-              onDelete={deleteSession}
-              onSwitch={switchSession}
-            />
-          )}
           <span className="text-xs text-muted-foreground">
             {config.apiKey ? "✓" : "未配置"}
           </span>
@@ -239,44 +235,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
         {chatMode === "agent" ? (
           <AgentPanel />
         ) : (
-          <div className="flex h-full">
-            {/* 左侧会话列表 */}
-            <div className="w-48 border-r border-border flex flex-col text-xs">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                <span className="font-medium text-foreground">会话</span>
-                <button
-                  onClick={() => createSession()}
-                  className="px-2 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  新建
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto">
-                {sessions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => switchSession(s.id)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left border-b border-border/60 hover:bg-muted ${
-                      s.id === currentSessionId ? "bg-muted text-primary" : "text-foreground"
-                    }`}
-                  >
-                    <span className="truncate mr-2">{s.title || "新对话"}</span>
-                    <button
-                      className="text-muted-foreground hover:text-red-500"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteSession(s.id);
-                      }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 右侧聊天区域 */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex flex-col h-full overflow-hidden">
               {/* Chat Messages */}
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.length === 0 && !isStreaming && (
@@ -372,9 +331,10 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                 )}
               </div>
             </div>
-            </div>
           </div>
         )}
+      </div>
+      </div>
       </div>
     </div>
   );
@@ -394,75 +354,3 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
   }
 }
 
-function ChatSessionSelector({
-  sessions,
-  currentSessionId,
-  onCreate,
-  onDelete,
-  onSwitch,
-}: {
-  sessions: { id: string; title: string }[];
-  currentSessionId: string | null;
-  onCreate: () => void;
-  onDelete: (id: string) => void;
-  onSwitch: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const current = sessions.find((s) => s.id === currentSessionId);
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className="ml-1 px-2 py-1 text-xs bg-muted rounded flex items-center gap-1 hover:bg-muted/80"
-      >
-        <span className="max-w-[120px] truncate">
-          {current?.title || "新对话"}
-        </span>
-        <ChevronDown className="w-3 h-3" />
-      </button>
-      {open && (
-        <div className="absolute left-0 mt-1 w-52 bg-background border border-border rounded-lg shadow-lg z-20">
-          <div className="p-1 border-b border-border">
-            <button
-              onClick={() => {
-                onCreate();
-                setOpen(false);
-              }}
-              className="w-full text-left text-xs px-2 py-1 rounded hover:bg-muted"
-            >
-              + 新建对话
-            </button>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
-            {sessions.map((s) => (
-              <div
-                key={s.id}
-                className={`flex items-center justify-between px-2 py-1 text-xs cursor-pointer ${
-                  s.id === currentSessionId
-                    ? "bg-muted text-primary"
-                    : "hover:bg-muted"
-                }`}
-                onClick={() => {
-                  onSwitch(s.id);
-                  setOpen(false);
-                }}
-              >
-                <span className="truncate mr-2">{s.title}</span>
-                <button
-                  className="text-muted-foreground hover:text-red-500"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(s.id);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
