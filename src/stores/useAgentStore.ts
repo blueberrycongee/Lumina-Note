@@ -229,10 +229,16 @@ export const useAgentStore = create<AgentState>()(
           resetAgentLoop();
           // 重新设置监听器
           (globalThis as any).__agentSetupListeners?.();
-          
+
           set((state) => {
             const session = state.sessions.find((s) => s.id === id);
             if (!session) return state;
+
+            // 将该会话的历史同步到 AgentLoop，确保切回时能完整恢复
+            const loop = getAgentLoop();
+            if (session.messages && session.messages.length > 0) {
+              loop.setMessages(session.messages);
+            }
 
             return {
               ...state,
@@ -256,7 +262,7 @@ export const useAgentStore = create<AgentState>()(
 
         // 启动任务
         startTask: async (message, context) => {
-          const { mode, currentSessionId, messages } = get();
+          const { mode, currentSessionId, sessions } = get();
 
           // 确保存在会话
           if (!currentSessionId) {
@@ -264,9 +270,11 @@ export const useAgentStore = create<AgentState>()(
           }
           const loop = getAgentLoop();
           
-          // 恢复会话的消息历史到 AgentLoop（切换会话后 AgentLoop 是空的）
-          if (messages.length > 0) {
-            loop.setMessages(messages);
+          // 恢复当前会话的消息历史到 AgentLoop（切换会话后 AgentLoop 是空的）
+          const currentSession = sessions.find((s) => s.id === currentSessionId);
+          const sessionMessages = currentSession?.messages ?? [];
+          if (sessionMessages.length > 0) {
+            loop.setMessages(sessionMessages);
           }
 
           // 添加模式到上下文
@@ -277,8 +285,12 @@ export const useAgentStore = create<AgentState>()(
 
           set((state) => {
             const userMessage: Message = { role: "user", content: message };
-            const currentMessages = state.messages.length ? state.messages : [];
-            const newMessages = [...currentMessages, userMessage];
+
+            const currentSession = state.sessions.find(
+              (s) => s.id === state.currentSessionId
+            );
+            const baseMessages = currentSession?.messages ?? state.messages ?? [];
+            const newMessages = [...baseMessages, userMessage];
             const newTitle = generateAgentSessionTitleFromMessages(newMessages, "新对话");
 
             return {
