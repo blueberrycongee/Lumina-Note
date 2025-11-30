@@ -163,8 +163,12 @@ export const useFileStore = create<FileState>()(
   openFile: async (path: string, addToHistory: boolean = true, forceReload: boolean = false) => {
     const { tabs, activeTabIndex, navigationHistory, navigationIndex } = get();
 
+    // Normalize paths for comparison (handle Windows backslashes)
+    const normalize = (p: string) => p.replace(/\\/g, "/");
+    const targetPath = normalize(path);
+
     // 检查是否已经在标签页中打开
-    const existingTabIndex = tabs.findIndex(tab => tab.path === path);
+    const existingTabIndex = tabs.findIndex(tab => normalize(tab.path) === targetPath);
     if (existingTabIndex !== -1) {
       // 已有此标签页
       if (forceReload) {

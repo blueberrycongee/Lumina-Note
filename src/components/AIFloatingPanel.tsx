@@ -50,7 +50,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
 
   // 滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages, streamingContent, streamingReasoning]);
 
   // 计算面板位置（在悬浮球旁边）

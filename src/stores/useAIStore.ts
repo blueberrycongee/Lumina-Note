@@ -104,6 +104,8 @@ interface AIState {
   // Diff preview
   pendingDiff: PendingDiff | null;
   setPendingDiff: (diff: PendingDiff | null) => void;
+  diffResolver: ((approved: boolean) => void) | null;
+  setDiffResolver: (resolver: ((approved: boolean) => void) | null) => void;
 
   // Actions
   sendMessage: (content: string, currentFile?: { path: string; name: string; content: string }) => Promise<void>;
@@ -237,6 +239,10 @@ export const useAIStore = create<AIState>()(
       pendingDiff: null,
       setPendingDiff: (diff) => {
         set({ pendingDiff: diff });
+      },
+      diffResolver: null,
+      setDiffResolver: (resolver) => {
+        set({ diffResolver: resolver });
       },
 
       // Send message

@@ -47,7 +47,7 @@ function EditorWithGraph() {
 
 // Component that shows diff view
 function DiffViewWrapper() {
-  const { pendingDiff, setPendingDiff, clearPendingEdits } = useAIStore();
+  const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } = useAIStore();
   const { openFile } = useFileStore();
   
   const handleAccept = useCallback(async () => {
@@ -64,17 +64,27 @@ function DiffViewWrapper() {
       await openFile(pendingDiff.filePath, false, true);
       
       console.log(`✅ 已应用修改到 ${pendingDiff.fileName}`);
+      
+      // Resolve promise if exists
+      if (diffResolver) {
+        diffResolver(true);
+      }
     } catch (error) {
       console.error("Failed to apply edit:", error);
       alert(`❌ 应用修改失败: ${error}`);
     }
-  }, [pendingDiff, clearPendingEdits, openFile]);
+  }, [pendingDiff, clearPendingEdits, openFile, diffResolver]);
   
   const handleReject = useCallback(() => {
     setPendingDiff(null);
     // Also clear pending edits so AI doesn't get confused
     clearPendingEdits();
-  }, [setPendingDiff, clearPendingEdits]);
+    
+    // Resolve promise if exists
+    if (diffResolver) {
+      diffResolver(false);
+    }
+  }, [setPendingDiff, clearPendingEdits, diffResolver]);
   
   if (!pendingDiff) return null;
   

@@ -82,7 +82,13 @@ export const EditNoteTool: ToolExecutor = {
         const fileName = path.split(/[/\\]/).pop() || path;
         
         // 设置 pendingDiff，复用 Chat 模式的 DiffView
-        const { setPendingDiff } = useAIStore.getState();
+        const { setPendingDiff, setDiffResolver } = useAIStore.getState();
+        
+        // 创建 Promise 等待用户确认
+        const confirmation = new Promise<boolean>((resolve) => {
+          setDiffResolver(resolve);
+        });
+
         setPendingDiff({
           fileName,
           filePath: fullPath,
@@ -91,20 +97,34 @@ export const EditNoteTool: ToolExecutor = {
           description: `Agent 编辑: ${appliedEdits.length} 处修改`,
         });
 
-        const summary = [
-          `文件: ${path}`,
-          `已生成 ${appliedEdits.length} 处修改，等待用户在 Diff 预览中确认`,
-          ...appliedEdits,
-        ];
+        // 等待用户确认
+        const approved = await confirmation;
+        
+        // 清理 resolver
+        setDiffResolver(null);
 
-        if (failedEdits.length > 0) {
-          summary.push(`失败: ${failedEdits.length} 处`, ...failedEdits);
+        if (approved) {
+          const summary = [
+            `文件: ${path}`,
+            `已生成 ${appliedEdits.length} 处修改，用户已确认并保存。`,
+            ...appliedEdits,
+          ];
+
+          if (failedEdits.length > 0) {
+            summary.push(`失败: ${failedEdits.length} 处`, ...failedEdits);
+          }
+
+          return {
+            success: true,
+            content: summary.join("\n"),
+          };
+        } else {
+          return {
+            success: false,
+            content: "用户拒绝了修改建议。",
+            error: "用户拒绝了修改",
+          };
         }
-
-        return {
-          success: true,
-          content: summary.join("\n") + "\n\n⚠️ 修改尚未保存，请用户在编辑器中查看 Diff 预览并确认。",
-        };
       } else {
         return {
           success: false,

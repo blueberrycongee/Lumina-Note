@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { FileEntry, deleteFile, renameFile, createFile, createDir, exists } from "@/lib/tauri";
@@ -51,6 +51,13 @@ export function Sidebar() {
   const [renameValue, setRenameValue] = useState("");
   // 展开的文件夹路径集合
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+
+  // Sync selectedPath with currentFile
+  useEffect(() => {
+    if (currentFile) {
+      setSelectedPath(currentFile);
+    }
+  }, [currentFile]);
 
   // Handle context menu
   const handleContextMenu = useCallback((e: React.MouseEvent, entry: FileEntry) => {
@@ -549,6 +556,10 @@ function FileTreeItem({
   const isRenaming = renamingPath === entry.path;
   const paddingLeft = 12 + level * 16;
 
+  // 优化高亮逻辑：避免切换文件时的双重高亮
+  const selectedIsFile = selectedPath?.toLowerCase().endsWith('.md');
+  const showActive = (isActive && (!selectedIsFile || selectedPath === currentFile)) || (isSelected && !entry.is_dir);
+
   // 是否在当前文件夹下新建
   const isCreatingHere = creating && creating.parentPath === entry.path;
 
@@ -690,10 +701,8 @@ function FileTreeItem({
       onKeyDown={(e) => e.key === "Enter" && onSelect(entry)}
       className={cn(
         "w-full flex items-center gap-1.5 py-1.5 transition-colors text-sm cursor-pointer",
-        isActive
+        showActive
           ? "bg-primary/10 text-primary"
-          : isSelected
-          ? "bg-accent"
           : "hover:bg-accent"
       )}
       style={{ paddingLeft: paddingLeft + 20 }}
