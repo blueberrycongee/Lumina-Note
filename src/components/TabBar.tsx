@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
-import { X, FileText, Network } from "lucide-react";
+import { X, FileText, Network, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TabItemProps {
@@ -44,6 +44,8 @@ function TabItem({
     >
       {tab.type === "graph" || tab.type === "isolated-graph" ? (
         <Network size={12} className="shrink-0 text-primary" />
+      ) : tab.type === "video-note" ? (
+        <Video size={12} className="shrink-0 text-red-500" />
       ) : (
         <FileText size={12} className="shrink-0 opacity-60" />
       )}
@@ -90,9 +92,15 @@ export function TabBar() {
   const handleClose = useCallback(
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
+      // 如果关闭的是视频标签页，同时关闭 WebView
+      if (tabs[index]?.type === "video-note") {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('close_embedded_webview').catch(() => {});
+        });
+      }
       closeTab(index);
     },
-    [closeTab]
+    [closeTab, tabs]
   );
 
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {

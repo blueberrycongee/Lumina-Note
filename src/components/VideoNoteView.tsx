@@ -15,7 +15,8 @@ import {
   Video,
   X,
   Edit3,
-  Check
+  Check,
+  Minus
 } from 'lucide-react';
 import {
   VideoNoteFile,
@@ -41,10 +42,16 @@ import { invoke } from '@tauri-apps/api/core';
 
 interface VideoNoteViewProps {
   onClose?: () => void;
+  onMinimize?: () => void;  // 最小化回调（隐藏界面但保持 WebView）
+  initialUrl?: string;  // 从外部传入的初始 URL
+  isActive?: boolean;   // 是否是当前激活的标签页
 }
 
-export function VideoNoteView({ onClose }: VideoNoteViewProps) {
+export function VideoNoteView({ onClose, onMinimize, initialUrl, isActive = true }: VideoNoteViewProps) {
   const { vaultPath } = useFileStore();
+  
+  // 使用传入的 initialUrl
+  const effectiveUrl = initialUrl;
   
   // 视频状态
   const [videoUrl, setVideoUrl] = useState('');
@@ -74,6 +81,9 @@ export function VideoNoteView({ onClose }: VideoNoteViewProps) {
   
   // 内嵌 WebView 状态
   const [webviewCreated, setWebviewCreated] = useState(false);
+
+  // 记录是否已自动加载
+  const autoLoadedRef = useRef(false);
 
   // 创建内嵌 WebView
   const createWebview = useCallback(async () => {
@@ -158,6 +168,20 @@ export function VideoNoteView({ onClose }: VideoNoteViewProps) {
       invoke('close_embedded_webview').catch(() => {});
     };
   }, []);
+
+  // 根据 isActive 控制 WebView 可见性
+  useEffect(() => {
+    if (!webviewCreated) return;
+    
+    if (isActive) {
+      // 激活时恢复位置
+      updateWebviewBounds();
+      invoke('set_webview_visible', { visible: true }).catch(() => {});
+    } else {
+      // 非激活时隐藏
+      invoke('set_webview_visible', { visible: false }).catch(() => {});
+    }
+  }, [isActive, webviewCreated, updateWebviewBounds]);
 
   // 自动保存笔记到 MD 文件
   useEffect(() => {
@@ -287,6 +311,21 @@ export function VideoNoteView({ onClose }: VideoNoteViewProps) {
       alert('加载视频失败：' + error);
     }
   }, [videoUrl, vaultPath]);
+
+  // 如果有初始 URL，自动设置
+  useEffect(() => {
+    if (effectiveUrl && !autoLoadedRef.current) {
+      autoLoadedRef.current = true;
+      setVideoUrl(effectiveUrl);
+    }
+  }, [effectiveUrl]);
+  
+  // videoUrl 变化且有值时自动加载
+  useEffect(() => {
+    if (videoUrl && !isVideoLoaded && autoLoadedRef.current) {
+      handleLoadVideo();
+    }
+  }, [videoUrl, isVideoLoaded, handleLoadVideo]);
 
   // 手动计时器
   useEffect(() => {
@@ -490,6 +529,15 @@ export function VideoNoteView({ onClose }: VideoNoteViewProps) {
           >
             <Download className="w-4 h-4" />
           </button>
+          {onMinimize && (
+            <button 
+              onClick={onMinimize} 
+              className="p-1.5 hover:bg-accent rounded transition-colors"
+              title="最小化（可通过左侧视频按钮恢复）"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          )}
           {onClose && (
             <button onClick={onClose} className="p-1.5 hover:bg-accent rounded">
               <X className="w-4 h-4" />

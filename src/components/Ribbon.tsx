@@ -13,25 +13,24 @@ import { cn } from "@/lib/utils";
 import { exists } from "@/lib/tauri";
 
 export function Ribbon() {
-  const { isDarkMode, toggleTheme, videoNoteOpen, toggleVideoNote, setVideoNoteOpen } = useUIStore();
-  const { tabs, activeTabIndex, openGraphTab, switchTab, recentFiles, openFile, fileTree } = useFileStore();
+  const { isDarkMode, toggleTheme } = useUIStore();
+  const { tabs, activeTabIndex, openGraphTab, switchTab, openVideoNoteTab, recentFiles, openFile, fileTree } = useFileStore();
   
   // Check active tab type
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const isGraphActive = activeTab?.type === "graph";
+  const isVideoActive = activeTab?.type === "video-note";
   
   // Find first file tab to switch to
   const handleSwitchToFiles = async () => {
-    setVideoNoteOpen(false);
     const fileTabIndex = tabs.findIndex(tab => tab.type === "file");
     if (fileTabIndex !== -1) {
       switchTab(fileTabIndex);
       return;
     }
 
-    // If no files open (whether in graph view or empty state), try to open recent file
+    // If no files open, try to open recent file
     if (recentFiles && recentFiles.length > 0) {
-      // Iterate backwards to find the most recent existing file
       for (let i = recentFiles.length - 1; i >= 0; i--) {
         const path = recentFiles[i];
         try {
@@ -63,30 +62,16 @@ export function Ribbon() {
     }
   };
 
-  const handleOpenGraph = () => {
-    setVideoNoteOpen(false);
-    openGraphTab();
-  };
-
   return (
     <div className="w-12 h-full bg-muted/30 border-r border-border flex flex-col items-center py-2 gap-1">
       {/* Top icons */}
       <div className="flex flex-col items-center gap-1">
-        {/* Search */}
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-          title="全局搜索 (Ctrl+Shift+F)"
-        >
-          <Search size={20} />
-        </button>
-
         {/* Files/Editor */}
         <button
           onClick={handleSwitchToFiles}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            !isGraphActive && !videoNoteOpen
+            !isGraphActive && !isVideoActive
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
@@ -97,10 +82,10 @@ export function Ribbon() {
 
         {/* Graph */}
         <button
-          onClick={handleOpenGraph}
+          onClick={openGraphTab}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            isGraphActive && !videoNoteOpen
+            isGraphActive
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
@@ -109,12 +94,28 @@ export function Ribbon() {
           <Network size={20} />
         </button>
 
+        {/* Search */}
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          title="全局搜索 (Ctrl+Shift+F)"
+        >
+          <Search size={20} />
+        </button>
+
         {/* Video Note */}
         <button
-          onClick={toggleVideoNote}
+          onClick={() => {
+            const videoTabIndex = tabs.findIndex(t => t.type === "video-note");
+            if (videoTabIndex >= 0) {
+              switchTab(videoTabIndex);
+            } else {
+              openVideoNoteTab("", "视频笔记");
+            }
+          }}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            videoNoteOpen
+            isVideoActive
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}

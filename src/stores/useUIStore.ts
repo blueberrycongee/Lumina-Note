@@ -62,7 +62,10 @@ interface UIState {
 
   // Video note view
   videoNoteOpen: boolean;
+  videoNoteUrl: string | null;
   setVideoNoteOpen: (open: boolean) => void;
+  setVideoNoteUrl: (url: string | null) => void;
+  openVideoNote: (url: string) => void;
   toggleVideoNote: () => void;
 }
 
@@ -134,15 +137,28 @@ export const useUIStore = create<UIState>()(
 
       // Video note
       videoNoteOpen: false,
+      videoNoteUrl: null,
       setVideoNoteOpen: (open) => set({ videoNoteOpen: open }),
+      setVideoNoteUrl: (url) => set({ videoNoteUrl: url }),
+      openVideoNote: (url) => set({ videoNoteUrl: url, videoNoteOpen: true }),
       toggleVideoNote: () => set((state) => ({ videoNoteOpen: !state.videoNoteOpen })),
     }),
     {
       name: "neurone-ui",
+      // 不持久化视频笔记状态，避免重启后自动打开
+      partialize: (state) => {
+        const { videoNoteOpen, videoNoteUrl, ...rest } = state;
+        return rest;
+      },
       onRehydrateStorage: () => (state) => {
         // Apply theme on hydration
         if (state?.isDarkMode) {
           document.documentElement.classList.add("dark");
+        }
+        // 强制重置视频笔记状态（不应从 localStorage 恢复）
+        if (state) {
+          state.videoNoteOpen = false;
+          state.videoNoteUrl = null;
         }
       },
     }

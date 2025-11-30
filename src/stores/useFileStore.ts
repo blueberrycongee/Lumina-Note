@@ -11,7 +11,7 @@ interface HistoryEntry {
 }
 
 // 标签页类型
-export type TabType = "file" | "graph" | "isolated-graph";
+export type TabType = "file" | "graph" | "isolated-graph" | "video-note";
 
 // 孤立视图节点信息
 export interface IsolatedNodeInfo {
@@ -32,6 +32,7 @@ export interface Tab {
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
   isolatedNode?: IsolatedNodeInfo; // 孤立视图的目标节点
+  videoUrl?: string; // 视频笔记的 URL
 }
 
 interface FileState {
@@ -86,6 +87,7 @@ interface FileState {
   // Open special tabs
   openGraphTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
+  openVideoNoteTab: (url: string, title?: string) => void;
   
   // Undo/Redo actions
   undo: () => void;
@@ -535,6 +537,90 @@ export const useFileStore = create<FileState>()(
     };
     
     updatedTabs.push(isolatedTab);
+    
+    set({
+      tabs: updatedTabs,
+      activeTabIndex: updatedTabs.length - 1,
+      currentFile: null,
+      currentContent: "",
+      isDirty: false,
+    });
+  },
+
+  // 打开视频笔记标签页（单例模式：只允许一个视频标签页）
+  openVideoNoteTab: (url: string, title?: string) => {
+    const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+    
+    // 检查是否已有视频标签页
+    const existingVideoIndex = tabs.findIndex(t => t.type === "video-note");
+    
+    if (existingVideoIndex >= 0) {
+      // 已有视频标签页，更新 URL 并切换过去
+      const updatedTabs = [...tabs];
+      
+      // 保存当前标签页状态
+      if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+        updatedTabs[activeTabIndex] = {
+          ...updatedTabs[activeTabIndex],
+          content: currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        };
+      }
+      
+      // 提取 BV 号
+      const bvidMatch = url.match(/BV[A-Za-z0-9]+/);
+      const bvid = bvidMatch ? bvidMatch[0] : "";
+      
+      // 更新视频标签页
+      updatedTabs[existingVideoIndex] = {
+        ...updatedTabs[existingVideoIndex],
+        videoUrl: url,
+        name: title || `视频-${bvid}`,
+      };
+      
+      set({
+        tabs: updatedTabs,
+        activeTabIndex: existingVideoIndex,
+        currentFile: null,
+        currentContent: "",
+        isDirty: false,
+      });
+      return;
+    }
+    
+    // 没有视频标签页，创建新的
+    const bvidMatch = url.match(/BV[A-Za-z0-9]+/);
+    const bvid = bvidMatch ? bvidMatch[0] : Date.now().toString();
+    const tabId = `__video_${bvid}__`;
+    
+    // 保存当前标签页状态
+    let updatedTabs = [...tabs];
+    if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+      updatedTabs[activeTabIndex] = {
+        ...updatedTabs[activeTabIndex],
+        content: currentContent,
+        isDirty,
+        undoStack,
+        redoStack,
+      };
+    }
+    
+    // 创建视频笔记标签页
+    const videoTab: Tab = {
+      id: tabId,
+      type: "video-note",
+      path: "",
+      name: title || `视频-${bvid}`,
+      content: "",
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      videoUrl: url,
+    };
+    
+    updatedTabs.push(videoTab);
     
     set({
       tabs: updatedTabs,

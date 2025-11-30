@@ -130,8 +130,6 @@ function App() {
     toggleLeftSidebar,
     toggleRightSidebar,
     splitView,
-    videoNoteOpen,
-    setVideoNoteOpen,
   } = useUIStore();
 
   // Build note index when file tree changes
@@ -319,12 +317,18 @@ function App() {
 
       {/* Main content - switches between Editor, Graph, Split, Diff, and VideoNote based on state */}
       <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {videoNoteOpen ? (
-          // 视频笔记模式
-          <VideoNoteView onClose={() => setVideoNoteOpen(false)} />
-        ) : pendingDiff ? (
+        {pendingDiff ? (
           // Show diff view when there's a pending AI edit
           <DiffViewWrapper />
+        ) : activeTab?.type === "video-note" ? (
+          // 视频笔记标签页
+          <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <TabBar />
+            <VideoNoteView 
+              initialUrl={activeTab.videoUrl}
+              isActive={true}
+            />
+          </div>
         ) : splitView && currentFile ? (
           // Show split editor when enabled
           <SplitEditor />

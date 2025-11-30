@@ -1,4 +1,5 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from "react";
+import { useFileStore } from "@/stores/useFileStore";
 import { EditorState } from "@codemirror/state";
 import {
   EditorView,
@@ -396,6 +397,15 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
   const viewRef = useRef<EditorView | null>(null);
   const isExternalChange = useRef(false);
   const lastInternalContent = useRef<string>(content); // 跟踪编辑器内部的最新内容
+  
+  const { openVideoNoteTab } = useFileStore();
+  
+  // 处理 B站链接点击
+  const handleBilibiliLinkClick = useCallback((url: string) => {
+    if (url.includes('bilibili.com/video/') || url.includes('b23.tv')) {
+      openVideoNoteTab(url);
+    }
+  }, [openVideoNoteTab]);
 
   // 暴露滚动控制方法
   useImperativeHandle(ref, () => ({
@@ -494,6 +504,86 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       isExternalChange.current = false;
     }
   }, [content]);
+  
+  // 监听 Ctrl+Click B站链接
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let currentCleanup: (() => void) | null = null;
+    
+    const handleClick = (e: MouseEvent) => {
+      const view = viewRef.current;
+      if (!view) return;
+      
+      // Ctrl+Click 或 Cmd+Click
+      if (!(e.ctrlKey || e.metaKey)) return;
+      
+      // 方法1：检查点击的 DOM 元素是否是链接
+      const target = e.target as HTMLElement;
+      const linkElement = target.closest('a[href]');
+      if (linkElement) {
+        const href = linkElement.getAttribute('href') || '';
+        if (href.includes('bilibili.com/video/') || href.includes('b23.tv')) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[CodeMirror] 检测到链接元素点击:', href);
+          handleBilibiliLinkClick(href);
+          return;
+        }
+      }
+      
+      // 方法2：检查点击位置附近的文本内容
+      const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+      if (pos === null) return;
+      
+      // 获取点击位置前后的文本（扩大搜索范围）
+      const from = Math.max(0, pos - 100);
+      const to = Math.min(view.state.doc.length, pos + 100);
+      const textAround = view.state.doc.sliceString(from, to);
+      
+      // 匹配 B站链接
+      const bilibiliRegex = /(https?:\/\/)?(www\.)?(bilibili\.com\/video\/[A-Za-z0-9]+|b23\.tv\/[A-Za-z0-9]+)/g;
+      let match;
+      while ((match = bilibiliRegex.exec(textAround)) !== null) {
+        const matchStart = from + match.index;
+        const matchEnd = matchStart + match[0].length;
+        
+        // 检查点击位置是否在链接范围内（放宽判断）
+        if (pos >= matchStart - 5 && pos <= matchEnd + 5) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          let url = match[0];
+          if (!url.startsWith('http')) {
+            url = 'https://' + url;
+          }
+          
+          console.log('[CodeMirror] 检测到B站链接点击:', url);
+          handleBilibiliLinkClick(url);
+          return;
+        }
+      }
+    };
+    
+    // 等待编辑器创建后添加监听
+    const tryAddListener = () => {
+      const view = viewRef.current;
+      if (!view) {
+        timer = setTimeout(tryAddListener, 100);
+        return;
+      }
+      
+      view.contentDOM.addEventListener('click', handleClick);
+      currentCleanup = () => view.contentDOM.removeEventListener('click', handleClick);
+      console.log('[CodeMirror] B站链接点击监听已添加');
+    };
+    
+    tryAddListener();
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+      if (currentCleanup) currentCleanup();
+    };
+  }, [handleBilibiliLinkClick, isDark, livePreview]);
   
   return (
     <div 
