@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { FileEntry, deleteFile, renameFile, createFile, createDir, exists } from "@/lib/tauri";
+import { FileEntry, deleteFile, renameFile, createFile, createDir, exists, openNewWindow } from "@/lib/tauri";
 import { invoke } from "@tauri-apps/api/core";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { ask, open } from "@tauri-apps/plugin-dialog";
 import { cn, getFileName } from "@/lib/utils";
 import { ContextMenu, MenuItem, menuItems } from "./ContextMenu";
 import {
@@ -19,6 +19,7 @@ import {
   Moon,
   FilePlus,
   FolderPlus,
+  AppWindow,
 } from "lucide-react";
 
 interface ContextMenuState {
@@ -41,6 +42,8 @@ export function Sidebar() {
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  // More menu state
+  const [moreMenu, setMoreMenu] = useState<{ x: number; y: number } | null>(null);
   // 选中状态（用于确定新建位置）
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   // 新建模式（先命名后创建）
@@ -74,7 +77,50 @@ export function Sidebar() {
   // Close context menu
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
+    setMoreMenu(null);
   }, []);
+
+  // Handle open folder
+  const handleOpenFolder = useCallback(async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "选择工作目录",
+      });
+      
+      if (selected && typeof selected === "string") {
+        useFileStore.getState().setVaultPath(selected);
+      }
+    } catch (error) {
+      console.error("Open folder failed:", error);
+    }
+  }, []);
+
+  // Handle new window
+  const handleNewWindow = useCallback(async () => {
+    try {
+      await openNewWindow();
+    } catch (error) {
+      console.error("Open new window failed:", error);
+    }
+  }, []);
+
+  // Build more menu items
+  const getMoreMenuItems = useCallback((): MenuItem[] => {
+    return [
+      {
+        label: "打开文件夹...",
+        icon: <FolderOpen size={14} />,
+        onClick: handleOpenFolder,
+      },
+      {
+        label: "新窗口",
+        icon: <AppWindow size={14} />,
+        onClick: handleNewWindow,
+      },
+    ];
+  }, [handleOpenFolder, handleNewWindow]);
 
   // Handle delete
   const handleDelete = useCallback(async (entry: FileEntry) => {
@@ -361,7 +407,14 @@ export function Sidebar() {
               className={cn("w-3.5 h-3.5", isLoadingTree && "animate-spin")}
             />
           </button>
-          <button className="p-1 hover:bg-accent rounded transition-colors">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              setMoreMenu({ x: e.clientX, y: e.clientY + 20 });
+            }}
+            className="p-1 hover:bg-accent rounded transition-colors"
+            title="更多"
+          >
             <MoreHorizontal className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -430,6 +483,16 @@ export function Sidebar() {
           x={contextMenu.x}
           y={contextMenu.y}
           items={getContextMenuItems(contextMenu.entry)}
+          onClose={closeContextMenu}
+        />
+      )}
+
+      {/* More Menu */}
+      {moreMenu && (
+        <ContextMenu
+          x={moreMenu.x}
+          y={moreMenu.y}
+          items={getMoreMenuItems()}
           onClose={closeContextMenu}
         />
       )}

@@ -113,3 +113,10 @@ export async function readDir(
 export async function rename(oldPath: string, newPath: string): Promise<void> {
   return tauriRename(oldPath, newPath);
 }
+
+/**
+ * Open a new window
+ */
+export async function openNewWindow(): Promise<void> {
+  return invoke("open_new_window");
+}

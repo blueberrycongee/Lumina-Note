@@ -143,6 +143,27 @@ pub async fn close_embedded_webview(app: AppHandle) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Open a new main window
+#[tauri::command]
+pub async fn open_new_window(app: AppHandle) -> Result<(), AppError> {
+    let label = format!("window-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
+    
+    WebviewWindowBuilder::new(
+        &app,
+        &label,
+        WebviewUrl::App("index.html".into())
+    )
+    .title("Lumina Note")
+    .inner_size(1200.0, 800.0)
+    .min_inner_size(800.0, 600.0)
+    .resizable(true)
+    .center()
+    .build()
+    .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    
+    Ok(())
+}
+
 /// 获取 B站视频 CID
 #[tauri::command]
 pub async fn get_bilibili_cid(bvid: String) -> Result<Option<u64>, AppError> {

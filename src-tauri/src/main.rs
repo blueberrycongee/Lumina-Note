@@ -31,6 +31,7 @@ fn main() {
             commands::create_embedded_webview,
             commands::update_webview_bounds,
             commands::close_embedded_webview,
+            commands::open_new_window,
             commands::get_bilibili_cid,
             commands::get_bilibili_danmaku,
             commands::seek_video_time,
