@@ -448,6 +448,51 @@ body {
   border-bottom-style: solid;
 }
 
+/* Table styles */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+  overflow-x: auto;
+  display: block;
+}
+
+.prose thead {
+  display: table-header-group;
+}
+
+.prose tbody {
+  display: table-row-group;
+}
+
+.prose tr {
+  display: table-row;
+}
+
+.prose th {
+  background: hsl(var(--muted));
+  font-weight: 600;
+  text-align: left;
+  padding: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  white-space: nowrap;
+}
+
+.prose td {
+  padding: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  min-width: 100px;
+}
+
+.prose tr:nth-child(even) {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.prose tr:hover {
+  background: hsl(var(--muted) / 0.5);
+}
+
 /* Live preview block styles */
 
 /* Slide-in animation for math/code editor */
@@ -772,6 +817,31 @@ body {
   background: hsl(var(--primary) / 0.2);
 }
 
+/* CodeMirror Code Block Widget */
+.cm-code-block-widget {
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+}
+
+.cm-code-block-widget pre {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.cm-code-block-widget code {
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  color: inherit;
+}
+
 /* CodeMirror Editor 样式 */
 .codemirror-wrapper {
   height: 100%;
@@ -799,3 +869,142 @@ body {
 .dark .codemirror-wrapper .cm-code {
   background-color: hsl(var(--muted));
 }
+
+/* Syntax Highlighting (highlight.js compatible) */
+
+/* Light Mode (GitHub Light) */
+.hljs-comment,
+.hljs-quote {
+  color: #6e7781;
+}
+
+.hljs-doctag,
+.hljs-keyword,
+.hljs-formula {
+  color: #cf222e;
+}
+
+.hljs-section,
+.hljs-name,
+.hljs-selector-tag,
+.hljs-deletion,
+.hljs-subst {
+  color: #0550ae;
+}
+
+.hljs-literal {
+  color: #953800;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-attribute,
+.hljs-meta .hljs-string {
+  color: #0a3069;
+}
+
+.hljs-attr,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-selector-class,
+.hljs-selector-attr,
+.hljs-selector-pseudo,
+.hljs-number {
+  color: #953800;
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link,
+.hljs-meta,
+.hljs-selector-id,
+.hljs-title {
+  color: #8250df;
+}
+
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-class .hljs-title {
+  color: #953800;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+.hljs-link {
+  text-decoration: underline;
+}
+
+/* Dark Mode (GitHub Dark) */
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #8b949e;
+}
+
+.dark .hljs-doctag,
+.dark .hljs-keyword,
+.dark .hljs-formula {
+  color: #ff7b72;
+}
+
+.dark .hljs-section,
+.dark .hljs-name,
+.dark .hljs-selector-tag,
+.dark .hljs-deletion,
+.dark .hljs-subst {
+  color: #79c0ff;
+}
+
+.dark .hljs-literal {
+  color: #ffa657;
+}
+
+.dark .hljs-string,
+.dark .hljs-regexp,
+.dark .hljs-addition,
+.dark .hljs-attribute,
+.dark .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+
+.dark .hljs-attr,
+.dark .hljs-variable,
+.dark .hljs-template-variable,
+.dark .hljs-type,
+.dark .hljs-selector-class,
+.dark .hljs-selector-attr,
+.dark .hljs-selector-pseudo,
+.dark .hljs-number {
+  color: #ffa657;
+}
+
+.dark .hljs-symbol,
+.dark .hljs-bullet,
+.dark .hljs-link,
+.dark .hljs-meta,
+.dark .hljs-selector-id,
+.dark .hljs-title {
+  color: #d2a8ff;
+}
+
+.dark .hljs-built_in,
+.dark .hljs-title.class_,
+.dark .hljs-class .hljs-title {
+  color: #ffa657;
+}
+
+
+/* Ensure hljs class has proper background/color if needed, though we rely on .cm-code-block-widget */
+.cm-code-block-widget .hljs {
+  background: transparent;
+  padding: 0;
+  display: block;
+}
+

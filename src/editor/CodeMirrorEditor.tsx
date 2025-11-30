@@ -1,6 +1,7 @@
+import { parseMarkdown } from "@/lib/markdown";
 import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from "react";
 import { useFileStore } from "@/stores/useFileStore";
-import { EditorState } from "@codemirror/state";
+import { EditorState, StateField } from "@codemirror/state";
 import {
   EditorView,
   keymap,
@@ -15,6 +16,10 @@ import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxTree } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
 import katex from "katex";
+import { common, createLowlight } from "lowlight";
+
+// Initialize lowlight with common languages
+const lowlight = createLowlight(common);
 
 interface CodeMirrorEditorProps {
   content: string;
@@ -125,6 +130,7 @@ class MathWidget extends WidgetType {
         displayMode: this.displayMode,
         throwOnError: false,
         trust: true,
+        strict: false, // 忽略 LaTeX 警告（如 display mode 中的换行符）
       });
     } catch (e) {
       container.textContent = this.formula;
@@ -139,104 +145,338 @@ class MathWidget extends WidgetType {
   }
 }
 
-// Math 渲染插件 - 只处理可见区域，性能优化
-const mathPlugin = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-    
-    constructor(view: EditorView) {
-      this.decorations = this.buildDecorations(view);
-    }
-    
-    update(update: ViewUpdate) {
-      // 只在文档或视口变化时更新（选择变化不触发，避免卡顿）
-      if (update.docChanged || update.viewportChanged) {
-        // 直接同步更新，避免 setTimeout 导致的渲染不同步
-        this.decorations = this.buildDecorations(update.view);
-      }
-    }
-    
-    buildDecorations(view: EditorView): DecorationSet {
-      try {
-        const decorations: any[] = [];
-        const { from: viewFrom, to: viewTo } = view.viewport;
-        const doc = view.state.doc.toString();
-        
-        // 记录已处理的区域，避免重复匹配
-        const processedRanges: Array<{ from: number; to: number }> = [];
-        
-        // 1. 处理单行块级公式 $$...$$（CodeMirror replace decoration 不支持跨行）
-        const blockMathRegex = /\$\$(.+?)\$\$/g;
-        let blockMatch;
-        
-        while ((blockMatch = blockMathRegex.exec(doc)) !== null) {
-          const from = blockMatch.index;
-          const to = from + blockMatch[0].length;
-          
-          // 只处理可见区域
-          if (to < viewFrom || from > viewTo) continue;
-          
-          // 确保不跨行（CodeMirror replace decoration 限制）
-          const content = blockMatch[0];
-          if (content.includes('\n')) continue;
-          
-          processedRanges.push({ from, to });
-          
-          const formula = blockMatch[1].trim();
-          if (formula) {
-            decorations.push(
-              Decoration.replace({
-                widget: new MathWidget(formula, true), // displayMode = true
-              }).range(from, to)
-            );
-          }
-        }
-        
-        // 2. 处理行内公式 $...$（单行）
-        const inlineMathRegex = /\$([^$\n]+?)\$/g;
-        let match;
-        while ((match = inlineMathRegex.exec(doc)) !== null) {
-          const from = match.index;
-          const to = from + match[0].length;
-          
-          // 只处理可见区域
-          if (to < viewFrom || from > viewTo) continue;
-          
-          // 跳过已处理的区域（块级公式、跨行公式）
-          const isProcessed = processedRanges.some(
-            (range: { from: number; to: number }) => from >= range.from && to <= range.to
-          );
-          if (isProcessed) continue;
-          
-          // 跳过 $$ 开头或结尾（避免误匹配块级公式的边界）
-          if (doc[from - 1] === '$' || doc[to] === '$') continue;
-          
-          // 确保不跨行
-          const fromLine = view.state.doc.lineAt(from).number;
-          const toLine = view.state.doc.lineAt(to).number;
-          if (fromLine !== toLine) continue;
-          
-          const formula = match[1].trim();
-          if (formula) {
-            decorations.push(
-              Decoration.replace({
-                widget: new MathWidget(formula, false), // displayMode = false
-              }).range(from, to)
-            );
-          }
-        }
-        
-        return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
-      } catch (e) {
-        console.error("Error creating math decorations:", e);
-        return Decoration.none;
-      }
-    }
-  },
-  {
-    decorations: (v) => v.decorations,
+// Table Widget
+class TableWidget extends WidgetType {
+  constructor(readonly markdown: string) {
+    super();
   }
-);
+
+  eq(other: TableWidget) {
+    return other.markdown === this.markdown;
+  }
+
+  toDOM() {
+    const container = document.createElement("div");
+    container.className = "cm-table-widget reading-view prose max-w-none"; // Add reading-view class to inherit styles
+    // 使用 parseMarkdown 渲染表格，支持单元格内的 Markdown 语法
+    container.innerHTML = parseMarkdown(this.markdown);
+    return container;
+  }
+
+  ignoreEvent() {
+    return true; // 表格内部事件不传递给编辑器（避免光标跳入）
+  }
+}
+
+// Code Block Widget
+class CodeBlockWidget extends WidgetType {
+  constructor(readonly code: string, readonly language: string) {
+    super();
+  }
+
+  eq(other: CodeBlockWidget) {
+    return other.code === this.code && other.language === this.language;
+  }
+
+  toDOM() {
+    const container = document.createElement("div");
+    container.className = "cm-code-block-widget relative group"; // 添加 relative 和 group 以支持语言标签定位
+    
+    const pre = document.createElement("pre");
+    const code = document.createElement("code");
+    
+    // 添加 hljs 类以确保样式生效
+    code.className = "hljs";
+
+    if (this.language) {
+      code.classList.add(`language-${this.language}`);
+    }
+    
+    // 使用 lowlight 进行语法高亮
+    // 尝试高亮，如果失败则回退到纯文本
+    let highlighted = false;
+    if (this.language) {
+      try {
+        // 检查语言是否注册，如果未注册尝试使用别名或直接高亮（lowlight 会抛出错误如果语言未知）
+        if (lowlight.registered(this.language)) {
+          const tree = lowlight.highlight(this.language, this.code);
+          this.hastToDOM(tree.children, code);
+          highlighted = true;
+        } else {
+          // 尝试查找别名或忽略错误
+          // lowlight v3 没有直接的 getLanguage，只能 try highlight
+          // 但 highlight 会 throw，所以我们在 catch 中处理
+          // 如果不知道语言，不进行高亮
+        }
+      } catch (e) {
+        console.warn("Highlight error:", e);
+      }
+    }
+    
+    if (!highlighted) {
+      code.textContent = this.code;
+    }
+    
+    pre.appendChild(code);
+    container.appendChild(pre);
+
+    // 显示语言标签（类似 Typora）
+    if (this.language) {
+      const langLabel = document.createElement("div");
+      langLabel.className = "absolute top-1 right-2 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity select-none pointer-events-none font-sans";
+      langLabel.textContent = this.language;
+      container.appendChild(langLabel);
+    }
+    
+    return container;
+  }
+
+  // 辅助函数：将 HAST 节点转换为 DOM
+  hastToDOM(nodes: any[], parent: HTMLElement) {
+    for (const node of nodes) {
+      if (node.type === 'text') {
+        parent.appendChild(document.createTextNode(node.value));
+      } else if (node.type === 'element') {
+        const el = document.createElement(node.tagName);
+        if (node.properties && node.properties.className) {
+          el.className = node.properties.className.join(' ');
+        }
+        if (node.children) {
+          this.hastToDOM(node.children, el);
+        }
+        parent.appendChild(el);
+      }
+    }
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+}
+
+// Code Block 渲染 StateField
+const codeBlockStateField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildCodeBlockDecorations(state);
+  },
+  update(decorations, transaction) {
+    if (transaction.docChanged || transaction.selection) {
+      return buildCodeBlockDecorations(transaction.state);
+    }
+    return decorations.map(transaction.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function buildCodeBlockDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  const selection = state.selection;
+
+  const isSelected = (from: number, to: number) => {
+    for (const range of selection.ranges) {
+      if (range.from <= to && range.to >= from) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name === "FencedCode") {
+        if (isSelected(node.from, node.to)) return;
+
+        const text = state.doc.sliceString(node.from, node.to);
+        // 解析语言和代码内容
+        const lines = text.split('\n');
+        if (lines.length < 2) return; // 至少要有开始和结束标记
+        
+        const firstLine = lines[0];
+        // 改进正则：支持缩进，支持任意数量的反引号（>=3）
+        const language = firstLine.replace(/^\s*`{3,}/, "").trim();
+        
+        // 提取代码内容
+        // 去掉第一行
+        const codeLines = lines.slice(1);
+        
+        // 检查最后一行是否是结束标记（只包含反引号）
+        // 如果是，则去掉；如果不是（例如未闭合的代码块），则保留
+        const lastLine = codeLines[codeLines.length - 1];
+        if (lastLine && /^\s*`{3,}\s*$/.test(lastLine)) {
+            codeLines.pop();
+        }
+        
+        const code = codeLines.join('\n');
+
+        decorations.push(
+          Decoration.replace({
+            widget: new CodeBlockWidget(code, language),
+            block: true,
+          }).range(node.from, node.to)
+        );
+      }
+    },
+  });
+
+  return Decoration.set(decorations);
+}
+
+// Table 渲染 StateField
+const tableStateField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildTableDecorations(state);
+  },
+  update(decorations, transaction) {
+    if (transaction.docChanged || transaction.selection) {
+      return buildTableDecorations(transaction.state);
+    }
+    return decorations.map(transaction.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function buildTableDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  const selection = state.selection;
+
+  const isSelected = (from: number, to: number) => {
+    for (const range of selection.ranges) {
+      if (range.from <= to && range.to >= from) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name === "Table") {
+        if (isSelected(node.from, node.to)) return;
+
+        const tableMarkdown = state.doc.sliceString(node.from, node.to);
+        decorations.push(
+          Decoration.replace({
+            widget: new TableWidget(tableMarkdown),
+            block: true,
+          }).range(node.from, node.to)
+        );
+      }
+    },
+  });
+
+  return Decoration.set(decorations);
+}
+
+// Math 渲染 StateField - 使用 StateField 以支持 block decorations
+const mathStateField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildMathDecorations(state);
+  },
+  update(decorations, transaction) {
+    // 当文档内容变化或选择变化时更新装饰
+    if (transaction.docChanged || transaction.selection) {
+      return buildMathDecorations(transaction.state);
+    }
+    return decorations.map(transaction.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function buildMathDecorations(state: EditorState): DecorationSet {
+  try {
+    const decorations: any[] = [];
+    const doc = state.doc.toString();
+    const selection = state.selection;
+    
+    // 辅助函数：检查范围是否与当前选择重叠
+    const isSelected = (from: number, to: number) => {
+      for (const range of selection.ranges) {
+        // 只要选择范围（包括光标）与公式范围有任何重叠或接触，就视为选中
+        // 使用 >= 和 <= 确保光标在公式边缘时也显示源码
+        if (range.from <= to && range.to >= from) {
+          return true;
+        }
+      }
+      return false;
+    };
+    
+    // 记录已处理的区域，避免重复匹配
+    const processedRanges: Array<{ from: number; to: number }> = [];
+    
+    // 1. 处理块级公式 $$...$$（支持跨行）
+    const blockMathRegex = /\$\$([\s\S]+?)\$\$/g;
+    let blockMatch;
+    
+    while ((blockMatch = blockMathRegex.exec(doc)) !== null) {
+      const from = blockMatch.index;
+      const to = from + blockMatch[0].length;
+      
+      processedRanges.push({ from, to });
+      
+      // 如果光标在公式范围内，不渲染（显示源码）
+      if (isSelected(from, to)) continue;
+      
+      const formula = blockMatch[1].trim();
+      if (formula) {
+        // 检查是否覆盖整行（从行首到行尾）
+        const fromLine = state.doc.lineAt(from);
+        const toLine = state.doc.lineAt(to);
+        const isFullLine = from === fromLine.from && to === toLine.to;
+
+        decorations.push(
+          Decoration.replace({
+            widget: new MathWidget(formula, true), // displayMode = true
+            block: isFullLine, // 只有覆盖整行时才使用 block: true
+          }).range(from, to)
+        );
+      }
+    }
+    
+    // 2. 处理行内公式 $...$（支持跨行，但不支持连续换行）
+    // 改进正则：允许单次换行，但不支持连续换行（段落分隔），以避免误判普通文本中的美元符号
+    const inlineMathRegex = /(?<!\\|\$)\$(?!\$)((?:[^$\n]|\n(?!\n))+?)(?<!\\|\$)\$(?!\$)/g;
+    let match;
+    while ((match = inlineMathRegex.exec(doc)) !== null) {
+      const from = match.index;
+      const to = from + match[0].length;
+      
+      // 跳过已处理的区域（块级公式）
+      const isProcessed = processedRanges.some(
+        (range: { from: number; to: number }) => from >= range.from && to <= range.to
+      );
+      if (isProcessed) continue;
+      
+      // 如果光标在公式范围内，不渲染（显示源码）
+      if (isSelected(from, to)) continue;
+      
+      const formula = match[1].trim();
+      if (formula) {
+        // 检查是否覆盖整行（从行首到行尾）
+        const fromLine = state.doc.lineAt(from);
+        const toLine = state.doc.lineAt(to);
+        const isFullLine = from === fromLine.from && to === toLine.to;
+        
+        // 如果跨行但不是整行，则无法渲染（CodeMirror 限制）
+        // 但如果是整行（例如 $ \n math \n $），则可以作为 block 渲染
+        if (fromLine.number !== toLine.number && !isFullLine) {
+          continue;
+        }
+
+        decorations.push(
+          Decoration.replace({
+            widget: new MathWidget(formula, isFullLine), // 如果是整行，则使用 displayMode
+            block: isFullLine, // 只有覆盖整行时才使用 block: true
+          }).range(from, to)
+        );
+      }
+    }
+    
+    return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
+  } catch (e) {
+    console.error("Error creating math decorations:", e);
+    return Decoration.none;
+  }
+}
 
 // 创建 Live Preview 装饰 - 只有选择区域显示源码（不响应光标，避免卡顿）
 function createLivePreviewDecorations(view: EditorView): DecorationSet {
@@ -450,9 +690,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         markdown({ base: markdownLanguage }),
         lightTheme,
         isDark ? oneDark : [],
-        // 实时预览模式：隐藏语法标记、渲染数学公式
+        // 实时预览模式：隐藏语法标记、渲染数学公式、渲染表格、渲染代码块
         // 源码模式：显示原始 Markdown
-        ...(livePreview ? [livePreviewPlugin, mathPlugin] : []),
+        ...(livePreview ? [livePreviewPlugin, mathStateField, tableStateField, codeBlockStateField] : []),
         markdownStylePlugin,
         updateListener,
         EditorView.lineWrapping,

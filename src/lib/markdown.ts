@@ -1,6 +1,6 @@
 import { Marked, Renderer } from "marked";
-import markedKatex from "marked-katex-extension";
 import TurndownService from "turndown";
+import katex from "katex";
 
 // Callout type icons and colors
 const calloutTypes: Record<string, { icon: string; color: string }> = {
@@ -75,20 +75,24 @@ renderer.image = function (token: { href: string; title: string | null; text: st
   }
 };
 
-// Create a configured marked instance with KaTeX support
+// Create a configured marked instance
 const markedInstance = new Marked({
   gfm: true,
   breaks: true,
   renderer,
 });
 
-// Add KaTeX extension for math rendering - must be added AFTER renderer
+// Remove marked-katex-extension usage since we handle math manually now
+/*
 markedInstance.use(
   markedKatex({
     throwOnError: false,
     output: "htmlAndMathml",
+    strict: false, // 忽略 LaTeX 警告
+    trust: true,   // 信任内容，允许某些命令
   })
 );
+*/
 
 // Configure turndown for HTML to Markdown conversion
 const turndownService = new TurndownService({
@@ -175,15 +179,44 @@ turndownService.addRule("katexBlock", {
 function preprocessMarkdown(markdown: string): string {
   let result = markdown;
   
-  // First, protect block math by replacing $$ temporarily
-  const blockMathPlaceholder = "⟦BLOCK_MATH_";
-  const blockMaths: string[] = [];
-  result = result.replace(/\$\$([\s\S]*?)\$\$/g, (match) => {
-    blockMaths.push(match);
-    return blockMathPlaceholder + (blockMaths.length - 1) + "⟧";
-  });
+  // 0. Handle Math Formulas (Copying logic from CodeMirrorEditor)
+  // We replace math with HTML placeholders to prevent marked from messing them up
+  const mathPlaceholders: string[] = [];
+  const mathPlaceholderPrefix = "⟦MATH_BLOCK_";
+  const mathPlaceholderSuffix = "⟧";
   
-  // Convert [[WikiLinks]] to HTML spans with data attribute
+  // Helper to render math and store placeholder
+  const renderAndStoreMath = (formula: string, displayMode: boolean) => {
+    try {
+      const html = katex.renderToString(formula, {
+        displayMode,
+        throwOnError: false,
+        trust: true,
+        strict: false,
+        output: "html", // Use HTML output
+      });
+      mathPlaceholders.push(html);
+      return `${mathPlaceholderPrefix}${mathPlaceholders.length - 1}${mathPlaceholderSuffix}`;
+    } catch (e) {
+      console.error("KaTeX render error:", e);
+      return formula;
+    }
+  };
+
+  // 1. Block Math $$...$$
+  result = result.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+    return renderAndStoreMath(formula.trim(), true);
+  });
+
+  // 2. Inline Math $...$ (using the same regex as CodeMirrorEditor)
+  // Matches $...$ but not if preceded by \ or $ (to avoid $$), and not if followed by $
+  // Allows newlines inside but not consecutive newlines (paragraph breaks)
+  const inlineMathRegex = /(?<!\\|\$)\$(?!\$)((?:[^$\n]|\n(?!\n))+?)(?<!\\|\$)\$(?!\$)/g;
+  result = result.replace(inlineMathRegex, (match, formula) => {
+    return renderAndStoreMath(formula.trim(), false);
+  });
+
+  // 3. Convert [[WikiLinks]] to HTML spans with data attribute
   // Supports [[link]] and [[link|display text]]
   result = result.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, link, display) => {
     const displayText = display || link;
@@ -191,30 +224,31 @@ function preprocessMarkdown(markdown: string): string {
     return `<span class="wikilink" data-wikilink="${linkName}">${displayText}</span>`;
   });
   
-  // Convert #tags to styled spans (but not in code blocks or URLs)
+  // 4. Convert #tags to styled spans (but not in code blocks or URLs)
   // Match #tag at word boundaries, supporting Chinese characters
   result = result.replace(/(?<![`\w\/])#([a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]*)/g, (_match, tag) => {
     return `<span class="tag" data-tag="${tag}">#${tag}</span>`;
   });
+
+  // 5. Restore Math Placeholders
+  // We do this BEFORE marked parsing if we want marked to ignore the math content (it's already HTML)
+  // However, marked might escape HTML.
+  // But since we are using a custom renderer or just standard marked, marked usually preserves HTML blocks if gfm is true.
+  // To be safe, we can restore AFTER marked, but then we need to protect placeholders from marked.
+  // Let's try restoring AFTER marked parsing.
   
-  // Simple approach: add spaces around inline math $...$ when adjacent to CJK/punctuation
-  // This regex matches $...$ (inline math)
-  const inlineMathRegex = /\$([^$\n]+?)\$/g;
+  // Wait, if we restore after marked, marked might have escaped our placeholders if they look like something else.
+  // Our placeholders are ⟦MATH_BLOCK_0⟧ which marked treats as text.
+  // So we should restore after marked.
   
-  // Replace each inline math with a spaced version
-  result = result.replace(inlineMathRegex, (_match, content) => {
-    return ` $${content}$ `;
-  });
+  // Store placeholders in a global or closure-scoped map? 
+  // preprocessMarkdown returns string. parseMarkdown calls it.
+  // We need to change the flow of parseMarkdown to handle this restoration.
   
-  // Clean up multiple spaces
-  result = result.replace(/  +/g, " ");
+  // Let's attach the placeholders to the result string temporarily? No.
+  // We need to refactor parseMarkdown.
   
-  // Restore block math
-  blockMaths.forEach((math, i) => {
-    result = result.replace(blockMathPlaceholder + i + "⟧", math);
-  });
-  
-  return result;
+  return result; // This result now contains placeholders like ⟦MATH_BLOCK_0⟧
 }
 
 /**
@@ -223,10 +257,72 @@ function preprocessMarkdown(markdown: string): string {
 export function parseMarkdown(markdown: string): string {
   try {
     if (!markdown) return "";
-    // Preprocess to fix math formula detection
-    const processed = preprocessMarkdown(markdown);
-    const result = markedInstance.parse(processed);
-    return typeof result === "string" ? result : "";
+    
+    // We need to handle math placeholders here
+    const mathPlaceholders: string[] = [];
+    const mathPlaceholderPrefix = "⟦MATH_BLOCK_";
+    const mathPlaceholderSuffix = "⟧";
+    
+    let processed = markdown;
+
+    // Helper to render math and store placeholder
+    const renderAndStoreMath = (formula: string, displayMode: boolean) => {
+      try {
+        const html = katex.renderToString(formula, {
+          displayMode,
+          throwOnError: false,
+          trust: true,
+          strict: false,
+          output: "html",
+        });
+        mathPlaceholders.push(html);
+        return `${mathPlaceholderPrefix}${mathPlaceholders.length - 1}${mathPlaceholderSuffix}`;
+      } catch (e) {
+        return formula;
+      }
+    };
+
+    // 1. Block Math $$...$$
+    processed = processed.replace(/\$\$([\s\S]+?)\$\$/g, (match, formula) => {
+      return renderAndStoreMath(formula.trim(), true);
+    });
+
+    // 2. Inline Math $...$
+    const inlineMathRegex = /(?<!\\|\$)\$(?!\$)((?:[^$\n]|\n(?!\n))+?)(?<!\\|\$)\$(?!\$)/g;
+    processed = processed.replace(inlineMathRegex, (match, formula) => {
+      return renderAndStoreMath(formula.trim(), false);
+    });
+
+    // 3. Preprocess other things (WikiLinks, Tags)
+    // We reuse the logic from preprocessMarkdown but without the math part
+    // Or we can just inline the logic here for simplicity and correctness
+    
+    // WikiLinks
+    processed = processed.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, link, display) => {
+      const displayText = display || link;
+      const linkName = link.trim();
+      return `<span class="wikilink" data-wikilink="${linkName}">${displayText}</span>`;
+    });
+    
+    // Tags
+    processed = processed.replace(/(?<![`\w\/])#([a-zA-Z\u4e00-\u9fa5][a-zA-Z0-9\u4e00-\u9fa5_-]*)/g, (_match, tag) => {
+      return `<span class="tag" data-tag="${tag}">#${tag}</span>`;
+    });
+
+    // 4. Parse with Marked
+    let html = markedInstance.parse(processed);
+    if (typeof html !== 'string') html = "";
+
+    // 5. Restore Math Placeholders
+    // Marked might wrap our placeholders in <p> tags if they are inline.
+    // We need to replace the placeholders in the HTML with the rendered math.
+    mathPlaceholders.forEach((mathHtml, index) => {
+      const placeholder = `${mathPlaceholderPrefix}${index}${mathPlaceholderSuffix}`;
+      // Replace global occurrences
+      html = (html as string).split(placeholder).join(mathHtml);
+    });
+
+    return html as string;
   } catch (error) {
     console.error("Markdown parse error:", error);
     return markdown; // Return raw text as fallback
