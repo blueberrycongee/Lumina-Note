@@ -3,6 +3,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { FileEntry, deleteFile, renameFile, createFile, createDir, exists } from "@/lib/tauri";
 import { invoke } from "@tauri-apps/api/core";
+import { ask } from "@tauri-apps/plugin-dialog";
 import { cn, getFileName } from "@/lib/utils";
 import { ContextMenu, MenuItem, menuItems } from "./ContextMenu";
 import {
@@ -77,7 +78,15 @@ export function Sidebar() {
 
   // Handle delete
   const handleDelete = useCallback(async (entry: FileEntry) => {
-    if (!confirm(`确定要删除 "${entry.name}" 吗？`)) return;
+    const yes = await ask(`确定要删除 "${entry.name}" 吗？\n此操作将把文件移至回收站。`, {
+      title: "删除确认",
+      kind: "warning",
+      okLabel: "删除",
+      cancelLabel: "取消",
+    });
+    
+    if (!yes) return;
+
     try {
       await deleteFile(entry.path);
       if (currentFile === entry.path) {
