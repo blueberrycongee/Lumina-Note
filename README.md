@@ -13,7 +13,7 @@
 [![Rust](https://img.shields.io/badge/Rust-Backend-dea584?style=flat-square&logo=rust&logoColor=black)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
 
-**Language**：简体中文（默认） · [English README](./README.en.md)
+**Language**：简体中文 · [English README](./README.en.md)
 
 [快速开始](#-快速开始) • [功能特性](#-核心特性) • [使用指南](#-使用指南) • [技术架构](#-技术架构)
 
