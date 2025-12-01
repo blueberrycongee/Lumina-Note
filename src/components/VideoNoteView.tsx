@@ -44,10 +44,17 @@ interface VideoNoteViewProps {
   onClose?: () => void;
   onMinimize?: () => void;  // 最小化回调（隐藏界面但保持 WebView）
   initialUrl?: string;  // 从外部传入的初始 URL
+  initialNoteFile?: VideoNoteFile | null; // 从分享内容直接传入的解析后笔记数据
   isActive?: boolean;   // 是否是当前激活的标签页
 }
 
-export function VideoNoteView({ onClose, onMinimize, initialUrl, isActive = true }: VideoNoteViewProps) {
+export function VideoNoteView({
+  onClose,
+  onMinimize,
+  initialUrl,
+  initialNoteFile,
+  isActive = true,
+}: VideoNoteViewProps) {
   const { vaultPath } = useFileStore();
   
   // 使用传入的 initialUrl
@@ -314,6 +321,15 @@ export function VideoNoteView({ onClose, onMinimize, initialUrl, isActive = true
 
   // 如果有初始 URL，自动设置
   useEffect(() => {
+    // 如果传入了初始解析好的 note 文件（例如通过分享打开），优先使用它
+    if (initialNoteFile && !autoLoadedRef.current) {
+      autoLoadedRef.current = true;
+      setNoteFile(initialNoteFile);
+      setVideoUrl(initialNoteFile.video.url);
+      setIsVideoLoaded(true);
+      return;
+    }
+
     if (effectiveUrl && !autoLoadedRef.current) {
       autoLoadedRef.current = true;
       setVideoUrl(effectiveUrl);

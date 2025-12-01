@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { FileEntry, listDirectory, readFile, saveFile, createFile } from "@/lib/tauri";
+import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
 
 // 历史记录条目
 interface HistoryEntry {
@@ -33,6 +34,7 @@ export interface Tab {
   redoStack: HistoryEntry[];
   isolatedNode?: IsolatedNodeInfo; // 孤立视图的目标节点
   videoUrl?: string; // 视频笔记的 URL
+  videoNoteData?: VideoNoteFile; // 从分享或内容打开时传入的笔记数据
   databaseId?: string; // 数据库 ID
 }
 
@@ -89,6 +91,7 @@ interface FileState {
   openGraphTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openVideoNoteTab: (url: string, title?: string) => void;
+  openVideoNoteFromContent: (content: string, title?: string) => void;
   openDatabaseTab: (dbId: string, dbName: string) => void;
   openPDFTab: (pdfPath: string) => void;
   
@@ -635,6 +638,94 @@ export const useFileStore = create<FileState>()(
       currentContent: "",
       isDirty: false,
     });
+  },
+
+  // 从已分享的 Markdown 内容打开视频笔记（支持识别并加载时间戳）
+  openVideoNoteFromContent: (content: string, title?: string) => {
+    const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+
+    try {
+      const parsed = parseVideoNoteMd(content);
+      if (!parsed) {
+        // 如果不是视频笔记格式，降级为创建空视频标签（不设置数据）
+        get().openVideoNoteTab('', title);
+        return;
+      }
+
+      // 单例视频标签：如果已存在则更新数据并切换
+      const existingVideoIndex = tabs.findIndex(t => t.type === 'video-note');
+      if (existingVideoIndex >= 0) {
+        const updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        updatedTabs[existingVideoIndex] = {
+          ...updatedTabs[existingVideoIndex],
+          videoUrl: parsed.video.url,
+          name: title || parsed.video.title || `视频-${parsed.video.bvid}`,
+          videoNoteData: parsed,
+        } as Tab;
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: existingVideoIndex,
+          currentFile: null,
+          currentContent: '',
+          isDirty: false,
+        });
+        return;
+      }
+
+      // 创建新的 video-note 标签并附带解析后的笔记数据
+      const bvidMatch = parsed.video.bvid ? parsed.video.bvid.match(/BV[A-Za-z0-9]+/) : null;
+      const bvid = bvidMatch ? bvidMatch[0] : Date.now().toString();
+      const tabId = `__video_${bvid}__`;
+
+      let updatedTabs = [...tabs];
+      if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+        updatedTabs[activeTabIndex] = {
+          ...updatedTabs[activeTabIndex],
+          content: currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        };
+      }
+
+      const videoTab: Tab = {
+        id: tabId,
+        type: 'video-note',
+        path: '',
+        name: title || parsed.video.title || `视频-${bvid}`,
+        content: '',
+        isDirty: false,
+        undoStack: [],
+        redoStack: [],
+        videoUrl: parsed.video.url,
+        videoNoteData: parsed,
+      };
+
+      updatedTabs.push(videoTab);
+
+      set({
+        tabs: updatedTabs,
+        activeTabIndex: updatedTabs.length - 1,
+        currentFile: null,
+        currentContent: '',
+        isDirty: false,
+      });
+    } catch (error) {
+      console.error('openVideoNoteFromContent failed:', error);
+      // fallback
+      get().openVideoNoteTab('', title);
+    }
   },
 
   // 打开数据库标签页

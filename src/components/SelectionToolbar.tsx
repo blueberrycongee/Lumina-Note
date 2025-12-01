@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquarePlus } from "lucide-react";
+import { MessageSquarePlus, Video } from "lucide-react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 
@@ -16,7 +16,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [selectedText, setSelectedText] = useState("");
   const { addTextSelection } = useAIStore();
-  const { currentFile } = useFileStore();
+  const { currentFile, openVideoNoteFromContent } = useFileStore();
 
   const handleSelectionChange = useCallback(() => {
     const selection = window.getSelection();
@@ -123,6 +123,18 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     setSelectedText("");
   };
 
+  const handleOpenAsVideoNote = () => {
+    if (!selectedText.trim()) return;
+
+    // 直接利用现有解析逻辑：允许用户选中完整的视频笔记 Markdown 段落
+    // 若解析失败，底层会降级为普通空视频标签
+    openVideoNoteFromContent(selectedText, "视频笔记");
+
+    window.getSelection()?.removeAllRanges();
+    setPosition(null);
+    setSelectedText("");
+  };
+
   if (!position || !selectedText) return null;
 
   return (
@@ -142,6 +154,14 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         >
           <MessageSquarePlus size={14} />
           <span>Add to Chat</span>
+        </button>
+        <button
+          onClick={handleOpenAsVideoNote}
+          className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
+          title="作为视频笔记打开（支持识别时间戳）"
+        >
+          <Video size={14} />
+          <span>Video Note</span>
         </button>
       </div>
       {/* 左侧小三角指向选中文字 */}

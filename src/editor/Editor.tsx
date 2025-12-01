@@ -38,6 +38,7 @@ export function Editor() {
     canGoBack,
     canGoForward,
   } = useFileStore();
+  const { openVideoNoteFromContent } = useFileStore();
 
   const { 
     toggleLeftSidebar, 
@@ -172,6 +173,16 @@ export function Editor() {
     );
   }
 
+  // 打开文件时自动检测是否是视频笔记 Markdown，给出提示
+  const isVideoNoteFile = useMemo(() => {
+    if (!currentContent) return false;
+    // 简单检测 frontmatter 中是否包含 video_bvid 字段
+    // 或正文中包含 "# 视频笔记" 标题
+    const hasFrontmatterBvid = /---[\s\S]*?video_bvid:\s*BV[\w-]+[\s\S]*?---/.test(currentContent);
+    const hasVideoNoteHeading = /# \s*视频笔记/.test(currentContent);
+    return hasFrontmatterBvid || hasVideoNoteHeading;
+  }, [currentContent]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-background transition-colors duration-300">
       {/* Tab Bar */}
@@ -275,6 +286,17 @@ export function Editor() {
         <SelectionToolbar containerRef={scrollContainerRef} />
         
         <div className="max-w-3xl mx-auto px-6 py-4 editor-mode-container">
+            {isVideoNoteFile && (
+              <div className="mb-3 flex items-center justify-between px-3 py-2 bg-blue-500/5 border border-blue-500/30 rounded-md text-xs text-blue-700 dark:text-blue-300">
+                <span>检测到这是一个视频笔记 Markdown，可以在专用的视频笔记视图中查看和编辑。</span>
+                <button
+                  onClick={() => openVideoNoteFromContent(currentContent, getFileName(currentFile || '视频笔记'))}
+                  className="ml-3 px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 text-xs font-medium"
+                >
+                  以视频笔记方式打开
+                </button>
+              </div>
+            )}
           {editorMode === "reading" && (
             <div key="reading" className="editor-mode-content">
               <ReadingView content={currentContent} />

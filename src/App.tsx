@@ -388,6 +388,7 @@ function App() {
             <TabBar />
             <VideoNoteView 
               initialUrl={activeTab.videoUrl}
+              initialNoteFile={activeTab.videoNoteData}
               isActive={true}
             />
           </div>
