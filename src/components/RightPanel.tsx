@@ -1,19 +1,14 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { diffLines } from "diff";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentStore } from "@/stores/useAgentStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useRAGStore } from "@/stores/useRAGStore";
-import { EditSuggestion, applyEdit } from "@/lib/ai";
 import { getFileName } from "@/lib/utils";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 import {
   BrainCircuit,
-  Send,
-  AtSign,
-  X,
   FileText,
   Settings,
   Trash2,
@@ -25,81 +20,10 @@ import {
   ArrowUpRight,
   ChevronRight,
   Bot,
-  Mic,
-  MicOff,
-  RefreshCw,
 } from "lucide-react";
-import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { AgentPanel } from "./AgentPanel";
 import { ConversationList } from "./ConversationList";
-
-// Edit suggestion card
-function EditCard({ 
-  edit, 
-  onApply, 
-  onReject 
-}: { 
-  edit: EditSuggestion; 
-  onApply: () => void; 
-  onReject: () => void;
-}) {
-  const diff = useMemo(() => {
-    return diffLines(edit.originalContent, edit.newContent);
-  }, [edit.originalContent, edit.newContent]);
-
-  return (
-    <div className="border border-border rounded-lg p-3 bg-muted/30 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-primary flex items-center gap-1">
-          <FileText size={12} />
-          {edit.filePath.split(/[/\\]/).pop()}
-        </span>
-        <div className="flex gap-1">
-          <button
-            onClick={onApply}
-            className="px-2 py-1 rounded bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-xs font-medium"
-            title="预览修改"
-          >
-            预览
-          </button>
-          <button
-            onClick={onReject}
-            className="p-1 rounded bg-red-500/20 text-red-600 hover:bg-red-500/30 transition-colors"
-            title="忽略"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-      <p className="text-xs text-muted-foreground">{edit.description}</p>
-      
-      <div className="text-xs font-mono bg-background/50 rounded border border-border overflow-hidden max-h-[200px] overflow-y-auto">
-        {diff.map((part, index) => {
-          if (part.added) {
-            return (
-              <div key={index} className="bg-green-500/10 text-green-600 px-2 py-0.5 whitespace-pre-wrap border-l-2 border-green-500">
-                {part.value}
-              </div>
-            );
-          }
-          if (part.removed) {
-            return (
-              <div key={index} className="bg-red-500/10 text-red-600 px-2 py-0.5 whitespace-pre-wrap line-through opacity-70 border-l-2 border-red-500">
-                {part.value}
-              </div>
-            );
-          }
-          // Context
-          return (
-            <div key={index} className="text-muted-foreground px-2 py-0.5 whitespace-pre-wrap opacity-50">
-              {part.value}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
+import { ChatPanel } from "./ChatPanel";
 
 // Heading item in outline
 interface HeadingItem {
@@ -412,22 +336,11 @@ export function RightPanel() {
     setFloatingBallDragging,
   } = useUIStore();
   const { 
-    messages, 
-    isLoading, 
-    error, 
-    referencedFiles,
-    pendingEdits,
     config,
-    sendMessage,
     clearChat,
-    retry,
-    addFileReference,
-    removeFileReference,
-    clearPendingEdits,
     setConfig,
-    setPendingDiff,
   } = useAIStore();
-  const { currentFile, currentContent, fileTree } = useFileStore();
+  useFileStore(); // Hook needed for store subscription
   const { 
     config: ragConfig, 
     setConfig: setRAGConfig, 
@@ -438,16 +351,9 @@ export function RightPanel() {
   } = useRAGStore();
   const { autoApprove, setAutoApprove } = useAgentStore();
   
-  const [inputValue, setInputValue] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [showFilePicker, setShowFilePicker] = useState(false);
   const [isDraggingAI, setIsDraggingAI] = useState(false);
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const { isRecording, interimText, toggleRecording } = useSpeechToText((text: string) => {
-    setInputValue((prev) => (prev ? prev + " " + text : text));
-  });
 
   // 处理 AI tab 拖拽开始
   const handleAIDragStart = (e: React.MouseEvent) => {
@@ -488,13 +394,6 @@ export function RightPanel() {
     };
   }, [isDraggingAI, dragStartPos, setFloatingBallPosition, setAIPanelMode]);
 
-  // Auto-scroll to bottom (only within chat container, not affecting page)
-  useEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-    }
-  }, [messages]);
-
   // Listen for tag-clicked events to switch to Tags tab
   useEffect(() => {
     const handleTagClicked = (e: CustomEvent<{ tag: string }>) => {
@@ -508,111 +407,6 @@ export function RightPanel() {
       window.removeEventListener("tag-clicked", handleTagClicked as EventListener);
     };
   }, [setRightPanelTab]);
-
-  // Get current file info for AI context
-  const currentFileInfo = useMemo(() => {
-    if (!currentFile) return null;
-    const name = currentFile.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "";
-    return {
-      path: currentFile,
-      name,
-      content: currentContent,
-    };
-  }, [currentFile, currentContent]);
-
-  // Handle send message
-  const handleSend = useCallback(async () => {
-    if (!inputValue.trim() || isLoading) return;
-    
-    const message = inputValue;
-    setInputValue("");
-    // Pass current file if no manual references added
-    await sendMessage(message, currentFileInfo || undefined);
-  }, [inputValue, isLoading, sendMessage, currentFileInfo]);
-
-  // Handle key press
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // STT 逻辑通过 useSpeechToText 统一管理
-
-  // Preview edit in diff view
-  const handlePreviewEdit = useCallback((edit: EditSuggestion) => {
-    console.log("[Preview] Edit:", edit);
-    console.log("[Preview] currentFileInfo:", currentFileInfo);
-    console.log("[Preview] referencedFiles:", referencedFiles);
-    
-    // Normalize file name for comparison
-    const editFileName = edit.filePath.replace(/\.md$/, "").toLowerCase();
-    
-    // Find the file - first check referencedFiles
-    let file = referencedFiles.find(f => {
-      const refName = f.name.replace(/\.md$/, "").toLowerCase();
-      return f.path.toLowerCase().includes(editFileName) || 
-             refName.includes(editFileName) ||
-             editFileName.includes(refName);
-    });
-    
-    // If not found in referenced files, check current file (auto context)
-    // This is the most common case when user doesn't manually add files
-    if (!file && currentFileInfo) {
-      const currentName = currentFileInfo.name.toLowerCase();
-      if (
-        currentFileInfo.path.toLowerCase().includes(editFileName) ||
-        currentName.includes(editFileName) ||
-        editFileName.includes(currentName) ||
-        // Also try exact match without extension
-        currentName === editFileName
-      ) {
-        file = currentFileInfo;
-      }
-    }
-    
-    // If still not found but we have current file, just use it (AI is likely modifying current file)
-    if (!file && currentFileInfo && currentFileInfo.content) {
-      console.log("[Preview] Using current file as fallback");
-      file = currentFileInfo;
-    }
-    
-    console.log("[Preview] Matched file:", file);
-    
-    if (file && file.content) {
-      const newContent = applyEdit(file.content, edit);
-      console.log("[Preview] Original length:", file.content.length);
-      console.log("[Preview] Modified length:", newContent.length);
-      
-      // Set pending diff to show in main view
-      setPendingDiff({
-        fileName: file.name,
-        filePath: file.path,
-        original: file.content,
-        modified: newContent,
-        description: edit.description,
-      });
-      console.log("[Preview] setPendingDiff called");
-    } else {
-      console.error("[Preview] No file found or no content");
-      alert("❌ 找不到要修改的文件");
-    }
-  }, [referencedFiles, currentFileInfo, setPendingDiff]);
-
-  // Flatten file tree for picker
-  const flattenFiles = (entries: typeof fileTree, result: {path: string; name: string}[] = []): {path: string; name: string}[] => {
-    for (const entry of entries) {
-      if (entry.is_dir && entry.children) {
-        flattenFiles(entry.children, result);
-      } else if (!entry.is_dir) {
-        result.push({ path: entry.path, name: entry.name });
-      }
-    }
-    return result;
-  };
-
-  const allFiles = flattenFiles(fileTree);
 
   return (
     <aside className="w-full h-full bg-background border-l border-border flex flex-col transition-colors duration-300">
@@ -1106,199 +900,7 @@ export function RightPanel() {
 
           {/* Chat Mode */}
           {chatMode === "chat" && (
-            <>
-          {/* Context indicator - shows which file(s) will be sent to AI */}
-          <div className="p-2 border-b border-border">
-            <div className="text-xs text-muted-foreground mb-1">上下文:</div>
-            <div className="flex flex-wrap gap-1">
-              {referencedFiles.length > 0 ? (
-                // Show manually added files
-                referencedFiles.map((file) => (
-                  <span
-                    key={file.path}
-                    className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded"
-                  >
-                    <FileText size={10} />
-                    {file.name}
-                    <button onClick={() => removeFileReference(file.path)}>
-                      <X size={10} />
-                    </button>
-                  </span>
-                ))
-              ) : currentFileInfo ? (
-                // Show current focused file (auto)
-                <span className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
-                  <FileText size={10} />
-                  {currentFileInfo.name}
-                  <span className="text-[10px] opacity-60">(自动)</span>
-                </span>
-              ) : (
-                <span className="text-xs text-muted-foreground/60">无文件</span>
-              )}
-            </div>
-          </div>
-
-          {/* Chat History */}
-          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
-            {/* Welcome message */}
-            {messages.length === 0 && (
-              <div className="text-sm text-muted-foreground leading-relaxed">
-                <p>你好！我可以帮你编辑笔记。</p>
-                <p className="mt-2 text-xs opacity-70">当前笔记会自动作为上下文</p>
-              </div>
-            )}
-
-            {/* Messages - Windsurf style */}
-            {messages.map((msg, idx) => (
-              <div key={idx} className={`${msg.role === "user" ? "flex justify-end" : ""}`}>
-                {msg.role === "user" ? (
-                  // User message - right aligned, blue background
-                  <div className="max-w-[85%] bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5 text-sm">
-                    {msg.content}
-                  </div>
-                ) : (
-                  // AI message - left aligned, simple text
-                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                    {msg.content}
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* Pending edits */}
-            {pendingEdits.length > 0 && (
-              <div className="space-y-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400">
-                  📝 待确认的修改 ({pendingEdits.length})
-                </p>
-                {pendingEdits.map((edit, idx) => (
-                  <EditCard
-                    key={idx}
-                    edit={edit}
-                    onApply={() => handlePreviewEdit(edit)}
-                    onReject={clearPendingEdits}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Loading */}
-            {isLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 size={14} className="animate-spin" />
-                <span>思考中...</span>
-              </div>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
-                {error}
-              </div>
-            )}
-
-            {/* Retry 按钮 - 只在有 AI 回复且不在加载时显示 */}
-            {messages.length > 0 && messages.some(m => m.role === "assistant") && !isLoading && (
-              <div className="flex justify-end">
-                <button
-                  onClick={() => {
-                    retry(currentFile ? {
-                      path: currentFile,
-                      name: currentFile.split(/[/\\]/).pop() || currentFile,
-                      content: currentContent || "",
-                    } : undefined);
-                  }}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-                  title="重新生成"
-                >
-                  <RefreshCw size={12} />
-                  重新生成
-                </button>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* File Picker */}
-          {showFilePicker && (
-            <div className="absolute bottom-24 left-3 right-3 bg-background border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto z-10">
-              {allFiles.map((file) => (
-                <button
-                  key={file.path}
-                  onClick={() => {
-                    addFileReference(file.path, file.name);
-                    setShowFilePicker(false);
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted flex items-center gap-2"
-                >
-                  <FileText size={12} />
-                  {file.name}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Input Area */}
-          <div className="p-3 border-t border-border">
-            <div className="bg-muted/30 border border-border rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
-              <textarea
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="输入消息..."
-                className="w-full bg-transparent resize-none outline-none text-sm min-h-[60px] max-h-32 text-foreground placeholder-muted-foreground"
-              />
-              <div className="flex items-center mt-2 gap-2">
-                <div className="flex gap-2 items-center shrink-0">
-                  <button
-                    onClick={() => setShowFilePicker(!showFilePicker)}
-                    className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                    title="引用文件"
-                  >
-                    <AtSign size={14} />
-                  </button>
-                  <span className="text-xs text-muted-foreground/60">
-                    @ 添加文件
-                  </span>
-                </div>
-                {/* 流式显示中间识别结果 */}
-                <div className="flex-1 truncate text-sm text-foreground/70 italic">
-                  {interimText && <span className="animate-pulse">{interimText}...</span>}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={toggleRecording}
-                    className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${
-                      isRecording
-                        ? "bg-red-500/20 border-red-500 text-red-500"
-                        : "bg-background border-border text-muted-foreground hover:bg-accent"
-                    }`}
-                    title={isRecording ? "停止语音输入" : "开始语音输入"}
-                  >
-                    {isRecording && (
-                      <span className="absolute inset-0 rounded-md animate-ping bg-red-500/30" />
-                    )}
-                    {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
-                  </button>
-                  <button
-                    onClick={handleSend}
-                    disabled={!inputValue.trim() || isLoading}
-                    className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded p-1.5 transition-colors flex items-center justify-center"
-                    title="发送"
-                  >
-                    {isLoading ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <Send size={14} />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-            </>
+            <ChatPanel />
           )}
             </>
           )}

@@ -122,8 +122,8 @@ interface AIState {
   clearTextSelections: () => void;
 
   // Actions
-  sendMessage: (content: string, currentFile?: { path: string; name: string; content: string }) => Promise<void>;
-  sendMessageStream: (content: string, currentFile?: { path: string; name: string; content: string }) => Promise<void>;
+  sendMessage: (content: string, currentFile?: { path: string; name: string; content: string }, displayContent?: string) => Promise<void>;
+  sendMessageStream: (content: string, currentFile?: { path: string; name: string; content: string }, displayContent?: string) => Promise<void>;
   stopStreaming: () => void;
   clearChat: () => void;
   retry: (currentFile?: { path: string; name: string; content: string }) => Promise<void>;  // 重新生成
@@ -278,7 +278,7 @@ export const useAIStore = create<AIState>()(
       },
 
       // Send message
-      sendMessage: async (content, currentFile) => {
+      sendMessage: async (content, currentFile, displayContent) => {
         const { referencedFiles, config, currentSessionId } = get();
 
         if (!config.apiKey) {
@@ -289,21 +289,21 @@ export const useAIStore = create<AIState>()(
         // Parse @file references in message
         const fileRefs = parseFileReferences(content);
         
-        // Add user message
-        const userMessage: Message = { role: "user", content };
+        // Add user message (use displayContent for showing, content for AI)
+        const userMessage: Message = { role: "user", content: displayContent || content };
 
         // 确保有当前会话
         if (!currentSessionId) {
           get().createSession();
         }
 
+        // 先显示用户消息
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
           const newMessages = [...state.messages, userMessage];
           const newTitle = generateSessionTitleFromMessages(newMessages, "新对话");
           return {
             messages: newMessages,
-            isLoading: true,
             error: null,
             sessions: state.sessions.map((s) =>
               s.id === state.currentSessionId
@@ -317,6 +317,10 @@ export const useAIStore = create<AIState>()(
             ),
           };
         });
+
+        // 短暂延迟后再显示 loading 状态
+        await new Promise(resolve => setTimeout(resolve, 150));
+        set({ isLoading: true });
 
         try {
           // Load any new referenced files
@@ -429,23 +433,23 @@ export const useAIStore = create<AIState>()(
       },
 
       // 流式发送消息
-      sendMessageStream: async (content, currentFile) => {
+      sendMessageStream: async (content, currentFile, displayContent) => {
         const { referencedFiles, config, currentSessionId } = get();
 
-        // Add user message
-        const userMessage: Message = { role: "user", content };
+        // Add user message (use displayContent for showing, content for AI)
+        const userMessage: Message = { role: "user", content: displayContent || content };
 
         if (!currentSessionId) {
           get().createSession();
         }
 
+        // 先显示用户消息
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
           const newMessages = [...state.messages, userMessage];
           const newTitle = generateSessionTitleFromMessages(newMessages, "新对话");
           return {
             messages: newMessages,
-            isStreaming: true,
             streamingContent: "",
             streamingReasoning: "",
             error: null,
@@ -461,6 +465,10 @@ export const useAIStore = create<AIState>()(
             ),
           };
         });
+
+        // 短暂延迟后再显示 streaming 状态
+        await new Promise(resolve => setTimeout(resolve, 150));
+        set({ isStreaming: true });
 
         if (!config.apiKey && config.provider !== "ollama") {
           set({ error: "请先在设置中配置 API Key" });

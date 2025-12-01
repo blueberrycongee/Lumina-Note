@@ -284,8 +284,10 @@ export const useAgentStore = create<AgentState>()(
             mode: MODES[mode],
           };
 
+          // 先显示用户消息（使用 displayMessage 显示简洁版本，不含完整文件内容）
+          const displayContent = fullContext.displayMessage || message;
           set((state) => {
-            const userMessage: Message = { role: "user", content: message };
+            const userMessage: Message = { role: "user", content: displayContent };
 
             const currentSession = state.sessions.find(
               (s) => s.id === state.currentSessionId
@@ -295,8 +297,7 @@ export const useAgentStore = create<AgentState>()(
             const newTitle = generateAgentSessionTitleFromMessages(newMessages, "新对话");
 
             return {
-              status: "running",
-              currentTask: message,
+              currentTask: displayContent,
               lastError: null,
               messages: newMessages,
               sessions: state.sessions.map((s) =>
@@ -304,8 +305,7 @@ export const useAgentStore = create<AgentState>()(
                   ? {
                       ...s,
                       title: s.title === "新对话" ? newTitle : s.title,
-                      status: "running",
-                      currentTask: message,
+                      currentTask: displayContent,
                       messages: newMessages,
                       lastError: null,
                       updatedAt: Date.now(),
@@ -314,6 +314,17 @@ export const useAgentStore = create<AgentState>()(
               ),
             };
           });
+
+          // 短暂延迟后再显示 running 状态
+          await new Promise(resolve => setTimeout(resolve, 150));
+          set((state) => ({
+            status: "running",
+            sessions: state.sessions.map((s) =>
+              s.id === state.currentSessionId
+                ? { ...s, status: "running", updatedAt: Date.now() }
+                : s
+            ),
+          }));
 
           try {
             await loop.startTask(message, fullContext);
@@ -450,10 +461,15 @@ export const useAgentStore = create<AgentState>()(
           const viewMessages = loopState.messages.filter((m) => m.role !== "system");
           
           set((state) => {
-            const newTitle = generateAgentTitleFromAssistant(viewMessages, "新对话");
+            // 防止旧消息覆盖新消息（当 AgentLoop 还没同步时）
+            // 只有当 loop 的消息数量 >= 当前 store 的消息数量时才更新
+            const shouldUpdateMessages = viewMessages.length >= state.messages.length;
+            const finalMessages = shouldUpdateMessages ? viewMessages : state.messages;
+            
+            const newTitle = generateAgentTitleFromAssistant(finalMessages, "新对话");
             return {
               status: loopState.status,
-              messages: viewMessages,
+              messages: finalMessages,
               pendingTool: loopState.pendingTool,
               currentTask: loopState.currentTask,
               lastError: loopState.lastError,
@@ -463,7 +479,7 @@ export const useAgentStore = create<AgentState>()(
                       ...s,
                       title: s.title === "新对话" ? newTitle : s.title,
                       status: loopState.status,
-                      messages: viewMessages,
+                      messages: finalMessages,
                       currentTask: loopState.currentTask,
                       lastError: loopState.lastError,
                       updatedAt: Date.now(),

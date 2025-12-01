@@ -13,13 +13,11 @@ import {
   Settings, 
   Trash2, 
   Dock,
-  Loader2,
 } from "lucide-react";
 import { AgentPanel } from "./AgentPanel";
 import { ConversationList } from "./ConversationList";
-import { ChatInput, type ReferencedFile } from "./ChatInput";
+import { ChatPanel } from "./ChatPanel";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
-import { readFile } from "@/lib/tauri";
 
 interface AIFloatingPanelProps {
   ballPosition: { x: number; y: number };
@@ -28,30 +26,15 @@ interface AIFloatingPanelProps {
 
 export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { chatMode, setChatMode, setFloatingPanelOpen } = useUIStore();
   const { 
     config, 
     setConfig, 
     clearChat,
-    messages,
-    isLoading,
-    isStreaming,
-    streamingContent,
-    streamingReasoning,
-    error,
-    sendMessageStream,
-    stopStreaming,
   } = useAIStore();
-  const { currentFile, currentContent } = useFileStore();
+  useFileStore(); // Hook for store subscription
 
   const [showSettings, setShowSettings] = useState(false);
-  const [inputValue, setInputValue] = useState("");
-
-  // 滚动到底部
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [messages, streamingContent, streamingReasoning]);
 
   // 计算面板位置（在悬浮球旁边）
   const getPanelPosition = () => {
@@ -264,115 +247,12 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
         {chatMode === "agent" ? (
           <AgentPanel />
         ) : (
-          <div className="flex flex-col h-full overflow-hidden">
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {messages.length === 0 && !isStreaming && (
-                <div className="text-sm text-muted-foreground leading-relaxed">
-                  <p>你好！我可以帮你编辑笔记。</p>
-                </div>
-              )}
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`${msg.role === "user" ? "flex justify-end" : ""}`}>
-                  {msg.role === "user" ? (
-                    <div className="max-w-[85%] bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-3 py-2 text-sm">
-                      {msg.content}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                      {msg.content}
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              {/* 流式内容显示 */}
-              {isStreaming && (
-                <div className="space-y-2">
-                  {streamingReasoning && (
-                    <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded border-l-2 border-yellow-500">
-                      <div className="font-medium mb-1">💭 思考中...</div>
-                      <div className="whitespace-pre-wrap opacity-70">{streamingReasoning}</div>
-                    </div>
-                  )}
-                  {streamingContent && (
-                    <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                      {streamingContent}
-                      <span className="inline-block w-2 h-4 bg-primary/50 animate-pulse ml-0.5" />
-                    </div>
-                  )}
-                  {!streamingContent && !streamingReasoning && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>连接中...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {isLoading && !isStreaming && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>思考中...</span>
-                </div>
-              )}
-              {error && (
-                <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
-                  {error}
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-            
-            {/* Input */}
-            <div className="p-2 border-t border-border">
-              <ChatInput
-                value={inputValue}
-                onChange={setInputValue}
-                onSend={handleSendWithFiles}
-                isLoading={isLoading}
-                isStreaming={isStreaming}
-                onStop={stopStreaming}
-                placeholder="输入消息... (@ 引用文件)"
-                rows={2}
-              />
-            </div>
-          </div>
+          <ChatPanel compact />
         )}
       </div>
       </div>
       </div>
     </div>
   );
-
-  // 发送消息（流式）- 支持引用文件
-  async function handleSendWithFiles(message: string, referencedFiles: ReferencedFile[]) {
-    if ((!message.trim() && referencedFiles.length === 0) || isLoading || isStreaming) return;
-    
-    // 构建文件上下文
-    let contextContent = "";
-    
-    // 添加引用文件的内容
-    for (const file of referencedFiles) {
-      if (!file.isFolder) {
-        try {
-          const content = await readFile(file.path);
-          contextContent += `\n\n--- 引用文件: ${file.name} ---\n${content}`;
-        } catch (e) {
-          console.error(`Failed to read file ${file.path}:`, e);
-        }
-      }
-    }
-    
-    // 如果没有引用文件，使用当前文件作为上下文
-    const fileContext = referencedFiles.length > 0 
-      ? { path: "", name: "引用文件", content: contextContent.trim() }
-      : currentFile 
-        ? { path: currentFile, name: currentFile.split(/[/\\]/).pop() || "", content: currentContent }
-        : undefined;
-    
-    sendMessageStream(message.trim(), fileContext);
-    setInputValue("");
-  }
 }
 

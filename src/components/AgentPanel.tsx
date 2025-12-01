@@ -10,9 +10,9 @@ import { useFileStore } from "@/stores/useFileStore";
 import { MODES, getModeList } from "@/agent/modes";
 import { AgentModeSlug, Message } from "@/agent/types";
 import { parseMarkdown } from "@/lib/markdown";
-import { ChatInput, type ReferencedFile } from "./ChatInput";
+import { ChatInput } from "./ChatInput";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
-import { readFile } from "@/lib/tauri";
+import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
 import {
   Square,
   Check,
@@ -64,28 +64,14 @@ export function AgentPanel() {
 
     setInput("");
 
-    // 读取引用文件的内容
-    let additionalContext = "";
-    for (const file of referencedFiles) {
-      if (!file.isFolder) {
-        try {
-          const content = await readFile(file.path);
-          additionalContext += `\n\n--- 引用文件: ${file.name} ---\n${content}`;
-        } catch (e) {
-          console.error(`Failed to read file ${file.path}:`, e);
-        }
-      }
-    }
-
-    // 如果有引用文件，将内容附加到消息中
-    const fullMessage = additionalContext 
-      ? `${message}\n\n[用户引用的文件内容]${additionalContext}`
-      : message;
+    // 使用共享函数处理消息和文件
+    const { displayMessage, fullMessage } = await processMessageWithFiles(message, referencedFiles);
 
     await startTask(fullMessage, {
       workspacePath: vaultPath || "",
       activeNote: currentFile || undefined,
       activeNoteContent: currentFile ? currentContent : undefined,
+      displayMessage,
     });
   };
 

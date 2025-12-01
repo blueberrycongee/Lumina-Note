@@ -91,6 +91,7 @@ export interface TaskContext {
   recentNotes?: string[];
   mode?: AgentMode;
   ragResults?: RAGSearchResult[];  // RAG 自动注入的搜索结果
+  displayMessage?: string;  // 用于前端显示的消息（不含文件完整内容）
 }
 
 // ============ Agent 模式 ============
