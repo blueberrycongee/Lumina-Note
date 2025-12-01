@@ -54,14 +54,24 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     const scrollLeft = container.scrollLeft;
     
     // 工具栏大约宽度 130px
-    const toolbarWidth = 130;
+    const toolbarWidth = 140;
     let x = rect.right - containerRect.left + scrollLeft + 8;  // 选区右边 + 8px 间距
     let y = rect.top - containerRect.top + scrollTop + rect.height / 2;  // 垂直居中
     
-    // 边界检测：如果右侧放不下，显示在左侧
+    // 边界检测：如果右侧放不下，尝试左侧
     if (rect.right - containerRect.left + toolbarWidth + 8 > containerRect.width) {
-      x = rect.left - containerRect.left + scrollLeft - toolbarWidth - 8;
+      const leftX = rect.left - containerRect.left + scrollLeft - toolbarWidth - 8;
+      // 如果左侧也放不下（会变成负数），就放在选区正上方
+      if (leftX < scrollLeft) {
+        x = rect.left - containerRect.left + scrollLeft;
+        y = rect.top - containerRect.top + scrollTop - 40;  // 选区上方
+      } else {
+        x = leftX;
+      }
     }
+    
+    // 确保 x 不小于 0
+    x = Math.max(scrollLeft + 8, x);
     
     // 确保 y 在可视区域内（相对于滚动位置）
     const viewportTop = scrollTop;
