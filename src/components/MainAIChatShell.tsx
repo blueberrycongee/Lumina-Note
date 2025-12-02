@@ -12,7 +12,6 @@ import { join } from "@/lib/path";
 import {
   ArrowUp,
   Bot,
-  BrainCircuit,
   FileText,
   Sparkles,
   X,
@@ -32,8 +31,6 @@ import {
   AlertCircle,
   Check,
   Settings,
-  Loader2,
-  Tag,
 } from "lucide-react";
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { AISettingsModal } from "@/components/ai/AISettingsModal";
