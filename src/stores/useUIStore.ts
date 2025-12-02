@@ -71,6 +71,10 @@ interface UIState {
   setVideoNoteUrl: (url: string | null) => void;
   openVideoNote: (url: string) => void;
   toggleVideoNote: () => void;
+  
+  // Settings modal
+  isSettingsOpen: boolean;
+  setSettingsOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -161,6 +165,10 @@ export const useUIStore = create<UIState>()(
       setVideoNoteUrl: (url) => set({ videoNoteUrl: url }),
       openVideoNote: (url) => set({ videoNoteUrl: url, videoNoteOpen: true }),
       toggleVideoNote: () => set((state) => ({ videoNoteOpen: !state.videoNoteOpen })),
+      
+      // Settings modal
+      isSettingsOpen: false,
+      setSettingsOpen: (open) => set({ isSettingsOpen: open }),
     }),
     {
       name: "neurone-ui",

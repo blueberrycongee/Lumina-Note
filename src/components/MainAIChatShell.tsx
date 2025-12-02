@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentStore } from "@/stores/useAgentStore";
+import { useRAGStore } from "@/stores/useRAGStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
@@ -11,6 +12,7 @@ import { join } from "@/lib/path";
 import {
   ArrowUp,
   Bot,
+  BrainCircuit,
   FileText,
   Sparkles,
   X,
@@ -29,8 +31,12 @@ import {
   Wrench,
   AlertCircle,
   Check,
+  Settings,
+  Loader2,
+  Tag,
 } from "lucide-react";
 import type { ReferencedFile } from "@/hooks/useChatSend";
+import { AISettingsModal } from "./AISettingsModal";
 
 // 随机黄豆 emoji 列表
 const WELCOME_EMOJIS = [
@@ -81,6 +87,7 @@ function SuggestionCard({
 export function MainAIChatShell() {
   const { chatMode, setChatMode } = useUIStore();
   const [input, setInput] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
   const [filePickerQuery, setFilePickerQuery] = useState("");
@@ -125,7 +132,11 @@ export function MainAIChatShell() {
     sendMessageStream,
     stopStreaming,
     checkFirstLoad: checkChatFirstLoad,
+    config,
   } = useAIStore();
+
+  useRAGStore();
+  useAgentStore();
 
   // 根据模式获取对应的会话数据
   const sessions = chatMode === "agent" ? agentSessions : chatSessions;
@@ -761,7 +772,7 @@ export function MainAIChatShell() {
 
         {/* 输入框容器 */}
         <div className={`w-full shrink-0 ${hasStarted ? "pb-4" : ""}`}>
-          <motion.div 
+          <motion.div
             layout
             transition={{ type: "spring", bounce: 0, duration: 0.6 }}
             className="w-full max-w-3xl mx-auto px-4"
@@ -899,6 +910,18 @@ export function MainAIChatShell() {
                     </span>
                   </button>
                 </div>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {config.apiKey ? "✓" : "未配置"}
+                </span>
+
+                {/* 设置按钮：紧挨着模式切换的小齿轮，打开 AI 对话设置 */}
+                <button
+                  onClick={() => setShowSettings(true)}
+                  className="ml-1 flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  title="AI 对话设置"
+                >
+                  <Settings size={14} />
+                </button>
                 
                 {/* 语音识别中间结果 */}
                 {interimText && (
@@ -947,7 +970,7 @@ export function MainAIChatShell() {
             {/* 应用集成栏 - 仅在未开始时显示 */}
             <AnimatePresence>
               {!hasStarted && (
-                <motion.div 
+                <motion.div
                   initial={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   className="bg-muted/30 border-t border-border px-4 py-2.5 text-xs text-muted-foreground overflow-hidden"
@@ -956,18 +979,21 @@ export function MainAIChatShell() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </motion.div>
-          
+
+            {/* AI 对话设置面板：使用悬浮窗口 */}
+            <AISettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+
             {/* 底部说明文字 (仅对话模式) */}
             {hasStarted && (
-              <motion.p 
-                initial={{ opacity: 0 }} 
+              <motion.p
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1, transition: { delay: 0.5 } }}
                 className="text-center text-xs text-muted-foreground mt-3"
               >
                 AI 生成的内容可能存在错误，请注意核实
               </motion.p>
             )}
+          </motion.div>
           </motion.div>
         </div>
 
@@ -1066,6 +1092,7 @@ export function MainAIChatShell() {
           </div>
         )}
       </div>
+
     </div>
   );
 }

@@ -43,7 +43,7 @@ interface CreatingState {
 }
 
 export function Sidebar() {
-  const { vaultPath, fileTree, currentFile, openFile, refreshFileTree, isLoadingTree, closeFile, openDatabaseTab, openPDFTab } =
+  const { vaultPath, fileTree, currentFile, openFile, refreshFileTree, isLoadingTree, closeFile, openDatabaseTab, openPDFTab, tabs, activeTabIndex } =
     useFileStore();
   const { config: ragConfig, isIndexing: ragIsIndexing, indexStatus, rebuildIndex, cancelIndex } = useRAGStore();
   const { setRightPanelTab, splitView } = useUIStore();
@@ -107,6 +107,9 @@ export function Sidebar() {
   const [renameValue, setRenameValue] = useState("");
   // 展开的文件夹路径集合
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+
+  // 当前是否激活了 AI 主对话标签
+  const isAIMainActive = tabs[activeTabIndex]?.type === "ai-chat";
 
   // Sync selectedPath with currentFile
   useEffect(() => {
@@ -453,7 +456,12 @@ export function Sidebar() {
               // 温和版：仅切换右侧面板 Tab，让 AI 区域消失
               setRightPanelTab("outline");
             }}
-            className="p-1 hover:bg-accent rounded transition-colors"
+            className={cn(
+              "p-1 rounded transition-colors",
+              isAIMainActive
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent"
+            )}
             title="AI 聊天（在主视图区打开）"
           >
             <Bot className="w-3.5 h-3.5" />

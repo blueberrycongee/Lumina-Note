@@ -20,13 +20,38 @@ import { SettingsModal } from "./SettingsModal";
 export function Ribbon() {
   const [showSettings, setShowSettings] = useState(false);
   const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
-  const { tabs, activeTabIndex, openGraphTab, switchTab, openVideoNoteTab, recentFiles, openFile, fileTree, openAIMainTab } = useFileStore();
+  const {
+    tabs,
+    activeTabIndex,
+    openGraphTab,
+    switchTab,
+    openVideoNoteTab,
+    recentFiles,
+    openFile,
+    fileTree,
+    openAIMainTab,
+    currentFile,
+  } = useFileStore();
 
-  // Check active tab type
+  // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
-  const isGraphActive = activeTab?.type === "graph";
-  const isVideoActive = activeTab?.type === "video-note";
-  const isDatabaseActive = activeTab?.type === "database";
+
+  // 归一化当前主视图所属的功能区，方便扩展
+  type RibbonSection = "ai" | "file" | "graph" | "video" | "database" | "none";
+
+  let activeSection: RibbonSection = "none";
+  if (activeTab?.type === "ai-chat") {
+    activeSection = "ai";
+  } else if (activeTab?.type === "graph" || activeTab?.type === "isolated-graph") {
+    activeSection = "graph";
+  } else if (activeTab?.type === "video-note") {
+    activeSection = "video";
+  } else if (activeTab?.type === "database") {
+    activeSection = "database";
+  } else if (activeTab?.type === "file" || currentFile) {
+    // 没有特殊类型时，只要在编辑文件，就认为是文件编辑区
+    activeSection = "file";
+  }
 
   // Find first file tab to switch to
   const handleSwitchToFiles = async () => {
@@ -88,7 +113,12 @@ export function Ribbon() {
             openAIMainTab();
             setRightPanelTab("outline");
           }}
-          className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className={cn(
+            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            activeSection === "ai"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
           title="AI 聊天（主视图）"
         >
           <Bot size={20} />
@@ -99,7 +129,7 @@ export function Ribbon() {
           onClick={handleSwitchToFiles}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            !isGraphActive && !isVideoActive
+            activeSection === "file"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
@@ -113,7 +143,7 @@ export function Ribbon() {
           onClick={openGraphTab}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            isGraphActive
+            activeSection === "graph"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
@@ -134,7 +164,7 @@ export function Ribbon() {
           }}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            isVideoActive
+            activeSection === "video"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
@@ -148,7 +178,7 @@ export function Ribbon() {
           onClick={() => window.dispatchEvent(new CustomEvent("open-create-database"))}
           className={cn(
             "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
-            isDatabaseActive
+            activeSection === "database"
               ? "bg-primary/10 text-primary"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}
