@@ -11,7 +11,9 @@ import { ReadNoteTool } from "./executors/ReadNoteTool";
 import { EditNoteTool } from "./executors/EditNoteTool";
 import { CreateNoteTool } from "./executors/CreateNoteTool";
 import { ListNotesTool } from "./executors/ListNotesTool";
-import { MoveNoteTool } from "./executors/MoveNoteTool";
+import { CreateFolderTool } from "./executors/CreateFolderTool";
+import { MoveFileTool } from "./executors/MoveFileTool";
+import { RenameFileTool } from "./executors/RenameFileTool";
 import { SearchNotesTool } from "./executors/SearchNotesTool";
 import { AttemptCompletionTool } from "./executors/AttemptCompletionTool";
 import { DeleteNoteTool } from "./executors/DeleteNoteTool";
@@ -38,7 +40,9 @@ export class ToolRegistry {
     this.register(EditNoteTool);
     this.register(CreateNoteTool);
     this.register(ListNotesTool);
-    this.register(MoveNoteTool);
+    this.register(CreateFolderTool);
+    this.register(MoveFileTool);
+    this.register(RenameFileTool);
     this.register(DeleteNoteTool);
     
     // 搜索工具
@@ -109,7 +113,9 @@ export class ToolRegistry {
 - create_note: 创建新笔记
 - delete_note: 删除笔记
 - list_notes: 列出目录下的笔记
-- move_note: 移动/重命名笔记
+- create_folder: 创建新目录
+- move_file: 移动文件/笔记
+- rename_file: 重命名文件/笔记
 - search_notes: 语义搜索笔记
 - grep_search: 全文搜索（支持正则）
 - attempt_completion: 完成任务

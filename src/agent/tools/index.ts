@@ -10,7 +10,9 @@ export { ReadNoteTool } from "./executors/ReadNoteTool";
 export { EditNoteTool } from "./executors/EditNoteTool";
 export { CreateNoteTool } from "./executors/CreateNoteTool";
 export { ListNotesTool } from "./executors/ListNotesTool";
-export { MoveNoteTool } from "./executors/MoveNoteTool";
+export { CreateFolderTool } from "./executors/CreateFolderTool";
+export { MoveFileTool } from "./executors/MoveFileTool";
+export { RenameFileTool } from "./executors/RenameFileTool";
 export { DeleteNoteTool } from "./executors/DeleteNoteTool";
 
 // 工具执行器 - 搜索

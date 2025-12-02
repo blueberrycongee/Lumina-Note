@@ -1,13 +1,13 @@
 /**
- * move_note 工具执行器
+ * move_file 工具执行器
  */
 
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { exists, rename, createDir } from "@/lib/tauri";
 import { join, dirname } from "@/lib/path";
 
-export const MoveNoteTool: ToolExecutor = {
-  name: "move_note",
+export const MoveFileTool: ToolExecutor = {
+  name: "move_file",
   requiresApproval: true, // 写操作，需要审批
 
   async execute(
@@ -24,10 +24,10 @@ export const MoveNoteTool: ToolExecutor = {
         error: `参数错误: 缺少 ${!from ? "from" : "to"} 参数。
 
 正确用法:
-<move_note>
-<from>原路径/笔记.md</from>
-<to>新路径/笔记.md</to>
-</move_note>
+<move_file>
+<from>原路径/文件.ext</from>
+<to>新路径/文件.ext</to>
+</move_file>
 
 提示: 也可用于重命名文件（在同一目录内移动）。`,
       };

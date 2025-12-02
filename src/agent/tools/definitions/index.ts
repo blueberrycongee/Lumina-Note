@@ -164,11 +164,40 @@ export const listNotesDefinition: ToolDefinition = {
 - 按字母顺序排列`,
 };
 
-// ============ move_note ============
+// ============ create_folder ============
 
-export const moveNoteDefinition: ToolDefinition = {
-  name: "move_note",
-  description: "移动或重命名笔记文件",
+export const createFolderDefinition: ToolDefinition = {
+  name: "create_folder",
+  description: "创建新目录",
+  parameters: [
+    {
+      name: "path",
+      type: "string",
+      required: true,
+      description: "要创建的目录路径",
+    },
+  ],
+  definition: `## create_folder
+描述: 创建新的目录文件夹。
+
+参数:
+- path: (必需) 目录路径，相对于笔记库根目录
+
+用法:
+<create_folder>
+<path>notes/new-category</path>
+</create_folder>
+
+注意:
+- 如果父目录不存在，会自动递归创建
+- 如果目录已存在，会返回错误`,
+};
+
+// ============ move_file ============
+
+export const moveFileDefinition: ToolDefinition = {
+  name: "move_file",
+  description: "移动文件或笔记到新目录",
   parameters: [
     {
       name: "from",
@@ -183,23 +212,60 @@ export const moveNoteDefinition: ToolDefinition = {
       description: "目标文件路径",
     },
   ],
-  definition: `## move_note
-描述: 移动或重命名笔记文件。
+  definition: `## move_file
+描述: 移动文件或笔记到新目录。
 
 参数:
 - from: (必需) 源文件路径，相对于笔记库根目录
 - to: (必需) 目标文件路径，相对于笔记库根目录
 
 用法:
-<move_note>
+<move_file>
 <from>notes/inbox/idea.md</from>
 <to>notes/projects/new-project.md</to>
-</move_note>
+</move_file>
 
 注意:
 - 会自动创建目标目录（如果不存在）
 - 如果目标文件已存在，操作将失败
-- 可用于重命名文件（在同一目录内移动）`,
+- 仅用于移动文件位置，如需重命名请使用 rename_file`,
+};
+
+// ============ rename_file ============
+
+export const renameFileDefinition: ToolDefinition = {
+  name: "rename_file",
+  description: "重命名文件、笔记或文件夹",
+  parameters: [
+    {
+      name: "path",
+      type: "string",
+      required: true,
+      description: "原文件/文件夹路径",
+    },
+    {
+      name: "new_name",
+      type: "string",
+      required: true,
+      description: "新名称（不含路径）",
+    },
+  ],
+  definition: `## rename_file
+描述: 重命名文件、笔记或文件夹（在同一目录下）。
+
+参数:
+- path: (必需) 原文件或文件夹路径，相对于笔记库根目录
+- new_name: (必需) 新名称，不包含路径
+
+用法:
+<rename_file>
+<path>notes/old-name.md</path>
+<new_name>new-name.md</new_name>
+</rename_file>
+
+注意:
+- 仅修改名称，不改变目录
+- 如果新名称已存在，操作将失败`,
 };
 
 // ============ search_notes ============
@@ -653,7 +719,9 @@ export function getAllToolDefinitions(): ToolDefinition[] {
     editNoteDefinition,
     createNoteDefinition,
     listNotesDefinition,
-    moveNoteDefinition,
+    createFolderDefinition,
+    moveFileDefinition,
+    renameFileDefinition,
     searchNotesDefinition,
     attemptCompletionDefinition,
     deleteNoteDefinition,
