@@ -1,5 +1,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { documentDir } from "@tauri-apps/api/path";
+import { exists, createDir } from "@/lib/tauri";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
 import { ResizeHandle } from "@/components/toolbar/ResizeHandle";
@@ -127,6 +129,34 @@ function App() {
       openAIMainTab();
     }
   }, []);
+
+  // 移动端自动初始化固定目录
+  useEffect(() => {
+    if (platform !== 'mobile') return;
+    if (vaultPath) return; // 已有 vault，不需要初始化
+    
+    const initMobileVault = async () => {
+      try {
+        const docDir = await documentDir();
+        const mobileVaultPath = `${docDir}/LuminaNote`;
+        
+        // 检查目录是否存在，不存在则创建
+        const dirExists = await exists(mobileVaultPath);
+        if (!dirExists) {
+          await createDir(mobileVaultPath);
+          console.log('[Mobile] Created vault directory:', mobileVaultPath);
+        }
+        
+        // 设置 vault 路径
+        setVaultPath(mobileVaultPath);
+        console.log('[Mobile] Vault initialized:', mobileVaultPath);
+      } catch (error) {
+        console.error('[Mobile] Failed to initialize vault:', error);
+      }
+    };
+    
+    initMobileVault();
+  }, [platform, vaultPath, setVaultPath]);
   
   // 启动时自动加载保存的工作空间
   useEffect(() => {
@@ -298,7 +328,7 @@ function App() {
 
   // 移动端使用专门的布局
   if (platform === 'mobile') {
-    return <MobileLayout onOpenVault={handleOpenVault} />;
+    return <MobileLayout />;
   }
 
   // Welcome screen when no vault is open

@@ -75,6 +75,10 @@ interface UIState {
   // Settings modal
   isSettingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
+  
+  // 移动端字号
+  mobileFontSize: number;
+  setMobileFontSize: (size: number) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -169,6 +173,10 @@ export const useUIStore = create<UIState>()(
       // Settings modal
       isSettingsOpen: false,
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
+      
+      // 移动端字号 (默认 16px)
+      mobileFontSize: 16,
+      setMobileFontSize: (size) => set({ mobileFontSize: Math.max(12, Math.min(24, size)) }),
     }),
     {
       name: "neurone-ui",

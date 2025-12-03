@@ -14,8 +14,19 @@ src-tauri/gen/android/app/build/
 src-tauri/gen/android/build/
 src-tauri/gen/android/buildSrc/build/
 src-tauri/gen/android/local.properties
+src-tauri/gen/android/app/src/main/jniLibs/
 *.apk
 *.aab
+
+# Android 签名密钥（敏感信息，不要提交！）
+*.keystore
+*.jks
+keystore.properties
+
+# iOS 构建产物
+src-tauri/gen/apple/build/
+src-tauri/gen/apple/*.xcodeproj/xcuserdata/
+src-tauri/gen/apple/*.xcodeproj/project.xcworkspace/xcuserdata/
 
 # OCR 模型文件（太大，应该单独下载）
 src-tauri/models/*.onnx

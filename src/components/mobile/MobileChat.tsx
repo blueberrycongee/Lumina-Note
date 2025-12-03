@@ -1,51 +1,66 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Sparkles, Settings, X, Check, Menu, Plus, MessageSquare, Trash2, Star, Keyboard, Mic } from 'lucide-react';
+import { Send, Sparkles, Settings, X, Check, Menu, Plus, MessageSquare, Trash2, Star, Mic } from 'lucide-react';
+import { useAgentStore } from '@/stores/useAgentStore';
 import { useAIStore } from '@/stores/useAIStore';
 import { PROVIDER_REGISTRY, type LLMProviderType } from '@/services/llm/types';
-
-// Web Speech API 类型 (浏览器原生 API)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SpeechRecognitionType = any;
+import { useFileStore } from '@/stores/useFileStore';
+import { useUIStore } from '@/stores/useUIStore';
+import { 
+  startListening, 
+  cancelListening, 
+  onPartialResult, 
+  isNativeSpeechAvailable 
+} from '@/lib/speech';
 
 interface MobileChatProps {
   onToggleSidebar?: () => void;
 }
 
 export function MobileChat({ onToggleSidebar }: MobileChatProps) {
+  // Agent Store (主要对话逻辑)
   const { 
     messages, 
-    isStreaming, 
-    sendMessageStream,
-    config,
-    setConfig,
+    status,
+    startTask,
     sessions,
     currentSessionId,
-  } = useAIStore();
+  } = useAgentStore();
+  
+  // AI Store (配置)
+  const { config, setConfig } = useAIStore();
+  
+  // File Store (获取当前文件信息)
+  const { vaultPath } = useFileStore();
+  
+  // UI Store (字号设置)
+  const { mobileFontSize, setMobileFontSize } = useUIStore();
+  
+  const isStreaming = status === 'running';
   
   const [input, setInput] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [inputMode, setInputMode] = useState<'voice' | 'keyboard'>('voice'); // 语音/键盘模式
+  const [isKeyboardMode, setIsKeyboardMode] = useState(false); // 是否在键盘输入模式
   const [isRecording, setIsRecording] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [voiceText, setVoiceText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionType | null>(null);
   const touchStartY = useRef<number>(0);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPressing = useRef(false);
-  const voiceTextRef = useRef(''); // 用 ref 存最新值，避免闭包问题
+  const didLongPress = useRef(false);
+  const voiceTextRef = useRef('');
+  const unlistenPartialRef = useRef<(() => void) | null>(null);
 
   // 同步 voiceText 到 ref
   useEffect(() => {
     voiceTextRef.current = voiceText;
   }, [voiceText]);
 
-  // 长按开始录音
-  const startRecording = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) {
-      alert('浏览器不支持语音识别，请使用 Chrome');
+  // 长按开始录音 - 使用 Android 原生 API
+  const startRecording = useCallback(async () => {
+    if (!isNativeSpeechAvailable()) {
+      alert('该设备不支持语音识别');
       return;
     }
     
@@ -55,51 +70,64 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
     setVoiceText('');
     voiceTextRef.current = '';
     
-    const recognition = new SpeechRecognitionAPI() as SpeechRecognitionType;
-    recognition.lang = 'zh-CN';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    // 监听实时识别结果
+    try {
+      const unlisten = await onPartialResult((text) => {
+        setVoiceText(text);
+        voiceTextRef.current = text;
+      });
+      unlistenPartialRef.current = unlisten;
+    } catch (e) {
+      console.error('Failed to setup partial listener:', e);
+    }
     
-    recognition.onresult = (event: SpeechRecognitionType) => {
-      const transcript = Array.from(event.results)
-        .map((result: SpeechRecognitionType) => result[0].transcript)
-        .join('');
-      setVoiceText(transcript);
-      voiceTextRef.current = transcript;
-    };
+    // 开始语音识别
+    const result = await startListening();
     
-    recognition.onerror = () => {
+    // 识别结束后的处理
+    if (isLongPressing.current) {
+      // 用户还在按住，但识别已结束（可能是静音超时）
       isLongPressing.current = false;
       setIsRecording(false);
-      setVoiceText('');
-    };
-    
-    recognition.onend = () => {
-      // 语音识别自然结束（如静音超时）
-      if (isLongPressing.current) {
-        isLongPressing.current = false;
-        setIsRecording(false);
+      
+      // 清理监听器
+      unlistenPartialRef.current?.();
+      unlistenPartialRef.current = null;
+      
+      // 如果有结果，发送
+      if (result.success && result.text) {
+        setVoiceText(result.text);
+        voiceTextRef.current = result.text;
+        await startTask(result.text, { workspacePath: vaultPath || '' });
+        setVoiceText('');
       }
-    };
-    
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, []);
+    }
+  }, [startTask, vaultPath]);
 
   // 停止录音并发送
   const stopRecording = useCallback(async (cancel: boolean) => {
     isLongPressing.current = false;
-    recognitionRef.current?.stop();
     setIsRecording(false);
     
-    // 使用 ref 获取最新值
-    const text = voiceTextRef.current.trim();
-    if (!cancel && text) {
-      await sendMessageStream(text);
+    // 清理监听器
+    unlistenPartialRef.current?.();
+    unlistenPartialRef.current = null;
+    
+    if (cancel) {
+      // 取消识别
+      await cancelListening();
+      setVoiceText('');
+    } else {
+      // 使用已识别的文本
+      const text = voiceTextRef.current.trim();
+      if (text) {
+        await startTask(text, { workspacePath: vaultPath || '' });
+      }
     }
+    
     setVoiceText('');
     setIsCancelling(false);
-  }, [sendMessageStream]);
+  }, [startTask, vaultPath]);
 
   // 全局鼠标/触摸释放监听
   useEffect(() => {
@@ -151,6 +179,7 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
   // 开始长按
   const handlePressStart = useCallback((clientY: number) => {
     touchStartY.current = clientY;
+    didLongPress.current = false; // 重置长按标记
     
     // 清除之前的定时器
     if (longPressTimer.current) {
@@ -159,9 +188,26 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
     
     // 500ms 后启动录音
     longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true; // 标记已触发长按
       startRecording();
     }, 500);
   }, [startRecording]);
+
+  // 点击输入框进入键盘模式
+  const handleInputClick = useCallback(() => {
+    // 如果是长按触发的，不进入键盘模式
+    if (didLongPress.current) {
+      didLongPress.current = false;
+      return;
+    }
+    // 清除长按定时器
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    setIsKeyboardMode(true);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
   
   // 自动滚动到底部
   useEffect(() => {
@@ -175,8 +221,59 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
     const message = input.trim();
     setInput('');
     
-    await sendMessageStream(message);
-  }, [input, isStreaming, sendMessageStream]);
+    await startTask(message, { workspacePath: vaultPath || '' });
+  }, [input, isStreaming, startTask, vaultPath]);
+
+  // 清理消息内容（参考桌面端 MainAIChatShell 的 cleanContent）
+  const cleanContent = useCallback((content: string, isUser: boolean): string => {
+    // 跳过工具结果消息和系统提示
+    if (content.includes("<tool_result") || 
+        content.includes("<tool_error") ||
+        content.includes("你的响应没有包含有效的工具调用") ||
+        content.includes("请使用 <thinking> 标签分析错误原因") ||
+        content.includes("系统错误:") ||
+        content.includes("系统拒绝执行") ||
+        content.includes("用户拒绝了工具调用")) {
+      return "";
+    }
+    
+    if (isUser) {
+      // 用户消息：提取 <task> 内容，移除上下文标签
+      return content
+        .replace(/<task>([\s\S]*?)<\/task>/g, "$1")
+        .replace(/<current_note[^>]*>[\s\S]*?<\/current_note>/g, "")
+        .replace(/<related_notes[^>]*>[\s\S]*?<\/related_notes>/g, "")
+        .trim();
+    } else {
+      // 助手消息
+      let text = content;
+      
+      // 移除 thinking
+      text = text.replace(/<thinking>[\s\S]*?<\/thinking>/g, "");
+      
+      // 处理 attempt_completion - 提取 result 内容
+      const attemptMatch = text.match(/<attempt_completion>[\s\S]*?<result>([\s\S]*?)<\/result>[\s\S]*?<\/attempt_completion>/);
+      if (attemptMatch) {
+        text = attemptMatch[1].trim();
+      } else {
+        // 移除所有工具调用标签
+        text = text.replace(/<(read_note|edit_note|create_note|list_notes|move_note|delete_note|search_notes|grep_search|semantic_search|query_database|add_database_row|get_backlinks|ask_user|attempt_completion)>[\s\S]*?<\/\1>/g, "");
+      }
+      
+      // 清理剩余的 XML 标签
+      text = text.replace(/<[^>]+>/g, "").trim();
+      
+      return text;
+    }
+  }, []);
+
+  // 过滤并清理消息
+  const filteredMessages = messages
+    .map(msg => ({
+      ...msg,
+      cleanedContent: cleanContent(msg.content || '', msg.role === 'user')
+    }))
+    .filter(msg => msg.cleanedContent.trim() !== '');
 
   // 渲染消息内容，支持加粗
   const renderContent = (content: string) => {
@@ -215,7 +312,7 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
 
       {/* 消息列表 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
+        {filteredMessages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
               <Sparkles className="w-8 h-8 text-white" />
@@ -254,15 +351,15 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
           </div>
         ) : (
           <>
-            {messages.map((msg, idx) => (
+            {filteredMessages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                   msg.role === 'user' 
                     ? 'bg-blue-600 text-white rounded-br-none' 
                     : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-100 dark:border-gray-700'
                 }`}>
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {renderContent(msg.content)}
+                  <div className="whitespace-pre-wrap leading-relaxed" style={{ fontSize: `${mobileFontSize}px` }}>
+                    {renderContent(msg.cleanedContent)}
                   </div>
                 </div>
               </div>
@@ -284,69 +381,108 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
         )}
       </div>
       
-      {/* 输入区 */}
+      {/* 输入区 - 统一输入框 */}
       <div className="flex-shrink-0 p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 safe-area-bottom">
         <div className="flex items-center space-x-2">
-          {/* 切换输入模式按钮 */}
-          <button 
-            onClick={() => setInputMode(inputMode === 'voice' ? 'keyboard' : 'voice')}
-            className="p-2.5 text-gray-500 hover:text-blue-500 transition-colors"
-          >
-            {inputMode === 'voice' ? <Keyboard size={22} /> : <Mic size={22} />}
-          </button>
-          
-          {/* 录音中状态 */}
+          {/* 录音中状态 - 全屏覆盖 */}
           {isRecording ? (
             <div 
-              className={`flex-1 py-3 rounded-full text-center select-none transition-all ${
+              className={`flex-1 py-3.5 rounded-2xl text-center select-none transition-all ${
                 isCancelling
-                  ? 'bg-red-100 dark:bg-red-900/30'
-                  : 'bg-green-100 dark:bg-green-900/30'
+                  ? 'bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700'
+                  : 'bg-green-100 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-700'
               }`}
             >
-              <span className={`text-sm font-medium ${isCancelling ? 'text-red-500' : 'text-green-600'}`}>
-                {isCancelling ? '↑ 松开取消' : (voiceText || '正在录音...')}
-              </span>
+              <div className="flex items-center justify-center gap-2">
+                {/* 录音动画 */}
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 3, 2, 1].map((h, i) => (
+                    <div
+                      key={i}
+                      className={`w-1 rounded-full transition-all ${
+                        isCancelling ? 'bg-red-500' : 'bg-green-500'
+                      }`}
+                      style={{
+                        height: `${h * 4 + 4}px`,
+                        animation: isCancelling ? 'none' : `pulse 0.5s ease-in-out ${i * 0.1}s infinite alternate`
+                      }}
+                    />
+                  ))}
+                </div>
+                <span className={`text-sm font-medium ${
+                  isCancelling ? 'text-red-500' : 'text-green-600 dark:text-green-400'
+                }`}>
+                  {isCancelling ? '↑ 松开取消' : (voiceText || '正在识别...')}
+                </span>
+              </div>
             </div>
-          ) : inputMode === 'voice' ? (
-            /* 语音模式 - 长按录音 */
-            <div 
-              className="flex-1 py-3 bg-gray-100 dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-700 text-center select-none cursor-pointer active:bg-gray-200 dark:active:bg-gray-800 transition-colors"
-              onTouchStart={(e) => handlePressStart(e.touches[0].clientY)}
-              onMouseDown={(e) => handlePressStart(e.clientY)}
-            >
-              <span className="text-gray-400 text-sm">按住说话</span>
-            </div>
+          ) : isKeyboardMode ? (
+            /* 键盘输入模式 */
+            <>
+              <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                onBlur={() => {
+                  // 失去焦点时，如果没有内容则退出键盘模式
+                  if (!input.trim()) {
+                    setTimeout(() => setIsKeyboardMode(false), 100);
+                  }
+                }}
+                placeholder="输入消息..."
+                autoFocus
+                className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-800 dark:text-white placeholder-gray-400 text-base" 
+              />
+              {/* 发送按钮 */}
+              <button 
+                onClick={handleSend}
+                disabled={!input.trim() || isStreaming}
+                className={`p-2.5 rounded-full transition-all ${
+                  input.trim() && !isStreaming
+                    ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95' 
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                }`}
+              >
+                <Send size={18} />
+              </button>
+            </>
           ) : (
-            /* 键盘模式 - 文字输入 */
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="输入消息..."
-              className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-900 rounded-full border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-800 dark:text-white placeholder-gray-400 text-base" 
-            />
+            /* 默认模式 - 点击输入/长按说话 */
+            <>
+              <div 
+                className="flex-1 py-3 px-4 bg-gray-100 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 text-center select-none cursor-pointer active:bg-gray-200 dark:active:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                onClick={handleInputClick}
+                onTouchStart={(e) => handlePressStart(e.touches[0].clientY)}
+                onMouseDown={(e) => handlePressStart(e.clientY)}
+              >
+                <Mic size={18} className="text-gray-400" />
+                <span className="text-gray-400 text-sm">发消息或按住说话</span>
+              </div>
+              {/* 发送按钮占位 */}
+              <button 
+                className="p-2.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-400"
+                disabled
+              >
+                <Send size={18} />
+              </button>
+            </>
           )}
-          
-          {/* 发送按钮 */}
-          <button 
-            onClick={handleSend}
-            disabled={(!input.trim() && inputMode === 'keyboard') || isStreaming}
-            className={`p-2.5 rounded-full transition-all ${
-              (input.trim() || inputMode === 'voice') && !isStreaming
-                ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95' 
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
-            }`}
-          >
-            <Send size={18} />
-          </button>
         </div>
       </div>
+      
+      {/* 录音动画 CSS */}
+      <style>{`
+        @keyframes pulse {
+          from { transform: scaleY(0.6); }
+          to { transform: scaleY(1.2); }
+        }
+      `}</style>
 
       {/* 设置面板 */}
       {showSettings && (
@@ -437,6 +573,32 @@ export function MobileChat({ onToggleSidebar }: MobileChatProps) {
                   placeholder={PROVIDER_REGISTRY[config.provider]?.defaultBaseUrl || 'https://api.example.com'}
                   className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
+              </div>
+              
+              {/* 字号调整 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  字号大小 <span className="text-gray-400">({mobileFontSize}px)</span>
+                </label>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-400">小</span>
+                  <input
+                    type="range"
+                    min={12}
+                    max={24}
+                    step={1}
+                    value={mobileFontSize}
+                    onChange={(e) => setMobileFontSize(Number(e.target.value))}
+                    className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-blue-500"
+                  />
+                  <span className="text-xs text-gray-400">大</span>
+                </div>
+                <div 
+                  className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-gray-700 dark:text-gray-300"
+                  style={{ fontSize: `${mobileFontSize}px` }}
+                >
+                  这是字号预览效果
+                </div>
               </div>
               
               {/* 保存状态指示 */}

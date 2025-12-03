@@ -1,16 +1,14 @@
 import { useCallback } from 'react';
-import { FileText, FolderOpen, Search, Sparkles, Edit3 } from 'lucide-react';
+import { FileText, FolderOpen, Search, Sparkles } from 'lucide-react';
 import { useFileStore } from '@/stores/useFileStore';
 import { FileEntry } from '@/lib/tauri';
 
 interface MobileFileBrowserProps {
   onFileSelect: () => void;
-  onOpenVault: () => void;
-  onCreateNote?: () => void;
 }
 
-export function MobileFileBrowser({ onFileSelect, onOpenVault, onCreateNote }: MobileFileBrowserProps) {
-  const { vaultPath, fileTree, openFile } = useFileStore();
+export function MobileFileBrowser({ onFileSelect }: MobileFileBrowserProps) {
+  const { vaultPath, fileTree, openFile, isLoadingTree } = useFileStore();
   
   const handleFileClick = useCallback(async (entry: FileEntry) => {
     if (!entry.is_dir && entry.path.endsWith('.md')) {
@@ -36,23 +34,17 @@ export function MobileFileBrowser({ onFileSelect, onOpenVault, onCreateNote }: M
   const notes = getAllNotes(fileTree);
 
   
-  // 未打开文件夹 - 精美空状态
-  if (!vaultPath) {
+  // 正在初始化或加载中
+  if (!vaultPath || isLoadingTree) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-500/20">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6 shadow-xl shadow-blue-500/20 animate-pulse">
           <FolderOpen className="w-10 h-10 text-white" />
         </div>
         <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">欢迎使用 Lumina Note</h2>
-        <p className="text-gray-500 dark:text-gray-400 text-center mb-8">
-          选择一个笔记文件夹开始使用
+        <p className="text-gray-500 dark:text-gray-400 text-center">
+          正在初始化笔记目录...
         </p>
-        <button
-          onClick={onOpenVault}
-          className="px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl font-medium shadow-lg shadow-blue-500/30 active:scale-95 transition-transform"
-        >
-          选择文件夹
-        </button>
       </div>
     );
   }
@@ -81,12 +73,7 @@ export function MobileFileBrowser({ onFileSelect, onOpenVault, onCreateNote }: M
               <Sparkles size={32} className="text-gray-300" />
             </div>
             <p className="text-gray-500">空空如也</p>
-            <button 
-              onClick={onCreateNote}
-              className="mt-4 text-blue-500 font-medium text-sm"
-            >
-              创建第一个笔记
-            </button>
+            <p className="mt-2 text-gray-400 text-sm">通过对话让 AI 创建笔记</p>
           </div>
         ) : (
           notes.map(note => (
@@ -98,18 +85,6 @@ export function MobileFileBrowser({ onFileSelect, onOpenVault, onCreateNote }: M
           ))
         )}
       </div>
-      
-      {/* 浮动新建按钮 */}
-      {onCreateNote && (
-        <div className="absolute bottom-6 right-6">
-          <button 
-            onClick={onCreateNote}
-            className="w-12 h-12 bg-blue-600 rounded-full text-white shadow-lg shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-all"
-          >
-            <Edit3 size={20} />
-          </button>
-        </div>
-      )}
     </div>
   );
 }

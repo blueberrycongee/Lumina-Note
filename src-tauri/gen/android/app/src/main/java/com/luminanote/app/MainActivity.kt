@@ -7,5 +7,8 @@ class MainActivity : TauriActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    
+    // 注册语音识别插件
+    registerPlugin(SpeechPlugin::class.java)
   }
 }

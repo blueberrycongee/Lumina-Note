@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { FileText, MessageSquare, Sparkles } from 'lucide-react';
+import { FileText, MessageSquare } from 'lucide-react';
 import { MobileFileBrowser } from './MobileFileBrowser';
 import { MobileEditor } from './MobileEditor';
 import { MobileChat, ChatSidebar } from './MobileChat';
@@ -10,29 +10,16 @@ import { useFileStore } from '@/stores/useFileStore';
 export type MainTab = 'chat' | 'files';
 export type FilesView = 'list' | 'editor';
 
-interface MobileLayoutProps {
-  onOpenVault: () => void;
-}
-
-export function MobileLayout({ onOpenVault }: MobileLayoutProps) {
+export function MobileLayout() {
   const [activeTab, setActiveTab] = useState<MainTab>('chat');
   const [filesView, setFilesView] = useState<FilesView>('list');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { vaultPath, currentFile, createNewFile } = useFileStore();
+  const { currentFile } = useFileStore();
   
   // 打开文件时切换到编辑器视图
   const handleFileSelect = useCallback(() => {
     setFilesView('editor');
   }, []);
-  
-  // 新建文件
-  const handleCreateNote = useCallback(async () => {
-    if (vaultPath) {
-      await createNewFile();
-      setFilesView('editor');
-      if (activeTab !== 'files') setActiveTab('files');
-    }
-  }, [vaultPath, createNewFile, activeTab]);
   
   // 返回列表
   const handleBackToList = useCallback(() => {
@@ -47,18 +34,26 @@ export function MobileLayout({ onOpenVault }: MobileLayoutProps) {
   }, [currentFile]);
 
   return (
-    <div className="h-full bg-gray-50 dark:bg-gray-900 relative overflow-hidden flex">
-      {/* 侧栏 - 固定宽度 */}
+    <div className="h-full bg-gray-50 dark:bg-gray-900 relative overflow-hidden">
+      {/* 侧栏遮罩层 - 点击关闭 */}
+      {sidebarOpen && (
+        <div 
+          className="absolute inset-0 bg-black/30 z-40 transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* 侧栏 - 绝对定位浮在上层 */}
       <div 
-        className={`flex-shrink-0 h-full transition-all duration-300 ease-out overflow-hidden ${
-          sidebarOpen ? 'w-[280px]' : 'w-0'
+        className={`absolute left-0 top-0 h-full z-50 transition-transform duration-300 ease-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <ChatSidebar onClose={() => setSidebarOpen(false)} />
       </div>
       
-      {/* 整体内容容器 */}
-      <div className="flex-1 h-full flex flex-col min-w-0">
+      {/* 整体内容容器 - 始终占满全屏 */}
+      <div className="h-full flex flex-col">
         {/* 主内容区 */}
         <main className="flex-1 overflow-hidden relative">
           {/* Chat View */}
@@ -74,8 +69,6 @@ export function MobileLayout({ onOpenVault }: MobileLayoutProps) {
               {filesView === 'list' ? (
                 <MobileFileBrowser 
                   onFileSelect={handleFileSelect}
-                  onOpenVault={onOpenVault}
-                  onCreateNote={handleCreateNote}
                 />
               ) : (
                 <MobileEditor onBack={handleBackToList} />
@@ -99,9 +92,6 @@ export function MobileLayout({ onOpenVault }: MobileLayoutProps) {
             <span className="text-[10px] font-medium">对话</span>
           </button>
           
-          {/* 中心 AI 按钮占位 */}
-          <div className="w-14" />
-          
           {/* 文件 Tab */}
           <button 
             onClick={handleFilesTab}
@@ -115,16 +105,6 @@ export function MobileLayout({ onOpenVault }: MobileLayoutProps) {
             <span className="text-[10px] font-medium">文件</span>
           </button>
         </nav>
-        
-        {/* 中心 AI 浮动按钮 */}
-        <div className="absolute bottom-[38px] left-1/2 transform -translate-x-1/2 z-20 safe-area-bottom">
-          <button 
-            onClick={handleCreateNote}
-            className="w-14 h-14 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center border-4 border-white dark:border-gray-900 hover:scale-105 active:scale-95 transition-transform"
-          >
-            <Sparkles size={24} className="text-white" />
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -24,7 +24,8 @@ tauri-plugin-fs = "2.0.0"
 tauri-plugin-shell = "2.0.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.40", features = ["full"] }
+# 移动端只需要基础 async runtime
+tokio = { version = "1.40", default-features = false, features = ["rt", "fs", "sync", "macros"] }
 walkdir = "2.5"
 thiserror = "2.0"
 

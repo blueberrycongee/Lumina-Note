@@ -8,7 +8,7 @@ type SettingsSection = 'main' | 'ai' | 'appearance';
 export function MobileSettings() {
   const [section, setSection] = useState<SettingsSection>('main');
   const { config, setConfig } = useAIStore();
-  const { isDarkMode, toggleTheme } = useUIStore();
+  const { isDarkMode, toggleTheme, mobileFontSize, setMobileFontSize } = useUIStore();
   
   // 主设置页
   if (section === 'main') {
@@ -129,7 +129,7 @@ export function MobileSettings() {
           
           <h2 className="text-lg font-semibold mb-4">外观</h2>
           
-          <div className="space-y-4">
+          <div className="space-y-6">
             {/* Theme */}
             <div>
               <label className="block text-sm font-medium mb-3">主题</label>
@@ -154,6 +154,33 @@ export function MobileSettings() {
                 >
                   深色
                 </button>
+              </div>
+            </div>
+            
+            {/* 字号调整 */}
+            <div>
+              <label className="block text-sm font-medium mb-3">
+                字号大小 <span className="text-muted-foreground">({mobileFontSize}px)</span>
+              </label>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">小</span>
+                <input
+                  type="range"
+                  min={12}
+                  max={24}
+                  step={1}
+                  value={mobileFontSize}
+                  onChange={(e) => setMobileFontSize(Number(e.target.value))}
+                  className="flex-1 h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
+                />
+                <span className="text-xs text-muted-foreground">大</span>
+              </div>
+              {/* 预览 */}
+              <div 
+                className="mt-3 p-3 bg-muted rounded-xl"
+                style={{ fontSize: `${mobileFontSize}px` }}
+              >
+                这是字号预览效果
               </div>
             </div>
           </div>
