@@ -1,0 +1,52 @@
+﻿> Task :buildSrc:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :buildSrc:compileKotlin UP-TO-DATE
+> Task :buildSrc:compileJava NO-SOURCE
+> Task :buildSrc:compileGroovy NO-SOURCE
+> Task :buildSrc:pluginDescriptors UP-TO-DATE
+> Task :buildSrc:processResources UP-TO-DATE
+> Task :buildSrc:classes UP-TO-DATE
+> Task :buildSrc:jar UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preUniversalReleaseBuild UP-TO-DATE
+
+> Task :app:rustBuildArm64Release
+
+> lumina-note@0.1.0 tauri
+> tauri android android-studio-script --release --target aarch64
+
+.\gradlew.bat : 
+所在位置 行:1 字符: 1
++ .\gradlew.bat assembleUniversalRelease 2>&1 | Out-File -FilePath grad ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+thread '<unnamed>' (124336) panicked at crates\tauri-cli\src\mobile\mod.rs:436:6:
+failed to read CLI options: Context("failed to build WebSocket client", Io(Os { code:
+ 10061, kind: ConnectionRefused, message: "由于目标计算机积极拒绝，无法连接。" }))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+> Task :app:rustBuildArm64Release FAILED
+
+[Incubating] Problems report is available at: file:///D:/Desktop/Lumina%20Note/src-tauri/gen/android/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:rustBuildArm64Release'.
+> A problem occurred starting process 'command 'npm.bat''
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 4s
+5 actionable tasks: 1 executed, 4 up-to-date

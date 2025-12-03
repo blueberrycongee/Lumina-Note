@@ -8,7 +8,6 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
 import app.tauri.annotation.Command
-import app.tauri.annotation.InvokeArg
 import app.tauri.annotation.TauriPlugin
 import app.tauri.plugin.Invoke
 import app.tauri.plugin.JSObject
@@ -29,7 +28,7 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun startListening(invoke: Invoke) {
         Log.d(TAG, "startListening called")
-        
+
         if (!SpeechRecognizer.isRecognitionAvailable(activity)) {
             val ret = JSObject()
             ret.put("success", false)
@@ -55,7 +54,6 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                 speechRecognizer?.setRecognitionListener(object : RecognitionListener {
                     override fun onReadyForSpeech(params: Bundle?) {
                         Log.d(TAG, "Ready for speech")
-                        // 发送事件通知前端录音已开始
                         trigger("speech_ready", JSObject())
                     }
 
@@ -63,11 +61,9 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                         Log.d(TAG, "Beginning of speech")
                     }
 
-                    override fun onRmsChanged(rmsdB: Float) {
-                        // 音量变化，可用于显示音量指示器
-                    }
+                    override fun onRmsChanged(rmsdB: Float) { }
 
-                    override fun onBufferReceived(buffer: ByteArray?) {}
+                    override fun onBufferReceived(buffer: ByteArray?) { }
 
                     override fun onEndOfSpeech() {
                         Log.d(TAG, "End of speech")
@@ -77,7 +73,7 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                     override fun onError(error: Int) {
                         Log.e(TAG, "Speech error: $error")
                         isListening = false
-                        
+
                         val errorMessage = when (error) {
                             SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
                             SpeechRecognizer.ERROR_CLIENT -> "Client side error"
@@ -90,7 +86,7 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                             SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
                             else -> "Unknown error: $error"
                         }
-                        
+
                         currentInvoke?.let {
                             val ret = JSObject()
                             ret.put("success", false)
@@ -98,17 +94,17 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                             it.resolve(ret)
                             currentInvoke = null
                         }
-                        
+
                         destroyRecognizer()
                     }
 
                     override fun onResults(results: Bundle?) {
                         Log.d(TAG, "Speech results received")
                         isListening = false
-                        
+
                         val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         val text = matches?.firstOrNull() ?: ""
-                        
+
                         currentInvoke?.let {
                             val ret = JSObject()
                             ret.put("success", true)
@@ -116,14 +112,14 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                             it.resolve(ret)
                             currentInvoke = null
                         }
-                        
+
                         destroyRecognizer()
                     }
 
                     override fun onPartialResults(partialResults: Bundle?) {
                         val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         val text = matches?.firstOrNull() ?: ""
-                        
+
                         if (text.isNotEmpty()) {
                             val event = JSObject()
                             event.put("text", text)
@@ -131,7 +127,7 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
                         }
                     }
 
-                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                    override fun onEvent(eventType: Int, params: Bundle?) { }
                 })
 
                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -143,7 +139,7 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
 
                 speechRecognizer?.startListening(intent)
                 Log.d(TAG, "Started listening")
-                
+
             } catch (e: Exception) {
                 Log.e(TAG, "Error starting speech recognition", e)
                 isListening = false
@@ -161,12 +157,12 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun stopListening(invoke: Invoke) {
         Log.d(TAG, "stopListening called")
-        
+
         activity.runOnUiThread {
             try {
                 speechRecognizer?.stopListening()
                 isListening = false
-                
+
                 val ret = JSObject()
                 ret.put("success", true)
                 invoke.resolve(ret)
@@ -182,14 +178,14 @@ class SpeechPlugin(private val activity: Activity) : Plugin(activity) {
     @Command
     fun cancelListening(invoke: Invoke) {
         Log.d(TAG, "cancelListening called")
-        
+
         activity.runOnUiThread {
             try {
                 speechRecognizer?.cancel()
                 isListening = false
                 currentInvoke = null
                 destroyRecognizer()
-                
+
                 val ret = JSObject()
                 ret.put("success", true)
                 invoke.resolve(ret)
