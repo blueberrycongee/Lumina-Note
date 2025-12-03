@@ -1,0 +1,26 @@
+# Cargo 配置 - 使用清华 TUNA 镜像 (Git 协议)
+[source.crates-io]
+replace-with = 'tuna'
+
+[source.tuna]
+registry = "https://mirrors.tuna.tsinghua.edu.cn/git/crates.io-index.git"
+
+# Android 构建目标
+[target.aarch64-linux-android]
+linker = "aarch64-linux-android21-clang"
+
+[target.armv7-linux-androideabi]
+linker = "armv7a-linux-androideabi21-clang"
+
+[target.i686-linux-android]
+linker = "i686-linux-android21-clang"
+
+[target.x86_64-linux-android]
+linker = "x86_64-linux-android21-clang"
+
+[net]
+retry = 5
+git-fetch-with-cli = true
+
+[http]
+check-revoke = false

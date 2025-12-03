@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2/capability",
+  "identifier": "mobile",
+  "description": "Mobile-specific capabilities for Lumina Note",
+  "platforms": ["android", "iOS"],
+  "windows": ["*"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close",
+    "dialog:default",
+    "shell:default",
+    "shell:allow-open",
+    "fs:default",
+    "fs:allow-read",
+    "fs:allow-write",
+    "fs:allow-exists",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-rename",
+    "fs:allow-read-dir",
+    "fs:allow-copy-file",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$DOCUMENT/**",
+        "$APPDATA/**",
+        "$DOWNLOAD/**",
+        "$CACHE/**"
+      ]
+    }
+  ]
+}

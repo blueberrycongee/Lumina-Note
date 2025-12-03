@@ -1,3 +1,4 @@
+// 仅桌面端使用 main.rs，移动端使用 lib.rs
 #![cfg_attr(
     all(not(debug_assertions), target_os = "windows"),
     windows_subsystem = "windows"
@@ -8,8 +9,14 @@ mod fs;
 mod error;
 mod vector_db;
 
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod pdf_ocr;
+
 #[cfg(debug_assertions)]
 use tauri::Manager;
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use std::thread;
 
 fn main() {
     tauri::Builder::default()
@@ -55,6 +62,18 @@ fn main() {
                 let window = _app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
+            
+            // 启动 PDF OCR 服务 (仅桌面端，在单独线程中运行)
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            thread::spawn(|| {
+                let rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+                rt.block_on(async {
+                    if let Err(e) = pdf_ocr::start_server(18765).await {
+                        eprintln!("PDF OCR 服务启动失败: {}", e);
+                    }
+                });
+            });
+            
             Ok(())
         })
         .run(tauri::generate_context!())

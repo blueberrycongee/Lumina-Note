@@ -55,7 +55,7 @@ const parseCache = new ParseCache();
  * 使用 PP-Structure 解析 PDF
  */
 async function parsePPStructure(pdfPath: string, config: ParseRequest['config']): Promise<PDFStructure> {
-  const apiUrl = config.ppStructure?.apiUrl || 'http://localhost:8080/parse';
+  const apiUrl = config.ppStructure?.apiUrl || 'http://localhost:18765/parse';
   
   try {
     const response = await fetch(apiUrl, {

@@ -69,3 +69,9 @@ README-1.md
 # 克隆的外部项目
 Roo-Code/
 media-extended/
+
+# PDF/OCR 相关（Rust 重构实验）
+onnxruntime-win-x64-*/
+pdfium.x64.*/
+microsoft.ml.onnxruntime.*.zip
+onnxruntime.dll

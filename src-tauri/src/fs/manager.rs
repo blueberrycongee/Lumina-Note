@@ -103,14 +103,30 @@ pub fn create_new_file(path: &str) -> Result<(), AppError> {
     fs::write(path, "").map_err(AppError::from)
 }
 
-/// Delete a file or directory (move to trash/recycle bin)
+/// Delete a file or directory
+/// 桌面端移动到回收站，移动端直接删除
 pub fn delete_entry(path: &str) -> Result<(), AppError> {
     let path = Path::new(path);
     if !path.exists() {
         return Err(AppError::FileNotFound(path.display().to_string()));
     }
-    // 移动到回收站而非永久删除
-    trash::delete(path)?;
+    
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        // 桌面端：移动到回收站
+        trash::delete(path)?;
+    }
+    
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        // 移动端：直接删除
+        if path.is_dir() {
+            fs::remove_dir_all(path)?;
+        } else {
+            fs::remove_file(path)?;
+        }
+    }
+    
     Ok(())
 }
 

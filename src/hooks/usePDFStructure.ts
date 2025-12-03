@@ -36,7 +36,7 @@ export function usePDFStructure() {
           config: {
             backend: 'pp-structure',
             ppStructure: {
-              apiUrl: 'http://localhost:8080/parse',
+              apiUrl: 'http://localhost:18765/parse',
               layoutAnalysis: true,
               tableRecognition: true,
               ocrEngine: 'paddleocr',

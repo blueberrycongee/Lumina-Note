@@ -12,6 +12,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [build-dependencies]
 tauri-build = { version = "2.0.0", features = [] }
 
+[features]
+default = []
+desktop = []  # 桌面端专属功能 (PDF OCR)
+mobile = []   # 移动端标记
+
 [dependencies]
 tauri = { version = "2.0.0", features = ["unstable"] }
 tauri-plugin-dialog = "2.0.0"
@@ -20,18 +25,31 @@ tauri-plugin-shell = "2.0.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.40", features = ["full"] }
-notify = "6.1"
 walkdir = "2.5"
 thiserror = "2.0"
-trash = "5"
 
 # RAG / Vector Storage
 rusqlite = { version = "0.32", features = ["bundled"] }
 bincode = "1.3"
 
-# HTTP client for Bilibili API
-reqwest = { version = "0.12", features = ["json"] }
+# HTTP client for Bilibili API (使用 rustls 避免 OpenSSL 交叉编译问题)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 flate2 = "1.0"
+
+# 共享依赖
+image = "0.25"
+
+# ============ 桌面端专属依赖 ============
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+notify = "6.1"
+trash = "5"
+
+# PDF OCR (仅桌面端)
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+pdfium-render = "0.8"
+ort = { version = "2.0.0-rc.10", features = ["load-dynamic", "ndarray", "directml"] }
+ndarray = "0.16"
 
 [profile.dev]
 incremental = true

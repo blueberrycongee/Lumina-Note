@@ -24,6 +24,8 @@ import { useAIStore } from "@/stores/useAIStore";
 import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
+import { MobileLayout } from "@/components/mobile";
+import { usePlatform } from "@/hooks/usePlatform";
 
 // Component that shows tabs + graph/editor content
 function EditorWithGraph() {
@@ -105,6 +107,7 @@ function DiffViewWrapper() {
 }
 
 function App() {
+  const platform = usePlatform();
   const { vaultPath, setVaultPath, currentFile, save, createNewFile, tabs, activeTabIndex, fileTree, refreshFileTree, openAIMainTab } = useFileStore();
   const { pendingDiff } = useAIStore();
   const { buildIndex } = useNoteIndexStore();
@@ -292,6 +295,11 @@ function App() {
     },
     [rightSidebarWidth, setRightSidebarWidth]
   );
+
+  // 移动端使用专门的布局
+  if (platform === 'mobile') {
+    return <MobileLayout onOpenVault={handleOpenVault} />;
+  }
 
   // Welcome screen when no vault is open
   if (!vaultPath) {

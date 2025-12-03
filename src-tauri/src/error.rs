@@ -18,6 +18,8 @@ pub enum AppError {
     #[error("Database error: {0}")]
     Database(String),
 
+    // 仅桌面端有回收站功能
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
     #[error("Trash error: {0}")]
     Trash(#[from] trash::Error),
 }

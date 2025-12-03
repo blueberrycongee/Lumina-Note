@@ -1,8 +1,15 @@
 use crate::error::AppError;
-use crate::fs::{self, FileEntry, watcher};
-use tauri::{AppHandle, Manager, WebviewWindowBuilder, WebviewBuilder, LogicalPosition, LogicalSize, Position, Size};
-use tauri::WebviewUrl;
+use crate::fs::{self, FileEntry};
+use tauri::AppHandle;
 use std::io::Read;
+
+// 桌面端专属导入
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use tauri::{Manager, WebviewWindowBuilder, WebviewBuilder, LogicalPosition, LogicalSize, Position, Size};
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use tauri::WebviewUrl;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+use crate::fs::watcher;
 
 /// Read file content
 #[tauri::command]
@@ -46,7 +53,8 @@ pub async fn rename_file(old_path: String, new_path: String) -> Result<(), AppEr
     fs::rename_entry(&old_path, &new_path)
 }
 
-/// Show file/folder in system file explorer
+/// Show file/folder in system file explorer (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn show_in_explorer(path: String) -> Result<(), AppError> {
     #[cfg(target_os = "windows")]
@@ -78,7 +86,8 @@ pub async fn show_in_explorer(path: String) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 在主窗口内创建内嵌 WebView
+/// 在主窗口内创建内嵌 WebView (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn create_embedded_webview(
     app: AppHandle, 
@@ -116,7 +125,8 @@ pub async fn create_embedded_webview(
     Ok(())
 }
 
-/// 更新内嵌 WebView 的位置和大小
+/// 更新内嵌 WebView 的位置和大小 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn update_webview_bounds(
     app: AppHandle,
@@ -134,7 +144,8 @@ pub async fn update_webview_bounds(
     Ok(())
 }
 
-/// 关闭内嵌 WebView
+/// 关闭内嵌 WebView (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn close_embedded_webview(app: AppHandle) -> Result<(), AppError> {
     if let Some(webview) = app.get_webview("video-webview") {
@@ -143,7 +154,8 @@ pub async fn close_embedded_webview(app: AppHandle) -> Result<(), AppError> {
     Ok(())
 }
 
-/// Open a new main window
+/// Open a new main window (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn open_new_window(app: AppHandle) -> Result<(), AppError> {
     let label = format!("window-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
@@ -261,7 +273,8 @@ pub struct DanmakuItem {
     pub timestamp: u64,
 }
 
-/// 在内嵌 WebView 中执行 JS 来跳转视频时间
+/// 在内嵌 WebView 中执行 JS 来跳转视频时间 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn seek_video_time(app: AppHandle, seconds: f64) -> Result<(), AppError> {
     if let Some(webview) = app.get_webview("video-webview") {
@@ -283,7 +296,8 @@ pub async fn seek_video_time(app: AppHandle, seconds: f64) -> Result<(), AppErro
     Ok(())
 }
 
-/// 在 B站弹幕输入框中填充前缀（仅当输入框为空时）
+/// 在 B站弹幕输入框中填充前缀 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn fill_danmaku_prefix(app: AppHandle, prefix: String) -> Result<(), AppError> {
     if let Some(webview) = app.get_webview("video-webview") {
@@ -325,7 +339,8 @@ pub async fn fill_danmaku_prefix(app: AppHandle, prefix: String) -> Result<(), A
     Ok(())
 }
 
-/// 监听弹幕输入框，为空时自动填充前缀
+/// 监听弹幕输入框，为空时自动填充前缀 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn setup_danmaku_autofill(app: AppHandle, prefix: String) -> Result<(), AppError> {
     if let Some(webview) = app.get_webview("video-webview") {
@@ -382,7 +397,8 @@ pub async fn setup_danmaku_autofill(app: AppHandle, prefix: String) -> Result<()
     Ok(())
 }
 
-/// 打开视频播放窗口（独立窗口备用）
+/// 打开视频播放窗口 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn open_video_window(app: AppHandle, url: String) -> Result<(), AppError> {
     // 如果窗口已存在，先关闭
@@ -408,7 +424,8 @@ pub async fn open_video_window(app: AppHandle, url: String) -> Result<(), AppErr
     Ok(())
 }
 
-/// 关闭视频播放窗口
+/// 关闭视频播放窗口 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn close_video_window(app: AppHandle) -> Result<(), AppError> {
     if let Some(window) = app.get_webview_window("video-player") {
@@ -417,8 +434,8 @@ pub async fn close_video_window(app: AppHandle) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 获取视频当前时间（轮询方式）
-/// 返回 JSON 字符串: {"currentTime": 123.45, "duration": 600.0, "paused": false} 或 null
+/// 获取视频当前时间 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn get_video_time(app: AppHandle) -> Result<Option<String>, AppError> {
     if let Some(window) = app.get_webview_window("video-player") {
@@ -453,7 +470,8 @@ pub async fn get_video_time(app: AppHandle) -> Result<Option<String>, AppError> 
     }
 }
 
-/// 读取视频时间（从窗口标题获取，由 initialization_script 更新）
+/// 读取视频时间 (仅桌面端)
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn sync_video_time(app: AppHandle) -> Result<Option<VideoTimeInfo>, AppError> {
     if let Some(window) = app.get_webview_window("video-player") {
@@ -486,10 +504,19 @@ pub struct VideoTimeInfo {
     pub paused: bool,
 }
 
-/// Start file system watcher
+/// Start file system watcher (仅桌面端可用)
 /// Emits "fs:change" events when files are created, modified, or deleted
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[tauri::command]
 pub async fn start_file_watcher(app: AppHandle, watch_path: String) -> Result<(), AppError> {
     watcher::start_watcher(app, watch_path)
         .map_err(|e| AppError::InvalidPath(e))
+}
+
+/// 移动端的占位实现 - 文件监听不可用
+#[cfg(any(target_os = "android", target_os = "ios"))]
+#[tauri::command]
+pub async fn start_file_watcher(_app: AppHandle, _watch_path: String) -> Result<(), AppError> {
+    // 移动端不支持文件监听，直接返回成功
+    Ok(())
 }
