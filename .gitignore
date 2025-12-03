@@ -8,6 +8,22 @@ dist-ssr/
 # Tauri
 src-tauri/target/
 
+# Android 构建产物
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/build/
+src-tauri/gen/android/buildSrc/build/
+src-tauri/gen/android/local.properties
+*.apk
+*.aab
+
+# OCR 模型文件（太大，应该单独下载）
+src-tauri/models/*.onnx
+src-tauri/models/temp/
+
+# DLL 文件
+src-tauri/*.dll
+
 # IDE
 .vscode/
 .idea/
