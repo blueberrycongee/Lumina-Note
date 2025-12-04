@@ -115,6 +115,17 @@ const editorTheme = EditorView.theme({
   ".cm-url": { 
     color: "hsl(var(--muted-foreground))",
   },
+  // WikiLink 双向链接 - Ctrl+Click 跳转
+  ".cm-wikilink": {
+    color: "hsl(var(--primary))",
+    textDecoration: "underline",
+    cursor: "text", // 默认文本光标，表示可编辑
+    borderRadius: "2px",
+    transition: "background-color 0.15s ease",
+    "&:hover": {
+      backgroundColor: "hsl(var(--primary) / 0.1)",
+    },
+  },
   // 代码
   ".cm-code, .cm-inline-code": {
     backgroundColor: "hsl(var(--md-code-bg, var(--muted)))",
@@ -317,6 +328,47 @@ class CodeBlockWidget extends WidgetType {
     // 返回 false 允许点击事件传递，这样点击代码块时可以进入编辑模式
     return false;
   }
+}
+
+// WikiLink 装饰 StateField
+const wikiLinkStateField = StateField.define<DecorationSet>({
+  create(state) {
+    return buildWikiLinkDecorations(state);
+  },
+  update(decorations, transaction) {
+    if (transaction.docChanged) {
+      return buildWikiLinkDecorations(transaction.state);
+    }
+    return decorations.map(transaction.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function buildWikiLinkDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  const doc = state.doc.toString();
+  
+  // 匹配 [[...]] 格式的 WikiLink
+  const wikiLinkRegex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+  let match;
+  
+  while ((match = wikiLinkRegex.exec(doc)) !== null) {
+    const from = match.index;
+    const to = from + match[0].length;
+    const linkName = match[1].trim();
+    
+    // 添加 WikiLink 装饰
+    decorations.push(
+      Decoration.mark({
+        class: "cm-wikilink",
+        attributes: {
+          "data-wikilink": linkName,
+        },
+      }).range(from, to)
+    );
+  }
+  
+  return Decoration.set(decorations);
 }
 
 // Code Block 渲染 StateField
@@ -849,9 +901,35 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
   const isExternalChange = useRef(false);
   const lastInternalContent = useRef<string>(content); // 跟踪编辑器内部的最新内容
   
-  const { openVideoNoteTab, openPDFTab } = useFileStore();
+  const { openVideoNoteTab, openPDFTab, fileTree, openFile } = useFileStore();
   const { openSecondaryPdf } = useSplitStore();
   const { setSplitView } = useUIStore();
+  
+  // 处理 WikiLink 双向链接点击
+  const handleWikiLinkClick = useCallback((linkName: string) => {
+    // 在文件树中查找匹配的文件
+    const findFile = (entries: typeof fileTree): string | null => {
+      for (const entry of entries) {
+        if (entry.is_dir && entry.children) {
+          const found = findFile(entry.children);
+          if (found) return found;
+        } else if (!entry.is_dir) {
+          const fileName = entry.name.replace(".md", "");
+          if (fileName.toLowerCase() === linkName.toLowerCase()) {
+            return entry.path;
+          }
+        }
+      }
+      return null;
+    };
+    
+    const filePath = findFile(fileTree);
+    if (filePath) {
+      openFile(filePath);
+    } else {
+      console.log(`笔记不存在: ${linkName}`);
+    }
+  }, [fileTree, openFile]);
   
   // 处理 B站链接点击
   const handleBilibiliLinkClick = useCallback((url: string) => {
@@ -921,6 +999,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         voicePreviewTheme,
         // 实时预览模式：隐藏语法标记、渲染数学公式、渲染表格、渲染代码块
         // 源码模式：显示原始 Markdown
+        wikiLinkStateField,
         ...(livePreview
           ? [
               livePreviewPlugin,
@@ -1008,6 +1087,24 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         }
       }
       
+      // 处理 WikiLink 双向链接（Ctrl+Click 跳转，普通点击编辑）
+      if (target.classList.contains("cm-wikilink") || target.closest(".cm-wikilink")) {
+        const wikiLinkEl = target.classList.contains("cm-wikilink") 
+          ? target 
+          : target.closest(".cm-wikilink") as HTMLElement;
+        const linkName = wikiLinkEl?.getAttribute("data-wikilink");
+        
+        // 只有 Ctrl+Click 才跳转，普通点击继续编辑
+        if ((e.ctrlKey || e.metaKey) && linkName) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[CodeMirror] Ctrl+Click WikiLink 跳转:', linkName);
+          handleWikiLinkClick(linkName);
+          return;
+        }
+        // 普通点击不阻止，让编辑器正常处理（进入编辑模式）
+      }
+      
       // 其他链接需要 Ctrl+Click
       if (!(e.ctrlKey || e.metaKey)) return;
       
@@ -1075,7 +1172,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       if (timer) clearTimeout(timer);
       if (currentCleanup) currentCleanup();
     };
-  }, [handleBilibiliLinkClick, handleLuminaLinkClick, isDark, livePreview]);
+  }, [handleWikiLinkClick, handleBilibiliLinkClick, handleLuminaLinkClick, isDark, livePreview]);
   
   // 监听语音输入事件：灰色流式预览 + 在光标处插入文本
   useEffect(() => {
