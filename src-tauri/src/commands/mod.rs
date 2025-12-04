@@ -493,3 +493,148 @@ pub async fn start_file_watcher(app: AppHandle, watch_path: String) -> Result<()
     watcher::start_watcher(app, watch_path)
         .map_err(|e| AppError::InvalidPath(e))
 }
+
+// ============== Browser WebView Commands ==============
+
+/// 创建浏览器 WebView（支持多标签页）
+#[tauri::command]
+pub async fn create_browser_webview(
+    app: AppHandle,
+    tab_id: String,
+    url: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64
+) -> Result<(), AppError> {
+    let windows = app.windows();
+    let main_window = windows.get("main")
+        .ok_or_else(|| AppError::InvalidPath("Main window not found".into()))?;
+    
+    // 使用 tab_id 作为 webview 标识
+    let webview_id = format!("browser-{}", tab_id);
+    
+    // 如果已存在同 id 的 webview，先关闭
+    if let Some(webview) = app.get_webview(&webview_id) {
+        let _ = webview.close();
+    }
+    
+    let webview_builder = WebviewBuilder::new(
+        &webview_id,
+        WebviewUrl::External(url.parse().map_err(|_| AppError::InvalidPath("Invalid URL".into()))?)
+    );
+    
+    let _webview = main_window.add_child(
+        webview_builder,
+        Position::Logical(LogicalPosition::new(x, y)),
+        Size::Logical(LogicalSize::new(width, height)),
+    ).map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    
+    println!("[Browser] WebView 创建成功: {} -> {} at ({}, {}) size {}x{}", webview_id, url, x, y, width, height);
+    
+    Ok(())
+}
+
+/// 更新浏览器 WebView 的位置和大小
+#[tauri::command]
+pub async fn update_browser_webview_bounds(
+    app: AppHandle,
+    tab_id: String,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64
+) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        webview.set_position(Position::Logical(LogicalPosition::new(x, y)))
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        webview.set_size(Size::Logical(LogicalSize::new(width, height)))
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// 关闭浏览器 WebView
+#[tauri::command]
+pub async fn close_browser_webview(app: AppHandle, tab_id: String) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        webview.close().map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        println!("[Browser] WebView 已关闭: {}", webview_id);
+    }
+    Ok(())
+}
+
+/// 浏览器 WebView 导航到新 URL
+#[tauri::command]
+pub async fn navigate_browser_webview(
+    app: AppHandle,
+    tab_id: String,
+    url: String
+) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        let parsed_url: tauri::Url = url.parse()
+            .map_err(|_| AppError::InvalidPath("Invalid URL".into()))?;
+        webview.navigate(parsed_url)
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        println!("[Browser] 导航到: {}", url);
+    }
+    Ok(())
+}
+
+/// 浏览器 WebView 后退
+#[tauri::command]
+pub async fn browser_webview_go_back(app: AppHandle, tab_id: String) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        // 通过 JS 执行后退
+        webview.eval("history.back()")
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// 浏览器 WebView 前进
+#[tauri::command]
+pub async fn browser_webview_go_forward(app: AppHandle, tab_id: String) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        webview.eval("history.forward()")
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// 浏览器 WebView 刷新
+#[tauri::command]
+pub async fn browser_webview_reload(app: AppHandle, tab_id: String) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        webview.eval("location.reload()")
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// 设置浏览器 WebView 可见性
+#[tauri::command]
+pub async fn set_browser_webview_visible(
+    app: AppHandle,
+    tab_id: String,
+    visible: bool
+) -> Result<(), AppError> {
+    let webview_id = format!("browser-{}", tab_id);
+    if let Some(webview) = app.get_webview(&webview_id) {
+        if visible {
+            webview.set_position(Position::Logical(LogicalPosition::new(0.0, 0.0)))
+                .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        } else {
+            // 移到屏幕外隐藏
+            webview.set_position(Position::Logical(LogicalPosition::new(-10000.0, -10000.0)))
+                .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+        }
+    }
+    Ok(())
+}

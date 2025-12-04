@@ -19,7 +19,8 @@ export type TabType =
   | "video-note"
   | "database"
   | "pdf"
-  | "ai-chat";
+  | "ai-chat"
+  | "webpage";
 
 // 孤立视图节点信息
 export interface IsolatedNodeInfo {
@@ -43,6 +44,8 @@ export interface Tab {
   videoUrl?: string; // 视频笔记的 URL
   videoNoteData?: VideoNoteFile; // 从分享或内容打开时传入的笔记数据
   databaseId?: string; // 数据库 ID
+  webpageUrl?: string; // 网页 URL
+  webpageTitle?: string; // 网页标题
 }
 
 interface FileState {
@@ -103,6 +106,8 @@ interface FileState {
   openDatabaseTab: (dbId: string, dbName: string) => void;
   openPDFTab: (pdfPath: string) => void;
   openAIMainTab: () => void;
+  openWebpageTab: (url: string, title?: string) => void;
+  updateWebpageTab: (tabId: string, url?: string, title?: string) => void;
   
   // Undo/Redo actions
   undo: () => void;
@@ -953,6 +958,80 @@ export const useFileStore = create<FileState>()(
       currentContent: "",
       isDirty: false,
     });
+  },
+
+  // 打开网页标签页
+  openWebpageTab: (url: string, title?: string) => {
+    const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+    
+    // 生成唯一 ID
+    const tabId = `__webpage_${Date.now()}__`;
+    
+    // 保存当前标签页状态
+    let updatedTabs = [...tabs];
+    if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+      updatedTabs[activeTabIndex] = {
+        ...updatedTabs[activeTabIndex],
+        content: currentContent,
+        isDirty,
+        undoStack,
+        redoStack,
+      };
+    }
+    
+    // 尝试从 URL 提取域名作为默认标题
+    let defaultTitle = title || '新标签页';
+    if (!title && url) {
+      try {
+        const urlObj = new URL(url);
+        defaultTitle = urlObj.hostname;
+      } catch {
+        // 无效 URL，使用默认标题
+      }
+    }
+    
+    // 创建网页标签页
+    const webpageTab: Tab = {
+      id: tabId,
+      type: "webpage",
+      path: "",
+      name: defaultTitle,
+      content: "",
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      webpageUrl: url,
+      webpageTitle: defaultTitle,
+    };
+    
+    updatedTabs.push(webpageTab);
+    
+    set({
+      tabs: updatedTabs,
+      activeTabIndex: updatedTabs.length - 1,
+      currentFile: null,
+      currentContent: "",
+      isDirty: false,
+    });
+  },
+
+  // 更新网页标签页信息
+  updateWebpageTab: (tabId: string, url?: string, title?: string) => {
+    const { tabs } = get();
+    
+    const updatedTabs = tabs.map(tab => {
+      if (tab.id === tabId && tab.type === 'webpage') {
+        return {
+          ...tab,
+          webpageUrl: url ?? tab.webpageUrl,
+          webpageTitle: title ?? tab.webpageTitle,
+          name: title ?? tab.name,
+        };
+      }
+      return tab;
+    });
+    
+    set({ tabs: updatedTabs });
   },
 
   // 创建新文件

@@ -40,6 +40,15 @@ fn main() {
             commands::fill_danmaku_prefix,
             commands::setup_danmaku_autofill,
             commands::start_file_watcher,
+            // Browser WebView commands
+            commands::create_browser_webview,
+            commands::update_browser_webview_bounds,
+            commands::close_browser_webview,
+            commands::navigate_browser_webview,
+            commands::browser_webview_go_back,
+            commands::browser_webview_go_forward,
+            commands::browser_webview_reload,
+            commands::set_browser_webview_visible,
             // Vector DB commands
             vector_db::init_vector_db,
             vector_db::upsert_vector_chunks,

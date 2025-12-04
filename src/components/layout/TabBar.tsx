@@ -1,6 +1,6 @@
 import { useCallback, useState, useRef } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
-import { X, FileText, Network, Video, Database } from "lucide-react";
+import { X, FileText, Network, Video, Database, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TabItemProps {
@@ -50,6 +50,8 @@ function TabItem({
         <Database size={12} className="shrink-0 text-slate-500" />
       ) : tab.type === "pdf" ? (
         <FileText size={12} className="shrink-0 text-red-500" />
+      ) : tab.type === "webpage" ? (
+        <Globe size={12} className="shrink-0 text-blue-500" />
       ) : (
         <FileText size={12} className="shrink-0 opacity-60" />
       )}
@@ -96,10 +98,17 @@ export function TabBar() {
   const handleClose = useCallback(
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
+      const tab = tabs[index];
       // 如果关闭的是视频标签页，同时关闭 WebView
-      if (tabs[index]?.type === "video-note") {
+      if (tab?.type === "video-note") {
         import('@tauri-apps/api/core').then(({ invoke }) => {
           invoke('close_embedded_webview').catch(() => {});
+        });
+      }
+      // 如果关闭的是网页标签页，同时关闭浏览器 WebView
+      if (tab?.type === "webpage") {
+        import('@tauri-apps/api/core').then(({ invoke }) => {
+          invoke('close_browser_webview', { tabId: tab.id }).catch(() => {});
         });
       }
       closeTab(index);

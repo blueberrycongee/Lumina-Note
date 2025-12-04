@@ -20,6 +20,7 @@ import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
 import { VideoNoteView } from "@/components/video/VideoNoteView";
 import { DatabaseView, CreateDatabaseDialog, DatabaseSplitView } from "@/components/database";
 import { PDFViewer } from "@/components/pdf";
+import { BrowserView } from "@/components/browser";
 import { useAIStore } from "@/stores/useAIStore";
 import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
@@ -403,6 +404,16 @@ function App() {
             <VideoNoteView 
               initialUrl={activeTab.videoUrl}
               initialNoteFile={activeTab.videoNoteData}
+              isActive={true}
+            />
+          </div>
+        ) : activeTab?.type === "webpage" ? (
+          // 网页浏览器标签页
+          <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <TabBar />
+            <BrowserView
+              tabId={activeTab.id}
+              initialUrl={activeTab.webpageUrl}
               isActive={true}
             />
           </div>

@@ -11,6 +11,7 @@ import {
   Video,
   Database,
   Bot,
+  Globe,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -31,13 +32,14 @@ export function Ribbon() {
     fileTree,
     openAIMainTab,
     currentFile,
+    openWebpageTab,
   } = useFileStore();
 
   // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
   // 归一化当前主视图所属的功能区，方便扩展
-  type RibbonSection = "ai" | "file" | "graph" | "video" | "database" | "none";
+  type RibbonSection = "ai" | "file" | "graph" | "video" | "database" | "browser" | "none";
 
   let activeSection: RibbonSection = "none";
   if (activeTab?.type === "ai-chat") {
@@ -48,6 +50,8 @@ export function Ribbon() {
     activeSection = "video";
   } else if (activeTab?.type === "database") {
     activeSection = "database";
+  } else if (activeTab?.type === "webpage") {
+    activeSection = "browser";
   } else if (activeTab?.type === "file" || currentFile) {
     // 没有特殊类型时，只要在编辑文件，就认为是文件编辑区
     activeSection = "file";
@@ -185,6 +189,28 @@ export function Ribbon() {
           title="数据库"
         >
           <Database size={20} />
+        </button>
+
+        {/* Browser */}
+        <button
+          onClick={() => {
+            // 查找已有的空网页标签页或创建新的
+            const webpageTabIndex = tabs.findIndex(t => t.type === "webpage" && !t.webpageUrl);
+            if (webpageTabIndex >= 0) {
+              switchTab(webpageTabIndex);
+            } else {
+              openWebpageTab("", "新标签页");
+            }
+          }}
+          className={cn(
+            "w-9 h-9 rounded-lg flex items-center justify-center transition-all",
+            activeSection === "browser"
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+          title="浏览器"
+        >
+          <Globe size={20} />
         </button>
       </div>
 
