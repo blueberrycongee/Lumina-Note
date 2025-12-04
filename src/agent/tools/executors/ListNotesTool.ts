@@ -4,7 +4,7 @@
 
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { readDir } from "@/lib/tauri";
-import { join } from "@/lib/path";
+import { join, resolve } from "@/lib/path";
 
 interface FileEntry {
   name: string;
@@ -33,7 +33,7 @@ export const ListNotesTool: ToolExecutor = {
     const recursive = params.recursive !== false; // 默认 true
 
     try {
-      const fullPath = join(context.workspacePath, directory);
+      const fullPath = resolve(context.workspacePath, directory);
       const rawEntries = await readDir(fullPath, { recursive });
 
       // 转换类型，确保 isDirectory 为 boolean

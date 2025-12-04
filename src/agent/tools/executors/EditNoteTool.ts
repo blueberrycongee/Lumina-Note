@@ -4,7 +4,7 @@
 
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { readFile } from "@/lib/tauri";
-import { join } from "@/lib/path";
+import { join, resolve } from "@/lib/path";
 import { useAIStore } from "@/stores/useAIStore";
 
 interface EditOperation {
@@ -21,10 +21,10 @@ export const EditNoteTool: ToolExecutor = {
     context: ToolContext
   ): Promise<ToolResult> {
     const path = params.path as string;
-    
+
     // 兼容多种参数格式
     let edits: EditOperation[] = [];
-    
+
     if (Array.isArray(params.edits) && params.edits.length > 0) {
       // 标准格式: edits: [{search, replace}]
       edits = params.edits as EditOperation[];
@@ -90,9 +90,9 @@ export const EditNoteTool: ToolExecutor = {
     }
 
     try {
-      const fullPath = join(context.workspacePath, path);
+      const fullPath = resolve(context.workspacePath, path);
       let content = await readFile(fullPath);
-      
+
       // 保存原始内容用于实时预览
       const oldContent = content;
 
@@ -121,8 +121,8 @@ export const EditNoteTool: ToolExecutor = {
             appliedEdits.push(`编辑 ${i + 1}: 成功 (规范化匹配)`);
           } else {
             // 提供更有用的错误信息
-            const searchPreview = edit.search.length > 50 
-              ? edit.search.substring(0, 50) + "..." 
+            const searchPreview = edit.search.length > 50
+              ? edit.search.substring(0, 50) + "..."
               : edit.search;
             failedEdits.push(
               `编辑 ${i + 1}: 未找到匹配内容 "${searchPreview}"
@@ -136,10 +136,10 @@ export const EditNoteTool: ToolExecutor = {
       if (appliedEdits.length > 0) {
         // 不直接写入文件，通过 DiffView 让用户确认
         const fileName = path.split(/[/\\]/).pop() || path;
-        
+
         // 设置 pendingDiff，复用 Chat 模式的 DiffView
         const { setPendingDiff, setDiffResolver } = useAIStore.getState();
-        
+
         // 创建 Promise 等待用户确认
         const confirmation = new Promise<boolean>((resolve) => {
           setDiffResolver(resolve);
@@ -155,7 +155,7 @@ export const EditNoteTool: ToolExecutor = {
 
         // 等待用户确认
         const approved = await confirmation;
-        
+
         // 清理 resolver
         setDiffResolver(null);
 

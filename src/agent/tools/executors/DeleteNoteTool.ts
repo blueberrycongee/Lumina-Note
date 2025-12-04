@@ -6,7 +6,7 @@
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { deleteFile, exists } from "@/lib/tauri";
 import { useFileStore } from "@/stores/useFileStore";
-import { join } from "@/lib/path";
+import { join, resolve } from "@/lib/path";
 
 export const DeleteNoteTool: ToolExecutor = {
   name: "delete_note",
@@ -28,7 +28,7 @@ export const DeleteNoteTool: ToolExecutor = {
 
     try {
       // 构建完整路径
-      const fullPath = join(context.workspacePath, path);
+      const fullPath = resolve(context.workspacePath, path);
 
       // 检查文件是否存在
       const fileExists = await exists(fullPath);

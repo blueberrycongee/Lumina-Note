@@ -4,7 +4,7 @@
 
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { exists, rename } from "@/lib/tauri";
-import { join, dirname } from "@/lib/path";
+import { join, dirname, resolve } from "@/lib/path";
 import { useFileStore } from "@/stores/useFileStore";
 
 export const RenameFileTool: ToolExecutor = {
@@ -41,7 +41,7 @@ export const RenameFileTool: ToolExecutor = {
     }
 
     try {
-      const fullPath = join(context.workspacePath, path);
+      const fullPath = resolve(context.workspacePath, path);
       const dir = dirname(fullPath);
       const newFullPath = join(dir, newName);
 

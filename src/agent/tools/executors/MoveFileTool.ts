@@ -4,7 +4,7 @@
 
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { exists, rename, createDir } from "@/lib/tauri";
-import { join, dirname } from "@/lib/path";
+import { join, dirname, resolve } from "@/lib/path";
 import { useFileStore } from "@/stores/useFileStore";
 
 export const MoveFileTool: ToolExecutor = {
@@ -35,8 +35,8 @@ export const MoveFileTool: ToolExecutor = {
     }
 
     try {
-      const fromPath = join(context.workspacePath, from);
-      const toPath = join(context.workspacePath, to);
+      const fromPath = resolve(context.workspacePath, from);
+      const toPath = resolve(context.workspacePath, to);
 
       // 检查源文件是否存在
       if (!(await exists(fromPath))) {

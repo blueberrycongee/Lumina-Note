@@ -4,7 +4,7 @@
 
 import { ToolExecutor, ToolResult, ToolContext } from "../../types";
 import { readFile } from "@/lib/tauri";
-import { join } from "@/lib/path";
+import { join, resolve } from "@/lib/path";
 
 export const ReadNoteTool: ToolExecutor = {
   name: "read_note",
@@ -16,7 +16,7 @@ export const ReadNoteTool: ToolExecutor = {
   ): Promise<ToolResult> {
     // 支持两种格式：path (单个字符串) 或 paths (数组)
     let paths: string[] = [];
-    
+
     if (params.paths) {
       // paths 参数
       if (Array.isArray(params.paths)) {
@@ -59,7 +59,10 @@ export const ReadNoteTool: ToolExecutor = {
 
     for (const relativePath of paths) {
       try {
-        const fullPath = join(context.workspacePath, relativePath);
+        // 允许两种用法：
+        // 1) 相对路径（相对于 workspacePath）
+        // 2) 绝对路径（直接使用，不再拼接 workspacePath）
+        const fullPath = resolve(context.workspacePath, relativePath);
         const content = await readFile(fullPath);
 
         // 添加行号
