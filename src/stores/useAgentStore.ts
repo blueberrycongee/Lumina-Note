@@ -15,7 +15,7 @@ import {
 import { getAgentLoop, resetAgentLoop } from "@/agent/core/AgentLoop";
 import { MODES } from "@/agent/modes";
 import { getAIConfig } from "@/lib/ai";
-import { intentRouter, Intent } from "@/services/llm";
+import { intentRouter, Intent, queryRewriter } from "@/services/llm";
 
 interface AgentSession {
   id: string;
@@ -27,6 +27,7 @@ interface AgentSession {
   currentTask: string | null;
   lastError: string | null;
   lastIntent: Intent | null;
+  lastRewrittenQuery?: string | null;
 }
 
 function generateAgentSessionTitleFromMessages(messages: Message[], fallback: string = "新对话"): string {
@@ -64,6 +65,7 @@ interface AgentState {
   currentTask: string | null;
   lastError: string | null;
   lastIntent: Intent | null;
+  lastRewrittenQuery: string | null;
 
   // 超时检测（LLM 请求级别）
   llmRequestStartTime: number | null;  // 当前 LLM 请求开始时间
@@ -163,6 +165,7 @@ export const useAgentStore = create<AgentState>()(
         currentTask: null,
         lastError: null,
         lastIntent: null,
+        lastRewrittenQuery: null,
 
         // 超时检测（LLM 请求级别）
         llmRequestStartTime: null,
@@ -180,6 +183,7 @@ export const useAgentStore = create<AgentState>()(
             currentTask: null,
             lastError: null,
             lastIntent: null,
+            lastRewrittenQuery: null,
           },
         ],
         currentSessionId: defaultSessionId,
@@ -356,6 +360,9 @@ export const useAgentStore = create<AgentState>()(
 
           // 意图识别与动态路由
           let configOverride: Partial<LLMConfig> | undefined = undefined;
+          // 准备用于路由/改写的消息历史与默认处理消息
+          const currentMessages = get().messages;
+          let processingMessage = message;
           try {
             const config = getAIConfig();
             // 检查路由是否启用 (只要启用了路由，就进行意图识别，即使没有配置 chatProvider)
@@ -363,6 +370,7 @@ export const useAgentStore = create<AgentState>()(
               // 获取最新消息历史
               const currentMessages = get().messages;
 
+              // 先进行意图识别（使用原始用户输入）
               const intent = await intentRouter.route(message, currentMessages);
               console.log('[Agent] Intent detected:', intent);
 
@@ -416,12 +424,38 @@ export const useAgentStore = create<AgentState>()(
                 console.log(`[Agent] Auto-switching mode to: ${targetMode} (based on intent: ${intent.type})`);
               }
             }
+            // 如果不是闲聊意图，则对 prompt 做保守改写，改写结果用于传递给 AgentLoop（不会改变 UI 中展示的原始用户消息）
+            try {
+              if (fullContext.intent !== "chat") {
+                const rewritten = await queryRewriter.rewrite(message, currentMessages);
+                processingMessage = rewritten || message;
+                console.log('[Agent] Rewritten query for processing:', processingMessage);
+
+                // 如果改写结果看起来像是“已完成/已执行”的陈述（这会误导后续 LLM 认为任务已完成），则放弃改写并回退为原始 message
+                const completedPattern = /(已成功|已删除|删除了|已完成|完成了|已移除|移除了|成功删除|已将.+删除|删除成功|done|deleted)/i;
+                if (completedPattern.test(processingMessage)) {
+                  console.warn('[Agent] Rewritten query appears to be a completion statement — discarding rewrite and using original message');
+                  processingMessage = message;
+                }
+
+                // 将最终（可能回退过的）改写结果写入 store（便于调试观察），同时更新当前会话的 lastRewrittenQuery
+                set((state) => ({
+                  lastRewrittenQuery: processingMessage,
+                  sessions: state.sessions.map((s) =>
+                    s.id === state.currentSessionId ? { ...s, lastRewrittenQuery: processingMessage } : s
+                  ),
+                }));
+              }
+            } catch (e) {
+              console.warn('[Agent] Query rewrite (post-intent) failed, fallback to original message', e);
+              processingMessage = message;
+            }
           } catch (e) {
             console.warn('[Agent] Routing failed:', e);
           }
 
           try {
-            await loop.startTask(message, fullContext, configOverride);
+            await loop.startTask(processingMessage, fullContext, configOverride);
           } catch (error) {
             const errMsg = error instanceof Error ? error.message : "未知错误";
             set((state) => ({

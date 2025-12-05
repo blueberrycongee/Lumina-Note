@@ -27,8 +27,8 @@ export { PROVIDER_REGISTRY } from "./types";
 export { getLLMConfig, setLLMConfig, resetLLMConfig } from "./config";
 
 // Providers
-export { 
-  AnthropicProvider, 
+export {
+  AnthropicProvider,
   OpenAIProvider,
   GeminiProvider,
   MoonshotProvider,
@@ -46,6 +46,7 @@ import { createProvider } from "./factory";
 
 // 导出 Router
 export { IntentRouter, intentRouter } from "./router";
+export { QueryRewriter, queryRewriter } from "./rewrite";
 export { createProvider } from "./factory";
 
 /**
@@ -58,11 +59,11 @@ export async function callLLM(
   configOverride?: Partial<LLMConfig>
 ): Promise<LLMResponse> {
   console.log('[AI Debug] callLLM() called with', messages.length, 'messages');
-  
+
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 1000;
   let lastError: Error | null = null;
-  
+
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const provider = createProvider(configOverride);
@@ -78,24 +79,24 @@ export async function callLLM(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.error('[AI Debug] Error in callLLM():', lastError);
-      
+
       // 检查是否是可重试的网络错误
-      const isRetryable = 
+      const isRetryable =
         lastError.message.includes("Failed to fetch") ||
         lastError.message.includes("HTTP2") ||
         lastError.message.includes("network") ||
         lastError.message.includes("ECONNRESET");
-      
+
       if (isRetryable && attempt < MAX_RETRIES) {
         console.warn(`[LLM] 请求失败 (尝试 ${attempt}/${MAX_RETRIES})，${RETRY_DELAY}ms 后重试...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         continue;
       }
-      
+
       throw lastError;
     }
   }
-  
+
   throw lastError || new Error("未知错误");
 }
 
@@ -114,9 +115,9 @@ export async function* callLLMStream(
     ...options,
     temperature: options?.temperature ?? config.temperature,
   };
-  
+
   console.log('[AI Debug] callLLMStream - provider.stream exists:', !!provider.stream);
-  
+
   // 检查 Provider 是否支持流式
   if (!provider.stream) {
     // 降级：不支持流式的 Provider 一次性返回
@@ -133,7 +134,7 @@ export async function* callLLMStream(
     }
     return;
   }
-  
+
   // 使用 Provider 的流式方法
   console.log('[AI Debug] callLLMStream - using provider.stream()');
   yield* provider.stream(messages, finalOptions);

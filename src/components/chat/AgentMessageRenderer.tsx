@@ -528,8 +528,17 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         const parsed = parseAssistantMessage(msg.content, toolResults);
         allThinkingBlocks.push(...parsed.thinkingBlocks);
         allToolCalls.push(...parsed.toolCalls);
+        // 优先使用 attempt_completion_result 或 attempt_completion 中的 result
         if (parsed.finalAnswer) {
           finalAnswer = parsed.finalAnswer;
+        }
+        // 如果没有结构化的 finalAnswer，保留解析出的纯文本（rawTextBeforeCompletion）作为回退
+        if (!finalAnswer && parsed.rawTextBeforeCompletion) {
+          // 仅在回退文本非空时使用
+          const fallback = parsed.rawTextBeforeCompletion.trim();
+          if (fallback.length > 0) {
+            finalAnswer = fallback;
+          }
         }
       });
 
@@ -537,6 +546,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       const roundKey = `round-${displayContent.slice(0, 50)}`;
 
       // 判断是否有 AI 回复内容
+      // 如果存在解析出的原始文本（即使没有结构化 finalAnswer），也应视为有回复并显示
       const hasAIContent = allThinkingBlocks.length > 0 || allToolCalls.length > 0 || !!finalAnswer;
 
       result.push({
