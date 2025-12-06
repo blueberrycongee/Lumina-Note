@@ -11,10 +11,14 @@ import {
   Plus, 
   Brain,
   Clock,
-  Sparkles
+  Sparkles,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useFlashcardStore } from '../../stores/useFlashcardStore';
 import { cn } from '../../lib/utils';
+import { Flashcard } from '../../types/flashcard';
 
 interface DeckListProps {
   onStartReview: (deckId: string) => void;
@@ -25,10 +29,32 @@ export const DeckList: React.FC<DeckListProps> = ({
   onStartReview, 
   onCreateCard 
 }) => {
-  const { getDecks, getDeckStats, getDueCards } = useFlashcardStore();
+  const { getDecks, getDeckStats, getDueCards, getCardsByDeck, deleteDeck, deleteCard } = useFlashcardStore();
+  const [expandedDecks, setExpandedDecks] = React.useState<Set<string>>(new Set());
   
   const decks = getDecks();
   const allDueCount = getDueCards().length;
+
+  const toggleExpanded = (deckId: string) => {
+    setExpandedDecks(prev => {
+      const next = new Set(prev);
+      if (next.has(deckId)) next.delete(deckId);
+      else next.add(deckId);
+      return next;
+    });
+  };
+
+  const handleDeleteDeck = async (deckId: string) => {
+    const confirmed = window.confirm(`确定删除牌组 "${deckId}" 下的所有卡片吗？`);
+    if (!confirmed) return;
+    await deleteDeck(deckId);
+  };
+
+  const handleDeleteCard = async (notePath: string) => {
+    const confirmed = window.confirm('确定删除这张卡片吗？');
+    if (!confirmed) return;
+    await deleteCard(notePath);
+  };
 
   return (
     <div className="p-4 space-y-4">
@@ -90,8 +116,13 @@ export const DeckList: React.FC<DeckListProps> = ({
               key={deck.id}
               deck={deck}
               stats={getDeckStats(deck.id)}
+              cards={getCardsByDeck(deck.id)}
               onStartReview={() => onStartReview(deck.id)}
               onCreateCard={() => onCreateCard(deck.id)}
+              onDeleteDeck={() => handleDeleteDeck(deck.id)}
+              onDeleteCard={(notePath) => handleDeleteCard(notePath)}
+              expanded={expandedDecks.has(deck.id)}
+              onToggleExpanded={() => toggleExpanded(deck.id)}
             />
           ))
         )}
@@ -105,15 +136,25 @@ export const DeckList: React.FC<DeckListProps> = ({
 interface DeckCardProps {
   deck: { id: string; name: string; description?: string };
   stats: { total: number; new: number; due: number; learning: number };
+  cards: Flashcard[];
   onStartReview: () => void;
   onCreateCard: () => void;
+  onDeleteDeck: () => void;
+  onDeleteCard: (notePath: string) => void;
+  expanded: boolean;
+  onToggleExpanded: () => void;
 }
 
 const DeckCard: React.FC<DeckCardProps> = ({ 
   deck, 
   stats, 
+  cards,
   onStartReview, 
-  onCreateCard 
+  onCreateCard,
+  onDeleteDeck,
+  onDeleteCard,
+  expanded,
+  onToggleExpanded,
 }) => {
   const hasDue = stats.due > 0 || stats.new > 0;
 
@@ -158,6 +199,14 @@ const DeckCard: React.FC<DeckCardProps> = ({
 
         {/* 操作按钮 */}
         <div className="flex items-center gap-1">
+          <button
+            onClick={onToggleExpanded}
+            className="p-2 hover:bg-muted rounded-lg"
+            title={expanded ? "收起卡片" : "展开卡片"}
+          >
+            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
           {hasDue && (
             <button
               onClick={onStartReview}
@@ -174,8 +223,42 @@ const DeckCard: React.FC<DeckCardProps> = ({
           >
             <Plus className="w-4 h-4" />
           </button>
+          <button
+            onClick={onDeleteDeck}
+            className="p-2 hover:bg-muted rounded-lg text-destructive"
+            title="删除牌组（会删除该组所有卡片）"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
+
+      {/* 展开显示卡片列表 */}
+      {expanded && cards.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {cards.map(card => (
+            <div
+              key={card.notePath}
+              className="text-sm text-muted-foreground border rounded-lg p-2 flex items-center justify-between gap-2"
+            >
+              <CardPreview card={card} />
+              <button
+                onClick={() => onDeleteCard(card.notePath)}
+                className="p-1 hover:bg-muted rounded text-destructive"
+                title="删除这张卡片"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {expanded && cards.length === 0 && (
+        <div className="mt-3 text-sm text-muted-foreground">
+          暂无卡片
+        </div>
+      )}
     </div>
   );
 };
@@ -202,6 +285,23 @@ const StatBadge: React.FC<{
       <span className="text-muted-foreground">{label}</span>
     </div>
   );
+};
+
+/** 卡片预览内容 */
+const CardPreview: React.FC<{ card: Flashcard }> = ({ card }) => {
+  if ((card.type === 'basic' || card.type === 'basic-reversed') && card.front) {
+    return <span>{card.front}</span>;
+  }
+  if (card.type === 'cloze' && card.text) {
+    return <span>{card.text}</span>;
+  }
+  if (card.type === 'mcq' && card.question) {
+    return <span>{card.question}</span>;
+  }
+  if (card.type === 'list' && card.question) {
+    return <span>{card.question}</span>;
+  }
+  return <span>{card.notePath}</span>;
 };
 
 export default DeckList;

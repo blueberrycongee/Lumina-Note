@@ -104,6 +104,8 @@ interface FlashcardState {
   getDecks: () => Deck[];
   getDeckStats: (deckId: string) => { total: number; new: number; due: number; learning: number };
   getDueCards: (deckId?: string) => Flashcard[];
+  getCardsByDeck: (deckId: string) => Flashcard[];
+  deleteDeck: (deckId: string) => Promise<void>;
   
   // 工具
   parseNoteAsCard: (notePath: string, yaml: Record<string, any>) => void;
@@ -416,6 +418,30 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
         }
         return isDue(card.due);
       });
+  },
+
+  /**
+   * 获取指定牌组的所有卡片
+   */
+  getCardsByDeck: (deckId) => {
+    return Array.from(get().cards.values())
+      .filter(card => card.deck === deckId);
+  },
+
+  /**
+   * 删除整个牌组（删除其包含的所有卡片）
+   */
+  deleteDeck: async (deckId) => {
+    const { deleteCard } = get();
+    const cardsToDelete = get().getCardsByDeck(deckId);
+
+    for (const card of cardsToDelete) {
+      await deleteCard(card.notePath);
+    }
+
+    // 刷新文件树以反映删除
+    const fileStore = useFileStore.getState();
+    await fileStore.refreshFileTree();
   },
 
   /**
