@@ -31,6 +31,8 @@ export const DeckList: React.FC<DeckListProps> = ({
 }) => {
   const { getDecks, getDeckStats, getDueCards, getCardsByDeck, deleteDeck, deleteCard } = useFlashcardStore();
   const [expandedDecks, setExpandedDecks] = React.useState<Set<string>>(new Set());
+  const [pendingDelete, setPendingDelete] = React.useState<{ type: 'deck' | 'card'; deckId: string; notePath?: string } | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   
   const decks = getDecks();
   const allDueCount = getDueCards().length;
@@ -44,16 +46,37 @@ export const DeckList: React.FC<DeckListProps> = ({
     });
   };
 
-  const handleDeleteDeck = async (deckId: string) => {
-    const confirmed = window.confirm(`确定删除牌组 "${deckId}" 下的所有卡片吗？`);
-    if (!confirmed) return;
-    await deleteDeck(deckId);
+  const requestDeleteDeck = (deckId: string) => {
+    setPendingDelete({ type: 'deck', deckId });
   };
 
-  const handleDeleteCard = async (notePath: string) => {
-    const confirmed = window.confirm('确定删除这张卡片吗？');
-    if (!confirmed) return;
-    await deleteCard(notePath);
+  const requestDeleteCard = (deckId: string, notePath: string) => {
+    setPendingDelete({ type: 'card', deckId, notePath });
+  };
+
+  const cancelDelete = () => {
+    if (isDeleting) return;
+    setPendingDelete(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setIsDeleting(true);
+    try {
+      if (pendingDelete.type === 'deck') {
+        await deleteDeck(pendingDelete.deckId);
+        setExpandedDecks(prev => {
+          const next = new Set(prev);
+          next.delete(pendingDelete.deckId);
+          return next;
+        });
+      } else if (pendingDelete.notePath) {
+        await deleteCard(pendingDelete.notePath);
+      }
+    } finally {
+      setIsDeleting(false);
+      setPendingDelete(null);
+    }
   };
 
   return (
@@ -119,14 +142,43 @@ export const DeckList: React.FC<DeckListProps> = ({
               cards={getCardsByDeck(deck.id)}
               onStartReview={() => onStartReview(deck.id)}
               onCreateCard={() => onCreateCard(deck.id)}
-              onDeleteDeck={() => handleDeleteDeck(deck.id)}
-              onDeleteCard={(notePath) => handleDeleteCard(notePath)}
+              onDeleteDeck={() => requestDeleteDeck(deck.id)}
+              onDeleteCard={(notePath) => requestDeleteCard(deck.id, notePath)}
               expanded={expandedDecks.has(deck.id)}
               onToggleExpanded={() => toggleExpanded(deck.id)}
             />
           ))
         )}
       </div>
+
+      {pendingDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-card border rounded-xl p-5 w-full max-w-sm shadow-xl space-y-3">
+            <div className="font-semibold text-base">
+              {pendingDelete.type === 'deck'
+                ? `确定删除牌组「${pendingDelete.deckId}」以及其中的所有卡片吗？`
+                : '确定删除这张卡片吗？'}
+            </div>
+            <p className="text-sm text-muted-foreground">删除后无法恢复。</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={cancelDelete}
+                className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+                disabled={isDeleting}
+              >
+                取消
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="px-3 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg disabled:opacity-50"
+              >
+                {isDeleting ? '删除中...' : '删除'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

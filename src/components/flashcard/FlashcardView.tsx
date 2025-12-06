@@ -1,7 +1,7 @@
-/**
+﻿/**
  * FlashcardView - 闪卡主视图
- * 
- * 整合牌组列表和复习界面
+ *
+ * 组合牌组列表和复习界面，并在文件树变化时自动刷新闪卡。
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -19,12 +19,14 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({ deckId }) => {
   const [reviewingDeckId, setReviewingDeckId] = useState<string | null>(deckId || null);
   const [showCreateCard, setShowCreateCard] = useState(false);
   const [createDeckId, setCreateDeckId] = useState<string>('Default');
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const { currentSession, endReview, loadCards, isLoading } = useFlashcardStore();
   const { fileTree } = useFileStore();
 
   // 加载闪卡
-  const refreshCards = useCallback(() => {
-    loadCards();
+  const refreshCards = useCallback(async () => {
+    await loadCards();
+    setHasLoadedOnce(true);
   }, [loadCards]);
 
   // 初始加载
@@ -34,8 +36,6 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({ deckId }) => {
 
   // 监听文件树变化（文件创建/删除时会更新 fileTree）
   useEffect(() => {
-    // 当文件树变化时，重新加载闪卡
-    // 这样可以捕获到文件的创建和删除
     refreshCards();
   }, [fileTree, refreshCards]);
 
@@ -66,18 +66,15 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({ deckId }) => {
     );
   }
 
-  // 加载中
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  // 显示牌组列表
+  // 显示牌组列表（加载时保持组件挂载，用遮罩提示，以免展开状态丢失）
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="relative flex-1 overflow-auto">
+      {!hasLoadedOnce && isLoading && (
+        <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
       <DeckList 
         onStartReview={handleStartReview}
         onCreateCard={handleCreateCard}
@@ -94,7 +91,7 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({ deckId }) => {
   );
 };
 
-// ==================== 创建卡片对话框 ====================
+// ==================== 创建卡片对话框（简版） ====================
 
 interface CreateCardDialogProps {
   deckId: string;
