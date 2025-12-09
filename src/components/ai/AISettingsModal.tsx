@@ -1,11 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentStore } from "@/stores/useAgentStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
-import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
-import { Settings, Tag, Loader2 } from "lucide-react";
+import { PROVIDER_REGISTRY, type LLMProviderType, createProvider } from "@/services/llm";
+import { Settings, Tag, Loader2, Check, X, Zap } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+
+// 测试连接状态类型
+type TestStatus = "idle" | "testing" | "success" | "error";
+
+interface TestResult {
+  status: TestStatus;
+  message?: string;
+  latency?: number;
+}
+
+// 常见错误信息映射
+const ERROR_MESSAGES: Record<string, string> = {
+  "401": "API Key 无效或已过期",
+  "403": "API Key 权限不足",
+  "404": "API 端点不存在，请检查 Base URL",
+  "429": "请求过于频繁，请稍后再试",
+  "500": "服务器内部错误",
+  "502": "网关错误，服务暂时不可用",
+  "503": "服务暂时不可用",
+  "timeout": "连接超时，请检查网络或服务器地址",
+  "network": "网络连接失败，请检查网络设置",
+  "invalid_key": "API Key 格式不正确",
+  "no_key": "请先输入 API Key",
+  "connection_refused": "连接被拒绝，请检查服务是否运行",
+};
 
 interface AISettingsModalProps {
   isOpen: boolean;
@@ -26,6 +51,77 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   } = useRAGStore();
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const { t } = useLocaleStore();
+
+  // 测试连接状态
+  const [testResult, setTestResult] = useState<TestResult>({ status: "idle" });
+
+  // 解析错误信息
+  const parseError = useCallback((error: unknown): string => {
+    const errorStr = String(error);
+    
+    // 检查 HTTP 状态码
+    for (const [code, msg] of Object.entries(ERROR_MESSAGES)) {
+      if (errorStr.includes(code) || errorStr.toLowerCase().includes(code)) {
+        return msg;
+      }
+    }
+    
+    // 检查常见错误关键词
+    if (errorStr.toLowerCase().includes("timeout")) return ERROR_MESSAGES.timeout;
+    if (errorStr.toLowerCase().includes("network") || errorStr.toLowerCase().includes("fetch")) return ERROR_MESSAGES.network;
+    if (errorStr.toLowerCase().includes("econnrefused") || errorStr.toLowerCase().includes("connection refused")) return ERROR_MESSAGES.connection_refused;
+    if (errorStr.toLowerCase().includes("unauthorized") || errorStr.toLowerCase().includes("invalid api key")) return ERROR_MESSAGES["401"];
+    
+    // 返回原始错误（截断过长的）
+    return errorStr.length > 100 ? errorStr.slice(0, 100) + "..." : errorStr;
+  }, []);
+
+  // 测试 API 连接
+  const testConnection = useCallback(async () => {
+    // 检查 API Key（Ollama 除外）
+    if (config.provider !== "ollama" && !config.apiKey) {
+      setTestResult({ status: "error", message: ERROR_MESSAGES.no_key });
+      return;
+    }
+
+    setTestResult({ status: "testing" });
+    const startTime = Date.now();
+
+    try {
+      const provider = createProvider(config);
+      
+      // 发送简单测试请求
+      const response = await provider.call(
+        [{ role: "user", content: "Reply with exactly: OK" }],
+        { maxTokens: 10, temperature: 0 }
+      );
+
+      const latency = Date.now() - startTime;
+      
+      if (response.content) {
+        setTestResult({
+          status: "success",
+          message: `连接成功`,
+          latency,
+        });
+      } else {
+        setTestResult({
+          status: "error",
+          message: "服务响应异常，未返回内容",
+        });
+      }
+    } catch (error) {
+      setTestResult({
+        status: "error",
+        message: parseError(error),
+      });
+    }
+  }, [config, parseError]);
+
+  // 配置变化时重置测试状态
+  useEffect(() => {
+    setTestResult({ status: "idle" });
+  }, [config.provider, config.apiKey, config.model, config.baseUrl]);
 
   // 弹窗打开时隐藏 WebView，关闭时恢复
   useEffect(() => {
@@ -91,19 +187,67 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               <label className="text-xs text-muted-foreground block mb-1">
                 {t.aiSettings.apiKey} {config.provider === "ollama" && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
               </label>
-              <input
-                type="password"
-                value={config.apiKey}
-                onChange={(e) => setConfig({ apiKey: e.target.value })}
-                placeholder={
-                  config.provider === "ollama"
-                    ? t.aiSettings.localModelNoKey
-                    : config.provider === "anthropic"
-                      ? "sk-ant-..."
-                      : "sk-..."
-                }
-                className="w-full text-xs p-2 rounded border border-border bg-background"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="password"
+                  value={config.apiKey}
+                  onChange={(e) => setConfig({ apiKey: e.target.value })}
+                  placeholder={
+                    config.provider === "ollama"
+                      ? t.aiSettings.localModelNoKey
+                      : config.provider === "anthropic"
+                        ? "sk-ant-..."
+                        : "sk-..."
+                  }
+                  className="flex-1 text-xs p-2 rounded border border-border bg-background"
+                />
+                <button
+                  onClick={testConnection}
+                  disabled={testResult.status === "testing"}
+                  className={`px-3 py-2 text-xs rounded border transition-all flex items-center gap-1.5 min-w-[90px] justify-center ${
+                    testResult.status === "success"
+                      ? "border-green-500/50 bg-green-500/10 text-green-500"
+                      : testResult.status === "error"
+                        ? "border-red-500/50 bg-red-500/10 text-red-500"
+                        : "border-border hover:bg-muted"
+                  }`}
+                >
+                  {testResult.status === "testing" ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" />
+                      测试中
+                    </>
+                  ) : testResult.status === "success" ? (
+                    <>
+                      <Check size={12} />
+                      {testResult.latency ? `${(testResult.latency / 1000).toFixed(1)}s` : "成功"}
+                    </>
+                  ) : testResult.status === "error" ? (
+                    <>
+                      <X size={12} />
+                      失败
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={12} />
+                      测试
+                    </>
+                  )}
+                </button>
+              </div>
+              {/* 测试结果详情 */}
+              {testResult.status === "error" && testResult.message && (
+                <div className="mt-1.5 text-xs text-red-500 bg-red-500/10 rounded px-2 py-1.5 flex items-start gap-1.5">
+                  <X size={12} className="shrink-0 mt-0.5" />
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+              {testResult.status === "success" && (
+                <div className="mt-1.5 text-xs text-green-500 bg-green-500/10 rounded px-2 py-1.5 flex items-center gap-1.5">
+                  <Check size={12} />
+                  <span>连接成功，API 配置有效</span>
+                </div>
+              )}
             </div>
 
             <div>
