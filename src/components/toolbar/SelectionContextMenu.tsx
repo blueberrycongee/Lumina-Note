@@ -254,7 +254,7 @@ export function SelectionContextMenu({ containerRef, onFormatText }: SelectionCo
         {/* 子菜单 */}
         {hasSubmenu && activeSubmenu === item.id && (
           <div
-            className="absolute left-full top-0 ml-1 min-w-[180px] bg-popover border border-border rounded-lg shadow-lg py-1 z-[60]"
+            className="absolute left-full top-0 ml-1 min-w-[180px] bg-background border border-border rounded-lg shadow-lg py-1 z-[60]"
             onMouseEnter={() => setActiveSubmenu(item.id)}
           >
             {item.submenu!.map((subItem) => renderMenuItem(subItem, true))}
@@ -267,7 +267,7 @@ export function SelectionContextMenu({ containerRef, onFormatText }: SelectionCo
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-[200px] bg-popover border border-border rounded-lg shadow-xl py-1"
+      className="fixed z-50 min-w-[200px] bg-background border border-border rounded-lg shadow-xl py-1"
       style={{
         left: position.x,
         top: position.y,
