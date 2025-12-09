@@ -13,6 +13,12 @@ body.resizing * {
   color: hsl(var(--foreground));
 }
 
+/* 全局选区颜色（更淡的蓝色）*/
+::selection {
+  background-color: rgba(191, 219, 254, 0.8);
+  color: inherit;
+}
+
 :root {
   --background: 45 10% 98%;  /* 微暖白：一点点黄调 */
   --foreground: 40 10% 10%;  /* 暖黑 */

@@ -81,9 +81,9 @@ const editorTheme = EditorView.theme({
   ".cm-content": { fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", padding: "16px 0", caretColor: "hsl(var(--primary))" },
   ".cm-line": { padding: "0 16px", paddingLeft: "16px", lineHeight: "1.75", position: "relative" },
   
-  // 选区颜色
-  ".cm-selectionBackground": { backgroundColor: "rgba(147, 197, 253, 0.35) !important" },
-  "&.cm-focused .cm-selectionBackground": { backgroundColor: "rgba(147, 197, 253, 0.45) !important" },
+  // 选区颜色（更淡的蓝色）
+  ".cm-selectionBackground": { backgroundColor: "rgba(191, 219, 254, 0.25) !important" },
+  "&.cm-focused .cm-selectionBackground": { backgroundColor: "rgba(191, 219, 254, 0.35) !important" },
   
   // === 动画核心样式 ===
   
