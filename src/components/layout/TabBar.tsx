@@ -1,5 +1,6 @@
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useState, useRef, useEffect } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { X, FileText, Network, Video, Database, Globe, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -7,40 +8,43 @@ interface TabItemProps {
   tab: Tab;
   index: number;
   isActive: boolean;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  dropPosition: 'left' | 'right' | null;
   onSelect: () => void;
   onClose: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onDragStart: (e: React.DragEvent, index: number) => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: (e: React.DragEvent, index: number) => void;
+  onMouseDown: (e: React.MouseEvent, index: number) => void;
 }
 
 function TabItem({
   tab,
   index,
   isActive,
+  isDragging,
+  isDropTarget,
+  dropPosition,
   onSelect,
   onClose,
   onContextMenu,
-  onDragStart,
-  onDragOver,
-  onDrop,
+  onMouseDown,
 }: TabItemProps) {
   return (
     <div
+      data-tab-index={index}
       className={cn(
-        "group relative flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-pointer border-r border-border",
+        "group relative flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-grab border-r border-border",
         "transition-colors duration-150 select-none",
         isActive
           ? "bg-background text-foreground"
-          : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+        isDragging && "opacity-50 cursor-grabbing",
+        isDropTarget && dropPosition === 'left' && "border-l-2 border-l-primary",
+        isDropTarget && dropPosition === 'right' && "border-r-2 border-r-primary"
       )}
       onClick={onSelect}
       onContextMenu={onContextMenu}
-      draggable
-      onDragStart={(e) => onDragStart(e, index)}
-      onDragOver={onDragOver}
-      onDrop={(e) => onDrop(e, index)}
+      onMouseDown={(e) => onMouseDown(e, index)}
     >
       {tab.type === "graph" || tab.type === "isolated-graph" ? (
         <Network size={12} className="shrink-0 text-primary" />
@@ -86,11 +90,16 @@ interface ContextMenuState {
 }
 
 export function TabBar() {
+  const { t } = useLocaleStore();
   const { tabs, activeTabIndex, switchTab, closeTab, closeOtherTabs, closeAllTabs, reorderTabs } =
     useFileStore();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null);
+  const [dropPosition, setDropPosition] = useState<'left' | 'right' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const isDragging = useRef(false);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -118,30 +127,91 @@ export function TabBar() {
     [closeTab, tabs]
   );
 
-  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+  // 自定义鼠标拖拽（绕过 Tauri WebView 的 HTML5 拖拽限制）
+  const handleTabMouseDown = useCallback((e: React.MouseEvent, index: number) => {
+    if (e.button !== 0) return; // 只处理左键
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
     setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = "move";
+    isDragging.current = false;
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-  }, []);
+  // 监听全局鼠标移动和松开
+  useEffect(() => {
+    if (draggedIndex === null) return;
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent, toIndex: number) => {
-      e.preventDefault();
-      if (draggedIndex !== null && draggedIndex !== toIndex) {
-        reorderTabs(draggedIndex, toIndex);
+    const handleMouseMove = (e: MouseEvent) => {
+      if (dragStartPos.current === null || draggedIndex === null) return;
+
+      const dx = e.clientX - dragStartPos.current.x;
+      const dy = e.clientY - dragStartPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // 移动超过 5px 才算拖拽
+      if (distance > 5) {
+        isDragging.current = true;
       }
-      setDraggedIndex(null);
-    },
-    [draggedIndex, reorderTabs]
-  );
 
-  const handleDragEnd = useCallback(() => {
-    setDraggedIndex(null);
-  }, []);
+      if (!isDragging.current) return;
+
+      // 找到鼠标下的标签页
+      const container = containerRef.current;
+      if (!container) return;
+
+      const tabElements = container.querySelectorAll('[data-tab-index]');
+      let foundTarget = false;
+
+      tabElements.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right) {
+          const tabIndex = parseInt(el.getAttribute('data-tab-index') || '-1');
+          if (tabIndex !== -1 && tabIndex !== draggedIndex) {
+            setDropTargetIndex(tabIndex);
+            // 判断是放在左边还是右边
+            const midX = rect.left + rect.width / 2;
+            setDropPosition(e.clientX < midX ? 'left' : 'right');
+            foundTarget = true;
+          }
+        }
+      });
+
+      if (!foundTarget) {
+        setDropTargetIndex(null);
+        setDropPosition(null);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging.current && draggedIndex !== null && dropTargetIndex !== null) {
+        // 计算目标位置
+        let targetIndex = dropTargetIndex;
+        if (dropPosition === 'right') {
+          targetIndex = dropTargetIndex + 1;
+        }
+        // 如果从左边拖到右边，需要调整索引
+        if (draggedIndex < targetIndex) {
+          targetIndex -= 1;
+        }
+        if (targetIndex !== draggedIndex) {
+          reorderTabs(draggedIndex, targetIndex);
+        }
+      }
+
+      // 清理状态
+      setDraggedIndex(null);
+      setDropTargetIndex(null);
+      setDropPosition(null);
+      dragStartPos.current = null;
+      isDragging.current = false;
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [draggedIndex, dropTargetIndex, dropPosition, reorderTabs]);
 
   // Close context menu when clicking outside
   const handleClickOutside = useCallback(() => {
@@ -154,7 +224,6 @@ export function TabBar() {
       <div
         ref={containerRef}
         className="flex items-stretch bg-muted/30 border-b border-border overflow-x-auto scrollbar-hide min-h-[32px]"
-        onDragEnd={handleDragEnd}
       >
         {tabs.map((tab, index) => (
           <TabItem
@@ -162,12 +231,13 @@ export function TabBar() {
             tab={tab}
             index={index}
             isActive={index === activeTabIndex}
+            isDragging={index === draggedIndex && isDragging.current}
+            isDropTarget={index === dropTargetIndex}
+            dropPosition={index === dropTargetIndex ? dropPosition : null}
             onSelect={() => switchTab(index)}
             onClose={(e) => handleClose(e, index)}
             onContextMenu={(e) => handleContextMenu(e, index)}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
+            onMouseDown={handleTabMouseDown}
           />
         ))}
       </div>
@@ -187,7 +257,7 @@ export function TabBar() {
               }}
               className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
             >
-              关闭
+              {t.tabBar.close}
             </button>
             <button
               onClick={() => {
@@ -196,7 +266,7 @@ export function TabBar() {
               }}
               className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
             >
-              关闭其他
+              {t.tabBar.closeOthers}
             </button>
             <button
               onClick={() => {
@@ -205,7 +275,7 @@ export function TabBar() {
               }}
               className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
             >
-              关闭全部
+              {t.tabBar.closeAll}
             </button>
           </div>
         </>

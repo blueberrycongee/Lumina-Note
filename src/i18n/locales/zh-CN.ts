@@ -266,6 +266,13 @@ export default {
     close: '关闭',
   },
 
+  // 标签栏
+  tabBar: {
+    close: '关闭',
+    closeOthers: '关闭其他',
+    closeAll: '关闭全部',
+  },
+
   // 对话列表
   conversationList: {
     collapseList: '收起列表',

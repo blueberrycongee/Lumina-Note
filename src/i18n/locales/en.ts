@@ -266,6 +266,13 @@ export default {
     close: 'Close',
   },
 
+  // Tab Bar
+  tabBar: {
+    close: 'Close',
+    closeOthers: 'Close Others',
+    closeAll: 'Close All',
+  },
+
   // Conversation List
   conversationList: {
     collapseList: 'Collapse list',

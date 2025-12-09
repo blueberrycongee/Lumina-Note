@@ -7,8 +7,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { MessageSquarePlus, Video, Sparkles } from "lucide-react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { callLLM } from '@/services/llm';
-import { cn } from '@/lib/utils';
+import { callLLM, type Message } from '@/services/llm';
 import { useLocaleStore } from '@/stores/useLocaleStore';
 
 interface SelectionToolbarProps {
