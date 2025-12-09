@@ -282,6 +282,15 @@ export function parseMarkdown(markdown: string): string {
       return `<span class="tag" data-tag="${tag}">#${tag}</span>`;
     });
     
+    // Highlight ==text== -> 占位符（稍后恢复）
+    const highlightPlaceholders: string[] = [];
+    const highlightPrefix = "⟦HIGHLIGHT_";
+    const highlightSuffix = "⟧";
+    processed = processed.replace(/==([^=\n]+)==/g, (_match, text) => {
+      highlightPlaceholders.push(text);
+      return `${highlightPrefix}${highlightPlaceholders.length - 1}${highlightSuffix}`;
+    });
+    
     // 恢复代码块
     codeBlockPlaceholders.forEach((code, index) => {
       const placeholder = `${codeBlockPrefix}${index}${codeBlockSuffix}`;
@@ -307,6 +316,12 @@ export function parseMarkdown(markdown: string): string {
       // 创建 mermaid 容器，code 存储在 data 属性中
       const mermaidHtml = `<div class="mermaid-container"><pre class="mermaid">${code}</pre></div>`;
       html = (html as string).split(placeholder).join(mermaidHtml);
+    });
+
+    // 5.6 Restore Highlight Placeholders - 恢复高亮
+    highlightPlaceholders.forEach((text, index) => {
+      const placeholder = `${highlightPrefix}${index}${highlightSuffix}`;
+      html = (html as string).split(placeholder).join(`<mark>${text}</mark>`);
     });
 
     // 6. Wrap tables in a scrollable container to fix alignment issues

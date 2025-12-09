@@ -9,6 +9,7 @@ import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce, getFileName } from "@/lib/utils";
 import { CodeMirrorEditor, CodeMirrorEditorRef, ViewMode } from "./CodeMirrorEditor";
 import { SelectionToolbar } from "@/components/toolbar/SelectionToolbar";
+import { SelectionContextMenu } from "@/components/toolbar/SelectionContextMenu";
 import { 
   Sidebar, 
   MessageSquare, 
@@ -385,6 +386,16 @@ export function Editor() {
           <div ref={scrollContainerRef} className="h-full overflow-auto">
             {/* Selection Toolbar - Add to Chat */}
             <SelectionToolbar containerRef={scrollContainerRef} />
+            {/* Selection Context Menu - Right Click */}
+            <SelectionContextMenu 
+              containerRef={scrollContainerRef} 
+              onFormatText={(format, text) => {
+                // 通过事件通知 CodeMirror 编辑器执行格式化
+                window.dispatchEvent(new CustomEvent('editor-format-text', {
+                  detail: { format, text }
+                }));
+              }}
+            />
           
             <div className="max-w-3xl mx-auto px-6 py-4 editor-mode-container">
               {isVideoNoteFile && (

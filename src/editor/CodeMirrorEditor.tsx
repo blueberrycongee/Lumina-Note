@@ -174,6 +174,9 @@ const editorTheme = EditorView.theme({
   ".cm-link": { color: "hsl(var(--md-link, var(--primary)))", textDecoration: "underline" },
   ".cm-code": { backgroundColor: "hsl(var(--muted))", padding: "2px 4px", borderRadius: "3px", fontFamily: "monospace" },
   ".cm-wikilink": { color: "hsl(var(--primary))", textDecoration: "underline", cursor: "pointer" },
+  ".cm-strikethrough": { textDecoration: "line-through", color: "hsl(var(--muted-foreground))" },
+  ".cm-highlight": { backgroundColor: "hsl(50 100% 50% / 0.4)", padding: "1px 2px", borderRadius: "2px" },
+  ".cm-highlight-source": { backgroundColor: "hsl(50 100% 50% / 0.3)", borderRadius: "2px" },
   ".cm-voice-preview": { color: "hsl(var(--muted-foreground))", fontStyle: "italic", opacity: 0.8 },
   ".cm-image-widget": { display: "block", margin: "8px 0" },
   ".cm-image-info": { background: "hsl(var(--muted))", padding: "4px 8px", borderRadius: "4px", fontSize: "12px", color: "hsl(var(--muted-foreground))", marginBottom: "4px", fontFamily: "monospace" },
@@ -523,6 +526,81 @@ function buildTableDecorations(state: EditorState): DecorationSet {
   return Decoration.set(decorations);
 }
 
+const codeBlockStateField = StateField.define<DecorationSet>({
+  create: buildCodeBlockDecorations,
+  update(deco, tr) { if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) return buildCodeBlockDecorations(tr.state); return deco.map(tr.changes); },
+  provide: f => EditorView.decorations.from(f),
+});
+function buildCodeBlockDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name === "FencedCode") {
+        if (shouldShowSource(state, node.from, node.to)) return;
+        const text = state.doc.sliceString(node.from, node.to);
+        const lines = text.split('\n');
+        if (lines.length < 2) return;
+        const lang = lines[0].replace(/^\s*`{3,}/, "").trim().toLowerCase();
+        const code = lines.slice(1, lines.length - 1).join('\n');
+        // Mermaid 图表使用专门的 Widget
+        const widget = lang === 'mermaid' 
+          ? new MermaidWidget(code)
+          : new CodeBlockWidget(code, lang);
+        decorations.push(Decoration.replace({ widget, block: true }).range(node.from, node.to));
+      }
+    }
+  });
+  return Decoration.set(decorations);
+}
+
+const highlightStateField = StateField.define<DecorationSet>({
+  create: buildHighlightDecorations,
+  update(deco, tr) {
+    if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) {
+      return buildHighlightDecorations(tr.state);
+    }
+    return deco.map(tr.changes);
+  },
+  provide: f => EditorView.decorations.from(f),
+});
+
+function buildHighlightDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  const doc = state.doc.toString();
+  const highlightRegex = /==([^=\n]+)==/g;
+  let match;
+  const isDrag = state.field(mouseSelectingField, false);
+  
+  while ((match = highlightRegex.exec(doc)) !== null) {
+    const from = match.index;
+    const to = from + match[0].length;
+    const textStart = from + 2;  // 跳过开头的 ==
+    const textEnd = to - 2;      // 跳过结尾的 ==
+    
+    // 检查是否在代码块内
+    const lineStart = doc.lastIndexOf('\n', from) + 1;
+    const lineText = doc.slice(lineStart, from);
+    if (lineText.includes('`')) continue;
+    
+    const isTouched = shouldShowSource(state, from, to);
+    
+    // 高亮文本部分始终添加高亮样式
+    decorations.push(Decoration.mark({ class: "cm-highlight" }).range(textStart, textEnd));
+    
+    // == 标记使用与加粗/斜体相同的动画类
+    const markCls = (isTouched && !isDrag) 
+      ? "cm-formatting-inline cm-formatting-inline-visible" 
+      : "cm-formatting-inline";
+    
+    // 开头的 ==
+    decorations.push(Decoration.mark({ class: markCls }).range(from, textStart));
+    // 结尾的 ==
+    decorations.push(Decoration.mark({ class: markCls }).range(textEnd, to));
+  }
+  
+  return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
+}
+
 // Table Keymap
 const tableKeymap = [
     {
@@ -558,38 +636,12 @@ const tableKeymap = [
     }
 ];
 
-const codeBlockStateField = StateField.define<DecorationSet>({
-  create: buildCodeBlockDecorations,
-  update(deco, tr) { if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) return buildCodeBlockDecorations(tr.state); return deco.map(tr.changes); },
-  provide: f => EditorView.decorations.from(f),
-});
-function buildCodeBlockDecorations(state: EditorState): DecorationSet {
-  const decorations: any[] = [];
-  syntaxTree(state).iterate({
-    enter: (node) => {
-      if (node.name === "FencedCode") {
-        if (shouldShowSource(state, node.from, node.to)) return;
-        const text = state.doc.sliceString(node.from, node.to);
-        const lines = text.split('\n');
-        if (lines.length < 2) return;
-        const lang = lines[0].replace(/^\s*`{3,}/, "").trim().toLowerCase();
-        const code = lines.slice(1, lines.length - 1).join('\n');
-        // Mermaid 图表使用专门的 Widget
-        const widget = lang === 'mermaid' 
-          ? new MermaidWidget(code)
-          : new CodeBlockWidget(code, lang);
-        decorations.push(Decoration.replace({ widget, block: true }).range(node.from, node.to));
-      }
-    }
-  });
-  return Decoration.set(decorations);
-}
-
 const wikiLinkStateField = StateField.define<DecorationSet>({
   create: buildWikiLinkDecorations,
   update(deco, tr) { return tr.docChanged ? buildWikiLinkDecorations(tr.state) : deco.map(tr.changes); },
   provide: f => EditorView.decorations.from(f),
 });
+
 function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
   const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
@@ -793,7 +845,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
     
     const getModeExtensions = useCallback((mode: ViewMode) => {
       const imageField = vaultPath ? createImageStateField(vaultPath) : null;
-      const widgets = [mathStateField, tableStateField, codeBlockStateField, calloutStateField];
+      const widgets = [mathStateField, tableStateField, codeBlockStateField, calloutStateField, highlightStateField];
       if (imageField) widgets.push(imageField);
       switch (mode) {
         case 'reading': return [collapseOnSelectionFacet.of(false), readingModePlugin, ...widgets];
@@ -1022,16 +1074,97 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
          }
       };
       const onSum = (e: any) => { if(viewRef.current && e.detail?.callout) { const p = viewRef.current.state.selection.main.to; viewRef.current.dispatch({ changes: {from:p, to:p, insert:e.detail.callout}, selection:{anchor:p+e.detail.callout.length} }); }};
+
+      // 处理右键菜单格式化
+      const onFormat = (e: any) => {
+        const view = viewRef.current;
+        if (!view || !e.detail?.format) return;
+        
+        const { format } = e.detail;
+        const sel = view.state.selection.main;
+        const selectedText = view.state.doc.sliceString(sel.from, sel.to);
+        
+        if (!selectedText) return;
+        
+        let replacement = selectedText;
+        let cursorOffset = 0;
+        
+        switch (format) {
+          case 'bold':
+            replacement = `**${selectedText}**`;
+            break;
+          case 'italic':
+            replacement = `*${selectedText}*`;
+            break;
+          case 'strikethrough':
+            replacement = `~~${selectedText}~~`;
+            break;
+          case 'highlight':
+            replacement = `==${selectedText}==`;
+            break;
+          case 'code':
+            replacement = `\`${selectedText}\``;
+            break;
+          case 'wikilink':
+            replacement = `[[${selectedText}]]`;
+            break;
+          case 'link':
+            replacement = `[${selectedText}](url)`;
+            cursorOffset = -4; // 光标移到 url 位置
+            break;
+          case 'ul':
+            replacement = selectedText.split('\n').map(line => `- ${line}`).join('\n');
+            break;
+          case 'ol':
+            replacement = selectedText.split('\n').map((line, i) => `${i + 1}. ${line}`).join('\n');
+            break;
+          case 'task':
+            replacement = selectedText.split('\n').map(line => `- [ ] ${line}`).join('\n');
+            break;
+          case 'h1':
+            replacement = `# ${selectedText}`;
+            break;
+          case 'h2':
+            replacement = `## ${selectedText}`;
+            break;
+          case 'h3':
+            replacement = `### ${selectedText}`;
+            break;
+          case 'h4':
+            replacement = `#### ${selectedText}`;
+            break;
+          case 'h5':
+            replacement = `##### ${selectedText}`;
+            break;
+          case 'h6':
+            replacement = `###### ${selectedText}`;
+            break;
+          case 'quote':
+            replacement = selectedText.split('\n').map(line => `> ${line}`).join('\n');
+            break;
+          default:
+            return;
+        }
+        
+        const newPos = sel.from + replacement.length + cursorOffset;
+        view.dispatch({
+          changes: { from: sel.from, to: sel.to, insert: replacement },
+          selection: { anchor: newPos }
+        });
+        view.focus();
+      };
       
       window.addEventListener("voice-input-interim", onVoiceInt);
       window.addEventListener("voice-input-final", onVoiceFin);
       window.addEventListener("selection-ai-edit", onAi);
       window.addEventListener("insert-summary-callout", onSum);
+      window.addEventListener("editor-format-text", onFormat);
       return () => {
         window.removeEventListener("voice-input-interim", onVoiceInt);
         window.removeEventListener("voice-input-final", onVoiceFin);
         window.removeEventListener("selection-ai-edit", onAi);
         window.removeEventListener("insert-summary-callout", onSum);
+        window.removeEventListener("editor-format-text", onFormat);
       };
     }, []);
 

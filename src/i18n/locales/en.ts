@@ -289,6 +289,32 @@ export default {
     clearHistory: 'Clear history',
   },
 
+  // Context Menu
+  contextMenu: {
+    addLink: 'Add Link',
+    addExternalLink: 'Add External Link',
+    textFormat: 'Text Format',
+    paragraphSettings: 'Paragraph Settings',
+    bold: 'Bold',
+    italic: 'Italic',
+    strikethrough: 'Strikethrough',
+    highlight: 'Highlight',
+    inlineCode: 'Inline Code',
+    bulletList: 'Bullet List',
+    numberedList: 'Numbered List',
+    taskList: 'Task List',
+    heading1: 'Heading 1',
+    heading2: 'Heading 2',
+    heading3: 'Heading 3',
+    heading4: 'Heading 4',
+    heading5: 'Heading 5',
+    heading6: 'Heading 6',
+    quote: 'Quote',
+    cut: 'Cut',
+    copy: 'Copy',
+    paste: 'Paste',
+  },
+
   // AI Floating Panel
   aiFloatingPanel: {
     agentMode: 'Agent Mode',

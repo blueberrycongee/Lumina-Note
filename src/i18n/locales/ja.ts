@@ -338,6 +338,32 @@ export default {
     clearHistory: '履歴をクリア',
   },
 
+  // コンテキストメニュー
+  contextMenu: {
+    addLink: 'リンクを追加',
+    addExternalLink: '外部リンクを追加',
+    textFormat: 'テキスト書式',
+    paragraphSettings: '段落設定',
+    bold: '太字',
+    italic: '斜体',
+    strikethrough: '取り消し線',
+    highlight: 'ハイライト',
+    inlineCode: 'インラインコード',
+    bulletList: '箇条書き',
+    numberedList: '番号付きリスト',
+    taskList: 'タスクリスト',
+    heading1: '見出し1',
+    heading2: '見出し2',
+    heading3: '見出し3',
+    heading4: '見出し4',
+    heading5: '見出し5',
+    heading6: '見出し6',
+    quote: '引用',
+    cut: '切り取り',
+    copy: 'コピー',
+    paste: '貼り付け',
+  },
+
   // AI フローティングパネル
   aiFloatingPanel: {
     agentMode: 'Agent モード',

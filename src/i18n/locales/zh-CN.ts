@@ -289,6 +289,32 @@ export default {
     clearHistory: '清空历史',
   },
 
+  // 右键菜单
+  contextMenu: {
+    addLink: '添加链接',
+    addExternalLink: '添加外部链接',
+    textFormat: '文本格式',
+    paragraphSettings: '段落设置',
+    bold: '粗体',
+    italic: '斜体',
+    strikethrough: '删除线',
+    highlight: '高亮',
+    inlineCode: '行内代码',
+    bulletList: '无序列表',
+    numberedList: '有序列表',
+    taskList: '任务列表',
+    heading1: '1级标题',
+    heading2: '2级标题',
+    heading3: '3级标题',
+    heading4: '4级标题',
+    heading5: '5级标题',
+    heading6: '6级标题',
+    quote: '引用',
+    cut: '剪切',
+    copy: '复制',
+    paste: '粘贴',
+  },
+
   // AI 悬浮面板
   aiFloatingPanel: {
     agentMode: 'Agent 模式',

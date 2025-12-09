@@ -505,6 +505,18 @@ body {
   border-bottom-style: solid;
 }
 
+/* Highlight mark styles */
+mark {
+  background-color: hsl(50 100% 50% / 0.4);
+  color: inherit;
+  padding: 0.1em 0.2em;
+  border-radius: 0.2em;
+}
+
+.dark mark {
+  background-color: hsl(50 100% 40% / 0.5);
+}
+
 /* Table styles - 使用主题变量 */
 .table-wrapper {
   overflow-x: auto;

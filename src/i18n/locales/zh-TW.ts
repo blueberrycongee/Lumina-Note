@@ -338,6 +338,32 @@ export default {
     clearHistory: '清空歷史',
   },
 
+  // 右鍵選單
+  contextMenu: {
+    addLink: '新增連結',
+    addExternalLink: '新增外部連結',
+    textFormat: '文字格式',
+    paragraphSettings: '段落設定',
+    bold: '粗體',
+    italic: '斜體',
+    strikethrough: '刪除線',
+    highlight: '螢光標記',
+    inlineCode: '行內程式碼',
+    bulletList: '無序清單',
+    numberedList: '有序清單',
+    taskList: '任務清單',
+    heading1: '1級標題',
+    heading2: '2級標題',
+    heading3: '3級標題',
+    heading4: '4級標題',
+    heading5: '5級標題',
+    heading6: '6級標題',
+    quote: '引用',
+    cut: '剪下',
+    copy: '複製',
+    paste: '貼上',
+  },
+
   // AI 懸浮面板
   aiFloatingPanel: {
     agentMode: 'Agent 模式',
