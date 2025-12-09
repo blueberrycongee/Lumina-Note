@@ -1112,6 +1112,12 @@ XMLタグ形式を使用してツールを呼び出します：
       summarySystem: 'あなたは要約アシスタントです。ツール出力を簡潔に要約し、重要なデータ/パス/エラーメッセージを保持してください。300文字以内で重要な情報を失わないようにしてください。',
       summaryUser: '{toolName}の出力を要約してください：',
       toolExecutionFailed: 'ツール実行失敗',
+      unknownError: '不明なエラー',
+      unknownFile: '不明なファイル',
+      referencedNotesHint: 'ユーザーが明示的に参照したノート、必ず参考にしてください',
+      relatedNotesHint: 'セマンティック検索で見つかった関連ノート、参考用',
+      relevance: '関連度',
+      systemError: '❌ システムエラー: {message}。\n\n<thinking>タグを使用してエラーを分析し、修正または代替案を試してください。',
     },
   },
 };

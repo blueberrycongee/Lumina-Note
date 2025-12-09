@@ -1322,6 +1322,12 @@ export default {
       summarySystem: '你是摘要助手，请用简洁要点总结工具输出，保留关键数据/路径/错误提示；限制在300字以内，避免丢失关键信息。',
       summaryUser: '请摘要以下 {toolName} 的输出：',
       toolExecutionFailed: '工具执行失败',
+      unknownError: '未知错误',
+      unknownFile: '未知文件',
+      referencedNotesHint: '用户显式引用的笔记，务必参考',
+      relatedNotesHint: '以下是语义搜索找到的相关笔记，可供参考',
+      relevance: '相关度',
+      systemError: '❌ 系统错误: {message}。\n\n请使用 <thinking> 标签分析错误原因，并尝试修复或使用替代方案。',
     },
   },
 };

@@ -1185,6 +1185,12 @@ export default {
       summarySystem: '你是摘要助手，請用簡潔要點總結工具輸出，保留關鍵數據/路徑/錯誤提示；限制在300字以內，避免丟失關鍵資訊。',
       summaryUser: '請摘要以下 {toolName} 的輸出：',
       toolExecutionFailed: '工具執行失敗',
+      unknownError: '未知錯誤',
+      unknownFile: '未知檔案',
+      referencedNotesHint: '使用者顯式引用的筆記，務必參考',
+      relatedNotesHint: '以下是語義搜尋找到的相關筆記，可供參考',
+      relevance: '相關度',
+      systemError: '❌ 系統錯誤: {message}。\n\n請使用 <thinking> 標籤分析錯誤原因，並嘗試修復或使用替代方案。',
     },
   },
 };

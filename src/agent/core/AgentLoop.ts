@@ -106,7 +106,7 @@ export class AgentLoop {
         this.stateManager.setStatus("aborted");
       } else {
         this.stateManager.setStatus("error");
-        this.stateManager.setError(error instanceof Error ? error.message : "未知错误");
+        this.stateManager.setError(error instanceof Error ? error.message : getCurrentTranslations().prompts.agentLoop.unknownError);
       }
     }
   }
@@ -156,7 +156,7 @@ export class AgentLoop {
         this.stateManager.setStatus("aborted");
       } else {
         this.stateManager.setStatus("error");
-        this.stateManager.setError(error instanceof Error ? error.message : "未知错误");
+        this.stateManager.setError(error instanceof Error ? error.message : getCurrentTranslations().prompts.agentLoop.unknownError);
       }
     }
   }
@@ -661,7 +661,7 @@ export class AgentLoop {
       const ragResults: RAGSearchResult[] = results
         .filter(r => r.filePath && r.content && !resolvedPaths.has(r.filePath))
         .map(r => ({
-          filePath: r.filePath || "未知文件",
+          filePath: r.filePath || getCurrentTranslations().prompts.agentLoop.unknownFile,
           content: r.content || "",
           score: typeof r.score === "number" && !isNaN(r.score) ? r.score : 0,
           heading: r.heading || undefined,
@@ -692,7 +692,7 @@ export class AgentLoop {
 
     // 显式引用注入：用户在消息或笔记中写了 [[link]]，优先级最高
     if (context.resolvedLinks && context.resolvedLinks.length > 0) {
-      content += `\n\n<referenced_notes hint="用户显式引用的笔记，务必参考">`;
+      content += `\n\n<referenced_notes hint="${getCurrentTranslations().prompts.agentLoop.referencedNotesHint}">`;
       context.resolvedLinks.forEach((link, i) => {
         // 显式引用给更多内容（最多 1500 字符），因为用户明确想要这些
         const preview = link.content.length > 1500 
@@ -706,10 +706,10 @@ export class AgentLoop {
     // RAG 自动注入：添加 top 3 相关笔记的详细内容
     if (context.ragResults && context.ragResults.length > 0) {
       const topResults = context.ragResults.slice(0, 3);
-      content += `\n\n<related_notes hint="以下是语义搜索找到的相关笔记，可供参考">`;
+      content += `\n\n<related_notes hint="${getCurrentTranslations().prompts.agentLoop.relatedNotesHint}">`;
       topResults.forEach((r, i) => {
         const preview = r.content.length > 600 ? r.content.slice(0, 600) + "..." : r.content;
-        content += `\n\n### ${i + 1}. ${r.filePath} (相关度: ${(r.score * 100).toFixed(0)}%)${r.heading ? ` - ${r.heading}` : ""}\n${preview}`;
+        content += `\n\n### ${i + 1}. ${r.filePath} (${getCurrentTranslations().prompts.agentLoop.relevance}: ${(r.score * 100).toFixed(0)}%)${r.heading ? ` - ${r.heading}` : ""}\n${preview}`;
       });
       content += `\n</related_notes>`;
     }
@@ -736,7 +736,7 @@ export class AgentLoop {
         // 添加错误信息让 LLM 重试
         this.stateManager.addMessage({
           role: "user",
-          content: `❌ 系统错误: ${error.message}。\n\n请使用 <thinking> 标签分析错误原因，并尝试修复或使用替代方案。`,
+          content: getCurrentTranslations().prompts.agentLoop.systemError.replace('{message}', error.message),
         });
       }
     }

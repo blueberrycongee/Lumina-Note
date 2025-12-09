@@ -1322,6 +1322,12 @@ Parameters:
       summarySystem: 'You are a summary assistant. Summarize tool output concisely, keeping key data/paths/error messages; limit to 300 characters without losing critical information.',
       summaryUser: 'Please summarize the output of {toolName}:',
       toolExecutionFailed: 'Tool execution failed',
+      unknownError: 'Unknown error',
+      unknownFile: 'Unknown file',
+      referencedNotesHint: 'User explicitly referenced notes, must consider',
+      relatedNotesHint: 'Related notes found by semantic search for reference',
+      relevance: 'Relevance',
+      systemError: '❌ System error: {message}.\n\nPlease use <thinking> tag to analyze the error and try to fix or use alternatives.',
     },
   },
 };
