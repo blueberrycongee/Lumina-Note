@@ -29,6 +29,7 @@ export default {
     untitled: 'Untitled',
     newConversation: 'New Conversation',
     unsavedChanges: 'Unsaved changes',
+    aiChatTab: 'AI Chat',
   },
   
   // Sidebar
@@ -96,7 +97,7 @@ export default {
     approve: 'Approve',
     reject: 'Reject',
     quoteFrom: 'Quote from',
-    welcomeTitle: 'Hello, I am Lumina',
+    welcomeTitle: 'Hi, I am Lumina',
     welcomeSubtitle: 'I can help you manage notes, organize ideas, search knowledge...',
     polishText: 'Polish Text',
     polishTextDesc: 'Chat: Optimize expression',

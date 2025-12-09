@@ -29,6 +29,7 @@ export default {
     untitled: '無題',
     newConversation: '新規会話',
     unsavedChanges: '未保存の変更',
+    aiChatTab: 'AIチャット',
   },
   
   // サイドバー

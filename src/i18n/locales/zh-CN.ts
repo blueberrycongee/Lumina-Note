@@ -29,6 +29,7 @@ export default {
     untitled: '未命名',
     newConversation: '新对话',
     unsavedChanges: '未保存更改',
+    aiChatTab: 'AI 聊天',
   },
   
   // 侧边栏

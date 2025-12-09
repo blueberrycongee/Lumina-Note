@@ -11,6 +11,7 @@ interface TabItemProps {
   isDragging: boolean;
   isDropTarget: boolean;
   dropPosition: 'left' | 'right' | null;
+  displayName: string;
   onSelect: () => void;
   onClose: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -24,6 +25,7 @@ function TabItem({
   isDragging,
   isDropTarget,
   dropPosition,
+  displayName,
   onSelect,
   onClose,
   onContextMenu,
@@ -61,7 +63,7 @@ function TabItem({
       ) : (
         <FileText size={12} className="shrink-0 opacity-60" />
       )}
-      <span className="truncate max-w-[120px]">{tab.name}</span>
+      <span className="truncate max-w-[120px]">{displayName}</span>
       {tab.isPinned && (
         <Pin size={10} className="shrink-0 text-primary rotate-45" />
       )}
@@ -239,6 +241,7 @@ export function TabBar() {
             isDragging={index === draggedIndex && isDragging.current}
             isDropTarget={index === dropTargetIndex}
             dropPosition={index === dropTargetIndex ? dropPosition : null}
+            displayName={tab.type === "ai-chat" ? t.common.aiChatTab : tab.name}
             onSelect={() => switchTab(index)}
             onClose={(e) => handleClose(e, index)}
             onContextMenu={(e) => handleContextMenu(e, index)}
