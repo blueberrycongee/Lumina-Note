@@ -13,7 +13,7 @@ export default defineConfig(async () => ({
   },
   clearScreen: false,
   server: {
-    port: 3030,
+    port: 1420,
     strictPort: true,
     host: host || false,
     hmr: host
