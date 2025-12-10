@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useRef } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -20,6 +20,8 @@ import {
   ChevronRight,
   Columns,
   Download,
+  Network,
+  X,
 } from "lucide-react";
 import { exportToPdf, getExportFileName } from "@/lib/exportPdf";
 import { TabBar } from "@/components/layout/TabBar";
@@ -30,6 +32,9 @@ const modeIcons: Record<EditorMode, React.ReactNode> = {
   live: <Eye size={14} />,
   source: <Code2 size={14} />,
 };
+
+// 局部图谱展开状态（组件外部以保持状态）
+let localGraphExpandedState = true;
 
 export function Editor() {
   const { t } = useLocaleStore();
@@ -92,6 +97,15 @@ export function Editor() {
   }, [currentContent]);
 
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
+
+  // 局部图谱展开/收起状态
+  const [localGraphExpanded, setLocalGraphExpanded] = useState(localGraphExpandedState);
+  const toggleLocalGraph = useCallback(() => {
+    setLocalGraphExpanded(prev => {
+      localGraphExpandedState = !prev;
+      return !prev;
+    });
+  }, []);
 
   // 当前会话标题（AI 聊天页使用）
   const currentSessionTitle = useMemo(() => {
@@ -376,11 +390,28 @@ export function Editor() {
       ) : (
         // 普通笔记编辑视图
         <div className="flex-1 overflow-hidden relative">
-          {/* 局部知识图谱 - 悬浮在右上角，不随滚动 */}
+          {/* 局部知识图谱 - 悬浮在右上角，可收起 */}
           {currentFile?.endsWith('.md') && (
-            <div className="absolute top-3 right-3 w-80 h-56 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 overflow-hidden">
-              <LocalGraph className="w-full h-full" />
-            </div>
+            localGraphExpanded ? (
+              <div className="absolute top-3 right-3 w-80 h-56 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 overflow-hidden transition-all duration-300">
+                <button
+                  onClick={toggleLocalGraph}
+                  className="absolute top-1.5 right-1.5 p-1 rounded hover:bg-accent/80 text-muted-foreground hover:text-foreground z-10 transition-colors"
+                  title={t.common.collapse}
+                >
+                  <X size={14} />
+                </button>
+                <LocalGraph className="w-full h-full" />
+              </div>
+            ) : (
+              <button
+                onClick={toggleLocalGraph}
+                className="absolute top-3 right-3 p-2.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-300"
+                title={t.common.localGraph}
+              >
+                <Network size={18} />
+              </button>
+            )
           )}
           
           <div ref={scrollContainerRef} className="h-full overflow-auto">

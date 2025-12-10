@@ -30,6 +30,9 @@ export default {
     newConversation: '新對話',
     unsavedChanges: '未儲存更改',
     aiChatTab: 'AI 聊天',
+    collapse: '收起',
+    expand: '展開',
+    localGraph: '局部圖譜',
   },
   
   // 側邊欄

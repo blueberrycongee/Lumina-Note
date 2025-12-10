@@ -30,6 +30,9 @@ export default {
     newConversation: 'New Conversation',
     unsavedChanges: 'Unsaved changes',
     aiChatTab: 'AI Chat',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    localGraph: 'Local Graph',
   },
   
   // Sidebar

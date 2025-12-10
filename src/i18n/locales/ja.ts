@@ -30,6 +30,9 @@ export default {
     newConversation: '新規会話',
     unsavedChanges: '未保存の変更',
     aiChatTab: 'AIチャット',
+    collapse: '折りたたむ',
+    expand: '展開',
+    localGraph: 'ローカルグラフ',
   },
   
   // サイドバー
