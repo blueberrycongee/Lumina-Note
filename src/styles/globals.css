@@ -29,6 +29,8 @@ body.resizing * {
   --primary: 215 25% 50%;  /* 柔和灰蓝 */
   --primary-foreground: 45 10% 98%;
   --border: 40 8% 88%;  /* 暖边框 */
+  --popover: 0 0% 100%;  /* 纯白弹出层背景 */
+  --popover-foreground: 40 10% 10%;  /* 弹出层文字颜色 */
 }
 
 .dark {
@@ -41,6 +43,8 @@ body.resizing * {
   --primary: 215 20% 55%;  /* 柔和灰蓝 */
   --primary-foreground: 40 5% 12%;
   --border: 40 5% 22%;  /* 暖边框 */
+  --popover: 40 5% 14%;  /* 暗色弹出层背景（比背景稍亮） */
+  --popover-foreground: 45 8% 85%;  /* 暗色弹出层文字 */
 }
 
 * {
