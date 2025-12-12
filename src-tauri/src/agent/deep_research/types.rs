@@ -17,6 +17,8 @@ pub enum ResearchPhase {
     SearchingNotes,
     /// 搜索网络
     SearchingWeb,
+    /// 爬取网页
+    CrawlingWeb,
     /// 阅读笔记
     ReadingNotes,
     /// 生成大纲
@@ -93,6 +95,17 @@ pub struct WebSearchResult {
     /// 相关性分数
     #[serde(default)]
     pub score: f32,
+}
+
+/// 爬取的网页内容
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrawledPageContent {
+    /// 原始 URL
+    pub url: String,
+    /// 页面标题
+    pub title: String,
+    /// 提取的内容（Markdown 格式）
+    pub content: String,
 }
 
 /// 报告大纲
@@ -214,6 +227,9 @@ pub struct DeepResearchState {
     /// 网络搜索结果
     #[serde(default)]
     pub web_search_results: Vec<WebSearchResult>,
+    /// 爬取的网页内容
+    #[serde(default)]
+    pub crawled_pages: Vec<CrawledPageContent>,
     /// 已读取的笔记内容
     #[serde(default)]
     pub read_notes: Vec<NoteContent>,
@@ -272,6 +288,10 @@ pub enum DeepResearchEvent {
     NotesFound { notes: Vec<NoteReference> },
     /// 网络搜索完成
     WebSearchComplete { results: Vec<WebSearchResult> },
+    /// 正在爬取网页
+    CrawlingPage { url: String, title: String, index: usize, total: usize },
+    /// 网页爬取完成
+    PageCrawled { url: String, title: String, content_preview: String },
     /// 正在阅读笔记
     ReadingNote { path: String, title: String, index: usize, total: usize },
     /// 笔记读取完成

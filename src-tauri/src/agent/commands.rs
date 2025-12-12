@@ -271,6 +271,7 @@ pub async fn deep_research_start(
         keywords: vec![],
         found_notes: vec![],
         web_search_results: vec![],
+        crawled_pages: vec![],
         read_notes: vec![],
         outline: None,
         report: None,

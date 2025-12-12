@@ -9,6 +9,7 @@ use crate::agent::llm_client::LlmClient;
 use crate::agent::deep_research::types::*;
 use crate::agent::deep_research::nodes::*;
 use crate::agent::deep_research::tavily::TavilyClient;
+use crate::agent::deep_research::crawler::JinaClient;
 
 /// Deep Research 执行上下文
 #[derive(Clone)]
@@ -17,6 +18,7 @@ pub struct DeepResearchContext {
     pub llm: Arc<LlmClient>,
     pub config: DeepResearchConfig,
     pub tavily: Option<Arc<TavilyClient>>,
+    pub jina: Option<Arc<JinaClient>>,
 }
 
 impl DeepResearchContext {
@@ -41,7 +43,15 @@ impl DeepResearchContext {
             None
         };
         
-        Self { app, llm, config, tavily }
+        // 创建 Jina 客户端（如果启用网络搜索）
+        // Jina Reader 免费版不需要 API Key，但有速率限制
+        let jina = if config.enable_web_search {
+            Some(Arc::new(JinaClient::new(None)))
+        } else {
+            None
+        };
+        
+        Self { app, llm, config, tavily, jina }
     }
 }
 
@@ -108,7 +118,25 @@ pub fn build_deep_research_graph(ctx: DeepResearchContext) -> GraphResult<Compil
         }
     });
     
-    // 3. 阅读笔记节点
+    // 3. 爬取网页节点
+    let ctx_crawl = ctx.clone();
+    graph.add_node("crawl_web", move |state: DeepResearchState| {
+        let ctx = ctx_crawl.clone();
+        let jina = ctx.jina.clone();
+        let max_pages = ctx.config.max_web_search_results.min(5); // 最多爬取 5 个网页
+        async move {
+            let result = crawl_web_node(&ctx.app, state, jina.as_ref(), max_pages).await
+                .map_err(|e| GraphError::ExecutionError {
+                    node: "crawl_web".to_string(),
+                    message: e,
+                })?;
+            let mut state = result.state;
+            state.goto = result.next_node.unwrap_or_default();
+            Ok(state)
+        }
+    });
+
+    // 4. 阅读笔记节点
     let ctx_read = ctx.clone();
     graph.add_node("read_notes", move |state: DeepResearchState| {
         let ctx = ctx_read.clone();
@@ -125,7 +153,7 @@ pub fn build_deep_research_graph(ctx: DeepResearchContext) -> GraphResult<Compil
         }
     });
     
-    // 4. 生成大纲节点
+    // 5. 生成大纲节点
     let ctx_outline = ctx.clone();
     graph.add_node("generate_outline", move |state: DeepResearchState| {
         let ctx = ctx_outline.clone();
@@ -180,6 +208,20 @@ pub fn build_deep_research_graph(ctx: DeepResearchContext) -> GraphResult<Compil
     
     graph.add_conditional_edges_sync(
         "search_notes",
+        |state: &DeepResearchState| {
+            if matches!(state.phase, ResearchPhase::Error) {
+                END.to_string()
+            } else if !state.goto.is_empty() {
+                state.goto.clone()
+            } else {
+                "crawl_web".to_string()
+            }
+        },
+        None,
+    );
+    
+    graph.add_conditional_edges_sync(
+        "crawl_web",
         |state: &DeepResearchState| {
             if matches!(state.phase, ResearchPhase::Error) {
                 END.to_string()

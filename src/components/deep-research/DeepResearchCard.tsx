@@ -27,6 +27,7 @@ import {
   Send,
   Lightbulb,
   Globe,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -55,6 +56,7 @@ function PhaseIcon({ phase }: { phase: ResearchPhase }) {
     waiting_for_clarification: <MessageCircleQuestion className="w-4 h-4" />,
     searching_notes: <FileText className="w-4 h-4" />,
     searching_web: <Globe className="w-4 h-4" />,
+    crawling_web: <Download className="w-4 h-4" />,
     reading_notes: <BookOpen className="w-4 h-4" />,
     generating_outline: <ListTree className="w-4 h-4" />,
     writing_report: <PenLine className="w-4 h-4" />,
@@ -102,12 +104,14 @@ function ProgressSteps({
   keywords,
   foundNotes,
   webSearchResults,
+  crawlingProgress,
   readingProgress,
 }: {
   currentPhase: ResearchPhase;
   keywords: string[];
   foundNotes: NoteReference[];
   webSearchResults: WebSearchResult[];
+  crawlingProgress: { current: number; total: number };
   readingProgress: { current: number; total: number };
 }) {
   return (
@@ -127,6 +131,8 @@ function ProgressSteps({
           extra = `找到 ${foundNotes.length} 篇笔记`;
         } else if (phase === "searching_web" && webSearchResults.length > 0) {
           extra = `找到 ${webSearchResults.length} 个结果`;
+        } else if (phase === "crawling_web" && crawlingProgress.total > 0) {
+          extra = `${crawlingProgress.current}/${crawlingProgress.total}`;
         } else if (
           phase === "reading_notes" &&
           readingProgress.total > 0
@@ -475,7 +481,7 @@ export function DeepResearchCard({ className }: DeepResearchCardProps) {
   // 没有会话时不渲染
   if (!currentSession) return null;
 
-  const { topic, phase, phaseMessage, keywords, foundNotes, webSearchResults, readingProgress, error } =
+  const { topic, phase, phaseMessage, keywords, foundNotes, webSearchResults, crawlingProgress, readingProgress, error } =
     currentSession;
 
   const progress = getPhaseProgress(phase);
@@ -630,6 +636,7 @@ ${reportContent}`;
                     keywords={keywords}
                     foundNotes={foundNotes}
                     webSearchResults={webSearchResults}
+                    crawlingProgress={crawlingProgress}
                     readingProgress={readingProgress}
                   />
                   <NoteList notes={foundNotes} />

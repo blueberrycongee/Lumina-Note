@@ -18,6 +18,7 @@ export type ResearchPhase =
   | "waiting_for_clarification"  // 等待用户澄清
   | "searching_notes"
   | "searching_web"  // 搜索网络
+  | "crawling_web"  // 爬取网页
   | "reading_notes"
   | "generating_outline"
   | "writing_report"
@@ -102,6 +103,7 @@ export interface ResearchSession {
   keywords: string[];
   foundNotes: NoteReference[];
   webSearchResults: WebSearchResult[];  // 网络搜索结果
+  crawlingProgress: { current: number; total: number };  // 爬取进度
   readingProgress: { current: number; total: number };
   outline: ReportOutline | null;
   reportChunks: string[];
@@ -160,6 +162,14 @@ type DeepResearchEvent =
   | { type: "notes_found"; data: { notes: NoteReference[] } }
   | { type: "web_search_complete"; data: { results: WebSearchResult[] } }
   | {
+      type: "crawling_page";
+      data: { url: string; title: string; index: number; total: number };
+    }
+  | {
+      type: "page_crawled";
+      data: { url: string; title: string; content_preview: string };
+    }
+  | {
       type: "reading_note";
       data: { path: string; title: string; index: number; total: number };
     }
@@ -205,6 +215,7 @@ export const useDeepResearchStore = create<DeepResearchState>()(
       keywords: [],
       foundNotes: [],
       webSearchResults: [],
+      crawlingProgress: { current: 0, total: 0 },
       readingProgress: { current: 0, total: 0 },
       outline: null,
       reportChunks: [],
@@ -388,6 +399,22 @@ export const useDeepResearchStore = create<DeepResearchState>()(
         });
         break;
 
+      case "crawling_page":
+        set({
+          currentSession: {
+            ...currentSession,
+            crawlingProgress: {
+              current: event.data.index,
+              total: event.data.total,
+            },
+          },
+        });
+        break;
+
+      case "page_crawled":
+        // 可以更新已爬取页面的信息
+        break;
+
       case "reading_note":
         set({
           currentSession: {
@@ -530,6 +557,7 @@ export function getPhaseLabel(phase: ResearchPhase): string {
     waiting_for_clarification: "等待澄清",
     searching_notes: "搜索笔记",
     searching_web: "搜索网络",
+    crawling_web: "爬取网页",
     reading_notes: "阅读笔记",
     generating_outline: "生成大纲",
     writing_report: "撰写报告",
@@ -543,10 +571,11 @@ export function getPhaseLabel(phase: ResearchPhase): string {
 export function getPhaseProgress(phase: ResearchPhase): number {
   const progress: Record<ResearchPhase, number> = {
     init: 0,
-    analyzing_topic: 15,
+    analyzing_topic: 10,
     waiting_for_clarification: 10,  // 等待用户输入时暂停
-    searching_notes: 25,
-    searching_web: 40,
+    searching_notes: 20,
+    searching_web: 30,
+    crawling_web: 40,
     reading_notes: 55,
     generating_outline: 70,
     writing_report: 85,
@@ -561,6 +590,7 @@ export const RESEARCH_PHASES: ResearchPhase[] = [
   "analyzing_topic",
   "searching_notes",
   "searching_web",
+  "crawling_web",
   "reading_notes",
   "generating_outline",
   "writing_report",

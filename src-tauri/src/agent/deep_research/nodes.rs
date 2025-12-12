@@ -8,6 +8,7 @@ use walkdir::WalkDir;
 use crate::agent::llm_client::LlmClient;
 use crate::agent::deep_research::types::*;
 use crate::agent::deep_research::tavily::TavilyClient;
+use crate::agent::deep_research::crawler::JinaClient;
 use crate::langgraph::error::{GraphError, Interrupt};
 
 /// 节点执行结果
@@ -458,6 +459,89 @@ pub async fn search_notes_node(
 
     Ok(NodeResult {
         state,
+        next_node: Some("crawl_web".to_string()),
+    })
+}
+
+/// 爬取网页节点
+/// 
+/// 逐个爬取网络搜索结果的网页内容
+pub async fn crawl_web_node(
+    app: &AppHandle,
+    mut state: DeepResearchState,
+    jina: Option<&Arc<JinaClient>>,
+    max_pages: usize,
+) -> Result<NodeResult, String> {
+    // 如果没有网络搜索结果，直接跳到下一步
+    if state.web_search_results.is_empty() {
+        return Ok(NodeResult {
+            state,
+            next_node: Some("read_notes".to_string()),
+        });
+    }
+
+    // 如果没有 Jina 客户端，跳过爬取
+    let jina_client = match jina {
+        Some(client) => client,
+        None => {
+            #[cfg(debug_assertions)]
+            println!("[DeepResearch] 无 Jina 客户端，跳过网页爬取");
+            return Ok(NodeResult {
+                state,
+                next_node: Some("read_notes".to_string()),
+            });
+        }
+    };
+
+    state.phase = ResearchPhase::CrawlingWeb;
+    let pages_to_crawl = state.web_search_results.iter().take(max_pages).collect::<Vec<_>>();
+    let total = pages_to_crawl.len();
+
+    emit_event(app, DeepResearchEvent::PhaseChange {
+        phase: state.phase.clone(),
+        message: format!("正在爬取 {} 个网页内容...", total),
+    });
+
+    for (index, web_result) in pages_to_crawl.into_iter().enumerate() {
+        emit_event(app, DeepResearchEvent::CrawlingPage {
+            url: web_result.url.clone(),
+            title: web_result.title.clone(),
+            index: index + 1,
+            total,
+        });
+
+        #[cfg(debug_assertions)]
+        println!("[DeepResearch] 爬取网页 {}/{}: {}", index + 1, total, web_result.url);
+
+        match jina_client.crawl(&web_result.url).await {
+            Ok(crawled) => {
+                let content_preview: String = crawled.content.chars().take(200).collect();
+                
+                emit_event(app, DeepResearchEvent::PageCrawled {
+                    url: crawled.url.clone(),
+                    title: crawled.title.clone(),
+                    content_preview: content_preview.clone(),
+                });
+
+                state.crawled_pages.push(CrawledPageContent {
+                    url: crawled.url,
+                    title: crawled.title,
+                    content: crawled.content,
+                });
+            }
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                eprintln!("[DeepResearch] 爬取网页失败: {} - {}", web_result.url, e);
+                // 爬取失败不影响整体流程，继续处理下一个
+            }
+        }
+    }
+
+    #[cfg(debug_assertions)]
+    println!("[DeepResearch] 成功爬取 {} 个网页", state.crawled_pages.len());
+
+    Ok(NodeResult {
+        state,
         next_node: Some("read_notes".to_string()),
     })
 }
@@ -773,10 +857,10 @@ pub async fn read_notes_node(
         state.read_notes.push(note_content);
     }
 
-    // 即使部分笔记读取失败，只要有网络结果或读取到的笔记，就继续
-    if state.read_notes.is_empty() && state.web_search_results.is_empty() {
+    // 即使部分笔记读取失败，只要有爬取的网页内容或读取到的笔记，就继续
+    if state.read_notes.is_empty() && state.crawled_pages.is_empty() {
         state.phase = ResearchPhase::Error;
-        state.error = Some("无法读取任何笔记内容".to_string());
+        state.error = Some("无法读取任何笔记或网页内容".to_string());
         return Ok(NodeResult {
             state,
             next_node: None,
@@ -817,16 +901,27 @@ pub async fn generate_outline_node(
             .join("\n")
     };
 
-    // 构建网络搜索结果摘要
-    let web_summary: String = if state.web_search_results.is_empty() {
-        String::new()
+    // 构建爬取的网页内容摘要
+    let web_summary: String = if state.crawled_pages.is_empty() {
+        // 如果没有爬取内容，使用搜索结果摘要
+        if state.web_search_results.is_empty() {
+            String::new()
+        } else {
+            let web_content = state.web_search_results
+                .iter()
+                .map(|w| format!("- {} ({})\n  {}", w.title, w.url, w.content.chars().take(200).collect::<String>()))
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("\n\n网络搜索结果：\n{}", web_content)
+        }
     } else {
-        let web_content = state.web_search_results
+        // 使用爬取的完整网页内容
+        let crawled_content = state.crawled_pages
             .iter()
-            .map(|w| format!("- {} ({})\n  {}", w.title, w.url, w.content.chars().take(200).collect::<String>()))
+            .map(|p| format!("## {} ({})\n{}", p.title, p.url, p.content.chars().take(500).collect::<String>()))
             .collect::<Vec<_>>()
-            .join("\n");
-        format!("\n\n网络搜索结果：\n{}", web_content)
+            .join("\n\n---\n\n");
+        format!("\n\n网络资料：\n{}", crawled_content)
     };
 
     let prompt = format!(
@@ -909,8 +1004,21 @@ pub async fn write_report_node(
             .join("\n")
     };
 
-    // 构建网络搜索结果参考
-    let web_content: String = if !state.web_search_results.is_empty() {
+    // 构建网络内容参考（优先使用爬取的完整内容）
+    let web_content: String = if !state.crawled_pages.is_empty() {
+        let crawled_refs: String = state.crawled_pages
+            .iter()
+            .map(|p| {
+                format!(
+                    "## {}\n来源: {}\n\n{}\n\n---\n",
+                    p.title, p.url, p.content
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        format!("\n网络资料（已爬取）：\n{}", crawled_refs)
+    } else if !state.web_search_results.is_empty() {
+        // 回退到搜索结果摘要
         let web_refs: String = state.web_search_results
             .iter()
             .map(|w| {
@@ -926,8 +1034,9 @@ pub async fn write_report_node(
         String::new()
     };
 
+    let has_web_content = !state.crawled_pages.is_empty() || !state.web_search_results.is_empty();
     let citation_instruction = if include_citations {
-        let web_note = if !state.web_search_results.is_empty() {
+        let web_note = if has_web_content {
             " 引用网络来源时，请使用 Markdown 链接格式 [标题](URL)。"
         } else {
             ""
