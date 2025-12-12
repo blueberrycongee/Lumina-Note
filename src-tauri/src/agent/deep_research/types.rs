@@ -158,7 +158,7 @@ pub struct DeepResearchConfig {
     pub max_web_search_results: usize,
 }
 
-fn default_web_search_results() -> usize { 5 }
+fn default_web_search_results() -> usize { 10 }
 
 fn default_temperature() -> f32 { 0.7 }
 fn default_max_search_results() -> usize { 20 }

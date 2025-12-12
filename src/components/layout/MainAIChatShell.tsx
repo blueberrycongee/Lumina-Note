@@ -479,7 +479,7 @@ export function MainAIChatShell() {
         // 网络搜索配置
         enable_web_search: shouldWebSearch,
         tavily_api_key: config.tavilyApiKey || undefined,
-        max_web_search_results: 5,
+        max_web_search_results: 10,
       };
       await startResearch(message, vaultPath || "", researchConfig, {
         reportStyle: "detailed",
