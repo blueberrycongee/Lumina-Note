@@ -475,13 +475,18 @@ pub async fn search_notes_node(
 
 /// 爬取网页节点
 /// 
-/// 逐个爬取网络搜索结果的网页内容
+/// 分批爬取：每次爬取 BATCH_SIZE 个，直到达到 max_pages 或内容总长度达到限制
+/// 这样可以更快开始生成报告，同时控制 prompt 长度
 pub async fn crawl_web_node(
     app: &AppHandle,
     mut state: DeepResearchState,
     jina: Option<&Arc<JinaClient>>,
     max_pages: usize,
 ) -> Result<NodeResult, String> {
+    const BATCH_SIZE: usize = 2;  // 每批爬取 2 个
+    const MAX_TOTAL_CONTENT_CHARS: usize = 15000;  // 总内容限制 15000 字符
+    const MAX_PER_PAGE_CHARS: usize = 3000;  // 每页内容限制 3000 字符
+
     // 如果没有网络搜索结果，直接跳到下一步
     if state.web_search_results.is_empty() {
         return Ok(NodeResult {
@@ -504,28 +509,42 @@ pub async fn crawl_web_node(
     };
 
     state.phase = ResearchPhase::CrawlingWeb;
-    let pages_to_crawl = state.web_search_results.iter().take(max_pages).collect::<Vec<_>>();
-    let total = pages_to_crawl.len();
-
+    let total_available = state.web_search_results.len().min(max_pages);
+    
     emit_event(app, DeepResearchEvent::PhaseChange {
         phase: state.phase.clone(),
-        message: format!("正在爬取 {} 个网页内容...", total),
+        message: format!("正在爬取网页内容（最多 {} 个）...", total_available),
     });
 
-    for (index, web_result) in pages_to_crawl.into_iter().enumerate() {
+    let mut total_content_chars = 0usize;
+    let mut crawled_count = 0usize;
+
+    // 分批爬取
+    for (index, web_result) in state.web_search_results.iter().take(max_pages).enumerate() {
+        // 检查是否达到内容限制
+        if total_content_chars >= MAX_TOTAL_CONTENT_CHARS {
+            #[cfg(debug_assertions)]
+            println!("[DeepResearch] 已达到内容总长度限制 ({} 字符)，停止爬取", total_content_chars);
+            break;
+        }
+
         emit_event(app, DeepResearchEvent::CrawlingPage {
             url: web_result.url.clone(),
             title: web_result.title.clone(),
             index: index + 1,
-            total,
+            total: total_available,
         });
 
         #[cfg(debug_assertions)]
-        println!("[DeepResearch] 爬取网页 {}/{}: {}", index + 1, total, web_result.url);
+        println!("[DeepResearch] 爬取网页 {}/{}: {}", index + 1, total_available, web_result.url);
 
         match jina_client.crawl(&web_result.url).await {
             Ok(crawled) => {
-                let content_preview: String = crawled.content.chars().take(200).collect();
+                // 截断单页内容
+                let truncated_content: String = crawled.content.chars().take(MAX_PER_PAGE_CHARS).collect();
+                let content_len = truncated_content.chars().count();
+                
+                let content_preview: String = truncated_content.chars().take(200).collect();
                 
                 emit_event(app, DeepResearchEvent::PageCrawled {
                     url: crawled.url.clone(),
@@ -536,8 +555,11 @@ pub async fn crawl_web_node(
                 state.crawled_pages.push(CrawledPageContent {
                     url: crawled.url,
                     title: crawled.title,
-                    content: crawled.content,
+                    content: truncated_content,
                 });
+
+                total_content_chars += content_len;
+                crawled_count += 1;
             }
             Err(e) => {
                 #[cfg(debug_assertions)]
@@ -545,10 +567,15 @@ pub async fn crawl_web_node(
                 // 爬取失败不影响整体流程，继续处理下一个
             }
         }
+
+        // 每爬完一批，短暂暂停避免请求过快
+        if (index + 1) % BATCH_SIZE == 0 && index + 1 < total_available {
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        }
     }
 
     #[cfg(debug_assertions)]
-    println!("[DeepResearch] 成功爬取 {} 个网页", state.crawled_pages.len());
+    println!("[DeepResearch] 成功爬取 {} 个网页，总内容 {} 字符", crawled_count, total_content_chars);
 
     Ok(NodeResult {
         state,

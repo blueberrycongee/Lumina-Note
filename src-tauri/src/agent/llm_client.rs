@@ -410,6 +410,8 @@ impl LlmClient {
     }
 
     /// 简单的流式调用（只传入 prompt，通过 channel 返回）
+    /// 
+    /// 包含超时处理和错误日志
     pub async fn call_stream_simple(
         &self,
         prompt: &str,
@@ -417,11 +419,17 @@ impl LlmClient {
         let url = self.get_api_url();
         let headers = self.build_headers();
         
+        // 限制 prompt 长度，避免超过模型限制
+        let prompt_chars: String = prompt.chars().take(50000).collect();
+        
+        #[cfg(debug_assertions)]
+        println!("[LLM] 流式调用开始，prompt 长度: {} 字符", prompt_chars.chars().count());
+        
         let body = json!({
             "model": self.config.model,
             "messages": [{
                 "role": "user",
-                "content": prompt
+                "content": prompt_chars
             }],
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
@@ -434,14 +442,25 @@ impl LlmClient {
         }
         req = req.json(&body);
         
-        let response = req.send().await
+        // 添加请求超时
+        let response = tokio::time::timeout(
+            tokio::time::Duration::from_secs(30),
+            req.send()
+        ).await
+            .map_err(|_| "请求超时（30秒）".to_string())?
             .map_err(|e| format!("Request failed: {}", e))?;
         
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            return Err(format!("HTTP {}: {}", status, text));
+            let error_msg = format!("HTTP {}: {}", status, text);
+            #[cfg(debug_assertions)]
+            eprintln!("[LLM] 流式调用失败: {}", error_msg);
+            return Err(error_msg);
         }
+        
+        #[cfg(debug_assertions)]
+        println!("[LLM] 流式响应开始接收...");
         
         // 创建 channel 用于流式输出
         let (tx, rx) = tokio::sync::mpsc::channel::<String>(100);
@@ -450,13 +469,39 @@ impl LlmClient {
         let mut stream = response.bytes_stream();
         tokio::spawn(async move {
             let mut buffer = String::new();
+            let mut chunk_count = 0usize;
+            let mut total_chars = 0usize;
+            let start_time = std::time::Instant::now();
             
-            while let Some(chunk_result) = stream.next().await {
-                let bytes = match chunk_result {
-                    Ok(b) => b,
-                    Err(_) => break,
+            // 流式读取超时：如果 60 秒没有新数据，认为流结束
+            let stream_timeout = tokio::time::Duration::from_secs(60);
+            
+            loop {
+                let chunk_result = tokio::time::timeout(stream_timeout, stream.next()).await;
+                
+                let chunk = match chunk_result {
+                    Ok(Some(Ok(bytes))) => bytes,
+                    Ok(Some(Err(e))) => {
+                        #[cfg(debug_assertions)]
+                        eprintln!("[LLM] 流式读取错误: {}", e);
+                        break;
+                    }
+                    Ok(None) => {
+                        // 流正常结束
+                        #[cfg(debug_assertions)]
+                        println!("[LLM] 流式响应结束，共 {} 个 chunk，{} 字符，耗时 {:?}", 
+                            chunk_count, total_chars, start_time.elapsed());
+                        break;
+                    }
+                    Err(_) => {
+                        // 超时
+                        #[cfg(debug_assertions)]
+                        eprintln!("[LLM] 流式读取超时（{}秒无数据）", stream_timeout.as_secs());
+                        break;
+                    }
                 };
-                let text = String::from_utf8_lossy(&bytes);
+                
+                let text = String::from_utf8_lossy(&chunk);
                 buffer.push_str(&text);
                 
                 // 按行处理 SSE
@@ -472,12 +517,28 @@ impl LlmClient {
                         let data = &line[6..];
                         
                         if data == "[DONE]" {
-                            break;
+                            #[cfg(debug_assertions)]
+                            println!("[LLM] 收到 [DONE] 信号");
+                            return;  // 使用 return 而不是 break，确保退出整个 spawn
                         }
                         
                         if let Ok(json) = serde_json::from_str::<Value>(data) {
+                            // 检查是否有错误
+                            if let Some(error) = json.get("error") {
+                                #[cfg(debug_assertions)]
+                                eprintln!("[LLM] API 返回错误: {}", error);
+                                return;
+                            }
+                            
                             if let Some(content) = json["choices"][0]["delta"]["content"].as_str() {
-                                let _ = tx.send(content.to_string()).await;
+                                chunk_count += 1;
+                                total_chars += content.chars().count();
+                                if tx.send(content.to_string()).await.is_err() {
+                                    // 接收端已关闭
+                                    #[cfg(debug_assertions)]
+                                    println!("[LLM] 接收端已关闭，停止发送");
+                                    return;
+                                }
                             }
                         }
                     }
