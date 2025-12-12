@@ -546,7 +546,7 @@ pub async fn crawl_web_node(
     })
 }
 
-/// 关键词文件搜索
+/// 关键词文件搜索（只匹配标题和H2，要求>=2个关键词）
 fn keyword_search(
     workspace_path: &str,
     search_scope: &Option<String>,
@@ -555,75 +555,90 @@ fn keyword_search(
 ) -> Vec<NoteReference> {
     let mut results: Vec<NoteReference> = Vec::new();
     
-    // 确定搜索路径
     let search_path = match search_scope {
         Some(scope) => Path::new(workspace_path).join(scope),
         None => Path::new(workspace_path).to_path_buf(),
     };
 
-    // 遍历笔记文件
     let walker = WalkDir::new(&search_path)
         .into_iter()
         .filter_map(|e| e.ok());
 
     for entry in walker {
-        if results.len() >= max_results * 2 {
-            // 多搜索一些，后面排序后截取
+        if results.len() >= max_results * 3 {
             break;
         }
         
         let path = entry.path();
         
-        // 只搜索 .md 文件
         if !path.extension().map(|e| e == "md").unwrap_or(false) {
             continue;
         }
 
-        // 跳过隐藏文件
         let path_str = path.to_string_lossy();
         if path_str.contains("/.") || path_str.contains("\\.") {
             continue;
         }
 
-        // 读取文件内容
         if let Ok(content) = std::fs::read_to_string(path) {
-            let content_lower = content.to_lowercase();
+            let title = extract_title(&content, path);
+            let title_lower = title.to_lowercase();
             
-            // 计算匹配分数（匹配的关键词数量）
+            // 提取 H2 标题
+            let h2_headings: Vec<String> = content.lines()
+                .filter(|l| l.trim().starts_with("## "))
+                .map(|l| l.trim()[3..].to_lowercase())
+                .collect();
+            
+            let mut score = 0.0;
             let mut match_count = 0;
-            let mut matched_snippets = Vec::new();
+            let mut matched_in: Vec<String> = Vec::new();
             
             for keyword in keywords {
-                let keyword_lower = keyword.to_lowercase();
-                if content_lower.contains(&keyword_lower) {
-                    match_count += 1;
-                    
-                    // 找到包含关键词的行作为片段
-                    for line in content.lines() {
-                        if line.to_lowercase().contains(&keyword_lower) {
-                            matched_snippets.push(line.trim().to_string());
-                            break;
-                        }
+                let kw = keyword.to_lowercase();
+                let mut matched = false;
+                
+                // 标题匹配 (权重 3.0)
+                if title_lower.contains(&kw) {
+                    score += 3.0;
+                    matched = true;
+                    if !matched_in.contains(&format!("标题: {}", title)) {
+                        matched_in.push(format!("标题: {}", title));
                     }
+                }
+                
+                // H2 匹配 (权重 1.5)
+                for h2 in &h2_headings {
+                    if h2.contains(&kw) {
+                        score += 1.5;
+                        matched = true;
+                        let h2_display = format!("## {}", h2);
+                        if !matched_in.contains(&h2_display) {
+                            matched_in.push(h2_display);
+                        }
+                        break;
+                    }
+                }
+                
+                if matched {
+                    match_count += 1;
                 }
             }
             
-            if match_count > 0 {
+            // 要求匹配 >= 2 个关键词
+            if match_count >= 2 {
                 let relative_path = path.strip_prefix(workspace_path)
                     .map(|p| p.to_string_lossy().to_string())
                     .unwrap_or_else(|_| path.to_string_lossy().to_string());
                 
-                // 提取标题
-                let title = extract_title(&content, path);
-                
                 results.push(NoteReference {
                     path: relative_path,
                     title,
-                    score: match_count as f32 / keywords.len().max(1) as f32,
-                    snippet: if matched_snippets.is_empty() {
+                    score,
+                    snippet: if matched_in.is_empty() {
                         None
                     } else {
-                        Some(matched_snippets.join(" | ").chars().take(200).collect())
+                        Some(matched_in.join(" | ").chars().take(200).collect())
                     },
                 });
             }
