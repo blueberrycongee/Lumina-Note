@@ -133,10 +133,16 @@ const editorTheme = EditorView.theme({
   ".cm-formatting-hidden": { display: "none" },
 
   // === Math 编辑体验 ===
-  ".cm-math-inline": { display: "inline-block", verticalAlign: "middle", cursor: "pointer" },
+  // 行内公式渲染结果 - 带淡入动画
+  ".cm-math-inline": { 
+    display: "inline-block", 
+    verticalAlign: "middle", 
+    cursor: "pointer",
+    animation: "mathFadeIn 0.15s ease-out",
+  },
   ".cm-math-block": { display: "block", textAlign: "center", padding: "0.5em 0", overflow: "hidden", cursor: "pointer" },
   
-  // 编辑模式：源码背景 (淡绿色)
+  // 编辑模式：源码背景 (淡绿色) - 带淡入动画
   ".cm-math-source": { 
     backgroundColor: "rgba(74, 222, 128, 0.15)", 
     color: "hsl(var(--foreground))", 
@@ -145,7 +151,14 @@ const editorTheme = EditorView.theme({
     padding: "2px 4px",
     zIndex: "1",
     position: "relative",
-    cursor: "text"
+    cursor: "text",
+    animation: "mathFadeIn 0.15s ease-out",
+  },
+  
+  // 公式淡入动画关键帧
+  "@keyframes mathFadeIn": {
+    "from": { opacity: "0", transform: "scale(0.95)" },
+    "to": { opacity: "1", transform: "scale(1)" },
   },
   // 编辑模式：预览面板 (位于源码下方)
   ".cm-math-preview-panel": {
@@ -187,6 +200,56 @@ const editorTheme = EditorView.theme({
 
 // ============ 4. Widgets ============
 
+// KaTeX 预渲染缓存：key = `${formula}|${displayMode}`
+const katexCache = new Map<string, string>();
+
+// 预渲染公式（在空闲时调用）
+function prerenderMath(formula: string, displayMode: boolean): void {
+  const key = `${formula}|${displayMode}`;
+  if (katexCache.has(key)) return;
+  
+  try {
+    const html = katex.renderToString(formula, { 
+      displayMode, 
+      throwOnError: false, 
+      strict: false 
+    });
+    katexCache.set(key, html);
+  } catch {
+    katexCache.set(key, formula);
+  }
+}
+
+// 后台预渲染队列
+let prerenderQueue: { formula: string, displayMode: boolean }[] = [];
+let prerenderScheduled = false;
+
+function schedulePrerenderBatch() {
+  if (prerenderScheduled || prerenderQueue.length === 0) return;
+  prerenderScheduled = true;
+  
+  requestIdleCallback?.(() => {
+    const batch = prerenderQueue.splice(0, 5); // 每次处理 5 个
+    batch.forEach(({ formula, displayMode }) => prerenderMath(formula, displayMode));
+    prerenderScheduled = false;
+    if (prerenderQueue.length > 0) schedulePrerenderBatch();
+  }, { timeout: 100 }) || setTimeout(() => {
+    const batch = prerenderQueue.splice(0, 5);
+    batch.forEach(({ formula, displayMode }) => prerenderMath(formula, displayMode));
+    prerenderScheduled = false;
+    if (prerenderQueue.length > 0) schedulePrerenderBatch();
+  }, 16);
+}
+
+function queuePrerender(formula: string, displayMode: boolean) {
+  const key = `${formula}|${displayMode}`;
+  if (katexCache.has(key)) return;
+  if (!prerenderQueue.some(q => q.formula === formula && q.displayMode === displayMode)) {
+    prerenderQueue.push({ formula, displayMode });
+    schedulePrerenderBatch();
+  }
+}
+
 class MathWidget extends WidgetType {
   // isPreviewPanel: true = 编辑模式下方的预览面板; false = 预览模式下的替换块
   constructor(readonly formula: string, readonly displayMode: boolean, readonly isPreviewPanel: boolean = false) { super(); }
@@ -206,9 +269,18 @@ class MathWidget extends WidgetType {
         container.dataset.widgetType = "math";
     }
     
-    try {
-      katex.render(this.formula, container, { displayMode: this.displayMode, throwOnError: false, strict: false });
-    } catch (e) { container.textContent = this.formula; }
+    // 尝试使用缓存
+    const cacheKey = `${this.formula}|${this.displayMode}`;
+    const cached = katexCache.get(cacheKey);
+    if (cached) {
+      container.innerHTML = cached;
+    } else {
+      try {
+        katex.render(this.formula, container, { displayMode: this.displayMode, throwOnError: false, strict: false });
+        // 缓存渲染结果
+        katexCache.set(cacheKey, container.innerHTML);
+      } catch (e) { container.textContent = this.formula; }
+    }
     return container;
   }
 
@@ -404,7 +476,29 @@ const livePreviewPlugin = ViewPlugin.fromClass(class {
   decorations: DecorationSet;
   constructor(view: EditorView) { this.decorations = this.build(view); }
   update(u: ViewUpdate) {
-    if (u.docChanged || u.selectionSet || u.viewportChanged || u.transactions.some(t=>t.reconfigured || t.effects.some(e=>e.is(setMouseSelecting)))) {
+    // 文档变化或视口变化：必须重建
+    if (u.docChanged || u.viewportChanged || u.transactions.some(t=>t.reconfigured)) {
+      this.decorations = this.build(u.view);
+      return;
+    }
+    
+    // 拖动状态变化
+    const isDragging = u.state.field(mouseSelectingField, false);
+    const wasDragging = u.startState.field(mouseSelectingField, false);
+    
+    // 刚结束拖动：重建
+    if (wasDragging && !isDragging) {
+      this.decorations = this.build(u.view);
+      return;
+    }
+    
+    // 正在拖动：跳过
+    if (isDragging) {
+      return;
+    }
+    
+    // 普通选择变化：重建
+    if (u.selectionSet) {
       this.decorations = this.build(u.view);
     }
   }
@@ -458,11 +552,48 @@ const livePreviewPlugin = ViewPlugin.fromClass(class {
   }
 }, { decorations: v => v.decorations });
 
+// 缓存公式位置，避免每次选择变化都重新解析
+let mathPositionsCache: { from: number, to: number }[] = [];
+
 const mathStateField = StateField.define<DecorationSet>({
   create: buildMathDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) return buildMathDecorations(tr.state);
-    return deco.map(tr.changes);
+    // 文档变化：必须重建
+    if (tr.docChanged || tr.reconfigured) {
+      return buildMathDecorations(tr.state);
+    }
+    
+    // 拖动选择期间：完全跳过重建，等拖动结束后再更新
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    
+    // 刚结束拖动：重建一次
+    if (wasDragging && !isDragging) {
+      return buildMathDecorations(tr.state);
+    }
+    
+    // 正在拖动：跳过
+    if (isDragging) {
+      return deco;
+    }
+    
+    // 普通选择变化：检查是否触及公式
+    if (tr.selection) {
+      const oldSel = tr.startState.selection.main;
+      const newSel = tr.state.selection.main;
+      const touchesMath = (sel: { from: number, to: number }) => 
+        mathPositionsCache.some(m => 
+          (sel.from >= m.from && sel.from <= m.to) || 
+          (sel.to >= m.from && sel.to <= m.to) ||
+          (sel.from <= m.from && sel.to >= m.to)
+        );
+      if (touchesMath(oldSel) !== touchesMath(newSel) || 
+          (touchesMath(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))) {
+        return buildMathDecorations(tr.state);
+      }
+    }
+    
+    return deco;
   },
   provide: f => EditorView.decorations.from(f),
 });
@@ -472,12 +603,19 @@ function buildMathDecorations(state: EditorState): DecorationSet {
   const doc = state.doc.toString();
   const processed: {from:number, to:number}[] = [];
   
+  // 更新公式位置缓存
+  mathPositionsCache = [];
+  
   const blockRegex = /\$\$([\s\S]+?)\$\$/g;
   let match;
   while ((match = blockRegex.exec(doc)) !== null) {
     const from = match.index, to = from + match[0].length;
     processed.push({from, to});
+    mathPositionsCache.push({from, to}); // 添加到缓存
     const formula = match[1].trim();
+    
+    // 预渲染公式（后台进行）
+    queuePrerender(formula, true);
     
     if (shouldShowSource(state, from, to)) {
       // 编辑模式：源码高亮 + 预览面板(Preview Panel)
@@ -495,56 +633,102 @@ function buildMathDecorations(state: EditorState): DecorationSet {
   while ((match = inlineRegex.exec(doc)) !== null) {
     const from = match.index, to = from + match[0].length;
     if (processed.some(p => from >= p.from && to <= p.to)) continue;
+    mathPositionsCache.push({from, to}); // 添加到缓存
+    const inlineFormula = match[1].trim();
+    
+    // 预渲染公式（后台进行）
+    queuePrerender(inlineFormula, false);
+    
     if (shouldShowSource(state, from, to)) {
        decorations.push(Decoration.mark({ class: "cm-math-source" }).range(from, to));
     } else {
-       decorations.push(Decoration.replace({ widget: new MathWidget(match[1].trim(), false) }).range(from, to));
+       decorations.push(Decoration.replace({ widget: new MathWidget(inlineFormula, false) }).range(from, to));
     }
   }
   return Decoration.set(decorations.sort((a,b)=>a.from-b.from), true);
 }
 
+// 表格位置缓存
+let tablePositionsCache: { from: number, to: number }[] = [];
+
 const tableStateField = StateField.define<DecorationSet>({
   create: buildTableDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) return buildTableDecorations(tr.state);
-    return deco.map(tr.changes);
+    if (tr.docChanged || tr.reconfigured) return buildTableDecorations(tr.state);
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    if (wasDragging && !isDragging) return buildTableDecorations(tr.state);
+    if (isDragging) return deco;
+    if (tr.selection) {
+      const oldSel = tr.startState.selection.main;
+      const newSel = tr.state.selection.main;
+      const touches = (sel: { from: number, to: number }) => 
+        tablePositionsCache.some(t => (sel.from >= t.from && sel.from <= t.to) || (sel.to >= t.from && sel.to <= t.to) || (sel.from <= t.from && sel.to >= t.to));
+      if (touches(oldSel) !== touches(newSel) || (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))) {
+        return buildTableDecorations(tr.state);
+      }
+    }
+    return deco;
   },
   provide: f => EditorView.decorations.from(f),
 });
+
 function buildTableDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
+  tablePositionsCache = [];
   syntaxTree(state).iterate({
     enter: (node) => {
       if (node.name === "Table") {
+        tablePositionsCache.push({ from: node.from, to: node.to });
         if (shouldShowSource(state, node.from, node.to)) {
           decorations.push(Decoration.mark({ class: "cm-table-source" }).range(node.from, node.to));
         } else {
           decorations.push(Decoration.replace({ widget: new TableWidget(state.doc.sliceString(node.from, node.to)), block: true }).range(node.from, node.to));
         }
       }
-    },
+    }
   });
   return Decoration.set(decorations);
 }
 
+// 代码块位置缓存
+let codeBlockPositionsCache: { from: number, to: number }[] = [];
+
 const codeBlockStateField = StateField.define<DecorationSet>({
   create: buildCodeBlockDecorations,
-  update(deco, tr) { if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) return buildCodeBlockDecorations(tr.state); return deco.map(tr.changes); },
+  update(deco, tr) {
+    if (tr.docChanged || tr.reconfigured) return buildCodeBlockDecorations(tr.state);
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    if (wasDragging && !isDragging) return buildCodeBlockDecorations(tr.state);
+    if (isDragging) return deco;
+    if (tr.selection) {
+      const oldSel = tr.startState.selection.main;
+      const newSel = tr.state.selection.main;
+      const touches = (sel: { from: number, to: number }) => 
+        codeBlockPositionsCache.some(c => (sel.from >= c.from && sel.from <= c.to) || (sel.to >= c.from && sel.to <= c.to) || (sel.from <= c.from && sel.to >= c.to));
+      if (touches(oldSel) !== touches(newSel) || (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))) {
+        return buildCodeBlockDecorations(tr.state);
+      }
+    }
+    return deco;
+  },
   provide: f => EditorView.decorations.from(f),
 });
+
 function buildCodeBlockDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
+  codeBlockPositionsCache = [];
   syntaxTree(state).iterate({
     enter: (node) => {
       if (node.name === "FencedCode") {
+        codeBlockPositionsCache.push({ from: node.from, to: node.to });
         if (shouldShowSource(state, node.from, node.to)) return;
         const text = state.doc.sliceString(node.from, node.to);
         const lines = text.split('\n');
         if (lines.length < 2) return;
         const lang = lines[0].replace(/^\s*`{3,}/, "").trim().toLowerCase();
         const code = lines.slice(1, lines.length - 1).join('\n');
-        // Mermaid 图表使用专门的 Widget
         const widget = lang === 'mermaid' 
           ? new MermaidWidget(code)
           : new CodeBlockWidget(code, lang);
@@ -555,13 +739,27 @@ function buildCodeBlockDecorations(state: EditorState): DecorationSet {
   return Decoration.set(decorations);
 }
 
+// 高亮位置缓存
+let highlightPositionsCache: { from: number, to: number }[] = [];
+
 const highlightStateField = StateField.define<DecorationSet>({
   create: buildHighlightDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.selection || tr.reconfigured || tr.effects.some(e => e.is(setMouseSelecting))) {
-      return buildHighlightDecorations(tr.state);
+    if (tr.docChanged || tr.reconfigured) return buildHighlightDecorations(tr.state);
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    if (wasDragging && !isDragging) return buildHighlightDecorations(tr.state);
+    if (isDragging) return deco;
+    if (tr.selection) {
+      const oldSel = tr.startState.selection.main;
+      const newSel = tr.state.selection.main;
+      const touches = (sel: { from: number, to: number }) => 
+        highlightPositionsCache.some(h => (sel.from >= h.from && sel.from <= h.to) || (sel.to >= h.from && sel.to <= h.to) || (sel.from <= h.from && sel.to >= h.to));
+      if (touches(oldSel) !== touches(newSel) || (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))) {
+        return buildHighlightDecorations(tr.state);
+      }
     }
-    return deco.map(tr.changes);
+    return deco;
   },
   provide: f => EditorView.decorations.from(f),
 });
@@ -573,9 +771,13 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
   let match;
   const isDrag = state.field(mouseSelectingField, false);
   
+  // 更新缓存
+  highlightPositionsCache = [];
+  
   while ((match = highlightRegex.exec(doc)) !== null) {
     const from = match.index;
     const to = from + match[0].length;
+    highlightPositionsCache.push({ from, to });
     const textStart = from + 2;  // 跳过开头的 ==
     const textEnd = to - 2;      // 跳过结尾的 ==
     
@@ -904,6 +1106,19 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       const view = new EditorView({ state, parent: containerRef.current });
       viewRef.current = view;
 
+      // 拖动选择检测：mousedown 时设为 true，mouseup 时设为 false
+      const handleMouseDown = () => {
+        view.dispatch({ effects: setMouseSelecting.of(true) });
+      };
+      const handleMouseUp = () => {
+        // 延迟一帧确保选择已更新
+        requestAnimationFrame(() => {
+          view.dispatch({ effects: setMouseSelecting.of(false) });
+        });
+      };
+      view.contentDOM.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mouseup', handleMouseUp);
+
       // Paste Handler for Images
       const handlePaste = async (e: ClipboardEvent) => {
         const v = viewRef.current;
@@ -1031,7 +1246,10 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       view.contentDOM.addEventListener('mousedown', handleClick);
       view.contentDOM.addEventListener('paste', handlePaste);
       return () => { 
+        view.contentDOM.removeEventListener('mousedown', handleMouseDown);
+        view.contentDOM.removeEventListener('mousedown', handleClick);
         view.contentDOM.removeEventListener('paste', handlePaste);
+        document.removeEventListener('mouseup', handleMouseUp);
         view.destroy(); 
         viewRef.current = null; 
       };
