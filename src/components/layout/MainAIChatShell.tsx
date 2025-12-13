@@ -263,7 +263,7 @@ export function MainAIChatShell() {
       if (chatMode !== "agent") setChatMode("agent");
     } else if (type === "research") {
       selectResearchSession(id);
-      // Research 会话点击后可以展示详情
+      if (chatMode !== "research") setChatMode("research");
     } else {
       switchChatSession(id);
       if (chatMode !== "chat") setChatMode("chat");

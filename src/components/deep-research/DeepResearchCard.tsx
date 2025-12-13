@@ -527,11 +527,15 @@ export function DeepResearchCard({ className, chatId }: DeepResearchCardProps) {
     isRunning, 
     abortResearch, 
     submitClarification,
-    reset 
+    reset,
+    selectedSessionId,
   } = useDeepResearchStore();
 
-  // 只显示属于当前聊天的 research session
-  const shouldShow = currentSession && (!chatId || currentSession.chatId === chatId);
+  // 显示逻辑：
+  // 1. 如果是从历史中选择的会话（selectedSessionId 存在），始终显示
+  // 2. 如果是正在运行的新会话，按 chatId 过滤
+  const isHistoryView = selectedSessionId && currentSession?.id === selectedSessionId;
+  const shouldShow = currentSession && (isHistoryView || !chatId || currentSession.chatId === chatId);
 
   const [isExpanded, setIsExpanded] = useState(true);
   const [showReport, setShowReport] = useState(false);

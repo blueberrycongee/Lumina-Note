@@ -321,7 +321,18 @@ export const useDeepResearchStore = create<DeepResearchState>()(
   // ============ 会话管理 ============
 
   selectSession: (sessionId: string | null) => {
-    set({ selectedSessionId: sessionId });
+    if (!sessionId) {
+      set({ selectedSessionId: null, currentSession: null });
+      return;
+    }
+    // 从历史会话中恢复到 currentSession
+    const { sessions } = get();
+    const session = sessions.find((s) => s.id === sessionId);
+    if (session) {
+      set({ selectedSessionId: sessionId, currentSession: session, isRunning: false });
+    } else {
+      set({ selectedSessionId: sessionId });
+    }
   },
 
   deleteSession: (sessionId: string) => {
