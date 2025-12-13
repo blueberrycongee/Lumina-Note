@@ -290,6 +290,9 @@ pub struct TaskContext {
     pub rag_results: Vec<RagResult>,
     #[serde(default)]
     pub resolved_links: Vec<ResolvedLink>,
+    /// 历史对话消息（多轮对话支持）
+    #[serde(default)]
+    pub history: Vec<Message>,
 }
 
 // ============ 实现 LangGraph GraphState trait ============

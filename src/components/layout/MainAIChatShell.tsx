@@ -37,6 +37,7 @@ import {
   Globe,
 } from "lucide-react";
 import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
+import { PlanCard } from "../chat/PlanCard";
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { AISettingsModal } from "../ai/AISettingsModal";
 import type { MessageContent, TextContent } from "@/services/llm";
@@ -130,12 +131,12 @@ export function MainAIChatShell() {
     status: rustAgentStatus,
     messages: rustAgentMessages,
     streamingContent: _rustStreamingContent,
-    currentPlan: _rustCurrentPlan,
     error: _rustError,
     lastIntent: rustLastIntent,
     totalTokensUsed: rustTotalTokens,
     sessions: rustSessions,
     currentSessionId: rustSessionId,
+    currentPlan: rustCurrentPlan,
     createSession: rustCreateSession,
     switchSession: rustSwitchSession,
     deleteSession: rustDeleteSession,
@@ -773,6 +774,11 @@ export function MainAIChatShell() {
           {hasStarted && (
             <div className="flex-1 w-full overflow-y-auto scrollbar-thin">
               <div className="max-w-3xl mx-auto px-4 pt-8">
+
+                {/* Agent 模式：任务计划卡片 + 消息渲染 */}
+                {chatMode === "agent" && rustCurrentPlan && rustCurrentPlan.steps.length > 0 && (
+                  <PlanCard plan={rustCurrentPlan} className="mb-4" />
+                )}
 
                 {/* Agent 模式：使用 AgentMessageRenderer 组件 */}
                 {chatMode === "agent" ? (

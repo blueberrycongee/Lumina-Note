@@ -7,7 +7,11 @@ use serde_json::{json, Value};
 /// 获取所有工具定义
 pub fn get_all_tool_definitions() -> Vec<Value> {
     vec![
+        create_plan_definition(),
+        update_plan_progress_definition(),
         read_note_definition(),
+        read_outline_definition(),
+        read_section_definition(),
         edit_note_definition(),
         create_note_definition(),
         list_notes_definition(),
@@ -28,7 +32,11 @@ pub fn get_all_tool_definitions() -> Vec<Value> {
 pub fn get_tools_for_agent(agent: &str) -> Vec<Value> {
     match agent {
         "editor" => vec![
+            create_plan_definition(),
+            update_plan_progress_definition(),
             read_note_definition(),
+            read_outline_definition(),
+            read_section_definition(),
             edit_note_definition(),
             create_note_definition(),
             list_notes_definition(),
@@ -37,7 +45,11 @@ pub fn get_tools_for_agent(agent: &str) -> Vec<Value> {
             attempt_completion_definition(),
         ],
         "researcher" => vec![
+            create_plan_definition(),
+            update_plan_progress_definition(),
             read_note_definition(),
+            read_outline_definition(),
+            read_section_definition(),
             list_notes_definition(),
             search_notes_definition(),
             grep_search_definition(),
@@ -47,6 +59,8 @@ pub fn get_tools_for_agent(agent: &str) -> Vec<Value> {
             attempt_completion_definition(),
         ],
         "writer" => vec![
+            create_plan_definition(),
+            update_plan_progress_definition(),
             read_note_definition(),
             create_note_definition(),
             edit_note_definition(),
@@ -55,6 +69,8 @@ pub fn get_tools_for_agent(agent: &str) -> Vec<Value> {
             attempt_completion_definition(),
         ],
         "organizer" => vec![
+            create_plan_definition(),
+            update_plan_progress_definition(),
             read_note_definition(),
             list_notes_definition(),
             move_note_definition(),
@@ -84,6 +100,51 @@ fn read_note_definition() -> Value {
                     }
                 },
                 "required": ["path"]
+            }
+        }
+    })
+}
+
+fn read_outline_definition() -> Value {
+    json!({
+        "type": "function",
+        "function": {
+            "name": "read_outline",
+            "description": "快速读取笔记的大纲结构（标题层级）。适合快速了解笔记内容分布，定位相关章节。支持批量读取多个笔记。比 read_note 更轻量，优先使用此工具进行初步探索。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "paths": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "笔记路径列表，相对于笔记库根目录。可以一次读取多个笔记的大纲。"
+                    }
+                },
+                "required": ["paths"]
+            }
+        }
+    })
+}
+
+fn read_section_definition() -> Value {
+    json!({
+        "type": "function",
+        "function": {
+            "name": "read_section",
+            "description": "读取笔记的指定章节内容。通过标题名定位章节，只返回该章节的内容（包含子章节）。适合在 read_outline 定位后深入阅读。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "笔记路径，相对于笔记库根目录"
+                    },
+                    "section": {
+                        "type": "string",
+                        "description": "章节标题名（不含 # 号）。如 '借用规则' 或 '第二章'"
+                    }
+                },
+                "required": ["path", "section"]
             }
         }
     })
@@ -404,6 +465,69 @@ fn get_backlinks_definition() -> Value {
                     }
                 },
                 "required": ["path"]
+            }
+        }
+    })
+}
+
+fn create_plan_definition() -> Value {
+    json!({
+        "type": "function",
+        "function": {
+            "name": "create_plan",
+            "description": "在开始执行任务前，必须先调用此工具来创建执行计划。将任务拆解为具体步骤。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "steps": {
+                        "type": "array",
+                        "description": "计划步骤列表",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "description": "步骤 ID，如 '1', '2', '3'"
+                                },
+                                "description": {
+                                    "type": "string",
+                                    "description": "步骤描述，具体说明要做什么"
+                                }
+                            },
+                            "required": ["id", "description"]
+                        }
+                    }
+                },
+                "required": ["steps"]
+            }
+        }
+    })
+}
+
+fn update_plan_progress_definition() -> Value {
+    json!({
+        "type": "function",
+        "function": {
+            "name": "update_plan_progress",
+            "description": "更新计划步骤的执行状态。完成一个步骤后调用此工具标记完成。",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "step_id": {
+                        "type": "string",
+                        "description": "要更新的步骤 ID"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["completed", "skipped", "failed"],
+                        "description": "步骤状态：completed=已完成, skipped=跳过, failed=失败"
+                    },
+                    "result": {
+                        "type": "string",
+                        "description": "步骤执行结果或跳过/失败的原因（可选）"
+                    }
+                },
+                "required": ["step_id", "status"]
             }
         }
     })

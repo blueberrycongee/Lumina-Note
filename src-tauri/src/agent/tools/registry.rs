@@ -22,6 +22,8 @@ impl ToolRegistry {
     pub async fn execute(&self, tool_call: &ToolCall) -> ToolResult {
         let result = match tool_call.name.as_str() {
             "read_note" => self.read_note(&tool_call.params).await,
+            "read_outline" => self.read_outline(&tool_call.params).await,
+            "read_section" => self.read_section(&tool_call.params).await,
             "edit_note" => self.edit_note(&tool_call.params).await,
             "create_note" => self.create_note(&tool_call.params).await,
             "list_notes" => self.list_notes(&tool_call.params).await,
@@ -35,6 +37,9 @@ impl ToolRegistry {
             "get_backlinks" => self.get_backlinks(&tool_call.params).await,
             "ask_user" => self.ask_user(&tool_call.params).await,
             "attempt_completion" => self.attempt_completion(&tool_call.params).await,
+            // 这两个工具在 agent_worker_node 中特殊处理，这里只返回确认
+            "create_plan" => Ok("计划已创建".to_string()),
+            "update_plan_progress" => Ok("进度已更新".to_string()),
             _ => Err(format!("Unknown tool: {}", tool_call.name)),
         };
 
@@ -82,6 +87,113 @@ impl ToolRegistry {
         Ok(numbered)
     }
 
+    /// 批量读取笔记大纲
+    async fn read_outline(&self, params: &HashMap<String, serde_json::Value>) -> Result<String, String> {
+        use crate::agent::note_map::parser::{parse_markdown, extract_title};
+        
+        let paths = params.get("paths")
+            .and_then(|v| v.as_array())
+            .ok_or("Missing 'paths' parameter")?;
+        
+        let mut results = Vec::new();
+        
+        for path_value in paths {
+            let path = path_value.as_str().ok_or("Invalid path in array")?;
+            let full_path = self.get_full_path(path);
+            
+            match tokio::fs::read_to_string(&full_path).await {
+                Ok(content) => {
+                    let title = extract_title(&content, path);
+                    let (tags, links) = parse_markdown(&content, path);
+                    
+                    let mut outline = format!("📄 {} ({})\n", path, title);
+                    
+                    // 渲染标题结构
+                    for tag in &tags {
+                        let indent = "  ".repeat((tag.level - 1) as usize);
+                        let prefix = "#".repeat(tag.level as usize);
+                        outline.push_str(&format!(
+                            "{}{}  {} (L{}, {}字)\n",
+                            indent, prefix, tag.heading, tag.line, tag.word_count
+                        ));
+                    }
+                    
+                    // 显示链接数量
+                    if !links.is_empty() {
+                        outline.push_str(&format!("   → {} 个出链\n", links.len()));
+                    }
+                    
+                    results.push(outline);
+                }
+                Err(e) => {
+                    results.push(format!("❌ {} - 读取失败: {}\n", path, e));
+                }
+            }
+        }
+        
+        Ok(results.join("\n"))
+    }
+
+    /// 读取笔记的指定章节
+    async fn read_section(&self, params: &HashMap<String, serde_json::Value>) -> Result<String, String> {
+        use crate::agent::note_map::parser::parse_markdown;
+        
+        let path = params.get("path")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing 'path' parameter")?;
+        let section = params.get("section")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing 'section' parameter")?;
+        
+        let full_path = self.get_full_path(path);
+        let content = tokio::fs::read_to_string(&full_path).await
+            .map_err(|e| format!("Failed to read file: {}", e))?;
+        
+        let (tags, _) = parse_markdown(&content, path);
+        
+        // 查找匹配的章节
+        let section_lower = section.to_lowercase();
+        let matching_tag = tags.iter().find(|t| {
+            t.heading.to_lowercase().contains(&section_lower)
+        });
+        
+        match matching_tag {
+            Some(tag) => {
+                // 提取章节内容
+                let section_content = if tag.end_offset > tag.start_offset && tag.end_offset <= content.len() {
+                    &content[tag.start_offset..tag.end_offset]
+                } else {
+                    &content[tag.start_offset..]
+                };
+                
+                // 添加行号
+                let start_line = tag.line;
+                let numbered = section_content.lines()
+                    .enumerate()
+                    .map(|(i, line)| format!("{:4} | {}", start_line + i, line))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                
+                Ok(format!(
+                    "章节: {} (从第 {} 行开始, {}字)\n\n{}",
+                    tag.heading, tag.line, tag.word_count, numbered
+                ))
+            }
+            None => {
+                // 列出可用章节
+                let available: Vec<String> = tags.iter()
+                    .map(|t| format!("  - {} (L{})", t.heading, t.line))
+                    .collect();
+                
+                Err(format!(
+                    "未找到章节 '{}'。可用章节:\n{}",
+                    section,
+                    available.join("\n")
+                ))
+            }
+        }
+    }
+
     /// 编辑笔记
     async fn edit_note(&self, params: &HashMap<String, serde_json::Value>) -> Result<String, String> {
         let path = params.get("path")
@@ -101,8 +213,32 @@ impl ToolRegistry {
 
         // 检查 old_string 是否存在
         if !content.contains(old_string) {
+            // 尝试找出问题原因
+            let old_trimmed = old_string.trim();
+            let hint = if content.contains(old_trimmed) {
+                "提示：去掉首尾空白后能找到，请检查 old_string 的首尾空格/换行"
+            } else if content.to_lowercase().contains(&old_string.to_lowercase()) {
+                "提示：忽略大小写后能找到，请检查大小写是否匹配"
+            } else {
+                // 显示文件的前几行帮助定位
+                let preview: String = content.lines().take(10).collect::<Vec<_>>().join("\n");
+                return Err(format!(
+                    "编辑失败：找不到要替换的内容。\n\n\
+                     文件：{}\n\
+                     搜索内容（前50字符）：{:?}\n\n\
+                     可能原因：\n\
+                     1. 内容已被修改，请重新 read_note 获取最新内容\n\
+                     2. 空格或换行符不匹配（注意行末空格）\n\
+                     3. 特殊字符转义问题\n\n\
+                     文件前10行预览：\n{}",
+                    path,
+                    old_string.chars().take(50).collect::<String>(),
+                    preview
+                ));
+            };
             return Err(format!(
-                "old_string not found in file. Make sure it matches exactly including whitespace."
+                "编辑失败：找不到要替换的内容。\n{}\n\n请重新 read_note 获取最新内容后再试。",
+                hint
             ));
         }
 

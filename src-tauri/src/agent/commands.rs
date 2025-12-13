@@ -60,9 +60,9 @@ pub async fn agent_start_task(
         *is_running = true;
     }
 
-    // 构建初始状态
+    // 构建初始状态（使用前端传入的历史消息）
     let initial_state = GraphState {
-        messages: vec![],
+        messages: context.history.clone(),
         user_task: task,
         workspace_path: context.workspace_path,
         active_note_path: context.active_note_path,

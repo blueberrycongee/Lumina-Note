@@ -11,6 +11,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ChatInput } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
+import { PlanCard } from "./PlanCard";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
 import {
@@ -121,6 +122,11 @@ export function AgentPanel() {
             <p>{t.ai.welcomeAgent}</p>
             <p className="mt-2 text-xs opacity-70">{t.ai.startTask}</p>
           </div>
+        )}
+
+        {/* 任务计划卡片 */}
+        {USE_RUST_AGENT && rustStore.currentPlan && rustStore.currentPlan.steps.length > 0 && (
+          <PlanCard plan={rustStore.currentPlan} className="mb-2" />
         )}
 
         {/* 消息列表 - 使用 AgentMessageRenderer 组件 */}

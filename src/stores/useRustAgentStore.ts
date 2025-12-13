@@ -67,6 +67,7 @@ export interface TaskContext {
   active_note_path?: string;
   active_note_content?: string;
   file_tree?: string;
+  history?: Message[];  // 历史对话消息（多轮对话支持）
 }
 
 export interface AgentConfig {
@@ -165,6 +166,9 @@ export const useRustAgentStore = create<RustAgentState>()(
           baseUrl: aiConfig.baseUrl,
         });
         
+        // 获取当前历史消息（发送前的消息）
+        const currentMessages = get().messages;
+        
         // 重置状态
         set({
           status: "running",
@@ -173,10 +177,18 @@ export const useRustAgentStore = create<RustAgentState>()(
           lastIntent: null,
           streamingContent: "",
           messages: [
-            ...get().messages,
+            ...currentMessages,
             { role: "user", content: task },
           ],
         });
+        
+        // 将历史消息转换为后端格式并传入
+        const historyForBackend = currentMessages
+          .filter(m => m.role === "user" || m.role === "assistant")
+          .map(m => ({
+            role: m.role,
+            content: m.content,
+          }));
 
         // 获取实际模型名（如果是 custom，使用 customModelId）
         const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
@@ -200,7 +212,12 @@ export const useRustAgentStore = create<RustAgentState>()(
         console.log("[RustAgent] 发送配置到 Rust:", config);
 
         try {
-          await invoke("agent_start_task", { config, task, context });
+          // 将历史消息附加到 context 中传给后端
+          const contextWithHistory = {
+            ...context,
+            history: historyForBackend,
+          };
+          await invoke("agent_start_task", { config, task, context: contextWithHistory });
         } catch (e) {
           set({
             status: "error",
@@ -461,6 +478,41 @@ export const useRustAgentStore = create<RustAgentState>()(
           case "plan_created": {
             const { plan } = event.data as { plan: Plan };
             set({ currentPlan: plan });
+            break;
+          }
+
+          case "step_started": {
+            const { index } = event.data as { step: Plan["steps"][0]; index: number };
+            // 更新 current_step
+            const currentPlan = get().currentPlan;
+            if (currentPlan) {
+              set({
+                currentPlan: {
+                  ...currentPlan,
+                  current_step: index,
+                },
+              });
+            }
+            break;
+          }
+
+          case "step_completed": {
+            const { index } = event.data as { step: Plan["steps"][0]; index: number };
+            console.log("[RustAgent] step_completed event received:", { index, event: event.data });
+            // 标记步骤为已完成
+            const currentPlan = get().currentPlan;
+            console.log("[RustAgent] currentPlan before update:", currentPlan);
+            if (currentPlan && index < currentPlan.steps.length) {
+              const updatedSteps = [...currentPlan.steps];
+              updatedSteps[index] = { ...updatedSteps[index], completed: true };
+              set({
+                currentPlan: {
+                  ...currentPlan,
+                  steps: updatedSteps,
+                  current_step: index + 1,
+                },
+              });
+            }
             break;
           }
 

@@ -9,6 +9,8 @@ pub mod tools;
 pub mod graph;
 pub mod commands;
 pub mod deep_research;
+pub mod note_map;
+pub mod messages;
 
 pub use types::*;
 pub use commands::*;
