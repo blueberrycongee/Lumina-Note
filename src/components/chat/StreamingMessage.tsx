@@ -5,7 +5,7 @@
 
 import { memo } from "react";
 import { Bot } from "lucide-react";
-import { parseMarkdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/services/markdown/markdown";
 import { useAIStore } from "@/stores/useAIStore";
 import { useUIStore } from "@/stores/useUIStore";
 

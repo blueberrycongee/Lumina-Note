@@ -10,7 +10,7 @@
 import { useState, useMemo, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore } from '@/stores/useLocaleStore';
-import { parseMarkdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/services/markdown/markdown";
 import { Message } from "@/agent/types";
 import type { MessageContent, TextContent } from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";

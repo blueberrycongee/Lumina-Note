@@ -15,7 +15,7 @@ import type {
 } from "@/types/database";
 import { DATABASE_TEMPLATES } from "@/types/database";
 import { readFile, saveFile, exists, createDir } from "@/lib/tauri";
-import { parseFrontmatter, updateFrontmatter, getTitleFromPath } from "@/lib/frontmatter";
+import { parseFrontmatter, updateFrontmatter, getTitleFromPath } from "@/services/markdown/frontmatter";
 import { useFileStore } from "./useFileStore";
 import { useSplitStore } from "./useSplitStore";
 

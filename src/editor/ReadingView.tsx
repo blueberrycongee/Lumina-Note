@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useEffect, useRef } from "react";
-import { parseMarkdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/services/markdown/markdown";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSplitStore } from "@/stores/useSplitStore";
 import { useUIStore } from "@/stores/useUIStore";

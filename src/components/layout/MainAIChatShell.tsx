@@ -12,7 +12,7 @@ import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
-import { parseMarkdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/services/markdown/markdown";
 import { join } from "@/lib/path";
 import {
   ArrowUp,

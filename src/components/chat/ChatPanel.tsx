@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { diffLines } from "diff";
 import { useAIStore } from "@/stores/useAIStore";
-import { parseMarkdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/services/markdown/markdown";
 import { useFileStore } from "@/stores/useFileStore";
 import { EditSuggestion, applyEdit } from "@/lib/ai";
 import {

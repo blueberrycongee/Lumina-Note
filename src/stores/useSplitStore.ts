@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { readFile, saveFile } from "@/lib/tauri";
-import { parseFrontmatter } from "@/lib/frontmatter";
+import { parseFrontmatter } from "@/services/markdown/frontmatter";
 
 // 分栏文件类型
 export type SplitFileType = 'markdown' | 'pdf';

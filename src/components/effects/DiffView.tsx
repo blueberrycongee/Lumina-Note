@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Check, X, FileText, Code, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { parseMarkdown } from "@/lib/markdown";
+import { parseMarkdown } from "@/services/markdown/markdown";
 
 interface DiffLine {
   type: "unchanged" | "added" | "removed";
