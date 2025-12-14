@@ -15,8 +15,8 @@ import {
 import { useFlashcardStore } from '../../stores/useFlashcardStore';
 import { useLocaleStore } from '../../stores/useLocaleStore';
 import { ReviewRating, Flashcard } from '../../types/flashcard';
-import { previewNextReview, formatInterval } from '../../lib/sm2';
-import { renderClozeFront, renderClozeBack } from '../../lib/flashcard';
+import { previewNextReview, formatInterval } from '@/services/flashcard/sm2';
+import { renderClozeFront, renderClozeBack } from '@/services/flashcard/flashcard';
 import { cn } from '../../lib/utils';
 
 interface FlashcardReviewProps {

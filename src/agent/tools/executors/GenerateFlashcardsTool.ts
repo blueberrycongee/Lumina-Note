@@ -6,8 +6,8 @@
 
 import { ToolExecutor, ToolResult, ToolContext } from '../../types';
 import { FlashcardType, Flashcard } from '../../../types/flashcard';
-import { generateCardMarkdown, generateCardFilename } from '../../../lib/flashcard';
-import { INITIAL_SM2_STATE } from '../../../lib/sm2';
+import { generateCardMarkdown, generateCardFilename } from '@/services/flashcard/flashcard';
+import { INITIAL_SM2_STATE } from '@/services/flashcard/sm2';
 import { writeFile, exists, createDir } from '@/lib/tauri';
 import { resolve } from '@/lib/path';
 import { useFileStore } from '@/stores/useFileStore';

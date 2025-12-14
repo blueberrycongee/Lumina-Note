@@ -12,8 +12,8 @@ import {
   ReviewRating,
   FlashcardType 
 } from '../types/flashcard';
-import { calculateNextReview, isDue, calculateDeckStats, INITIAL_SM2_STATE } from '../lib/sm2';
-import { yamlToCard, generateCardMarkdown, generateCardFilename } from '../lib/flashcard';
+import { calculateNextReview, isDue, calculateDeckStats, INITIAL_SM2_STATE } from '@/services/flashcard/sm2';
+import { yamlToCard, generateCardMarkdown, generateCardFilename } from '@/services/flashcard/flashcard';
 import { useFileStore } from './useFileStore';
 import { createFile, saveFile, deleteFile } from '../lib/tauri';
 

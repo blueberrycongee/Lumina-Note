@@ -8,7 +8,7 @@ import {
   Flashcard, 
   ClozeCard,
   FLASHCARD_DATABASE_COLUMNS 
-} from '../types/flashcard';
+} from '@/types/flashcard';
 import { INITIAL_SM2_STATE } from './sm2';
 
 // ==================== 填空语法解析 ====================
