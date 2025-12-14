@@ -2,7 +2,7 @@
  * utils.ts 测试
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cn, debounce, getFileName, getRelativePath } from '../utils';
+import { cn, debounce, getFileName, getRelativePath } from './utils';
 
 describe('cn (className merge)', () => {
   it('should merge class names', () => {

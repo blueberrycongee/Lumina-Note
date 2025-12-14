@@ -105,3 +105,7 @@ docs/deer-flow/
 # ===================
 # LangGraph 浏览器版本（不能运行，已迁移到 Rust）
 src/agent/langgraph/
+aider/
+banana-slides/
+deer-flow/
+anthropic-skills/

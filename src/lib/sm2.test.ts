@@ -14,7 +14,7 @@ import {
   getCardStatus,
   formatInterval,
   calculateDeckStats,
-} from '../sm2';
+} from './sm2';
 import type { SM2State } from '@/types/flashcard';
 
 // Mock current date for consistent testing

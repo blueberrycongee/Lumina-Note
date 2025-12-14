@@ -22,7 +22,7 @@ vi.mock('@/lib/ai', () => ({
 }));
 
 // Import after mocks
-import { useRustAgentStore } from '../useRustAgentStore';
+import { useRustAgentStore } from './useRustAgentStore';
 
 describe('useRustAgentStore', () => {
   beforeEach(() => {

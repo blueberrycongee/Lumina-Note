@@ -2,7 +2,7 @@
  * path.ts 测试
  */
 import { describe, it, expect } from 'vitest';
-import { join, dirname, basename, extname, isAbsolute, resolve, relative, normalize } from '../path';
+import { join, dirname, basename, extname, isAbsolute, resolve, relative, normalize } from './path';
 
 describe('join', () => {
   it('should join path segments', () => {

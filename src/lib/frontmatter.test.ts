@@ -9,7 +9,7 @@ import {
   ensureFrontmatter,
   getTitleFromPath,
   belongsToDatabase,
-} from '../frontmatter';
+} from './frontmatter';
 
 describe('parseFrontmatter', () => {
   it('should parse basic frontmatter', () => {
