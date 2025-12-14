@@ -7,7 +7,7 @@
 import { useState, useEffect } from "react";
 import { useRustAgentStore, initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { getAIConfig } from "@/lib/ai";
+import { getAIConfig } from "@/services/ai/ai";
 
 export function RustAgentTest() {
   const [input, setInput] = useState("");

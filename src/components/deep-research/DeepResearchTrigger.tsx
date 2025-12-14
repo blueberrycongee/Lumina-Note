@@ -14,7 +14,7 @@ import {
   History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAIConfig } from "@/lib/ai";
+import { getAIConfig } from "@/services/ai/ai";
 import {
   useDeepResearchStore,
   setupDeepResearchListener,

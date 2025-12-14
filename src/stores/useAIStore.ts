@@ -11,7 +11,7 @@ import {
   applyEdit,
   setAIConfig,
   getAIConfig,
-} from "@/lib/ai";
+} from "@/services/ai/ai";
 import { readFile } from "@/lib/tauri";
 import { callLLMStream, type ImageContent, type TextContent, type MessageContent } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";

@@ -14,7 +14,7 @@ import {
 } from "@/agent/types";
 import { getAgentLoop, resetAgentLoop } from "@/agent/core/AgentLoop";
 import { MODES } from "@/agent/modes";
-import { getAIConfig } from "@/lib/ai";
+import { getAIConfig } from "@/services/ai/ai";
 import { intentRouter, Intent, queryRewriter, type MessageContent, type TextContent } from "@/services/llm";
 
 // 从消息内容中提取文本（处理多模态内容）

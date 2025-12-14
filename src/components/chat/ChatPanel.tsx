@@ -8,7 +8,7 @@ import { diffLines } from "diff";
 import { useAIStore } from "@/stores/useAIStore";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { useFileStore } from "@/stores/useFileStore";
-import { EditSuggestion, applyEdit } from "@/lib/ai";
+import { EditSuggestion, applyEdit } from "@/services/ai/ai";
 import {
   Send,
   X,

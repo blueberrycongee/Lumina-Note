@@ -9,7 +9,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { getAIConfig } from "@/lib/ai";
+import { getAIConfig } from "@/services/ai/ai";
 
 // ============ 类型定义 ============
 
