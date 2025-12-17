@@ -89,6 +89,12 @@ build-full.log
 android-build-*.log
 2025-*.log
 
+# Agent 评估报告（临时生成）
+eval-report-*.md
+
+# 测试生成的笔记
+tests/agent-eval/test-*.md
+
 # 调试日志目录
 debug-logs/
 
