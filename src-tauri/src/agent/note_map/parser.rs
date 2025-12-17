@@ -41,9 +41,22 @@ fn extract_headings(content: &str, file_path: &str) -> Vec<NoteTag> {
         // 找到下一个同级或更高级标题的位置作为结束
         let end_offset = find_section_end(&heading_positions, i, total_len);
         
-        // 计算该章节的字数
+        // 计算该章节的字数（安全地处理 UTF-8 边界）
         let section_content = if end_offset > *start_offset {
-            &content[*start_offset..end_offset]
+            // 找到安全的字符边界
+            let safe_start = content.char_indices()
+                .find(|(i, _)| *i >= *start_offset)
+                .map(|(i, _)| i)
+                .unwrap_or(*start_offset);
+            let safe_end = content.char_indices()
+                .find(|(i, _)| *i >= end_offset)
+                .map(|(i, _)| i)
+                .unwrap_or(content.len());
+            if safe_end > safe_start && safe_end <= content.len() {
+                &content[safe_start..safe_end]
+            } else {
+                ""
+            }
         } else {
             ""
         };

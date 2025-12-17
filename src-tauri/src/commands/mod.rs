@@ -51,6 +51,50 @@ pub async fn list_directory(path: String) -> Result<Vec<FileEntry>, AppError> {
     fs::list_dir_recursive(&path)
 }
 
+/// List directory tree as formatted string (for Agent context)
+#[tauri::command]
+pub async fn list_directory_tree(path: String, max_depth: Option<usize>) -> Result<String, AppError> {
+    use walkdir::WalkDir;
+    use std::path::Path;
+    
+    let max_depth = max_depth.unwrap_or(3);
+    let base_path = Path::new(&path);
+    let mut result = Vec::new();
+    
+    result.push(format!("📁 {} (工作区根目录)", base_path.file_name().unwrap_or_default().to_string_lossy()));
+    
+    let walker = WalkDir::new(&path)
+        .max_depth(max_depth)
+        .into_iter()
+        .filter_map(|e| e.ok());
+    
+    for entry in walker {
+        let entry_path = entry.path();
+        if entry_path == base_path {
+            continue;
+        }
+        
+        let name = entry.file_name().to_string_lossy().to_string();
+        
+        // 跳过隐藏文件和常见忽略目录
+        if name.starts_with('.') || name == "node_modules" || name == "target" {
+            continue;
+        }
+        
+        let depth = entry.depth();
+        let indent = "  ".repeat(depth);
+        let is_dir = entry.file_type().is_dir();
+        let prefix = if is_dir { "📁" } else { "📄" };
+        
+        // 只显示 .md 文件或目录
+        if is_dir || name.ends_with(".md") {
+            result.push(format!("{}{} {}", indent, prefix, name));
+        }
+    }
+    
+    Ok(result.join("\n"))
+}
+
 /// Create a new file
 #[tauri::command]
 pub async fn create_file(path: String) -> Result<(), AppError> {
