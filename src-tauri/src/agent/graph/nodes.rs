@@ -1087,6 +1087,22 @@ RULES
 - 涉及文件整理/移动/重命名
 - 预计需要 3 步以上的任务
 
+# 笔记读取工具（read_note）
+
+**用法**：
+- `read_note(path)` - 小文件（≤500行）直接返回全部
+- `read_note(path, offset, limit)` - 大文件分段读取（1-indexed）
+
+**规则**：
+- 小文件（≤500行）：不传 offset/limit，直接读取全部
+- 大文件（>500行）：会自动截断，按提示使用 offset/limit 分段
+- 超过 2000 字符的行会被截断
+- **优先使用 read_outline + read_section**：按章节阅读更高效
+
+**示例**：
+- 读取小文件：`read_note("notes/daily.md")`
+- 读取大文件第 100-200 行：`read_note("docs/guide.md", offset=100, limit=100)`
+
 # 执行规则
 
 1. **简单任务直接执行**，不调用 update_plan，完成后直接 attempt_completion

@@ -86,13 +86,21 @@ fn read_note_definition() -> Value {
         "type": "function",
         "function": {
             "name": "read_note",
-            "description": "读取笔记文件的内容。返回带行号的内容，便于后续编辑定位。",
+            "description": "读取笔记文件的内容。返回带行号的内容（1-indexed），便于后续编辑定位。对于大文件（>500行），可使用 offset/limit 分段读取，或优先使用 read_outline + read_section。",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "path": {
                         "type": "string",
                         "description": "笔记路径，相对于笔记库根目录"
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "起始行号（1-indexed）。仅对大文件使用，小文件不需要此参数"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "读取的行数。仅对大文件使用，小文件不需要此参数"
                     }
                 },
                 "required": ["path"]

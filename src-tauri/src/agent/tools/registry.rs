@@ -73,25 +73,81 @@ impl ToolRegistry {
         base.join(rel).to_string_lossy().to_string()
     }
 
-    /// 读取笔记
+    /// 读取笔记（支持分段读取）
+    /// 
+    /// Windsurf 风格：
+    /// - 小文件（≤500行）：直接返回全部内容
+    /// - 大文件（>500行）：使用 offset/limit 分段，或自动截断并提示
     async fn read_note(&self, params: &HashMap<String, serde_json::Value>) -> Result<String, String> {
+        const MAX_LINES_DEFAULT: usize = 500;  // 默认最大行数
+        const MAX_LINE_CHARS: usize = 2000;    // 单行最大字符（截断）
+        
         let path = params.get("path")
             .and_then(|v| v.as_str())
             .ok_or("Missing 'path' parameter")?;
+        
+        // 可选参数：offset 和 limit
+        let offset = params.get("offset")
+            .and_then(|v| v.as_i64())
+            .map(|v| v.max(1) as usize)  // 1-indexed，最小为 1
+            .unwrap_or(1);
+        let limit = params.get("limit")
+            .and_then(|v| v.as_i64())
+            .map(|v| v as usize);
 
         let full_path = self.get_full_path(path);
         
         let content = tokio::fs::read_to_string(&full_path).await
             .map_err(|e| format!("Failed to read file: {}", e))?;
+        
+        // 空文件提醒
+        if content.trim().is_empty() {
+            return Ok("[系统提醒] 文件存在但内容为空".to_string());
+        }
 
-        // 添加行号
-        let numbered = content.lines()
+        let lines: Vec<&str> = content.lines().collect();
+        let total_lines = lines.len();
+        
+        // 计算实际读取范围
+        let start_idx = (offset - 1).min(total_lines);  // 转为 0-indexed
+        let end_idx = match limit {
+            Some(l) => (start_idx + l).min(total_lines),
+            None => {
+                // 没有指定 limit，根据文件大小决定
+                if total_lines <= MAX_LINES_DEFAULT {
+                    total_lines  // 小文件：返回全部
+                } else {
+                    start_idx + MAX_LINES_DEFAULT  // 大文件：默认返回 500 行
+                }
+            }
+        };
+        
+        // 添加行号并截断过长的行
+        let numbered: Vec<String> = lines[start_idx..end_idx]
+            .iter()
             .enumerate()
-            .map(|(i, line)| format!("{:4} | {}", i + 1, line))
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        Ok(numbered)
+            .map(|(i, line)| {
+                let line_num = start_idx + i + 1;  // 1-indexed
+                let truncated = if line.len() > MAX_LINE_CHARS {
+                    format!("{}...[truncated]", &line[..MAX_LINE_CHARS])
+                } else {
+                    line.to_string()
+                };
+                format!("{:4} | {}", line_num, truncated)
+            })
+            .collect();
+        
+        let mut result = numbered.join("\n");
+        
+        // 如果有截断，添加提示
+        if end_idx < total_lines {
+            result.push_str(&format!(
+                "\n\n[系统提示] 文件共 {} 行，当前显示第 {}-{} 行。使用 offset/limit 参数读取其他部分，或使用 read_outline + read_section 按章节阅读。",
+                total_lines, start_idx + 1, end_idx
+            ));
+        }
+        
+        Ok(result)
     }
 
     /// 批量读取笔记大纲
