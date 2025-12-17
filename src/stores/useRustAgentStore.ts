@@ -128,11 +128,19 @@ interface RustAgentState {
   // 配置
   autoApprove: boolean;
   
+  // 调试模式
+  debugEnabled: boolean;
+  debugLogPath: string | null;
+  
   // 操作
   startTask: (task: string, context: TaskContext) => Promise<void>;
   abort: () => Promise<void>;
   clearChat: () => void;
   setAutoApprove: (value: boolean) => void;
+  
+  // 调试操作
+  enableDebug: (workspacePath: string) => Promise<void>;
+  disableDebug: () => Promise<void>;
   
   // 会话操作
   createSession: (title?: string) => void;
@@ -185,6 +193,10 @@ export const useRustAgentStore = create<RustAgentState>()(
         totalTokensUsed: 0,
       }],
       currentSessionId: "default-rust-session",
+      
+      // 调试模式初始状态
+      debugEnabled: false,
+      debugLogPath: null,
 
       // 启动任务
       startTask: async (task: string, context: TaskContext) => {
@@ -292,6 +304,29 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 设置自动审批
       setAutoApprove: (value: boolean) => {
         set({ autoApprove: value });
+      },
+      
+      // 启用调试模式
+      enableDebug: async (workspacePath: string) => {
+        try {
+          const logPath = await invoke<string>("agent_enable_debug", { workspacePath });
+          set({ debugEnabled: true, debugLogPath: logPath });
+          console.log("[RustAgent] 调试模式已启用，日志文件:", logPath);
+        } catch (e) {
+          console.error("[RustAgent] 启用调试模式失败:", e);
+        }
+      },
+      
+      // 禁用调试模式
+      disableDebug: async () => {
+        try {
+          await invoke("agent_disable_debug");
+          const logPath = get().debugLogPath;
+          set({ debugEnabled: false, debugLogPath: null });
+          console.log("[RustAgent] 调试模式已禁用，日志文件:", logPath);
+        } catch (e) {
+          console.error("[RustAgent] 禁用调试模式失败:", e);
+        }
       },
 
       // 创建新会话

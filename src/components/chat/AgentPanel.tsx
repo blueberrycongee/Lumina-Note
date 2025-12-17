@@ -26,6 +26,8 @@ import {
   MicOff,
   Send,
   RefreshCw,
+  Bug,
+  FileText,
 } from "lucide-react";
 
 // 使用 Rust Agent（与 MainAIChatShell 保持一致）
@@ -102,7 +104,43 @@ export function AgentPanel() {
           <span className="font-medium text-foreground">Lumina Agent</span>
         </div>
         <div className="flex items-center gap-2">
-          {/* 模式选择已由意图自动决定，隐藏手动切换 */}
+          {/* 调试模式按钮 */}
+          {USE_RUST_AGENT && (
+            <>
+              <button
+                onClick={() => {
+                  if (rustStore.debugEnabled) {
+                    rustStore.disableDebug();
+                  } else {
+                    rustStore.enableDebug(vaultPath || ".");
+                  }
+                }}
+                className={`p-1.5 rounded hover:bg-muted ${
+                  rustStore.debugEnabled 
+                    ? "text-yellow-500 bg-yellow-500/10" 
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title={rustStore.debugEnabled ? "禁用调试模式" : "启用调试模式"}
+              >
+                <Bug className="w-4 h-4" />
+              </button>
+              {/* 查看日志按钮（调试启用时显示） */}
+              {rustStore.debugEnabled && rustStore.debugLogPath && (
+                <button
+                  onClick={() => {
+                    // 在系统默认程序中打开日志文件
+                    if (rustStore.debugLogPath) {
+                      window.open(`file://${rustStore.debugLogPath}`, "_blank");
+                    }
+                  }}
+                  className="p-1.5 rounded hover:bg-muted text-yellow-500"
+                  title={`查看调试日志: ${rustStore.debugLogPath}`}
+                >
+                  <FileText className="w-4 h-4" />
+                </button>
+              )}
+            </>
+          )}
           {/* 清空按钮 */}
           <button
             onClick={clearChat}

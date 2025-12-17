@@ -35,6 +35,7 @@ import {
   Settings,
   Microscope,
   Globe,
+  Bug,
 } from "lucide-react";
 import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { PlanCard } from "../chat/PlanCard";
@@ -143,6 +144,10 @@ export function MainAIChatShell() {
     startTask: rustStartTask,
     abort: rustAbort,
     clearChat: rustClearChat,
+    debugEnabled,
+    debugLogPath,
+    enableDebug,
+    disableDebug,
   } = useRustAgentStore();
 
   // 初始化 Rust Agent 事件监听器
@@ -1125,6 +1130,27 @@ export function MainAIChatShell() {
                     >
                       <Settings size={14} />
                     </button>
+                    
+                    {/* 调试模式按钮：仅在 Agent 模式下显示 */}
+                    {chatMode === "agent" && USE_RUST_AGENT && (
+                      <button
+                        onClick={() => {
+                          if (debugEnabled) {
+                            disableDebug();
+                          } else {
+                            enableDebug(vaultPath || ".");
+                          }
+                        }}
+                        className={`ml-1 flex items-center justify-center p-1.5 rounded-md transition-colors ${
+                          debugEnabled 
+                            ? "text-yellow-500 bg-yellow-500/10" 
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        }`}
+                        title={debugEnabled ? `调试模式已启用: ${debugLogPath}` : "启用调试模式"}
+                      >
+                        <Bug size={14} />
+                      </button>
+                    )}
 
                     {/* 语音识别中间结果 */}
                     {interimText && (
