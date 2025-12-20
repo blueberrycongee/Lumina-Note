@@ -1,4 +1,4 @@
-[package]
+﻿[package]
 name = "lumina-note"
 version = "0.4.0"
 description = "A local-first AI-powered note-taking app"
@@ -48,6 +48,7 @@ futures-util = "0.3"
 flate2 = "1.0"
 chrono = "0.4"
 rand = "0.8"
+uuid = { version = "1.0", features = ["v4"] }
 
 [profile.dev]
 incremental = true
