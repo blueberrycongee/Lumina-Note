@@ -176,7 +176,7 @@ graph TD
 1.  **克隆仓库**
 
     ```bash
-    git clone [https://github.com/blueberrycongee/Lumina-Note.git](https://github.com/blueberrycongee/Lumina-Note.git)
+    git clone https://github.com/blueberrycongee/Lumina-Note.git
     cd Lumina-Note
     ```
 
