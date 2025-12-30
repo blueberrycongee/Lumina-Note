@@ -27,7 +27,7 @@ export function TitleBar() {
       }
     };
     checkPlatform();
-    
+
     // ç›‘å¬çª—å£æœ€å¤§åŒ–çŠ¶æ€?
     const checkMaximized = async () => {
       try {
@@ -53,9 +53,8 @@ export function TitleBar() {
   }, []);
 
   const handleDragStart = (e: React.MouseEvent) => {
-    // åªå“åº”å·¦é”?
     if (e.button !== 0) return;
-    // å¼€å§‹æ‹–æ‹?
+    if (e.detail >= 2) return;
     getCurrentWindow().startDragging();
   };
 
@@ -75,6 +74,14 @@ export function TitleBar() {
     }
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    // Only respond to left-button double click on draggable area
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-tauri-drag-region="false"]')) return;
+    handleMaximize();
+  };
+
   const handleClose = async () => {
     try {
       await getCurrentWindow().close();
@@ -86,7 +93,7 @@ export function TitleBar() {
   // Mac ä¸Šä½¿ç”¨åŽŸç”Ÿæ ‡é¢˜æ ï¼Œåªéœ€è¦ä¸€ä¸ªé€æ˜Žçš„æ‹–æ‹½åŒºåŸ?
   if (isMac) {
     return (
-      <div 
+      <div
         className="h-8 flex items-center bg-transparent select-none"
         data-tauri-drag-region
       >
@@ -112,11 +119,12 @@ export function TitleBar() {
     );
   }
 
-  // Windows/Linux ä½¿ç”¨è‡ªå®šä¹‰æ ‡é¢˜æ 
   return (
-    <div 
+    <div
       className="h-8 flex items-center justify-between bg-muted border-b border-border select-none"
       onMouseDown={handleDragStart}
+      onDoubleClick={handleDoubleClick}
+      data-tauri-drag-region
     >
       {/* å·¦ä¾§ï¼šåº”ç”¨å›¾æ ‡å’Œæ ‡é¢˜ */}
       <div className="flex items-center gap-2 px-3">
@@ -133,6 +141,8 @@ export function TitleBar() {
       <div
         className="flex items-center h-full gap-2 pr-1"
         onMouseDown={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => e.stopPropagation()}
+        data-tauri-drag-region="false"
       >
         <LanguageSwitcher
           compact
