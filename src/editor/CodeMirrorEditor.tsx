@@ -92,7 +92,8 @@ const editorTheme = EditorView.theme({
   // 1. 悬挂标记 (Headings) - 绝对定位到左侧，不占用正文空间
   ".cm-formatting-hanging": {
     position: "absolute",
-    right: "100%", // 悬挂在内容左侧
+    left: "0",
+    transform: "translateX(-100%)",
     marginRight: "6px",
     color: "hsl(var(--muted-foreground) / 0.4)",
     fontFamily: "'JetBrains Mono', monospace",
@@ -430,10 +431,11 @@ const livePreviewPlugin = ViewPlugin.fromClass(class {
         const isActiveLine = activeLines.has(lineNum);
         
         if (isBlock) {
-          // 悬挂标记逻辑：活动行显示 Widget，隐藏原始文本
+          // 悬挂标记：隐藏原始符号，活跃行用 widget 替换，避免光标进入标记前
+          const markText = state.doc.sliceString(node.from, node.to);
           if (isActiveLine && !isDrag && !lineHanging.has(lineNum)) {
             lineHanging.set(lineNum, true);
-            d.push(Decoration.widget({ widget: new HangingMarkWidget(state.doc.sliceString(node.from, node.to)), side: -1 }).range(node.from));
+            d.push(Decoration.replace({ widget: new HangingMarkWidget(markText), inclusive: false }).range(node.from, node.to));
           }
           this.hide(state, node.from, node.to, d);
         } else {
