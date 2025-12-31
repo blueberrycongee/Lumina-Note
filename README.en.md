@@ -2,9 +2,9 @@
 
 <img src="src-tauri/icons/icon.png" alt="Lumina Note Logo" width="120" height="120" />
 
-# ✨ Lumina Note
+# Lumina Note
 
-**Local-first · AI-powered · Modern knowledge base**
+**Local-first · AI-powered · Modern Knowledge Base**
 
 Build your second brain with a Markdown note app deeply integrated with AI Agents.
 
@@ -15,15 +15,13 @@ Build your second brain with a Markdown note app deeply integrated with AI Agent
 
 **Language**: [简体中文](./README.md) · English · [日本語](./README.ja.md)
 
-> 🚀 **This entire project was built by 2 people in 2 weeks with AI-assisted development, containing 44,000+ lines of source code**
-
-[Quick Start](#-getting-started) • [Features](#-core-features) • [Usage Guide](#-usage-guide) • [Architecture](#️-architecture-high-level)
+[Quick Start](#quick-start) · [Features](#core-features) · [Usage Guide](#usage-guide) · [Architecture](#architecture)
 
 </div>
 
-<br/>
+---
 
-## 📸 Screenshots
+## Screenshots
 
 <p align="center">
   <img src="docs/screenshots/ai-agent.png" alt="AI Agent" width="800" />
@@ -45,306 +43,444 @@ Build your second brain with a Markdown note app deeply integrated with AI Agent
 
 ---
 
-## 🎯 What is Lumina Note?
+## Core Features
 
-Lumina Note is not just a Markdown editor – it is an **LLM-native knowledge workspace**:
+Lumina Note is not just an editor - it's an LLM-native knowledge workspace.
 
-- Local Markdown vault, Git-friendly
-- Built-in multi-provider LLM client (8 providers)
-- Full-featured Agent system with tools
-- RAG semantic search on your own notes
-- PDF reader + annotation system
-- Dataview-style databases driven by YAML
-- Bilibili video notes, voice notes, daily notes
+### Immersive Editing
+
+- **Multi-mode switching**: Seamlessly switch between Source / Live Preview / Reading modes
+- **Bidirectional links**: Use `[[WikiLinks]]` to build a graph-like knowledge network, supports drag-and-drop from file tree
+- **Professional formatting**: Native support for LaTeX math, Mermaid diagrams, and Obsidian-style `> [!info]` callouts
+- **Syntax highlighting**: Based on CodeMirror 6, supports hundreds of languages
+- **Split view editing**: Horizontal/vertical split, draggable resize, active pane auto-receives new files
+- **Image paste**: `Ctrl+V` to paste screenshots directly, auto-saved to vault
+
+### Knowledge Graph
+
+Canvas-based high-performance visualization engine for intuitive display of note relationships.
+
+- **Folder hierarchy**: Folders displayed as nodes (spiky ball style), parent-child relationships with arrow connections
+- **Color zones**: Auto-assigned colors by folder, child nodes inherit parent folder color
+- **Bidirectional links**: `[[WikiLinks]]` automatically parsed as connections between nodes
+- **Right-click isolated view**: Right-click any node to view it and its direct connections in a new tab
+- **Physics engine**: Adjustable repulsion, elasticity, centripetal force parameters, supports node dragging and canvas zoom
+
+### AI Agent System
+
+- **Agent mode**: Understands intent, automatically executes complex task chains like reading, editing, searching notes
+- **AI floating ball**: Always-available assistant, draggable, doesn't interrupt your flow
+- **Voice input**: Web Speech API-based speech-to-text, streaming display, auto-stop, recording animation
+- **Diff preview**: Provides diff comparison view before AI modifications, you decide whether to apply
+- **RAG semantic search**: Built-in SQLite vector database, semantic retrieval of your local knowledge base
+
+#### Agent Architecture
+
+The system uses intent-driven + Agent self-planning architecture. Coordinator analyzes intent and routes to specialized Agents, each Agent has a complete plan-execute-supervise loop internally.
+
+```mermaid
+flowchart TD
+    START((__start__))
+    
+    START --> COORD[coordinator<br/>Intent Analysis]
+    
+    COORD -->|chat| REPORT[reporter]
+    COORD -->|edit| EDITOR
+    COORD -->|create| WRITER
+    COORD -->|search/complex| RESEARCHER
+    COORD -->|organize| ORGANIZER
+    
+    subgraph editor ["editor (Self-planning Loop)"]
+        direction TB
+        E_PLAN[create_plan] --> E_EXEC[Execute Tools]
+        E_EXEC --> E_UPDATE[update_plan_progress]
+        E_UPDATE -->|incomplete| E_EXEC
+        E_UPDATE -->|all complete| E_COMPLETE[attempt_completion]
+    end
+    
+    subgraph writer ["writer (Self-planning Loop)"]
+        direction TB
+        W_PLAN[create_plan] --> W_EXEC[Execute Tools]
+        W_EXEC --> W_UPDATE[update_plan_progress]
+        W_UPDATE -->|incomplete| W_EXEC
+        W_UPDATE -->|all complete| W_COMPLETE[attempt_completion]
+    end
+    
+    subgraph researcher ["researcher (Self-planning Loop)"]
+        direction TB
+        R_PLAN[create_plan] --> R_EXEC[Execute Tools]
+        R_EXEC --> R_UPDATE[update_plan_progress]
+        R_UPDATE -->|incomplete| R_EXEC
+        R_UPDATE -->|all complete| R_COMPLETE[attempt_completion]
+    end
+    
+    subgraph organizer ["organizer (Self-planning Loop)"]
+        direction TB
+        O_PLAN[create_plan] --> O_EXEC[Execute Tools]
+        O_EXEC --> O_UPDATE[update_plan_progress]
+        O_UPDATE -->|incomplete| O_EXEC
+        O_UPDATE -->|all complete| O_COMPLETE[attempt_completion]
+    end
+    
+    EDITOR --> E_PLAN
+    WRITER --> W_PLAN
+    RESEARCHER --> R_PLAN
+    ORGANIZER --> O_PLAN
+    
+    E_COMPLETE --> REPORT
+    W_COMPLETE --> REPORT
+    R_COMPLETE --> REPORT
+    O_COMPLETE --> REPORT
+    
+    REPORT --> END_((__end__))
+```
+
+Core mechanisms:
+- **Self-planning**: Agent first calls `create_plan` to decompose task into 1-5 steps
+- **Self-execution**: Loop calls tools to execute each step
+- **Self-supervision**: `attempt_completion` checks plan completion, refuses to end if incomplete
+
+Agent Toolset (18 tools):
+
+| Category | Tools |
+| :--- | :--- |
+| Plan | `update_plan` |
+| Read | `read_note`, `read_outline`, `read_section` |
+| Write | `edit_note`, `create_note` |
+| Search | `list_notes`, `search_notes`, `grep_search`, `semantic_search`, `fast_search` |
+| Organize | `move_note`, `delete_note` |
+| Database | `query_database`, `add_database_row` |
+| Other | `get_backlinks`, `ask_user`, `attempt_completion` |
+
+### Bilibili Video Notes
+
+Take notes while watching videos, precise timestamp recording through danmaku sync.
+
+- **Embedded playback**: Play Bilibili videos directly in the app, supports login and sending danmaku
+- **Danmaku sync**: Send prefixed danmaku (e.g., `#note content`), one-click sync to timestamped notes
+- **Time jump**: Click note timestamp, video auto-jumps to corresponding position (no refresh needed)
+- **Auto-save**: Notes auto-saved as Markdown files, auto-loaded when opening the same video next time
+
+### PDF Intelligent Reader
+
+PDF reading and annotation system optimized for academic workflows.
+
+- **Interactive element recognition**: Auto-detect text, images, tables, supports hover highlight and click selection
+- **PDF annotation system**: Add highlight/underline to selected text, supports 5 colors and notes
+- **Annotation sync**: Annotations auto-saved as Markdown files, same directory as PDF
+- **Bidirectional jump**: Click links in notes to jump to PDF location, Ctrl+Click opens in split view
+- **Thumbnails & outline**: Sidebar shows page thumbnails and document outline for quick navigation
+- **Full-text search**: Search keywords in PDF, real-time highlight of matches
+- **AI chat**: Send selected PDF content to AI for summarization, translation, or explanation
+
+### Theme System
+
+- **15 official themes**: Default/Ocean/Forest/Lavender/Rose/Sunset/Mint/Indigo/Latte/Aurora/Minimal etc.
+- **Light & dark modes**: Each theme has both light and dark modes (30 looks total)
+- **Markdown colors**: Themes affect 17 elements including headings/links/code blocks/quotes
+- **Settings panel**: Gear icon in bottom-left, unified management of themes, AI, RAG settings
+
+### Multi-model Ecosystem
+
+Supports mainstream LLM Providers, freely switch models:
+
+Anthropic · OpenAI · Gemini · DeepSeek · Moonshot · Groq · OpenRouter · Ollama (Local)
 
 ---
 
-## ✨ Core Features
+## Architecture
 
-### 📝 Immersive Editing
+This project uses a Rust + React frontend-backend separation architecture, bridged through Tauri v2 for native capabilities.
 
-- **Three editor modes**: **Source / Live Preview / Reading**
-- **WikiLinks**: `[[WikiLinks]]` to build a graph-like knowledge network, supports drag-and-drop from file tree
-- **Beautiful formatting**: LaTeX math (KaTeX), Mermaid, Obsidian-style callouts `> [!info]`
-- **Syntax highlighting**: CodeMirror 6 with hundreds of languages
-- **Split view editor**:
-  - Horizontal / vertical split
-  - Draggable divider with live resize
-  - **Active pane tracking**: the pane you clicked last becomes the target when opening files
-- **Image paste**: `Ctrl+V` to paste screenshots directly into editor, auto-saved to vault
+```mermaid
+graph TD
+    subgraph Frontend["Frontend (React 18 + TS)"]
+        UI[Components & UI]
+        Editor[CodeMirror Editor]
+        Agent[AI Agent System]
+        Store[Zustand Store]
+    end
 
-### 🕸️ Knowledge Graph
+    subgraph Backend["Backend (Rust + Tauri v2)"]
+        Tauri[Tauri Commands]
+        FS[File System Ops]
+        Vector[SQLite Vector DB]
+        LLM[LLM Client]
+    end
 
-- Canvas-based, high-performance visualization of your vault
-- Folders shown as **spiky balls**, children inherit folder color
-- `[[WikiLinks]]` automatically become edges between notes
-- Right-click a node to open an **isolated view** (node + neighbors)
-- Physics simulation for natural clustering & interactive dragging/zooming
+    UI --> Store
+    Editor --> Store
+    Agent --> LLM
+    Agent --> Tauri
+    Tauri --> FS
+    Tauri --> Vector
+```
 
-### 🤖 AI Agent System
+### Tech Stack
 
-- **Multi-provider LLM support**:
-  - Anthropic, OpenAI, Gemini, DeepSeek, Moonshot (Kimi), Groq, OpenRouter, Ollama (local)
-- **Agent modes**: editor, organizer, researcher, writer
-- **Tooling**: read/edit/create/move/search notes, database tools, RAG search, grep, etc.
-- **Real-time edit preview**: animated diff playback inside the editor
-- **RAG semantic search**: vector DB + optional reranker
-- **AI floating ball**: draggable assistant that doesn’t break your flow
-- **Voice input**: streaming STT with auto-stop and animation
-
-### 🎬 Bilibili Video Notes
-
-- Play Bilibili videos inside the app (Tauri multi-WebView)
-- Send special-prefixed danmaku to create timestamped notes
-- Click timestamps in notes to jump the video
-- Notes are saved as Markdown and reloaded automatically next time
-
-### 📄 PDF Intelligent Reader & Annotations
-
-Optimized for academic and research workflows.
-
-- **Interactive element detection**: detect text, images, tables, etc.
-- **Annotation system**:
-  - Highlight / underline selected text (5 colors)
-  - Add textual notes to highlights
-- **Annotation storage**:
-  - Saved as pure Markdown files: `yourfile.pdf.annotations.md`
-  - Lives next to the PDF, Git-friendly and editable in any editor
-- **Bi-directional jumping**:
-  - From PDF → annotation file
-  - From annotation file → back to the exact PDF location via `lumina://pdf` links
-  - **Ctrl+Click** opens the PDF in split view and jumps to the annotation
-- **Thumbnails & outline**: page thumbnails and table-of-contents sidebar
-- **Full-text search**: in-document search with highlight
-- **AI integration**: send selected PDF content to AI for summarization/translation
-
-### 🎨 Themes
-
-- **15 built-in themes**, each with **light + dark** variants (30 looks in total)
-- Themes affect headings/links/code/blockquote and 17+ Markdown elements
-- Custom title bar that follows theme colors, with window controls
-- All theme settings are managed in the **Settings panel** (bottom-left gear icon)
-
-### 📊 Dataview-style Databases
-
-- YAML frontmatter-driven: **notes are the source of truth**
-- Table and Kanban views
-- 7 column types: text, number, select, multi-select, date, checkbox, URL
-- Database definitions stored as `.db.json` (structure only, no row data)
-- File tree integration: database icons, click to open views
-- Fully Git-friendly and plaintext-friendly
+- **Core**: Tauri v2
+- **UI**: React 18, Tailwind CSS, Radix UI
+- **Editor**: CodeMirror 6
+- **State**: Zustand
+- **Database**: SQLite (Vector Extension)
+- **Lang**: TypeScript, Rust
 
 ---
 
-## 🚀 Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- **Node.js** ≥ 18
-- **Rust** ≥ 1.70
+- Node.js 18.0+
+- Rust 1.70+
 - npm or pnpm
 
-### Install & Run
+### Installation
 
-1. **Clone the repo**
+1. Clone the repository
 
 ```bash
 git clone https://github.com/blueberrycongee/Lumina-Note.git
 cd Lumina-Note
 ```
 
-2. **Install dependencies**
+2. Install dependencies
 
 ```bash
 npm install
-# or
-# pnpm install
 ```
 
-3. **Run in dev mode**
+3. Run in development mode
 
 ```bash
 npm run tauri dev
 ```
 
-4. **Build production app**
+4. Build production package
 
 ```bash
 npm run tauri build
 ```
 
-### Optional: PDF element recognition backend
+### PDF Element Recognition (Optional)
 
-To enable advanced interactive PDF element selection:
+To use PDF intelligent recognition (interactive element selection), start the backend parsing service:
 
-1. Install Python deps (first time only):
+1. Install Python dependencies (first time only)
 
 ```bash
 cd scripts
 pip install flask flask-cors pymupdf
 ```
 
-2. Start the server:
+2. Start PDF parsing service
 
 ```bash
 python simple_pdf_server.py
 ```
 
-The server runs at `http://localhost:8080`.
+Service will start at `http://localhost:8080`.
 
-> Note: In the long term this Python service will be migrated to a Rust Tauri command so no extra runtime is required.
+3. Usage in app
+   - Open any PDF file
+   - Click "Interactive Mode" button (lightning icon) in top-right
+   - Hover over text/images to see highlights
+   - Click elements to select, Ctrl+click for multi-select
+   - Right panel allows copying references or chatting with AI
 
----
+Advanced option: For more precise layout analysis (tables, formula recognition), use PP-Structure:
 
-## 📖 Usage Guide
+```bash
+cd scripts
+pip install -r requirements-pp-structure.txt
+python pp_structure_server.py
+```
 
-### 1. Choosing a Vault (Workspace)
-
-- On first launch you will be asked to select a folder as your **vault**.
-- ⚠️ **Important**: do **not** choose huge directories (like your entire `Documents` or home folder).
-  - Too many files will slow down **indexing and RAG semantic search**.
-  - Recommended: create a dedicated folder like `~/LuminaVault` or `~/Notes`.
-
-### 2. Basic Editing
-
-- **Create a note**: sidebar `+` button or `Ctrl+N`.
-- **Switch editor mode** (buttons in the top-right of editor):
-  - **Source** – raw Markdown
-  - **Live Preview** – rendered view while typing (recommended)
-  - **Reading** – clean reading view, no editing
-- **WikiLinks**: type `[[` to link to other notes (with auto-complete).
-- **Tags**: use `#tag` anywhere in the note; tags are indexed in the right sidebar.
-
-### 3. Daily Quick Notes 📅
-
-- Click the **calendar icon** in the sidebar.
-- Creates a new Markdown file named like `Quick_2025-12-02_06-00.md`.
-- Perfect for meeting notes, daily logs, and scratch ideas.
-
-### 4. Voice Notes 🎤
-
-- Click the **microphone icon** in the sidebar.
-- Speech is transcribed live into the editor.
-- Recording auto-stops after a few seconds of silence.
-- Button shows an animated ripple while recording.
-- Implemented with the browser’s Web Speech API – no extra install needed.
-
-### 5. Knowledge Graph 🕸️
-
-- Open via the sidebar graph icon or command palette.
-- Interactions:
-  - Click a node to open its note.
-  - Drag nodes to reposition them.
-  - Right-click a node to open an **isolated view** (only that node + neighbors).
-  - Scroll to zoom in/out.
-- Visual features:
-  - Folders as **spiky balls**, auto-colored per folder.
-  - Child notes inherit folder color.
-  - `[[WikiLinks]]` become edges between notes.
-
-### 6. Theme Settings 🎨
-
-- Click the **gear icon** in the bottom-left to open **Settings**.
-- Choose from **15 built-in themes**, each with light & dark mode.
-- Quickly toggle light/dark via the **sun/moon icon** in the title bar.
-
-### 7. Using the AI Assistant 
-
-1. **Configure API keys**:
-   - Open **Settings → AI Settings** (bottom-left gear icon)
-   - Choose a provider and fill in your API key / base URL if needed
-   - Click **Save**
-
-2. **Where you can use AI (all support Chat & Agent modes)**:
-   - **Right-side AI panel**  
-     Use the AI tab in the right sidebar to chat or run agents with the current note as context.
-   - **Floating AI ball**  
-     Enable in Settings. A draggable floating button appears; click it to open Chat / Agent anywhere without leaving your current view.
-   - **Main-view AI mode (left ribbon button)**  
-     Click the AI icon in the left ribbon to open a **full-screen AI view** in the main area – ideal for long conversations or complex Agent workflows.
-
-4. **RAG semantic search**:
-   - Turn on **RAG indexing** in Settings.
-   - The Agent can then semantically search your whole vault to answer questions.
-   - Note: the first indexing pass can be slow on very large vaults, so keep your workspace reasonably sized.
-
-### 8. PDF Annotations
-
-1. Open a PDF from the sidebar.
-2. Select text to bring up the annotation toolbar.
-3. Choose highlight color / underline or add a text note.
-4. An annotation Markdown file `<pdfname>.annotations.md` is created/updated automatically.
-5. In the annotation file, use the `[📍 Jump]` links:
-   - Normal click: open PDF in the main pane and jump.
-   - **Ctrl+Click**: open PDF in the split pane and jump.
-
-### 9. Split View Editing
-
-- Toggle split view via the editor toolbar.
-- Click left/right pane to mark it as **active** (highlighted border).
-- When split view is on, opening a file from the sidebar will open it in the active pane.
-- Drag the divider to resize panes.
-
-### 10. Dataview-style Database
-
-- Define database structure in a `.db.json` file.
-- Attach notes to a database via YAML frontmatter (`db: projects`).
-- Use table or Kanban view to browse & edit; changes sync back into note YAML.
+See [docs/PP_STRUCTURE_SETUP.md](docs/PP_STRUCTURE_SETUP.md) for details.
 
 ---
 
-## 🛠️ Architecture (High-level)
+## Usage Guide
 
-See the Chinese README or `docs/` for more implementation details. In short:
+### First Use
 
-- **Frontend**: React 18 + TypeScript + Tailwind + Zustand + CodeMirror 6
-- **Backend**: Tauri v2 + Rust commands for filesystem and vector DB
-- **RAG**: SQLite-based vector store, multiple embedding backends, optional reranker
+1. **Choose Workspace (Vault)**:
+   - Select a folder as your note library on first launch
+   - Recommend choosing a dedicated notes folder, avoid large directories (like entire Documents)
+   - Too many files will slow down indexing, affecting AI semantic search performance
+   - Recommended: Create a dedicated folder like `MyNotes` or `Vault`
+
+2. **Interface Layout**:
+   - Left sidebar: File tree, search, quick note buttons
+   - Center area: Editor/PDF reader/Knowledge graph
+   - Right sidebar: AI chat, outline, backlinks, tags
+   - Bottom-left: Settings button (gear icon)
+
+### Basic Editing
+
+1. **Create note**: Click sidebar `+` button or use `Ctrl+N`
+2. **Switch edit mode** (click top-right buttons):
+   - Source mode: Shows raw Markdown syntax
+   - Live preview: See rendered output while writing (recommended for daily use)
+   - Reading mode: Pure reading view, no editing distractions
+3. **Bidirectional links**: Type `[[` to trigger note linking, auto-completes existing notes
+4. **Tags**: Use `#tagname` to add tags to notes
+
+### Daily Quick Notes
+
+- Click the calendar icon button in sidebar
+- Notes auto-named as `Quick_2025-12-02_06-00.md` (with timestamp)
+- Perfect for capturing ideas, meeting notes, temporary notes
+- Auto-opens for editing after creation
+
+### Voice Notes
+
+- Click the microphone icon button in sidebar
+- Voice converted to text in real-time, streaming display in editor
+- Auto-stops recording after 3 seconds of silence
+- Button shows dynamic ripple effect while recording
+- Based on browser Web Speech API, no extra installation needed
+
+### Knowledge Graph
+
+1. **Open graph**: Click network icon in sidebar or use command palette
+2. **Node interactions**:
+   - Single-click node: Jump to corresponding note
+   - Drag node: Adjust node position
+   - Right-click node: Open isolated view (only shows that node and its connections)
+   - Scroll wheel: Zoom in/out
+3. **Graph features**:
+   - Folders displayed as spiky ball style
+   - Auto-colored by folder, child files inherit color
+   - `[[WikiLinks]]` auto-parsed as connections between nodes
+   - Physics engine simulation, nodes naturally cluster
+
+### Theme Settings
+
+1. Open settings: Click gear icon in bottom-left
+2. Switch theme: Select theme in settings panel
+3. 15 official themes: Default, Ocean, Forest, Lavender, Rose, Sunset, Mint, Indigo, Latte, Aurora, Minimal, etc.
+4. Light/dark modes: Each theme has both light and dark modes
+5. Quick toggle: Click sun/moon icon in title bar to quickly switch light/dark
+
+### Using AI Assistant
+
+1. **Configure API Key**:
+   - Click settings icon in bottom-left → AI Settings
+   - Select model provider, enter your API Key
+   - Click save
+
+2. **Entry points (3) - all support Chat / Agent modes**:
+   - **Right AI panel**: Switch to AI Tab in right sidebar, chat or use Agent in current note context
+   - **Floating ball**: Enable "Floating ball mode" in settings, a draggable AI button appears on screen, invoke Chat / Agent anytime
+   - **Main view AI mode (left Ribbon button)**: Click AI icon in left function bar to open a full-screen AI view in main editing area, suitable for long conversations or complex Agent tasks
+
+3. **RAG semantic search**:
+   - Enable RAG indexing in settings
+   - AI can semantically search your entire note library to answer questions
+   - First indexing may be slow, recommend keeping note library not too large
+
+### PDF Annotations
+
+1. Open PDF: Click PDF file from file tree
+2. Add annotation: Select text → popup toolbar → choose highlight color or add note
+3. Annotation file: Auto-saved as `filename.annotations.md`
+4. Jump:
+   - Normal click `[Jump]` link: Opens PDF in main view
+   - Ctrl+Click: Opens PDF in split view and jumps to position
+
+### Split View Editing
+
+1. Enable split: Click split button in toolbar
+2. Switch active panel: Click left/right panel, highlighted border indicates current active
+3. Open file to active panel: Click file from sidebar, opens in active panel
+4. Resize: Drag middle divider
+
+### Bilibili Video Notes
+
+1. Open video: Paste Bilibili video link in note, click play button
+2. Record notes: Send danmaku with `#` prefix, auto-syncs to timestamped notes
+3. Time jump: Click timestamp in notes, video auto-jumps
+
+### Database (Dataview Style)
+
+1. Create database: Create `.db.json` file to define column structure
+2. Add data: Add `db: databaseID` in note YAML frontmatter
+3. Views: Supports table view and kanban view
+4. Edit: Edit directly in table/kanban, auto-syncs back to note files
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-### ✅ Completed
+### Completed
 
-- [x] **Core**: Multi-provider LLM support (8 providers)
-- [x] **Agent**: AI Agent system with tool calling (4 modes + 14 tools)
-- [x] **RAG**: Local vector database with semantic search (+ Reranker)
-- [x] **UI**: AI floating ball with streaming responses
-- [x] **Video**: Bilibili video notes (embedded WebView + danmaku sync)
-- [x] **STT**: Voice-to-text (streaming + auto-stop + recording animation)
-- [x] **Theme**: 15 built-in themes + Markdown color customization
-- [x] **Settings**: Central modal settings panel
-- [x] **PDF**: Smart PDF reader (element detection + interactive selection + AI chat)
-- [x] **PDF Annotations**: Highlight/underline/notes, Markdown storage, bi-directional jump
-- [x] **Split Editor**: Resizable split panes with active panel tracking
-- [x] **Database**: Dataview-style YAML-driven table/kanban views
-- [x] **Image Paste**: Paste screenshots directly into editor, auto-save to vault
-- [x] **Drag-and-drop WikiLinks**: Drag files from tree to editor to insert `[[WikiLink]]`
-- [x] **WebDAV Sync**: Support Jianguoyun and other WebDAV services for bi-directional vault sync
-- [x] **Flashcard System**: Generate flashcards from notes, spaced repetition review (basic/cloze/MCQ)
-- [x] **Multi-language**: Chinese/English/Traditional Chinese/Japanese internationalization
-- [x] **Dynamic Routing**: Intent recognition + multi-model routing for smart task distribution
-- [x] **Backlinks Panel**: Show which notes reference the current note, click to navigate
-- [x] **Tag Aggregation**: Tag list with counts, expand to see related notes
-- [x] **Export PDF**: One-click export notes to PDF files
+- [x] Multi LLM Provider support (8 providers)
+- [x] AI Agent system with tool calling (4 modes + 14 tools)
+- [x] Local vector database with semantic search (supports Reranker)
+- [x] AI floating ball with streaming response
+- [x] Bilibili video notes (embedded WebView + danmaku sync)
+- [x] Speech-to-text (streaming display + auto-stop + recording animation)
+- [x] 15 official themes + Markdown color customization
+- [x] Central modal settings panel
+- [x] PDF intelligent reader (element recognition + interactive selection + AI chat)
+- [x] PDF annotations: highlight/underline/notes, Markdown storage, bidirectional jump
+- [x] Split editing: resizable split panes, active panel tracking
+- [x] Database: Dataview-style YAML-driven, table/kanban views
+- [x] Image paste: Paste screenshots directly to editor, auto-save to vault
+- [x] Drag-and-drop links: Drag files from tree to editor, auto-insert `[[WikiLink]]`
+- [x] WebDAV sync: Support Jianguoyun and other WebDAV services, bidirectional vault sync
+- [x] Flashcard system: Generate flashcards from notes, spaced repetition review (basic/cloze/MCQ)
+- [x] Multi-language support: Chinese/English/Traditional Chinese/Japanese i18n
+- [x] Dynamic routing: Intent recognition + multi-model routing, smart task distribution
+- [x] Backlinks panel: Show which notes reference current note, click to navigate
+- [x] Tag aggregation: Tag list + count + expand to view related notes
+- [x] Export PDF: One-click export notes to PDF files
 
-### 🚧 In Progress
+### In Progress
 
-- [ ] **PDF Rust Migration**: Port Python PDF parsing service to Rust
-- [ ] **Calendar View**: Calendar view for databases
+- [ ] PDF Rust migration: Port Python parsing service to Rust (eliminate external dependencies)
+- [ ] Calendar view: Database calendar view
 
-### 📋 Planned
+### Planned
 
-- [ ] **Template System**: Choose templates when creating new notes
-- [ ] **Export HTML/Word**: More export formats
-- [ ] **Plugin System**: Plugin API design
-- [ ] **Git Sync**: Git version control integration
-- [ ] **Mobile**: iOS / Android adaptation
+- [ ] Template system: Choose preset templates when creating new notes
+- [ ] Export HTML/Word: More export formats
+- [ ] Plugin system: Plugin API design
+- [ ] Git sync: Git version control integration
+- [ ] Mobile: iOS / Android adaptation
 
 ---
 
-## 🤝 Contributors
+## Project Structure
+
+```
+lumina-note/
+├── src/
+│   ├── agent/           # AI Agent core logic (Core, Tools, Prompts)
+│   ├── components/      # React UI components
+│   │   ├── layout/      # Layout components
+│   │   ├── chat/        # Chat components
+│   │   ├── ai/          # AI components
+│   │   ├── search/      # Search components
+│   │   ├── toolbar/     # Toolbar components
+│   │   └── effects/     # Effect components
+│   ├── editor/          # CodeMirror editor config and extensions
+│   ├── services/        # LLM client and RAG service layer
+│   ├── hooks/           # Custom React Hooks
+│   └── stores/          # Zustand state management
+├── src-tauri/
+│   └── src/
+│       ├── commands/    # Rust commands exposed to frontend
+│       ├── fs/          # File system operations
+│       └── vector_db/   # SQLite vector storage logic
+├── scripts/             # Python backend services
+└── package.json
+```
+
+---
+
+## Contributors
 
 <a href="https://github.com/blueberrycongee/Lumina-Note/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=blueberrycongee/Lumina-Note" />
@@ -352,6 +488,6 @@ See the Chinese README or `docs/` for more implementation details. In short:
 
 ---
 
-## 📄 License
+## License
 
-Lumina Note is open-sourced under the [Apache 2.0 License](./LICENSE).
+This project is open-sourced under the [Apache License 2.0](LICENSE).
