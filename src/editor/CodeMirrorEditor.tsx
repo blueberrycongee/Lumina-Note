@@ -96,6 +96,7 @@ const editorTheme = EditorView.theme({
     marginRight: "6px",
     color: "hsl(var(--muted-foreground) / 0.4)",
     fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "14px", // 固定字体大小，不继承标题大小
     fontWeight: "bold",
     userSelect: "none",
     pointerEvents: "none",
@@ -129,8 +130,27 @@ const editorTheme = EditorView.theme({
     pointerEvents: "auto",
   },
 
-  // 隐藏原始标记 (配合悬挂使用)
-  ".cm-formatting-hidden": { display: "none" },
+  // 隐藏原始标记 (配合悬挂使用) - 带动画
+  ".cm-formatting-hidden": { 
+    display: "inline",
+    overflow: "hidden",
+    width: "0",
+    opacity: "0",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    transition: "width 0.2s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.15s ease-out",
+  },
+  
+  // 显示原始标记 (活动行)
+  ".cm-formatting-visible": {
+    display: "inline",
+    opacity: "1",
+    color: "hsl(var(--muted-foreground) / 0.6)",
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "inherit",
+    lineHeight: "inherit",
+    transition: "opacity 0.15s ease-out",
+  },
 
   // === Math 编辑体验 ===
   // 行内公式渲染结果 - 带淡入动画
@@ -525,12 +545,18 @@ const livePreviewPlugin = ViewPlugin.fromClass(class {
         const isActiveLine = activeLines.has(lineNum);
         
         if (isBlock) {
-          // 悬挂标记逻辑：活动行显示 Widget，隐藏原始文本
-          if (isActiveLine && !isDrag && !lineHanging.has(lineNum)) {
-            lineHanging.set(lineNum, true);
-            d.push(Decoration.widget({ widget: new HangingMarkWidget(state.doc.sliceString(node.from, node.to)), side: -1 }).range(node.from));
+          // 标题/列表/引用标记逻辑
+          if (isActiveLine && !isDrag) {
+            // 活动行：显示原始标记，让用户可以编辑
+            d.push(Decoration.mark({ class: "cm-formatting-visible" }).range(node.from, node.to));
+          } else {
+            // 非活动行：显示悬挂标记，隐藏原始标记
+            if (!lineHanging.has(lineNum)) {
+              lineHanging.set(lineNum, true);
+              d.push(Decoration.widget({ widget: new HangingMarkWidget(state.doc.sliceString(node.from, node.to)), side: -1 }).range(node.from));
+            }
+            d.push(Decoration.mark({ class: "cm-formatting-hidden" }).range(node.from, node.to));
           }
-          this.hide(state, node.from, node.to, d);
         } else {
           // 行内标记逻辑：光标接触时展开
           if (node.from >= node.to) return;
