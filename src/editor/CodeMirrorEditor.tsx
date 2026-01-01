@@ -130,26 +130,22 @@ const editorTheme = EditorView.theme({
     pointerEvents: "auto",
   },
 
-  // 隐藏原始标记 (配合悬挂使用) - 带动画
-  ".cm-formatting-hidden": { 
+  // 块级标记 (标题/列表/引用) - 默认隐藏
+  ".cm-formatting-block": {
     display: "inline",
     overflow: "hidden",
-    width: "0",
-    opacity: "0",
-    fontSize: "inherit",
+    fontSize: "0.01em",
     lineHeight: "inherit",
-    transition: "width 0.2s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.15s ease-out",
+    opacity: "0",
+    color: "hsl(var(--muted-foreground))",
+    fontFamily: "'JetBrains Mono', monospace",
+    transition: "font-size 0.2s ease-out, opacity 0.2s ease-out",
   },
   
-  // 显示原始标记 (活动行)
-  ".cm-formatting-visible": {
-    display: "inline",
-    opacity: "1",
-    color: "hsl(var(--muted-foreground) / 0.6)",
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: "inherit",
-    lineHeight: "inherit",
-    transition: "opacity 0.15s ease-out",
+  // 块级标记 - 激活状态 (展开)
+  ".cm-formatting-block-visible": {
+    fontSize: "1em",
+    opacity: "0.6",
   },
 
   // === Math 编辑体验 ===
@@ -546,17 +542,11 @@ const livePreviewPlugin = ViewPlugin.fromClass(class {
         
         if (isBlock) {
           // 标题/列表/引用标记逻辑
-          if (isActiveLine && !isDrag) {
-            // 活动行：显示原始标记，让用户可以编辑
-            d.push(Decoration.mark({ class: "cm-formatting-visible" }).range(node.from, node.to));
-          } else {
-            // 非活动行：显示悬挂标记，隐藏原始标记
-            if (!lineHanging.has(lineNum)) {
-              lineHanging.set(lineNum, true);
-              d.push(Decoration.widget({ widget: new HangingMarkWidget(state.doc.sliceString(node.from, node.to)), side: -1 }).range(node.from));
-            }
-            d.push(Decoration.mark({ class: "cm-formatting-hidden" }).range(node.from, node.to));
-          }
+          // 块级标记：始终用同一个基础类，活动时加 visible 类
+          const cls = (isActiveLine && !isDrag)
+            ? "cm-formatting-block cm-formatting-block-visible"
+            : "cm-formatting-block";
+          d.push(Decoration.mark({ class: cls }).range(node.from, node.to));
         } else {
           // 行内标记逻辑：光标接触时展开
           if (node.from >= node.to) return;
