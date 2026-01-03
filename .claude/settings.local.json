@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm run test:run:*)",
-      "Bash(npm audit:*)",
-      "Bash(npm outdated)"
-    ]
-  }
-}

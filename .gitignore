@@ -1,25 +1,20 @@
 # Dependencies
 node_modules/
 
-# Build outputs
+# Build
 dist/
 dist-ssr/
 
-# Tauri
+# Tauri build
 src-tauri/target/
 src-tauri/gen/
 src-tauri/build.log
-src-tauri/CEF_BUILD_SETUP.md
-src-tauri/build-cef-setup.rs
-src-tauri/build-cef.bat
-src-tauri/build-cef.sh
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
@@ -27,10 +22,6 @@ Thumbs.db
 
 # Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
 
 # Environment
 .env
@@ -42,77 +33,12 @@ pnpm-debug.log*
 *.cache
 .eslintcache
 
-# Test
+# Test coverage
 coverage/
 
-# Misc
+# Local config
 *.local
 
-# ===================
-# 本地调试文件（不提交）
-# ===================
-
-# 旧 README
-README-1.md
-
-# 参考设计文档
-界面参考设计.md
-实时预览样式参考.md
-
-# 开发笔记
-开发todo.md
-
-# 测试用的示例笔记
-二重积分区域合并.md
-数列极限与复合函数性质判定.md
-知识图谱.md
-
-# 其他用户笔记（可选）
-# *.md
-# !README.md
-
-# 克隆的外部项目
-Roo-Code/
-media-extended/
-
-# ===================
-# Kiro 相关
-# ===================
-# 忽略整个 .kiro 目录（spec 开发文档不上传）
+# AI assistants
+.claude/
 .kiro/
-
-# ===================
-# 临时文件和调试日志
-# ===================
-# 构建日志
-build-full.log
-android-build-*.log
-2025-*.log
-
-# Agent 评估报告（临时生成）
-eval-report-*.md
-
-# 测试生成的笔记
-tests/agent-eval/test-*.md
-
-# 调试日志目录
-debug-logs/
-
-# 其他克隆的外部项目
-trae-agent/
-claude-code/
-banana-slides/
-deer-flow/
-/langgraph/
-docs/deer-flow/
-
-# ===================
-# 废弃/备用代码（不提交）
-# ===================
-# LangGraph 浏览器版本（不能运行，已迁移到 Rust）
-src/agent/langgraph/
-aider/
-banana-slides/
-deer-flow/
-anthropic-skills/
-..ProseMark/
