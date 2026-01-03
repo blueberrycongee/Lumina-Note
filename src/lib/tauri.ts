@@ -129,6 +129,22 @@ export async function rename(oldPath: string, newPath: string): Promise<void> {
 }
 
 /**
+ * Move a file to a target folder
+ * Returns the new path of the moved file
+ */
+export async function moveFile(sourcePath: string, targetFolder: string): Promise<string> {
+  return invoke<string>("move_file", { source: sourcePath, targetFolder });
+}
+
+/**
+ * Move a folder to a target folder
+ * Returns the new path of the moved folder
+ */
+export async function moveFolder(sourcePath: string, targetFolder: string): Promise<string> {
+  return invoke<string>("move_folder", { source: sourcePath, targetFolder });
+}
+
+/**
  * Open a new window
  */
 export async function openNewWindow(): Promise<void> {

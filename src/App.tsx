@@ -270,11 +270,19 @@ function App() {
         // 创建拖拽指示器 - VS Code/Cursor 风格
         dragIndicator = document.createElement('div');
         dragIndicator.className = 'fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover/95 backdrop-blur-sm text-popover-foreground text-sm rounded-lg border border-border shadow-xl';
+        
+        // 根据是文件还是文件夹显示不同图标
+        const icon = dragData.isFolder 
+          ? `<svg class="w-4 h-4 text-yellow-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>`
+          : `<svg class="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>`;
+        
         dragIndicator.innerHTML = `
-          <svg class="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
+          ${icon}
           <span class="truncate max-w-[200px]">${dragData.fileName.replace(/\.(md|db\.json)$/i, '')}</span>
         `;
         document.body.appendChild(dragIndicator);
@@ -297,17 +305,40 @@ function App() {
       }
       
       if (dragData.isDragging) {
-        // 触发自定义事件，让编辑器和 AI 对话框处理
-        const dropEvent = new CustomEvent('lumina-drop', {
-          detail: {
-            wikiLink: dragData.wikiLink,
-            filePath: dragData.filePath,
-            fileName: dragData.fileName,
-            x: e.clientX,
-            y: e.clientY,
+        // 检查是否放置在文件夹上
+        const folderTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-folder-path]');
+        if (folderTarget) {
+          const targetPath = folderTarget.getAttribute('data-folder-path');
+          if (targetPath && targetPath !== dragData.filePath) {
+            // 触发文件夹放置事件
+            const folderDropEvent = new CustomEvent('lumina-folder-drop', {
+              detail: {
+                sourcePath: dragData.filePath,
+                targetFolder: targetPath,
+                isFolder: dragData.isFolder,
+              }
+            });
+            window.dispatchEvent(folderDropEvent);
+            // 清理全局数据
+            (window as any).__lumina_drag_data = null;
+            return;
           }
-        });
-        window.dispatchEvent(dropEvent);
+        }
+        
+        // 文件夹不能插入链接，只触发文件的 lumina-drop
+        if (!dragData.isFolder) {
+          // 触发自定义事件，让编辑器和 AI 对话框处理
+          const dropEvent = new CustomEvent('lumina-drop', {
+            detail: {
+              wikiLink: dragData.wikiLink,
+              filePath: dragData.filePath,
+              fileName: dragData.fileName,
+              x: e.clientX,
+              y: e.clientY,
+            }
+          });
+          window.dispatchEvent(dropEvent);
+        }
       }
       
       // 清理全局数据

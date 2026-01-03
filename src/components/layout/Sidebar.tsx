@@ -109,9 +109,49 @@ export function Sidebar() {
   const [renameValue, setRenameValue] = useState("");
   // 展开的文件夹路径集合
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  // 根目录拖拽悬停状态
+  const [isRootDragOver, setIsRootDragOver] = useState(false);
 
   // 当前是否激活了 AI 主对话标签
   const isAIMainActive = tabs[activeTabIndex]?.type === "ai-chat";
+
+  // 获取 store 的移动方法
+  const { moveFileToFolder, moveFolderToFolder } = useFileStore();
+
+  // 监听根目录放置
+  useEffect(() => {
+    const handleRootDrop = async (e: CustomEvent) => {
+      if (!isRootDragOver || !vaultPath) return;
+      setIsRootDragOver(false);
+      
+      const { sourcePath, isFolder } = e.detail;
+      if (!sourcePath) return;
+      
+      // 检查是否已经在根目录
+      const normalize = (p: string) => p.replace(/\\/g, "/");
+      const normalizedSource = normalize(sourcePath);
+      const normalizedVault = normalize(vaultPath);
+      const sourceParent = normalizedSource.substring(0, normalizedSource.lastIndexOf("/"));
+      if (sourceParent === normalizedVault) {
+        return; // 已经在根目录，不需要移动
+      }
+      
+      try {
+        if (isFolder) {
+          await moveFolderToFolder(sourcePath, vaultPath);
+        } else {
+          await moveFileToFolder(sourcePath, vaultPath);
+        }
+      } catch (error: any) {
+        alert(error?.message || '移动失败');
+      }
+    };
+    
+    window.addEventListener('lumina-folder-drop', handleRootDrop as unknown as EventListener);
+    return () => {
+      window.removeEventListener('lumina-folder-drop', handleRootDrop as unknown as EventListener);
+    };
+  }, [isRootDragOver, vaultPath, moveFileToFolder, moveFolderToFolder]);
 
   // Sync selectedPath with currentFile
   useEffect(() => {
@@ -574,8 +614,21 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* Vault Name */}
-      <div className="px-3 py-2 text-sm font-medium truncate border-b border-border">
+      {/* Vault Name - 也是根目录放置区 */}
+      <div 
+        data-folder-path={vaultPath}
+        onMouseEnter={() => {
+          const dragData = (window as any).__lumina_drag_data;
+          if (dragData?.isDragging) {
+            setIsRootDragOver(true);
+          }
+        }}
+        onMouseLeave={() => setIsRootDragOver(false)}
+        className={cn(
+          "px-3 py-2 text-sm font-medium truncate border-b border-border transition-colors",
+          isRootDragOver && "bg-primary/20 ring-2 ring-primary ring-inset"
+        )}
+      >
         {vaultPath?.split(/[/\\]/).pop() || "Notes"}
       </div>
 
@@ -618,6 +671,7 @@ export function Sidebar() {
               setCreateValue={setCreateValue}
               onCreateSubmit={handleCreateSubmit}
               onCreateCancel={handleCreateCancel}
+              vaultPath={vaultPath}
             />
           ))
         )}
@@ -788,6 +842,7 @@ interface FileTreeItemProps {
   setCreateValue: (value: string) => void;
   onCreateSubmit: () => void;
   onCreateCancel: () => void;
+  vaultPath: string | null;
 }
 
 function FileTreeItem({ 
@@ -809,7 +864,11 @@ function FileTreeItem({
   setCreateValue,
   onCreateSubmit,
   onCreateCancel,
+  vaultPath,
 }: FileTreeItemProps) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const { moveFileToFolder, moveFolderToFolder } = useFileStore();
+  
   const isExpanded = expandedPaths.has(entry.path);
   const isActive = currentFile === entry.path;
   const isSelected = selectedPath === entry.path;
@@ -830,6 +889,67 @@ function FileTreeItem({
       onRenameCancel();
     }
   };
+
+  // 文件夹拖拽开始
+  const handleFolderMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // 只处理左键
+    
+    // 存储拖拽数据到全局
+    (window as any).__lumina_drag_data = {
+      wikiLink: '', // 文件夹不支持 wiki 链接
+      filePath: entry.path,
+      fileName: entry.name,
+      isFolder: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      isDragging: false,
+    };
+  };
+
+  // 拖拽进入文件夹
+  const handleMouseEnter = useCallback(() => {
+    const dragData = (window as any).__lumina_drag_data;
+    if (dragData?.isDragging && entry.is_dir) {
+      // 不能拖到自己身上
+      if (dragData.filePath === entry.path) return;
+      // 不能拖到自己的子文件夹
+      const normalize = (p: string) => p.replace(/\\/g, "/");
+      if (dragData.isFolder && normalize(entry.path).startsWith(normalize(dragData.filePath) + "/")) return;
+      setIsDragOver(true);
+    }
+  }, [entry.path, entry.is_dir]);
+
+  // 拖拽离开文件夹
+  const handleMouseLeave = useCallback(() => {
+    setIsDragOver(false);
+  }, []);
+
+  // 监听全局拖拽结束，处理文件夹放置
+  useEffect(() => {
+    const handleFolderDrop = async (e: CustomEvent) => {
+      if (!isDragOver) return;
+      setIsDragOver(false);
+      
+      const { sourcePath, isFolder } = e.detail;
+      if (!sourcePath || sourcePath === entry.path) return;
+      
+      try {
+        if (isFolder) {
+          await moveFolderToFolder(sourcePath, entry.path);
+        } else {
+          await moveFileToFolder(sourcePath, entry.path);
+        }
+      } catch (error: any) {
+        // 显示错误提示
+        alert(error?.message || '移动失败');
+      }
+    };
+    
+    window.addEventListener('lumina-folder-drop', handleFolderDrop as unknown as EventListener);
+    return () => {
+      window.removeEventListener('lumina-folder-drop', handleFolderDrop as unknown as EventListener);
+    };
+  }, [isDragOver, entry.path, moveFileToFolder, moveFolderToFolder]);
 
   if (entry.is_dir) {
     // 文件夹重命名
@@ -859,6 +979,8 @@ function FileTreeItem({
         <div
           role="button"
           tabIndex={0}
+          data-folder-path={entry.path}
+          onMouseDown={handleFolderMouseDown}
           onClick={() => {
             onSelect(entry);
             toggleExpanded(entry.path);
@@ -869,23 +991,26 @@ function FileTreeItem({
               toggleExpanded(entry.path);
             }
           }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
           className={cn(
-            "w-full flex items-center gap-1.5 py-1.5 transition-colors text-sm cursor-pointer",
-            isSelected ? "bg-accent" : "hover:bg-accent"
+            "w-full flex items-center gap-1.5 py-1.5 transition-colors text-sm cursor-pointer select-none",
+            isSelected ? "bg-accent" : "hover:bg-accent",
+            isDragOver && "bg-primary/20 ring-2 ring-primary ring-inset"
           )}
           style={{ paddingLeft }}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           )}
           {isExpanded ? (
-            <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0" />
+            <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           ) : (
-            <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Folder className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           )}
-          <span className="truncate">{entry.name}</span>
+          <span className="truncate pointer-events-none">{entry.name}</span>
         </div>
 
         {isExpanded && (
@@ -922,6 +1047,7 @@ function FileTreeItem({
                 setCreateValue={setCreateValue}
                 onCreateSubmit={onCreateSubmit}
                 onCreateCancel={onCreateCancel}
+                vaultPath={vaultPath}
               />
             ))}
           </div>
@@ -979,6 +1105,7 @@ function FileTreeItem({
       wikiLink,
       filePath: entry.path,
       fileName: entry.name,
+      isFolder: false,
       startX: e.clientX,
       startY: e.clientY,
       isDragging: false,

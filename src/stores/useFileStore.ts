@@ -133,6 +133,10 @@ interface FileState {
   // File sync actions
   reloadFileIfOpen: (path: string) => Promise<void>;
 
+  // Move file/folder actions
+  moveFileToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
+  moveFolderToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
+
   // Workspace actions
   clearVault: () => void;
 }
@@ -1531,6 +1535,102 @@ export const useFileStore = create<FileState>()(
           }
         } catch (error) {
           console.error(`Failed to reload file ${path}:`, error);
+        }
+      },
+
+      // Move file to a target folder
+      moveFileToFolder: async (sourcePath: string, targetFolder: string) => {
+        const { tabs, currentFile, refreshFileTree } = get();
+        
+        try {
+          // Import moveFile dynamically to avoid circular dependency
+          const { moveFile } = await import("@/lib/tauri");
+          const newPath = await moveFile(sourcePath, targetFolder);
+          
+          // Update tab path if the moved file is open
+          const tabIndex = tabs.findIndex(t => t.type === 'file' && t.path === sourcePath);
+          if (tabIndex !== -1) {
+            const newFileName = newPath.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "未命名";
+            const updatedTabs = tabs.map((tab, i) => {
+              if (i === tabIndex) {
+                return {
+                  ...tab,
+                  path: newPath,
+                  name: newFileName,
+                  id: newPath,
+                };
+              }
+              return tab;
+            });
+            
+            set({
+              tabs: updatedTabs,
+              currentFile: currentFile === sourcePath ? newPath : currentFile,
+            });
+          }
+          
+          // Refresh file tree
+          await refreshFileTree();
+        } catch (error) {
+          console.error("Failed to move file:", error);
+          throw error;
+        }
+      },
+
+      // Move folder to a target folder
+      moveFolderToFolder: async (sourcePath: string, targetFolder: string) => {
+        const { tabs, currentFile, refreshFileTree } = get();
+        
+        try {
+          // Import moveFolder dynamically to avoid circular dependency
+          const { moveFolder } = await import("@/lib/tauri");
+          const newPath = await moveFolder(sourcePath, targetFolder);
+          
+          // Normalize paths for comparison
+          const normalize = (p: string) => p.replace(/\\/g, "/");
+          const normalizedSource = normalize(sourcePath);
+          const normalizedNew = normalize(newPath);
+          
+          // Update all tabs that are inside the moved folder
+          const updatedTabs = tabs.map(tab => {
+            if (tab.type === 'file') {
+              const normalizedTabPath = normalize(tab.path);
+              if (normalizedTabPath.startsWith(normalizedSource + "/") || normalizedTabPath === normalizedSource) {
+                // Replace the old folder path with the new one
+                const relativePath = normalizedTabPath.slice(normalizedSource.length);
+                const newTabPath = normalizedNew + relativePath;
+                const newFileName = newTabPath.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "未命名";
+                return {
+                  ...tab,
+                  path: newTabPath,
+                  name: newFileName,
+                  id: newTabPath,
+                };
+              }
+            }
+            return tab;
+          });
+          
+          // Update currentFile if it was inside the moved folder
+          let newCurrentFile = currentFile;
+          if (currentFile) {
+            const normalizedCurrent = normalize(currentFile);
+            if (normalizedCurrent.startsWith(normalizedSource + "/") || normalizedCurrent === normalizedSource) {
+              const relativePath = normalizedCurrent.slice(normalizedSource.length);
+              newCurrentFile = normalizedNew + relativePath;
+            }
+          }
+          
+          set({
+            tabs: updatedTabs,
+            currentFile: newCurrentFile,
+          });
+          
+          // Refresh file tree
+          await refreshFileTree();
+        } catch (error) {
+          console.error("Failed to move folder:", error);
+          throw error;
         }
       },
     }),

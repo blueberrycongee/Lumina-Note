@@ -136,3 +136,89 @@ pub fn rename_entry(old_path: &str, new_path: &str) -> Result<(), AppError> {
     }
     fs::rename(old, new).map_err(AppError::from)
 }
+
+/// Move a file to a target folder
+/// Returns the new path of the moved file
+pub fn move_file_to_folder(source: &str, target_folder: &str) -> Result<String, AppError> {
+    let source_path = Path::new(source);
+    let target_folder_path = Path::new(target_folder);
+    
+    // Check source exists and is a file
+    if !source_path.exists() {
+        return Err(AppError::FileNotFound(source.to_string()));
+    }
+    if source_path.is_dir() {
+        return Err(AppError::InvalidPath("Source is a directory, use move_folder instead".to_string()));
+    }
+    
+    // Check target folder exists and is a directory
+    if !target_folder_path.exists() {
+        return Err(AppError::FileNotFound(target_folder.to_string()));
+    }
+    if !target_folder_path.is_dir() {
+        return Err(AppError::InvalidPath("Target is not a directory".to_string()));
+    }
+    
+    // Build new path
+    let file_name = source_path.file_name()
+        .ok_or_else(|| AppError::InvalidPath("Invalid source file name".to_string()))?;
+    let new_path = target_folder_path.join(file_name);
+    
+    // Check if target already exists
+    if new_path.exists() {
+        return Err(AppError::FileExists(new_path.display().to_string()));
+    }
+    
+    // Move the file
+    fs::rename(source_path, &new_path).map_err(AppError::from)?;
+    
+    Ok(new_path.to_string_lossy().to_string())
+}
+
+/// Move a folder to a target folder
+/// Returns the new path of the moved folder
+pub fn move_folder_to_folder(source: &str, target_folder: &str) -> Result<String, AppError> {
+    let source_path = Path::new(source);
+    let target_folder_path = Path::new(target_folder);
+    
+    // Check source exists and is a directory
+    if !source_path.exists() {
+        return Err(AppError::FileNotFound(source.to_string()));
+    }
+    if !source_path.is_dir() {
+        return Err(AppError::InvalidPath("Source is not a directory".to_string()));
+    }
+    
+    // Check target folder exists and is a directory
+    if !target_folder_path.exists() {
+        return Err(AppError::FileNotFound(target_folder.to_string()));
+    }
+    if !target_folder_path.is_dir() {
+        return Err(AppError::InvalidPath("Target is not a directory".to_string()));
+    }
+    
+    // Build new path
+    let folder_name = source_path.file_name()
+        .ok_or_else(|| AppError::InvalidPath("Invalid source folder name".to_string()))?;
+    let new_path = target_folder_path.join(folder_name);
+    
+    // Check if moving to self or subdirectory
+    let source_canonical = source_path.canonicalize()
+        .map_err(|_| AppError::InvalidPath("Cannot resolve source path".to_string()))?;
+    let target_canonical = target_folder_path.canonicalize()
+        .map_err(|_| AppError::InvalidPath("Cannot resolve target path".to_string()))?;
+    
+    if target_canonical.starts_with(&source_canonical) {
+        return Err(AppError::InvalidPath("Cannot move folder into itself or its subdirectory".to_string()));
+    }
+    
+    // Check if target already exists
+    if new_path.exists() {
+        return Err(AppError::FileExists(new_path.display().to_string()));
+    }
+    
+    // Move the folder
+    fs::rename(source_path, &new_path).map_err(AppError::from)?;
+    
+    Ok(new_path.to_string_lossy().to_string())
+}

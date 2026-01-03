@@ -33,6 +33,8 @@ fn main() {
             commands::create_dir,
             commands::delete_file,
             commands::rename_file,
+            commands::move_file,
+            commands::move_folder,
             commands::show_in_explorer,
             commands::open_video_window,
             commands::close_video_window,

@@ -119,6 +119,20 @@ pub async fn rename_file(old_path: String, new_path: String) -> Result<(), AppEr
     fs::rename_entry(&old_path, &new_path)
 }
 
+/// Move a file to a target folder
+/// Returns the new path of the moved file
+#[tauri::command]
+pub async fn move_file(source: String, target_folder: String) -> Result<String, AppError> {
+    fs::move_file_to_folder(&source, &target_folder)
+}
+
+/// Move a folder to a target folder
+/// Returns the new path of the moved folder
+#[tauri::command]
+pub async fn move_folder(source: String, target_folder: String) -> Result<String, AppError> {
+    fs::move_folder_to_folder(&source, &target_folder)
+}
+
 /// Show file/folder in system file explorer
 #[tauri::command]
 pub async fn show_in_explorer(path: String) -> Result<(), AppError> {
