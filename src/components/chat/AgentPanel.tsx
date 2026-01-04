@@ -5,13 +5,13 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { useAgentStore } from "@/stores/useAgentStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ChatInput } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
 import { PlanCard } from "./PlanCard";
+import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
 import {
@@ -19,7 +19,6 @@ import {
   Check,
   X,
   Trash2,
-  Loader2,
   AlertCircle,
   Bot,
   Mic,
@@ -30,9 +29,6 @@ import {
   FileText,
 } from "lucide-react";
 
-// 使用 Rust Agent（与 MainAIChatShell 保持一致）
-const USE_RUST_AGENT = true;
-
 export function AgentPanel() {
   const { t } = useLocaleStore();
   const [input, setInput] = useState("");
@@ -41,40 +37,34 @@ export function AgentPanel() {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
 
-  // 根据开关选择 store
-  const legacyStore = useAgentStore();
+  // 使用 Rust Agent store
   const rustStore = useRustAgentStore();
   
   // 选择实际使用的 store 数据
-  const status = USE_RUST_AGENT ? rustStore.status : legacyStore.status;
+  const status = rustStore.status;
   // 转换 Rust Agent 消息格式（tool role -> assistant）
-  const messages = USE_RUST_AGENT 
-    ? rustStore.messages.map(m => ({
-        ...m,
-        role: m.role === "tool" ? "assistant" as const : m.role,
-      }))
-    : legacyStore.messages;
-  const clearChat = USE_RUST_AGENT ? rustStore.clearChat : legacyStore.clearChat;
-  const abort = USE_RUST_AGENT ? rustStore.abort : legacyStore.abort;
+  const messages = rustStore.messages.map(m => ({
+    ...m,
+    role: m.role === "tool" ? "assistant" as const : m.role,
+  }));
+  const clearChat = rustStore.clearChat;
+  const abort = rustStore.abort;
   
-  // 工具审批功能 - 现在 Rust Agent 也支持了
-  const pendingTool = USE_RUST_AGENT ? rustStore.pendingTool?.tool : legacyStore.pendingTool;
-  const approve = USE_RUST_AGENT ? rustStore.approveTool : legacyStore.approve;
-  const reject = USE_RUST_AGENT ? rustStore.rejectTool : legacyStore.reject;
-  const retry = USE_RUST_AGENT ? (() => {}) : legacyStore.retry; // Rust Agent 暂不支持 retry
-  const llmRequestStartTime = USE_RUST_AGENT ? rustStore.llmRequestStartTime : legacyStore.llmRequestStartTime;
-  const retryTimeout = USE_RUST_AGENT ? rustStore.retryTimeout : legacyStore.retryTimeout;
+  // 工具审批功能
+  const pendingTool = rustStore.pendingTool?.tool;
+  const approve = rustStore.approveTool;
+  const reject = rustStore.rejectTool;
+  const llmRequestStartTime = rustStore.llmRequestStartTime;
+  const retryTimeout = rustStore.retryTimeout;
   
-  // startTask 需要不同的参数格式
-  const startTask = USE_RUST_AGENT 
-    ? async (message: string, context: { workspacePath: string; activeNote?: string; activeNoteContent?: string; displayMessage?: string }) => {
-        await rustStore.startTask(message, {
-          workspace_path: context.workspacePath,
-          active_note_path: context.activeNote,
-          active_note_content: context.activeNoteContent,
-        });
-      }
-    : legacyStore.startTask;
+  // startTask
+  const startTask = async (message: string, context: { workspacePath: string; activeNote?: string; activeNoteContent?: string; displayMessage?: string }) => {
+    await rustStore.startTask(message, {
+      workspace_path: context.workspacePath,
+      active_note_path: context.activeNote,
+      active_note_content: context.activeNoteContent,
+    });
+  };
 
   const { vaultPath, currentFile, currentContent } = useFileStore();
 
@@ -110,7 +100,7 @@ export function AgentPanel() {
         </div>
         <div className="flex items-center gap-2">
           {/* 调试模式按钮（开发模式） */}
-          {import.meta.env.DEV && USE_RUST_AGENT && (
+          {import.meta.env.DEV && (
             <>
               <button
                 onClick={() => {
@@ -168,7 +158,7 @@ export function AgentPanel() {
         )}
 
         {/* 任务计划卡片 */}
-        {USE_RUST_AGENT && rustStore.currentPlan && rustStore.currentPlan.steps.length > 0 && (
+        {rustStore.currentPlan && rustStore.currentPlan.steps.length > 0 && (
           <PlanCard plan={rustStore.currentPlan} className="mb-2" />
         )}
 
@@ -184,6 +174,9 @@ export function AgentPanel() {
           })}
         />
 
+        {/* 流式输出 */}
+        <StreamingOutput mode="agent" />
+
         {/* 工具审批 */}
         {pendingTool && status === "waiting_approval" && (
           <ToolApproval
@@ -192,14 +185,6 @@ export function AgentPanel() {
             onApprove={approve}
             onReject={reject}
           />
-        )}
-
-        {/* 加载状态 */}
-        {status === "running" && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>{t.ai.thinking}</span>
-          </div>
         )}
 
         {/* 错误状态 */}
@@ -214,12 +199,15 @@ export function AgentPanel() {
           <div className="flex justify-end">
             <button
               onClick={() => {
-                if (!vaultPath) return;
-                retry({
-                  workspacePath: vaultPath,
-                  activeNote: currentFile || undefined,
-                  activeNoteContent: currentContent || undefined,
-                });
+                // 重新发送最后一条用户消息
+                const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+                if (lastUserMsg && vaultPath) {
+                  startTask(lastUserMsg.content, {
+                    workspacePath: vaultPath,
+                    activeNote: currentFile || undefined,
+                    activeNoteContent: currentContent || undefined,
+                  });
+                }
               }}
               className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
               title={t.ai.regenerate}

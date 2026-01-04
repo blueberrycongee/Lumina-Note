@@ -7,7 +7,6 @@ import { useRef, useEffect, useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useAgentStore } from "@/stores/useAgentStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
@@ -38,11 +37,8 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
     clearChat,
     checkFirstLoad: checkChatFirstLoad,
   } = useAIStore();
-  // 根据开关选择 Agent store
-  const legacyAgentStore = useAgentStore();
-  // useRustAgentStore 由 AgentPanel/ConversationList 使用
+  // 使用 Rust Agent store
   void useRustAgentStore();
-  const checkAgentFirstLoad = legacyAgentStore.checkFirstLoad; // Rust Agent 暂不需要
   useFileStore(); // Hook for store subscription
 
   const [showSettings, setShowSettings] = useState(false);
@@ -50,12 +46,10 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
 
   // 首次加载检查
   useEffect(() => {
-    if (chatMode === "agent") {
-      checkAgentFirstLoad();
-    } else {
+    if (chatMode !== "agent") {
       checkChatFirstLoad();
     }
-  }, [chatMode, checkAgentFirstLoad, checkChatFirstLoad]);
+  }, [chatMode, checkChatFirstLoad]);
 
   // 计算面板位置（在悬浮球旁边）
   const getPanelPosition = () => {

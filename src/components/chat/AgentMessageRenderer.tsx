@@ -630,8 +630,8 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         }
       });
 
-      // 使用用户消息内容的前 50 字符作为稳定 key
-      const roundKey = `round-${displayContent.slice(0, 50)}`;
+      // 使用用户消息索引作为稳定且唯一的 key
+      const roundKey = `round-${userIdx}`;
 
       // 判断是否有 AI 回复内容
       // 如果存在解析出的原始文本（即使没有结构化 finalAnswer），也应视为有回复并显示

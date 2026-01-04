@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useAgentStore } from "@/stores/useAgentStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
@@ -360,14 +359,11 @@ export function RightPanel() {
     cancelIndex,
     lastError: ragError,
   } = useRAGStore();
-  // 根据开关选择 Agent store
-  const legacyAgentStore = useAgentStore();
+  // 使用 Rust Agent store
   const rustAgentStore = useRustAgentStore();
-  const USE_RUST_AGENT = true;
   
-  const autoApprove = USE_RUST_AGENT ? rustAgentStore.autoApprove : legacyAgentStore.autoApprove;
-  const setAutoApprove = USE_RUST_AGENT ? rustAgentStore.setAutoApprove : legacyAgentStore.setAutoApprove;
-  const checkAgentFirstLoad = legacyAgentStore.checkFirstLoad; // Rust Agent 暂不需要
+  const autoApprove = rustAgentStore.autoApprove;
+  const setAutoApprove = rustAgentStore.setAutoApprove;
 
   const [showSettings, setShowSettings] = useState(false);
   const [isDraggingAI, setIsDraggingAI] = useState(false);
@@ -382,13 +378,11 @@ export function RightPanel() {
   useEffect(() => {
     // 只有当 AI 面板可见时才检查
     if (rightPanelTab === "chat" && aiPanelMode === "docked" && !isMainAIActive) {
-      if (chatMode === "agent") {
-        checkAgentFirstLoad();
-      } else {
+      if (chatMode !== "agent") {
         checkChatFirstLoad();
       }
     }
-  }, [rightPanelTab, aiPanelMode, isMainAIActive, chatMode, checkAgentFirstLoad, checkChatFirstLoad]);
+  }, [rightPanelTab, aiPanelMode, isMainAIActive, chatMode, checkChatFirstLoad]);
 
   // 处理 AI tab 拖拽开始
   const handleAIDragStart = (e: React.MouseEvent) => {

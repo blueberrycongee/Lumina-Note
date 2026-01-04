@@ -147,6 +147,10 @@ interface RustAgentState {
   llmRequestStartTime: number | null;
   llmRequestId: string | null;
   
+  // 心跳监控（新增）
+  lastHeartbeat: number | null;
+  connectionStatus: "connected" | "disconnected" | "unknown";
+  
   // 操作
   startTask: (task: string, context: TaskContext) => Promise<void>;
   abort: () => Promise<void>;
@@ -226,6 +230,10 @@ export const useRustAgentStore = create<RustAgentState>()(
       // LLM 请求超时检测初始状态（新增）
       llmRequestStartTime: null,
       llmRequestId: null,
+      
+      // 心跳监控初始状态（新增）
+      lastHeartbeat: null,
+      connectionStatus: "unknown",
 
       // 启动任务
       startTask: async (task: string, context: TaskContext) => {
@@ -763,9 +771,12 @@ export const useRustAgentStore = create<RustAgentState>()(
           
           // 新增：心跳事件（用于连接状态监控）
           case "heartbeat": {
-            // 可以用于更新最后心跳时间，检测连接状态
-            // 目前只是记录日志
-            console.log("[RustAgent] heartbeat received");
+            const { timestamp } = event.data as { timestamp: number };
+            set({
+              lastHeartbeat: timestamp,
+              connectionStatus: "connected",
+            });
+            console.log("[RustAgent] heartbeat received:", timestamp);
             break;
           }
         }

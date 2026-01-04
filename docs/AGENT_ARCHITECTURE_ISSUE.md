@@ -6,11 +6,11 @@
 |-------|------|------|----------|
 | Phase 1 | Rust 端工具审批机制 | ✅ 已完成 | 2026-01-04 |
 | Phase 2 | 前端状态迁移 | ✅ 已完成 | 2026-01-04 |
-| Phase 3 | SSE 稳定性增强 | ⏳ 待实施 | - |
-| Phase 4 | 清理旧代码 | ⏳ 待实施 | - |
+| Phase 3 | SSE 稳定性增强 | ✅ 已完成 | 2026-01-04 |
+| Phase 4 | 清理旧代码 | ✅ 已完成 | 2026-01-04 |
 | Phase 5 | 测试验证 | ⏳ 待实施 | - |
 
-### 已完成的工作 (Phase 1 & 2)
+### 已完成的工作 (Phase 1 ~ 4)
 
 **Rust 后端:**
 - ✅ 新增 `WaitingApproval`, `LlmRequestStart/End`, `Heartbeat` 事件类型
@@ -19,12 +19,29 @@
 - ✅ 定义 `DANGEROUS_TOOLS` 列表（edit_note, create_note, delete_note, move_note）
 - ✅ 在 `ToolRegistry` 中实现 `wait_for_approval()` 异步等待逻辑
 - ✅ 传递 `AppHandle` 和 `auto_approve` 到 `ToolRegistry`
+- ✅ SSE 心跳机制（每 15 秒发送心跳事件）
+- ✅ 流式调用指数退避重试（最多 3 次）
+- ✅ 流超时检测（60 秒无数据自动断开）
+- ✅ LLM 请求开始/结束事件
 
 **前端:**
 - ✅ 新增 `PendingToolApproval` 类型和 `pendingTool` 状态
 - ✅ 实现 `approveTool()` / `rejectTool()` / `retryTimeout()` 方法
 - ✅ 处理 `waiting_approval`, `llm_request_start/end`, `heartbeat` 事件
 - ✅ 更新 `AgentPanel` 和 `MainAIChatShell` 使用 Rust Agent 审批功能
+- ✅ 新增 `lastHeartbeat` 和 `connectionStatus` 状态
+- ✅ 新增 `useHeartbeatMonitor` Hook（心跳监控）
+- ✅ 移除所有组件对 `useAgentStore` 的引用
+- ✅ 移除 `USE_RUST_AGENT` 开关，直接使用 Rust Agent
+
+**待删除的旧代码（可选）:**
+以下文件不再被引用，可以安全删除：
+- `src/stores/useAgentStore.ts`
+- `src/agent/core/AgentLoop.ts`
+- `src/agent/core/StateManager.ts`
+- `src/agent/core/MessageParser.ts`
+- `src/agent/core/ToolOutputCache.ts`
+- `src/agent/tools/*.ts`
 
 ---
 

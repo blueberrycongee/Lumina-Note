@@ -1,64 +1,148 @@
 /**
  * 流式消息显示组件
- * 直接从 useAIStore 获取状态，无需额外订阅机制
+ * 
+ * 统一处理 Agent 和 Chat 模式的流式输出渲染
+ * - Agent 模式：从 useRustAgentStore 获取 streamingContent
+ * - Chat 模式：从 useAIStore 获取 streamingContent
  */
 
 import { memo } from "react";
 import { Bot } from "lucide-react";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { useAIStore } from "@/stores/useAIStore";
+import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useUIStore } from "@/stores/useUIStore";
 
-// 流式消息组件 - 直接从 Zustand 获取状态
-export const StreamingMessage = memo(function StreamingMessage() {
-  const content = useAIStore((state) => state.streamingContent);
-  const streaming = useAIStore((state) => state.isStreaming);
-  const chatMode = useUIStore((state) => state.chatMode);
+interface StreamingMessageProps {
+  /** 强制指定模式，不指定则自动从 UIStore 获取 */
+  mode?: "agent" | "chat";
+  /** 自定义类名 */
+  className?: string;
+}
 
-  // 只在 chat 模式下显示
-  if (chatMode !== "chat" || !streaming || !content) {
+/**
+ * 流式消息组件
+ * 
+ * 根据当前模式自动选择数据源，渲染流式输出内容
+ */
+export const StreamingMessage = memo(function StreamingMessage({ 
+  mode,
+  className = "",
+}: StreamingMessageProps) {
+  const chatMode = useUIStore((state) => state.chatMode);
+  const currentMode = mode ?? chatMode;
+  
+  // Agent 模式数据
+  const agentContent = useRustAgentStore((state) => state.streamingContent);
+  const agentStatus = useRustAgentStore((state) => state.status);
+  const isAgentStreaming = agentStatus === "running" && agentContent.length > 0;
+  
+  // Chat 模式数据
+  const chatContent = useAIStore((state) => state.streamingContent);
+  const chatStreaming = useAIStore((state) => state.isStreaming);
+  const isChatStreaming = chatStreaming && chatContent.length > 0;
+  
+  // 根据模式选择数据
+  const content = currentMode === "agent" ? agentContent : chatContent;
+  const isStreaming = currentMode === "agent" ? isAgentStreaming : isChatStreaming;
+
+  // 不在流式状态或没有内容时不渲染
+  if (!isStreaming || !content) {
     return null;
   }
 
   return (
-    <div className="flex gap-3 mb-6">
+    <div className={`flex gap-3 mb-6 ${className}`}>
       <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
         <Bot size={16} className="text-muted-foreground" />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="p-3 rounded-xl bg-muted/50 text-sm max-w-[80%]">
-          <div 
-            className="prose prose-sm dark:prose-invert max-w-none"
-            dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
+      <div className="max-w-[80%] text-foreground">
+        <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
+          <span dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }} />
+          {/* 闪烁光标 */}
+          <span
+            className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle animate-pulse"
+            style={{ animationDuration: "1s" }}
           />
-          <span className="inline-block w-2 h-4 bg-primary/50 animate-pulse ml-0.5" />
         </div>
       </div>
     </div>
   );
 });
 
-// 打字指示器组件
-export const TypingIndicator = memo(function TypingIndicator() {
-  const content = useAIStore((state) => state.streamingContent);
-  const streaming = useAIStore((state) => state.isStreaming);
-  const chatMode = useUIStore((state) => state.chatMode);
+interface TypingIndicatorProps {
+  /** 强制指定模式 */
+  mode?: "agent" | "chat";
+  /** 自定义类名 */
+  className?: string;
+}
 
-  // 只在 chat 模式、流式中且没有内容时显示
-  if (chatMode !== "chat" || !streaming || content) {
+/**
+ * 打字指示器组件
+ * 
+ * 在等待首个 token 时显示跳动的点
+ */
+export const TypingIndicator = memo(function TypingIndicator({
+  mode,
+  className = "",
+}: TypingIndicatorProps) {
+  const chatMode = useUIStore((state) => state.chatMode);
+  const currentMode = mode ?? chatMode;
+  
+  // Agent 模式数据
+  const agentContent = useRustAgentStore((state) => state.streamingContent);
+  const agentStatus = useRustAgentStore((state) => state.status);
+  const isAgentWaiting = agentStatus === "running" && agentContent.length === 0;
+  
+  // Chat 模式数据
+  const chatContent = useAIStore((state) => state.streamingContent);
+  const chatStreaming = useAIStore((state) => state.isStreaming);
+  const chatLoading = useAIStore((state) => state.isLoading);
+  const isChatWaiting = (chatStreaming || chatLoading) && chatContent.length === 0;
+  
+  // 根据模式选择
+  const isWaiting = currentMode === "agent" ? isAgentWaiting : isChatWaiting;
+
+  if (!isWaiting) {
     return null;
   }
 
   return (
-    <div className="flex gap-3 mb-6">
+    <div className={`flex gap-3 mb-6 ${className}`}>
       <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
         <Bot size={16} className="text-muted-foreground" />
       </div>
       <div className="flex items-center gap-1 h-8">
-        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-        <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+        <span 
+          className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" 
+          style={{ animationDelay: "0ms" }} 
+        />
+        <span 
+          className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" 
+          style={{ animationDelay: "150ms" }} 
+        />
+        <span 
+          className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" 
+          style={{ animationDelay: "300ms" }} 
+        />
       </div>
     </div>
+  );
+});
+
+/**
+ * 组合组件：流式消息 + 打字指示器
+ * 
+ * 自动处理两种状态的切换
+ */
+export const StreamingOutput = memo(function StreamingOutput({
+  mode,
+  className = "",
+}: StreamingMessageProps) {
+  return (
+    <>
+      <TypingIndicator mode={mode} className={className} />
+      <StreamingMessage mode={mode} className={className} />
+    </>
   );
 });

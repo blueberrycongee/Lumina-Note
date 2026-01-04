@@ -8,12 +8,8 @@
 import { useMemo, useCallback } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useAgentStore } from "@/stores/useAgentStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useDeepResearchStore } from "@/stores/useDeepResearchStore";
-
-// 使用 Rust Agent（与 MainAIChatShell 保持一致）
-const USE_RUST_AGENT = true;
 
 export type SessionType = "agent" | "chat" | "research";
 
@@ -37,16 +33,15 @@ export function useConversationManager() {
     switchSession: switchChatSession,
   } = useAIStore();
 
-  // Agent store - 根据开关选择
-  const legacyAgentStore = useAgentStore();
+  // Agent store - 使用 Rust Agent
   const rustAgentStore = useRustAgentStore();
 
-  const agentSessions = USE_RUST_AGENT ? rustAgentStore.sessions : legacyAgentStore.sessions;
-  const agentCurrentId = USE_RUST_AGENT ? rustAgentStore.currentSessionId : legacyAgentStore.currentSessionId;
-  const createAgentSession = USE_RUST_AGENT ? rustAgentStore.createSession : legacyAgentStore.createSession;
-  const deleteAgentSession = USE_RUST_AGENT ? rustAgentStore.deleteSession : legacyAgentStore.deleteSession;
-  const switchAgentSession = USE_RUST_AGENT ? rustAgentStore.switchSession : legacyAgentStore.switchSession;
-  const clearAgentChat = USE_RUST_AGENT ? rustAgentStore.clearChat : undefined;
+  const agentSessions = rustAgentStore.sessions;
+  const agentCurrentId = rustAgentStore.currentSessionId;
+  const createAgentSession = rustAgentStore.createSession;
+  const deleteAgentSession = rustAgentStore.deleteSession;
+  const switchAgentSession = rustAgentStore.switchSession;
+  const clearAgentChat = rustAgentStore.clearChat;
 
   // Deep Research store
   const {
@@ -117,13 +112,8 @@ export function useConversationManager() {
       // Research 模式: 重置当前研究会话
       resetResearch();
     } else if (chatMode === "agent") {
-      if (USE_RUST_AGENT && clearAgentChat) {
-        // Rust Agent: 清空消息
-        clearAgentChat();
-      } else {
-        // 原系统: 创建新会话
-        createAgentSession();
-      }
+      // Rust Agent: 清空消息
+      clearAgentChat();
     } else {
       createChatSession();
     }

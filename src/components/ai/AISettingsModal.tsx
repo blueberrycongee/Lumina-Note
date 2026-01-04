@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAIStore } from "@/stores/useAIStore";
-import { useAgentStore } from "@/stores/useAgentStore";
+import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
 import { PROVIDER_REGISTRY, type LLMProviderType, createProvider } from "@/services/llm";
@@ -39,7 +39,7 @@ interface AISettingsModalProps {
 
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { config, setConfig } = useAIStore();
-  const { autoApprove, setAutoApprove } = useAgentStore();
+  const { autoApprove, setAutoApprove } = useRustAgentStore();
   const {
     config: ragConfig,
     setConfig: setRAGConfig,

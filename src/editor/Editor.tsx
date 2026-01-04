@@ -3,7 +3,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useAgentStore } from "@/stores/useAgentStore";
+import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
 import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce, getFileName } from "@/lib/utils";
@@ -77,7 +77,7 @@ export function Editor() {
 
   // 获取当前会话标题
   const { sessions: chatSessions, currentSessionId: chatSessionId } = useAIStore();
-  const { sessions: agentSessions, currentSessionId: agentSessionId } = useAgentStore();
+  const { sessions: agentSessions, currentSessionId: agentSessionId } = useRustAgentStore();
 
   // 滚动位置保持（基于行号）
   const scrollContainerRef = useRef<HTMLDivElement>(null);

@@ -2,10 +2,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useAgentStore } from "@/stores/useAgentStore";
 import { useRustAgentStore, initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { getAgentLoop } from "@/agent";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 
@@ -39,6 +37,7 @@ import {
 } from "lucide-react";
 import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { PlanCard } from "../chat/PlanCard";
+import { StreamingOutput } from "../chat/StreamingMessage";
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { AISettingsModal } from "../ai/AISettingsModal";
 import type { MessageContent, TextContent } from "@/services/llm";
@@ -127,11 +126,10 @@ export function MainAIChatShell() {
     WELCOME_EMOJIS[Math.floor(Math.random() * WELCOME_EMOJIS.length)]
   );
 
-  // ========== Rust Agent (新后端) ==========
+  // ========== Rust Agent ==========
   const {
-    status: rustAgentStatus,
+    status: agentStatus,
     messages: rustAgentMessages,
-    streamingContent: _rustStreamingContent,
     error: _rustError,
     lastIntent: rustLastIntent,
     totalTokensUsed: rustTotalTokens,
@@ -142,77 +140,40 @@ export function MainAIChatShell() {
     switchSession: rustSwitchSession,
     deleteSession: rustDeleteSession,
     startTask: rustStartTask,
-    abort: rustAbort,
+    abort: agentAbort,
     clearChat: rustClearChat,
     debugEnabled,
     debugLogPath,
     enableDebug,
     disableDebug,
+    pendingTool: rustPendingTool,
+    approveTool: approve,
+    rejectTool: reject,
+    llmRequestStartTime,
+    retryTimeout,
   } = useRustAgentStore();
 
   // 初始化 Rust Agent 事件监听器
   useEffect(() => {
     initRustAgentListeners();
   }, []);
-
-  // ========== 原 Agent store (备用) ==========
-  const {
-    status: legacyAgentStatus,
-    messages: legacyAgentMessages,
-    sessions: agentSessions,
-    currentSessionId: agentSessionId,
-    createSession: createAgentSession,
-    switchSession: switchAgentSession,
-    deleteSession: deleteAgentSession,
-    pendingTool: legacyPendingTool,
-    approve: legacyApprove,
-    reject: legacyReject,
-    startTask: legacyStartTask,
-    abort: legacyAgentAbort,
-    checkFirstLoad: checkAgentFirstLoad,
-    lastIntent,
-    llmRequestStartTime: legacyLlmRequestStartTime,
-    retryTimeout: legacyRetryTimeout,
-  } = useAgentStore();
-
-  // 使用 Rust Agent（设为 true 启用）
-  const USE_RUST_AGENT = true;
   
-  // 根据开关选择使用哪个 Agent
-  const agentStatus = USE_RUST_AGENT ? rustAgentStatus : legacyAgentStatus;
-  const agentAbort = USE_RUST_AGENT ? rustAbort : legacyAgentAbort;
-  
-  // 工具审批功能 - 现在 Rust Agent 也支持了
-  const {
-    pendingTool: rustPendingTool,
-    approveTool: rustApproveTool,
-    rejectTool: rustRejectTool,
-    llmRequestStartTime: rustLlmRequestStartTime,
-    retryTimeout: rustRetryTimeout,
-  } = useRustAgentStore();
-  
-  const pendingTool = USE_RUST_AGENT ? rustPendingTool?.tool : legacyPendingTool;
-  const approve = USE_RUST_AGENT ? rustApproveTool : legacyApprove;
-  const reject = USE_RUST_AGENT ? rustRejectTool : legacyReject;
-  const llmRequestStartTime = USE_RUST_AGENT ? rustLlmRequestStartTime : legacyLlmRequestStartTime;
-  const retryTimeout = USE_RUST_AGENT ? rustRetryTimeout : legacyRetryTimeout;
+  // 工具审批 - 提取 tool 对象
+  const pendingTool = rustPendingTool?.tool;
   
   // 转换 Rust Agent 消息格式以兼容 UI
   const agentMessages = useMemo(() => {
-    if (USE_RUST_AGENT) {
-      return rustAgentMessages
-        // 过滤掉意图分析消息（只在调试面板显示）
-        .filter(msg => !msg.content?.includes('🎯 意图分析'))
-        .map(msg => ({
-          ...msg,
-          // 将 tool 消息显示为 assistant（工具调用结果）
-          role: msg.role === "tool" ? "assistant" as const : msg.role as "user" | "assistant" | "system",
-          // 保留原始内容
-          content: msg.content,
-        }));
-    }
-    return legacyAgentMessages;
-  }, [USE_RUST_AGENT, rustAgentMessages, legacyAgentMessages]);
+    return rustAgentMessages
+      // 过滤掉意图分析消息（只在调试面板显示）
+      .filter(msg => !msg.content?.includes('🎯 意图分析'))
+      .map(msg => ({
+        ...msg,
+        // 将 tool 消息显示为 assistant（工具调用结果）
+        role: msg.role === "tool" ? "assistant" as const : msg.role as "user" | "assistant" | "system",
+        // 保留原始内容
+        content: msg.content,
+      }));
+  }, [rustAgentMessages]);
 
   // Chat store - 使用 selector 确保状态变化时正确重新渲染
   const chatMessages = useAIStore((state) => state.messages);
@@ -223,19 +184,17 @@ export function MainAIChatShell() {
   const deleteChatSession = useAIStore((state) => state.deleteSession);
   const chatLoading = useAIStore((state) => state.isLoading);
   const chatStreaming = useAIStore((state) => state.isStreaming);
-  const streamingContent = useAIStore((state) => state.streamingContent);
   const sendMessageStream = useAIStore((state) => state.sendMessageStream);
   const stopStreaming = useAIStore((state) => state.stopStreaming);
   const checkChatFirstLoad = useAIStore((state) => state.checkFirstLoad);
   const config = useAIStore((state) => state.config);
   const chatTotalTokens = useAIStore((state) => state.totalTokensUsed);
-  const agentTotalTokens = useAgentStore((state) => {
+  const agentTotalTokens = useRustAgentStore((state) => {
     const session = state.sessions.find((s) => s.id === state.currentSessionId);
     return session?.totalTokensUsed ?? 0;
   });
 
   useRAGStore();
-  useAgentStore();
 
   // Deep Research
   const { startResearch, isRunning: isResearchRunning, abortResearch, currentSession: _researchSession, reset: resetResearch } = useDeepResearchStore();
@@ -255,7 +214,7 @@ export function MainAIChatShell() {
 
   // 统一会话列表 - 合并所有类型，按更新时间排序
   const allSessions = useMemo(() => {
-    const agentList = (USE_RUST_AGENT ? rustSessions : agentSessions).map(s => ({
+    const agentList = rustSessions.map(s => ({
       ...s,
       type: "agent" as const,
     }));
@@ -270,17 +229,17 @@ export function MainAIChatShell() {
       updatedAt: (s.completedAt || s.startedAt).getTime(),
     }));
     return [...agentList, ...chatList, ...researchList].sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [rustSessions, agentSessions, chatSessions, researchSessions]);
+  }, [rustSessions, chatSessions, researchSessions]);
 
   // 根据模式获取创建会话函数
   const createSession = chatMode === "agent" 
-    ? (USE_RUST_AGENT ? rustCreateSession : createAgentSession) 
+    ? rustCreateSession 
     : createChatSession;
   
   // 统一切换会话函数
   const handleSwitchSession = useCallback((id: string, type: "agent" | "chat" | "research") => {
     if (type === "agent") {
-      (USE_RUST_AGENT ? rustSwitchSession : switchAgentSession)(id);
+      rustSwitchSession(id);
       if (chatMode !== "agent") setChatMode("agent");
     } else if (type === "research") {
       selectResearchSession(id);
@@ -290,29 +249,29 @@ export function MainAIChatShell() {
       if (chatMode !== "chat") setChatMode("chat");
     }
     setShowHistory(false);
-  }, [chatMode, setChatMode, rustSwitchSession, switchAgentSession, switchChatSession, selectResearchSession]);
+  }, [chatMode, setChatMode, rustSwitchSession, switchChatSession, selectResearchSession]);
 
   // 统一删除会话函数
   const handleDeleteSession = useCallback((id: string, type: "agent" | "chat" | "research") => {
     if (type === "agent") {
-      (USE_RUST_AGENT ? rustDeleteSession : deleteAgentSession)(id);
+      rustDeleteSession(id);
     } else if (type === "research") {
       deleteResearchSession(id);
     } else {
       deleteChatSession(id);
     }
-  }, [rustDeleteSession, deleteAgentSession, deleteChatSession, deleteResearchSession]);
+  }, [rustDeleteSession, deleteChatSession, deleteResearchSession]);
 
   // 判断是否当前会话
   const isCurrentSession = useCallback((id: string, type: "agent" | "chat" | "research") => {
     if (type === "agent") {
-      return chatMode === "agent" && (USE_RUST_AGENT ? rustSessionId : agentSessionId) === id;
+      return chatMode === "agent" && rustSessionId === id;
     }
     if (type === "research") {
       return researchSelectedId === id;
     }
     return chatMode === "chat" && chatSessionId === id;
-  }, [chatMode, rustSessionId, agentSessionId, chatSessionId, researchSelectedId]);
+  }, [chatMode, rustSessionId, chatSessionId, researchSelectedId]);
 
   const { vaultPath, currentFile, currentContent, fileTree, openFile } = useFileStore();
 
@@ -372,14 +331,12 @@ export function MainAIChatShell() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // 首次加载检查
+  // 首次加载检查（仅 Chat 模式需要）
   useEffect(() => {
-    if (chatMode === "agent") {
-      checkAgentFirstLoad();
-    } else {
+    if (chatMode !== "agent") {
       checkChatFirstLoad();
     }
-  }, [chatMode, checkAgentFirstLoad, checkChatFirstLoad]);
+  }, [chatMode, checkChatFirstLoad]);
 
   // 点击外部关闭文件选择器
   useEffect(() => {
@@ -509,22 +466,12 @@ export function MainAIChatShell() {
         preSearchedNotes: [],
       });
     } else if (chatMode === "agent") {
-      if (USE_RUST_AGENT) {
-        // 使用 Rust Agent
-        await rustStartTask(fullMessage, {
-          workspace_path: vaultPath || "",
-          active_note_path: currentFile || undefined,
-          active_note_content: currentFile ? currentContent : undefined,
-        });
-      } else {
-        // 使用原 TypeScript Agent
-        await legacyStartTask(fullMessage, {
-          workspacePath: vaultPath || "",
-          activeNote: currentFile || undefined,
-          activeNoteContent: currentFile ? currentContent : undefined,
-          displayMessage,
-        });
-      }
+      // 使用 Rust Agent
+      await rustStartTask(fullMessage, {
+        workspace_path: vaultPath || "",
+        active_note_path: currentFile || undefined,
+        active_note_content: currentFile ? currentContent : undefined,
+      });
     } else {
       const currentFileInfo = currentFile ? {
         path: currentFile,
@@ -533,7 +480,7 @@ export function MainAIChatShell() {
       } : undefined;
       await sendMessageStream(fullMessage, currentFileInfo, displayMessage);
     }
-  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, rustStartTask, legacyStartTask, sendMessageStream, isOnlyWebLink, USE_RUST_AGENT, startResearch, enableWebSearch, config]);
+  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config]);
 
   // 键盘事件
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -612,11 +559,11 @@ export function MainAIChatShell() {
     if (chatMode === "research") {
       // Research 模式: 重置当前研究会话，准备新研究
       resetResearch();
-    } else if (chatMode === "agent" && USE_RUST_AGENT) {
+    } else if (chatMode === "agent") {
       // Rust Agent: 清空消息
       rustClearChat();
     } else {
-      // 原系统: 创建新会话
+      // Chat 模式: 创建新会话
       createSession();
     }
     setShowHistory(false);
@@ -649,7 +596,7 @@ export function MainAIChatShell() {
             <span>{t.ai.historyChats}</span>
           </button>
           <span className="ml-3 text-[11px] text-muted-foreground select-none">
-            {t.ai.sessionTokens}: {chatMode === "agent" ? (USE_RUST_AGENT ? rustTotalTokens : agentTotalTokens) : chatTotalTokens}
+            {t.ai.sessionTokens}: {chatMode === "agent" ? rustTotalTokens : chatTotalTokens}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -914,54 +861,9 @@ export function MainAIChatShell() {
                   </motion.div>
                 )}
 
-                {/* 打字指示器 - 仅 Agent 模式使用，Chat 模式使用 TypingIndicator 组件 */}
-                {chatMode === "agent" && isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex gap-3 mb-6"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
-                      <Bot size={16} className="text-muted-foreground" />
-                    </div>
-                    <div className="flex items-center gap-1 h-8">
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                      <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Chat 模式的流式消息 - 直接渲染在消息列表中，使用相同样式 */}
-                {chatMode === "chat" && chatStreaming && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex gap-3 mb-6"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
-                      <Bot size={16} className="text-muted-foreground" />
-                    </div>
-                    <div className="max-w-[80%] text-foreground">
-                      {streamingContent ? (
-                        <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
-                          <span dangerouslySetInnerHTML={{ __html: parseMarkdown(streamingContent) }} />
-                          {/* 闪烁光标 */}
-                          <span
-                            className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle animate-pulse"
-                            style={{ animationDuration: '1s' }}
-                          />
-                        </div>
-                      ) : (
-                        /* 等待首个 token 时的打字指示器 */
-                        <div className="flex items-center gap-1 h-6">
-                          <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                          <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                          <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
+                {/* 流式输出 - Agent 和 Chat 模式统一使用 StreamingOutput 组件 */}
+                {(chatMode === "agent" || chatMode === "chat") && (
+                  <StreamingOutput mode={chatMode} />
                 )}
 
                 {/* Deep Research 卡片 */}
@@ -1147,7 +1049,7 @@ export function MainAIChatShell() {
                     </button>
                     
                     {/* 调试模式按钮：仅在 Agent 模式下显示（开发模式） */}
-                    {import.meta.env.DEV && chatMode === "agent" && USE_RUST_AGENT && (
+                    {import.meta.env.DEV && chatMode === "agent" && (
                       <button
                         onClick={() => {
                           if (debugEnabled) {
@@ -1281,15 +1183,12 @@ export function MainAIChatShell() {
         {/* 调试面板（开发模式） */}
         {import.meta.env.DEV && showDebug && (() => {
           // 获取完整消息（包含 system prompt）
-          // 根据是否使用 Rust Agent 选择数据源
-          const fullMessages = USE_RUST_AGENT 
-            ? rustAgentMessages  // Rust Agent 消息
-            : getAgentLoop().getState().messages;  // 原 TypeScript Agent 消息
+          const fullMessages = rustAgentMessages;  // Rust Agent 消息
 
           return (
             <div className="fixed inset-4 z-50 bg-background/95 backdrop-blur border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
-                <h2 className="font-bold text-lg">🐛 {t.ai.agentDebugPanel} {USE_RUST_AGENT && "(🦀 Rust)"}</h2>
+                <h2 className="font-bold text-lg">🐛 {t.ai.agentDebugPanel} (🦀 Rust)</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
                     {t.ai.mode}: {chatMode} | {t.ai.status}: {agentStatus} | {t.ai.fullMsgsCount}: {fullMessages.length} | {t.ai.displayMsgsCount}: {agentMessages.length}
@@ -1307,18 +1206,16 @@ export function MainAIChatShell() {
                 <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4">
                   {(() => {
                     // 使用 store 中的意图状态
-                    const displayIntent = USE_RUST_AGENT ? rustLastIntent : lastIntent;
+                    const displayIntent = rustLastIntent;
 
                     return (
                       <>
                         <div className="flex items-center justify-between mb-2">
                           <div className="font-bold text-muted-foreground flex items-center gap-2">
                             <span>🔍 {t.ai.intentResult}</span>
-                            {USE_RUST_AGENT && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-600">
-                                🦀 Rust
-                              </span>
-                            )}
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-600">
+                              🦀 Rust
+                            </span>
                             {displayIntent && (
                               <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-500/20 text-green-600">
                                 ✓ 已识别
