@@ -25,15 +25,14 @@ function getVersion(): string {
 }
 
 function getSignature(platform: string, arch: string): string {
-    // Tauri v2 artifacts are usually in target/release/bundle/macos/ or target/release/bundle/dmg/
-    // For updater, it uses .app.tar.gz
-    const sigPath = path.resolve(process.cwd(), 'src-tauri', 'target', 'release', 'bundle', 'macos', `lumina-note.app.tar.gz.sig`);
+    const version = getVersion();
+    const archSuffix = arch === 'aarch64' ? 'aarch64' : 'x64';
+    const sigPath = path.resolve(process.cwd(), 'src-tauri', 'target', 'release', 'bundle', 'macos', `lumina-note_${version}_${archSuffix}.app.tar.gz.sig`);
 
     if (fs.existsSync(sigPath)) {
         return fs.readFileSync(sigPath, 'utf-8').trim();
     }
 
-    // Fallback check in other possible locations if needed
     console.warn(`Signature not found at ${sigPath}`);
     return '';
 }
@@ -56,11 +55,11 @@ function generate(): void {
         platforms: {
             "darwin-aarch64": {
                 signature: getSignature("darwin", "aarch64"),
-                url: `${baseUrl}/lumina-note_aarch64.app.tar.gz`
+                url: `${baseUrl}/lumina-note_${version}_aarch64.app.tar.gz`
             },
             "darwin-x86_64": {
                 signature: getSignature("darwin", "x86_64"),
-                url: `${baseUrl}/lumina-note_x86_64.app.tar.gz`
+                url: `${baseUrl}/lumina-note_${version}_x64.app.tar.gz`
             }
         }
     };
