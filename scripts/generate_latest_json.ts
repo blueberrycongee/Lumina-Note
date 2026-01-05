@@ -43,7 +43,7 @@ function generate(): void {
     const notes = `Lumina Note version ${version}`;
     const pub_date = new Date().toISOString();
 
-    const repo = "blueberrycongee/Lumina-Note";
+    const repo = "ccasJay/Lumina-Note";
     const baseUrl = `https://github.com/${repo}/releases/download/v${version}`;
 
     // We generate entries for both macOS architectures. 
