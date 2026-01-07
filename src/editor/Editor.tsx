@@ -10,11 +10,11 @@ import { debounce, getFileName } from "@/lib/utils";
 import { CodeMirrorEditor, CodeMirrorEditorRef, ViewMode } from "./CodeMirrorEditor";
 import { SelectionToolbar } from "@/components/toolbar/SelectionToolbar";
 import { SelectionContextMenu } from "@/components/toolbar/SelectionContextMenu";
-import { 
-  Sidebar, 
-  MessageSquare, 
-  BookOpen, 
-  Eye, 
+import {
+  Sidebar,
+  MessageSquare,
+  BookOpen,
+  Eye,
   Code2,
   ChevronLeft,
   ChevronRight,
@@ -38,13 +38,13 @@ let localGraphExpandedState = true;
 
 export function Editor() {
   const { t } = useLocaleStore();
-  
+
   const modeLabels: Record<EditorMode, string> = {
     reading: t.editor.reading,
     live: t.editor.live,
     source: t.editor.source,
   };
-  
+
   const {
     tabs,
     activeTabIndex,
@@ -66,10 +66,10 @@ export function Editor() {
   } = useFileStore();
   const { openVideoNoteFromContent } = useFileStore();
 
-  const { 
-    toggleLeftSidebar, 
-    toggleRightSidebar, 
-    editorMode, 
+  const {
+    toggleLeftSidebar,
+    toggleRightSidebar,
+    editorMode,
     setEditorMode,
     toggleSplitView,
     chatMode,
@@ -239,7 +239,7 @@ export function Editor() {
       goForward();
       return;
     }
-    
+
     // live 模式使用 CodeMirror 自带的撤销/重做，不拦截
     // 其他模式不需要拦截
   }, [editorMode, undo, redo, canUndo, canRedo, goBack, goForward]);
@@ -249,11 +249,22 @@ export function Editor() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  // Debounced save (500ms after user stops typing)
+  // Debounced save (1000ms after user stops typing, matching VS Code default)
   const debouncedSave = useMemo(
-    () => debounce(() => save(), 500),
+    () => debounce(() => save(), 1000),
     [save]
   );
+
+  // Save on window blur (when user switches to another app)
+  useEffect(() => {
+    const handleBlur = () => {
+      if (isDirty && activeTab?.type !== 'ai-chat') {
+        save();
+      }
+    };
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, [isDirty, save, activeTab?.type]);
 
   // 打开文件时自动检测是否是视频笔记 Markdown，给出提示
   // 注意：必须在 early return 之前，否则违反 React Hooks 规则
@@ -278,7 +289,7 @@ export function Editor() {
     <div className="flex-1 flex flex-col overflow-hidden bg-background transition-colors duration-300">
       {/* Tab Bar */}
       <TabBar />
-      
+
       {/* Top Navigation Bar */}
       <div className="h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -289,7 +300,7 @@ export function Editor() {
           >
             <Sidebar size={16} />
           </button>
-          
+
           {/* Navigation buttons */}
           <div className="flex items-center gap-0.5">
             <button
@@ -322,8 +333,8 @@ export function Editor() {
 
           <span className="text-muted-foreground/50">/</span>
           <span className="text-foreground font-medium">
-            {activeTab?.type === "ai-chat" 
-              ? currentSessionTitle 
+            {activeTab?.type === "ai-chat"
+              ? currentSessionTitle
               : (currentFile ? getFileName(currentFile) : t.common.untitled)}
           </span>
           {isDirty && activeTab?.type !== "ai-chat" && (
@@ -413,13 +424,13 @@ export function Editor() {
               </button>
             )
           )}
-          
+
           <div ref={scrollContainerRef} className="h-full overflow-auto">
             {/* Selection Toolbar - Add to Chat */}
             <SelectionToolbar containerRef={scrollContainerRef} />
             {/* Selection Context Menu - Right Click */}
-            <SelectionContextMenu 
-              containerRef={scrollContainerRef} 
+            <SelectionContextMenu
+              containerRef={scrollContainerRef}
               onFormatText={(format, text) => {
                 // 通过事件通知 CodeMirror 编辑器执行格式化
                 window.dispatchEvent(new CustomEvent('editor-format-text', {
@@ -427,7 +438,7 @@ export function Editor() {
                 }));
               }}
             />
-          
+
             <div className="max-w-4xl mx-auto px-8 py-4 editor-mode-container">
               {isVideoNoteFile && (
                 <div className="mb-3 flex items-center justify-between px-3 py-2 bg-blue-500/5 border border-blue-500/30 rounded-md text-xs text-blue-700 dark:text-blue-300">
@@ -440,18 +451,18 @@ export function Editor() {
                   </button>
                 </div>
               )}
-            {/* 统一使用 CodeMirrorEditor，通过 viewMode 切换模式 */}
-            <div key="editor" className="editor-mode-content h-full">
-              <CodeMirrorEditor 
-                ref={codeMirrorRef}
-                content={currentContent} 
-                onChange={(newContent) => {
-                  updateContent(newContent);
-                  debouncedSave();
-                }}
-                viewMode={editorMode as ViewMode}
-              />
-            </div>
+              {/* 统一使用 CodeMirrorEditor，通过 viewMode 切换模式 */}
+              <div key="editor" className="editor-mode-content h-full">
+                <CodeMirrorEditor
+                  ref={codeMirrorRef}
+                  content={currentContent}
+                  onChange={(newContent) => {
+                    updateContent(newContent);
+                    debouncedSave();
+                  }}
+                  viewMode={editorMode as ViewMode}
+                />
+              </div>
             </div>
           </div>
         </div>
