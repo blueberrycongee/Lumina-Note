@@ -1,11 +1,15 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "lumina-note",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "identifier": "com.luminanote.app",
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi", "dmg"],
+    "targets": [
+      "nsis",
+      "msi",
+      "dmg"
+    ],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -39,7 +43,9 @@
       "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: asset: https://asset.localhost; img-src * data: blob: asset: https://asset.localhost; media-src * data: blob:; frame-src *; connect-src * data: blob:;",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     }
   },
