@@ -73,4 +73,39 @@ describe('parsePDF cache', () => {
     expect(second.fromCache).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('should not reuse cache across different backend configs', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ structure: mockStructure }),
+    }));
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    const baseRequest: Omit<ParseRequest, 'modifiedTime'> = {
+      pdfPath: '/path/to/file.pdf',
+      config: {
+        backend: 'pp-structure',
+        ppStructure: {
+          layoutAnalysis: true,
+        },
+      },
+      useCache: true,
+    };
+
+    const first = await parsePDF({ ...baseRequest, modifiedTime: 123 });
+    const second = await parsePDF({
+      ...baseRequest,
+      config: {
+        backend: 'pp-structure',
+        ppStructure: {
+          layoutAnalysis: false,
+        },
+      },
+      modifiedTime: 123,
+    });
+
+    expect(first.fromCache).toBe(false);
+    expect(second.fromCache).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

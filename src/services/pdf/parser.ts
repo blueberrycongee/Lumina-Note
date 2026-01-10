@@ -13,12 +13,17 @@ class ParseCache {
   private cache = new Map<string, CacheEntry>();
   private readonly MAX_CACHE_SIZE = 50;
 
-  getCacheKey(pdfPath: string, modifiedTime: number): string {
-    return `${pdfPath}:${modifiedTime}`;
+  getCacheKey(pdfPath: string, modifiedTime: number, backend: ParseBackend, config: ParseRequest['config']): string {
+    return `${pdfPath}:${modifiedTime}:${backend}:${stableStringify(config)}`;
   }
 
-  get(pdfPath: string, modifiedTime: number): PDFStructure | null {
-    const key = this.getCacheKey(pdfPath, modifiedTime);
+  get(
+    pdfPath: string,
+    modifiedTime: number,
+    backend: ParseBackend,
+    config: ParseRequest['config']
+  ): PDFStructure | null {
+    const key = this.getCacheKey(pdfPath, modifiedTime, backend, config);
     const entry = this.cache.get(key);
     if (entry && entry.modifiedTime === modifiedTime) {
       return entry.structure;
@@ -26,8 +31,14 @@ class ParseCache {
     return null;
   }
 
-  set(pdfPath: string, modifiedTime: number, structure: PDFStructure, backend: ParseBackend) {
-    const key = this.getCacheKey(pdfPath, modifiedTime);
+  set(
+    pdfPath: string,
+    modifiedTime: number,
+    structure: PDFStructure,
+    backend: ParseBackend,
+    config: ParseRequest['config']
+  ) {
+    const key = this.getCacheKey(pdfPath, modifiedTime, backend, config);
     
     // LRU 缓存：删除最老的条目
     if (this.cache.size >= this.MAX_CACHE_SIZE) {
@@ -52,6 +63,18 @@ class ParseCache {
 }
 
 const parseCache = new ParseCache();
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  const entries = Object.entries(value).sort(([a], [b]) => a.localeCompare(b));
+  const serialized = entries.map(([key, val]) => `"${key}":${stableStringify(val)}`);
+  return `{${serialized.join(',')}}`;
+}
 
 async function resolveModifiedTime(request: ParseRequest): Promise<number> {
   if (typeof request.modifiedTime === 'number') {
@@ -141,7 +164,12 @@ export async function parsePDF(request: ParseRequest): Promise<ParseResponse> {
   try {
     // 检查缓存
     if (shouldUseCache && cacheModifiedTime !== null) {
-      const cached = parseCache.get(request.pdfPath, cacheModifiedTime);
+      const cached = parseCache.get(
+        request.pdfPath,
+        cacheModifiedTime,
+        request.config.backend,
+        request.config
+      );
       if (cached) {
         return {
           success: true,
@@ -173,7 +201,13 @@ export async function parsePDF(request: ParseRequest): Promise<ParseResponse> {
 
     // 缓存结果
     if (shouldUseCache && cacheModifiedTime !== null && structure.pages.length > 0) {
-      parseCache.set(request.pdfPath, cacheModifiedTime, structure, request.config.backend);
+      parseCache.set(
+        request.pdfPath,
+        cacheModifiedTime,
+        structure,
+        request.config.backend,
+        request.config
+      );
     }
 
     return {
