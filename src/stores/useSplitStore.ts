@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { readFile, saveFile } from "@/lib/tauri";
 import { parseFrontmatter } from "@/services/markdown/frontmatter";
+import { useFavoriteStore } from "@/stores/useFavoriteStore";
 
 // 分栏文件类型
 export type SplitFileType = 'markdown' | 'pdf';
@@ -58,6 +59,7 @@ export const useSplitStore = create<SplitState>((set, get) => ({
         secondaryIsDirty: false,
         isLoadingSecondary: false,
       });
+      useFavoriteStore.getState().markOpened(path);
     } catch (error) {
       console.error("Failed to open secondary file:", error);
       set({ isLoadingSecondary: false });

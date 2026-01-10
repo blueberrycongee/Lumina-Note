@@ -10,6 +10,7 @@ import { ContextMenu, MenuItem, menuItems } from "../toolbar/ContextMenu";
 import {
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   File,
   Folder,
   FolderOpen,
@@ -25,10 +26,13 @@ import {
   Mic,
   Loader2,
   Bot,
+  Star,
+  StarOff,
 } from "lucide-react";
 import { useVoiceNote } from "@/hooks/useVoiceNote";
 import { useUIStore } from "@/stores/useUIStore";
 import { useSplitStore } from "@/stores/useSplitStore";
+import { useFavoriteStore } from "@/stores/useFavoriteStore";
 
 interface ContextMenuState {
   x: number;
@@ -50,6 +54,21 @@ export function Sidebar() {
   const { config: ragConfig, isIndexing: ragIsIndexing, indexStatus, rebuildIndex, cancelIndex } = useRAGStore();
   const { setRightPanelTab, splitView } = useUIStore();
   const { activePane, openSecondaryFile, openSecondaryPdf } = useSplitStore();
+  const {
+    favoriteEntries,
+    favoriteSortMode,
+    setFavoriteSortMode,
+    moveFavorite,
+    toggleFavorite,
+    isFavorite,
+  } = useFavoriteStore((state) => ({
+    favoriteEntries: state.getFavorites(state.defaultSortMode),
+    favoriteSortMode: state.defaultSortMode,
+    setFavoriteSortMode: state.setDefaultSortMode,
+    moveFavorite: state.moveFavorite,
+    toggleFavorite: state.toggleFavorite,
+    isFavorite: state.isFavorite,
+  }));
   const { 
     isRecording, 
     status: voiceStatus, 
@@ -436,6 +455,15 @@ export function Sidebar() {
       items.push(menuItems.newFile(() => handleNewFile(entry.path)));
       items.push(menuItems.newFolder(() => handleNewFolder(entry.path)));
     }
+
+    if (!entry.is_dir && entry.name.toLowerCase().endsWith(".md")) {
+      const favored = isFavorite(entry.path);
+      items.push({
+        label: favored ? t.favorites.remove : t.favorites.add,
+        icon: favored ? <StarOff size={14} /> : <Star size={14} />,
+        onClick: () => toggleFavorite(entry.path),
+      });
+    }
     
     items.push(menuItems.copyPath(() => handleCopyPath(entry.path)));
     items.push(menuItems.showInExplorer(() => handleShowInExplorer(entry.path)));
@@ -443,7 +471,7 @@ export function Sidebar() {
     items.push(menuItems.delete(() => handleDelete(entry)));
     
     return items;
-  }, [handleNewFile, handleNewFolder, handleCopyPath, handleShowInExplorer, handleStartRename, handleDelete]);
+  }, [handleNewFile, handleNewFolder, handleCopyPath, handleShowInExplorer, handleStartRename, handleDelete, isFavorite, toggleFavorite, t.favorites.add, t.favorites.remove]);
 
   // 切换文件夹展开状态
   const toggleExpanded = useCallback((path: string) => {
@@ -611,6 +639,113 @@ export function Sidebar() {
             <Mic size={14} />
             <span>{t.file.voiceNote}</span>
           </button>
+        )}
+      </div>
+
+      {/* Favorites */}
+      <div className="px-2 mb-2">
+        <div className="flex items-center justify-between px-1 mb-1">
+          <span className="text-xs font-semibold text-muted-foreground">{t.favorites.title}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setFavoriteSortMode("manual")}
+              className={cn(
+                "px-1.5 py-0.5 text-[10px] rounded border transition-colors",
+                favoriteSortMode === "manual"
+                  ? "bg-accent text-foreground border-border"
+                  : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+              )}
+              title={t.favorites.sortManual}
+            >
+              {t.favorites.sortManual}
+            </button>
+            <button
+              onClick={() => setFavoriteSortMode("recentAdded")}
+              className={cn(
+                "px-1.5 py-0.5 text-[10px] rounded border transition-colors",
+                favoriteSortMode === "recentAdded"
+                  ? "bg-accent text-foreground border-border"
+                  : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+              )}
+              title={t.favorites.sortRecentAdded}
+            >
+              {t.favorites.sortRecentAdded}
+            </button>
+            <button
+              onClick={() => setFavoriteSortMode("recentOpened")}
+              className={cn(
+                "px-1.5 py-0.5 text-[10px] rounded border transition-colors",
+                favoriteSortMode === "recentOpened"
+                  ? "bg-accent text-foreground border-border"
+                  : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
+              )}
+              title={t.favorites.sortRecentOpened}
+            >
+              {t.favorites.sortRecentOpened}
+            </button>
+          </div>
+        </div>
+        {favoriteEntries.length === 0 ? (
+          <div className="px-2 py-2 text-xs text-muted-foreground">
+            {t.favorites.empty}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {favoriteEntries.map((entry, index) => (
+              <div
+                key={entry.path}
+                className={cn(
+                  "group flex items-center gap-2 px-2 py-1 rounded-md text-xs",
+                  currentFile === entry.path ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                )}
+              >
+                <button
+                  onClick={() => openFile(entry.path)}
+                  className="flex-1 flex items-center gap-2 text-left truncate"
+                  title={entry.path}
+                >
+                  <Star className="w-3.5 h-3.5 text-yellow-500" />
+                  <span className="truncate">{getFileName(entry.path).replace(/\.md$/i, "")}</span>
+                </button>
+                {favoriteSortMode === "manual" && (
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveFavorite(index, index - 1);
+                      }}
+                      className="p-0.5 rounded hover:bg-accent"
+                      title={t.favorites.moveUp}
+                      disabled={index === 0}
+                    >
+                      <ChevronUp className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveFavorite(index, index + 1);
+                      }}
+                      className="p-0.5 rounded hover:bg-accent"
+                      title={t.favorites.moveDown}
+                      disabled={index === favoriteEntries.length - 1}
+                    >
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(entry.path);
+                  }}
+                  className="p-0.5 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity"
+                  title={t.favorites.remove}
+                >
+                  <StarOff className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

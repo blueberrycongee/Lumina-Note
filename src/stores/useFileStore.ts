@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import { FileEntry, listDirectory, readFile, saveFile, createFile } from "@/lib/tauri";
 import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
 import { invoke } from '@tauri-apps/api/core';
+import { useFavoriteStore } from "@/stores/useFavoriteStore";
 
 // 历史记录条目
 interface HistoryEntry {
@@ -204,6 +205,7 @@ export const useFileStore = create<FileState>()(
         try {
           const tree = await listDirectory(vaultPath);
           set({ fileTree: tree, isLoadingTree: false });
+          useFavoriteStore.getState().pruneMissing(tree);
         } catch (error) {
           console.error("Failed to refresh file tree:", error);
           set({ isLoadingTree: false });
@@ -317,6 +319,7 @@ export const useFileStore = create<FileState>()(
             navigationIndex: newNavIndex,
             recentFiles: newRecentFiles,
           });
+          useFavoriteStore.getState().markOpened(path);
         } catch (error) {
           console.error("Failed to open file:", error);
           set({ isLoadingFile: false });
@@ -541,6 +544,7 @@ export const useFileStore = create<FileState>()(
         }
 
         set(newState);
+        useFavoriteStore.getState().updatePath(oldPath, newPath);
       },
 
       // 重新排序标签页
@@ -1546,6 +1550,7 @@ export const useFileStore = create<FileState>()(
           // Import moveFile dynamically to avoid circular dependency
           const { moveFile } = await import("@/lib/tauri");
           const newPath = await moveFile(sourcePath, targetFolder);
+          useFavoriteStore.getState().updatePath(sourcePath, newPath);
           
           // Update tab path if the moved file is open
           const tabIndex = tabs.findIndex(t => t.type === 'file' && t.path === sourcePath);
@@ -1585,6 +1590,7 @@ export const useFileStore = create<FileState>()(
           // Import moveFolder dynamically to avoid circular dependency
           const { moveFolder } = await import("@/lib/tauri");
           const newPath = await moveFolder(sourcePath, targetFolder);
+          useFavoriteStore.getState().updatePathsForFolderMove(sourcePath, newPath);
           
           // Normalize paths for comparison
           const normalize = (p: string) => p.replace(/\\/g, "/");

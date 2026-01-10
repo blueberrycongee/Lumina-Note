@@ -46,6 +46,18 @@ export default {
     toggleSidebar: 'サイドバーを切替',
     toggleAIPanel: 'AI パネルを切替',
   },
+
+  favorites: {
+    title: 'お気に入り',
+    add: 'お気に入りに追加',
+    remove: 'お気に入りから削除',
+    empty: 'お気に入りなし',
+    sortManual: '手動',
+    sortRecentAdded: '最近追加',
+    sortRecentOpened: '最近開いた',
+    moveUp: '上へ',
+    moveDown: '下へ',
+  },
   
   // エディター
   editor: {

@@ -46,6 +46,18 @@ export default {
     toggleSidebar: 'Toggle Sidebar',
     toggleAIPanel: 'Toggle AI Panel',
   },
+
+  favorites: {
+    title: 'Favorites',
+    add: 'Add to favorites',
+    remove: 'Remove favorite',
+    empty: 'No favorites yet',
+    sortManual: 'Manual',
+    sortRecentAdded: 'Recently added',
+    sortRecentOpened: 'Recently opened',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+  },
   
   // Editor
   editor: {

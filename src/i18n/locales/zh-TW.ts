@@ -46,6 +46,18 @@ export default {
     toggleSidebar: '切換側邊欄',
     toggleAIPanel: '切換 AI 面板',
   },
+
+  favorites: {
+    title: '收藏夾',
+    add: '加入收藏',
+    remove: '取消收藏',
+    empty: '暫無收藏',
+    sortManual: '手動',
+    sortRecentAdded: '最近收藏',
+    sortRecentOpened: '最近打開',
+    moveUp: '上移',
+    moveDown: '下移',
+  },
   
   // 編輯器
   editor: {
