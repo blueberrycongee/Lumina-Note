@@ -7,6 +7,8 @@ export interface SlashCommand {
     key: string;
     description: string;
     prompt: string;
+    isDefault?: boolean;
+    isCustomized?: boolean;
 }
 
 interface CommandState {
@@ -25,18 +27,24 @@ export const getDefaultCommandsFromTranslations = (t: Translations): SlashComman
             key: "explain",
             description: t.ai.slashCommands.explain,
             prompt: t.ai.slashCommands.explainPrompt,
+            isDefault: true,
+            isCustomized: false,
         },
         {
             id: "default-fix",
             key: "fix",
             description: t.ai.slashCommands.fix,
             prompt: t.ai.slashCommands.fixPrompt,
+            isDefault: true,
+            isCustomized: false,
         },
         {
             id: "default-translate",
             key: "translate",
             description: t.ai.slashCommands.translate,
             prompt: t.ai.slashCommands.translatePrompt,
+            isDefault: true,
+            isCustomized: false,
         },
     ];
 };
@@ -63,6 +71,10 @@ function getInitialTranslations(): Translations {
     return getTranslations(detectSystemLocale());
 }
 
+const isDefaultCommandId = (id: string) => id.startsWith("default-");
+
+const normalizeKey = (key: string) => key.trim().replace(/^\//, "");
+
 export const useCommandStore = create<CommandState>()(
     persist(
         (set) => ({
@@ -70,16 +82,45 @@ export const useCommandStore = create<CommandState>()(
             registerCommand: (cmd) =>
                 set((state) => ({
                     commands: [
-                        ...state.commands.filter((c) => c.key !== cmd.key),
-                        { ...cmd, id: Date.now().toString() },
+                        ...state.commands.filter((c) => c.key !== normalizeKey(cmd.key)),
+                        {
+                            ...cmd,
+                            key: normalizeKey(cmd.key),
+                            id: Date.now().toString(),
+                            isDefault: false,
+                        },
                     ],
                 })),
             updateCommand: (id, newCmd) =>
-                set((state) => ({
-                    commands: state.commands.map((c) =>
-                        c.id === id ? { ...c, ...newCmd } : c
-                    ),
-                })),
+                set((state) => {
+                    const current = state.commands.find((c) => c.id === id);
+                    if (!current) {
+                        return state;
+                    }
+
+                    const isDefault = current.isDefault ?? isDefaultCommandId(current.id);
+                    const nextKey = newCmd.key ? normalizeKey(newCmd.key) : current.key;
+                    const nextCmd: SlashCommand = {
+                        ...current,
+                        ...newCmd,
+                        key: nextKey,
+                        isDefault,
+                    };
+
+                    if (isDefault) {
+                        const changed =
+                            (newCmd.key && nextKey !== current.key) ||
+                            (newCmd.description && newCmd.description !== current.description) ||
+                            (newCmd.prompt && newCmd.prompt !== current.prompt);
+                        if (changed) {
+                            nextCmd.isCustomized = true;
+                        }
+                    }
+
+                    let commands = state.commands.map((c) => (c.id === id ? nextCmd : c));
+                    commands = commands.filter((c) => c.id === id || c.key !== nextCmd.key);
+                    return { commands };
+                }),
             deleteCommand: (id) =>
                 set((state) => ({
                     commands: state.commands.filter((c) => c.id !== id),
@@ -97,16 +138,36 @@ export const useCommandStore = create<CommandState>()(
                 if (!persisted?.commands) {
                     return currentState;
                 }
-                // 合并：保留持久化的自定义命令，更新默认命令的翻译
+                // 合并：保留自定义命令，默认命令只在未被用户修改时更新翻译
                 const defaultCommands = getDefaultCommandsFromTranslations(getInitialTranslations());
-                const defaultIds = new Set(defaultCommands.map(c => c.id));
-                
-                // 保留用户自定义命令（非默认命令）
-                const customCommands = persisted.commands.filter(c => !defaultIds.has(c.id));
-                
+                const persistedCommands = persisted.commands;
+
+                const mergedDefaults = defaultCommands.map((defaultCmd) => {
+                    const persistedCmd = persistedCommands.find((c) => c.id === defaultCmd.id);
+                    if (!persistedCmd) {
+                        return defaultCmd;
+                    }
+                    const persistedIsDefault =
+                        persistedCmd.isDefault ?? isDefaultCommandId(persistedCmd.id);
+                    const persistedCustomized = persistedCmd.isCustomized ?? false;
+                    if (persistedIsDefault && persistedCustomized) {
+                        return {
+                            ...persistedCmd,
+                            isDefault: true,
+                            isCustomized: true,
+                        };
+                    }
+                    return defaultCmd;
+                });
+
+                const customCommands = persistedCommands.filter((c) => {
+                    const persistedIsDefault = c.isDefault ?? isDefaultCommandId(c.id);
+                    return !persistedIsDefault;
+                });
+
                 return {
                     ...currentState,
-                    commands: [...defaultCommands, ...customCommands],
+                    commands: [...mergedDefaults, ...customCommands],
                 };
             },
         }

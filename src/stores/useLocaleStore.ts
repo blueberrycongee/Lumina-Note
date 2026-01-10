@@ -55,17 +55,22 @@ export const useLocaleStore = create<LocaleState>()(
         // 语言切换时更新命令的翻译
         const commandStore = useCommandStore.getState();
         const defaultCommands: SlashCommand[] = getDefaultCommandsFromTranslations(newTranslations);
-        // 只更新默认命令的翻译，保留用户自定义命令
-        const updatedCommands = commandStore.commands.map(cmd => {
+        // 只更新未被用户修改的默认命令翻译
+        const updatedCommands = commandStore.commands.map((cmd) => {
           const defaultCmd = defaultCommands.find((dc: SlashCommand) => dc.id === cmd.id);
-          if (defaultCmd) {
-            return { ...cmd, description: defaultCmd.description, prompt: defaultCmd.prompt };
+          if (!defaultCmd) {
+            return cmd;
           }
-          return cmd;
+          const isDefault = cmd.isDefault ?? cmd.id.startsWith("default-");
+          const isCustomized = cmd.isCustomized ?? false;
+          if (isDefault && !isCustomized) {
+            return { ...cmd, ...defaultCmd, isDefault: true, isCustomized: false };
+          }
+          return { ...cmd, isDefault };
         });
         // 确保所有默认命令都存在
         defaultCommands.forEach((defaultCmd: SlashCommand) => {
-          if (!updatedCommands.find(cmd => cmd.id === defaultCmd.id)) {
+          if (!updatedCommands.find((cmd) => cmd.id === defaultCmd.id)) {
             updatedCommands.push(defaultCmd);
           }
         });
