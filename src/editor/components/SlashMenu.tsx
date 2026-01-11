@@ -123,11 +123,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex(i => Math.min(i + 1, flatCommands.length - 1));
+          setSelectedIndex(i => (i + 1) % flatCommands.length);
           break;
         case "ArrowUp":
           e.preventDefault();
-          setSelectedIndex(i => Math.max(i - 1, 0));
+          setSelectedIndex(i => (i - 1 + flatCommands.length) % flatCommands.length);
           break;
         case "Enter":
           e.preventDefault();
