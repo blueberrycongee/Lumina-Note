@@ -1514,7 +1514,7 @@ export const useFileStore = create<FileState>()(
 
       // Reload file if it's currently open (for external updates like database edits)
       reloadFileIfOpen: async (path: string, options?: { skipIfDirty?: boolean }) => {
-        const { tabs, activeTabIndex, currentFile } = get();
+        const { tabs, activeTabIndex, currentFile, currentContent, isDirty } = get();
 
         // 查找该文件是否在标签页中打开
         const tabIndex = tabs.findIndex(t => t.type === 'file' && t.path === path);
@@ -1523,11 +1523,17 @@ export const useFileStore = create<FileState>()(
         try {
           const skipIfDirty = options?.skipIfDirty ?? false;
           const targetTab = tabs[tabIndex];
-          if (skipIfDirty && targetTab?.isDirty) {
+          const isActivePath = currentFile === path && tabIndex === activeTabIndex;
+          const isTargetDirty = isActivePath ? isDirty : targetTab?.isDirty;
+          if (skipIfDirty && isTargetDirty) {
             return;
           }
 
           const newContent = await readFile(path);
+          const currentTabContent = isActivePath ? currentContent : targetTab.content;
+          if (newContent === currentTabContent) {
+            return;
+          }
 
           const updatedTabs = tabs.map((tab, i) =>
             i === tabIndex ? { ...tab, content: newContent, isDirty: false } : tab

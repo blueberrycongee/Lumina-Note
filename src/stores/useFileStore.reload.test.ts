@@ -83,5 +83,34 @@ describe("useFileStore reloadFileIfOpen", () => {
     expect(readFile).not.toHaveBeenCalled();
     expect(useFileStore.getState().currentContent).toBe("Dirty");
   });
-});
 
+  it("skips reload when active content is dirty even if tab is clean", async () => {
+    vi.mocked(readFile).mockResolvedValue("Reloaded");
+
+    useFileStore.setState({
+      tabs: [
+        {
+          id: "/path/to/file.md",
+          type: "file",
+          path: "/path/to/file.md",
+          name: "file",
+          content: "Saved",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: "/path/to/file.md",
+      currentContent: "Typing",
+      lastSavedContent: "Saved",
+      isDirty: true,
+    });
+
+    const store = useFileStore.getState();
+    await store.reloadFileIfOpen("/path/to/file.md", { skipIfDirty: true });
+
+    expect(readFile).not.toHaveBeenCalled();
+    expect(useFileStore.getState().currentContent).toBe("Typing");
+  });
+});
