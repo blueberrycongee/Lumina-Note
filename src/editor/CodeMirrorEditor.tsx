@@ -141,7 +141,7 @@ const editorTheme = EditorView.theme({
   },
 
   // When selection exists, ensure formatting marks use the same highlight.
-  ".cm-has-selection .cm-formatting-inline-visible, .cm-has-selection .cm-formatting-block-visible, .cm-has-selection .cm-formatting-hanging": {
+  "&.cm-has-selection .cm-formatting-inline-visible, &.cm-has-selection .cm-formatting-block-visible, &.cm-has-selection .cm-formatting-hanging": {
     backgroundColor: "rgba(191, 219, 254, 0.25)",
     borderRadius: "2px",
     margin: "0",
