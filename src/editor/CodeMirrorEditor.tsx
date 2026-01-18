@@ -140,6 +140,15 @@ const editorTheme = EditorView.theme({
     opacity: "0.6",
   },
 
+  // Selection should visually cover formatting marks when they are revealed.
+  ".cm-selection-line .cm-formatting-inline-visible, .cm-selection-line .cm-formatting-block-visible": {
+    backgroundColor: "rgba(191, 219, 254, 0.25)",
+    borderRadius: "2px",
+  },
+  "&.cm-focused .cm-selection-line .cm-formatting-inline-visible, &.cm-focused .cm-selection-line .cm-formatting-block-visible": {
+    backgroundColor: "rgba(191, 219, 254, 0.35)",
+  },
+
   // === Math 编辑体验 ===
   // 行内公式渲染结果 - 带淡入动画
   ".cm-math-inline": {
@@ -723,6 +732,34 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
   return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
 }
 
+function buildSelectionLineDecorations(view: EditorView): DecorationSet {
+  const { from, to } = view.state.selection.main;
+  if (from === to) return Decoration.none;
+
+  const effectiveTo = Math.max(from, to - 1);
+  const startLine = view.state.doc.lineAt(from).number;
+  const endLine = view.state.doc.lineAt(effectiveTo).number;
+  const decorations: any[] = [];
+
+  for (let line = startLine; line <= endLine; line += 1) {
+    decorations.push(Decoration.line({ class: "cm-selection-line" }).range(view.state.doc.line(line).from));
+  }
+
+  return Decoration.set(decorations, true);
+}
+
+const selectionLinePlugin = ViewPlugin.fromClass(class {
+  decorations: DecorationSet;
+  constructor(view: EditorView) {
+    this.decorations = buildSelectionLineDecorations(view);
+  }
+  update(update: ViewUpdate) {
+    if (update.selectionSet || update.docChanged) {
+      this.decorations = buildSelectionLineDecorations(update.view);
+    }
+  }
+}, { decorations: v => v.decorations });
+
 // Table Keymap
 const tableKeymap = [
   {
@@ -1004,6 +1041,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           EditorView.lineWrapping,
           editorTheme,
           mouseSelectingField,
+          selectionLinePlugin,
           wikiLinkStateField,
           voicePreviewField,
           markdownStylePlugin,
