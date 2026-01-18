@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Download, RefreshCw, ExternalLink, Code2 } from "lucide-react";
@@ -55,6 +56,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   const [status, setStatus] = useState<ExtensionStatus | null>(null);
   const [host, setHost] = useState<HostInfo | null>(null);
   const [busy, setBusy] = useState(false);
+  const [autoInstallAttempted, setAutoInstallAttempted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const token = useMemo(() => crypto.randomUUID(), []);
 
@@ -82,6 +84,28 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
     }
   };
 
+  const installFromVsix = async () => {
+    setError(null);
+    const selected = await open({
+      title: "Select Codex VSIX",
+      multiple: false,
+      filters: [{ name: "VSIX", extensions: ["vsix"] }],
+    });
+    if (!selected || typeof selected !== "string") return;
+
+    setBusy(true);
+    try {
+      const s = await invoke<ExtensionStatus>("codex_extension_install_vsix", {
+        vsixPath: selected,
+      });
+      setStatus(s);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const startHostIfReady = async (s: ExtensionStatus | null) => {
     if (!visible) return;
     if (!workspacePath) return;
@@ -99,9 +123,24 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   }, []);
 
   useEffect(() => {
+    if (!visible) {
+      setAutoInstallAttempted(false);
+    }
+  }, [visible]);
+
+  useEffect(() => {
     startHostIfReady(status).catch((e) => setError(e instanceof Error ? e.message : String(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, workspacePath, status?.installed, status?.extensionPath]);
+
+  useEffect(() => {
+    if (!visible || !workspacePath || busy) return;
+    if (!status || status.installed) return;
+    if (autoInstallAttempted) return;
+    setAutoInstallAttempted(true);
+    installLatest().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, workspacePath, status?.installed, busy, autoInstallAttempted]);
 
   // Push theme + current document into the VS Code shim.
   useEffect(() => {
@@ -207,6 +246,14 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
               >
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                 Download & Install
+              </button>
+              <button
+                onClick={() => installFromVsix()}
+                disabled={busy || !workspacePath}
+                className="h-9 px-3 rounded-lg border border-border bg-muted/40 hover:bg-muted/70 text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {busy ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                Import VSIX
               </button>
               <button
                 onClick={() => openExternal("https://marketplace.visualstudio.com/items?itemName=openai.chatgpt")}
