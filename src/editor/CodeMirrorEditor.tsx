@@ -140,15 +140,15 @@ const editorTheme = EditorView.theme({
     opacity: "0.6",
   },
 
-  // When selection exists, ensure formatting marks use the same highlight.
-  "&.cm-has-selection .cm-formatting-inline-visible, &.cm-has-selection .cm-formatting-block-visible, &.cm-has-selection .cm-formatting-hanging": {
+  // Selection bridge for visible formatting marks and their gap spaces.
+  ".cm-selection-bridge, .cm-selection-gap": {
     backgroundColor: "rgba(191, 219, 254, 0.25)",
     borderRadius: "2px",
-    margin: "0",
-    padding: "0 1px",
+    boxShadow: "1px 0 0 rgba(191, 219, 254, 0.25), -1px 0 0 rgba(191, 219, 254, 0.25)",
   },
-  "&.cm-focused.cm-has-selection .cm-formatting-inline-visible, &.cm-focused.cm-has-selection .cm-formatting-block-visible, &.cm-focused.cm-has-selection .cm-formatting-hanging": {
+  "&.cm-focused .cm-selection-bridge, &.cm-focused .cm-selection-gap": {
     backgroundColor: "rgba(191, 219, 254, 0.35)",
+    boxShadow: "1px 0 0 rgba(191, 219, 254, 0.35), -1px 0 0 rgba(191, 219, 254, 0.35)",
   },
 
   // === Math 编辑体验 ===
@@ -699,6 +699,7 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
   const highlightRegex = /==([^=\n]+)==/g;
   let match;
   const isDrag = state.field(mouseSelectingField, false);
+  const hasSelection = state.selection.ranges.some((range) => range.from !== range.to);
 
   // 更新缓存
   highlightPositionsCache = [];
@@ -722,7 +723,7 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
 
     // == 标记使用与加粗/斜体相同的动画类
     const markCls = (isTouched && !isDrag)
-      ? "cm-formatting-inline cm-formatting-inline-visible"
+      ? `cm-formatting-inline cm-formatting-inline-visible${hasSelection ? " cm-selection-bridge" : ""}`
       : "cm-formatting-inline";
 
     // 开头的 ==
@@ -751,6 +752,70 @@ const selectionStatePlugin = ViewPlugin.fromClass(class {
     view.dom.classList.toggle("cm-has-selection", hasSelection);
   }
 }, { decorations: () => Decoration.none });
+
+const SKIP_SELECTION_PARENT_TYPES = new Set(["FencedCode", "CodeBlock"]);
+
+function isInsideSkippedSelectionParent(node: any): boolean {
+  let parent = node.node.parent;
+  while (parent) {
+    if (SKIP_SELECTION_PARENT_TYPES.has(parent.name)) return true;
+    parent = parent.parent;
+  }
+  return false;
+}
+
+const selectionBridgeField = StateField.define<DecorationSet>({
+  create: buildSelectionBridgeDecorations,
+  update(deco, tr) {
+    return (tr.docChanged || tr.selection || tr.reconfigured)
+      ? buildSelectionBridgeDecorations(tr.state)
+      : deco.map(tr.changes);
+  },
+  provide: f => EditorView.decorations.from(f),
+});
+
+function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
+  if (!state.facet(collapseOnSelectionFacet)) return Decoration.none;
+  const hasSelection = state.selection.ranges.some((range) => range.from !== range.to);
+  if (!hasSelection) return Decoration.none;
+
+  const selectedLines = new Set<number>();
+  for (const range of state.selection.ranges) {
+    const start = state.doc.lineAt(range.from).number;
+    const end = state.doc.lineAt(range.to).number;
+    for (let line = start; line <= end; line++) {
+      selectedLines.add(line);
+    }
+  }
+
+  const decorations: any[] = [];
+  const blockTypes = new Set(["HeaderMark", "ListMark", "QuoteMark"]);
+  const inlineTypes = new Set(["EmphasisMark", "StrikethroughMark", "CodeMark"]);
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (!blockTypes.has(node.name) && !inlineTypes.has(node.name)) return;
+      if (isInsideSkippedSelectionParent(node)) return;
+
+      if (blockTypes.has(node.name)) {
+        const lineNum = state.doc.lineAt(node.from).number;
+        if (!selectedLines.has(lineNum)) return;
+        decorations.push(Decoration.mark({ class: "cm-selection-bridge" }).range(node.from, node.to));
+        const nextChar = state.doc.sliceString(node.to, node.to + 1);
+        if (nextChar === " ") {
+          decorations.push(Decoration.mark({ class: "cm-selection-gap" }).range(node.to, node.to + 1));
+        }
+        return;
+      }
+
+      if (node.from >= node.to) return;
+      if (!shouldShowSource(state, node.from, node.to)) return;
+      decorations.push(Decoration.mark({ class: "cm-selection-bridge" }).range(node.from, node.to));
+    }
+  });
+
+  return Decoration.set(decorations, true);
+}
 
 // Table Keymap
 const tableKeymap = [
@@ -1034,6 +1099,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           editorTheme,
           mouseSelectingField,
           selectionStatePlugin,
+          selectionBridgeField,
           wikiLinkStateField,
           voicePreviewField,
           markdownStylePlugin,
