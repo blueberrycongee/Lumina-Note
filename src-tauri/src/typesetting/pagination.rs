@@ -84,6 +84,16 @@ pub fn paginate_lines_with_widows_orphans(
             continue;
         }
 
+        let (page_para_start, page_para_end) =
+            find_paragraph_bounds(page_start, line_count, paragraph_end);
+        if page_start > page_para_start {
+            let lines_on_page =
+                page_para_end.saturating_add(1).saturating_sub(page_start);
+            if widows > 0 && lines_on_page < widows {
+                continue;
+            }
+        }
+
         let next_end = pages[page_index + 1].end;
         if candidate >= next_end {
             continue;
