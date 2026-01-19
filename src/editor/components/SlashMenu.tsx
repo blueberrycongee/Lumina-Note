@@ -34,7 +34,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     if (!filter) return defaultCommands;
     const lower = filter.toLowerCase();
     return defaultCommands.filter(
-      cmd => 
+      cmd =>
         cmd.label.toLowerCase().includes(lower) ||
         cmd.description.toLowerCase().includes(lower) ||
         cmd.id.toLowerCase().includes(lower)
@@ -65,15 +65,15 @@ export function SlashMenu({ view }: SlashMenuProps) {
   // 执行命令
   const executeCommand = useCallback((cmd: SlashCommand) => {
     if (!view) return;
-    
+
     // 获取当前的 filter 范围（从 / 到光标）
     const state = view.state.field(slashMenuField);
     const from = state.pos;
     const to = view.state.selection.main.head;
-    
+
     // 执行命令
     cmd.action(view, from, to);
-    
+
     // 关闭菜单
     view.dispatch({ effects: hideSlashMenu.of() });
     setVisible(false);
@@ -123,11 +123,15 @@ export function SlashMenu({ view }: SlashMenuProps) {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex(i => Math.min(i + 1, flatCommands.length - 1));
+          if (flatCommands.length > 0) {
+            setSelectedIndex(i => (i + 1) % flatCommands.length);
+          }
           break;
         case "ArrowUp":
           e.preventDefault();
-          setSelectedIndex(i => Math.max(i - 1, 0));
+          if (flatCommands.length > 0) {
+            setSelectedIndex(i => (i - 1 + flatCommands.length) % flatCommands.length);
+          }
           break;
         case "Enter":
           e.preventDefault();
@@ -188,7 +192,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
         {categoryOrder.map(cat => {
           const commands = groupedCommands[cat];
           if (!commands?.length) return null;
-          
+
           return (
             <div key={cat}>
               <div className="px-2 py-1 text-xs text-muted-foreground font-medium sticky top-0 bg-background">
@@ -197,14 +201,13 @@ export function SlashMenu({ view }: SlashMenuProps) {
               {commands.map(cmd => {
                 const globalIndex = flatCommands.indexOf(cmd);
                 const isSelected = globalIndex === selectedIndex;
-                
+
                 return (
                   <button
                     key={cmd.id}
                     data-selected={isSelected}
-                    className={`w-full flex items-center gap-3 px-2 py-1.5 text-left rounded-md transition-colors ${
-                      isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-                    }`}
+                    className={`w-full flex items-center gap-3 px-2 py-1.5 text-left rounded-md transition-colors ${isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                      }`}
                     onClick={() => executeCommand(cmd)}
                     onMouseEnter={() => setSelectedIndex(globalIndex)}
                   >
@@ -222,7 +225,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
           );
         })}
       </div>
-      
+
       {filter && flatCommands.length === 0 && (
         <div className="p-4 text-center text-sm text-muted-foreground">
           未找到命令

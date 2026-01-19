@@ -13,6 +13,7 @@ export interface SlashCommand {
 
 interface CommandState {
     commands: SlashCommand[];
+    deletedDefaultIds: string[];
     registerCommand: (cmd: Omit<SlashCommand, "id">) => void;
     updateCommand: (id: string, cmd: Partial<SlashCommand>) => void;
     deleteCommand: (id: string) => void;
@@ -67,7 +68,7 @@ function getInitialTranslations(): Translations {
                 return getTranslations(parsed.state.locale);
             }
         }
-    } catch {}
+    } catch { }
     return getTranslations(detectSystemLocale());
 }
 
@@ -79,6 +80,7 @@ export const useCommandStore = create<CommandState>()(
     persist(
         (set) => ({
             commands: getDefaultCommandsFromTranslations(getInitialTranslations()),
+            deletedDefaultIds: [],
             registerCommand: (cmd) =>
                 set((state) => ({
                     commands: [
@@ -122,9 +124,15 @@ export const useCommandStore = create<CommandState>()(
                     return { commands };
                 }),
             deleteCommand: (id) =>
-                set((state) => ({
-                    commands: state.commands.filter((c) => c.id !== id),
-                })),
+                set((state) => {
+                    const isDefault = isDefaultCommandId(id);
+                    return {
+                        commands: state.commands.filter((c) => c.id !== id),
+                        deletedDefaultIds: isDefault
+                            ? [...new Set([...state.deletedDefaultIds, id])]
+                            : state.deletedDefaultIds
+                    };
+                }),
             unregisterCommand: (key) =>
                 set((state) => ({
                     commands: state.commands.filter((c) => c.key !== key),
@@ -132,33 +140,37 @@ export const useCommandStore = create<CommandState>()(
         }),
         {
             name: "lumina-commands",
-            version: 1,
+            version: 2,
             merge: (persistedState, currentState) => {
                 const persisted = persistedState as Partial<CommandState> | undefined;
                 if (!persisted?.commands) {
                     return currentState;
                 }
+
+                const deletedDefaultIds = persisted.deletedDefaultIds || [];
                 // 合并：保留自定义命令，默认命令只在未被用户修改时更新翻译
                 const defaultCommands = getDefaultCommandsFromTranslations(getInitialTranslations());
                 const persistedCommands = persisted.commands;
 
-                const mergedDefaults = defaultCommands.map((defaultCmd) => {
-                    const persistedCmd = persistedCommands.find((c) => c.id === defaultCmd.id);
-                    if (!persistedCmd) {
+                const mergedDefaults = defaultCommands
+                    .filter(d => !deletedDefaultIds.includes(d.id))
+                    .map((defaultCmd) => {
+                        const persistedCmd = persistedCommands.find((c) => c.id === defaultCmd.id);
+                        if (!persistedCmd) {
+                            return defaultCmd;
+                        }
+                        const persistedIsDefault =
+                            persistedCmd.isDefault ?? isDefaultCommandId(persistedCmd.id);
+                        const persistedCustomized = persistedCmd.isCustomized ?? false;
+                        if (persistedIsDefault && persistedCustomized) {
+                            return {
+                                ...persistedCmd,
+                                isDefault: true,
+                                isCustomized: true,
+                            };
+                        }
                         return defaultCmd;
-                    }
-                    const persistedIsDefault =
-                        persistedCmd.isDefault ?? isDefaultCommandId(persistedCmd.id);
-                    const persistedCustomized = persistedCmd.isCustomized ?? false;
-                    if (persistedIsDefault && persistedCustomized) {
-                        return {
-                            ...persistedCmd,
-                            isDefault: true,
-                            isCustomized: true,
-                        };
-                    }
-                    return defaultCmd;
-                });
+                    });
 
                 const customCommands = persistedCommands.filter((c) => {
                     const persistedIsDefault = c.isDefault ?? isDefaultCommandId(c.id);
@@ -168,6 +180,7 @@ export const useCommandStore = create<CommandState>()(
                 return {
                     ...currentState,
                     commands: [...mergedDefaults, ...customCommands],
+                    deletedDefaultIds,
                 };
             },
         }
