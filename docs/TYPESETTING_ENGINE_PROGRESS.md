@@ -108,3 +108,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added widow/orphan-aware pagination for line-based layouts; when a break would create a widow/orphan, move the break to the paragraph start if both pages still fit; use paragraph-end markers to detect splits.
   - Files changed: src-tauri/src/typesetting/pagination.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run `cargo test` in WSL. Next: wire widow/orphan-aware pagination into the layout pipeline and run WSL tests/lint once a distro is available.
+- 2026-01-19
+  - Task completed: M6 -> 渲染 pipeline：preview pages 分页脚手架（layout lines -> preview pages）
+  - Key decisions: Added PreviewPage/PreviewLine structs and build_preview_pages; line heights include space_before on first line and space_after on last line for pagination.
+  - Files changed: src-tauri/src/typesetting/preview_pipeline.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: connect preview pages to page boxes and add basic zoom/pagination browsing.
