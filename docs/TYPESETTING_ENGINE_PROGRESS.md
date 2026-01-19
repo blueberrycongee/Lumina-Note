@@ -270,3 +270,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a text_layout helper that shapes mixed text, derives whitespace break opportunities from glyph clusters, and feeds line breaking + paragraph layout.
   - Files changed: src-tauri/src/typesetting/text_layout.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro list empty (`wsl -l -q`), so WSL tests/lint/CI not run. Next: wire this helper into a Tauri command or document model adapter.
+- 2026-01-19
+  - Task completed: M13 -> Wire document model edits to layout pipeline (incremental reflow) [layout_text Tauri command]
+  - Key decisions: Exposed a placeholder Tauri command that runs paragraph layout for plain text with left alignment and returns line metrics; input includes a font file path to keep loading explicit.
+  - Files changed: src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: wire UI to call this command and pass real font paths from the font manager.
