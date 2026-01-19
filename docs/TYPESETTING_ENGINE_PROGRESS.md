@@ -146,3 +146,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox as complete to reflect the existing minimal PDF document generation scaffold.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M9 -> 定义 AI schema 校验（zod）
+  - Key decisions: Added strict zod schema for page/typography/paragraph fields with unit-validated lengths; font sizes restricted to pt.
+  - Files changed: src/typesetting/aiSchema.ts; src/typesetting/aiSchema.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run npm run test:run or lint/CI in WSL. Next: parse natural language -> schema (minimal rules) and apply schema to document styles.
+
