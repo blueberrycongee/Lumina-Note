@@ -272,7 +272,7 @@ Long-term direction:
 
 ### M10 Docx import
 - [x] Parse paragraphs/headings/font styles
-- [ ] Parse lists, simple tables, images
+- [x] Parse lists, simple tables, images
 - [ ] Import headers/footers
 
 ### M11 Docx export
