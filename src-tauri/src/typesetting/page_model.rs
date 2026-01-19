@@ -107,6 +107,31 @@ impl PageStyle {
             height_mm: height,
         }
     }
+
+    pub fn header_content_box(self, content_height_mm: f32) -> PageBox {
+        let header = self.header_box();
+        let content_height = content_height_mm.max(0.0).min(header.height_mm);
+
+        PageBox {
+            x_mm: header.x_mm,
+            y_mm: header.y_mm,
+            width_mm: header.width_mm,
+            height_mm: content_height,
+        }
+    }
+
+    pub fn footer_content_box(self, content_height_mm: f32) -> PageBox {
+        let footer = self.footer_box();
+        let content_height = content_height_mm.max(0.0).min(footer.height_mm);
+        let y = footer.y_mm + (footer.height_mm - content_height);
+
+        PageBox {
+            x_mm: footer.x_mm,
+            y_mm: y,
+            width_mm: footer.width_mm,
+            height_mm: content_height,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -150,5 +175,55 @@ mod tests {
         approx_eq(body.y_mm, 18.0);
         approx_eq(body.width_mm, 182.0);
         approx_eq(body.height_mm, 259.0);
+    }
+
+    #[test]
+    fn header_content_box_clamps_and_top_aligns() {
+        let style = PageStyle {
+            size: PageSize::A4,
+            margins: PageMargins {
+                top_mm: 12.0,
+                right_mm: 10.0,
+                bottom_mm: 10.0,
+                left_mm: 8.0,
+            },
+            header_height_mm: 6.0,
+            footer_height_mm: 4.0,
+        };
+
+        let header = style.header_content_box(10.0);
+        approx_eq(header.x_mm, 8.0);
+        approx_eq(header.y_mm, 12.0);
+        approx_eq(header.width_mm, 192.0);
+        approx_eq(header.height_mm, 6.0);
+
+        let empty = style.header_content_box(-2.0);
+        approx_eq(empty.height_mm, 0.0);
+        approx_eq(empty.y_mm, 12.0);
+    }
+
+    #[test]
+    fn footer_content_box_bottom_aligns_and_clamps() {
+        let style = PageStyle {
+            size: PageSize::A4,
+            margins: PageMargins {
+                top_mm: 10.0,
+                right_mm: 10.0,
+                bottom_mm: 20.0,
+                left_mm: 10.0,
+            },
+            header_height_mm: 6.0,
+            footer_height_mm: 12.0,
+        };
+
+        let footer = style.footer_content_box(4.0);
+        approx_eq(footer.x_mm, 10.0);
+        approx_eq(footer.width_mm, 190.0);
+        approx_eq(footer.height_mm, 4.0);
+        approx_eq(footer.y_mm, 297.0 - 20.0 - 4.0);
+
+        let clamped = style.footer_content_box(30.0);
+        approx_eq(clamped.height_mm, 12.0);
+        approx_eq(clamped.y_mm, 297.0 - 20.0 - 12.0);
     }
 }
