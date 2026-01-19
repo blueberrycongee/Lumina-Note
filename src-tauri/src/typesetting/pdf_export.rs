@@ -10,13 +10,7 @@ pub enum PdfExportError {
 }
 
 pub fn write_empty_pdf(page_style: PageStyle) -> Result<Vec<u8>, PdfExportError> {
-    let page_box = page_style.page_box();
-    let width_pt = mm_to_pt(page_box.width_mm);
-    let height_pt = mm_to_pt(page_box.height_mm);
-
-    if width_pt <= 0.0 || height_pt <= 0.0 {
-        return Err(PdfExportError::InvalidPageSize);
-    }
+    let (width_pt, height_pt) = pdf_page_size_points(page_style)?;
 
     let mut output = String::new();
     output.push_str("%PDF-1.7\n");
@@ -64,13 +58,7 @@ pub fn write_pdf_with_embedded_font(
     font_name: &str,
     font_bytes: &[u8],
 ) -> Result<Vec<u8>, PdfExportError> {
-    let page_box = page_style.page_box();
-    let width_pt = mm_to_pt(page_box.width_mm);
-    let height_pt = mm_to_pt(page_box.height_mm);
-
-    if width_pt <= 0.0 || height_pt <= 0.0 {
-        return Err(PdfExportError::InvalidPageSize);
-    }
+    let (width_pt, height_pt) = pdf_page_size_points(page_style)?;
 
     if font_bytes.is_empty() {
         return Err(PdfExportError::InvalidFontData);
@@ -181,6 +169,18 @@ fn mm_to_pt(mm: f32) -> f32 {
     }
 }
 
+fn pdf_page_size_points(page_style: PageStyle) -> Result<(f32, f32), PdfExportError> {
+    let page_box = page_style.page_box();
+    let width_pt = mm_to_pt(page_box.width_mm);
+    let height_pt = mm_to_pt(page_box.height_mm);
+
+    if width_pt <= 0.0 || height_pt <= 0.0 {
+        return Err(PdfExportError::InvalidPageSize);
+    }
+
+    Ok((width_pt, height_pt))
+}
+
 fn subset_font_name(font_name: &str, font_bytes: &[u8]) -> String {
     let tag = subset_tag(font_bytes);
     let name = sanitize_pdf_name(font_name);
@@ -243,7 +243,7 @@ fn encode_hex(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::typesetting::{PageMargins, PageSize};
+    use crate::typesetting::{preview_page_metrics, PageMargins, PageSize};
 
     fn sample_style(size: PageSize) -> PageStyle {
         PageStyle {
@@ -294,6 +294,23 @@ mod tests {
         let text = String::from_utf8(pdf).unwrap();
 
         assert!(text.contains(&expected));
+    }
+
+    #[test]
+    fn pdf_page_size_points_aligns_with_preview_metrics() {
+        let style = sample_style(PageSize::A4);
+        let dpi = 96.0;
+
+        let (width_pt, height_pt) = pdf_page_size_points(style).unwrap();
+        let expected_width_px =
+            (width_pt * dpi / POINTS_PER_INCH).round() as i32;
+        let expected_height_px =
+            (height_pt * dpi / POINTS_PER_INCH).round() as i32;
+
+        let metrics = preview_page_metrics(style, dpi);
+
+        assert_eq!(metrics.page_size_px.width_px, expected_width_px);
+        assert_eq!(metrics.page_size_px.height_px, expected_height_px);
     }
 
     #[test]
