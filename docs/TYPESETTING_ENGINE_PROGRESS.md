@@ -244,3 +244,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a Tauri command returning page/body/header/footer boxes in mm (A4, 25mm margins, 12mm header/footer); UI converts mm -> px at 96dpi and renders the page box overlays.
   - Files changed: src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; src/__tests__/setup.ts
   - Blockers/next steps: `C:\Users\10758\.cargo\bin\cargo.exe test typesetting_preview_page_mm` failed (rustybuzz Script::Han/Latin + Language::from_str signature errors in src-tauri/src/typesetting/shaping.rs). Frontend test ran: `npm run test:run -- TypesettingPreviewPane`.
+- 2026-01-19
+  - Task completed: M13 -> Integrate engine preview into app UI (paged view + zoom controls) [zoom controls]
+  - Key decisions: Zoom controls clamp between 50% and 200% in 10% steps; scale preview boxes by zoom while keeping base mm->px conversion at 96dpi.
+  - Files changed: src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run WSL npm tests/lint/CI. Next: wire preview pane to real layout/PDF pipeline.
+
