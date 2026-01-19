@@ -88,3 +88,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the M4 align/line-height task as complete to reflect existing paragraph layout implementation (alignment offsets + line height spacing).
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M5 -> Page model（纸张尺寸、边距、可用区）
+  - Key decisions: Added PageSize (A4/Letter/Custom) and PageStyle with margins + header/footer heights; exposed page/body/header/footer boxes in mm with non-negative clamping.
+  - Files changed: src-tauri/src/typesetting/page_model.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: `cargo test` timed out while updating rsproxy index; rerun tests when network/index available. Continue M5 header/footer layout or simple pagination next.
