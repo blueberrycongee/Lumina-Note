@@ -216,3 +216,248 @@ Notes:
 - Positions address Document.blocks[block] and Paragraph/Heading inlines[inline]; offset is UTF-16 code unit index.
 - Range order is normalized before applying ops; empty range is a no-op for delete.
 - applyStyle is split for inline marks vs paragraph style refs; page style changes are out of scope for M1.
+
+## M1 Serialization JSON Schema Draft
+> Minimal, JSON-friendly schema to serialize the M1 document model. Discriminators use `type` for blocks/inlines.
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lumina-note/schema/document.v1.json",
+  "title": "Lumina Document v1 (M1)",
+  "type": "object",
+  "required": ["blocks"],
+  "properties": {
+    "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
+    "styles": {
+      "type": "object",
+      "properties": {
+        "fonts": { "type": "array", "items": { "$ref": "#/$defs/fontStyle" } },
+        "paragraphs": { "type": "array", "items": { "$ref": "#/$defs/paragraphStyle" } },
+        "pages": { "type": "array", "items": { "$ref": "#/$defs/pageStyle" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "block": {
+      "oneOf": [
+        { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/heading" },
+        { "$ref": "#/$defs/list" },
+        { "$ref": "#/$defs/table" },
+        { "$ref": "#/$defs/image" }
+      ]
+    },
+    "inline": {
+      "oneOf": [
+        { "$ref": "#/$defs/text" },
+        { "$ref": "#/$defs/lineBreak" },
+        { "$ref": "#/$defs/inlineCode" },
+        { "$ref": "#/$defs/emphasis" },
+        { "$ref": "#/$defs/strong" },
+        { "$ref": "#/$defs/link" }
+      ]
+    },
+    "paragraph": {
+      "type": "object",
+      "required": ["type", "inlines"],
+      "properties": {
+        "type": { "const": "paragraph" },
+        "id": { "type": "string" },
+        "inlines": { "type": "array", "items": { "$ref": "#/$defs/inline" } },
+        "style_ref": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "heading": {
+      "type": "object",
+      "required": ["type", "level", "inlines"],
+      "properties": {
+        "type": { "const": "heading" },
+        "id": { "type": "string" },
+        "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "inlines": { "type": "array", "items": { "$ref": "#/$defs/inline" } },
+        "style_ref": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "list": {
+      "type": "object",
+      "required": ["type", "ordered", "items"],
+      "properties": {
+        "type": { "const": "list" },
+        "id": { "type": "string" },
+        "ordered": { "type": "boolean" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/listItem" } }
+      },
+      "additionalProperties": false
+    },
+    "listItem": {
+      "type": "object",
+      "required": ["blocks"],
+      "properties": {
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } }
+      },
+      "additionalProperties": false
+    },
+    "table": {
+      "type": "object",
+      "required": ["type", "rows"],
+      "properties": {
+        "type": { "const": "table" },
+        "id": { "type": "string" },
+        "rows": { "type": "array", "items": { "$ref": "#/$defs/tableRow" } }
+      },
+      "additionalProperties": false
+    },
+    "tableRow": {
+      "type": "object",
+      "required": ["cells"],
+      "properties": {
+        "cells": { "type": "array", "items": { "$ref": "#/$defs/tableCell" } }
+      },
+      "additionalProperties": false
+    },
+    "tableCell": {
+      "type": "object",
+      "required": ["blocks"],
+      "properties": {
+        "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
+        "row_span": { "type": "integer", "minimum": 1 },
+        "col_span": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "image": {
+      "type": "object",
+      "required": ["type", "src"],
+      "properties": {
+        "type": { "const": "image" },
+        "id": { "type": "string" },
+        "src": { "type": "string" },
+        "alt": { "type": "string" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "text": {
+      "type": "object",
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "text" },
+        "text": { "type": "string" },
+        "marks": { "type": "array", "items": { "$ref": "#/$defs/textMark" } }
+      },
+      "additionalProperties": false
+    },
+    "lineBreak": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "line_break" }
+      },
+      "additionalProperties": false
+    },
+    "inlineCode": {
+      "type": "object",
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "inline_code" },
+        "text": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "emphasis": {
+      "type": "object",
+      "required": ["type", "inlines"],
+      "properties": {
+        "type": { "const": "emphasis" },
+        "inlines": { "type": "array", "items": { "$ref": "#/$defs/inline" } }
+      },
+      "additionalProperties": false
+    },
+    "strong": {
+      "type": "object",
+      "required": ["type", "inlines"],
+      "properties": {
+        "type": { "const": "strong" },
+        "inlines": { "type": "array", "items": { "$ref": "#/$defs/inline" } }
+      },
+      "additionalProperties": false
+    },
+    "link": {
+      "type": "object",
+      "required": ["type", "href", "inlines"],
+      "properties": {
+        "type": { "const": "link" },
+        "href": { "type": "string" },
+        "inlines": { "type": "array", "items": { "$ref": "#/$defs/inline" } }
+      },
+      "additionalProperties": false
+    },
+    "textMark": {
+      "type": "string",
+      "enum": ["bold", "italic", "underline", "strikethrough", "code"]
+    },
+    "fontStyle": {
+      "type": "object",
+      "required": ["font_family", "size_pt", "weight", "italic", "underline", "color"],
+      "properties": {
+        "id": { "type": "string" },
+        "font_family": { "type": "string" },
+        "size_pt": { "type": "number" },
+        "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+        "italic": { "type": "boolean" },
+        "underline": { "type": "boolean" },
+        "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" }
+      },
+      "additionalProperties": false
+    },
+    "paragraphStyle": {
+      "type": "object",
+      "required": ["align", "line_height", "indent_first_line", "space_before", "space_after", "keep_with_next", "widows", "orphans"],
+      "properties": {
+        "id": { "type": "string" },
+        "align": { "type": "string", "enum": ["left", "right", "center", "justify"] },
+        "line_height": { "type": "number" },
+        "indent_first_line": { "type": "string" },
+        "space_before": { "type": "string" },
+        "space_after": { "type": "string" },
+        "keep_with_next": { "type": "boolean" },
+        "widows": { "type": "integer", "minimum": 0 },
+        "orphans": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "pageStyle": {
+      "type": "object",
+      "required": ["size", "margin_mm", "header_height_mm", "footer_height_mm", "column_count", "column_gap_mm"],
+      "properties": {
+        "id": { "type": "string" },
+        "size": { "type": "string", "enum": ["A4", "Letter", "Custom"] },
+        "width_mm": { "type": "number" },
+        "height_mm": { "type": "number" },
+        "margin_mm": {
+          "type": "object",
+          "required": ["top", "right", "bottom", "left"],
+          "properties": {
+            "top": { "type": "number" },
+            "right": { "type": "number" },
+            "bottom": { "type": "number" },
+            "left": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "header_height_mm": { "type": "number" },
+        "footer_height_mm": { "type": "number" },
+        "column_count": { "type": "integer", "minimum": 1 },
+        "column_gap_mm": { "type": "number" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+```
+

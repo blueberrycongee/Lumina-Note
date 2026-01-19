@@ -36,3 +36,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added Position/Range-based ops; split applyStyle into inline marks vs paragraph style refs; use UTF-16 offsets for editor compatibility.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Draft the JSON schema for serialization; tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M1 -> 确定序列化格式（JSON schema 草案）
+  - Key decisions: Added JSON Schema with 	ype discriminators for block/inline unions; included optional styles collections for font/paragraph/page.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Align in-memory model vs serialization 	ype tags; tests not run (docs-only).
