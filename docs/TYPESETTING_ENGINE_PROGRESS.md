@@ -52,3 +52,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Parse units_per_em/ascender/descender/line_gap via ttf-parser; cache by path with shared font bytes; use KaTeX font fixture for tests.
   - Files changed: src-tauri/src/typesetting/font_manager.rs; src-tauri/src/typesetting/mod.rs; src-tauri/src/lib.rs; src-tauri/Cargo.toml; src-tauri/tests/fixtures/katex-main-regular.ttf
   - Blockers/next steps: WSL distro not found; run WSL test/lint/CI once available.
+- 2026-01-20
+  - Task completed: M2 -> Font mapping table (zh/en default mapping)
+  - Key decisions: Default mapping uses SimSun (zh) + Times New Roman (en); resolve trims whitespace and falls back to the other mapping or defaults when missing.
+  - Files changed: src-tauri/src/typesetting/font_manager.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found; run WSL cargo test/full lint/CI when available.

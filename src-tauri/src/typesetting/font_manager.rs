@@ -4,6 +4,60 @@ use std::{
     sync::Arc,
 };
 
+const DEFAULT_ZH_FONT_FAMILY: &str = "SimSun";
+const DEFAULT_EN_FONT_FAMILY: &str = "Times New Roman";
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScriptKind {
+    Zh,
+    En,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FontMapping {
+    zh: String,
+    en: String,
+}
+
+impl FontMapping {
+    pub fn new(zh: impl Into<String>, en: impl Into<String>) -> Self {
+        Self {
+            zh: zh.into(),
+            en: en.into(),
+        }
+    }
+
+    pub fn default_system() -> Self {
+        Self::new(DEFAULT_ZH_FONT_FAMILY, DEFAULT_EN_FONT_FAMILY)
+    }
+
+    pub fn resolve(&self, script: ScriptKind) -> &str {
+        let zh = self.zh.trim();
+        let en = self.en.trim();
+
+        match script {
+            ScriptKind::Zh => {
+                if !zh.is_empty() {
+                    zh
+                } else if !en.is_empty() {
+                    en
+                } else {
+                    DEFAULT_ZH_FONT_FAMILY
+                }
+            }
+            ScriptKind::En => {
+                if !en.is_empty() {
+                    en
+                } else if !zh.is_empty() {
+                    zh
+                } else {
+                    DEFAULT_EN_FONT_FAMILY
+                }
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FontMetrics {
     pub units_per_em: u16,
@@ -139,5 +193,32 @@ mod tests {
             .expect_err("expected parse error");
 
         assert!(matches!(err, FontError::Parse(_)));
+    }
+
+    #[test]
+    fn default_font_mapping_uses_expected_families() {
+        let mapping = FontMapping::default_system();
+
+        assert_eq!(mapping.resolve(ScriptKind::Zh), DEFAULT_ZH_FONT_FAMILY);
+        assert_eq!(mapping.resolve(ScriptKind::En), DEFAULT_EN_FONT_FAMILY);
+    }
+
+    #[test]
+    fn font_mapping_falls_back_when_one_side_missing() {
+        let mapping = FontMapping::new(" ", "Times New Roman");
+
+        assert_eq!(mapping.resolve(ScriptKind::Zh), "Times New Roman");
+
+        let mapping = FontMapping::new("SimSun", "  ");
+
+        assert_eq!(mapping.resolve(ScriptKind::En), "SimSun");
+    }
+
+    #[test]
+    fn font_mapping_falls_back_to_defaults_when_both_missing() {
+        let mapping = FontMapping::new("", "");
+
+        assert_eq!(mapping.resolve(ScriptKind::Zh), DEFAULT_ZH_FONT_FAMILY);
+        assert_eq!(mapping.resolve(ScriptKind::En), DEFAULT_EN_FONT_FAMILY);
     }
 }

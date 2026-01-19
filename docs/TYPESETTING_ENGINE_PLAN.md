@@ -123,7 +123,7 @@ engine/
 ### M1 鏂囨。妯″瀷
 - [x] 瀹氫箟鏂囨。鏍戣妭鐐圭被鍨嬶紙Paragraph/Heading/List/Table/Image锛?- [x] 瀹氫箟鏍峰紡缁撴瀯锛團ontStyle/ParagraphStyle/PageStyle锛?- [ ] 璁捐鏈€灏?ops锛坕nsert/delete/applyStyle锛?- [ ] 纭畾搴忓垪鍖栨牸寮忥紙JSON schema 鑽夋锛?
 ### M2 瀛椾綋灞?- [x] 瀛椾綋鍙戠幇锛氬垪鍑虹郴缁熷瓧浣?+ fallback 瑙勫垯
-- [ ] 瀛椾綋鍔犺浇锛氫粠璺緞鍔犺浇骞剁紦瀛樺害閲?- [ ] 瀛椾綋鏄犲皠琛細涓枃/鑻辨枃榛樿鏄犲皠
+- [ ] 瀛椾綋鍔犺浇锛氫粠璺緞鍔犺浇骞剁紦瀛樺害閲?- [x] 瀛椾綋鏄犲皠琛細涓枃/鑻辨枃榛樿鏄犲皠
 
 ### M3 琛屽唴鎺掔増
 - [ ] 闆嗘垚 shaping锛屽緱鍒?glyph runs
