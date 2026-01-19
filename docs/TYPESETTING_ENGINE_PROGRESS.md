@@ -14,3 +14,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Locked the default tech stack (M0); record any changes in the same section.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Define WYSIWYG acceptance thresholds. Tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M0 -> Write WYSIWYG acceptance thresholds (pixel/mm)
+  - Key decisions: Added explicit page size, margin/header/footer, line spacing, and page-break deltas; used 96dpi as the px reference.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
