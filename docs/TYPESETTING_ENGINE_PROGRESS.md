@@ -201,3 +201,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Group list items by numId/ilvl into list blocks (ordered default false); parse tables into row/cell paragraph blocks; extract image embedIds from drawing blips and emit image blocks when paragraphs are image-only.
   - Files changed: src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); `wsl -d Ubuntu` failed, so `npm run test:run`/lint/CI not run. Next: M10 import headers/footers.
+- 2026-01-19
+  - Task completed: M10 -> Import headers/footers (docx header/footer XML parsing)
+  - Key decisions: Added parseDocxHeaderFooterXml that accepts w:hdr/w:ftr roots (or their unprefixed variants) and reuses body parsing for blocks.
+  - Files changed: src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro list empty; unable to run WSL tests/lint. Next: run npm test/lint in WSL once a distro is available and wire header/footer parts into the docx package importer.

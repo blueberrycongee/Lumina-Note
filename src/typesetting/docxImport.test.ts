@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect } from "vitest";
-import { parseDocxDocumentXml } from "./docxImport";
+import { parseDocxDocumentXml, parseDocxHeaderFooterXml } from "./docxImport";
 
 describe("parseDocxDocumentXml", () => {
   it("parses headings, paragraphs, and run font styles", () => {
@@ -247,5 +247,33 @@ describe("parseDocxDocumentXml", () => {
     if (image.type === "image") {
       expect(image.embedId).toBe("rId5");
     }
+  });
+
+  it("parses header XML roots into blocks", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:p>
+          <w:r><w:t>Header Text</w:t></w:r>
+        </w:p>
+      </w:hdr>`;
+
+    const blocks = parseDocxHeaderFooterXml(xml);
+    expect(blocks).toEqual([
+      { type: "paragraph", runs: [{ text: "Header Text" }] },
+    ]);
+  });
+
+  it("parses footer XML roots into blocks", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:p>
+          <w:r><w:t>Footer Text</w:t></w:r>
+        </w:p>
+      </w:ftr>`;
+
+    const blocks = parseDocxHeaderFooterXml(xml);
+    expect(blocks).toEqual([
+      { type: "paragraph", runs: [{ text: "Footer Text" }] },
+    ]);
   });
 });

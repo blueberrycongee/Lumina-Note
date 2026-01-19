@@ -59,6 +59,24 @@ export type DocxBlock =
   | DocxImageBlock;
 
 export function parseDocxDocumentXml(xml: string): DocxBlock[] {
+  return parseDocxXmlWithContainer(xml, ["w:body", "body"]);
+}
+
+export function parseDocxHeaderFooterXml(xml: string): DocxBlock[] {
+  return parseDocxXmlWithContainer(xml, ["w:hdr", "hdr", "w:ftr", "ftr"]);
+}
+
+type ParagraphContent = {
+  runs: DocxRun[];
+  headingLevel?: number;
+  listKey?: string;
+  images: DocxImageBlock[];
+};
+
+function parseDocxXmlWithContainer(
+  xml: string,
+  containerTags: string[],
+): DocxBlock[] {
   if (!xml.trim()) {
     return [];
   }
@@ -68,21 +86,22 @@ export function parseDocxDocumentXml(xml: string): DocxBlock[] {
     return [];
   }
 
-  const body = doc.getElementsByTagName("w:body")[0];
-  const container = body ?? doc.documentElement;
-  if (!container) {
+  let container: Element | undefined;
+  for (const tag of containerTags) {
+    const match = doc.getElementsByTagName(tag)[0];
+    if (match) {
+      container = match;
+      break;
+    }
+  }
+
+  const fallback = container ?? doc.documentElement;
+  if (!fallback) {
     return [];
   }
 
-  return parseBodyBlocks(container);
+  return parseBodyBlocks(fallback);
 }
-
-type ParagraphContent = {
-  runs: DocxRun[];
-  headingLevel?: number;
-  listKey?: string;
-  images: DocxImageBlock[];
-};
 
 function parseBodyBlocks(container: Element): DocxBlock[] {
   const blocks: DocxBlock[] = [];
