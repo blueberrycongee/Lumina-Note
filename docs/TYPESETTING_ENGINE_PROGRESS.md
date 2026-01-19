@@ -176,3 +176,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked M7 PDF doc generation and font embedding as complete to match existing implementation.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M8 -> Print settings guide (disable scaling, paper match)
+  - Key decisions: Added a concise print dialog checklist covering no-scaling, paper size match, and disabling auto-geometry adjustments.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Add margin calibration flow (record device offsets). Tests not run (docs-only).

@@ -48,6 +48,13 @@ Goal: Implement "paper-level layout + AI layout instructions" in Lumina Note, an
 - Export: generate a single embedded-font PDF as the print and delivery baseline.
 - Print: only print from exported PDF; never print directly from DOM/Canvas; default to no scaling.
 
+## Print settings guide (M8 draft)
+- Print the exported PDF only; do not print from the preview UI.
+- In the print dialog, set scaling to "Actual size" / 100% (disable "Fit to page").
+- Ensure the printer paper size matches the PDF page size (A4 vs Letter).
+- Disable any "auto-rotate/center" options that alter page geometry.
+- Keep driver "borderless" or margin adjustments off unless explicitly calibrated.
+
 ---
 
 ## Default tech stack (modifiable, default is binding)
@@ -228,7 +235,7 @@ engine/
   - [x] PDF/preview alignment verification
 
 ### M8 Print calibration
-- [ ] Print settings guide (disable scaling, paper match)
+- [x] Print settings guide (disable scaling, paper match)
 - [ ] Margin calibration flow (record device offsets)
 
 ### M9 AI layout
