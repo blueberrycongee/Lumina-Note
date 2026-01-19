@@ -93,3 +93,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added PageSize (A4/Letter/Custom) and PageStyle with margins + header/footer heights; exposed page/body/header/footer boxes in mm with non-negative clamping.
   - Files changed: src-tauri/src/typesetting/page_model.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: `cargo test` timed out while updating rsproxy index; rerun tests when network/index available. Continue M5 header/footer layout or simple pagination next.
+- 2026-01-19
+  - Task completed: M5 -> 简单分页（按块流式切页）
+  - Key decisions: Added paginate_flow with PageSlice boundaries; break only when positive height overflows; clamp negative heights to zero.
+  - Files changed: src-tauri/src/typesetting/pagination.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run cargo fmt/clippy/test in WSL. Next: header/footer layout or minimal widow/orphan control.
