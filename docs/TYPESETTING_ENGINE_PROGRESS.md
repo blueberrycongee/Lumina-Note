@@ -196,3 +196,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Implemented a minimal WordprocessingML parser with DOMParser; detect HeadingN styles; convert w:sz half-points to pt; omit disabled run styles; added empty-body edge case test.
   - Files changed: src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run `npm run test:run` in WSL. Next: parse lists/tables/images.
+- 2026-01-19
+  - Task completed: M10 -> Parse lists, simple tables, images
+  - Key decisions: Group list items by numId/ilvl into list blocks (ordered default false); parse tables into row/cell paragraph blocks; extract image embedIds from drawing blips and emit image blocks when paragraphs are image-only.
+  - Files changed: src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); `wsl -d Ubuntu` failed, so `npm run test:run`/lint/CI not run. Next: M10 import headers/footers.

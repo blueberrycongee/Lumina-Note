@@ -114,4 +114,138 @@ describe("parseDocxDocumentXml", () => {
 
     expect(parseDocxDocumentXml(xml)).toEqual([]);
   });
+
+  it("groups list paragraphs into list blocks", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:p>
+            <w:pPr>
+              <w:numPr>
+                <w:ilvl w:val="0" />
+                <w:numId w:val="7" />
+              </w:numPr>
+            </w:pPr>
+            <w:r><w:t>Item A</w:t></w:r>
+          </w:p>
+          <w:p>
+            <w:pPr>
+              <w:numPr>
+                <w:ilvl w:val="0" />
+                <w:numId w:val="7" />
+              </w:numPr>
+            </w:pPr>
+            <w:r><w:t>Item B</w:t></w:r>
+          </w:p>
+          <w:p>
+            <w:r><w:t>Break</w:t></w:r>
+          </w:p>
+          <w:p>
+            <w:pPr>
+              <w:numPr>
+                <w:ilvl w:val="0" />
+                <w:numId w:val="8" />
+              </w:numPr>
+            </w:pPr>
+            <w:r><w:t>Item C</w:t></w:r>
+          </w:p>
+        </w:body>
+      </w:document>`;
+
+    const blocks = parseDocxDocumentXml(xml);
+    expect(blocks).toHaveLength(3);
+
+    const first = blocks[0];
+    expect(first.type).toBe("list");
+    if (first.type === "list") {
+      expect(first.ordered).toBe(false);
+      expect(first.items).toEqual([
+        { runs: [{ text: "Item A" }] },
+        { runs: [{ text: "Item B" }] },
+      ]);
+    }
+
+    const middle = blocks[1];
+    expect(middle.type).toBe("paragraph");
+    if (middle.type === "paragraph") {
+      expect(middle.runs).toEqual([{ text: "Break" }]);
+    }
+
+    const last = blocks[2];
+    expect(last.type).toBe("list");
+    if (last.type === "list") {
+      expect(last.items).toEqual([{ runs: [{ text: "Item C" }] }]);
+    }
+  });
+
+  it("parses tables with paragraph cells", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:tbl>
+            <w:tr>
+              <w:tc>
+                <w:p><w:r><w:t>R1C1</w:t></w:r></w:p>
+              </w:tc>
+              <w:tc>
+                <w:p><w:r><w:t>R1C2</w:t></w:r></w:p>
+              </w:tc>
+            </w:tr>
+            <w:tr>
+              <w:tc>
+                <w:p><w:r><w:t>R2C1</w:t></w:r></w:p>
+              </w:tc>
+              <w:tc>
+                <w:p><w:r><w:t>R2C2</w:t></w:r></w:p>
+              </w:tc>
+            </w:tr>
+          </w:tbl>
+        </w:body>
+      </w:document>`;
+
+    const blocks = parseDocxDocumentXml(xml);
+    expect(blocks).toHaveLength(1);
+    const table = blocks[0];
+    expect(table.type).toBe("table");
+    if (table.type === "table") {
+      expect(table.rows).toHaveLength(2);
+      expect(table.rows[0].cells[0].blocks).toEqual([
+        { type: "paragraph", runs: [{ text: "R1C1" }] },
+      ]);
+      expect(table.rows[0].cells[1].blocks).toEqual([
+        { type: "paragraph", runs: [{ text: "R1C2" }] },
+      ]);
+      expect(table.rows[1].cells[0].blocks).toEqual([
+        { type: "paragraph", runs: [{ text: "R2C1" }] },
+      ]);
+      expect(table.rows[1].cells[1].blocks).toEqual([
+        { type: "paragraph", runs: [{ text: "R2C2" }] },
+      ]);
+    }
+  });
+
+  it("parses image-only paragraphs into image blocks", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+        xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+        xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+        <w:body>
+          <w:p>
+            <w:r>
+              <w:drawing>
+                <a:blip r:embed="rId5" />
+              </w:drawing>
+            </w:r>
+          </w:p>
+        </w:body>
+      </w:document>`;
+
+    const blocks = parseDocxDocumentXml(xml);
+    expect(blocks).toHaveLength(1);
+    const image = blocks[0];
+    expect(image.type).toBe("image");
+    if (image.type === "image") {
+      expect(image.embedId).toBe("rId5");
+    }
+  });
 });

@@ -22,7 +22,41 @@ export type DocxHeadingBlock = {
   runs: DocxRun[];
 };
 
-export type DocxBlock = DocxParagraphBlock | DocxHeadingBlock;
+export type DocxListItem = {
+  runs: DocxRun[];
+};
+
+export type DocxListBlock = {
+  type: "list";
+  ordered: boolean;
+  items: DocxListItem[];
+};
+
+export type DocxTableCell = {
+  blocks: DocxBlock[];
+};
+
+export type DocxTableRow = {
+  cells: DocxTableCell[];
+};
+
+export type DocxTableBlock = {
+  type: "table";
+  rows: DocxTableRow[];
+};
+
+export type DocxImageBlock = {
+  type: "image";
+  embedId: string;
+  description?: string;
+};
+
+export type DocxBlock =
+  | DocxParagraphBlock
+  | DocxHeadingBlock
+  | DocxListBlock
+  | DocxTableBlock
+  | DocxImageBlock;
 
 export function parseDocxDocumentXml(xml: string): DocxBlock[] {
   if (!xml.trim()) {
@@ -35,18 +69,103 @@ export function parseDocxDocumentXml(xml: string): DocxBlock[] {
   }
 
   const body = doc.getElementsByTagName("w:body")[0];
-  const paragraphs = body
-    ? Array.from(body.getElementsByTagName("w:p"))
-    : Array.from(doc.getElementsByTagName("w:p"));
+  const container = body ?? doc.documentElement;
+  if (!container) {
+    return [];
+  }
 
-  return paragraphs.map((paragraph) => {
-    const runs = parseRuns(paragraph);
-    const headingLevel = parseHeadingLevel(paragraph);
-    if (headingLevel !== undefined) {
-      return { type: "heading", level: headingLevel, runs };
+  return parseBodyBlocks(container);
+}
+
+type ParagraphContent = {
+  runs: DocxRun[];
+  headingLevel?: number;
+  listKey?: string;
+  images: DocxImageBlock[];
+};
+
+function parseBodyBlocks(container: Element): DocxBlock[] {
+  const blocks: DocxBlock[] = [];
+  let currentList: { key: string; block: DocxListBlock } | null = null;
+
+  const flushList = () => {
+    if (currentList) {
+      blocks.push(currentList.block);
+      currentList = null;
     }
-    return { type: "paragraph", runs };
-  });
+  };
+
+  for (const node of Array.from(container.childNodes)) {
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      continue;
+    }
+
+    const element = node as Element;
+    switch (element.tagName) {
+      case "w:p": {
+        const content = parseParagraphContent(element, { includeList: true });
+        if (content.listKey) {
+          if (!currentList || currentList.key !== content.listKey) {
+            flushList();
+            currentList = {
+              key: content.listKey,
+              block: { type: "list", ordered: false, items: [] },
+            };
+          }
+          currentList.block.items.push({ runs: content.runs });
+          break;
+        }
+
+        flushList();
+        const paragraphBlocks = paragraphContentToBlocks(content);
+        blocks.push(...paragraphBlocks);
+        break;
+      }
+      case "w:tbl": {
+        flushList();
+        blocks.push(parseTable(element));
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  flushList();
+  return blocks;
+}
+
+function paragraphContentToBlocks(content: ParagraphContent): DocxBlock[] {
+  const blocks: DocxBlock[] = [];
+
+  if (content.runs.length > 0) {
+    if (content.headingLevel !== undefined) {
+      blocks.push({
+        type: "heading",
+        level: content.headingLevel,
+        runs: content.runs,
+      });
+    } else {
+      blocks.push({ type: "paragraph", runs: content.runs });
+    }
+  }
+
+  if (content.images.length > 0) {
+    blocks.push(...content.images);
+  }
+
+  return blocks;
+}
+
+function parseParagraphContent(
+  paragraph: Element,
+  options: { includeList: boolean },
+): ParagraphContent {
+  const runs = parseRuns(paragraph);
+  const headingLevel = parseHeadingLevel(paragraph);
+  const listKey = options.includeList ? parseListKey(paragraph) : undefined;
+  const images = extractParagraphImages(paragraph);
+  return { runs, headingLevel, listKey, images };
 }
 
 function parseHeadingLevel(paragraph: Element): number | undefined {
@@ -73,6 +192,31 @@ function parseHeadingLevel(paragraph: Element): number | undefined {
   return level;
 }
 
+function parseListKey(paragraph: Element): string | undefined {
+  const pPr = paragraph.getElementsByTagName("w:pPr")[0];
+  if (!pPr) {
+    return undefined;
+  }
+
+  const numPr = pPr.getElementsByTagName("w:numPr")[0];
+  if (!numPr) {
+    return undefined;
+  }
+
+  const numIdNode = numPr.getElementsByTagName("w:numId")[0];
+  const ilvlNode = numPr.getElementsByTagName("w:ilvl")[0];
+  const numId =
+    numIdNode?.getAttribute("w:val") ?? numIdNode?.getAttribute("val");
+  const level =
+    ilvlNode?.getAttribute("w:val") ?? ilvlNode?.getAttribute("val") ?? "0";
+
+  if (!numId) {
+    return `unknown:${level}`;
+  }
+
+  return `${numId}:${level}`;
+}
+
 function parseRuns(paragraph: Element): DocxRun[] {
   const runs = Array.from(paragraph.getElementsByTagName("w:r"));
   const result: DocxRun[] = [];
@@ -92,6 +236,46 @@ function parseRuns(paragraph: Element): DocxRun[] {
   }
 
   return result;
+}
+
+function extractParagraphImages(paragraph: Element): DocxImageBlock[] {
+  const images: DocxImageBlock[] = [];
+  const drawings = [
+    ...Array.from(paragraph.getElementsByTagName("w:drawing")),
+    ...Array.from(paragraph.getElementsByTagName("drawing")),
+  ];
+
+  for (const drawing of drawings) {
+    const blips = [
+      ...Array.from(drawing.getElementsByTagName("a:blip")),
+      ...Array.from(drawing.getElementsByTagName("blip")),
+    ];
+    for (const blip of blips) {
+      const embed = blip.getAttribute("r:embed") ?? blip.getAttribute("embed");
+      if (embed) {
+        images.push({ type: "image", embedId: embed });
+      }
+    }
+  }
+
+  return images;
+}
+
+function parseTable(table: Element): DocxTableBlock {
+  const rows = Array.from(table.getElementsByTagName("w:tr")).map((row) => {
+    const cells = Array.from(row.getElementsByTagName("w:tc")).map((cell) => {
+      const paragraphs = Array.from(cell.getElementsByTagName("w:p"));
+      const blocks: DocxBlock[] = [];
+      for (const paragraph of paragraphs) {
+        const content = parseParagraphContent(paragraph, { includeList: false });
+        blocks.push(...paragraphContentToBlocks(content));
+      }
+      return { blocks };
+    });
+    return { cells };
+  });
+
+  return { type: "table", rows };
 }
 
 function extractRunText(run: Element): string {
