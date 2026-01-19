@@ -24,3 +24,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Drafted core block/inline node list with optional ids and style refs placeholders.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Define style structs and ops; tests not run (docs-only).
+
+- 2026-01-20
+  - Task completed: M1 -> Define style structs (FontStyle/ParagraphStyle/PageStyle)
+  - Key decisions: Drafted minimal JSON-friendly fields with explicit units for lengths; added ids for style refs.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Define minimal ops; draft JSON schema; tests not run (docs-only).
