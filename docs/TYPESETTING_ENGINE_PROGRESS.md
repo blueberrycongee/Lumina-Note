@@ -5,12 +5,17 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
 ## Entries
 - 2026-01-20: Initialized progress log.
 - 2026-01-20
-  - Task completed: M0 -> 明确 PDF 输出与打印流程（预览 -> PDF -> 打印）
+  - Task completed: Environment update -> Use local Windows Rust toolchain for tests (no WSL)
+  - Key decisions: Run Rust tests locally with `C:\Users\10758\.cargo\bin\cargo.exe`; note that cargo is not on PATH.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Optional PATH update to simplify commands.
+- 2026-01-20
+  - Task completed: M0 -> Clarify PDF output and print flow (preview -> PDF -> print)
   - Key decisions: Preview uses the same PDF render pipeline; print only from exported PDF; default to no scaling.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Define WYSIWYG acceptance thresholds; finalize default tech stack decision.
 - 2026-01-20
-  - Task completed: M0 -> 固化技术栈选择并在“默认技术栈”中标记最终决定
+  - Task completed: M0 -> Lock the tech stack and mark the final decision in "Default tech stack"
   - Key decisions: Locked the default tech stack (M0); record any changes in the same section.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Define WYSIWYG acceptance thresholds. Tests not run (docs-only).
@@ -37,7 +42,7 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Draft the JSON schema for serialization; tests not run (docs-only).
 - 2026-01-20
-  - Task completed: M1 -> 确定序列化格式（JSON schema 草案）
+  - Task completed: M1 -> Define serialization format (JSON schema draft)
   - Key decisions: Added JSON Schema with type discriminators for block/inline unions; included optional styles collections for font/paragraph/page.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Align in-memory model vs serialization type tags; tests not run (docs-only).
@@ -48,7 +53,7 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Implement font loading and default zh/en mapping; tests not run (docs-only).
 - 2026-01-20
-  - Task completed: M2 -> 字体加载：从路径加载并缓存度量
+  - Task completed: M2 -> Font loading: load from path and cache metrics
   - Key decisions: Parse units_per_em/ascender/descender/line_gap via ttf-parser; cache by path with shared font bytes; use KaTeX font fixture for tests.
   - Files changed: src-tauri/src/typesetting/font_manager.rs; src-tauri/src/typesetting/mod.rs; src-tauri/src/lib.rs; src-tauri/Cargo.toml; src-tauri/tests/fixtures/katex-main-regular.ttf
   - Blockers/next steps: WSL distro not found; run WSL test/lint/CI once available.
@@ -63,12 +68,12 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
 - 2026-01-20
-  - Task completed: M3 -> 集成 shaping，得到 glyph runs
+  - Task completed: M3 -> Integrate shaping, get glyph runs
   - Key decisions: Added a rustybuzz-based shaping API with ScriptKind mapping (Han/Latin) and raw glyph positions in font units.
   - Files changed: src-tauri/Cargo.toml; src-tauri/src/typesetting/mod.rs; src-tauri/src/typesetting/shaping.rs
   - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo test/clippy/fmt. Run WSL tests/lint once available, then continue M3 line breaking.
 - 2026-01-20
-  - Task completed: M3 -> 实现断行（按宽度折行）
+  - Task completed: M3 -> Implement line breaking (width-based)
   - Key decisions: Implemented greedy width-based line breaking with optional soft-break hints; edge cases covered: empty input, oversized glyphs, no soft break before overflow, exact-fit soft breaks.
   - Files changed: src-tauri/src/typesetting/line_break.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo fmt/clippy/test in WSL.
@@ -79,76 +84,80 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo fmt/clippy/test in WSL.
 
 - 2026-01-20
-  - Task completed: M4 -> 首行缩进与段前段后
+  - Task completed: M4 -> First-line indent and space before/after
   - Key decisions: Added first-line indent and paragraph spacing parameters; y_offset includes space_before; space_after recorded on last line; justification uses available width after indent.
   - Files changed: src-tauri/src/typesetting/paragraph_layout.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found; run cargo fmt/clippy/test in WSL once available. Continue M4 align/line-height task if needed.
 - 2026-01-19
-  - Task completed: M4 -> 段落行距与对齐（左/右/居中/两端） [plan checkbox sync]
+  - Task completed: M4 -> Paragraph line height and alignment (left/right/center/justify) [plan checkbox sync]
   - Key decisions: Marked the M4 align/line-height task as complete to reflect existing paragraph layout implementation (alignment offsets + line height spacing).
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
 - 2026-01-19
-  - Task completed: M5 -> Page model（纸张尺寸、边距、可用区）
+  - Task completed: M5 -> Page model (paper size, margins, content box)
   - Key decisions: Added PageSize (A4/Letter/Custom) and PageStyle with margins + header/footer heights; exposed page/body/header/footer boxes in mm with non-negative clamping.
   - Files changed: src-tauri/src/typesetting/page_model.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: `cargo test` timed out while updating rsproxy index; rerun tests when network/index available. Continue M5 header/footer layout or simple pagination next.
 - 2026-01-19
-  - Task completed: M5 -> 简单分页（按块流式切页）
+  - Task completed: M5 -> Simple pagination (flow-based page breaks)
   - Key decisions: Added paginate_flow with PageSlice boundaries; break only when positive height overflows; clamp negative heights to zero.
   - Files changed: src-tauri/src/typesetting/pagination.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run cargo fmt/clippy/test in WSL. Next: header/footer layout or minimal widow/orphan control.
 - 2026-01-19
-  - Task completed: M5 -> 页眉页脚布局
+  - Task completed: M5 -> Header/footer layout
   - Key decisions: Added header/footer content boxes with top-aligned header and bottom-aligned footer; clamp content heights to header/footer boxes and treat negative heights as zero.
   - Files changed: src-tauri/src/typesetting/page_model.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: implement basic widow/orphan control.
 - 2026-01-19
-  - Task completed: M5 -> 基础孤行/寡行处理（最小实现）
+  - Task completed: M5 -> Basic widow/orphan handling (minimal)
   - Key decisions: Added widow/orphan-aware pagination for line-based layouts; when a break would create a widow/orphan, move the break to the paragraph start if both pages still fit; use paragraph-end markers to detect splits.
   - Files changed: src-tauri/src/typesetting/pagination.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run `cargo test` in WSL. Next: wire widow/orphan-aware pagination into the layout pipeline and run WSL tests/lint once a distro is available.
 - 2026-01-19
-  - Task completed: M6 -> 渲染 pipeline：preview pages 分页脚手架（layout lines -> preview pages）
+  - Task completed: M6 -> Render pipeline: preview pages scaffolding (layout lines -> preview pages)
   - Key decisions: Added PreviewPage/PreviewLine structs and build_preview_pages; line heights include space_before on first line and space_after on last line for pagination.
   - Files changed: src-tauri/src/typesetting/preview_pipeline.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: connect preview pages to page boxes and add basic zoom/pagination browsing.
 
 - 2026-01-19
-  - Task completed: M6 -> 基础缩放与分页浏览
+  - Task completed: M6 -> Basic zoom and paginated browsing
   - Key decisions: Added PreviewViewport helpers for zoomed page sizing, page spans, and visible page ranges; clamp zoom to >= 0.1 and gaps to >= 0 to keep math stable.
   - Files changed: src-tauri/src/typesetting/preview_viewport.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (wsl -l -q empty); unable to run cargo fmt/clippy/test in WSL.
 
 - 2026-01-19
-  - Task completed: M6 -> 渲染 pipeline：布局树 -> 预览页面
+  - Task completed: M6 -> Render pipeline: layout tree -> preview pages
   - Key decisions: Added preview metrics converting PageStyle mm to px with a default 96dpi fallback; new helper builds preview pages using body box height for pagination.
   - Files changed: src-tauri/src/typesetting/preview_pipeline.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run WSL cargo fmt/clippy/test/ci.
 - 2026-01-19
-  - Task completed: M7 -> PDF 文档生成（最小空白 PDF 输出脚手架）
-  - Key decisions: 手写最小 PDF 结构（Catalog/Pages/Page/Contents + xref）；页尺寸由 mm->pt 转换；无效尺寸直接报错。
+  - Task completed: M7 -> PDF document generation (minimal blank PDF scaffolding)
+  - Key decisions: Hand-wrote a minimal PDF structure (Catalog/Pages/Page/Contents + xref); page size converts mm -> pt; invalid sizes error out.
   - Files changed: src-tauri/src/typesetting/pdf_export.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
-  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND);无法运行 WSL cargo test/ci。下一步：添加字体嵌入与内容流输出。
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run WSL cargo test/ci. Next: add font embedding and content stream output.
 - 2026-01-19
-  - Task completed: M7 -> 字体嵌入与字体子集（嵌入 TrueType 字体流 + 子集标记）
-  - Key decisions: PDF 内嵌字体以 /FontFile2 + ASCIIHexDecode 写入；子集名由确定性 6 字母前缀 + 清理后的字体名组成；FontDescriptor 复用 ttf-parser 的边界框与升/降部度量。
+  - Task completed: M7 -> Font embedding and font subset (embed TrueType stream + subset tag)
+  - Key decisions: Embed fonts via /FontFile2 + ASCIIHexDecode; subset name uses deterministic 6-letter prefix + sanitized font name; FontDescriptor reuses ttf-parser bounds and ascent/descent metrics.
   - Files changed: src-tauri/src/typesetting/pdf_export.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
-  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND);无法运行 cargo fmt/clippy/test。下一步：真实 glyph 子集化（Widths/Encoding/ToUnicode）与 PDF/预览对齐验证。
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test. Next: real glyph subsetting (Widths/Encoding/ToUnicode) and PDF/preview alignment verification.
 
 - 2026-01-19
-  - Task completed: M7 -> PDF 与预览对齐验证
+  - Task completed: M7 -> PDF/preview alignment verification
   - Key decisions: Added pdf_page_size_points helper; added alignment test converting PDF points to preview pixels at 96dpi to confirm MediaBox size matches preview metrics.
   - Files changed: src-tauri/src/typesetting/pdf_export.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL.
 - 2026-01-19
-  - Task completed: M7 -> PDF 文档生成 [plan checkbox sync]
+  - Task completed: M7 -> PDF document generation [plan checkbox sync]
   - Key decisions: Marked the plan checkbox as complete to reflect the existing minimal PDF document generation scaffold.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
 - 2026-01-19
-  - Task completed: M9 -> 定义 AI schema 校验（zod）
+  - Task completed: M9 -> Define AI schema validation (zod)
   - Key decisions: Added strict zod schema for page/typography/paragraph fields with unit-validated lengths; font sizes restricted to pt.
   - Files changed: src/typesetting/aiSchema.ts; src/typesetting/aiSchema.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run npm run test:run or lint/CI in WSL. Next: parse natural language -> schema (minimal rules) and apply schema to document styles.
-
+- 2026-01-19
+  - Task completed: M9 -> Apply schema -> document styles
+  - Key decisions: Added a style-mapping helper that merges AI instructions into a base style config and preserves footerHeight when omitted; return new objects to avoid mutation.
+  - Files changed: src/typesetting/aiStyleMapper.ts; src/typesetting/aiStyleMapper.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found (no `wsl -l` entries), so tests/lint/CI not run. Next: mark/verify M9 prompt parsing if needed and wire style application into editor state.
