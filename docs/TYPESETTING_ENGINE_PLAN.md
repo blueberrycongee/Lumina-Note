@@ -121,7 +121,7 @@ engine/
 > 姣忎釜鏉＄洰鏄€滃崟娆″惊鐜彲瀹屾垚鈥濈殑鏈€灏忎换鍔″崟浣嶃€?
 ### M0 鐩爣涓庤鑼?- [x] 鍥哄寲鎶€鏈爤閫夋嫨骞跺湪鈥滈粯璁ゆ妧鏈爤鈥濅腑鏍囪鏈€缁堝喅瀹?- [x] 鏄庣‘ PDF 杈撳嚭涓庢墦鍗版祦绋嬶紙棰勮 -> PDF -> 鎵撳嵃锛?- [x] 鍐欏嚭 WYSIWYG 楠屾敹闃堝€硷紙鍍忕礌/姣背锛?
 ### M1 鏂囨。妯″瀷
-- [ ] 瀹氫箟鏂囨。鏍戣妭鐐圭被鍨嬶紙Paragraph/Heading/List/Table/Image锛?- [ ] 瀹氫箟鏍峰紡缁撴瀯锛團ontStyle/ParagraphStyle/PageStyle锛?- [ ] 璁捐鏈€灏?ops锛坕nsert/delete/applyStyle锛?- [ ] 纭畾搴忓垪鍖栨牸寮忥紙JSON schema 鑽夋锛?
+- [x] 瀹氫箟鏂囨。鏍戣妭鐐圭被鍨嬶紙Paragraph/Heading/List/Table/Image锛?- [ ] 瀹氫箟鏍峰紡缁撴瀯锛團ontStyle/ParagraphStyle/PageStyle锛?- [ ] 璁捐鏈€灏?ops锛坕nsert/delete/applyStyle锛?- [ ] 纭畾搴忓垪鍖栨牸寮忥紙JSON schema 鑽夋锛?
 ### M2 瀛椾綋灞?- [ ] 瀛椾綋鍙戠幇锛氬垪鍑虹郴缁熷瓧浣?+ fallback 瑙勫垯
 - [ ] 瀛椾綋鍔犺浇锛氫粠璺緞鍔犺浇骞剁紦瀛樺害閲?- [ ] 瀛椾綋鏄犲皠琛細涓枃/鑻辨枃榛樿鏄犲皠
 
@@ -170,4 +170,25 @@ engine/
 ---
 
 ## 椋庨櫓涓庢敞鎰忎簨椤?- 瀛椾綋鎺堟潈锛氬晢涓氬瓧浣撲笉鑳介殢杞欢鍒嗗彂锛屽彧鑳戒娇鐢ㄧ郴缁熷畨瑁呮垨寮€婧愭浛浠ｃ€?- Word 鍏煎锛歚.docx` 涓哄彲閲嶆帓鏍煎紡锛岀紪杈戞ā寮忔棤娉曚繚璇佺粷瀵逛竴鑷淬€?- CJK 鎺掔増缁嗚妭澶嶆潅锛氭柇琛屻€佹爣鐐规尋鍘嬨€佸瓧鍙锋槧灏勯渶閫愭杩唬銆?
+
+## M1 Document Model Draft (nodes + inline types)
+- Document: { blocks: Block[] }
+- Block: Paragraph | Heading | List | Table | Image
+- Paragraph: { inlines: Inline[], style: ParagraphStyleRef? }
+- Heading: { level: 1..6, inlines: Inline[], style: ParagraphStyleRef? }
+- List: { ordered: boolean, items: ListItem[] }
+- ListItem: { blocks: Block[] }
+- Table: { rows: TableRow[] }
+- TableRow: { cells: TableCell[] }
+- TableCell: { blocks: Block[], row_span?: number, col_span?: number }
+- Image: { src: string, alt?: string, width?: number, height?: number }
+
+- Inline: Text | LineBreak | InlineCode | Emphasis | Strong | Link
+- Text: { text: string, marks?: TextMark[] }
+- TextMark: Bold | Italic | Underline | Strikethrough | Code
+- Link: { href: string, inlines: Inline[] }
+
+Notes:
+- All nodes may carry optional `id` for ops and history tracking.
+- Style refs are placeholders until `FontStyle`/`ParagraphStyle`/`PageStyle` are defined.
 

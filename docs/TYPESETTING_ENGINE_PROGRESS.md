@@ -19,3 +19,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added explicit page size, margin/header/footer, line spacing, and page-break deltas; used 96dpi as the px reference.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M1 -> Define document node types (Paragraph/Heading/List/Table/Image)
+  - Key decisions: Drafted core block/inline node list with optional ids and style refs placeholders.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Define style structs and ops; tests not run (docs-only).
