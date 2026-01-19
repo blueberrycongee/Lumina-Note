@@ -122,7 +122,7 @@ engine/
 ### M0 鐩爣涓庤鑼?- [x] 鍥哄寲鎶€鏈爤閫夋嫨骞跺湪鈥滈粯璁ゆ妧鏈爤鈥濅腑鏍囪鏈€缁堝喅瀹?- [x] 鏄庣‘ PDF 杈撳嚭涓庢墦鍗版祦绋嬶紙棰勮 -> PDF -> 鎵撳嵃锛?- [x] 鍐欏嚭 WYSIWYG 楠屾敹闃堝€硷紙鍍忕礌/姣背锛?
 ### M1 鏂囨。妯″瀷
 - [x] 瀹氫箟鏂囨。鏍戣妭鐐圭被鍨嬶紙Paragraph/Heading/List/Table/Image锛?- [x] 瀹氫箟鏍峰紡缁撴瀯锛團ontStyle/ParagraphStyle/PageStyle锛?- [ ] 璁捐鏈€灏?ops锛坕nsert/delete/applyStyle锛?- [ ] 纭畾搴忓垪鍖栨牸寮忥紙JSON schema 鑽夋锛?
-### M2 瀛椾綋灞?- [ ] 瀛椾綋鍙戠幇锛氬垪鍑虹郴缁熷瓧浣?+ fallback 瑙勫垯
+### M2 瀛椾綋灞?- [x] 瀛椾綋鍙戠幇锛氬垪鍑虹郴缁熷瓧浣?+ fallback 瑙勫垯
 - [ ] 瀛椾綋鍔犺浇锛氫粠璺緞鍔犺浇骞剁紦瀛樺害閲?- [ ] 瀛椾綋鏄犲皠琛細涓枃/鑻辨枃榛樿鏄犲皠
 
 ### M3 琛屽唴鎺掔増
@@ -461,3 +461,9 @@ Notes:
 }
 ```
 
+
+## M2 Font Discovery Draft (system list + fallback rules)
+- Enumerate installed fonts via OS APIs (DirectWrite/CoreText/fontconfig); normalize family and style metadata.
+- Build fallback chains per script (Latin, CJK, Symbol/Emoji); resolve per-glyph when shaping reports missing glyphs.
+- Prefer user-selected fonts, then document styles, then system defaults, then open-source fallbacks (e.g., Noto Sans CJK, Noto Serif).
+- Edge cases: missing CJK fonts, mixed-script runs, symbol-only glyphs, fallback loops; log chosen fallback in debug builds.
