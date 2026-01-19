@@ -44,6 +44,7 @@
 ## 默认技术栈（可修改，默认即执行）
 > 为了让循环能无阻推进，先锁定默认技术路径。
 
+- 最终决定（M0）：锁定以下默认技术栈；若需改动，必须在此节记录原因。
 - 语言：Rust（核心排版引擎）+ TS/React（UI 预览）
 - 字体与排版：HarfBuzz（shaping）+ rustybuzz/harfbuzz-rs 选一条成熟 binding
 - 字体发现：font-kit 或系统 API（Windows DirectWrite / macOS CoreText / Linux fontconfig）
@@ -179,7 +180,7 @@ engine/
 > 每个条目是“单次循环可完成”的最小任务单位。
 
 ### M0 目标与规范
-- [ ] 固化技术栈选择并在“默认技术栈”中标记最终决定
+- [x] 固化技术栈选择并在“默认技术栈”中标记最终决定
 - [x] 明确 PDF 输出与打印流程（预览 -> PDF -> 打印）
 - [ ] 写出 WYSIWYG 验收阈值（像素/毫米）
 
