@@ -11,8 +11,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useRAGStore } from "@/stores/useRAGStore";
-import { FolderOpen, Sparkles, PanelRight } from "lucide-react";
-import { useLocaleStore } from "@/stores/useLocaleStore";
+import { PanelRight } from "lucide-react";
 import { CommandPalette, PaletteMode } from "@/components/search/CommandPalette";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
@@ -29,10 +28,11 @@ import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
 import { enableDebugLogger } from "@/lib/debugLogger";
-import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { AgentEvalPanel } from "@/tests/agent-eval/AgentEvalPanel";
 import { CodexVscodeHostPanel } from "@/components/debug/CodexVscodeHostPanel";
 import { CodexPanelHost } from "@/components/codex/CodexPanelHost";
+import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
+import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import type { FsChangePayload } from "@/lib/fsChange";
 
 // 启用调试日志收集（开发模式下）
@@ -53,12 +53,7 @@ function EditorWithGraph() {
       ) : activeTab?.type === "isolated-graph" && activeTab.isolatedNode ? (
         <KnowledgeGraph className="flex-1" isolatedNode={activeTab.isolatedNode} />
       ) : (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <div className="text-center space-y-2">
-            <p className="text-lg">从侧边栏选择一个笔记开始编辑</p>
-            <p className="text-sm opacity-70">或按 Ctrl+N 创建新笔记</p>
-          </div>
-        </div>
+        <OverviewDashboard />
       )}
     </div>
   );
@@ -522,50 +517,12 @@ function App() {
   );
 
   // Welcome screen when no vault is open
-  const { t } = useLocaleStore();
-
   if (!vaultPath) {
-    return (
-      <div className="h-full flex flex-col bg-background">
-        <TitleBar />
-        <div className="flex-1 flex items-center justify-center relative">
-          {/* Language Selector - Top Right */}
-          <LanguageSwitcher className="absolute top-4 right-4" />
-
-          <div className="text-center space-y-8">
-            {/* Logo */}
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                {t.welcome.title}
-              </h1>
-            </div>
-
-            <p className="text-muted-foreground text-lg">
-              {t.welcome.subtitle}
-            </p>
-
-            <button
-              onClick={handleOpenVault}
-              className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all font-medium shadow-lg hover:shadow-xl hover:scale-105"
-            >
-              <FolderOpen className="w-5 h-5" />
-              {t.welcome.openFolder}
-            </button>
-
-            <p className="text-sm text-muted-foreground">
-              {t.welcome.selectFolder}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return <WelcomeScreen onOpenVault={handleOpenVault} />;
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background ui-app-bg">
       <TitleBar />
       <div className="flex-1 flex overflow-hidden transition-colors duration-300">
         {/* Left Ribbon (Icon Bar) */}
@@ -675,7 +632,7 @@ function App() {
           {!rightSidebarOpen && (
             <button
               onClick={toggleRightSidebar}
-              className="absolute top-1/2 -translate-y-1/2 z-10 p-1 rounded-md bg-muted/80 hover:bg-accent border border-border shadow-sm transition-all right-1"
+              className="absolute top-1/2 -translate-y-1/2 z-10 right-1 w-7 h-7 bg-background/55 backdrop-blur-md border border-border/60 shadow-ui-card ui-icon-btn"
               title="展开右侧栏"
             >
               <PanelRight className="w-4 h-4 text-muted-foreground" />

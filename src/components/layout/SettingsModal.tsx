@@ -5,6 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { getVersion } from "@tauri-apps/api/app";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
@@ -91,7 +92,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   if (!isOpen) return null;
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* 背景遮罩 - 液态玻璃效果 */}
       <div
@@ -401,4 +402,6 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       />
     </div>
   );
+
+  return typeof document !== "undefined" ? createPortal(modal, document.body) : modal;
 }

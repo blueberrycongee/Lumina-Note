@@ -35,11 +35,11 @@ function TabItem({
     <div
       data-tab-index={index}
       className={cn(
-        "group relative flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-grab border-r border-border",
-        "transition-colors duration-150 select-none",
+        "group relative flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-grab border-r border-border/50",
+        "transition-[background-color,color] duration-150 select-none",
         isActive
-          ? "bg-background text-foreground"
-          : "bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+          ? "bg-background/70 text-foreground shadow-[inset_0_-1px_0_hsl(var(--primary)/0.6)]"
+          : "bg-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground",
         isDragging && "opacity-50 cursor-grabbing",
         isDropTarget && dropPosition === 'left' && "border-l-2 border-l-primary",
         isDropTarget && dropPosition === 'right' && "border-r-2 border-r-primary"
@@ -74,7 +74,7 @@ function TabItem({
         <button
           onClick={onClose}
           className={cn(
-            "shrink-0 p-0.5 rounded hover:bg-accent",
+            "shrink-0 p-0.5 rounded-ui-sm hover:bg-accent/60",
             "opacity-0 group-hover:opacity-100 transition-opacity",
             isActive && "opacity-60"
           )}
@@ -84,7 +84,7 @@ function TabItem({
       )}
       {/* Active indicator */}
       {isActive && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+        <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary/80" />
       )}
     </div>
   );
@@ -230,7 +230,7 @@ export function TabBar() {
     <>
       <div
         ref={containerRef}
-        className="flex items-stretch bg-muted/30 border-b border-border overflow-x-auto scrollbar-hide min-h-[32px]"
+        className="flex items-stretch bg-background/55 backdrop-blur-md border-b border-border/60 shadow-[0_1px_0_hsl(var(--border)/0.5)] overflow-x-auto scrollbar-hide min-h-[32px]"
       >
         {tabs.map((tab, index) => (
           <TabItem
@@ -255,7 +255,7 @@ export function TabBar() {
         <>
           <div className="fixed inset-0 z-40" onClick={handleClickOutside} />
           <div
-            className="fixed z-50 bg-background border border-border rounded-md shadow-lg py-1 min-w-[160px]"
+            className="fixed z-50 bg-background/75 backdrop-blur-md border border-border/60 rounded-ui-md shadow-ui-float py-1 min-w-[160px]"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button
@@ -263,7 +263,7 @@ export function TabBar() {
                 togglePinTab(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
+              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent/60 transition-colors flex items-center gap-2"
             >
               <Pin size={12} className={tabs[contextMenu.tabIndex]?.isPinned ? "" : "rotate-45"} />
               {tabs[contextMenu.tabIndex]?.isPinned ? t.tabBar.unpin : t.tabBar.pin}
@@ -274,7 +274,7 @@ export function TabBar() {
                 closeTab(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={tabs[contextMenu.tabIndex]?.isPinned}
             >
               {t.tabBar.close}
@@ -284,7 +284,7 @@ export function TabBar() {
                 closeOtherTabs(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent/60 transition-colors"
             >
               {t.tabBar.closeOthers}
             </button>
@@ -293,7 +293,7 @@ export function TabBar() {
                 closeAllTabs();
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent/60 transition-colors"
             >
               {t.tabBar.closeAll}
             </button>

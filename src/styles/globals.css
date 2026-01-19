@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -19,32 +21,126 @@ body.resizing iframe[data-codex-iframe="true"] {
 
 /* 全局选区颜色（更淡的蓝色）*/
 ::selection {
-  background-color: rgba(191, 219, 254, 0.8);
+  background-color: hsl(var(--primary) / 0.25);
   color: inherit;
 }
 
 :root {
-  --background: 45 10% 98%;  /* 微暖白：一点点黄调 */
-  --foreground: 40 10% 10%;  /* 暖黑 */
-  --muted: 45 10% 94%;  /* 暖灰 */
-  --muted-foreground: 40 5% 45%;  /* 暖灰文字 */
-  --accent: 45 10% 93%;  /* 暖灰强调 */
-  --accent-foreground: 40 10% 15%;
-  --primary: 215 25% 50%;  /* 柔和灰蓝 */
-  --primary-foreground: 45 10% 98%;
-  --border: 40 8% 88%;  /* 暖边框 */
+  --background: 220 24% 97%;  /* 微暖白：一点点黄调 */
+  --foreground: 222 22% 12%;  /* 暖黑 */
+  --muted: 220 18% 93%;  /* 暖灰 */
+  --muted-foreground: 220 10% 45%;  /* 暖灰文字 */
+  --accent: 220 16% 92%;  /* 暖灰强调 */
+  --accent-foreground: 222 22% 18%;
+  --primary: 200 70% 45%;  /* 柔和灰蓝 */
+  --primary-foreground: 220 24% 98%;
+  --border: 220 16% 84%;  /* 暖边框 */
+  --font-sans: "Sora", "Manrope", "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* UI tokens (aliases + shape) */
+  --ui-surface: var(--background);
+  --ui-panel: var(--muted);
+  --ui-panel-2: var(--accent);
+  --ui-radius-sm: 10px;
+  --ui-radius-md: 14px;
+  --ui-radius-lg: 18px;
 }
 
 .dark {
-  --background: 40 5% 11%;  /* 暖深灰背景 */
-  --foreground: 45 8% 85%;  /* 暖浅灰文字 */
-  --muted: 40 5% 15%;  /* 暖深灰 */
-  --muted-foreground: 40 5% 55%;
-  --accent: 40 5% 18%;
-  --accent-foreground: 45 8% 92%;
-  --primary: 215 20% 55%;  /* 柔和灰蓝 */
-  --primary-foreground: 40 5% 12%;
-  --border: 40 5% 22%;  /* 暖边框 */
+  --background: 222 32% 10%;  /* 暖深灰背景 */
+  --foreground: 210 20% 94%;  /* 暖浅灰文字 */
+  --muted: 222 22% 16%;  /* 暖深灰 */
+  --muted-foreground: 220 12% 58%;
+  --accent: 222 18% 20%;
+  --accent-foreground: 210 20% 96%;
+  --primary: 200 75% 55%;  /* 柔和灰蓝 */
+  --primary-foreground: 222 30% 12%;
+  --border: 220 14% 28%;  /* 暖边框 */
+}
+
+@layer components {
+  .ui-app-bg {
+    background:
+      radial-gradient(1200px 800px at 8% -10%, hsl(var(--primary) / 0.18), transparent 55%),
+      radial-gradient(900px 600px at 92% 4%, hsl(var(--foreground) / 0.06), transparent 62%),
+      radial-gradient(1100px 700px at 50% 120%, hsl(var(--primary) / 0.08), transparent 70%),
+      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
+  }
+
+  .dark .ui-app-bg {
+    background:
+      radial-gradient(1200px 800px at 8% -10%, hsl(var(--primary) / 0.14), transparent 55%),
+      radial-gradient(900px 600px at 92% 4%, hsl(var(--foreground) / 0.10), transparent 62%),
+      radial-gradient(1100px 700px at 50% 120%, hsl(var(--primary) / 0.06), transparent 70%),
+      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
+  }
+
+  .ui-glass {
+    @apply border border-border/60 bg-background/55 backdrop-blur-md shadow-ui-card;
+  }
+
+  .ui-card {
+    @apply rounded-ui-lg border border-border/60 bg-background/70 shadow-ui-card;
+  }
+
+  .dark .ui-card {
+    @apply bg-muted/30 border-border/50;
+  }
+
+  .ui-card-hover {
+    @apply transition-[transform,box-shadow,border-color,background-color] duration-150 ease-out hover:-translate-y-[1px] hover:shadow-ui-float hover:border-border/80;
+  }
+
+  .ui-kbd {
+    @apply inline-flex items-center rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground;
+  }
+
+  .ui-divider {
+    @apply h-px w-full bg-border/70;
+  }
+
+  .ui-panel {
+    @apply rounded-ui-lg border border-border/60 bg-background/55 backdrop-blur-md shadow-ui-card;
+  }
+
+  .dark .ui-panel {
+    @apply bg-muted/30 border-border/50;
+  }
+
+  .ui-input {
+    @apply h-9 w-full rounded-ui-md border border-border/60 bg-background/40 px-3 text-sm text-foreground;
+    @apply placeholder:text-muted-foreground/70;
+    @apply transition-[border-color,background-color,box-shadow] duration-150 ease-out;
+    @apply focus-visible:outline-none focus-visible:border-primary/60 focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.4),0_0_0_4px_hsl(var(--primary)/0.18)];
+  }
+
+  .ui-icon-btn {
+    @apply inline-flex items-center justify-center rounded-ui-md border border-transparent;
+    @apply text-muted-foreground hover:text-foreground;
+    @apply hover:bg-accent/60 hover:border-border/60;
+    @apply transition-[background-color,border-color,color,transform] duration-150 ease-out;
+    @apply focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)];
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  @keyframes ui-shimmer {
+    0% {
+      transform: translateX(-120%);
+    }
+    100% {
+      transform: translateX(120%);
+    }
+  }
 }
 
 * {
@@ -67,10 +163,10 @@ body,
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: var(--font-sans);
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  letter-spacing: -0.01em;
 }
 
 /* Scrollbar */
@@ -234,7 +330,7 @@ body {
   background: hsl(var(--muted));
   border-radius: 0.5rem;
   padding: 1rem;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   overflow-x: auto;
   margin: 1rem 0;
@@ -458,7 +554,7 @@ body {
   padding: 0.2rem 0.4rem;
   border-radius: 0.25rem;
   font-size: 0.875rem;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
 }
 
 /* 代码块 */
@@ -934,7 +1030,7 @@ mark {
   margin: 0;
   padding: 1rem;
   overflow-x: auto;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.6;
 }
@@ -958,7 +1054,7 @@ mark {
 
 .codemirror-wrapper .cm-scroller {
   overflow: auto;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* 暗色模式适配 */

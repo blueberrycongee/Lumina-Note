@@ -107,13 +107,13 @@ export function Ribbon() {
   };
 
   return (
-    <div className="w-10 h-full bg-muted/30 border-r border-border flex flex-col items-center py-2 gap-0.5">
+    <div className="w-11 h-full bg-background/55 backdrop-blur-md border-r border-border/60 shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] flex flex-col items-center py-2 gap-0.5">
       {/* Top icons */}
       <div className="flex flex-col items-center gap-0.5">
         {/* Search */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="w-8 h-8 ui-icon-btn"
           title="全局搜索 (Ctrl+Shift+F)"
         >
           <Search size={18} />
@@ -126,10 +126,10 @@ export function Ribbon() {
             setRightPanelTab("outline");
           }}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "ai"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="AI 聊天（主视图）"
         >
@@ -140,10 +140,10 @@ export function Ribbon() {
         <button
           onClick={handleSwitchToFiles}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "file"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="文件编辑器"
         >
@@ -154,10 +154,10 @@ export function Ribbon() {
         <button
           onClick={openCardFlowTab}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "cardflow"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="卡片视图"
         >
@@ -168,10 +168,10 @@ export function Ribbon() {
         <button
           onClick={openGraphTab}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "graph"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="关系图谱"
         >
@@ -189,10 +189,10 @@ export function Ribbon() {
             }
           }}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "video"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="视频笔记"
         >
@@ -203,10 +203,10 @@ export function Ribbon() {
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("open-create-database"))}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "database"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="数据库"
         >
@@ -217,10 +217,10 @@ export function Ribbon() {
         <button
           onClick={() => openFlashcardTab()}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "flashcard"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="闪卡复习"
         >
@@ -239,10 +239,10 @@ export function Ribbon() {
             }
           }}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-all",
+            "w-8 h-8 ui-icon-btn",
             activeSection === "browser"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+              : ""
           )}
           title="浏览器"
         >
@@ -258,7 +258,7 @@ export function Ribbon() {
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="w-8 h-8 ui-icon-btn"
           title={isDarkMode ? "切换到亮色模式" : "切换到暗色模式"}
         >
           {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
@@ -267,7 +267,7 @@ export function Ribbon() {
         {/* Settings */}
         <button
           onClick={() => setShowSettings(true)}
-          className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+          className="w-8 h-8 ui-icon-btn"
           title="设置"
         >
           <Settings size={18} />

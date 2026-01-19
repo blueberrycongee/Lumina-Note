@@ -84,9 +84,8 @@ export function LanguageSwitcher({
         ref={buttonRef}
         onClick={() => setOpen((prev) => !prev)}
         className={clsx(
-          "inline-flex items-center gap-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors",
+          "inline-flex items-center gap-2 rounded-ui-md border border-border/60 bg-background/50 hover:bg-accent/60 transition-colors shadow-ui-card/70 backdrop-blur-sm",
           sizeClass,
-          "shadow-sm",
           buttonClassName
         )}
         aria-expanded={open}
@@ -108,7 +107,7 @@ export function LanguageSwitcher({
         <div
           ref={menuRef}
           className={clsx(
-            "absolute mt-1 w-44 rounded-lg border border-border bg-background shadow-lg py-1 z-50",
+            "absolute mt-1 w-44 rounded-ui-md border border-border/60 bg-background/80 backdrop-blur-md shadow-ui-float py-1 z-50",
             menuAlign === "right" ? "right-0" : "left-0",
             menuClassName
           )}
@@ -118,7 +117,7 @@ export function LanguageSwitcher({
               key={loc.code}
               onClick={() => handleSelect(loc.code as Locale)}
               className={clsx(
-                "w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between",
+                "w-full px-3 py-2 text-left text-sm hover:bg-accent/60 transition-colors flex items-center justify-between",
                 locale === loc.code ? "text-primary font-medium" : ""
               )}
             >

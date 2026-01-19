@@ -497,20 +497,20 @@ export function RightPanel() {
   return (
     <aside 
       ref={panelRef}
-      className={`w-full h-full bg-background border-l border-border flex flex-col transition-all duration-200 ${
+      className={`w-full h-full bg-background/55 backdrop-blur-md border-l border-border/60 shadow-[inset_1px_0_0_hsl(var(--border)/0.6)] flex flex-col transition-all duration-200 ${
         isDraggingFileOver ? "ring-2 ring-primary ring-inset bg-primary/5" : ""
       }`}
     >
       {/* Tabs */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border/60 bg-background/45">
         {/* AI Tab - 只在 docked 模式且主视图未处于 AI 聊天时显示 */}
         {aiPanelMode === "docked" && !isMainAIActive && (
           <button
             onClick={() => setRightPanelTab("chat")}
             onMouseDown={handleAIDragStart}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 select-none ${
+            className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 select-none hover:bg-accent/50 ${
               rightPanelTab === "chat"
-                ? "text-primary border-b-2 border-primary"
+                ? "text-primary border-b-2 border-primary/80 bg-background/60"
                 : "text-muted-foreground hover:text-foreground"
             } ${isDraggingAI ? "cursor-grabbing" : "cursor-grab"}`}
             title={t.ai.chat}
@@ -527,9 +527,9 @@ export function RightPanel() {
         )}
         <button
           onClick={() => setRightPanelTab("outline")}
-          className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 hover:bg-accent/50 ${
             rightPanelTab === "outline"
-              ? "text-primary border-b-2 border-primary"
+              ? "text-primary border-b-2 border-primary/80 bg-background/60"
               : "text-muted-foreground hover:text-foreground"
           }`}
           title={t.graph.outline}
@@ -539,9 +539,9 @@ export function RightPanel() {
         </button>
         <button
           onClick={() => setRightPanelTab("backlinks")}
-          className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 hover:bg-accent/50 ${
             rightPanelTab === "backlinks"
-              ? "text-primary border-b-2 border-primary"
+              ? "text-primary border-b-2 border-primary/80 bg-background/60"
               : "text-muted-foreground hover:text-foreground"
           }`}
           title={t.graph.backlinks}
@@ -551,9 +551,9 @@ export function RightPanel() {
         </button>
         <button
           onClick={() => setRightPanelTab("tags")}
-          className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 ${
+          className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 hover:bg-accent/50 ${
             rightPanelTab === "tags"
-              ? "text-primary border-b-2 border-primary"
+              ? "text-primary border-b-2 border-primary/80 bg-background/60"
               : "text-muted-foreground hover:text-foreground"
           }`}
           title={t.graph.tags}
@@ -565,22 +565,22 @@ export function RightPanel() {
 
       {/* Chat Interface - 只在 docked 模式且主视图未处于 AI 聊天时显示 */}
       {rightPanelTab === "chat" && aiPanelMode === "docked" && !isMainAIActive && (
-        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex overflow-hidden">
           {/* 可折叠的对话列表侧栏 */}
           {chatMode !== "codex" && <ConversationList />}
           
           {/* 右侧主内容区 */}
           <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header with Mode Toggle */}
-          <div className="p-2 border-b border-border flex items-center justify-between">
+          <div className="p-2 border-b border-border/60 bg-background/35 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {/* Mode Toggle */}
-              <div className="flex bg-muted rounded-md p-0.5">
+              <div className="flex bg-background/40 border border-border/60 rounded-ui-md p-0.5">
                 <button
                   onClick={() => setChatMode("agent")}
-                  className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 ${
                     chatMode === "agent"
-                      ? "bg-background text-primary shadow-sm"
+                      ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                   title={t.ai.agentMode}
@@ -590,9 +590,9 @@ export function RightPanel() {
                 </button>
                 <button
                   onClick={() => setChatMode("chat")}
-                  className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 ${
                     chatMode === "chat"
-                      ? "bg-background text-primary shadow-sm"
+                      ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                   title={t.ai.chatMode}
@@ -602,9 +602,9 @@ export function RightPanel() {
                 </button>
                 <button
                   onClick={() => setChatMode("codex")}
-                  className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 ${
                     chatMode === "codex"
-                      ? "bg-background text-primary shadow-sm"
+                      ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                   title="Codex"
@@ -623,14 +623,14 @@ export function RightPanel() {
               <div className="flex gap-1">
                 <button
                   onClick={deleteCurrentSession}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  className="w-7 h-7 ui-icon-btn"
                   title={t.conversationList.deleteConversation}
                 >
                   <Trash2 size={14} />
                 </button>
                 <button
                   onClick={() => setShowSettings(!showSettings)}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                  className="w-7 h-7 ui-icon-btn"
                   title={t.common.settings}
                 >
                   <Settings size={14} />
@@ -665,7 +665,7 @@ export function RightPanel() {
                       const defaultModel = providerMeta?.models[0]?.id || "";
                       setConfig({ provider, model: defaultModel });
                     }}
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="ui-input h-9 text-xs"
                   >
                     {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
                       <option key={key} value={key}>
@@ -689,7 +689,7 @@ export function RightPanel() {
                           ? "sk-ant-..." 
                           : "sk-..."
                     }
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="ui-input h-9 text-xs"
                   />
                 </div>
                 <div>
@@ -705,7 +705,7 @@ export function RightPanel() {
                         setConfig({ model: newModel });
                       }
                     }}
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="ui-input h-9 text-xs"
                   >
                     {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
                       <option key={model.id} value={model.id}>
@@ -725,7 +725,7 @@ export function RightPanel() {
                       value={config.customModelId || ""}
                       onChange={(e) => setConfig({ customModelId: e.target.value })}
                       placeholder="例如：deepseek-ai/DeepSeek-V3 或 Pro/ERNIE-4.0-Turbo-8K"
-                      className="w-full text-xs p-2 rounded border border-border bg-background"
+                      className="ui-input h-9 text-xs"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       <Lightbulb size={12} className="inline" /> {t.settingsPanel.customModelHint}
@@ -742,7 +742,7 @@ export function RightPanel() {
                     value={config.baseUrl || ""}
                     onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
                     placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl}
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="ui-input h-9 text-xs"
                   />
                 </div>
 
@@ -852,7 +852,7 @@ export function RightPanel() {
                             embeddingModel: defaultModels[provider] 
                           });
                         }}
-                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                        className="ui-input h-9 text-xs"
                       >
                         <option value="openai">OpenAI</option>
                         <option value="ollama">Ollama (Local)</option>
@@ -871,7 +871,7 @@ export function RightPanel() {
                         value={ragConfig.embeddingApiKey || ""}
                         onChange={(e) => setRAGConfig({ embeddingApiKey: e.target.value })}
                         placeholder={ragConfig.embeddingProvider === "openai" ? "sk-..." : "http://localhost:11434"}
-                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                        className="ui-input h-9 text-xs"
                       />
                     </div>
 
@@ -882,7 +882,7 @@ export function RightPanel() {
                         value={ragConfig.embeddingBaseUrl || ""}
                         onChange={(e) => setRAGConfig({ embeddingBaseUrl: e.target.value })}
                         placeholder={ragConfig.embeddingProvider === "openai" ? "https://api.openai.com/v1" : "http://localhost:11434"}
-                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                        className="ui-input h-9 text-xs"
                       />
                     </div>
 
@@ -893,7 +893,7 @@ export function RightPanel() {
                         value={ragConfig.embeddingModel}
                         onChange={(e) => setRAGConfig({ embeddingModel: e.target.value })}
                         placeholder="Qwen/Qwen3-Embedding-8B"
-                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                        className="ui-input h-9 text-xs"
                       />
                     </div>
 
@@ -907,7 +907,7 @@ export function RightPanel() {
                         value={ragConfig.embeddingDimensions || ""}
                         onChange={(e) => setRAGConfig({ embeddingDimensions: e.target.value ? parseInt(e.target.value) : undefined })}
                         placeholder="如 1024（留空使用默认）"
-                        className="w-full text-xs p-2 rounded border border-border bg-background"
+                        className="ui-input h-9 text-xs"
                       />
                     </div>
 
@@ -935,7 +935,7 @@ export function RightPanel() {
                               value={ragConfig.rerankerBaseUrl || ""}
                               onChange={(e) => setRAGConfig({ rerankerBaseUrl: e.target.value })}
                               placeholder="https://api.siliconflow.cn/v1"
-                              className="w-full text-xs p-2 rounded border border-border bg-background"
+                              className="ui-input h-9 text-xs"
                             />
                           </div>
                           
@@ -946,7 +946,7 @@ export function RightPanel() {
                               value={ragConfig.rerankerApiKey || ""}
                               onChange={(e) => setRAGConfig({ rerankerApiKey: e.target.value })}
                               placeholder="sk-..."
-                              className="w-full text-xs p-2 rounded border border-border bg-background"
+                              className="ui-input h-9 text-xs"
                             />
                           </div>
                           
@@ -957,7 +957,7 @@ export function RightPanel() {
                               value={ragConfig.rerankerModel || ""}
                               onChange={(e) => setRAGConfig({ rerankerModel: e.target.value })}
                               placeholder="BAAI/bge-reranker-v2-m3"
-                              className="w-full text-xs p-2 rounded border border-border bg-background"
+                              className="ui-input h-9 text-xs"
                             />
                           </div>
                           
@@ -969,7 +969,7 @@ export function RightPanel() {
                               onChange={(e) => setRAGConfig({ rerankerTopN: parseInt(e.target.value) || 5 })}
                               min={1}
                               max={20}
-                              className="w-full text-xs p-2 rounded border border-border bg-background"
+                              className="ui-input h-9 text-xs"
                             />
                           </div>
                         </div>
