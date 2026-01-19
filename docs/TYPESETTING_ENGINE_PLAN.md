@@ -276,7 +276,7 @@ Long-term direction:
 - [x] Import headers/footers
 
 ### M11 Docx export
-- [ ] Export paragraphs/headings/font styles
+- [x] Export paragraphs/headings/font styles
 - [ ] Export lists, simple tables, images
 - [ ] Export headers/footers and page numbers
 
