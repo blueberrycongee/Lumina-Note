@@ -249,4 +249,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Zoom controls clamp between 50% and 200% in 10% steps; scale preview boxes by zoom while keeping base mm->px conversion at 96dpi.
   - Files changed: src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run WSL npm tests/lint/CI. Next: wire preview pane to real layout/PDF pipeline.
+- 2026-01-19
+  - Task completed: M13 -> Add a minimal "apply intent" entrypoint for AI-driven layout changes
+  - Key decisions: Added applyAiPromptToStyles wrapper to parse prompts into the AI schema and merge into base styles; returns both instruction and merged styles for downstream wiring.
+  - Files changed: src/typesetting/aiIntent.ts; src/typesetting/aiIntent.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro list empty (`wsl -l -q`); unable to run WSL npm test/lint/CI. Next: wire this entrypoint into the UI/agent pipeline.
 

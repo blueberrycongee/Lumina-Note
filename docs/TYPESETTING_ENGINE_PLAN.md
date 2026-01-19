@@ -607,7 +607,7 @@ Notes:
 - [ ] Integrate engine preview into the app UI (paged view + zoom controls).
 - [ ] Wire document model edits to layout pipeline (incremental reflow).
 - [ ] Connect export/print UI to PDF output (single source of truth).
-- [ ] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
+- [x] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
 - [ ] Open `.docx` files with the engine (not WebView), and provide a Word-like editing UI (typing, selection, and formatting changes).
 - [ ] Doc editing is initially exposed only in Lumina Note Codex mode; after integration, create a dedicated Codex skill that teaches the agent how to drive this document model.
 
