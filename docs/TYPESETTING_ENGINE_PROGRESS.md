@@ -136,3 +136,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src-tauri/src/typesetting/pdf_export.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND);无法运行 cargo fmt/clippy/test。下一步：真实 glyph 子集化（Widths/Encoding/ToUnicode）与 PDF/预览对齐验证。
 
+- 2026-01-19
+  - Task completed: M7 -> PDF 与预览对齐验证
+  - Key decisions: Added pdf_page_size_points helper; added alignment test converting PDF points to preview pixels at 96dpi to confirm MediaBox size matches preview metrics.
+  - Files changed: src-tauri/src/typesetting/pdf_export.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL.
