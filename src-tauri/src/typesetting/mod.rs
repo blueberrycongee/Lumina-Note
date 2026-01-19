@@ -7,6 +7,7 @@ pub mod pdf_export;
 pub mod preview_pipeline;
 pub mod preview_viewport;
 pub mod shaping;
+pub mod text_layout;
 
 pub use font_manager::{
     FontData, FontError, FontManager, FontMapping, FontMetrics, ScriptKind,
@@ -22,3 +23,4 @@ pub use preview_pipeline::{
 };
 pub use preview_viewport::{PreviewPageSize, PreviewViewport};
 pub use shaping::{shape_mixed_text, shape_text, Glyph, GlyphRun, ShapingError};
+pub use text_layout::{layout_text_paragraph, TextLayoutOptions};

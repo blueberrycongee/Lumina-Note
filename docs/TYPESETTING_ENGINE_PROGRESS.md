@@ -265,3 +265,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added `typesetting_export_pdf_base64` using the existing empty-PDF generator and shared the default A4/margins style between preview + export; preview pane now saves the base64 PDF via Tauri FS APIs.
   - Files changed: src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; src/__tests__/setup.ts
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND), so npm/cargo tests/lint not run in WSL. Next: render real layout content into PDF and embed fonts before replacing the legacy html2canvas export.
+- 2026-01-19
+  - Task completed: M13 -> Wire document model edits to layout pipeline (incremental reflow) [add text-to-layout adapter]
+  - Key decisions: Added a text_layout helper that shapes mixed text, derives whitespace break opportunities from glyph clusters, and feeds line breaking + paragraph layout.
+  - Files changed: src-tauri/src/typesetting/text_layout.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro list empty (`wsl -l -q`), so WSL tests/lint/CI not run. Next: wire this helper into a Tauri command or document model adapter.
