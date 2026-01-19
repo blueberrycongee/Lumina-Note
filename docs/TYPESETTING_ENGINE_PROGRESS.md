@@ -255,3 +255,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src/typesetting/aiIntent.ts; src/typesetting/aiIntent.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro list empty (`wsl -l -q`); unable to run WSL npm test/lint/CI. Next: wire this entrypoint into the UI/agent pipeline.
 
+- 2026-01-19
+  - Task completed: M13 -> Unblock typesetting preview Rust build (rustybuzz API update in shaping)
+  - Key decisions: Use rustybuzz::script::HAN/LATIN; handle Language::from_str Result with Ok guard.
+  - Files changed: src-tauri/src/typesetting/shaping.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: `C:\Users\10758\.cargo\bin\cargo.exe test -p lumina-note typesetting_preview_page_mm` failed due to unresolved `lumina_lib` in tests/mcp_integration.rs and missing `crate::typesetting` import in src-tauri/src/commands/mod.rs; address those to restore Rust tests.

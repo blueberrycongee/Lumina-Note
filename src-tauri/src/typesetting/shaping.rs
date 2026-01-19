@@ -1,5 +1,5 @@
 use crate::typesetting::{FontData, ScriptKind};
-use rustybuzz::{Direction, Face, Language, Script, UnicodeBuffer};
+use rustybuzz::{script, Direction, Face, Language, UnicodeBuffer};
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -132,15 +132,15 @@ pub fn shape_text(
     buffer.push_str(text);
     buffer.set_direction(Direction::LeftToRight);
     buffer.set_script(match script {
-        ScriptKind::Zh => Script::Han,
-        ScriptKind::En => Script::Latin,
+        ScriptKind::Zh => script::HAN,
+        ScriptKind::En => script::LATIN,
     });
 
     let language_tag = match script {
         ScriptKind::Zh => "zh",
         ScriptKind::En => "en",
     };
-    if let Some(language) = Language::from_str(language_tag) {
+    if let Ok(language) = Language::from_str(language_tag) {
         buffer.set_language(language);
     }
 
