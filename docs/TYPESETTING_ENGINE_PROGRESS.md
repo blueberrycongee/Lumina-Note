@@ -30,3 +30,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Drafted minimal JSON-friendly fields with explicit units for lengths; added ids for style refs.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Define minimal ops; draft JSON schema; tests not run (docs-only).
+
+- 2026-01-20
+  - Task completed: M1 -> Design minimal ops (insert/delete/applyStyle)
+  - Key decisions: Added Position/Range-based ops; split applyStyle into inline marks vs paragraph style refs; use UTF-16 offsets for editor compatibility.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Draft the JSON schema for serialization; tests not run (docs-only).
