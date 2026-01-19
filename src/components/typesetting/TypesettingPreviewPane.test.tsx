@@ -1,6 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 import { TypesettingPreviewPane } from "@/components/typesetting/TypesettingPreviewPane";
 
 describe("TypesettingPreviewPane", () => {
@@ -27,5 +29,31 @@ describe("TypesettingPreviewPane", () => {
 
     fireEvent.click(zoomOut);
     expect(page).toHaveStyle({ width: "794px", height: "1123px" });
+  });
+
+  it("exports a placeholder PDF via the typesetting pipeline", async () => {
+    const invokeMock = vi.mocked(invoke);
+    const saveMock = vi.mocked(save);
+    const writeFileMock = vi.mocked(writeFile);
+
+    saveMock.mockResolvedValue("C:\\temp\\typesetting-preview.pdf");
+
+    render(<TypesettingPreviewPane />);
+
+    await screen.findByTestId("typesetting-preview-page");
+    fireEvent.click(screen.getByRole("button", { name: /export pdf/i }));
+
+    await waitFor(() => {
+      expect(writeFileMock).toHaveBeenCalled();
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("typesetting_export_pdf_base64");
+
+    const [path, data] = writeFileMock.mock.calls[0] ?? [];
+    expect(path).toBe("C:\\temp\\typesetting-preview.pdf");
+
+    const bytes = data as Uint8Array;
+    const text = Buffer.from(bytes).toString("utf8");
+    expect(text.startsWith("%PDF-1.7")).toBe(true);
   });
 });

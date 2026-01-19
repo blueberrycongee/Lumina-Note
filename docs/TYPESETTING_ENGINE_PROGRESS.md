@@ -260,3 +260,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Use rustybuzz::script::HAN/LATIN; handle Language::from_str Result with Ok guard.
   - Files changed: src-tauri/src/typesetting/shaping.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: `C:\Users\10758\.cargo\bin\cargo.exe test -p lumina-note typesetting_preview_page_mm` failed due to unresolved `lumina_lib` in tests/mcp_integration.rs and missing `crate::typesetting` import in src-tauri/src/commands/mod.rs; address those to restore Rust tests.
+- 2026-01-19
+  - Task completed: M13 -> Connect export/print UI to PDF output (placeholder typesetting export button + Tauri command)
+  - Key decisions: Added `typesetting_export_pdf_base64` using the existing empty-PDF generator and shared the default A4/margins style between preview + export; preview pane now saves the base64 PDF via Tauri FS APIs.
+  - Files changed: src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; src/__tests__/setup.ts
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND), so npm/cargo tests/lint not run in WSL. Next: render real layout content into PDF and embed fonts before replacing the legacy html2canvas export.

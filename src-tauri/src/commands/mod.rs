@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use crate::fs::{self, FileEntry, watcher};
-use crate::typesetting::{PageBox, PageMargins, PageSize, PageStyle};
+use crate::typesetting::{write_empty_pdf, PageBox, PageMargins, PageSize, PageStyle};
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, WebviewBuilder, LogicalPosition, LogicalSize, Position, Size};
 use tauri::WebviewUrl;
 use tauri::webview::NewWindowResponse;
@@ -41,10 +41,8 @@ fn page_box_to_mm(box_mm: PageBox) -> PreviewBoxMm {
     }
 }
 
-/// Typesetting preview defaults (mm). Used by the preview pane before document wiring.
-#[tauri::command]
-pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, AppError> {
-    let style = PageStyle {
+fn default_typesetting_page_style() -> PageStyle {
+    PageStyle {
         size: PageSize::A4,
         margins: PageMargins {
             top_mm: 25.0,
@@ -54,7 +52,13 @@ pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, A
         },
         header_height_mm: 12.0,
         footer_height_mm: 12.0,
-    };
+    }
+}
+
+/// Typesetting preview defaults (mm). Used by the preview pane before document wiring.
+#[tauri::command]
+pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, AppError> {
+    let style = default_typesetting_page_style();
 
     Ok(TypesettingPreviewPageMm {
         page: page_box_to_mm(style.page_box()),
@@ -62,6 +66,18 @@ pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, A
         header: page_box_to_mm(style.header_box()),
         footer: page_box_to_mm(style.footer_box()),
     })
+}
+
+/// Typesetting PDF export (placeholder). Returns base64-encoded PDF bytes.
+#[tauri::command]
+pub async fn typesetting_export_pdf_base64() -> Result<String, AppError> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let pdf = write_empty_pdf(default_typesetting_page_style()).map_err(|err| {
+        AppError::InvalidPath(format!("Typesetting PDF export failed: {err}"))
+    })?;
+
+    Ok(STANDARD.encode(pdf))
 }
 
 /// Read file content
@@ -943,5 +959,18 @@ mod tests {
         approx_eq(preview.body.y_mm, 37.0);
         approx_eq(preview.body.width_mm, 160.0);
         approx_eq(preview.body.height_mm, 223.0);
+    }
+
+    #[tokio::test]
+    async fn typesetting_export_pdf_base64_returns_pdf_header() {
+        use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+        let payload = typesetting_export_pdf_base64()
+            .await
+            .expect("export should succeed");
+        let decoded = STANDARD.decode(payload).expect("decode base64");
+        let text = String::from_utf8_lossy(&decoded);
+
+        assert!(text.starts_with("%PDF-1.7\n"));
     }
 }

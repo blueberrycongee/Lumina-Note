@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
 
 type PreviewBoxMm = {
   x_mm: number;
@@ -47,10 +49,24 @@ const scaleBoxPx = (
   height: scalePx(box.height, zoom),
 });
 
+const decodeBase64ToBytes = (data: string) => {
+  if (typeof atob !== "function") {
+    throw new Error("Base64 decoding is unavailable in this environment.");
+  }
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
+
 export function TypesettingPreviewPane() {
   const [pageMm, setPageMm] = useState<TypesettingPreviewPageMm | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -92,36 +108,71 @@ export function TypesettingPreviewPane() {
   const zoomLabel = `${Math.round(zoom * 100)}%`;
   const zoomOutDisabled = zoom <= MIN_ZOOM;
   const zoomInDisabled = zoom >= MAX_ZOOM;
+  const exportDisabled = exporting;
+
+  const handleExport = async () => {
+    setExportError(null);
+    setExporting(true);
+    try {
+      const filePath = await save({
+        defaultPath: "typesetting-preview.pdf",
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+      if (!filePath) return;
+
+      const payload = await invoke<string>("typesetting_export_pdf_base64");
+      const bytes = decodeBase64ToBytes(payload);
+      await writeFile(filePath, bytes);
+    } catch (err) {
+      console.error("Typesetting PDF export failed:", err);
+      setExportError("Export failed.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="flex-1 overflow-auto bg-background">
       <div className="sticky top-0 z-10 flex items-center justify-center bg-background/80 px-6 py-3 backdrop-blur">
-        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-sm disabled:opacity-50"
+              aria-label="Zoom out"
+              onClick={() =>
+                setZoom((current) => clampZoom(roundZoom(current - ZOOM_STEP)))
+              }
+              disabled={zoomOutDisabled}
+            >
+              -
+            </button>
+            <span data-testid="typesetting-zoom-label" className="min-w-[3rem] text-center">
+              {zoomLabel}
+            </span>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-sm disabled:opacity-50"
+              aria-label="Zoom in"
+              onClick={() =>
+                setZoom((current) => clampZoom(roundZoom(current + ZOOM_STEP)))
+              }
+              disabled={zoomInDisabled}
+            >
+              +
+            </button>
+          </div>
           <button
             type="button"
-            className="rounded border border-border px-2 py-0.5 text-sm disabled:opacity-50"
-            aria-label="Zoom out"
-            onClick={() =>
-              setZoom((current) => clampZoom(roundZoom(current - ZOOM_STEP)))
-            }
-            disabled={zoomOutDisabled}
+            className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+            onClick={handleExport}
+            disabled={exportDisabled}
           >
-            -
+            {exporting ? "Exporting..." : "Export PDF"}
           </button>
-          <span data-testid="typesetting-zoom-label" className="min-w-[3rem] text-center">
-            {zoomLabel}
-          </span>
-          <button
-            type="button"
-            className="rounded border border-border px-2 py-0.5 text-sm disabled:opacity-50"
-            aria-label="Zoom in"
-            onClick={() =>
-              setZoom((current) => clampZoom(roundZoom(current + ZOOM_STEP)))
-            }
-            disabled={zoomInDisabled}
-          >
-            +
-          </button>
+          {exportError ? (
+            <span className="text-xs text-destructive">{exportError}</span>
+          ) : null}
         </div>
       </div>
       <div className="flex min-h-full items-center justify-center px-6 py-10">
