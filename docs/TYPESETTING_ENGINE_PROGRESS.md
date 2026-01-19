@@ -1,4 +1,4 @@
-# Typesetting Engine Progress Log
+﻿# Typesetting Engine Progress Log
 
 Plan: docs/TYPESETTING_ENGINE_PLAN.md
 
@@ -62,3 +62,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the M2 font loading task as complete in the plan to match the implemented FontManager::load_from_path.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M3 -> 集成 shaping，得到 glyph runs
+  - Key decisions: Added a rustybuzz-based shaping API with ScriptKind mapping (Han/Latin) and raw glyph positions in font units.
+  - Files changed: src-tauri/Cargo.toml; src-tauri/src/typesetting/mod.rs; src-tauri/src/typesetting/shaping.rs
+  - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo test/clippy/fmt. Run WSL tests/lint once available, then continue M3 line breaking.
