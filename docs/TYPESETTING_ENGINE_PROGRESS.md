@@ -72,3 +72,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Implemented greedy width-based line breaking with optional soft-break hints; edge cases covered: empty input, oversized glyphs, no soft break before overflow, exact-fit soft breaks.
   - Files changed: src-tauri/src/typesetting/line_break.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo fmt/clippy/test in WSL.
+- 2026-01-20
+  - Task completed: M3 -> Implement mixed-script merge (CJK + Latin)
+  - Key decisions: Split text into script runs using CJK ranges; merge glyph runs by offsetting clusters with UTF-8 byte indices; reuse the same font for both scripts for now.
+  - Files changed: src-tauri/src/typesetting/shaping.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo fmt/clippy/test in WSL.
