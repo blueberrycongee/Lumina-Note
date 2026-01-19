@@ -217,3 +217,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run wsl -d Ubuntu -- npm run test:run -- docxExport.test.ts. Next: export headers/footers and page numbers.
 
+- 2026-01-19
+  - Task completed: M11 -> Export headers/footers and page numbers
+  - Key decisions: Added header/footer XML builders and a PAGE field helper; ensure empty headers/footers emit a fallback paragraph.
+  - Files changed: src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run WSL npm tests/lint/CI.
+

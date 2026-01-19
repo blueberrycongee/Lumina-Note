@@ -1,7 +1,11 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect } from "vitest";
 import type { DocxBlock } from "./docxImport";
-import { buildDocxDocumentXml } from "./docxExport";
+import {
+  buildDocxDocumentXml,
+  buildDocxFooterXml,
+  buildDocxHeaderXml,
+} from "./docxExport";
 
 describe("buildDocxDocumentXml", () => {
   it("exports headings and paragraphs with run styles", () => {
@@ -112,5 +116,34 @@ describe("buildDocxDocumentXml", () => {
 
     const blip = doc.getElementsByTagName("a:blip")[0];
     expect(blip?.getAttribute("r:embed")).toBe("rId42");
+  });
+
+  it("exports header/footer XML and page number fields", () => {
+    const blocks: DocxBlock[] = [
+      {
+        type: "paragraph",
+        runs: [{ text: "Header Text" }],
+      },
+    ];
+
+    const headerXml = buildDocxHeaderXml(blocks);
+    const headerDoc = new DOMParser().parseFromString(
+      headerXml,
+      "application/xml",
+    );
+    expect(headerDoc.documentElement.tagName).toBe("w:hdr");
+    const headerText = headerDoc.getElementsByTagName("w:t")[0]?.textContent;
+    expect(headerText).toBe("Header Text");
+
+    const footerXml = buildDocxFooterXml([], { includePageNumber: true });
+    const footerDoc = new DOMParser().parseFromString(
+      footerXml,
+      "application/xml",
+    );
+    expect(footerDoc.documentElement.tagName).toBe("w:ftr");
+    const pageField = footerDoc.getElementsByTagName("w:fldSimple")[0];
+    const instr =
+      pageField?.getAttribute("w:instr") ?? pageField?.getAttribute("instr");
+    expect(instr).toBe("PAGE");
   });
 });
