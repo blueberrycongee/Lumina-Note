@@ -38,9 +38,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Blockers/next steps: Draft the JSON schema for serialization; tests not run (docs-only).
 - 2026-01-20
   - Task completed: M1 -> 确定序列化格式（JSON schema 草案）
-  - Key decisions: Added JSON Schema with 	ype discriminators for block/inline unions; included optional styles collections for font/paragraph/page.
+  - Key decisions: Added JSON Schema with type discriminators for block/inline unions; included optional styles collections for font/paragraph/page.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
-  - Blockers/next steps: Align in-memory model vs serialization 	ype tags; tests not run (docs-only).
+  - Blockers/next steps: Align in-memory model vs serialization type tags; tests not run (docs-only).
 
 - 2026-01-20
   - Task completed: M2 -> Font discovery (list system fonts + fallback rules)
@@ -48,7 +48,7 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Implement font loading and default zh/en mapping; tests not run (docs-only).
 - 2026-01-20
-  - Task completed: M2 -> 瀛椾綋鍔犺浇锛氫粠璺緞鍔犺浇骞剁紦瀛樺害閲?
+  - Task completed: M2 -> 字体加载：从路径加载并缓存度量
   - Key decisions: Parse units_per_em/ascender/descender/line_gap via ttf-parser; cache by path with shared font bytes; use KaTeX font fixture for tests.
   - Files changed: src-tauri/src/typesetting/font_manager.rs; src-tauri/src/typesetting/mod.rs; src-tauri/src/lib.rs; src-tauri/Cargo.toml; src-tauri/tests/fixtures/katex-main-regular.ttf
   - Blockers/next steps: WSL distro not found; run WSL test/lint/CI once available.
@@ -77,3 +77,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Split text into script runs using CJK ranges; merge glyph runs by offsetting clusters with UTF-8 byte indices; reuse the same font for both scripts for now.
   - Files changed: src-tauri/src/typesetting/shaping.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo fmt/clippy/test in WSL.
+
+- 2026-01-20
+  - Task completed: M4 -> 首行缩进与段前段后
+  - Key decisions: Added first-line indent and paragraph spacing parameters; y_offset includes space_before; space_after recorded on last line; justification uses available width after indent.
+  - Files changed: src-tauri/src/typesetting/paragraph_layout.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found; run cargo fmt/clippy/test in WSL once available. Continue M4 align/line-height task if needed.
