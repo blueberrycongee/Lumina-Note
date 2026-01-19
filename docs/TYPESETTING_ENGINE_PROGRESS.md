@@ -239,3 +239,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a typesetting-preview tab type with a command palette entry; scaffolded a placeholder pane for later engine output wiring.
   - Files changed: src/stores/useFileStore.ts; src/components/search/CommandPalette.tsx; src/components/layout/TabBar.tsx; src/components/typesetting/TypesettingPreviewPane.tsx; src/App.tsx; src/__tests__/useFileStore.typesettingPreview.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run npm run test:run in WSL. Next: wire the preview pane to the Rust layout/PDF pipeline and add zoom/page controls.
+- 2026-01-19
+  - Task completed: M13 -> Preview pane now consumes Rust typesetting page metrics (A4 + margins)
+  - Key decisions: Added a Tauri command returning page/body/header/footer boxes in mm (A4, 25mm margins, 12mm header/footer); UI converts mm -> px at 96dpi and renders the page box overlays.
+  - Files changed: src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; src/__tests__/setup.ts
+  - Blockers/next steps: `C:\Users\10758\.cargo\bin\cargo.exe test typesetting_preview_page_mm` failed (rustybuzz Script::Han/Latin + Language::from_str signature errors in src-tauri/src/typesetting/shaping.rs). Frontend test ran: `npm run test:run -- TypesettingPreviewPane`.

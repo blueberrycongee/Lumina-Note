@@ -1,5 +1,6 @@
 use crate::error::AppError;
 use crate::fs::{self, FileEntry, watcher};
+use crate::typesetting::{PageBox, PageMargins, PageSize, PageStyle};
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, WebviewBuilder, LogicalPosition, LogicalSize, Position, Size};
 use tauri::WebviewUrl;
 use tauri::webview::NewWindowResponse;
@@ -13,6 +14,54 @@ fn browser_debug_log(app: &AppHandle, message: String) {
         let content = format!("[Browser-Rust] {}\n", message);
         let _ = crate::llm::append_debug_log(app_clone, content).await;
     });
+}
+
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+pub struct PreviewBoxMm {
+    pub x_mm: f32,
+    pub y_mm: f32,
+    pub width_mm: f32,
+    pub height_mm: f32,
+}
+
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+pub struct TypesettingPreviewPageMm {
+    pub page: PreviewBoxMm,
+    pub body: PreviewBoxMm,
+    pub header: PreviewBoxMm,
+    pub footer: PreviewBoxMm,
+}
+
+fn page_box_to_mm(box_mm: PageBox) -> PreviewBoxMm {
+    PreviewBoxMm {
+        x_mm: box_mm.x_mm,
+        y_mm: box_mm.y_mm,
+        width_mm: box_mm.width_mm,
+        height_mm: box_mm.height_mm,
+    }
+}
+
+/// Typesetting preview defaults (mm). Used by the preview pane before document wiring.
+#[tauri::command]
+pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, AppError> {
+    let style = PageStyle {
+        size: PageSize::A4,
+        margins: PageMargins {
+            top_mm: 25.0,
+            right_mm: 25.0,
+            bottom_mm: 25.0,
+            left_mm: 25.0,
+        },
+        header_height_mm: 12.0,
+        footer_height_mm: 12.0,
+    };
+
+    Ok(TypesettingPreviewPageMm {
+        page: page_box_to_mm(style.page_box()),
+        body: page_box_to_mm(style.body_box()),
+        header: page_box_to_mm(style.header_box()),
+        footer: page_box_to_mm(style.footer_box()),
+    })
 }
 
 /// Read file content
@@ -872,4 +921,27 @@ pub async fn browser_webview_unfreeze(app: AppHandle, tab_id: String) -> Result<
 pub async fn browser_webview_exists(app: AppHandle, tab_id: String) -> Result<bool, AppError> {
     let webview_id = format!("browser-{}", tab_id);
     Ok(app.get_webview(&webview_id).is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn approx_eq(value: f32, expected: f32) {
+        assert!((value - expected).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn typesetting_preview_page_mm_defaults_to_a4_layout() {
+        let preview = typesetting_preview_page_mm()
+            .await
+            .expect("preview should be available");
+
+        approx_eq(preview.page.width_mm, 210.0);
+        approx_eq(preview.page.height_mm, 297.0);
+        approx_eq(preview.body.x_mm, 25.0);
+        approx_eq(preview.body.y_mm, 37.0);
+        approx_eq(preview.body.width_mm, 160.0);
+        approx_eq(preview.body.height_mm, 223.0);
+    }
 }
