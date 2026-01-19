@@ -191,3 +191,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete to reflect the existing zod schema implementation.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M10 -> Parse paragraphs/headings/font styles
+  - Key decisions: Implemented a minimal WordprocessingML parser with DOMParser; detect HeadingN styles; convert w:sz half-points to pt; omit disabled run styles; added empty-body edge case test.
+  - Files changed: src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run `npm run test:run` in WSL. Next: parse lists/tables/images.

@@ -271,7 +271,7 @@ Long-term direction:
 - [x] Apply schema -> document styles
 
 ### M10 Docx import
-- [ ] Parse paragraphs/headings/font styles
+- [x] Parse paragraphs/headings/font styles
 - [ ] Parse lists, simple tables, images
 - [ ] Import headers/footers
 
