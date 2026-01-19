@@ -56,6 +56,7 @@ fn main() {
             commands::setup_danmaku_autofill,
             commands::start_file_watcher,
             commands::typesetting_preview_page_mm,
+            commands::typesetting_fixture_font_path,
             commands::typesetting_export_pdf_base64,
             commands::typesetting_layout_text,
             // Browser WebView commands

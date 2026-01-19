@@ -65,6 +65,13 @@ vi.mock('@tauri-apps/api/core', () => ({
         footer: { x_mm: 25, y_mm: 260, width_mm: 160, height_mm: 12 },
       },
       'typesetting_export_pdf_base64': 'JVBERi0xLjcK',
+      'typesetting_fixture_font_path': 'C:\\mock\\fonts\\katex-main-regular.ttf',
+      'typesetting_layout_text': {
+        lines: [
+          { start: 0, end: 5, width: 200, x_offset: 0, y_offset: 0 },
+          { start: 6, end: 12, width: 180, x_offset: 0, y_offset: 20 },
+        ],
+      },
     };
 
     const response = mockResponses[cmd];

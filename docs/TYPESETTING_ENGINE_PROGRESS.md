@@ -275,3 +275,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Exposed a placeholder Tauri command that runs paragraph layout for plain text with left alignment and returns line metrics; input includes a font file path to keep loading explicit.
   - Files changed: src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: wire UI to call this command and pass real font paths from the font manager.
+- 2026-01-20
+  - Task completed: M13 -> Wire document model edits to layout pipeline (incremental reflow) [preview pane calls layout_text]
+  - Key decisions: Added a dev-only fixture font lookup command to power sample layout calls; preview pane now shows a layout summary or an unavailable state when no fixture font exists.
+  - Files changed: src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; src/__tests__/setup.ts; src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro list empty (`wsl -l -q` returned no distros); unable to run WSL npm/cargo tests or lint. Next: map real font paths from the font manager and render layout output in the preview body.
