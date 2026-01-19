@@ -233,3 +233,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete to reflect existing fixture files in src-tauri/tests/fixtures/typesetting.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+
+- 2026-01-19
+  - Task completed: M13 -> Integrate engine preview into app UI (paged view + zoom controls) [scaffold typesetting preview tab]
+  - Key decisions: Added a typesetting-preview tab type with a command palette entry; scaffolded a placeholder pane for later engine output wiring.
+  - Files changed: src/stores/useFileStore.ts; src/components/search/CommandPalette.tsx; src/components/layout/TabBar.tsx; src/components/typesetting/TypesettingPreviewPane.tsx; src/App.tsx; src/__tests__/useFileStore.typesettingPreview.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run npm run test:run in WSL. Next: wire the preview pane to the Rust layout/PDF pipeline and add zoom/page controls.

@@ -18,6 +18,7 @@ export type TabType =
   | "file"
   | "graph"
   | "isolated-graph"
+  | "typesetting-preview"
   | "video-note"
   | "database"
   | "pdf"
@@ -107,6 +108,7 @@ interface FileState {
 
   // Open special tabs
   openGraphTab: () => void;
+  openTypesettingPreviewTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openVideoNoteTab: (url: string, title?: string) => void;
   openVideoNoteFromContent: (content: string, title?: string) => void;
@@ -657,6 +659,51 @@ export const useFileStore = create<FileState>()(
       },
 
       // 打开主视图区 AI 聊天标签页
+      // Typesetting preview tab (scaffold)
+      openTypesettingPreviewTab: () => {
+        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+
+        // Check if already open
+        const existingIndex = tabs.findIndex(tab => tab.type === "typesetting-preview");
+        if (existingIndex !== -1) {
+          get().switchTab(existingIndex);
+          return;
+        }
+
+        // Preserve current tab state
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        const previewTab: Tab = {
+          id: "__typesetting_preview__",
+          type: "typesetting-preview",
+          path: "",
+          name: "Typesetting Preview",
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        updatedTabs.push(previewTab);
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: null,
+          currentContent: "",
+          isDirty: false,
+        });
+      },
+
       openAIMainTab: () => {
         const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
 
