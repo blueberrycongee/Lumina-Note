@@ -1,0 +1,82 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "inlines": [
+        { "type": "text", "text": "双语排版示例 / Bilingual Fixture" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "中文段落用于验证 CJK 排版与换行规则。" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "English text follows to validate Latin spacing and punctuation handling." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "混合文本 Mixed text includes 中文 and English in one line." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "强调样式", "marks": ["bold"] },
+        { "type": "text", "text": " with bold emphasis in a bilingual line." }
+      ]
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "id": "zh",
+        "font_family": "SimSun",
+        "size_pt": 12,
+        "weight": 400,
+        "italic": false,
+        "underline": false,
+        "color": "#000000"
+      },
+      {
+        "id": "en",
+        "font_family": "Times New Roman",
+        "size_pt": 12,
+        "weight": 400,
+        "italic": false,
+        "underline": false,
+        "color": "#000000"
+      }
+    ],
+    "paragraphs": [
+      {
+        "id": "body",
+        "align": "justify",
+        "line_height": 1.6,
+        "indent_first_line": "2em",
+        "space_before": "0pt",
+        "space_after": "6pt",
+        "keep_with_next": false,
+        "widows": 2,
+        "orphans": 2
+      }
+    ],
+    "pages": [
+      {
+        "id": "default",
+        "size": "A4",
+        "margin_mm": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+        "header_height_mm": 12,
+        "footer_height_mm": 12,
+        "column_count": 1,
+        "column_gap_mm": 0
+      }
+    ]
+  }
+}

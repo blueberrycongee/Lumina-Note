@@ -223,3 +223,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run WSL npm tests/lint/CI.
 
+- 2026-01-19
+  - Task completed: M12 -> Add golden fixtures (short/long/bilingual docs) [initial fixture set]
+  - Key decisions: Store fixtures in src-tauri/tests/fixtures/typesetting using the M1 JSON schema draft; include a bilingual sample with CJK text.
+  - Files changed: src-tauri/tests/fixtures/typesetting/short.json; src-tauri/tests/fixtures/typesetting/long.json; src-tauri/tests/fixtures/typesetting/bilingual.json; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Wire fixtures into golden/layout diff tests and update the plan checkbox after validation. Tests not run (fixtures-only).
