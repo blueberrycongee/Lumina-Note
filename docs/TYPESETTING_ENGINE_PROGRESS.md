@@ -141,3 +141,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added pdf_page_size_points helper; added alignment test converting PDF points to preview pixels at 96dpi to confirm MediaBox size matches preview metrics.
   - Files changed: src-tauri/src/typesetting/pdf_export.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL.
+- 2026-01-19
+  - Task completed: M7 -> PDF 文档生成 [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox as complete to reflect the existing minimal PDF document generation scaffold.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
