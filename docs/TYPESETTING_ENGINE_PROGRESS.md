@@ -113,3 +113,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added PreviewPage/PreviewLine structs and build_preview_pages; line heights include space_before on first line and space_after on last line for pagination.
   - Files changed: src-tauri/src/typesetting/preview_pipeline.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: connect preview pages to page boxes and add basic zoom/pagination browsing.
+
+- 2026-01-19
+  - Task completed: M6 -> 基础缩放与分页浏览
+  - Key decisions: Added PreviewViewport helpers for zoomed page sizing, page spans, and visible page ranges; clamp zoom to >= 0.1 and gaps to >= 0 to keep math stable.
+  - Files changed: src-tauri/src/typesetting/preview_viewport.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (wsl -l -q empty); unable to run cargo fmt/clippy/test in WSL.
