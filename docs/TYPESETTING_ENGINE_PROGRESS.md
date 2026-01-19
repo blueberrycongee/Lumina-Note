@@ -119,3 +119,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added PreviewViewport helpers for zoomed page sizing, page spans, and visible page ranges; clamp zoom to >= 0.1 and gaps to >= 0 to keep math stable.
   - Files changed: src-tauri/src/typesetting/preview_viewport.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (wsl -l -q empty); unable to run cargo fmt/clippy/test in WSL.
+
+- 2026-01-19
+  - Task completed: M6 -> 渲染 pipeline：布局树 -> 预览页面
+  - Key decisions: Added preview metrics converting PageStyle mm to px with a default 96dpi fallback; new helper builds preview pages using body box height for pagination.
+  - Files changed: src-tauri/src/typesetting/preview_pipeline.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run WSL cargo fmt/clippy/test/ci.
