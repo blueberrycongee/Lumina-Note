@@ -201,3 +201,18 @@ Notes:
 Notes:
 - Length fields use explicit units like "pt", "mm", or "em".
 - ParagraphStyleRef/PageStyleRef point to these ids.
+
+## M1 Minimal Ops Draft (insert/delete/applyStyle)
+- Position: { block: number, inline: number, offset: number }
+- Range: { anchor: Position, focus: Position }
+
+- Op: InsertText | DeleteRange | ApplyInlineMarks | ApplyParagraphStyleRef
+- InsertText: { pos: Position, text: string }
+- DeleteRange: { range: Range }
+- ApplyInlineMarks: { range: Range, add: TextMark[], remove: TextMark[] }
+- ApplyParagraphStyleRef: { block: number, style_ref: string }
+
+Notes:
+- Positions address Document.blocks[block] and Paragraph/Heading inlines[inline]; offset is UTF-16 code unit index.
+- Range order is normalized before applying ops; empty range is a no-op for delete.
+- applyStyle is split for inline marks vs paragraph style refs; page style changes are out of scope for M1.
