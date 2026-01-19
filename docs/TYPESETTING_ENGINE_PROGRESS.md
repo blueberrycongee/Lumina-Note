@@ -166,3 +166,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete to reflect the existing PDF/preview alignment verification test.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M9 -> Parse natural language -> schema (minimal rules) [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox as complete to reflect the existing aiPromptParser implementation.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).

@@ -233,7 +233,7 @@ engine/
 
 ### M9 AI layout
 - [ ] Define AI schema validation (zod)
-- [ ] Parse natural language -> schema (minimal rules)
+- [x] Parse natural language -> schema (minimal rules)
 - [x] Apply schema -> document styles
 
 ### M10 Docx import
