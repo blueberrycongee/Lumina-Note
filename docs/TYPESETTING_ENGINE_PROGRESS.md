@@ -103,3 +103,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added header/footer content boxes with top-aligned header and bottom-aligned footer; clamp content heights to header/footer boxes and treat negative heights as zero.
   - Files changed: src-tauri/src/typesetting/page_model.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run cargo fmt/clippy/test in WSL. Next: implement basic widow/orphan control.
+- 2026-01-19
+  - Task completed: M5 -> 基础孤行/寡行处理（最小实现）
+  - Key decisions: Added widow/orphan-aware pagination for line-based layouts; when a break would create a widow/orphan, move the break to the paragraph start if both pages still fit; use paragraph-end markers to detect splits.
+  - Files changed: src-tauri/src/typesetting/pagination.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (Wsl/Service/WSL_E_DISTRO_NOT_FOUND); unable to run `cargo test` in WSL. Next: wire widow/orphan-aware pagination into the layout pipeline and run WSL tests/lint once a distro is available.
