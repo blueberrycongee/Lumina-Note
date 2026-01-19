@@ -41,3 +41,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added JSON Schema with 	ype discriminators for block/inline unions; included optional styles collections for font/paragraph/page.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Align in-memory model vs serialization 	ype tags; tests not run (docs-only).
+
+- 2026-01-20
+  - Task completed: M2 -> Font discovery (list system fonts + fallback rules)
+  - Key decisions: Enumerate fonts via OS APIs; resolve missing glyphs per-glyph; fallback order user -> doc -> system -> open-source.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Implement font loading and default zh/en mapping; tests not run (docs-only).
