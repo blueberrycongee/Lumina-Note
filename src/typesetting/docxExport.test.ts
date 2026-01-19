@@ -70,4 +70,47 @@ describe("buildDocxDocumentXml", () => {
     expect(xml).toContain("<w:br");
     expect(xml).toContain("<w:tab");
   });
+
+  it("exports lists, tables, and images", () => {
+    const blocks: DocxBlock[] = [
+      {
+        type: "list",
+        ordered: true,
+        items: [{ runs: [{ text: "First" }] }, { runs: [{ text: "Second" }] }],
+      },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { blocks: [{ type: "paragraph", runs: [{ text: "Cell A" }] }] },
+              { blocks: [{ type: "paragraph", runs: [{ text: "Cell B" }] }] },
+            ],
+          },
+        ],
+      },
+      {
+        type: "image",
+        embedId: "rId42",
+      },
+    ];
+
+    const xml = buildDocxDocumentXml(blocks);
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+
+    const listProps = Array.from(doc.getElementsByTagName("w:numPr"));
+    expect(listProps).toHaveLength(2);
+    expect(listProps[0].getElementsByTagName("w:numId")[0]?.getAttribute("w:val")).toBe("1");
+    expect(listProps[0].getElementsByTagName("w:ilvl")[0]?.getAttribute("w:val")).toBe("0");
+
+    const tables = Array.from(doc.getElementsByTagName("w:tbl"));
+    expect(tables).toHaveLength(1);
+    const cells = Array.from(tables[0].getElementsByTagName("w:tc"));
+    expect(cells).toHaveLength(2);
+    const cellText = cells[0].getElementsByTagName("w:t")[0]?.textContent;
+    expect(cellText).toBe("Cell A");
+
+    const blip = doc.getElementsByTagName("a:blip")[0];
+    expect(blip?.getAttribute("r:embed")).toBe("rId42");
+  });
 });

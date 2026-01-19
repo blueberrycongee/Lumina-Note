@@ -1,31 +1,64 @@
-import type { DocxBlock, DocxRun, DocxRunStyle } from "./docxImport";
+import type {
+  DocxBlock,
+  DocxImageBlock,
+  DocxListBlock,
+  DocxRun,
+  DocxRunStyle,
+  DocxTableBlock,
+} from "./docxImport";
 
 const WORD_NAMESPACE =
   "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+const REL_NAMESPACE =
+  "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+const DRAWING_NAMESPACE =
+  "http://schemas.openxmlformats.org/drawingml/2006/main";
 
 export function buildDocxDocumentXml(blocks: DocxBlock[]): string {
-  const body = blocks
-    .map((block) => {
-      if (block.type === "paragraph") {
-        return buildParagraph(block.runs, undefined);
-      }
-      if (block.type === "heading") {
-        return buildParagraph(block.runs, block.level);
-      }
-      return "";
-    })
-    .join("");
+  const body = blocks.map((block) => buildBlockXml(block)).join("");
 
   return `<?xml version="1.0" encoding="UTF-8"?>` +
-    `<w:document xmlns:w="${WORD_NAMESPACE}">` +
+    `<w:document xmlns:w="${WORD_NAMESPACE}" xmlns:r="${REL_NAMESPACE}" xmlns:a="${DRAWING_NAMESPACE}">` +
     `<w:body>${body}</w:body>` +
     `</w:document>`;
 }
 
-function buildParagraph(runs: DocxRun[], headingLevel?: number): string {
-  const pPr = headingLevel
-    ? `<w:pPr><w:pStyle w:val="Heading${headingLevel}" /></w:pPr>`
-    : "";
+type ListMeta = {
+  numId: string;
+  level: number;
+};
+
+function buildBlockXml(block: DocxBlock): string {
+  switch (block.type) {
+    case "paragraph":
+      return buildParagraph(block.runs, {});
+    case "heading":
+      return buildParagraph(block.runs, { headingLevel: block.level });
+    case "list":
+      return buildListBlock(block);
+    case "table":
+      return buildTableBlock(block);
+    case "image":
+      return buildImageParagraph(block);
+    default:
+      return "";
+  }
+}
+
+function buildParagraph(
+  runs: DocxRun[],
+  options: { headingLevel?: number; listMeta?: ListMeta },
+): string {
+  const pPrParts: string[] = [];
+  if (options.headingLevel) {
+    pPrParts.push(`<w:pStyle w:val="Heading${options.headingLevel}" />`);
+  }
+  if (options.listMeta) {
+    pPrParts.push(
+      `<w:numPr><w:ilvl w:val="${options.listMeta.level}" /><w:numId w:val="${options.listMeta.numId}" /></w:numPr>`,
+    );
+  }
+  const pPr = pPrParts.length > 0 ? `<w:pPr>${pPrParts.join("")}</w:pPr>` : "";
   const runXml = runs.map((run) => buildRun(run)).join("");
   return `<w:p>${pPr}${runXml}</w:p>`;
 }
@@ -71,6 +104,36 @@ function buildRunStyle(style?: DocxRunStyle): string {
   }
 
   return `<w:rPr>${parts.join("")}</w:rPr>`;
+}
+
+function buildListBlock(list: DocxListBlock): string {
+  const numId = list.ordered ? "1" : "2";
+  return list.items
+    .map((item) =>
+      buildParagraph(item.runs, { listMeta: { numId, level: 0 } }),
+    )
+    .join("");
+}
+
+function buildTableBlock(table: DocxTableBlock): string {
+  const rowsXml = table.rows
+    .map((row) => {
+      const cellsXml = row.cells
+        .map((cell) => {
+          const cellContent = cell.blocks.map((block) => buildBlockXml(block)).join("");
+          return `<w:tc>${cellContent || "<w:p />"}</w:tc>`;
+        })
+        .join("");
+      return `<w:tr>${cellsXml}</w:tr>`;
+    })
+    .join("");
+
+  return `<w:tbl>${rowsXml}</w:tbl>`;
+}
+
+function buildImageParagraph(image: DocxImageBlock): string {
+  const blip = `<a:blip r:embed="${escapeXmlAttribute(image.embedId)}" />`;
+  return `<w:p><w:r><w:drawing>${blip}</w:drawing></w:r></w:p>`;
 }
 
 function buildRunText(text: string): string {

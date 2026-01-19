@@ -277,7 +277,7 @@ Long-term direction:
 
 ### M11 Docx export
 - [x] Export paragraphs/headings/font styles
-- [ ] Export lists, simple tables, images
+- [x] Export lists, simple tables, images
 - [ ] Export headers/footers and page numbers
 
 ### M12 Tests and performance

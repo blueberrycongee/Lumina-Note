@@ -211,3 +211,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a minimal WordprocessingML exporter for paragraph/heading blocks with run-level font, size (half-points), and bold/italic/underline styles; emit tabs/line breaks for \t/\n and escape XML text.
   - Files changed: src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run npm tests in WSL. Next: export lists/simple tables/images and wire header/footer/page number export.
+- 2026-01-19
+  - Task completed: M11 -> Export lists, simple tables, images
+  - Key decisions: Added list/table/image serialization in document.xml; list items use numId 1 (ordered) or 2 (unordered) with ilvl 0; images emit w:drawing with a:blip r:embed; table cells fall back to an empty paragraph when needed.
+  - Files changed: src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run wsl -d Ubuntu -- npm run test:run -- docxExport.test.ts. Next: export headers/footers and page numbers.
+
