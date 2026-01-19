@@ -57,3 +57,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Default mapping uses SimSun (zh) + Times New Roman (en); resolve trims whitespace and falls back to the other mapping or defaults when missing.
   - Files changed: src-tauri/src/typesetting/font_manager.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found; run WSL cargo test/full lint/CI when available.
+- 2026-01-20
+  - Task completed: M2 -> Font loading (load from path and cache metrics) [plan checkbox sync]
+  - Key decisions: Marked the M2 font loading task as complete in the plan to match the implemented FontManager::load_from_path.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
