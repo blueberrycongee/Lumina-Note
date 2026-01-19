@@ -125,3 +125,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added preview metrics converting PageStyle mm to px with a default 96dpi fallback; new helper builds preview pages using body box height for pagination.
   - Files changed: src-tauri/src/typesetting/preview_pipeline.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run WSL cargo fmt/clippy/test/ci.
+- 2026-01-19
+  - Task completed: M7 -> PDF 文档生成（最小空白 PDF 输出脚手架）
+  - Key decisions: 手写最小 PDF 结构（Catalog/Pages/Page/Contents + xref）；页尺寸由 mm->pt 转换；无效尺寸直接报错。
+  - Files changed: src-tauri/src/typesetting/pdf_export.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND);无法运行 WSL cargo test/ci。下一步：添加字体嵌入与内容流输出。
+
