@@ -1,70 +1,79 @@
-# Lumina Note ×ÔÑĞÅÅ°æÒıÇæ¼Æ»®£¨WYSIWYG ´òÓ¡Ä¿±ê£©
+ï»¿# Lumina Note Typesetting Engine Plan (WYSIWYG Print Target)
 
-Ä¿±ê£ºÔÚ Lumina Note ÄÚÊµÏÖ¡°Ö½ÕÅ¼¶ÅÅ°æ + AI ÅÅ°æÖ¸Áî¡±£¬±£Ö¤**Í¬Ò»Ì¨»úÆ÷**ÉÏµÄÔ¤ÀÀÓë´òÓ¡Ò»ÖÂ£¨WYSIWYG£©¡£Íê³ÉÒ»¸öÀï³Ì±®ºó£¬±ØĞëÔÚ´ËÎÄµµÖĞ±ê×¢ÒÑ¾­Íê³É¡£
+Goal: Implement "paper-level layout + AI layout instructions" in Lumina Note, and guarantee preview == print on the same machine (WYSIWYG). After each milestone, mark completion in this document.
 
-## ±³¾°ÓëÏÖÓĞÄÜÁ¦
-- ±¾µØÓÅÏÈ + Tauri ×ÀÃæÓ¦ÓÃ
-- AI Agent + RAG ÓïÒå¼ìË÷
-- Markdown ±à¼­Æ÷£¨CodeMirror£©+ LaTeX/Mermaid/´úÂë¸ßÁÁ
-- ÖªÊ¶Í¼Æ×¡¢PDF Åú×¢¡¢Êı¾İ¿âÊÓÍ¼£¨±í¸ñ/¿´°å£©¡¢WebDAV Í¬²½µÈ
+## Background and current capabilities
+- Local-first + Tauri desktop app
+- AI Agent + RAG semantic search
+- Markdown editor (CodeMirror) + LaTeX/Mermaid/code highlighting
+- Knowledge graph, PDF annotations, database views (table/kanban), WebDAV sync, etc.
 
-## ÏÖÓĞ¼¼ÊõÕ»£¨Ñ¡ĞÍÔ¼Êø£©
-- ¿ò¼Ü£ºTauri v2£¨Rust + WebView£©
-- Ç°¶Ë£ºReact 18 + TypeScript + Vite + Tailwind CSS
-- ±à¼­Æ÷£ºCodeMirror 6£¨Markdown£©
-- ×´Ì¬¹ÜÀí£ºZustand
-- Êı¾İ²ã£ºSQLite
-- PDF Ïà¹Ø£ºpdfjs-dist/react-pdf¡¢jsPDF
-- ²âÊÔ£ºVitest£¨µ¥²â£©¡¢Playwright core£¨¶Ëµ½¶Ë£©
+## Current tech stack (selection constraints)
+- Framework: Tauri v2 (Rust + WebView)
+- Frontend: React 18 + TypeScript + Vite + Tailwind CSS
+- Editor: CodeMirror 6 (Markdown)
+- State: Zustand
+- Data: SQLite
+- PDF: pdfjs-dist/react-pdf, jsPDF
+- Tests: Vitest (unit), Playwright core (e2e)
 
-## ºËĞÄÄ¿±ê£¨MVP£©
-- Ö½ÕÅ¼¶ÅÅ°æ£ºA4/Letter¡¢Ò³±ß¾à¡¢Ò³Ã¼Ò³½Å¡¢·ÖÒ³¡¢¶ÎÂä/×ÖÌå¾«È·¿ØÖÆ¡£
-- AI ÅÅ°æÖ¸Áî£ºÖĞÎÄ/Ó¢ÎÄ·Ö±ğÖ¸¶¨×ÖÌåÓë×ÖºÅ£¨ÈçĞ¡ËÄËÎÌå + Times New Roman£©¡¢ĞĞ¾à¡¢¶ÎÂäËõ½øµÈ¡£
-- Ô¤ÀÀÓë´òÓ¡Ò»ÖÂ£ºÍ³Ò»ÒÔ **PDF£¨Ç¶Èë×ÖÌå£©** ×÷Îª´òÓ¡Êä³öÔ´¡£
-- `.docx` Ö§³ÖÎª¡°¿É±à¼­Ä£Ê½¡±£¬Ö»¸²¸Ç³£ÓÃ×Ó¼¯£¨¶ÎÂä/±êÌâ/ÁĞ±í/±í¸ñ/Í¼Æ¬/Ò³Ã¼Ò³½Å£©¡£
-- ÒıÇæĞè¿É³éÀëÎª¶ÀÁ¢ÏîÄ¿£¬±ãÓÚºóĞø¿ªÔ´·¢²¼Óë¸´ÓÃ¡£
+## Local test setup (Windows)
+- WSL is no longer required for tests; run locally on Windows.
+- Rust toolchain is installed but `cargo` is not in PATH.
+- Use the full path when running Rust tests:
+  - `C:\Users\10758\.cargo\bin\cargo.exe test`
+  - `C:\Users\10758\.cargo\bin\cargo.exe fmt`
+  - `C:\Users\10758\.cargo\bin\cargo.exe clippy`
+- Optional: add `C:\Users\10758\.cargo\bin` to PATH to simplify commands.
 
-## ·ÇÄ¿±ê£¨Ã÷È·²»×ö£©
-- `.doc` ÀÏ¸ñÊ½
-- ¸´ÔÓ Word ÌØĞÔ£ººê¡¢ĞŞ¶©¡¢Óò¡¢¸´ÔÓ½Å×¢/Î²×¢¡¢¸¡¶¯Í¼ÎÄ»·ÈÆ¡¢Ç¶Ì×¸´ÔÓ±í¸ñµÈ
-- ¿çÆ½Ì¨ 100% Ò»ÖÂ£¨Word ×ÔÉíÒ²ÎŞ·¨±£Ö¤£©£¬Ö»±£Ö¤**Í¬»úÔ¤ÀÀ=´òÓ¡**
+## Core goals (MVP)
+- Paper-level layout: A4/Letter, margins, headers/footers, pagination, precise paragraph/font control.
+- AI layout instructions: set font and size per language (e.g., SimSun + Times New Roman), line height, indent, etc.
+- Preview == print: always use **PDF (embedded fonts)** as the print source.
+- `.docx` support is "editable mode" and only covers common subsets (paragraphs/headings/lists/tables/images/headers/footers).
+- Engine can be extracted as an independent project for later open-source release and reuse.
 
-## ¹Ø¼ü²ßÂÔ
-- **È·¶¨ĞÔÅÅ°æ**£ºÍ¬Ò»ÊäÈë¡¢Í¬Ò»×ÖÌå¡¢Í¬Ò»»·¾³ ¡ú Êä³ö°æÃæÒ»ÖÂ¡£
-- **×ÖÌå¿É¿Ø**£ºÔÊĞíÊ¹ÓÃÏµÍ³×ÖÌå£¬µ«ÓÅÏÈÌá¹©¿ªÔ´Ìæ´úÓë×ÖÌåÓ³Éä£»´òÓ¡Ò»ÂÉÊ¹ÓÃ PDF ×ÖÌåÇ¶Èë¡£
-- **½á¹¹»¯ÅÅ°æÖ¸Áî**£ºAI Êä³ö±ØĞëÂäµ½ÎÈ¶¨µÄ JSON/DSL£¬ÔÙÓÉÒıÇæÖ´ĞĞ¡£
+## Non-goals (explicitly out of scope)
+- `.doc` legacy format
+- Complex Word features: macros, revisions, fields, complex footnotes/endnotes, floating wraps, nested complex tables, etc.
+- 100% cross-platform identical output (Word itself cannot guarantee this); only same-machine preview == print.
 
-## PDF Êä³öÓë´òÓ¡Á÷³Ì£¨Ã÷È·£©
-- Ô¤ÀÀ£ºÍ³Ò»×ßÍ¬Ò»Ì×ÅÅ°æÓë PDF äÖÈ¾¹ÜÏß£¬Ô¤ÀÀÒ³ÃæÀ´×Ô PDF äÖÈ¾Êä³ö¡£
-- µ¼³ö£ºÉú³ÉÎ¨Ò»µÄÇ¶Èë×ÖÌå PDF£¬×÷Îª´òÓ¡Óë½»¸¶»ù×¼¡£
-- ´òÓ¡£º½ö´Óµ¼³öµÄ PDF ´òÓ¡£¬½ûÖ¹Ö±½Ó´Ó DOM/Canvas ´òÓ¡£»Ä¬ÈÏ¹Ø±ÕËõ·Å¡£
+## Key strategies
+- **Deterministic layout**: same input + same fonts + same environment => same output.
+- **Font control**: allow system fonts but prefer OSS fallbacks and font mapping; printing always embeds fonts into PDF.
+- **Structured layout instructions**: AI outputs stable JSON/DSL, then engine executes.
 
----
-
-## Ä¬ÈÏ¼¼ÊõÕ»£¨¿ÉĞŞ¸Ä£¬Ä¬ÈÏ¼´Ö´ĞĞ£©
-> ÎªÁËÈÃÑ­»·ÄÜÎŞ×èÍÆ½ø£¬ÏÈËø¶¨Ä¬ÈÏ¼¼ÊõÂ·Ïß¡£
-- ×îÖÕ¾ö¶¨£¨M0£©£ºËø¶¨ÒÔÏÂÄ¬ÈÏ¼¼ÊõÕ»£»ÈôĞè¸Ä¶¯£¬±ØĞëÔÚ´Ë½Ú¼ÇÂ¼Ô­Òò¡£
-- ÓïÑÔ£ºRust£¨ºËĞÄÅÅ°æÒıÇæ£©+ TS/React£¨UI Ô¤ÀÀ£©
-- ×ÖÌåÓëÅÅ°æ£ºHarfBuzz£¨shaping£©rustybuzz/harfbuzz-rs Ñ¡Ò»Ìõ³ÉÊì binding
-- ×ÖÌå·¢ÏÖ£ºfont-kit »òÏµÍ³ API£¨Windows DirectWrite / macOS CoreText / Linux fontconfig£©
-- PDF Êä³ö£ºpdf-writer / lopdf£¨¶şÑ¡Ò»£¬ÓÅÏÈ pdf-writer£©×ÖÌåÇ¶Èë
-- äÖÈ¾£ºSkia£¨skia-safe£©»ò×ÔÑĞÊ¸Á¿äÖÈ¾£»Ä¬ÈÏÏÈ×ß PDF ×÷ÎªäÖÈ¾»ù×¼
-
-ÈôĞè¸Ä¶¯¼¼ÊõÕ»£¬ÏÈ¸üĞÂ±¾½Ú²¢¼ÇÂ¼Ô­Òò¡£
+## PDF output and print flow (explicit)
+- Preview: use the same layout + PDF render pipeline; preview pages come from PDF render output.
+- Export: generate a single embedded-font PDF as the print and delivery baseline.
+- Print: only print from exported PDF; never print directly from DOM/Canvas; default to no scaling.
 
 ---
 
-## Ä¿Â¼½á¹¹²İ°¸£¨ÒıÇæ¿É³éÀë£©
+## Default tech stack (modifiable, default is binding)
+> To keep the loop moving, lock the default tech path first.
+- Final decision (M0): lock the default stack below; any change must be recorded in this section with reasons.
+- Language: Rust (core typesetting engine) + TS/React (UI preview)
+- Text shaping: HarfBuzz (shaping), use rustybuzz or harfbuzz-rs mature bindings
+- Font discovery: font-kit or system APIs (Windows DirectWrite / macOS CoreText / Linux fontconfig)
+- PDF output: pdf-writer or lopdf (prefer pdf-writer), embed fonts
+- Rendering: Skia (skia-safe) or custom vector renderer; default to PDF as the render baseline
+
+If the stack changes, update this section and record the reason.
+
+---
+
+## Directory layout draft (engine can be extracted)
 ```
 engine/
   Cargo.toml
   src/
-    model/            # ÎÄµµÄ£ĞÍÓëÑùÊ½
-    text/             # ×ÖÌå¼ÓÔØ¡¢shaping¡¢¶ÏĞĞ
-    layout/           # ¶ÎÂä²¼¾Ö¡¢·ÖÒ³
-    render/           # äÖÈ¾Æ÷Óë PDF Êä³ö
-    io_docx/          # docx ×Ó¼¯µ¼Èëµ¼³ö
-    ai/               # AI Ö¸Áî½âÎöÓëÓ³Éä
+    model/            # document model and styles
+    text/             # font loading, shaping, line breaking
+    layout/           # paragraph layout, pagination
+    render/           # renderer and PDF output
+    io_docx/          # docx subset import/export
+    ai/               # AI instruction parsing and mapping
   tests/
   fixtures/
   golden/
@@ -72,31 +81,31 @@ engine/
 
 ---
 
-## ¼Ü¹¹²ğ·Ö£¨Ä£¿é£©
-1) ÎÄµµÄ£ĞÍ£¨Document Model£©
-   - Block/Inline Ê÷¡¢ÑùÊ½¼Ì³Ğ¡¢¶ÎÂä/×Ö·ûÑùÊ½
-   - ²Ù×÷Ä£ĞÍ£¨²åÈë/É¾³ı/ÑùÊ½±ä¸ü£©+ ÀúÊ·¼ÇÂ¼
-2) ×ÖÌåÓëÎÄ±¾ÒıÇæ£¨Font + Text Shaping£©
-   - ×ÖÌå¼ÓÔØ/»ØÍË¡¢×ÖĞÎ¶ÈÁ¿
-   - CJK + Latin »ìÅÅ¡¢ĞĞÄÚ¶ÏĞĞ¹æÔò
-3) ÅÅ°æÒıÇæ£¨Layout Engine£©
-   - ĞĞÄÚ²¼¾Ö¡¢¶ÎÂä²¼¾Ö¡¢·ÖÒ³
-   - ¹ÂĞĞ/¹ÑĞĞ¿ØÖÆ¡¢Ò³Ã¼Ò³½Å²¼¾Ö
-4) äÖÈ¾ÓëÊä³ö£¨Renderer + Export£©
-   - ·ÖÒ³Ô¤ÀÀäÖÈ¾
-   - PDF µ¼³ö£¨Ç¶Èë×ÖÌå£©
-   - ´òÓ¡Â·¾¶Ê¹ÓÃ PDF Êä³ö
-5) AI ÅÅ°æÖ¸Áî¹ÜÏß£¨AI ¡ú Layout Ops£©
-   - ×ÔÈ»ÓïÑÔ ¡ú ½á¹¹»¯ schema
-   - ÑéÖ¤¡¢¹éÒ»»¯¡¢Ó¦ÓÃµ½ÎÄµµ
-6) µ¼Èëµ¼³ö£¨Docx Subset IO£©
-   - `.docx` ×Ó¼¯µ¼Èë¡¢ÑùÊ½Ó³Éä
-   - `.docx` ×Ó¼¯µ¼³ö£¨¿É±à¼­Ä£Ê½£©
+## Architecture (modules)
+1) Document model
+   - Block/Inline tree, style inheritance, paragraph/inline styles
+   - Operation model (insert/delete/style change) + history
+2) Font + Text shaping
+   - Font loading/fallback, glyph metrics
+   - CJK + Latin mixed runs, inline breaking rules
+3) Layout engine
+   - Line layout, paragraph layout, pagination
+   - Widow/orphan control, header/footer layout
+4) Render + Export
+   - Paginated preview rendering
+   - PDF export (embedded fonts)
+   - Print path uses PDF output
+5) AI layout instruction pipeline (AI -> Layout Ops)
+   - Natural language -> structured schema
+   - Validation, normalization, application to document
+6) Import/Export (Docx subset IO)
+   - `.docx` subset import + style mapping
+   - `.docx` subset export (editable mode)
 
 ---
 
-## AI ÅÅ°æÖ¸Áî Schema£¨²İ°¸£©
-> AI ²»Ö±½ÓÉú³É CSS/HTML£¬Ö»Éú³É½á¹¹»¯Ö¸Áî£¬±ÜÃâ²»È·¶¨ĞÔ¡£
+## AI layout instruction schema (draft)
+> AI does not generate CSS/HTML directly. It only generates structured instructions to reduce non-determinism.
 
 ```json
 {
@@ -115,139 +124,139 @@ engine/
 
 ---
 
-## AI Ê¹ÓÃ³¡¾°£¨ÓÅÏÈ¼¶£©
-> ×÷ÎªºóĞøÊµÏÖµÄÓÅÏÈ¼¶ÒÀ¾İ£¨´Ó¸ßµ½µÍ£©¡£
+## AI use cases (priority)
+> Used to prioritize implementation work (high to low).
 
-### P0£º×ÔÈ»ÓïÑÔÅÅ°æ
-- ÓÃ»§ prompt£ºÇë°´ A4 ÅÅ°æ£¬ÖĞÎÄĞ¡ËÄËÎÌå£¬Ó¢ÎÄ Times New Roman£¬ĞĞ¾à 1.5£¬Ê×ĞĞËõ½ø 2 ×Ö·û£¬±êÌâ 1 ¾ÓÖĞ¼Ó´Ö 16pt£¬±êÌâ 2 ×ó¶ÔÆë 14pt£¬Ò³Ã¼¡°ÑĞ¾¿±¨¸æ¡±£¬Ò³½Å¾ÓÖĞÒ³Âë¡£
+### P0: Natural language layout
+- User prompt: Use A4, margin 25mm, header 12mm, footer 12mm, Chinese SimSun 12pt, English Times New Roman 12pt, line height 1.5, first-line indent 2 characters, Heading 1 centered bold 16pt, Heading 2 left 14pt, header "Research Report", centered page numbers.
 
-### P0£ºÖÇÄÜ·ÖÒ³ĞŞÕı
-- ÓÃ»§ prompt£ºÇë±ÜÃâ¹ÂĞĞ/¹ÑĞĞ£¬±êÌâ²»ÂäÔÚÒ³Î²£¬Í¼±íÓë±êÌâÍ¬Ò³£»Èç¹ûĞèÒª£¬×Ô¶¯µ÷Õû¶ÎÇ°¶ÎºóÓëĞĞ¾àÎ¢µ÷¡£
+### P0: Smart pagination fixups
+- User prompt: Avoid widows/orphans, avoid headings at page bottom, keep figures and captions on the same page; if needed, adjust spacing and line height slightly.
 
-### P1£ºÅúÁ¿¹æ·¶»¯
-- ÓÃ»§ prompt£º½«µ±Ç°ÎÄµµËùÓĞÕıÎÄÍ³Ò»ÎªĞ¡ËÄËÎÌå£¬Ó¢ÎÄÍ³Ò» Times New Roman£»±êÌâ²ã¼¶±£³Ö²»±äµ«×ÖºÅ·Ö±ğ¸ÄÎªÒ»/¶ş/Èı¼¶ 16/14/12pt£¬²¢Á½¶Ë¶ÔÆë¡£
+### P1: Batch normalization
+- User prompt: Set all body text to SimSun 12pt and English to Times New Roman; keep heading levels but change sizes to 16/14/12pt and justify.
 
-### P1£ºÄ£°å»¯±¨¸æÉú³É
-- ÓÃ»§ prompt£º°´¹«Ë¾±¨¸æÄ£°åÅÅ°æ£ºÒ³±ß¾àÉÏ 25mm ÏÂ 20mm ×óÓÒ 25mm£¬Ò³Ã¼ 12mm£¬Ò³½Å 12mm£¬ÕıÎÄÁ½¶Ë¶ÔÆë£¬±êÌâ·Ö¼¶ÓëÄ¿Â¼×Ô¶¯Éú³É¡£
+### P1: Template-based report
+- User prompt: Apply the company report template: margins top 25mm bottom 20mm left/right 25mm, header 12mm, footer 12mm, body justified, headings and table of contents auto-generated.
 
-### P2£ºË«ÓïÄÚÈİÅÅ°æ
-- ÓÃ»§ prompt£ºÖĞÎÄ¶ÎÂäÓÃËÎÌåĞ¡ËÄ£¬Ó¢ÎÄ¶ÎÂäÓÃ Times New Roman 12pt£¬Ó¢ÎÄ¶ÎÂä×ó¶ÔÆë¡¢ÖĞÎÄÁ½¶Ë¶ÔÆë£¬ÕÂ½Ú±êÌâÖĞÓ¢ÎÄ·ÖĞĞÏÔÊ¾¡£
+### P2: Bilingual layout
+- User prompt: Chinese paragraphs use SimSun 12pt and justify; English paragraphs use Times New Roman 12pt and left align; section titles show Chinese and English on separate lines.
 
-### P2£º´òÓ¡½»¸¶°æ
-- ÓÃ»§ prompt£ºÉú³É¿É´òÓ¡°æ±¾£¬Êä³öÎªÇ¶Èë×ÖÌåµÄ PDF£¬±£³ÖÔ¤ÀÀÓë´òÓ¡Ò»ÖÂ¡£
+### P2: Print delivery
+- User prompt: Generate a printable version, output as embedded-font PDF, keep preview and print identical.
 
 ---
 
-## Docx ×Ó¼¯·¶Î§£¨MVP£©
-| Àà±ğ | Ö§³Ö | ±¸×¢ |
+## Docx subset scope (MVP)
+| Category | Supported | Notes |
 |---|---|---|
-| ¶ÎÂä | ? | ¶ÔÆë¡¢Ëõ½ø¡¢ĞĞ¾à¡¢¶ÎÇ°¶Îºó |
-| ±êÌâ | ? | H1-H3 Ó³Éä |
-| ×ÖÌå | ? | ÖĞ/Ó¢·Ö±ğ×ÖÌå¡¢×ÖºÅ¡¢¼Ó´Ö/Ğ±Ìå |
-| ÁĞ±í | ? | ÓĞĞò/ÎŞĞò |
-| ±í¸ñ | ? | ¼òµ¥±í¸ñ£¬²»º¬¸´ÔÓºÏ²¢Óë¿çÒ³ |
-| Í¼Æ¬ | ? | ĞĞÄÚ/¶ÎÂä¼¶ |
-| Ò³Ã¼Ò³½Å | ? | ÎÄ±¾ÓëÒ³Âë |
-| ½Å×¢/Î²×¢ | ? | MVP ²»×ö |
-| ĞŞ¶©/Åú×¢ | ? | MVP ²»×ö |
+| Paragraphs | Yes | alignment, indent, line spacing, space before/after |
+| Headings | Yes | H1-H3 mapping |
+| Fonts | Yes | zh/en fonts, sizes, bold/italic |
+| Lists | Yes | ordered/unordered |
+| Tables | Yes | simple tables, no complex merges or cross-page |
+| Images | Yes | inline/paragraph-level |
+| Headers/footers | Yes | text + page numbers |
+| Footnotes/endnotes | No | out of MVP |
+| Revisions/comments | No | out of MVP |
 
 ---
 
-## Àï³Ì±®¼Æ»®±í£¨Ï¸»¯£©
+## Milestone plan (detailed)
 
-> Ã¿¸öÀï³Ì±®°üº¬£ºScope / Deliverables / How to verify / Expected outcome
+> Each milestone includes Scope / Deliverables / How to verify / Expected outcome
 
 | Milestone | Scope | Deliverables | How to verify | Expected outcome |
 |---|---|---|---|---|
-| M0: Ä¿±êÓë¹æ·¶ | MVP ·¶Î§¡¢·ÇÄ¿±ê¡¢Êä³ö²ßÂÔ | ĞèÇóÎÄµµ + Schema ²İ°¸ + ×ÖÌå²ßÂÔ²İ°¸ | ÆÀÉóÍ¨¹ı£¬ĞÎ³É¶³½áÇåµ¥ | Ä¿±êÓë±ß½çÇåÎú |
-| M1: ÎÄµµÄ£ĞÍ | Block/Inline Ê÷¡¢ÑùÊ½¼Ì³Ğ¡¢²Ù×÷Ä£ĞÍ | Model + JSON ĞòÁĞ»¯¸ñÊ½ | »ù±¾±à¼­ ops ¿É»Ø·Å | ÎÄµµ½á¹¹ÎÈ¶¨ |
-| M2: ×ÖÌå²ã | ×ÖÌå¼ÓÔØ/»ØÍË/²âÁ¿ | ×ÖÌå¹ÜÀíÆ÷ + »ØÍË±í | ×ÖÌåÈ±Ê§¿ÉÌáÊ¾ÇÒ»ØÍËÒ»ÖÂ | ×ÖÌå¿É¿Ø |
-| M3: ĞĞÄÚÅÅ°æ | ĞĞÄÚ²¼¾Ö¡¢¶ÏĞĞ¹æÔò¡¢»ìÅÅ´¦Àí | Line layout ÒıÇæ | »ù×¼ÎÄ±¾ĞĞ¿í¶ÈÒ»ÖÂ | ĞĞÄÚÅÅ°æ¿ÉÓÃ |
-| M4: ¶ÎÂä²¼¾Ö | ¶ÎÂäËõ½ø¡¢¶ÔÆë¡¢ĞĞ¾à | Paragraph layout | µäĞÍ¶ÎÂäÅÅ°æÕıÈ· | ¶ÎÂäÅÅ°æ¿ÉÓÃ |
-| M5: ·ÖÒ³ | Ò³±ß¾à¡¢·ÖÒ³¡¢Ò³Ã¼Ò³½Å | Pagination engine | Í¬ÑùÊäÈë·ÖÒ³ÎÈ¶¨ | ·ÖÒ³¿ÉÓÃ |
-| M6: Ô¤ÀÀäÖÈ¾ | ·ÖÒ³Ô¤ÀÀÊÓÍ¼¡¢¹ö¶¯ | Page viewer | Ô¤ÀÀÓë²¼¾ÖÒ»ÖÂ | ¿ÉÊÓ»¯Ô¤ÀÀÍê³É |
-| M7: PDF Êä³ö | PDF äÖÈ¾Óë×ÖÌåÇ¶Èë | PDF exporter | Ô¤ÀÀÓë PDF ¶ÔÆë | ´òÓ¡»ù´¡Íê³É |
-| M8: ´òÓ¡Ğ£×¼ | ´òÓ¡±ß¾à/Ëõ·Å²ßÂÔ | ´òÓ¡ÉèÖÃÓëĞ£×¼Ö¸ÄÏ | ´òÓ¡½á¹ûÓëÔ¤ÀÀÒ»ÖÂ | Í¬»ú WYSIWYG |
-| M9: AI ÅÅ°æ | AI Ö¸Áî½âÎö + Ó¦ÓÃ | Schema ÑéÖ¤ + ²Ù×÷Ó³Éä | Ö¸Áî¿É¸´ÏÖ¡¢¿É»Ø¹ö | AI ÅÅ°æ¿ÉÓÃ |
-| M10: Docx µ¼Èë | `.docx` ×Ó¼¯½âÎö | Importer + Ó³Éä±í | ³£¼û docx ¿Éµ¼Èë | ¿É±à¼­µ¼Èë |
-| M11: Docx µ¼³ö | `.docx` ×Ó¼¯µ¼³ö | Exporter + ¼æÈİËµÃ÷ | Word ´ò¿ª¿É±à¼­ | ¿É±à¼­µ¼³ö |
-| M12: ²âÊÔÓëĞÔÄÜ | golden PDFs + layout diff | »Ø¹éÓÃÀı + ĞÔÄÜÖ¸±ê | CI ÖĞ¿ÉÖØ¸´ÑéÖ¤ | ¹¤³ÌÎÈ¶¨¿Éµü´ú |
+| M0: Goals and scope | MVP scope, non-goals, output strategy | Requirements doc + schema draft + font strategy draft | Review and freeze list | Clear scope |
+| M1: Document model | Block/Inline tree, style inheritance, ops model | Model + JSON serialization | Basic edit ops replay | Stable structure |
+| M2: Font layer | Load/fallback/measure | Font manager + fallback table | Missing fonts are handled consistently | Font control |
+| M3: Inline layout | Inline layout, line breaking, mixed runs | Line layout engine | Baseline line widths stable | Inline layout ready |
+| M4: Paragraph layout | Indent, align, line height | Paragraph layout | Typical paragraphs correct | Paragraph layout ready |
+| M5: Pagination | Margins, pagination, headers/footers | Pagination engine | Stable pagination for same input | Pagination ready |
+| M6: Preview rendering | Paginated preview view | Page viewer | Preview matches layout | Visual preview ready |
+| M7: PDF output | PDF render + font embedding | PDF exporter | Preview aligns with PDF | Print foundation ready |
+| M8: Print calibration | Print margin/scale strategy | Print setup + calibration guide | Print matches preview | Same-machine WYSIWYG |
+| M9: AI layout | AI parse + apply | Schema validation + ops mapping | Instructions reproducible + reversible | AI layout ready |
+| M10: Docx import | `.docx` subset parse | Importer + mapping table | Common docx import | Editable import |
+| M11: Docx export | `.docx` subset export | Exporter + compatibility notes | Word opens editable | Editable export |
+| M12: Tests + perf | golden PDFs + layout diff | Regression set + perf metrics | Reproducible in CI | Stable and scalable |
 
 ---
 
-## Àï³Ì±®ÈÎÎñ²ğ·Ö£¨¿ÉÖ±½ÓÖ´ĞĞ£©
-> Ã¿¸öÌõÄ¿ÊÇ¡°µ¥´ÎÑ­»·¿ÉÍê³É¡±µÄ×îĞ¡ÈÎÎñµ¥Î»¡£
+## Milestone task breakdown (directly executable)
+> Each item is the smallest "single-loop complete" task.
 
-### M0 Ä¿±êÓë¹æ·¶
-- [x] ¹Ì»¯¼¼ÊõÕ»Ñ¡Ôñ²¢ÔÚ¡°Ä¬ÈÏ¼¼ÊõÕ»¡±ÖĞ±ê¼Ç×îÖÕ¾ö¶¨
-- [x] Ã÷È· PDF Êä³öÓë´òÓ¡Á÷³Ì£¨Ô¤ÀÀ -> PDF -> ´òÓ¡£©
-- [x] Ğ´³ö WYSIWYG ÑéÊÕãĞÖµ£¨ÏñËØ/ºÁÃ×£©
+### M0 Goals and scope
+- [x] Lock the default tech stack in "Default tech stack"
+- [x] Clarify PDF output and print flow (preview -> PDF -> print)
+- [x] Define WYSIWYG acceptance thresholds (px/mm)
 
-### M1 ÎÄµµÄ£ĞÍ
-- [x] ¶¨ÒåÎÄµµÊ÷½ÚµãÀàĞÍ£¨Paragraph/Heading/List/Table/Image£©
-- [x] ¶¨ÒåÑùÊ½½á¹¹£¨FontStyle/ParagraphStyle/PageStyle£©
-- [x] Éè¼Æ×îĞ¡ ops£¨insert/delete/applyStyle£©
-- [x] È·¶¨ĞòÁĞ»¯¸ñÊ½£¨JSON schema ²İ°¸£©
+### M1 Document model
+- [x] Define document node types (Paragraph/Heading/List/Table/Image)
+- [x] Define style structs (FontStyle/ParagraphStyle/PageStyle)
+- [x] Design minimal ops (insert/delete/applyStyle)
+- [x] Define serialization format (JSON schema draft)
 
-### M2 ×ÖÌå²ã
-- [x] ×ÖÌå·¢ÏÖ£ºÁĞ³öÏµÍ³×ÖÌå + fallback ¹æÔò
-- [x] ×ÖÌå¼ÓÔØ£º´ÓÂ·¾¶¼ÓÔØ²¢»º´æ¶ÈÁ¿
-- [x] ×ÖÌåÓ³Éä±í£ºÖĞÎÄ/Ó¢ÎÄÄ¬ÈÏÓ³Éä
+### M2 Font layer
+- [x] Font discovery: list system fonts + fallback rules
+- [x] Font loading: load from path and cache metrics
+- [x] Font mapping table: default zh/en mapping
 
-### M3 ĞĞÄÚÅÅ°æ
-- [x] ¼¯³É shaping£¬µÃµ½ glyph runs
-- [x] ÊµÏÖ¶ÏĞĞ£¨°´¿í¶ÈÕÛĞĞ£©
-- [x] ÊµÏÖ»ìÅÅºÏ²¢£¨CJK + Latin£©
+### M3 Inline layout
+- [x] Integrate shaping and get glyph runs
+- [x] Implement line breaking (width-based)
+- [x] Implement mixed-script merge (CJK + Latin)
 
-### M4 ¶ÎÂä²¼¾Ö
-- [x] ¶ÎÂäĞĞ¾àÓë¶ÔÆë£¨×ó/ÓÒ/¾ÓÖĞ/Á½¶Ë£©
-- [x] Ê×ĞĞËõ½øÓë¶ÎÇ°¶Îºó
+### M4 Paragraph layout
+- [x] Paragraph line height and alignment (left/right/center/justify)
+- [x] First-line indent and space before/after
 
-### M5 ·ÖÒ³
-- [x] Page model£¨Ö½ÕÅ³ß´ç¡¢±ß¾à¡¢¿ÉÓÃÇø£©
-- [x] Ò³Ã¼Ò³½Å²¼¾Ö
-- [x] ¼òµ¥·ÖÒ³£¨°´¿éÁ÷Ê½ÇĞÒ³£©
-- [x] »ù´¡¹ÂĞĞ/¹ÑĞĞ´¦Àí£¨×îĞ¡ÊµÏÖ£©
+### M5 Pagination
+- [x] Page model (paper size, margins, content box)
+- [x] Header/footer layout
+- [x] Simple pagination (flow-based page breaks)
+- [x] Basic widow/orphan handling (minimal)
 
-### M6 Ô¤ÀÀäÖÈ¾
-- [x] äÖÈ¾ pipeline£º²¼¾ÖÊ÷ -> Ô¤ÀÀÒ³Ãæ
-- [x] »ù´¡Ëõ·ÅÓë·ÖÒ³ä¯ÀÀ
+### M6 Preview rendering
+- [x] Render pipeline: layout tree -> preview pages
+- [x] Basic zoom and paginated browsing
 
-### M7 PDF Êä³ö
-- [x] PDF ÎÄµµÉú³É
-- [x] ×ÖÌåÇ¶ÈëÓë×ÖÌå×Ó¼¯
-- [x] PDF ÓëÔ¤ÀÀ¶ÔÆëÑéÖ¤
+### M7 PDF output
+- [ ] PDF document generation
+- [ ] Font embedding and font subset
+- [ ] PDF/preview alignment verification
 
-### M8 ´òÓ¡Ğ£×¼
-- [ ] ´òÓ¡ÉèÖÃÖ¸ÄÏ£¨½ûÓÃËõ·Å¡¢Ö½ÕÅÆ¥Åä£©
-- [ ] ±ß¾àĞ£×¼Á÷³Ì£¨¼ÇÂ¼Éè±¸Æ«²î£©
+### M8 Print calibration
+- [ ] Print settings guide (disable scaling, paper match)
+- [ ] Margin calibration flow (record device offsets)
 
-### M9 AI ÅÅ°æ
-- [x] ¶¨Òå AI schema Ğ£Ñé£¨zod£©
-- [ ] ½âÎö×ÔÈ»ÓïÑÔ -> schema£¨×îĞ¡¹æÔò£©
-- [ ] schema -> ÑùÊ½Ó¦ÓÃµ½ÎÄµµ
+### M9 AI layout
+- [ ] Define AI schema validation (zod)
+- [ ] Parse natural language -> schema (minimal rules)
+- [x] Apply schema -> document styles
 
-### M10 Docx µ¼Èë
-- [ ] ½âÎö¶ÎÂä/±êÌâ/×ÖÌåÑùÊ½
-- [ ] ½âÎöÁĞ±í¡¢¼òµ¥±í¸ñ¡¢Í¼Æ¬
-- [ ] Ò³Ã¼Ò³½Åµ¼Èë
+### M10 Docx import
+- [ ] Parse paragraphs/headings/font styles
+- [ ] Parse lists, simple tables, images
+- [ ] Import headers/footers
 
-### M11 Docx µ¼³ö
-- [ ] Êä³ö¶ÎÂä/±êÌâ/×ÖÌåÑùÊ½
-- [ ] Êä³öÁĞ±í¡¢¼òµ¥±í¸ñ¡¢Í¼Æ¬
-- [ ] Êä³öÒ³Ã¼Ò³½ÅÓëÒ³Âë
+### M11 Docx export
+- [ ] Export paragraphs/headings/font styles
+- [ ] Export lists, simple tables, images
+- [ ] Export headers/footers and page numbers
 
-### M12 ²âÊÔÓëĞÔÄÜ
-- [ ] golden fixture£º¶ÌÎÄµµ / ³¤ÎÄµµ / Ë«ÓïÎÄµµ
-- [x] ²¼¾Ö diff ¹¤¾ß£¨ÏñËØ»ò²¼¾ÖÖ¸±ê£©
-- [x] ĞÔÄÜ»ù×¼£¨·ÖÒ³ºÄÊ±¡¢PDF Éú³ÉºÄÊ±£©
+### M12 Tests and performance
+- [ ] Golden fixtures: short/long/bilingual docs
+- [x] Layout diff tool (pixel or layout metrics)
+- [x] Performance baselines (pagination time, PDF time)
 
 ---
 
-## WYSIWYG ´òÓ¡ÑéÊÕ±ê×¼£¨Í¬»ú£©
-- Í¬Ò»Ì¨»úÆ÷¡¢Í¬Ò»×ÖÌå»·¾³ÏÂ£ºÔ¤ÀÀÓë PDF Êä³ö°æÃæÒ»ÖÂ£¨³ß´ç/·ÖÒ³/ĞĞ¾àÎó²î < 1px£©¡£
-- ´òÓ¡Ê¹ÓÃ PDF Êä³ö£¬¹Ø±ÕËõ·Å£¨No scaling£©£¬´òÓ¡½á¹ûÓëÔ¤ÀÀÒ»ÖÂ¡£
-- ×ÖÌåÇ¶Èë±£Ö¤¿çÉè±¸ÊÓ¾õÒ»ÖÂ£¨¼´Ê¹±à¼­ĞÔÏÂ½µ£©¡£
+## WYSIWYG print acceptance (same machine)
+- Same machine + same font environment: preview and exported PDF match (size/page breaks/line spacing delta < 1px).
+- Print from exported PDF with no scaling; print matches preview.
+- Embedded fonts guarantee cross-device visual consistency (even if editability drops).
 - Acceptance thresholds (same machine, preview vs exported PDF):
 - Page size delta <= 0.2mm (<= 1px @ 96dpi).
 - Margin box delta <= 0.2mm; header/footer baseline delta <= 0.2mm.
@@ -256,10 +265,10 @@ engine/
 
 ---
 
-## ·çÏÕÓë×¢ÒâÊÂÏî
-- ×ÖÌåÊÚÈ¨£ºÉÌÒµ×ÖÌå²»ÄÜËæÈí¼ş·Ö·¢£¬Ö»ÄÜÊ¹ÓÃÏµÍ³°²×°»ò¿ªÔ´Ìæ´ú¡£
-- Word ¼æÈİ£º`.docx` Îª¿ÉÖØÅÅ¸ñÊ½£¬±à¼­Ä£Ê½ÎŞ·¨±£Ö¤¾ø¶ÔÒ»ÖÂ¡£
-- CJK ÅÅ°æÏ¸½Ú¸´ÔÓ£º¶ÏĞĞ¡¢±êµã¼·Ñ¹¡¢×ÖºÅÓ³ÉäĞèÖğ²½µü´ú¡£
+## Risks and notes
+- Font licensing: commercial fonts cannot be redistributed; use system fonts or OSS alternatives.
+- Word compatibility: `.docx` is reflowable; edit mode cannot guarantee absolute fidelity.
+- CJK layout is complex: line breaking, punctuation compression, size mapping need iterative work.
 
 ## M1 Document Model Draft (nodes + inline types)
 - Document: { blocks: Block[] }
@@ -550,7 +559,7 @@ Notes:
 ```
 
 ## M2 Font Discovery Draft (system list + fallback rules)
-- Enumerate installed fonts via OS APIs (DirectWrite/CoreText/fontconfig); normalize family and style metadata.
+- Enumerate installed fonts via OS APIs (DirectWrite/CoreText/fontconfig); normalize family/style metadata.
 - Build fallback chains per script (Latin, CJK, Symbol/Emoji); resolve per-glyph when shaping reports missing glyphs.
 - Prefer user-selected fonts, then document styles, then system defaults, then open-source fallbacks (e.g., Noto Sans CJK, Noto Serif).
 - Edge cases: missing CJK fonts, mixed-script runs, symbol-only glyphs, fallback loops; log chosen fallback in debug builds.
