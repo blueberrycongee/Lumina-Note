@@ -130,4 +130,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: 手写最小 PDF 结构（Catalog/Pages/Page/Contents + xref）；页尺寸由 mm->pt 转换；无效尺寸直接报错。
   - Files changed: src-tauri/src/typesetting/pdf_export.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND);无法运行 WSL cargo test/ci。下一步：添加字体嵌入与内容流输出。
+- 2026-01-19
+  - Task completed: M7 -> 字体嵌入与字体子集（嵌入 TrueType 字体流 + 子集标记）
+  - Key decisions: PDF 内嵌字体以 /FontFile2 + ASCIIHexDecode 写入；子集名由确定性 6 字母前缀 + 清理后的字体名组成；FontDescriptor 复用 ttf-parser 的边界框与升/降部度量。
+  - Files changed: src-tauri/src/typesetting/pdf_export.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND);无法运行 cargo fmt/clippy/test。下一步：真实 glyph 子集化（Widths/Encoding/ToUnicode）与 PDF/预览对齐验证。
 
