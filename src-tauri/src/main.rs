@@ -55,6 +55,7 @@ fn main() {
             commands::fill_danmaku_prefix,
             commands::setup_danmaku_autofill,
             commands::start_file_watcher,
+            commands::typesetting_preview_page_mm,
             // Browser WebView commands
             commands::create_browser_webview,
             commands::update_browser_webview_bounds,
