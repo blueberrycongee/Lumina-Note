@@ -64,6 +64,7 @@ vi.mock('@tauri-apps/api/core', () => ({
         header: { x_mm: 25, y_mm: 25, width_mm: 160, height_mm: 12 },
         footer: { x_mm: 25, y_mm: 260, width_mm: 160, height_mm: 12 },
       },
+      'typesetting_export_pdf_base64': 'JVBERi0xLjcK',
     };
 
     const response = mockResponses[cmd];
@@ -86,6 +87,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readTextFile: vi.fn(),
   writeTextFile: vi.fn(),
+  writeFile: vi.fn(),
   mkdir: vi.fn(),
   exists: vi.fn(),
   readDir: vi.fn(),
