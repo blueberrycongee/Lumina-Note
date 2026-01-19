@@ -228,3 +228,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Store fixtures in src-tauri/tests/fixtures/typesetting using the M1 JSON schema draft; include a bilingual sample with CJK text.
   - Files changed: src-tauri/tests/fixtures/typesetting/short.json; src-tauri/tests/fixtures/typesetting/long.json; src-tauri/tests/fixtures/typesetting/bilingual.json; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Wire fixtures into golden/layout diff tests and update the plan checkbox after validation. Tests not run (fixtures-only).
+- 2026-01-19
+  - Task completed: M12 -> Golden fixtures: short/long/bilingual docs [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox complete to reflect existing fixture files in src-tauri/tests/fixtures/typesetting.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).

@@ -281,7 +281,7 @@ Long-term direction:
 - [x] Export headers/footers and page numbers
 
 ### M12 Tests and performance
-- [ ] Golden fixtures: short/long/bilingual docs
+- [x] Golden fixtures: short/long/bilingual docs
 - [x] Layout diff tool (pixel or layout metrics)
 - [x] Performance baselines (pagination time, PDF time)
 
