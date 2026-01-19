@@ -171,3 +171,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox as complete to reflect the existing aiPromptParser implementation.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M7 -> Sync plan checkboxes for PDF document generation and font embedding
+  - Key decisions: Marked M7 PDF doc generation and font embedding as complete to match existing implementation.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
