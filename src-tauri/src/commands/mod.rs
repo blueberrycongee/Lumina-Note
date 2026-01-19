@@ -9,6 +9,7 @@ use tauri::WebviewUrl;
 use tauri::webview::NewWindowResponse;
 use tauri::Emitter;
 use std::io::Read;
+use std::path::PathBuf;
 
 // Browser / WebView 调试日志，写入与前端相同的 debug-logs 目录，方便统一排查
 fn browser_debug_log(app: &AppHandle, message: String) {
@@ -83,6 +84,21 @@ pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, A
         header: page_box_to_mm(style.header_box()),
         footer: page_box_to_mm(style.footer_box()),
     })
+}
+
+/// Fixture font path (dev-only). Returns None when the fixture is unavailable.
+#[tauri::command]
+pub async fn typesetting_fixture_font_path() -> Option<String> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("katex-main-regular.ttf");
+
+    if path.exists() {
+        Some(path.to_string_lossy().to_string())
+    } else {
+        None
+    }
 }
 
 /// Typesetting PDF export (placeholder). Returns base64-encoded PDF bytes.
@@ -1028,6 +1044,15 @@ mod tests {
         let text = String::from_utf8_lossy(&decoded);
 
         assert!(text.starts_with("%PDF-1.7\n"));
+    }
+
+    #[tokio::test]
+    async fn typesetting_fixture_font_path_returns_fixture() {
+        let path = typesetting_fixture_font_path()
+            .await
+            .expect("expected fixture path");
+
+        assert!(path.ends_with("katex-main-regular.ttf"));
     }
 
     fn fixture_font_path() -> String {

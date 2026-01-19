@@ -17,6 +17,38 @@ describe("TypesettingPreviewPane", () => {
     expect(invokeMock).toHaveBeenCalledWith("typesetting_preview_page_mm");
   });
 
+  it("renders a layout summary when sample layout data is available", async () => {
+    render(<TypesettingPreviewPane />);
+
+    const summary = await screen.findByTestId("typesetting-layout-summary");
+
+    await waitFor(() => {
+      expect(summary).toHaveTextContent("Layout: 2 lines");
+    });
+  });
+
+  it("shows layout unavailable when fixture font is missing", async () => {
+    const invokeMock = vi.mocked(invoke);
+    const baseImpl = invokeMock.getMockImplementation();
+
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "typesetting_fixture_font_path") {
+        return Promise.resolve(null);
+      }
+      return baseImpl ? baseImpl(cmd, args) : Promise.resolve(null);
+    });
+
+    render(<TypesettingPreviewPane />);
+
+    const summary = await screen.findByTestId("typesetting-layout-summary");
+
+    await waitFor(() => {
+      expect(summary).toHaveTextContent("Layout unavailable");
+    });
+
+    invokeMock.mockImplementation(baseImpl ?? (() => Promise.resolve(null)));
+  });
+
   it("zooms the preview page when the zoom controls are used", async () => {
     render(<TypesettingPreviewPane />);
 

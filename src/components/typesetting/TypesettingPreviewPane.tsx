@@ -17,10 +17,25 @@ type TypesettingPreviewPageMm = {
   footer: PreviewBoxMm;
 };
 
+type TypesettingTextLine = {
+  start: number;
+  end: number;
+  width: number;
+  x_offset: number;
+  y_offset: number;
+};
+
+type TypesettingTextLayout = {
+  lines: TypesettingTextLine[];
+};
+
 const DEFAULT_DPI = 96;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
+const SAMPLE_TEXT =
+  "Typesetting preview sample paragraph used to validate layout output.";
+const SAMPLE_LINE_HEIGHT = 20;
 
 const mmToPx = (mm: number, dpi = DEFAULT_DPI) =>
   Math.round((Math.max(0, mm) * dpi) / 25.4);
@@ -67,6 +82,8 @@ export function TypesettingPreviewPane() {
   const [zoom, setZoom] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<TypesettingTextLayout | null>(null);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -87,6 +104,50 @@ export function TypesettingPreviewPane() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!pageMm) return;
+    let active = true;
+
+    setLayout(null);
+    setLayoutError(null);
+
+    const loadLayout = async () => {
+      const fontPath = await invoke<string | null>(
+        "typesetting_fixture_font_path",
+      );
+      if (!fontPath) {
+        if (active) {
+          setLayoutError("missing fixture font");
+        }
+        return;
+      }
+
+      const maxWidth = mmToPx(pageMm.body.width_mm);
+      const layoutData = await invoke<TypesettingTextLayout>(
+        "typesetting_layout_text",
+        {
+          text: SAMPLE_TEXT,
+          font_path: fontPath,
+          max_width: maxWidth,
+          line_height: SAMPLE_LINE_HEIGHT,
+        },
+      );
+      if (active) {
+        setLayout(layoutData);
+      }
+    };
+
+    loadLayout().catch((err) => {
+      if (active) {
+        setLayoutError(String(err));
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [pageMm]);
 
   const pagePx = useMemo(() => {
     if (!pageMm) return null;
@@ -109,6 +170,11 @@ export function TypesettingPreviewPane() {
   const zoomOutDisabled = zoom <= MIN_ZOOM;
   const zoomInDisabled = zoom >= MAX_ZOOM;
   const exportDisabled = exporting;
+  const layoutSummary = layout
+    ? `Layout: ${layout.lines.length} lines`
+    : layoutError
+      ? `Layout unavailable: ${layoutError}`
+      : "Layout: loading...";
 
   const handleExport = async () => {
     setExportError(null);
@@ -173,6 +239,12 @@ export function TypesettingPreviewPane() {
           {exportError ? (
             <span className="text-xs text-destructive">{exportError}</span>
           ) : null}
+          <span
+            className="text-xs text-muted-foreground"
+            data-testid="typesetting-layout-summary"
+          >
+            {layoutSummary}
+          </span>
         </div>
       </div>
       <div className="flex min-h-full items-center justify-center px-6 py-10">
