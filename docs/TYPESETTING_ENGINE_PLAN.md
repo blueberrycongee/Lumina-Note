@@ -138,6 +138,26 @@ engine/
 
 ---
 
+## AI intent/DSL strategy (agent-friendly editing)
+Goal: Make AI-driven edits as simple as editing Markdown, while preserving Word-like manual micro-editing.
+
+Principles:
+- Provide a **high-level intent DSL** (declarative, validated, no loops/conditions).
+- Compile intent into **document ops** (replayable, reversible).
+- Keep tool-calls minimal: a few high-level actions like `apply_intent`, `preview_intent`, `diff_intent`.
+- Preserve manual overrides: AI changes should not overwrite locked or manually overridden fields.
+
+Structure:
+- Intent layer: page/typography/paragraph/pagination rules.
+- Ops layer: concrete operations against the document model.
+- Execution: DSL -> ops -> layout engine -> preview/PDF.
+
+Long-term direction:
+- AI outputs DSL only; the system refuses raw fine-grained edits.
+- Tools remain as execution channels, not editing surfaces.
+
+---
+
 ## AI use cases (priority)
 > Used to prioritize implementation work (high to low).
 
@@ -246,7 +266,7 @@ engine/
 - [x] Margin calibration flow (record device offsets)
 
 ### M9 AI layout
-- [ ] Define AI schema validation (zod)
+- [x] Define AI schema validation (zod)
 - [x] Parse natural language -> schema (minimal rules)
 - [x] Apply schema -> document styles
 
@@ -577,3 +597,43 @@ Notes:
 - Build fallback chains per script (Latin, CJK, Symbol/Emoji); resolve per-glyph when shaping reports missing glyphs.
 - Prefer user-selected fonts, then document styles, then system defaults, then open-source fallbacks (e.g., Noto Sans CJK, Noto Serif).
 - Edge cases: missing CJK fonts, mixed-script runs, symbol-only glyphs, fallback loops; log chosen fallback in debug builds.
+
+---
+
+## Post-MVP roadmap (M13+)
+> These milestones extend beyond the current MVP and are suitable for longer loops.
+
+### M13 Product integration
+- [ ] Integrate engine preview into the app UI (paged view + zoom controls).
+- [ ] Wire document model edits to layout pipeline (incremental reflow).
+- [ ] Connect export/print UI to PDF output (single source of truth).
+- [ ] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
+- [ ] Open `.docx` files with the engine (not WebView), and provide a Word-like editing UI (typing, selection, and formatting changes).
+- [ ] Doc editing is initially exposed only in Lumina Note Codex mode; after integration, create a dedicated Codex skill that teaches the agent how to drive this document model.
+
+### M14 Editing UX and overrides
+- [ ] Style inspector: show computed style vs local override.
+- [ ] Lock/override semantics: AI edits must not overwrite locked fields.
+- [ ] Selection mapping: map UI selection to document ops reliably.
+- [ ] Undo/redo across AI and manual edits with stable diff summaries.
+
+### M15 Advanced layout features
+- [ ] Multi-column layout (section-level columns).
+- [ ] Floating images/text wrap (basic anchors and wrap modes).
+- [ ] Footnotes/endnotes (simple flow, no complex numbering yet).
+- [ ] Table pagination (split rows across pages, repeat header rows).
+
+### M16 Docx compatibility hardening
+- [ ] Style mapping parity (named styles, based-on, next-style).
+- [ ] Import/export round-trip tests with common docx fixtures.
+- [ ] Compatibility notes for unsupported features and fallbacks.
+
+### M17 Collaboration and review
+- [ ] Comments and threaded replies.
+- [ ] Track changes (insert/delete/format).
+- [ ] Compare and merge revisions.
+
+### M18 QA, performance, and packaging
+- [ ] Golden fixture suite for complex layouts and large docs.
+- [ ] Perf budgets (layout, pagination, export time).
+- [ ] Crash repro harness + stable regression test pipeline.

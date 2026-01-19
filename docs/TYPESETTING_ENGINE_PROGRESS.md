@@ -186,3 +186,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Drafted a calibration PDF workflow with crosshair measurements; store per-printer dx/dy offsets and apply as origin compensation only.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only). Next: M10 docx import tasks.
+- 2026-01-19
+  - Task completed: M9 -> Define AI schema validation (zod) [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox complete to reflect the existing zod schema implementation.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
