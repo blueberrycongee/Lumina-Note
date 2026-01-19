@@ -223,8 +223,8 @@ engine/
 - [x] Basic zoom and paginated browsing
 
 ### M7 PDF output
-- [ ] PDF document generation
-- [ ] Font embedding and font subset
+- [x] PDF document generation
+- [x] Font embedding and font subset
   - [x] PDF/preview alignment verification
 
 ### M8 Print calibration
