@@ -67,3 +67,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a rustybuzz-based shaping API with ScriptKind mapping (Han/Latin) and raw glyph positions in font units.
   - Files changed: src-tauri/Cargo.toml; src-tauri/src/typesetting/mod.rs; src-tauri/src/typesetting/shaping.rs
   - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo test/clippy/fmt. Run WSL tests/lint once available, then continue M3 line breaking.
+- 2026-01-20
+  - Task completed: M3 -> 实现断行（按宽度折行）
+  - Key decisions: Implemented greedy width-based line breaking with optional soft-break hints; edge cases covered: empty input, oversized glyphs, no soft break before overflow, exact-fit soft breaks.
+  - Files changed: src-tauri/src/typesetting/line_break.rs; src-tauri/src/typesetting/mod.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found; unable to run cargo fmt/clippy/test in WSL.
