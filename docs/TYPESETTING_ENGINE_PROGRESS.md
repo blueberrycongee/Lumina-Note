@@ -47,3 +47,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Enumerate fonts via OS APIs; resolve missing glyphs per-glyph; fallback order user -> doc -> system -> open-source.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Implement font loading and default zh/en mapping; tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M2 -> 瀛椾綋鍔犺浇锛氫粠璺緞鍔犺浇骞剁紦瀛樺害閲?
+  - Key decisions: Parse units_per_em/ascender/descender/line_gap via ttf-parser; cache by path with shared font bytes; use KaTeX font fixture for tests.
+  - Files changed: src-tauri/src/typesetting/font_manager.rs; src-tauri/src/typesetting/mod.rs; src-tauri/src/lib.rs; src-tauri/Cargo.toml; src-tauri/tests/fixtures/katex-main-regular.ttf
+  - Blockers/next steps: WSL distro not found; run WSL test/lint/CI once available.
