@@ -161,3 +161,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a style-mapping helper that merges AI instructions into a base style config and preserves footerHeight when omitted; return new objects to avoid mutation.
   - Files changed: src/typesetting/aiStyleMapper.ts; src/typesetting/aiStyleMapper.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (no `wsl -l` entries), so tests/lint/CI not run. Next: mark/verify M9 prompt parsing if needed and wire style application into editor state.
+- 2026-01-19
+  - Task completed: M7 -> PDF/preview alignment verification [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox complete to reflect the existing PDF/preview alignment verification test.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).

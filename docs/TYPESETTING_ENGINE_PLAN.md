@@ -225,7 +225,7 @@ engine/
 ### M7 PDF output
 - [ ] PDF document generation
 - [ ] Font embedding and font subset
-- [ ] PDF/preview alignment verification
+  - [x] PDF/preview alignment verification
 
 ### M8 Print calibration
 - [ ] Print settings guide (disable scaling, paper match)
