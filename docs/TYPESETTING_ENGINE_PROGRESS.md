@@ -181,3 +181,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a concise print dialog checklist covering no-scaling, paper size match, and disabling auto-geometry adjustments.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Add margin calibration flow (record device offsets). Tests not run (docs-only).
+- 2026-01-19
+  - Task completed: M8 -> Margin calibration flow (record device offsets)
+  - Key decisions: Drafted a calibration PDF workflow with crosshair measurements; store per-printer dx/dy offsets and apply as origin compensation only.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only). Next: M10 docx import tasks.

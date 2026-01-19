@@ -55,6 +55,13 @@ Goal: Implement "paper-level layout + AI layout instructions" in Lumina Note, an
 - Disable any "auto-rotate/center" options that alter page geometry.
 - Keep driver "borderless" or margin adjustments off unless explicitly calibrated.
 
+## Margin calibration flow (M8 draft)
+- Generate a calibration PDF with crop marks and crosshairs at known offsets (e.g., 10mm from each edge).
+- Print at 100% actual size using the target printer and paper size.
+- Measure the printed offset from each crosshair to the paper edge; record dx/dy in mm for top-left.
+- Save per-printer profile: `{ paperSize, dxMm, dyMm, measuredAt }`.
+- Apply offsets in preview/print alignment guides (do not scale content; only compensate origin).
+
 ---
 
 ## Default tech stack (modifiable, default is binding)
@@ -236,7 +243,7 @@ engine/
 
 ### M8 Print calibration
 - [x] Print settings guide (disable scaling, paper match)
-- [ ] Margin calibration flow (record device offsets)
+- [x] Margin calibration flow (record device offsets)
 
 ### M9 AI layout
 - [ ] Define AI schema validation (zod)
