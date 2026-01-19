@@ -83,3 +83,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added first-line indent and paragraph spacing parameters; y_offset includes space_before; space_after recorded on last line; justification uses available width after indent.
   - Files changed: src-tauri/src/typesetting/paragraph_layout.rs; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found; run cargo fmt/clippy/test in WSL once available. Continue M4 align/line-height task if needed.
+- 2026-01-19
+  - Task completed: M4 -> 段落行距与对齐（左/右/居中/两端） [plan checkbox sync]
+  - Key decisions: Marked the M4 align/line-height task as complete to reflect existing paragraph layout implementation (alignment offsets + line height spacing).
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
