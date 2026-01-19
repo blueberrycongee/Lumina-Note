@@ -9,6 +9,7 @@ mod fs;
 mod error;
 mod vector_db;
 mod llm;
+mod typesetting;
 mod cef;
 mod webdav;
 mod langgraph;

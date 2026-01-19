@@ -7,7 +7,7 @@ use super::types::{RankedNote, NoteMapConfig};
 /// 渲染 Note Map
 ///
 /// 输出格式类似 Aider 的 Repo Map：
-/// ```
+/// ```text
 /// 编程笔记/Rust/所有权.md:
 /// ⋮...
 /// │# 所有权

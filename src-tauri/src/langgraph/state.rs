@@ -10,8 +10,8 @@ use std::any::Any;
 /// The state should be cloneable and thread-safe.
 /// 
 /// # Example
-/// ```rust
-/// use langgraph::prelude::*;
+/// ```rust,no_run
+/// use lumina_note_lib::langgraph::state::GraphState;
 /// 
 /// #[derive(Clone, Default)]
 /// struct MyState {
