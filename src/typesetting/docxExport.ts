@@ -23,6 +23,24 @@ export function buildDocxDocumentXml(blocks: DocxBlock[]): string {
     `</w:document>`;
 }
 
+type HeaderFooterOptions = {
+  includePageNumber?: boolean;
+};
+
+export function buildDocxHeaderXml(
+  blocks: DocxBlock[],
+  options: HeaderFooterOptions = {},
+): string {
+  return buildHeaderFooterXml("hdr", blocks, options);
+}
+
+export function buildDocxFooterXml(
+  blocks: DocxBlock[],
+  options: HeaderFooterOptions = {},
+): string {
+  return buildHeaderFooterXml("ftr", blocks, options);
+}
+
 type ListMeta = {
   numId: string;
   level: number;
@@ -43,6 +61,24 @@ function buildBlockXml(block: DocxBlock): string {
     default:
       return "";
   }
+}
+
+function buildHeaderFooterXml(
+  tag: "hdr" | "ftr",
+  blocks: DocxBlock[],
+  options: HeaderFooterOptions,
+): string {
+  let content = blocks.map((block) => buildBlockXml(block)).join("");
+  if (options.includePageNumber) {
+    content += buildPageNumberParagraph();
+  }
+  if (!content) {
+    content = "<w:p />";
+  }
+
+  return `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<w:${tag} xmlns:w="${WORD_NAMESPACE}" xmlns:r="${REL_NAMESPACE}" xmlns:a="${DRAWING_NAMESPACE}">` +
+    `${content}</w:${tag}>`;
 }
 
 function buildParagraph(
@@ -134,6 +170,14 @@ function buildTableBlock(table: DocxTableBlock): string {
 function buildImageParagraph(image: DocxImageBlock): string {
   const blip = `<a:blip r:embed="${escapeXmlAttribute(image.embedId)}" />`;
   return `<w:p><w:r><w:drawing>${blip}</w:drawing></w:r></w:p>`;
+}
+
+function buildPageNumberParagraph(): string {
+  return `<w:p>${buildPageNumberField()}</w:p>`;
+}
+
+function buildPageNumberField(): string {
+  return `<w:fldSimple w:instr="PAGE"><w:r><w:t>1</w:t></w:r></w:fldSimple>`;
 }
 
 function buildRunText(text: string): string {
