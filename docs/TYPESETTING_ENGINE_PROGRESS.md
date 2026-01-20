@@ -460,3 +460,8 @@ pm run test:run -- src/typesetting/docxHtml.test.ts.
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx
   - Blockers/next steps: Tables/images still need engine pipeline rendering for parity; pm is unavailable so tests run via npm (\
 pm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx\).
+- 2026-01-20
+  - Task completed: M19 -> Establish Word PDF baselines (add baseline storage README + expected filenames)
+  - Key decisions: Added a baseline folder README to document expected Word PDF filenames and metadata reference.
+  - Files changed: tests/typesetting/word-baselines/README.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Export Word PDFs into tests/typesetting/word-baselines; record capture metadata in docs/WORD_BASELINE_CAPTURE.md. Tests not run (docs-only).
