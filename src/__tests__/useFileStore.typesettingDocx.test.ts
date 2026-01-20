@@ -40,4 +40,75 @@ describe("useFileStore docx tabs", () => {
     const openDoc = useTypesettingDocStore.getState().openDoc as unknown as ReturnType<typeof vi.fn>;
     expect(openDoc).toHaveBeenCalledWith(docPath);
   });
+
+  it("marks active typesetting tabs dirty", () => {
+    const docPath = "C:/vault/report.docx";
+    useFileStore.setState({
+      tabs: [{
+        id: docPath,
+        type: "typesetting-doc",
+        path: docPath,
+        name: "report",
+        content: "",
+        isDirty: false,
+        undoStack: [],
+        redoStack: [],
+      }],
+      activeTabIndex: 0,
+      currentFile: docPath,
+      currentContent: "",
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: "",
+    });
+
+    useFileStore.getState().markTypesettingTabDirty(docPath, true);
+
+    const { tabs, isDirty } = useFileStore.getState();
+    expect(tabs[0]?.isDirty).toBe(true);
+    expect(isDirty).toBe(true);
+  });
+
+  it("updates inactive typesetting tabs without toggling the active dirty state", () => {
+    const activePath = "C:/vault/active.md";
+    const docPath = "C:/vault/report.docx";
+    useFileStore.setState({
+      tabs: [
+        {
+          id: activePath,
+          type: "file",
+          path: activePath,
+          name: "active",
+          content: "hello",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        },
+        {
+          id: docPath,
+          type: "typesetting-doc",
+          path: docPath,
+          name: "report",
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: activePath,
+      currentContent: "hello",
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: "hello",
+    });
+
+    useFileStore.getState().markTypesettingTabDirty(docPath, true);
+
+    const { tabs, isDirty } = useFileStore.getState();
+    expect(tabs[1]?.isDirty).toBe(true);
+    expect(isDirty).toBe(false);
+  });
 });

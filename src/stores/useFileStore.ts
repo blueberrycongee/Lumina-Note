@@ -139,6 +139,9 @@ interface FileState {
   // File sync actions
   reloadFileIfOpen: (path: string, options?: { skipIfDirty?: boolean }) => Promise<void>;
 
+  // Typesetting doc helpers
+  markTypesettingTabDirty: (path: string, isDirty: boolean) => void;
+
   // Move file/folder actions
   moveFileToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
   moveFolderToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
@@ -1615,6 +1618,7 @@ export const useFileStore = create<FileState>()(
           set({ isSaving: true });
           try {
             await useTypesettingDocStore.getState().saveDoc(activeTab.path);
+            get().markTypesettingTabDirty(activeTab.path, false);
             set({ isSaving: false });
           } catch (error) {
             console.error("Failed to save docx:", error);
@@ -1633,6 +1637,26 @@ export const useFileStore = create<FileState>()(
           console.error("Failed to save file:", error);
           set({ isSaving: false });
         }
+      },
+
+      markTypesettingTabDirty: (path: string, isDirty: boolean) => {
+        set((state) => {
+          const tabIndex = state.tabs.findIndex(
+            (tab) => tab.type === "typesetting-doc" && tab.path === path,
+          );
+          if (tabIndex === -1) {
+            return state;
+          }
+          const tabs = state.tabs.map((tab, index) =>
+            index === tabIndex ? { ...tab, isDirty } : tab,
+          );
+          const isActive =
+            state.activeTabIndex === tabIndex && state.currentFile === path;
+          return {
+            tabs,
+            isDirty: isActive ? isDirty : state.isDirty,
+          };
+        });
       },
 
       // Close current file (now closes current tab)
