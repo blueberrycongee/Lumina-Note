@@ -1,4 +1,4 @@
-import { act, render, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
 import {
@@ -52,5 +52,23 @@ describe("TypesettingDocumentPane", () => {
     });
 
     vi.useRealTimers();
+  });
+
+  it("shows page navigation controls with a single-page default", async () => {
+    const path = "C:/vault/report.docx";
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path),
+      },
+    });
+
+    render(<TypesettingDocumentPane path={path} />);
+
+    const prevButton = await screen.findByLabelText("Previous page");
+    const nextButton = screen.getByLabelText("Next page");
+
+    expect(screen.getByText("Page 1 / 1")).toBeInTheDocument();
+    expect(prevButton).toBeDisabled();
+    expect(nextButton).toBeDisabled();
   });
 });

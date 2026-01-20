@@ -331,3 +331,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete to reflect the existing useTypesettingDocStore implementation with style refs and layout cache.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only). Continue remaining M13 integration items.
+- 2026-01-20
+  - Task completed: M13 -> Integrate engine preview UI (paged view, zoom controls, page navigation, layout summary)
+  - Key decisions: Added page navigation controls and estimate total pages from layout line count plus body height using the default 20px line height; clamp page changes within bounds.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: `npm run test:run -- TypesettingDocumentPane` failed (EPIPE broken pipe, Node.js v22.14.0). Rerun tests once the vitest output issue is resolved.

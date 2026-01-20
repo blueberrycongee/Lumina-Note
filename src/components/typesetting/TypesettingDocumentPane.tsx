@@ -21,6 +21,7 @@ type TypesettingDocumentPaneProps = {
 };
 
 const DEFAULT_DPI = 96;
+const DEFAULT_LINE_HEIGHT_PX = 20;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
@@ -66,6 +67,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   const [error, setError] = useState<string | null>(null);
   const [pageMm, setPageMm] = useState<TypesettingPreviewPageMm | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -113,7 +115,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           text,
           fontPath,
           maxWidth,
-          lineHeight: 20,
+          lineHeight: DEFAULT_LINE_HEIGHT_PX,
         });
         updateLayoutSummary(path, `Layout: ${layoutData.lines.length} lines`);
         updateLayoutCache(path, {
@@ -158,6 +160,21 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
 
   const layoutSummary = doc?.layoutSummary
     ?? (layoutError ? `Layout unavailable: ${layoutError}` : "Layout: idle");
+
+  const totalPages = useMemo(() => {
+    if (!pageMm) return 1;
+    const lineCount = doc?.layoutCache?.lineCount ?? 0;
+    const linesPerPage = Math.max(
+      1,
+      Math.floor(mmToPx(pageMm.body.height_mm) / DEFAULT_LINE_HEIGHT_PX),
+    );
+    const safeLineCount = Math.max(1, lineCount);
+    return Math.max(1, Math.ceil(safeLineCount / linesPerPage));
+  }, [doc?.layoutCache?.lineCount, pageMm]);
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(Math.max(1, prev), totalPages));
+  }, [totalPages]);
 
   const handleInput = () => {
     if (!editableRef.current) return;
@@ -223,6 +240,31 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
               disabled={zoom >= MAX_ZOOM}
             >
               +
+            </button>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs disabled:opacity-50"
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage <= 1}
+              aria-label="Previous page"
+            >
+              Prev
+            </button>
+            <span className="min-w-[5rem] text-center">
+              Page {currentPage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs disabled:opacity-50"
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
+              disabled={currentPage >= totalPages}
+              aria-label="Next page"
+            >
+              Next
             </button>
           </div>
           <button
