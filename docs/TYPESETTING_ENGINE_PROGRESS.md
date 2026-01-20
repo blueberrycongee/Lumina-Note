@@ -400,3 +400,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Establish Word PDF baselines for golden fixtures on a single machine. Tests not run (docs-only).
 
+- 2026-01-20
+  - Task completed: M19 -> Establish Word PDF baselines (capture procedure + naming)
+  - Key decisions: Added a Word baseline capture guide with output path tests/typesetting/word-baselines/ and <fixture-id>.word.pdf naming; record Word/Windows/font metadata per batch.
+  - Files changed: docs/WORD_BASELINE_CAPTURE.md; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Export Word PDFs for the golden docx fixtures on the target machine; tests not run (docs-only).
