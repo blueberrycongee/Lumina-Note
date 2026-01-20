@@ -616,7 +616,7 @@ Notes:
 - [x] Persist document model to storage (save/load) and export to docx/PDF.
 - [x] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
 - [x] Expose doc editing only in Lumina Note Codex mode (feature flag + UI gating).
-- [ ] Create a dedicated Codex skill for document ops (apply_intent, insert_text, apply_style, selection ops).
+- [x] Create a dedicated Codex skill for document ops (apply_intent, insert_text, apply_style, selection ops).
 
 ### M14 Editing UX and overrides
 - [ ] Style inspector: show computed style vs local override.

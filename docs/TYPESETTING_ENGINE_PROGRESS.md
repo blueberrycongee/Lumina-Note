@@ -388,3 +388,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Treat composition/replacement input types as text inserts when data is present; map deleteContent/deleteByDrag to selection deletes.
   - Files changed: src/typesetting/docOps.ts; src/typesetting/docOps.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests run: npm run test:run -- docOps.test.ts. Remaining M13 item: create dedicated Codex skill for document ops.
+- 2026-01-20
+  - Task completed: M13 -> Create a dedicated Codex skill for document ops (apply_intent, insert_text, apply_style, selection ops)
+  - Key decisions: Created the typesetting-doc-ops skill with a concise workflow and op guidance; no extra resources needed; packaged the skill to C:\Users\10758\.codex\skills\dist\typesetting-doc-ops.skill.
+  - Files changed: C:\Users\10758\.codex\skills\typesetting-doc-ops\SKILL.md; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs/skill-only changes).
+
