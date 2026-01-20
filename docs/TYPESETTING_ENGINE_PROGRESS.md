@@ -410,3 +410,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Use pdfjs-dist to read MediaBox points for page sizes; diff compares shared pages and reports max absolute deltas in points.
   - Files changed: src/typesetting/pdfMetrics.ts; src/typesetting/pdfMetrics.test.ts; scripts/typesetting_pdf_diff.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Pixel diff still needed for M19 tooling; npm run test:run failing in docxPackage tests (missing word/document.xml) and TypesettingPreviewPane invoke expectations; rerun once fixed.
+- 2026-01-20
+  - Task completed: M19 -> Build diff tooling (pixel + layout metrics) and acceptance thresholds [pixel diff helper]
+  - Key decisions: Added a pixel diff helper that reports per-pixel change counts plus max/mean channel deltas; throw on length mismatch or non-RGBA buffers.
+  - Files changed: src/typesetting/pixelDiff.ts; src/typesetting/pixelDiff.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Wire pixel diff to PDF render output and define acceptance thresholds; full test run still pending (known failures in other suites).
