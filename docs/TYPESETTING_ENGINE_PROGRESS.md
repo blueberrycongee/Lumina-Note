@@ -311,3 +311,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Only direct <li> children become list items; skip <ul>/<ol> nodes when extracting inline runs to avoid nested list text bleed.
   - Files changed: src/typesetting/docxHtml.ts; src/typesetting/docxHtml.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (wsl -l -q returned no distros); unable to run WSL npm test/lint/CI.
+- 2026-01-20
+  - Task completed: M13 -> Persist document model to storage (save/load) and export to docx/PDF [sync typesetting doc dirty state with tabs]
+  - Key decisions: Added a typesetting tab dirty-state updater in useFileStore; TypesettingDocumentPane now marks tabs dirty on input and uses the shared save action to clear indicators after saving.
+  - Files changed: src/stores/useFileStore.ts; src/components/typesetting/TypesettingDocumentPane.tsx; src/__tests__/useFileStore.typesettingDocx.test.ts
+  - Blockers/next steps: `npm run test:run` failed (docxPackage tests missing document.xml; TypesettingDocumentPane test timed out). Cargo tests not run (no Rust changes).

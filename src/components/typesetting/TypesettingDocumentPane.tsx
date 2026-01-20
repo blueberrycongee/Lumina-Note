@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
+import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import {
   getTypesettingExportPdfBase64,
@@ -53,13 +54,13 @@ const scaleBoxPx = (
 
 export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) {
   const { chatMode } = useUIStore();
+  const { save: saveActiveFile, markTypesettingTabDirty } = useFileStore();
   const {
     docs,
     openDoc,
     updateDocBlocks,
     updateLayoutSummary,
     updateLayoutCache,
-    saveDoc,
   } = useTypesettingDocStore();
   const doc = docs[path];
   const [error, setError] = useState<string | null>(null);
@@ -162,6 +163,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     if (!editableRef.current) return;
     const blocks = docxHtmlToBlocks(editableRef.current);
     updateDocBlocks(path, blocks);
+    markTypesettingTabDirty(path, true);
   };
 
   const handleExport = async () => {
@@ -226,7 +228,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           <button
             type="button"
             className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
-            onClick={() => saveDoc(path)}
+            onClick={() => saveActiveFile()}
             disabled={!doc?.isDirty}
           >
             Save
