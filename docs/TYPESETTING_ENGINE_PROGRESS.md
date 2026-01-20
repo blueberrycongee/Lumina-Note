@@ -346,3 +346,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the M13 checklist item complete to reflect existing debounced layout recompute and layout cache updates in TypesettingDocumentPane.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M13 -> Bridge Tauri commands for preview metrics and layout runs (invoke wrappers + error handling)
+  - Key decisions: Added a typesetting invoke wrapper to add command context on errors; updated typesetting wrappers to use it; added tests to assert error context and snake_case argument mapping.
+  - Files changed: src/lib/tauri.ts; src/lib/tauri.typesetting.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests run: npm run test:run -- tauri.typesetting.test.ts.

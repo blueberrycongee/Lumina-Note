@@ -67,12 +67,26 @@ export type TypesettingTextLayout = {
   lines: TypesettingTextLine[];
 };
 
+const invokeTypesetting = async <T>(
+  command: string,
+  args?: Record<string, unknown>,
+): Promise<T> => {
+  try {
+    return await invoke<T>(command, args);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Typesetting command ${command} failed: ${message}`);
+  }
+};
+
 export async function getTypesettingPreviewPageMm(): Promise<TypesettingPreviewPageMm> {
-  return invoke<TypesettingPreviewPageMm>("typesetting_preview_page_mm");
+  return invokeTypesetting<TypesettingPreviewPageMm>(
+    "typesetting_preview_page_mm",
+  );
 }
 
 export async function getTypesettingFixtureFontPath(): Promise<string | null> {
-  return invoke<string | null>("typesetting_fixture_font_path");
+  return invokeTypesetting<string | null>("typesetting_fixture_font_path");
 }
 
 export async function getTypesettingLayoutText(params: {
@@ -81,7 +95,7 @@ export async function getTypesettingLayoutText(params: {
   maxWidth: number;
   lineHeight: number;
 }): Promise<TypesettingTextLayout> {
-  return invoke<TypesettingTextLayout>("typesetting_layout_text", {
+  return invokeTypesetting<TypesettingTextLayout>("typesetting_layout_text", {
     text: params.text,
     font_path: params.fontPath,
     max_width: params.maxWidth,
@@ -90,7 +104,7 @@ export async function getTypesettingLayoutText(params: {
 }
 
 export async function getTypesettingExportPdfBase64(): Promise<string> {
-  return invoke<string>("typesetting_export_pdf_base64");
+  return invokeTypesetting<string>("typesetting_export_pdf_base64");
 }
 
 /**
