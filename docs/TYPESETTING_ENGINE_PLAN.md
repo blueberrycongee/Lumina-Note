@@ -607,7 +607,7 @@ Notes:
 - [x] Add a typesetting document entry point in the app (new doc type + open route).
 - [x] Create a typesetting document store (document model, style refs, layout cache).
 - [x] Integrate engine preview UI (paged view, zoom controls, page navigation, layout summary).
-- [ ] Wire document model edits to layout pipeline (incremental reflow + debounced recompute).
+- [x] Wire document model edits to layout pipeline (incremental reflow + debounced recompute).
 - [ ] Bridge Tauri commands for preview metrics and layout runs (invoke wrappers + error handling).
 - [ ] Connect export/print UI to PDF output (single source of truth).
 - [x] Docx open pipeline: detect `.docx`, unzip, read document/header/footer XML, map styles, images.

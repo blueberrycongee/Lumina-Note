@@ -341,3 +341,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Track layout run ids in the preview pane so older async layout results cannot overwrite newer edits; updated tests to cover stale run ordering with fake timers.
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests run: npm run test:run -- TypesettingDocumentPane. Cargo tests not run (no Rust changes). Continue remaining M13 integration tasks.
+- 2026-01-20
+  - Task completed: M13 -> Wire document model edits to layout pipeline (incremental reflow + debounced recompute) [plan checkbox sync]
+  - Key decisions: Marked the M13 checklist item complete to reflect existing debounced layout recompute and layout cache updates in TypesettingDocumentPane.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only).
