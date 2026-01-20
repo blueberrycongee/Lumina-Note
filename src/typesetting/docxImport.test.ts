@@ -106,6 +106,45 @@ describe("parseDocxDocumentXml", () => {
     }
   });
 
+  it("parses strikethrough run styles", () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:p>
+            <w:r>
+              <w:rPr>
+                <w:strike />
+              </w:rPr>
+              <w:t>Strike</w:t>
+            </w:r>
+            <w:r>
+              <w:rPr>
+                <w:dstrike w:val="true" />
+              </w:rPr>
+              <w:t>Double</w:t>
+            </w:r>
+          </w:p>
+        </w:body>
+      </w:document>`;
+
+    const blocks = parseDocxDocumentXml(xml);
+    expect(blocks).toHaveLength(1);
+    const paragraph = blocks[0];
+    expect(paragraph.type).toBe("paragraph");
+    if (paragraph.type === "paragraph") {
+      expect(paragraph.runs).toEqual([
+        {
+          text: "Strike",
+          style: { strikethrough: true },
+        },
+        {
+          text: "Double",
+          style: { strikethrough: true },
+        },
+      ]);
+    }
+  });
+
   it("returns an empty list when no paragraphs exist", () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
       <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">

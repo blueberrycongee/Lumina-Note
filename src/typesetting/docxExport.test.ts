@@ -75,6 +75,20 @@ describe("buildDocxDocumentXml", () => {
     expect(xml).toContain("<w:tab");
   });
 
+  it("exports strikethrough runs", () => {
+    const blocks: DocxBlock[] = [
+      {
+        type: "paragraph",
+        runs: [{ text: "Cut", style: { strikethrough: true } }],
+      },
+    ];
+
+    const xml = buildDocxDocumentXml(blocks);
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const strike = doc.getElementsByTagName("w:strike")[0];
+    expect(strike).toBeTruthy();
+  });
+
   it("exports lists, tables, and images", () => {
     const blocks: DocxBlock[] = [
       {

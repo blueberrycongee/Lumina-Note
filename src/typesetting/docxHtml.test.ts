@@ -49,6 +49,33 @@ describe("docxHtmlToBlocks", () => {
     ]);
   });
 
+  it("captures strikethrough from tags and text-decoration", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<p><span style="text-decoration: line-through;">Cut</span> <s>Old</s></p>`;
+
+    const blocks = docxHtmlToBlocks(root);
+    expect(blocks).toEqual([
+      {
+        type: "paragraph",
+        runs: [
+          {
+            text: "Cut",
+            style: {
+              strikethrough: true,
+            },
+          },
+          { text: " " },
+          {
+            text: "Old",
+            style: {
+              strikethrough: true,
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
   it("ignores nested list items when mapping to flat list blocks", () => {
     const root = document.createElement("div");
     root.innerHTML = `<ul><li>First<ul><li>Nested</li></ul></li><li>Second</li></ul>`;

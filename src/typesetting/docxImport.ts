@@ -4,6 +4,7 @@ export type DocxRunStyle = {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  strikethrough?: boolean;
 };
 
 export type DocxRun = {
@@ -372,6 +373,16 @@ function parseRunStyle(run: Element): DocxRunStyle | undefined {
     const raw = underlineNode.getAttribute("w:val") ?? underlineNode.getAttribute("val");
     if (raw && raw.toLowerCase() !== "none") {
       style.underline = true;
+    }
+  }
+
+  const strikeNode =
+    rPr.getElementsByTagName("w:strike")[0] ??
+    rPr.getElementsByTagName("w:dstrike")[0];
+  if (strikeNode) {
+    const raw = strikeNode.getAttribute("w:val") ?? strikeNode.getAttribute("val");
+    if (!raw || raw === "1" || raw.toLowerCase() === "true") {
+      style.strikethrough = true;
     }
   }
 

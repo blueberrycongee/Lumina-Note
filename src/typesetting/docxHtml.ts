@@ -124,6 +124,9 @@ function wrapWithStyle(text: string, style: DocxRunStyle): string {
   if (style.underline) {
     output = `<u>${output}</u>`;
   }
+  if (style.strikethrough) {
+    output = `<s>${output}</s>`;
+  }
   if (style.italic) {
     output = `<em>${output}</em>`;
   }
@@ -174,6 +177,9 @@ function extractRuns(element: Element): DocxRun[] {
     if (tag === "u") {
       nextStyle.underline = true;
     }
+    if (tag === "s" || tag === "del" || tag === "strike") {
+      nextStyle.strikethrough = true;
+    }
     applyInlineStyle(el, nextStyle);
 
     for (const child of Array.from(el.childNodes)) {
@@ -205,8 +211,13 @@ function applyInlineStyle(element: HTMLElement, style: DocxRunStyle) {
   }
 
   const textDecoration = element.style.textDecorationLine || element.style.textDecoration;
-  if (textDecoration && textDecoration.includes("underline")) {
-    style.underline = true;
+  if (textDecoration) {
+    if (textDecoration.includes("underline")) {
+      style.underline = true;
+    }
+    if (textDecoration.includes("line-through")) {
+      style.strikethrough = true;
+    }
   }
 }
 

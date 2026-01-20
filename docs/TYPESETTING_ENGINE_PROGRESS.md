@@ -351,3 +351,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a typesetting invoke wrapper to add command context on errors; updated typesetting wrappers to use it; added tests to assert error context and snake_case argument mapping.
   - Files changed: src/lib/tauri.ts; src/lib/tauri.typesetting.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests run: npm run test:run -- tauri.typesetting.test.ts.
+- 2026-01-20
+  - Task completed: M13 -> Map editor actions to document ops (strikethrough support in HTML/docx runs)
+  - Key decisions: Treat <s>/<del>/<strike> and text-decoration: line-through as strikethrough; map to w:strike/w:dstrike on import and w:strike on export.
+  - Files changed: src/typesetting/docxHtml.ts; src/typesetting/docxHtml.test.ts; src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts
+  - Blockers/next steps: Continue mapping remaining editor actions (lists/indent/selection state) and persistence/export wiring as needed. Tests run: npm run test:run -- docxHtml.test.ts docxImport.test.ts docxExport.test.ts

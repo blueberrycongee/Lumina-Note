@@ -135,6 +135,10 @@ function buildRunStyle(style?: DocxRunStyle): string {
     parts.push('<w:u w:val="single" />');
   }
 
+  if (style.strikethrough) {
+    parts.push("<w:strike />");
+  }
+
   if (parts.length === 0) {
     return "";
   }
