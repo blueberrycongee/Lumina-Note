@@ -36,9 +36,11 @@ export function docxHtmlToBlocks(root: HTMLElement): DocxBlock[] {
     }
 
     if (tag === "ul" || tag === "ol") {
-      const items = Array.from(element.querySelectorAll("li")).map((li) => ({
-        runs: extractRuns(li),
-      }));
+      const items = Array.from(element.children)
+        .filter((child) => child.tagName.toLowerCase() === "li")
+        .map((li) => ({
+          runs: extractRuns(li),
+        }));
       blocks.push({
         type: "list",
         ordered: tag === "ol",
@@ -149,6 +151,10 @@ function extractRuns(element: Element): DocxRun[] {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
+
+    if (tag === "ul" || tag === "ol") {
+      return;
+    }
 
     if (tag === "br") {
       runs.push({

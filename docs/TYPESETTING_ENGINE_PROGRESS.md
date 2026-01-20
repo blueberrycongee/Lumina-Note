@@ -306,3 +306,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Parse inline CSS styles from contentEditable spans; treat font-weight >= 600 as bold and text-decoration-line underline as underline.
   - Files changed: src/typesetting/docxHtml.ts; src/typesetting/docxHtml.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND), so `wsl -d Ubuntu -- npm run test:run` failed. Rerun full tests/lint/CI once WSL is available. Next: map more editor actions to structured ops (lists/indent/selection state).
+- 2026-01-20
+  - Task completed: M13 -> Map editor actions to document ops (ignore nested list items during HTML -> docx blocks)
+  - Key decisions: Only direct <li> children become list items; skip <ul>/<ol> nodes when extracting inline runs to avoid nested list text bleed.
+  - Files changed: src/typesetting/docxHtml.ts; src/typesetting/docxHtml.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found (wsl -l -q returned no distros); unable to run WSL npm test/lint/CI.

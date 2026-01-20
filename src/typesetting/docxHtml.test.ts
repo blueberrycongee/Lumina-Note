@@ -48,4 +48,18 @@ describe("docxHtmlToBlocks", () => {
       },
     ]);
   });
+
+  it("ignores nested list items when mapping to flat list blocks", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<ul><li>First<ul><li>Nested</li></ul></li><li>Second</li></ul>`;
+
+    const blocks = docxHtmlToBlocks(root);
+    expect(blocks).toEqual([
+      {
+        type: "list",
+        ordered: false,
+        items: [{ runs: [{ text: "First" }] }, { runs: [{ text: "Second" }] }],
+      },
+    ]);
+  });
 });
