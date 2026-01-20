@@ -405,3 +405,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a Word baseline capture guide with output path tests/typesetting/word-baselines/ and <fixture-id>.word.pdf naming; record Word/Windows/font metadata per batch.
   - Files changed: docs/WORD_BASELINE_CAPTURE.md; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Export Word PDFs for the golden docx fixtures on the target machine; tests not run (docs-only).
+- 2026-01-20
+  - Task completed: M19 -> Build diff tooling (layout metrics diff helper + PDF metrics CLI scaffold)
+  - Key decisions: Use pdfjs-dist to read MediaBox points for page sizes; diff compares shared pages and reports max absolute deltas in points.
+  - Files changed: src/typesetting/pdfMetrics.ts; src/typesetting/pdfMetrics.test.ts; scripts/typesetting_pdf_diff.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Pixel diff still needed for M19 tooling; npm run test:run failing in docxPackage tests (missing word/document.xml) and TypesettingPreviewPane invoke expectations; rerun once fixed.
