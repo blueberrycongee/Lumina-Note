@@ -296,3 +296,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete because the pipeline is already wired through useFileStore + useTypesettingDocStore + docxPackage parsing.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only). Next: continue remaining M13 integration tasks (editor action mapping, persistence wiring).
+- 2026-01-20
+  - Task completed: M13 -> Wire document model edits to layout pipeline (incremental reflow + debounced recompute) [layout cache updates]
+  - Key decisions: Persist layout cache with lineCount + updatedAt when layout_text succeeds; leave cache unchanged on layout errors.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL Ubuntu distro not found (WSL_E_DISTRO_NOT_FOUND); unable to run WSL test/lint/CI.

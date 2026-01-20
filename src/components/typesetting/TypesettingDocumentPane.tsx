@@ -1,0 +1,359 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeFile } from "@tauri-apps/plugin-fs";
+import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
+import { useUIStore } from "@/stores/useUIStore";
+import {
+  getTypesettingExportPdfBase64,
+  getTypesettingFixtureFontPath,
+  getTypesettingLayoutText,
+  getTypesettingPreviewPageMm,
+  TypesettingPreviewBoxMm,
+  TypesettingPreviewPageMm,
+} from "@/lib/tauri";
+import { decodeBase64ToBytes } from "@/typesetting/base64";
+import { docxBlocksToHtml, docxHtmlToBlocks } from "@/typesetting/docxHtml";
+import { docxBlocksToPlainText } from "@/typesetting/docxText";
+
+type TypesettingDocumentPaneProps = {
+  path: string;
+};
+
+const DEFAULT_DPI = 96;
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 2;
+const ZOOM_STEP = 0.1;
+
+const mmToPx = (mm: number, dpi = DEFAULT_DPI) =>
+  Math.round((Math.max(0, mm) * dpi) / 25.4);
+
+const boxToPx = (box: TypesettingPreviewBoxMm) => ({
+  left: mmToPx(box.x_mm),
+  top: mmToPx(box.y_mm),
+  width: mmToPx(box.width_mm),
+  height: mmToPx(box.height_mm),
+});
+
+const clampZoom = (value: number) =>
+  Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, value));
+
+const roundZoom = (value: number) => Math.round(value * 100) / 100;
+
+const scalePx = (value: number, zoom: number) => Math.round(value * zoom);
+
+const scaleBoxPx = (
+  box: ReturnType<typeof boxToPx>,
+  zoom: number,
+) => ({
+  left: scalePx(box.left, zoom),
+  top: scalePx(box.top, zoom),
+  width: scalePx(box.width, zoom),
+  height: scalePx(box.height, zoom),
+});
+
+export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) {
+  const { chatMode } = useUIStore();
+  const {
+    docs,
+    openDoc,
+    updateDocBlocks,
+    updateLayoutSummary,
+    updateLayoutCache,
+    saveDoc,
+  } = useTypesettingDocStore();
+  const doc = docs[path];
+  const [error, setError] = useState<string | null>(null);
+  const [pageMm, setPageMm] = useState<TypesettingPreviewPageMm | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [layoutError, setLayoutError] = useState<string | null>(null);
+  const editableRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (doc) return;
+    openDoc(path).catch((err) => setError(String(err)));
+  }, [doc, openDoc, path]);
+
+  useEffect(() => {
+    let active = true;
+    getTypesettingPreviewPageMm()
+      .then((data) => {
+        if (active) {
+          setPageMm(data);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setError(String(err));
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!doc || !pageMm) return;
+    setLayoutError(null);
+
+    const text = docxBlocksToPlainText(doc.blocks);
+    const handler = setTimeout(async () => {
+      const fontPath = await getTypesettingFixtureFontPath();
+      if (!fontPath) {
+        setLayoutError("missing fixture font");
+        updateLayoutSummary(path, "Layout unavailable");
+        return;
+      }
+      try {
+        const maxWidth = mmToPx(pageMm.body.width_mm);
+        const layoutData = await getTypesettingLayoutText({
+          text,
+          fontPath,
+          maxWidth,
+          lineHeight: 20,
+        });
+        updateLayoutSummary(path, `Layout: ${layoutData.lines.length} lines`);
+        updateLayoutCache(path, {
+          lineCount: layoutData.lines.length,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        setLayoutError(String(err));
+        updateLayoutSummary(path, "Layout unavailable");
+      }
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [doc, pageMm, path, updateLayoutSummary]);
+
+  const html = useMemo(() => {
+    if (!doc) return "";
+    return docxBlocksToHtml(doc.blocks);
+  }, [doc]);
+
+  useEffect(() => {
+    if (!editableRef.current || isEditing) return;
+    editableRef.current.innerHTML = html;
+  }, [html, isEditing]);
+
+  const pagePx = useMemo(() => {
+    if (!pageMm) return null;
+    const base = {
+      page: boxToPx(pageMm.page),
+      body: boxToPx(pageMm.body),
+      header: boxToPx(pageMm.header),
+      footer: boxToPx(pageMm.footer),
+    };
+    if (zoom === 1) return base;
+    return {
+      page: scaleBoxPx(base.page, zoom),
+      body: scaleBoxPx(base.body, zoom),
+      header: scaleBoxPx(base.header, zoom),
+      footer: scaleBoxPx(base.footer, zoom),
+    };
+  }, [pageMm, zoom]);
+
+  const layoutSummary = doc?.layoutSummary
+    ?? (layoutError ? `Layout unavailable: ${layoutError}` : "Layout: idle");
+
+  const handleInput = () => {
+    if (!editableRef.current) return;
+    const blocks = docxHtmlToBlocks(editableRef.current);
+    updateDocBlocks(path, blocks);
+  };
+
+  const handleExport = async () => {
+    setExportError(null);
+    setExporting(true);
+    try {
+      const filePath = await save({
+        defaultPath: "typesetting-export.pdf",
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+      if (!filePath) return;
+      const payload = await getTypesettingExportPdfBase64();
+      const bytes = decodeBase64ToBytes(payload);
+      await writeFile(filePath, bytes);
+    } catch (err) {
+      console.error("Typesetting PDF export failed:", err);
+      setExportError("Export failed.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="text-sm text-destructive">Failed to open docx: {error}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-auto bg-background">
+      <div className="sticky top-0 z-10 flex items-center justify-center bg-background/80 px-6 py-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-sm disabled:opacity-50"
+              aria-label="Zoom out"
+              onClick={() =>
+                setZoom((current) => clampZoom(roundZoom(current - ZOOM_STEP)))
+              }
+              disabled={zoom <= MIN_ZOOM}
+            >
+              -
+            </button>
+            <span className="min-w-[3rem] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-sm disabled:opacity-50"
+              aria-label="Zoom in"
+              onClick={() =>
+                setZoom((current) => clampZoom(roundZoom(current + ZOOM_STEP)))
+              }
+              disabled={zoom >= MAX_ZOOM}
+            >
+              +
+            </button>
+          </div>
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+            onClick={() => saveDoc(path)}
+            disabled={!doc?.isDirty}
+          >
+            Save
+          </button>
+          <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs"
+              onClick={() => {
+                editableRef.current?.focus();
+                document.execCommand("bold");
+              }}
+              disabled={chatMode !== "codex"}
+              aria-label="Bold"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs"
+              onClick={() => {
+                editableRef.current?.focus();
+                document.execCommand("italic");
+              }}
+              disabled={chatMode !== "codex"}
+              aria-label="Italic"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs"
+              onClick={() => {
+                editableRef.current?.focus();
+                document.execCommand("underline");
+              }}
+              disabled={chatMode !== "codex"}
+              aria-label="Underline"
+            >
+              U
+            </button>
+          </div>
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? "Exporting..." : "Export PDF"}
+          </button>
+          {exportError ? (
+            <span className="text-xs text-destructive">{exportError}</span>
+          ) : null}
+          <span className="text-xs text-muted-foreground">{layoutSummary}</span>
+        </div>
+      </div>
+      <div className="flex min-h-full items-center justify-center px-6 py-10">
+        {!pagePx ? (
+          <div className="text-center space-y-2">
+            <div className="text-lg font-semibold text-foreground">
+              Typesetting Document
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Loading preview metrics...
+            </p>
+          </div>
+        ) : (
+          <div
+            className="relative rounded-lg border border-border bg-white shadow-sm"
+            style={{ width: pagePx.page.width, height: pagePx.page.height }}
+          >
+            <div
+              className="absolute border border-dashed border-muted-foreground/40"
+              style={{
+                left: pagePx.body.left,
+                top: pagePx.body.top,
+                width: pagePx.body.width,
+                height: pagePx.body.height,
+              }}
+            >
+              {chatMode === "codex" ? (
+                <div
+                  ref={editableRef}
+                  className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={handleInput}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={() => {
+                    setIsEditing(false);
+                    handleInput();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Tab") {
+                      event.preventDefault();
+                      document.execCommand("insertText", false, "\t");
+                    }
+                  }}
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  Switch to Codex mode to edit this document.
+                </div>
+              )}
+            </div>
+            <div
+              className="absolute border border-dotted border-muted-foreground/30"
+              style={{
+                left: pagePx.header.left,
+                top: pagePx.header.top,
+                width: pagePx.header.width,
+                height: pagePx.header.height,
+              }}
+            />
+            <div
+              className="absolute border border-dotted border-muted-foreground/30"
+              style={{
+                left: pagePx.footer.left,
+                top: pagePx.footer.top,
+                width: pagePx.footer.width,
+                height: pagePx.footer.height,
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
