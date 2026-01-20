@@ -280,3 +280,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a dev-only fixture font lookup command to power sample layout calls; preview pane now shows a layout summary or an unavailable state when no fixture font exists.
   - Files changed: src/components/typesetting/TypesettingPreviewPane.tsx; src/components/typesetting/TypesettingPreviewPane.test.tsx; src/__tests__/setup.ts; src-tauri/src/commands/mod.rs; src-tauri/src/main.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro list empty (`wsl -l -q` returned no distros); unable to run WSL npm/cargo tests or lint. Next: map real font paths from the font manager and render layout output in the preview body.
+- 2026-01-20
+  - Task completed: M13 -> Create a typesetting document store (document model, style refs, layout cache) [store refs + layout cache fields]
+  - Key decisions: Added simple style ref ids (font/paragraph/page) and a layout cache with lineCount + updatedAt; layout cache updates do not mark docs dirty.
+  - Files changed: src/stores/useTypesettingDocStore.ts; src/stores/useTypesettingDocStore.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run WSL npm test/lint/CI. Next: wire layout cache updates from the layout pipeline and feed style refs from document settings.
