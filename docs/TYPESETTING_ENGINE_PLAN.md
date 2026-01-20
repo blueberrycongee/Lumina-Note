@@ -644,3 +644,13 @@ Notes:
 - [ ] Golden fixture suite for complex layouts and large docs.
 - [ ] Perf budgets (layout, pagination, export time).
 - [ ] Crash repro harness + stable regression test pipeline.
+
+### M19 Word parity fitting (next phase focus)
+Goal: minimize visible differences between Lumina rendering and Word for a defined docx subset.
+- [ ] Define a compatibility contract (supported docx features, fonts, page sizes).
+- [ ] Establish Word PDF baselines for golden fixtures on a single machine.
+- [ ] Build diff tooling (pixel + layout metrics) and acceptance thresholds.
+- [ ] Map docx styles -> layout engine inputs (font, size, line height, indent, spacing, alignment).
+- [ ] Render images/tables/headers/footers using the engine pipeline (no placeholders).
+- [ ] Drive pagination with real layout results (no fixed line-height placeholders).
+- [ ] Iterate until diffs are within thresholds; document known gaps.
