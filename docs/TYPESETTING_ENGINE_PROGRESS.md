@@ -481,3 +481,9 @@ pm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx\)
   - Key decisions: Use layout_text for text-only header/footer blocks and render absolute line boxes from UTF-8 byte ranges; fall back to HTML when header/footer blocks include images/tables; derive header/footer line height from font size default * 1.2.
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; src/typesetting/utf8.ts; src/typesetting/utf8.test.ts
   - Blockers/next steps: Engine rendering for images/tables/header/footer images still pending; npm test run hit Node.js EPIPE (vitest) and timed out; pm not available; WSL unavailable for full CI/lint.
+- 2026-01-20
+  - Task completed: M19 -> Render engine body text for simple blocks when not editing (partial toward engine pipeline rendering)
+  - Key decisions: Use engine layout output for read-only body preview when no images/tables; keep contentEditable for edits/complex blocks; click-to-edit swaps back to the HTML editor.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Engine rendering for images/tables still pending; Word PDF baselines still need capture. pm is unavailable, so tests ran via 
+pm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx.

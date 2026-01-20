@@ -157,6 +157,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   const [printError, setPrintError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
+  const [bodyLayout, setBodyLayout] = useState<LayoutRender | null>(null);
   const [headerLayout, setHeaderLayout] = useState<LayoutRender | null>(null);
   const [footerLayout, setFooterLayout] = useState<LayoutRender | null>(null);
   const editableRef = useRef<HTMLDivElement | null>(null);
@@ -187,6 +188,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
 
   useEffect(() => {
     if (!doc || !pageMm) {
+      setBodyLayout(null);
       setHeaderLayout(null);
       setFooterLayout(null);
       return;
@@ -229,6 +231,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
       if (!fontPath) {
         setLayoutError("missing fixture font");
         updateLayoutSummary(path, "Layout unavailable");
+        setBodyLayout(null);
         setHeaderLayout(null);
         setFooterLayout(null);
         return;
@@ -282,6 +285,12 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           spaceAfter: layoutOptions.spaceAfterPx,
         });
         if (layoutRunRef.current !== runId) return;
+        setBodyLayout({
+          text,
+          fontSizePx,
+          lineHeightPx,
+          lines: layoutData.lines,
+        });
         const contentHeightPx = layoutData.lines.length > 0
           ? Math.max(
               0,
@@ -322,6 +331,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
         if (layoutRunRef.current !== runId) return;
         setLayoutError(String(err));
         updateLayoutSummary(path, "Layout unavailable");
+        setBodyLayout(null);
         setHeaderLayout(null);
         setFooterLayout(null);
       }
@@ -359,6 +369,16 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     if (!footerLayout) return [];
     return buildRenderedLines(footerLayout.text, footerLayout.lines);
   }, [footerLayout]);
+
+  const bodyLines = useMemo(() => {
+    if (!bodyLayout) return [];
+    return buildRenderedLines(bodyLayout.text, bodyLayout.lines);
+  }, [bodyLayout]);
+
+  const bodyUsesEngine = !!doc
+    && !isEditing
+    && !hasComplexLayoutBlocks(doc.blocks)
+    && bodyLines.length > 0;
 
   const headerUsesEngine = headerLines.length > 0;
   const footerUsesEngine = footerLines.length > 0;
@@ -413,6 +433,11 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     const blocks = docxHtmlToBlocks(editableRef.current);
     updateDocBlocks(path, blocks);
     markTypesettingTabDirty(path, true);
+  };
+
+  const startEditing = () => {
+    setIsEditing(true);
+    setTimeout(() => editableRef.current?.focus(), 0);
   };
 
   const handleBeforeInput = (event: React.FormEvent<HTMLDivElement>) => {
@@ -674,26 +699,53 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 height: pagePx.body.height,
               }}
             >
-              <div
-                ref={editableRef}
-                className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
-                contentEditable
-                suppressContentEditableWarning
-                onBeforeInput={handleBeforeInput}
-                onInput={handleInput}
-                onFocus={() => setIsEditing(true)}
-                onBlur={() => {
-                  setIsEditing(false);
-                  handleInput();
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Tab") {
-                    event.preventDefault();
-                    document.execCommand("insertText", false, "\t");
-                  }
-                }}
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
+              {bodyUsesEngine && bodyLayout ? (
+                <div
+                  className="relative h-full w-full overflow-hidden px-4 py-2 text-foreground"
+                  style={{
+                    fontSize: bodyLayout.fontSizePx,
+                    lineHeight: `${bodyLayout.lineHeightPx}px`,
+                  }}
+                  data-testid="typesetting-body-engine"
+                  onClick={startEditing}
+                >
+                  {bodyLines.map((line, index) => (
+                    <div
+                      key={`${index}-${line.x}-${line.y}`}
+                      style={{
+                        position: "absolute",
+                        left: line.x,
+                        top: line.y,
+                        width: line.width,
+                        whiteSpace: "pre",
+                      }}
+                    >
+                      {line.text}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  ref={editableRef}
+                  className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
+                  contentEditable
+                  suppressContentEditableWarning
+                  onBeforeInput={handleBeforeInput}
+                  onInput={handleInput}
+                  onFocus={() => setIsEditing(true)}
+                  onBlur={() => {
+                    setIsEditing(false);
+                    handleInput();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Tab") {
+                      event.preventDefault();
+                      document.execCommand("insertText", false, "\t");
+                    }
+                  }}
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              )}
             </div>
             <div
               className="absolute border border-dotted border-muted-foreground/30"
