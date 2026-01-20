@@ -1,0 +1,170 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "inlines": [
+        { "type": "text", "text": "Long Fixture" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "This fixture is intended to span multiple pages once pagination is wired." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "Paragraph one adds a moderate amount of text to exercise line breaking across typical widths." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "Paragraph two continues with steady line length and a few commas, ensuring spacing stays predictable." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "Paragraph three includes a short sentence. Then a longer sentence that should wrap several times in narrow columns." }
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "inlines": [
+                { "type": "text", "text": "First list item with a short description." }
+              ]
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "type": "paragraph",
+              "inlines": [
+                { "type": "text", "text": "Second list item with enough words to wrap across multiple lines." }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "rows": [
+        {
+          "cells": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    { "type": "text", "text": "Header A" }
+                  ]
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    { "type": "text", "text": "Header B" }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "cells": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    { "type": "text", "text": "Cell A1 content." }
+                  ]
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "inlines": [
+                    { "type": "text", "text": "Cell B1 content." }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "inlines": [
+        { "type": "text", "text": "Continuation" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "Additional paragraphs help create enough content for pagination and perf tests." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "Final paragraph wraps up the long fixture with consistent punctuation and spacing." }
+      ]
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "id": "body",
+        "font_family": "Times New Roman",
+        "size_pt": 12,
+        "weight": 400,
+        "italic": false,
+        "underline": false,
+        "color": "#000000"
+      }
+    ],
+    "paragraphs": [
+      {
+        "id": "body",
+        "align": "justify",
+        "line_height": 1.6,
+        "indent_first_line": "2em",
+        "space_before": "0pt",
+        "space_after": "8pt",
+        "keep_with_next": false,
+        "widows": 2,
+        "orphans": 2
+      }
+    ],
+    "pages": [
+      {
+        "id": "default",
+        "size": "Letter",
+        "margin_mm": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+        "header_height_mm": 12,
+        "footer_height_mm": 12,
+        "column_count": 1,
+        "column_gap_mm": 0
+      }
+    ]
+  }
+}

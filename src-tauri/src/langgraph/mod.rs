@@ -12,8 +12,10 @@
 //! - **Evaluators**: Assess output quality with built-in or custom evaluators
 //!
 //! # Example
-//! ```rust
-//! use langgraph::prelude::*;
+//! ```rust,no_run
+//! use lumina_note_lib::langgraph::constants::START;
+//! use lumina_note_lib::langgraph::prelude::{GraphError, StateGraph, END};
+//! use lumina_note_lib::langgraph::state::GraphState;
 //!
 //! #[derive(Clone, Default)]
 //! struct MyState {
@@ -32,18 +34,22 @@
 //!     Ok(state)
 //! }
 //!
+//! # async fn run() -> Result<(), GraphError> {
 //! let mut graph = StateGraph::<MyState>::new();
 //! graph.add_node("a", node_a);
 //! graph.add_edge(START, "a");
 //! graph.add_edge("a", END);
 //!
 //! let compiled = graph.compile()?;
-//! let result = compiled.invoke(MyState::default()).await?;
+//! let _result = compiled.invoke(MyState::default()).await?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! # Ablation Study Example
-//! ```rust
-//! use langgraph::prelude::*;
+//! ```rust,no_run
+//! use lumina_note_lib::langgraph::ablation::{AblationConfig, AblationReport};
+//! use lumina_note_lib::langgraph::metrics::MetricsCollector;
 //!
 //! // Create ablation configs
 //! let configs = vec![

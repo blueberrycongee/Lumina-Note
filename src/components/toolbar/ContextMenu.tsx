@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
   Trash2,
@@ -65,7 +66,7 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
     }
   }, [x, y]);
 
-  return (
+  const content = (
     <div
       ref={menuRef}
       className="fixed z-50 min-w-[180px] bg-background border border-border rounded-lg shadow-lg py-1 animate-fade-scale-in"
@@ -93,6 +94,12 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
       ))}
     </div>
   );
+
+  if (typeof document === "undefined") {
+    return content;
+  }
+
+  return createPortal(content, document.body);
 }
 
 // Pre-built menu item creators

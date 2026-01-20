@@ -146,13 +146,21 @@ pub type GraphResult<T> = Result<T, GraphError>;
 /// 在节点中触发中断，等待人类输入
 /// 
 /// # Example
-/// ```rust
-/// use langgraph::prelude::*;
+/// ```rust,no_run
+/// use lumina_note_lib::langgraph::error::{interrupt, GraphResult};
+/// use lumina_note_lib::langgraph::state::GraphState;
+/// 
+/// #[derive(Clone, Default)]
+/// struct MyState {
+///     needs_clarification: bool,
+/// }
+/// 
+/// impl GraphState for MyState {}
 /// 
 /// async fn clarify_node(state: MyState) -> GraphResult<MyState> {
-///     // 需要用户澄清
+///     // Need user clarification
 ///     if state.needs_clarification {
-///         return interrupt("请问您想搜索什么主题？", "clarify");
+///         return interrupt("Please clarify your topic.", "clarify");
 ///     }
 ///     Ok(state)
 /// }

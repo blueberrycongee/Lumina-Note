@@ -58,6 +58,20 @@ vi.mock('@tauri-apps/api/core', () => ({
       // 系统信息
       'get_workspace_path': '/mock/workspace',
       'get_debug_log_path': '/mock/logs',
+      'typesetting_preview_page_mm': {
+        page: { x_mm: 0, y_mm: 0, width_mm: 210, height_mm: 297 },
+        body: { x_mm: 25, y_mm: 37, width_mm: 160, height_mm: 223 },
+        header: { x_mm: 25, y_mm: 25, width_mm: 160, height_mm: 12 },
+        footer: { x_mm: 25, y_mm: 260, width_mm: 160, height_mm: 12 },
+      },
+      'typesetting_export_pdf_base64': 'JVBERi0xLjcK',
+      'typesetting_fixture_font_path': 'C:\\mock\\fonts\\katex-main-regular.ttf',
+      'typesetting_layout_text': {
+        lines: [
+          { start: 0, end: 5, width: 200, x_offset: 0, y_offset: 0 },
+          { start: 6, end: 12, width: 180, x_offset: 0, y_offset: 20 },
+        ],
+      },
     };
 
     const response = mockResponses[cmd];
@@ -80,6 +94,7 @@ vi.mock('@tauri-apps/api/event', () => ({
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readTextFile: vi.fn(),
   writeTextFile: vi.fn(),
+  writeFile: vi.fn(),
   mkdir: vi.fn(),
   exists: vi.fn(),
   readDir: vi.fn(),
@@ -93,6 +108,15 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
   save: vi.fn(),
   message: vi.fn(),
   confirm: vi.fn(),
+}));
+
+vi.mock('@tauri-apps/plugin-shell', () => ({
+  open: vi.fn(),
+}));
+
+vi.mock('@tauri-apps/api/path', () => ({
+  join: vi.fn((...parts: string[]) => Promise.resolve(parts.join("\\"))),
+  tempDir: vi.fn(() => Promise.resolve("C:\\Temp")),
 }));
 
 // Global test utilities

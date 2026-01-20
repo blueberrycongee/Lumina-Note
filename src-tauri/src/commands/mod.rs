@@ -1,10 +1,15 @@
 use crate::error::AppError;
 use crate::fs::{self, FileEntry, watcher};
+use crate::typesetting::{
+    layout_text_paragraph, write_empty_pdf, FontManager, ParagraphAlign, PageBox,
+    PageMargins, PageSize, PageStyle, TextLayoutOptions,
+};
 use tauri::{AppHandle, Manager, WebviewWindowBuilder, WebviewBuilder, LogicalPosition, LogicalSize, Position, Size};
 use tauri::WebviewUrl;
 use tauri::webview::NewWindowResponse;
 use tauri::Emitter;
 use std::io::Read;
+use std::path::PathBuf;
 
 // Browser / WebView 调试日志，写入与前端相同的 debug-logs 目录，方便统一排查
 fn browser_debug_log(app: &AppHandle, message: String) {
@@ -13,6 +18,147 @@ fn browser_debug_log(app: &AppHandle, message: String) {
         let content = format!("[Browser-Rust] {}\n", message);
         let _ = crate::llm::append_debug_log(app_clone, content).await;
     });
+}
+
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+pub struct PreviewBoxMm {
+    pub x_mm: f32,
+    pub y_mm: f32,
+    pub width_mm: f32,
+    pub height_mm: f32,
+}
+
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+pub struct TypesettingPreviewPageMm {
+    pub page: PreviewBoxMm,
+    pub body: PreviewBoxMm,
+    pub header: PreviewBoxMm,
+    pub footer: PreviewBoxMm,
+}
+
+#[derive(serde::Serialize, Clone, Copy, Debug)]
+pub struct TypesettingTextLine {
+    pub start: usize,
+    pub end: usize,
+    pub width: i32,
+    pub x_offset: i32,
+    pub y_offset: i32,
+}
+
+#[derive(serde::Serialize, Clone, Debug)]
+pub struct TypesettingTextLayout {
+    pub lines: Vec<TypesettingTextLine>,
+}
+
+fn page_box_to_mm(box_mm: PageBox) -> PreviewBoxMm {
+    PreviewBoxMm {
+        x_mm: box_mm.x_mm,
+        y_mm: box_mm.y_mm,
+        width_mm: box_mm.width_mm,
+        height_mm: box_mm.height_mm,
+    }
+}
+
+fn default_typesetting_page_style() -> PageStyle {
+    PageStyle {
+        size: PageSize::A4,
+        margins: PageMargins {
+            top_mm: 25.0,
+            right_mm: 25.0,
+            bottom_mm: 25.0,
+            left_mm: 25.0,
+        },
+        header_height_mm: 12.0,
+        footer_height_mm: 12.0,
+    }
+}
+
+/// Typesetting preview defaults (mm). Used by the preview pane before document wiring.
+#[tauri::command]
+pub async fn typesetting_preview_page_mm() -> Result<TypesettingPreviewPageMm, AppError> {
+    let style = default_typesetting_page_style();
+
+    Ok(TypesettingPreviewPageMm {
+        page: page_box_to_mm(style.page_box()),
+        body: page_box_to_mm(style.body_box()),
+        header: page_box_to_mm(style.header_box()),
+        footer: page_box_to_mm(style.footer_box()),
+    })
+}
+
+/// Fixture font path (dev-only). Returns None when the fixture is unavailable.
+#[tauri::command]
+pub async fn typesetting_fixture_font_path() -> Option<String> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests")
+        .join("fixtures")
+        .join("katex-main-regular.ttf");
+
+    if path.exists() {
+        Some(path.to_string_lossy().to_string())
+    } else {
+        None
+    }
+}
+
+/// Typesetting PDF export (placeholder). Returns base64-encoded PDF bytes.
+#[tauri::command]
+pub async fn typesetting_export_pdf_base64() -> Result<String, AppError> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let pdf = write_empty_pdf(default_typesetting_page_style()).map_err(|err| {
+        AppError::InvalidPath(format!("Typesetting PDF export failed: {err}"))
+    })?;
+
+    Ok(STANDARD.encode(pdf))
+}
+
+/// Typesetting text layout (placeholder). Returns line metrics for a single paragraph.
+#[tauri::command]
+pub async fn typesetting_layout_text(
+    text: String,
+    font_path: String,
+    max_width: i32,
+    line_height: i32,
+) -> Result<TypesettingTextLayout, AppError> {
+    if max_width <= 0 {
+        return Err(AppError::InvalidPath(
+            "Typesetting layout requires a positive max_width".into(),
+        ));
+    }
+    if line_height <= 0 {
+        return Err(AppError::InvalidPath(
+            "Typesetting layout requires a positive line_height".into(),
+        ));
+    }
+    let mut manager = FontManager::new();
+    let font = manager.load_from_path(&font_path).map_err(|err| {
+        AppError::InvalidPath(format!("Typesetting font load failed: {err}"))
+    })?;
+    let options = TextLayoutOptions {
+        max_width,
+        line_height,
+        align: ParagraphAlign::Left,
+        first_line_indent: 0,
+        space_before: 0,
+        space_after: 0,
+    };
+    let lines =
+        layout_text_paragraph(&font, &text, options).map_err(|err| {
+            AppError::InvalidPath(format!("Typesetting layout failed: {err}"))
+        })?;
+    let lines = lines
+        .into_iter()
+        .map(|line| TypesettingTextLine {
+            start: line.start,
+            end: line.end,
+            width: line.width,
+            x_offset: line.x_offset,
+            y_offset: line.y_offset,
+        })
+        .collect();
+
+    Ok(TypesettingTextLayout { lines })
 }
 
 /// Read file content
@@ -872,4 +1018,114 @@ pub async fn browser_webview_unfreeze(app: AppHandle, tab_id: String) -> Result<
 pub async fn browser_webview_exists(app: AppHandle, tab_id: String) -> Result<bool, AppError> {
     let webview_id = format!("browser-{}", tab_id);
     Ok(app.get_webview(&webview_id).is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn approx_eq(value: f32, expected: f32) {
+        assert!((value - expected).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn typesetting_preview_page_mm_defaults_to_a4_layout() {
+        let preview = typesetting_preview_page_mm()
+            .await
+            .expect("preview should be available");
+
+        approx_eq(preview.page.width_mm, 210.0);
+        approx_eq(preview.page.height_mm, 297.0);
+        approx_eq(preview.body.x_mm, 25.0);
+        approx_eq(preview.body.y_mm, 37.0);
+        approx_eq(preview.body.width_mm, 160.0);
+        approx_eq(preview.body.height_mm, 223.0);
+    }
+
+    #[tokio::test]
+    async fn typesetting_export_pdf_base64_returns_pdf_header() {
+        use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+        let payload = typesetting_export_pdf_base64()
+            .await
+            .expect("export should succeed");
+        let decoded = STANDARD.decode(payload).expect("decode base64");
+        let text = String::from_utf8_lossy(&decoded);
+
+        assert!(text.starts_with("%PDF-1.7\n"));
+    }
+
+    #[tokio::test]
+    async fn typesetting_fixture_font_path_returns_fixture() {
+        let path = typesetting_fixture_font_path()
+            .await
+            .expect("expected fixture path");
+
+        assert!(path.ends_with("katex-main-regular.ttf"));
+    }
+
+    fn fixture_font_path() -> String {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("tests")
+            .join("fixtures")
+            .join("katex-main-regular.ttf")
+            .to_string_lossy()
+            .to_string()
+    }
+
+    #[tokio::test]
+    async fn typesetting_layout_text_handles_empty_text() {
+        let layout = typesetting_layout_text(
+            "".to_string(),
+            fixture_font_path(),
+            1000,
+            1200,
+        )
+        .await
+        .expect("layout should succeed");
+
+        assert!(layout.lines.is_empty());
+    }
+
+    #[tokio::test]
+    async fn typesetting_layout_text_rejects_non_positive_dimensions() {
+        let err = typesetting_layout_text(
+            "Hello".to_string(),
+            fixture_font_path(),
+            0,
+            1200,
+        )
+        .await
+        .expect_err("expected invalid max_width error");
+        let message = format!("{err}");
+        assert!(message.contains("max_width"));
+
+        let err = typesetting_layout_text(
+            "Hello".to_string(),
+            fixture_font_path(),
+            1000,
+            0,
+        )
+        .await
+        .expect_err("expected invalid line_height error");
+        let message = format!("{err}");
+        assert!(message.contains("line_height"));
+    }
+
+    #[tokio::test]
+    async fn typesetting_layout_text_returns_single_line_for_wide_width() {
+        let layout = typesetting_layout_text(
+            "Hello world".to_string(),
+            fixture_font_path(),
+            100_000,
+            1200,
+        )
+        .await
+        .expect("layout should succeed");
+
+        assert_eq!(layout.lines.len(), 1);
+        assert_eq!(layout.lines[0].start, 0);
+        assert!(layout.lines[0].end > layout.lines[0].start);
+    }
 }

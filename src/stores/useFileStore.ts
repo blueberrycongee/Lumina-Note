@@ -4,6 +4,7 @@ import { FileEntry, listDirectory, readFile, saveFile, createFile } from "@/lib/
 import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
 import { invoke } from '@tauri-apps/api/core';
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 
 // 历史记录条目
 interface HistoryEntry {
@@ -18,6 +19,8 @@ export type TabType =
   | "file"
   | "graph"
   | "isolated-graph"
+  | "typesetting-preview"
+  | "typesetting-doc"
   | "video-note"
   | "database"
   | "pdf"
@@ -107,6 +110,8 @@ interface FileState {
 
   // Open special tabs
   openGraphTab: () => void;
+  openTypesettingPreviewTab: () => void;
+  openTypesettingDocTab: (path: string, addToHistory?: boolean) => Promise<void>;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openVideoNoteTab: (url: string, title?: string) => void;
   openVideoNoteFromContent: (content: string, title?: string) => void;
@@ -134,6 +139,9 @@ interface FileState {
   // File sync actions
   reloadFileIfOpen: (path: string, options?: { skipIfDirty?: boolean }) => Promise<void>;
 
+  // Typesetting doc helpers
+  markTypesettingTabDirty: (path: string, isDirty: boolean) => void;
+
   // Move file/folder actions
   moveFileToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
   moveFolderToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
@@ -148,6 +156,8 @@ let lastUserEditTime = 0;
 
 // 撤销历史最大条数（防止内存泄漏）
 const MAX_UNDO_HISTORY = 50;
+
+const isDocxPath = (path: string) => path.toLowerCase().endsWith(".docx");
 
 // 限制 undoStack 大小的辅助函数
 function trimUndoStack(stack: HistoryEntry[]): HistoryEntry[] {
@@ -227,21 +237,32 @@ export const useFileStore = create<FileState>()(
           if (forceReload) {
             // 强制重新加载内容（Agent 编辑后使用）
             try {
-              const newContent = await readFile(path);
-              const updatedTabs = [...tabs];
-              updatedTabs[existingTabIndex] = {
-                ...updatedTabs[existingTabIndex],
-                content: newContent,
-                isDirty: false,
-              };
-              set({
-                tabs: updatedTabs,
-                activeTabIndex: existingTabIndex,
-                currentFile: path,
-                currentContent: newContent,
-                isDirty: false,
-                lastSavedContent: newContent,
-              });
+              const existingTab = tabs[existingTabIndex];
+              if (existingTab?.type === "typesetting-doc") {
+                await useTypesettingDocStore.getState().openDoc(path);
+                set({
+                  activeTabIndex: existingTabIndex,
+                  currentFile: path,
+                  currentContent: "",
+                  isDirty: false,
+                });
+              } else {
+                const newContent = await readFile(path);
+                const updatedTabs = [...tabs];
+                updatedTabs[existingTabIndex] = {
+                  ...updatedTabs[existingTabIndex],
+                  content: newContent,
+                  isDirty: false,
+                };
+                set({
+                  tabs: updatedTabs,
+                  activeTabIndex: existingTabIndex,
+                  currentFile: path,
+                  currentContent: newContent,
+                  isDirty: false,
+                  lastSavedContent: newContent,
+                });
+              }
             } catch (error) {
               console.error("Failed to reload file:", error);
               // 即使重载失败也切换到该标签页
@@ -262,10 +283,15 @@ export const useFileStore = create<FileState>()(
           }
         }
 
+        if (isDocxPath(path)) {
+          await get().openTypesettingDocTab(path, addToHistory);
+          return;
+        }
+
         set({ isLoadingFile: true });
         try {
           const content = await readFile(path);
-          const fileName = path.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "未命名";
+          const fileName = path.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || "未命名";
 
           // 创建新标签页
           const newTab: Tab = {
@@ -379,12 +405,21 @@ export const useFileStore = create<FileState>()(
         // 固定标签不能关闭
         if (tabToClose.isPinned) return;
 
+        if (tabToClose.type === "typesetting-doc") {
+          if (tabToClose.path) {
+            await useTypesettingDocStore.getState().saveDoc(tabToClose.path);
+            useTypesettingDocStore.getState().closeDoc(tabToClose.path);
+          }
+        }
+
         // 如果要关闭的是当前标签页且有未保存的更改，先保存
+        if (tabToClose.type !== "typesetting-doc") {
         if (index === activeTabIndex && isDirty) {
           await get().save();
         } else if (tabs[index].isDirty) {
           // 非当前标签页但有未保存更改，也保存
           await saveFile(tabs[index].path, tabs[index].content);
+        }
         }
 
         // 如果是网页标签页，关闭对应的 WebView
@@ -452,20 +487,31 @@ export const useFileStore = create<FileState>()(
       },
 
       // 关闭其他标签页（保留固定标签）
+      
+      // Close other tabs (keep pinned + target)
       closeOtherTabs: async (index: number) => {
         const { tabs } = get();
         if (index < 0 || index >= tabs.length) return;
 
         const targetTab = tabs[index];
 
-        // 保存所有要关闭的标签页
+        // Save tabs that will be closed
         for (const tab of tabs) {
-          if (tab.isDirty && tab.id !== targetTab.id && !tab.isPinned) {
+          if (tab.id === targetTab.id || tab.isPinned) {
+            continue;
+          }
+          if (tab.type === "typesetting-doc") {
+            if (tab.path) {
+              await useTypesettingDocStore.getState().saveDoc(tab.path);
+              useTypesettingDocStore.getState().closeDoc(tab.path);
+            }
+            continue;
+          }
+          if (tab.isDirty) {
             await saveFile(tab.path, tab.content);
           }
         }
 
-        // 保留固定标签和当前标签
         const remainingTabs = tabs.filter(tab => tab.isPinned || tab.id === targetTab.id);
         const newActiveIndex = remainingTabs.findIndex(t => t.id === targetTab.id);
 
@@ -480,18 +526,27 @@ export const useFileStore = create<FileState>()(
         });
       },
 
-      // 关闭所有标签页（保留固定标签）
+      // Close all tabs (keep pinned)
       closeAllTabs: async () => {
         const { tabs } = get();
 
-        // 保存所有要关闭的标签页
+        // Save tabs that will be closed
         for (const tab of tabs) {
-          if (tab.isDirty && !tab.isPinned) {
+          if (tab.isPinned) {
+            continue;
+          }
+          if (tab.type === "typesetting-doc") {
+            if (tab.path) {
+              await useTypesettingDocStore.getState().saveDoc(tab.path);
+              useTypesettingDocStore.getState().closeDoc(tab.path);
+            }
+            continue;
+          }
+          if (tab.isDirty) {
             await saveFile(tab.path, tab.content);
           }
         }
 
-        // 保留固定标签
         const pinnedTabs = tabs.filter(tab => tab.isPinned);
 
         if (pinnedTabs.length === 0) {
@@ -505,7 +560,6 @@ export const useFileStore = create<FileState>()(
             redoStack: [],
           });
         } else {
-          // 切换到第一个固定标签
           const firstPinned = pinnedTabs[0];
           set({
             tabs: pinnedTabs,
@@ -519,14 +573,14 @@ export const useFileStore = create<FileState>()(
         }
       },
 
-      // 更新标签页路径（用于文件重命名）
+      // Update tab path (for rename)
       updateTabPath: (oldPath: string, newPath: string) => {
         const { tabs, currentFile } = get();
-        const newFileName = newPath.split(/[/\\/]/).pop()?.replace(/\.md$/, "") || "未命名";
+        const newFileName = newPath.split(/[/\\/]/).pop()?.replace(/\.(md|docx)$/i, "") || "未命名";
 
         // 查找并更新所有匹配的标签页
         const updatedTabs = tabs.map(tab => {
-          if (tab.type === "file" && tab.path === oldPath) {
+          if ((tab.type === "file" || tab.type === "typesetting-doc") && tab.path === oldPath) {
             return {
               ...tab,
               path: newPath,
@@ -657,6 +711,118 @@ export const useFileStore = create<FileState>()(
       },
 
       // 打开主视图区 AI 聊天标签页
+      // Typesetting preview tab (scaffold)
+      openTypesettingPreviewTab: () => {
+        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+
+        // Check if already open
+        const existingIndex = tabs.findIndex(tab => tab.type === "typesetting-preview");
+        if (existingIndex !== -1) {
+          get().switchTab(existingIndex);
+          return;
+        }
+
+        // Preserve current tab state
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        const previewTab: Tab = {
+          id: "__typesetting_preview__",
+          type: "typesetting-preview",
+          path: "",
+          name: "Typesetting Preview",
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        updatedTabs.push(previewTab);
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: null,
+          currentContent: "",
+          isDirty: false,
+        });
+      },
+
+      openTypesettingDocTab: async (path: string, addToHistory: boolean = true) => {
+        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack, navigationHistory, navigationIndex } = get();
+        const normalize = (p: string) => p.replace(/\\/g, "/");
+        const targetPath = normalize(path);
+        const existingIndex = tabs.findIndex(tab => normalize(tab.path) === targetPath);
+        if (existingIndex !== -1) {
+          get().switchTab(existingIndex);
+          return;
+        }
+
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        await useTypesettingDocStore.getState().openDoc(path);
+
+        const fileName = path.split(/[/\\]/).pop()?.replace(/\.docx$/i, "") || "Docx";
+        const newTab: Tab = {
+          id: path,
+          type: "typesetting-doc",
+          path,
+          name: fileName,
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        const newTabs = [...updatedTabs, newTab];
+        const newTabIndex = newTabs.length - 1;
+
+        let newHistory = navigationHistory;
+        let newNavIndex = navigationIndex;
+        if (addToHistory) {
+          newHistory = navigationHistory.slice(0, navigationIndex + 1);
+          newHistory.push(path);
+          newNavIndex = newHistory.length - 1;
+        }
+
+
+        const { recentFiles } = get();
+        let newRecentFiles = recentFiles.filter(p => p !== path);
+        newRecentFiles.push(path);
+        if (newRecentFiles.length > 20) {
+          newRecentFiles = newRecentFiles.slice(-20);
+        }
+
+        set({
+          tabs: newTabs,
+          activeTabIndex: newTabIndex,
+          currentFile: path,
+          currentContent: "",
+          isDirty: false,
+          navigationHistory: newHistory,
+          navigationIndex: newNavIndex,
+          recentFiles: newRecentFiles,
+        });
+        useFavoriteStore.getState().markOpened(path);
+      },
+
       openAIMainTab: () => {
         const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
 
@@ -1445,7 +1611,22 @@ export const useFileStore = create<FileState>()(
 
       // Save current file
       save: async () => {
-        const { currentFile, currentContent, isDirty } = get();
+        const { currentFile, currentContent, isDirty, tabs, activeTabIndex } = get();
+        const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
+        if (activeTab?.type === "typesetting-doc") {
+          if (!activeTab.path) return;
+          set({ isSaving: true });
+          try {
+            await useTypesettingDocStore.getState().saveDoc(activeTab.path);
+            get().markTypesettingTabDirty(activeTab.path, false);
+            set({ isSaving: false });
+          } catch (error) {
+            console.error("Failed to save docx:", error);
+            set({ isSaving: false });
+          }
+          return;
+        }
+
         if (!currentFile || !isDirty) return;
 
         set({ isSaving: true });
@@ -1456,6 +1637,26 @@ export const useFileStore = create<FileState>()(
           console.error("Failed to save file:", error);
           set({ isSaving: false });
         }
+      },
+
+      markTypesettingTabDirty: (path: string, isDirty: boolean) => {
+        set((state) => {
+          const tabIndex = state.tabs.findIndex(
+            (tab) => tab.type === "typesetting-doc" && tab.path === path,
+          );
+          if (tabIndex === -1) {
+            return state;
+          }
+          const tabs = state.tabs.map((tab, index) =>
+            index === tabIndex ? { ...tab, isDirty } : tab,
+          );
+          const isActive =
+            state.activeTabIndex === tabIndex && state.currentFile === path;
+          return {
+            tabs,
+            isDirty: isActive ? isDirty : state.isDirty,
+          };
+        });
       },
 
       // Close current file (now closes current tab)
@@ -1568,7 +1769,7 @@ export const useFileStore = create<FileState>()(
           // Update tab path if the moved file is open
           const tabIndex = tabs.findIndex(t => t.type === 'file' && t.path === sourcePath);
           if (tabIndex !== -1) {
-            const newFileName = newPath.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "未命名";
+            const newFileName = newPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || "未命名";
             const updatedTabs = tabs.map((tab, i) => {
               if (i === tabIndex) {
                 return {
@@ -1618,7 +1819,7 @@ export const useFileStore = create<FileState>()(
                 // Replace the old folder path with the new one
                 const relativePath = normalizedTabPath.slice(normalizedSource.length);
                 const newTabPath = normalizedNew + relativePath;
-                const newFileName = newTabPath.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "未命名";
+                const newFileName = newTabPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || "未命名";
                 return {
                   ...tab,
                   path: newTabPath,

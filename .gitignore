@@ -47,3 +47,5 @@ coverage/
 .tmp_codex_ext/
 skills/
 tmp.txt
+.plan-loop/
+scripts/plan-loop*.ps1

@@ -4,6 +4,7 @@
 
 use std::collections::HashMap;
 use tempfile::TempDir;
+use lumina_note_lib as lumina_lib;
 
 /// 创建测试用的 MCP 配置
 fn create_test_config(temp_dir: &TempDir) -> String {

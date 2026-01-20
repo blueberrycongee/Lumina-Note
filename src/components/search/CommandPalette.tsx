@@ -54,6 +54,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     createNewFile,
     vaultPath,
     openGraphTab,
+    openTypesettingPreviewTab,
     tabs,
     clearVault,
   } = useFileStore();
@@ -163,6 +164,16 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       action: () => {
         onClose();
         openGraphTab();
+      },
+    },
+    {
+      id: "typesetting-preview",
+      label: "Typesetting Preview",
+      description: "Open the paged typesetting preview (placeholder)",
+      icon: <FileText size={16} />,
+      action: () => {
+        onClose();
+        openTypesettingPreviewTab();
       },
     },
     {

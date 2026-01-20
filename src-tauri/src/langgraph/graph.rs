@@ -26,7 +26,31 @@ pub enum Edge {
 /// Use this to define your graph structure, then compile it for execution.
 /// 
 /// # Example
-/// ```rust
+/// ```rust,no_run
+/// use lumina_note_lib::langgraph::constants::START;
+/// use lumina_note_lib::langgraph::prelude::{GraphError, StateGraph, END};
+/// use lumina_note_lib::langgraph::state::GraphState;
+/// 
+/// #[derive(Clone, Default)]
+/// struct MyState {
+///     counter: usize,
+/// }
+/// 
+/// impl GraphState for MyState {}
+/// 
+/// async fn process_fn(state: MyState) -> Result<MyState, GraphError> {
+///     Ok(state)
+/// }
+/// 
+/// async fn validate_fn(state: MyState) -> Result<MyState, GraphError> {
+///     Ok(state)
+/// }
+/// 
+/// fn router_fn(_state: MyState) -> Result<String, GraphError> {
+///     Ok("validate".to_string())
+/// }
+/// 
+/// # async fn run() -> Result<(), GraphError> {
 /// let mut graph = StateGraph::<MyState>::new();
 /// 
 /// // Add nodes
@@ -40,7 +64,9 @@ pub enum Edge {
 /// 
 /// // Compile and use
 /// let compiled = graph.compile()?;
-/// let result = compiled.invoke(initial_state).await?;
+/// let _result = compiled.invoke(MyState::default()).await?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct StateGraph<S: GraphState> {
     /// Registered nodes
@@ -71,10 +97,19 @@ impl<S: GraphState> StateGraph<S> {
     /// * `func` - Async function that processes state
     /// 
     /// # Example
-    /// ```rust
+    /// ```rust,no_run
+    /// use lumina_note_lib::langgraph::prelude::{GraphError, StateGraph};
+    /// use lumina_note_lib::langgraph::state::GraphState;
+    /// 
+    /// #[derive(Clone, Default)]
+    /// struct MyState;
+    /// 
+    /// impl GraphState for MyState {}
+    /// 
+    /// let mut graph = StateGraph::<MyState>::new();
     /// graph.add_node("my_node", |state| async move {
     ///     // Process state
-    ///     Ok(state)
+    ///     Ok::<_, GraphError>(state)
     /// });
     /// ```
     pub fn add_node<F, Fut>(&mut self, name: impl Into<String>, func: F) -> &mut Self

@@ -1,0 +1,62 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "inlines": [
+        { "type": "text", "text": "Short Fixture" }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "A short paragraph to validate basic layout output." }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        { "type": "text", "text": "Second paragraph with a manual break." },
+        { "type": "line_break" },
+        { "type": "text", "text": "Continuation after the break." }
+      ]
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "id": "body",
+        "font_family": "Times New Roman",
+        "size_pt": 12,
+        "weight": 400,
+        "italic": false,
+        "underline": false,
+        "color": "#000000"
+      }
+    ],
+    "paragraphs": [
+      {
+        "id": "body",
+        "align": "left",
+        "line_height": 1.5,
+        "indent_first_line": "0em",
+        "space_before": "0pt",
+        "space_after": "6pt",
+        "keep_with_next": false,
+        "widows": 2,
+        "orphans": 2
+      }
+    ],
+    "pages": [
+      {
+        "id": "default",
+        "size": "A4",
+        "margin_mm": { "top": 25, "right": 25, "bottom": 25, "left": 25 },
+        "header_height_mm": 12,
+        "footer_height_mm": 12,
+        "column_count": 1,
+        "column_gap_mm": 0
+      }
+    ]
+  }
+}
