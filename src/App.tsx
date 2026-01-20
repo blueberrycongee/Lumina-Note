@@ -24,6 +24,7 @@ import { BrowserView } from "@/components/browser";
 import { FlashcardView } from "@/components/flashcard";
 import { CardFlowView } from "@/components/cardflow/CardFlowView";
 import { TypesettingPreviewPane } from "@/components/typesetting/TypesettingPreviewPane";
+import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
 import { useAIStore } from "@/stores/useAIStore";
 import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
@@ -589,6 +590,11 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
+            </div>
+          ) : activeTab?.type === "typesetting-doc" && activeTab.path ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <TabBar />
+              <TypesettingDocumentPane path={activeTab.path} />
             </div>
           ) : activeTab?.type === "typesetting-preview" ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">

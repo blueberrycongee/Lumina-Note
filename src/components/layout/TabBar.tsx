@@ -58,6 +58,8 @@ function TabItem({
         <FileText size={12} className="shrink-0 text-red-500" />
       ) : tab.type === "typesetting-preview" ? (
         <FileText size={12} className="shrink-0 text-amber-500" />
+      ) : tab.type === "typesetting-doc" ? (
+        <FileText size={12} className="shrink-0 text-emerald-500" />
       ) : tab.type === "webpage" ? (
         <Globe size={12} className="shrink-0 text-blue-500" />
       ) : tab.type === "flashcard" ? (

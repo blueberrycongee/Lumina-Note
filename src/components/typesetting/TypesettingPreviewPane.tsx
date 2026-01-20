@@ -1,33 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
-
-type PreviewBoxMm = {
-  x_mm: number;
-  y_mm: number;
-  width_mm: number;
-  height_mm: number;
-};
-
-type TypesettingPreviewPageMm = {
-  page: PreviewBoxMm;
-  body: PreviewBoxMm;
-  header: PreviewBoxMm;
-  footer: PreviewBoxMm;
-};
-
-type TypesettingTextLine = {
-  start: number;
-  end: number;
-  width: number;
-  x_offset: number;
-  y_offset: number;
-};
-
-type TypesettingTextLayout = {
-  lines: TypesettingTextLine[];
-};
+import {
+  getTypesettingExportPdfBase64,
+  getTypesettingFixtureFontPath,
+  getTypesettingLayoutText,
+  getTypesettingPreviewPageMm,
+  TypesettingPreviewBoxMm,
+  TypesettingPreviewPageMm,
+  TypesettingTextLayout,
+} from "@/lib/tauri";
 
 const DEFAULT_DPI = 96;
 const MIN_ZOOM = 0.5;
@@ -40,7 +22,7 @@ const SAMPLE_LINE_HEIGHT = 20;
 const mmToPx = (mm: number, dpi = DEFAULT_DPI) =>
   Math.round((Math.max(0, mm) * dpi) / 25.4);
 
-const boxToPx = (box: PreviewBoxMm) => ({
+const boxToPx = (box: TypesettingPreviewBoxMm) => ({
   left: mmToPx(box.x_mm),
   top: mmToPx(box.y_mm),
   width: mmToPx(box.width_mm),
@@ -88,7 +70,7 @@ export function TypesettingPreviewPane() {
   useEffect(() => {
     let active = true;
 
-    invoke<TypesettingPreviewPageMm>("typesetting_preview_page_mm")
+    getTypesettingPreviewPageMm()
       .then((data) => {
         if (active) {
           setPageMm(data);
@@ -113,9 +95,7 @@ export function TypesettingPreviewPane() {
     setLayoutError(null);
 
     const loadLayout = async () => {
-      const fontPath = await invoke<string | null>(
-        "typesetting_fixture_font_path",
-      );
+      const fontPath = await getTypesettingFixtureFontPath();
       if (!fontPath) {
         if (active) {
           setLayoutError("missing fixture font");
@@ -124,15 +104,12 @@ export function TypesettingPreviewPane() {
       }
 
       const maxWidth = mmToPx(pageMm.body.width_mm);
-      const layoutData = await invoke<TypesettingTextLayout>(
-        "typesetting_layout_text",
-        {
-          text: SAMPLE_TEXT,
-          font_path: fontPath,
-          max_width: maxWidth,
-          line_height: SAMPLE_LINE_HEIGHT,
-        },
-      );
+      const layoutData = await getTypesettingLayoutText({
+        text: SAMPLE_TEXT,
+        fontPath,
+        maxWidth,
+        lineHeight: SAMPLE_LINE_HEIGHT,
+      });
       if (active) {
         setLayout(layoutData);
       }
@@ -186,7 +163,7 @@ export function TypesettingPreviewPane() {
       });
       if (!filePath) return;
 
-      const payload = await invoke<string>("typesetting_export_pdf_base64");
+      const payload = await getTypesettingExportPdfBase64();
       const bytes = decodeBase64ToBytes(payload);
       await writeFile(filePath, bytes);
     } catch (err) {

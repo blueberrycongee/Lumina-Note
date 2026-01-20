@@ -41,6 +41,58 @@ export async function readBinaryFileBase64(path: string): Promise<string> {
   return invoke<string>("read_binary_file_base64", { path });
 }
 
+export type TypesettingPreviewBoxMm = {
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
+  height_mm: number;
+};
+
+export type TypesettingPreviewPageMm = {
+  page: TypesettingPreviewBoxMm;
+  body: TypesettingPreviewBoxMm;
+  header: TypesettingPreviewBoxMm;
+  footer: TypesettingPreviewBoxMm;
+};
+
+export type TypesettingTextLine = {
+  start: number;
+  end: number;
+  width: number;
+  x_offset: number;
+  y_offset: number;
+};
+
+export type TypesettingTextLayout = {
+  lines: TypesettingTextLine[];
+};
+
+export async function getTypesettingPreviewPageMm(): Promise<TypesettingPreviewPageMm> {
+  return invoke<TypesettingPreviewPageMm>("typesetting_preview_page_mm");
+}
+
+export async function getTypesettingFixtureFontPath(): Promise<string | null> {
+  return invoke<string | null>("typesetting_fixture_font_path");
+}
+
+export async function getTypesettingLayoutText(params: {
+  text: string;
+  fontPath: string;
+  maxWidth: number;
+  lineHeight: number;
+}): Promise<TypesettingTextLayout> {
+  return invoke<TypesettingTextLayout>("typesetting_layout_text", {
+    text: params.text,
+    font_path: params.fontPath,
+    max_width: params.maxWidth,
+    line_height: params.lineHeight,
+  });
+}
+
+export async function getTypesettingExportPdfBase64(): Promise<string> {
+  return invoke<string>("typesetting_export_pdf_base64");
+}
+
 /**
  * List directory contents (recursive, .md files only)
  */
