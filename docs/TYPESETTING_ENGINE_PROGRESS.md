@@ -476,3 +476,8 @@ pm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx\)
   - Files changed: src-tauri/src/commands/mod.rs; src/lib/tauri.ts; src/components/typesetting/TypesettingDocumentPane.test.tsx; src/__tests__/setup.ts
   - Blockers/next steps: pm is not available (used npm). Still need full engine pipeline rendering for images/tables/headers/footers and Word baseline PDFs.
   - Tests: C:\Users\10758\.cargo\bin\cargo.exe test typesetting_layout_text_includes_byte_offsets (warnings: deprecated ttf_parser::Face::from_slice, unused imports); npm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx
+- 2026-01-20
+  - Task completed: M19 -> Render header/footer text via engine layout (partial toward engine pipeline rendering)
+  - Key decisions: Use layout_text for text-only header/footer blocks and render absolute line boxes from UTF-8 byte ranges; fall back to HTML when header/footer blocks include images/tables; derive header/footer line height from font size default * 1.2.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; src/typesetting/utf8.ts; src/typesetting/utf8.test.ts
+  - Blockers/next steps: Engine rendering for images/tables/header/footer images still pending; npm test run hit Node.js EPIPE (vitest) and timed out; pm not available; WSL unavailable for full CI/lint.

@@ -12,6 +12,7 @@ import {
   getTypesettingPreviewPageMm,
   TypesettingPreviewBoxMm,
   TypesettingPreviewPageMm,
+  TypesettingTextLine,
 } from "@/lib/tauri";
 import { decodeBase64ToBytes, encodeBytesToBase64 } from "@/typesetting/base64";
 import { docxBlocksToHtml, docxHtmlToBlocks } from "@/typesetting/docxHtml";
@@ -22,7 +23,9 @@ import {
   docxBlocksToPlainText,
 } from "@/typesetting/docxText";
 import { docOpFromBeforeInput } from "@/typesetting/docOps";
+import { sliceUtf8 } from "@/typesetting/utf8";
 import type { TypesettingDoc } from "@/stores/useTypesettingDocStore";
+import type { DocxBlock } from "@/typesetting/docxImport";
 
 type TypesettingDocumentPaneProps = {
   path: string;
@@ -34,6 +37,20 @@ const DEFAULT_LINE_HEIGHT_PX = 20;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
+
+type LayoutRender = {
+  text: string;
+  fontSizePx: number;
+  lineHeightPx: number;
+  lines: TypesettingTextLine[];
+};
+
+type RenderedLine = {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+};
 
 const mmToPx = (mm: number, dpi = DEFAULT_DPI) =>
   Math.round((Math.max(0, mm) * dpi) / 25.4);
@@ -61,6 +78,25 @@ const scaleBoxPx = (
   width: scalePx(box.width, zoom),
   height: scalePx(box.height, zoom),
 });
+
+const hasComplexLayoutBlocks = (blocks: DocxBlock[]): boolean =>
+  blocks.some((block) => block.type === "image" || block.type === "table");
+
+const defaultLineHeightForFont = (fontSizePx: number) =>
+  Math.max(1, Math.round(fontSizePx * 1.2));
+
+const buildRenderedLines = (
+  text: string,
+  lines: TypesettingTextLine[],
+): RenderedLine[] => {
+  if (!text || lines.length === 0) return [];
+  return lines.map((line) => ({
+    text: sliceUtf8(text, line.start_byte, line.end_byte),
+    x: line.x_offset,
+    y: line.y_offset,
+    width: line.width,
+  }));
+};
 
 const imageMimeType = (path: string): string | null => {
   const ext = path.split(".").pop()?.toLowerCase();
@@ -121,6 +157,8 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   const [printError, setPrintError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
+  const [headerLayout, setHeaderLayout] = useState<LayoutRender | null>(null);
+  const [footerLayout, setFooterLayout] = useState<LayoutRender | null>(null);
   const editableRef = useRef<HTMLDivElement | null>(null);
   const layoutRunRef = useRef(0);
 
@@ -148,7 +186,11 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   }, []);
 
   useEffect(() => {
-    if (!doc || !pageMm) return;
+    if (!doc || !pageMm) {
+      setHeaderLayout(null);
+      setFooterLayout(null);
+      return;
+    }
     setLayoutError(null);
 
     const text = docxBlocksToPlainText(doc.blocks);
@@ -166,6 +208,20 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
       doc.blocks,
       DEFAULT_DPI,
     );
+    const headerText = docxBlocksToPlainText(doc.headerBlocks);
+    const footerText = docxBlocksToPlainText(doc.footerBlocks);
+    const headerUsesEngine = headerText.trim().length > 0
+      && !hasComplexLayoutBlocks(doc.headerBlocks);
+    const footerUsesEngine = footerText.trim().length > 0
+      && !hasComplexLayoutBlocks(doc.footerBlocks);
+
+    if (!headerUsesEngine) {
+      setHeaderLayout(null);
+    }
+    if (!footerUsesEngine) {
+      setFooterLayout(null);
+    }
+
     const runId = ++layoutRunRef.current;
     const handler = setTimeout(async () => {
       const fontPath = await getTypesettingFixtureFontPath();
@@ -173,9 +229,46 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
       if (!fontPath) {
         setLayoutError("missing fixture font");
         updateLayoutSummary(path, "Layout unavailable");
+        setHeaderLayout(null);
+        setFooterLayout(null);
         return;
       }
       try {
+        const buildHeaderFooterLayout = async (
+          blocks: DocxBlock[],
+          content: string,
+          maxWidthMm: number,
+        ): Promise<LayoutRender> => {
+          const fontSize = docxBlocksToFontSizePx(
+            blocks,
+            DEFAULT_FONT_SIZE_PX,
+            DEFAULT_DPI,
+          );
+          const lineHeight = docxBlocksToLineHeightPx(
+            blocks,
+            defaultLineHeightForFont(fontSize),
+            DEFAULT_DPI,
+          );
+          const options = docxBlocksToLayoutTextOptions(blocks, DEFAULT_DPI);
+          const layout = await getTypesettingLayoutText({
+            text: content,
+            fontPath,
+            maxWidth: mmToPx(maxWidthMm),
+            lineHeight,
+            fontSize,
+            align: options.align,
+            firstLineIndent: options.firstLineIndentPx,
+            spaceBefore: options.spaceBeforePx,
+            spaceAfter: options.spaceAfterPx,
+          });
+          return {
+            text: content,
+            fontSizePx: fontSize,
+            lineHeightPx: lineHeight,
+            lines: layout.lines,
+          };
+        };
+
         const maxWidth = mmToPx(pageMm.body.width_mm);
         const layoutData = await getTypesettingLayoutText({
           text,
@@ -203,10 +296,34 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           contentHeightPx,
           updatedAt: new Date().toISOString(),
         });
+
+        const safeLayout = async (
+          blocks: DocxBlock[],
+          content: string,
+          widthMm: number,
+          enabled: boolean,
+        ): Promise<LayoutRender | null> => {
+          if (!enabled) return null;
+          try {
+            return await buildHeaderFooterLayout(blocks, content, widthMm);
+          } catch {
+            return null;
+          }
+        };
+
+        const [nextHeaderLayout, nextFooterLayout] = await Promise.all([
+          safeLayout(doc.headerBlocks, headerText, pageMm.header.width_mm, headerUsesEngine),
+          safeLayout(doc.footerBlocks, footerText, pageMm.footer.width_mm, footerUsesEngine),
+        ]);
+        if (layoutRunRef.current !== runId) return;
+        setHeaderLayout(nextHeaderLayout);
+        setFooterLayout(nextFooterLayout);
       } catch (err) {
         if (layoutRunRef.current !== runId) return;
         setLayoutError(String(err));
         updateLayoutSummary(path, "Layout unavailable");
+        setHeaderLayout(null);
+        setFooterLayout(null);
       }
     }, 300);
 
@@ -232,6 +349,19 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     if (!doc) return "";
     return docxBlocksToHtml(doc.footerBlocks, { imageResolver });
   }, [doc, imageResolver]);
+
+  const headerLines = useMemo(() => {
+    if (!headerLayout) return [];
+    return buildRenderedLines(headerLayout.text, headerLayout.lines);
+  }, [headerLayout]);
+
+  const footerLines = useMemo(() => {
+    if (!footerLayout) return [];
+    return buildRenderedLines(footerLayout.text, footerLayout.lines);
+  }, [footerLayout]);
+
+  const headerUsesEngine = headerLines.length > 0;
+  const footerUsesEngine = footerLines.length > 0;
 
   useEffect(() => {
     if (!editableRef.current || isEditing) return;
@@ -574,7 +704,31 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 height: pagePx.header.height,
               }}
             >
-              {headerHtml ? (
+              {headerUsesEngine && headerLayout ? (
+                <div
+                  className="relative h-full w-full overflow-hidden px-4 py-1 text-foreground"
+                  style={{
+                    fontSize: headerLayout.fontSizePx,
+                    lineHeight: `${headerLayout.lineHeightPx}px`,
+                  }}
+                  data-testid="typesetting-header"
+                >
+                  {headerLines.map((line, index) => (
+                    <div
+                      key={`${index}-${line.x}-${line.y}`}
+                      style={{
+                        position: "absolute",
+                        left: line.x,
+                        top: line.y,
+                        width: line.width,
+                        whiteSpace: "pre",
+                      }}
+                    >
+                      {line.text}
+                    </div>
+                  ))}
+                </div>
+              ) : headerHtml ? (
                 <div
                   className="h-full w-full overflow-hidden px-4 py-1 text-[10px] leading-tight text-foreground"
                   data-testid="typesetting-header"
@@ -591,7 +745,31 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 height: pagePx.footer.height,
               }}
             >
-              {footerHtml ? (
+              {footerUsesEngine && footerLayout ? (
+                <div
+                  className="relative h-full w-full overflow-hidden px-4 py-1 text-foreground"
+                  style={{
+                    fontSize: footerLayout.fontSizePx,
+                    lineHeight: `${footerLayout.lineHeightPx}px`,
+                  }}
+                  data-testid="typesetting-footer"
+                >
+                  {footerLines.map((line, index) => (
+                    <div
+                      key={`${index}-${line.x}-${line.y}`}
+                      style={{
+                        position: "absolute",
+                        left: line.x,
+                        top: line.y,
+                        width: line.width,
+                        whiteSpace: "pre",
+                      }}
+                    >
+                      {line.text}
+                    </div>
+                  ))}
+                </div>
+              ) : footerHtml ? (
                 <div
                   className="h-full w-full overflow-hidden px-4 py-1 text-[10px] leading-tight text-foreground"
                   data-testid="typesetting-footer"

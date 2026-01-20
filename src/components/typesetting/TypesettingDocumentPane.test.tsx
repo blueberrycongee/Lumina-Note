@@ -252,6 +252,8 @@ describe("TypesettingDocumentPane", () => {
   });
 
   it("renders header and footer blocks in the preview boxes", async () => {
+    vi.useFakeTimers();
+
     const path = "C:/vault/report.docx";
     useTypesettingDocStore.setState({
       docs: {
@@ -266,10 +268,67 @@ describe("TypesettingDocumentPane", () => {
       },
     });
 
+    const layoutSpy = vi
+      .spyOn(tauri, "getTypesettingLayoutText")
+      .mockResolvedValueOnce({
+        lines: [
+          {
+            start: 0,
+            end: 5,
+            width: 200,
+            x_offset: 0,
+            y_offset: 0,
+            start_byte: 0,
+            end_byte: 5,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        lines: [
+          {
+            start: 0,
+            end: 11,
+            width: 180,
+            x_offset: 0,
+            y_offset: 0,
+            start_byte: 0,
+            end_byte: 11,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        lines: [
+          {
+            start: 0,
+            end: 11,
+            width: 160,
+            x_offset: 0,
+            y_offset: 0,
+            start_byte: 0,
+            end_byte: 11,
+          },
+        ],
+      });
+
     render(<TypesettingDocumentPane path={path} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(await screen.findByText("Header Text")).toBeInTheDocument();
     expect(await screen.findByText("Footer Text")).toBeInTheDocument();
+    expect(layoutSpy).toHaveBeenCalledWith(expect.objectContaining({ text: "Header Text" }));
+    expect(layoutSpy).toHaveBeenCalledWith(expect.objectContaining({ text: "Footer Text" }));
+
+    layoutSpy.mockRestore();
+    vi.useRealTimers();
   });
 
   it("triggers list formatting commands from the toolbar", async () => {
