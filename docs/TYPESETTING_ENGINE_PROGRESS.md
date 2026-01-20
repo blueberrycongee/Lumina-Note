@@ -361,3 +361,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added exportDocx to write a DOCX package to a user-selected path without clearing dirty state; wired a new Export DOCX button that uses the same doc blocks/headers/footers as Save.
   - Files changed: src/stores/useTypesettingDocStore.ts; src/stores/useTypesettingDocStore.test.ts; src/components/typesetting/TypesettingDocumentPane.tsx; docs/TYPESETTING_ENGINE_PLAN.md
   - Blockers/next steps: `npm run test:run` failed (docxPackage tests: missing word/document.xml and expected entries; TypesettingPreviewPane tests expect invoke calls without undefined args). Cargo tests not run (no Rust changes).
+- 2026-01-20
+  - Task completed: M13 -> Connect export/print UI to PDF output (single source of truth)
+  - Key decisions: Print action writes the exported PDF to a temp file and opens it externally; reuse the same typesetting PDF export pipeline.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/__tests__/setup.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: `npm run test:run` failed (docxPackage tests missing word/document.xml + expected entries; TypesettingPreviewPane tests expect invoke calls without undefined args). Cargo tests not run (no Rust changes).
+

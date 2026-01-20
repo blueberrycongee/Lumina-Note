@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
+import { join, tempDir } from "@tauri-apps/api/path";
+import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
@@ -73,6 +75,8 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportingDocx, setExportingDocx] = useState(false);
   const [exportDocxError, setExportDocxError] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
+  const [printError, setPrintError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const editableRef = useRef<HTMLDivElement | null>(null);
@@ -232,6 +236,27 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     }
   };
 
+  const handlePrint = async () => {
+    setPrintError(null);
+    setPrinting(true);
+    try {
+      const tempRoot = await tempDir();
+      const filePath = await join(
+        tempRoot,
+        `lumina-typesetting-print-${Date.now()}.pdf`,
+      );
+      const payload = await getTypesettingExportPdfBase64();
+      const bytes = decodeBase64ToBytes(payload);
+      await writeFile(filePath, bytes);
+      await openExternal(filePath);
+    } catch (err) {
+      console.error("Typesetting print failed:", err);
+      setPrintError("Print failed.");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -353,6 +378,14 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           <button
             type="button"
             className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+            onClick={handlePrint}
+            disabled={printing}
+          >
+            {printing ? "Printing..." : "Print"}
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
             onClick={handleExportDocx}
             disabled={exportingDocx}
           >
@@ -360,6 +393,9 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           </button>
           {exportError ? (
             <span className="text-xs text-destructive">{exportError}</span>
+          ) : null}
+          {printError ? (
+            <span className="text-xs text-destructive">{printError}</span>
           ) : null}
           {exportDocxError ? (
             <span className="text-xs text-destructive">{exportDocxError}</span>
