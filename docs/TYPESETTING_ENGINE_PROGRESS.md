@@ -321,3 +321,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete based on the existing typesetting-doc tab wiring in useFileStore and App.tsx.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: None for this sync; continue remaining M13 tasks.
+- 2026-01-20
+  - Task completed: M13 -> Expose doc editing only in Lumina Note Codex mode (feature flag + UI gating)
+  - Key decisions: Marked the plan checkbox complete because TypesettingDocumentPane already gates editing/formatting via chatMode === "codex" and shows a non-editable placeholder otherwise.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only). Continue remaining M13 integration tasks.
