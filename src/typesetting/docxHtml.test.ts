@@ -76,6 +76,36 @@ describe("docxHtmlToBlocks", () => {
     ]);
   });
 
+  it("captures font family and font size from inline styles", () => {
+    const root = document.createElement("div");
+    root.innerHTML =
+      `<p><span style="font-family: 'Times New Roman', serif; font-size: 16px;">Hello</span> ` +
+      `<span style="font-size: 12pt;">World</span></p>`;
+
+    const blocks = docxHtmlToBlocks(root);
+    expect(blocks).toEqual([
+      {
+        type: "paragraph",
+        runs: [
+          {
+            text: "Hello",
+            style: {
+              font: "Times New Roman",
+              sizePt: 12,
+            },
+          },
+          { text: " " },
+          {
+            text: "World",
+            style: {
+              sizePt: 12,
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
   it("ignores nested list items when mapping to flat list blocks", () => {
     const root = document.createElement("div");
     root.innerHTML = `<ul><li>First<ul><li>Nested</li></ul></li><li>Second</li></ul>`;

@@ -372,3 +372,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added bulleted/numbered list toolbar buttons using execCommand; reuse existing HTML->docx list parsing.
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests ran: npm run test:run -- TypesettingDocumentPane (React act() warning emitted, tests passed).
+- 2026-01-20
+  - Task completed: M13 -> Map editor actions to document ops (capture inline font family/size from HTML) [partial]
+  - Key decisions: Parse the first font-family entry and strip quotes; convert px to pt using 96dpi (px * 0.75).
+  - Files changed: src/typesetting/docxHtml.ts; src/typesetting/docxHtml.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: M13 mapping still needs insert/delete + paragraph style ops. Full test run timed out; reported failures in docxPackage tests (missing word/document.xml, expected parts) and TypesettingPreviewPane test expectations.
+
