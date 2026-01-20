@@ -73,6 +73,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const editableRef = useRef<HTMLDivElement | null>(null);
+  const layoutRunRef = useRef(0);
 
   useEffect(() => {
     if (doc) return;
@@ -102,8 +103,10 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     setLayoutError(null);
 
     const text = docxBlocksToPlainText(doc.blocks);
+    const runId = ++layoutRunRef.current;
     const handler = setTimeout(async () => {
       const fontPath = await getTypesettingFixtureFontPath();
+      if (layoutRunRef.current !== runId) return;
       if (!fontPath) {
         setLayoutError("missing fixture font");
         updateLayoutSummary(path, "Layout unavailable");
@@ -117,19 +120,21 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           maxWidth,
           lineHeight: DEFAULT_LINE_HEIGHT_PX,
         });
+        if (layoutRunRef.current !== runId) return;
         updateLayoutSummary(path, `Layout: ${layoutData.lines.length} lines`);
         updateLayoutCache(path, {
           lineCount: layoutData.lines.length,
           updatedAt: new Date().toISOString(),
         });
       } catch (err) {
+        if (layoutRunRef.current !== runId) return;
         setLayoutError(String(err));
         updateLayoutSummary(path, "Layout unavailable");
       }
     }, 300);
 
     return () => clearTimeout(handler);
-  }, [doc, pageMm, path, updateLayoutSummary]);
+  }, [doc, pageMm, path, updateLayoutSummary, updateLayoutCache]);
 
   const html = useMemo(() => {
     if (!doc) return "";

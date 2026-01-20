@@ -1,11 +1,22 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
+import * as tauri from "@/lib/tauri";
 import {
   TypesettingDoc,
   useTypesettingDocStore,
 } from "@/stores/useTypesettingDocStore";
 import { DocxBlock } from "@/typesetting/docxImport";
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
 
 const buildDoc = (path: string, overrides: Partial<TypesettingDoc> = {}): TypesettingDoc => ({
   path,
@@ -40,17 +51,94 @@ describe("TypesettingDocumentPane", () => {
     render(<TypesettingDocumentPane path={path} />);
 
     await act(async () => {
-      await vi.runAllTimersAsync();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    await act(async () => {
+      await Promise.resolve();
     });
 
-    await waitFor(() => {
-      const doc = useTypesettingDocStore.getState().docs[path];
-      expect(doc?.layoutCache).toEqual({
-        lineCount: 2,
-        updatedAt: "2026-01-20T12:00:00.000Z",
+    const doc = useTypesettingDocStore.getState().docs[path];
+    expect(doc?.layoutCache?.lineCount).toBe(2);
+    expect(doc?.layoutCache?.updatedAt).toBe(new Date().toISOString());
+
+    vi.useRealTimers();
+  });
+
+  it("ignores stale layout runs after newer edits", async () => {
+    vi.useFakeTimers();
+
+    const path = "C:/vault/report.docx";
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path, {
+          blocks: [{ type: "paragraph", runs: [{ text: "First draft" }] } as DocxBlock],
+        }),
+      },
+    });
+
+    const first = createDeferred<tauri.TypesettingTextLayout>();
+    const second = createDeferred<tauri.TypesettingTextLayout>();
+    const layoutSpy = vi
+      .spyOn(tauri, "getTypesettingLayoutText")
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+
+    render(<TypesettingDocumentPane path={path} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      useTypesettingDocStore
+        .getState()
+        .updateDocBlocks(path, [
+          { type: "paragraph", runs: [{ text: "Second draft update" }] } as DocxBlock,
+        ]);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      second.resolve({
+        lines: [
+          { start: 0, end: 5, width: 200, x_offset: 0, y_offset: 0 },
+          { start: 6, end: 10, width: 180, x_offset: 0, y_offset: 20 },
+          { start: 11, end: 16, width: 160, x_offset: 0, y_offset: 40 },
+        ],
       });
     });
 
+    expect(useTypesettingDocStore.getState().docs[path]?.layoutCache?.lineCount)
+      .toBe(3);
+
+    await act(async () => {
+      first.resolve({
+        lines: [{ start: 0, end: 3, width: 120, x_offset: 0, y_offset: 0 }],
+      });
+    });
+
+    expect(useTypesettingDocStore.getState().docs[path]?.layoutCache?.lineCount)
+      .toBe(3);
+
+    layoutSpy.mockRestore();
     vi.useRealTimers();
   });
 

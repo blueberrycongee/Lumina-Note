@@ -336,3 +336,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added page navigation controls and estimate total pages from layout line count plus body height using the default 20px line height; clamp page changes within bounds.
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: `npm run test:run -- TypesettingDocumentPane` failed (EPIPE broken pipe, Node.js v22.14.0). Rerun tests once the vitest output issue is resolved.
+- 2026-01-20
+  - Task completed: M13 -> Wire document model edits to layout pipeline (ignore stale layout runs)
+  - Key decisions: Track layout run ids in the preview pane so older async layout results cannot overwrite newer edits; updated tests to cover stale run ordering with fake timers.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests run: npm run test:run -- TypesettingDocumentPane. Cargo tests not run (no Rust changes). Continue remaining M13 integration tasks.
