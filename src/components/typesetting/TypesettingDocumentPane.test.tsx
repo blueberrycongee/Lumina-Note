@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
 import * as tauri from "@/lib/tauri";
@@ -6,6 +6,7 @@ import {
   TypesettingDoc,
   useTypesettingDocStore,
 } from "@/stores/useTypesettingDocStore";
+import { useUIStore } from "@/stores/useUIStore";
 import { DocxBlock } from "@/typesetting/docxImport";
 
 const createDeferred = <T,>() => {
@@ -158,5 +159,35 @@ describe("TypesettingDocumentPane", () => {
     expect(screen.getByText("Page 1 / 1")).toBeInTheDocument();
     expect(prevButton).toBeDisabled();
     expect(nextButton).toBeDisabled();
+  });
+
+  it("triggers list formatting commands from the toolbar", async () => {
+    const path = "C:/vault/report.docx";
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path),
+      },
+    });
+
+    const previousMode = useUIStore.getState().chatMode;
+    useUIStore.setState({ chatMode: "codex" });
+
+    const originalExecCommand = document.execCommand;
+    const execSpy = vi.fn();
+    document.execCommand = execSpy;
+
+    render(<TypesettingDocumentPane path={path} />);
+
+    const bulleted = await screen.findByLabelText("Bulleted list");
+    const numbered = screen.getByLabelText("Numbered list");
+
+    fireEvent.click(bulleted);
+    fireEvent.click(numbered);
+
+    expect(execSpy).toHaveBeenCalledWith("insertUnorderedList");
+    expect(execSpy).toHaveBeenCalledWith("insertOrderedList");
+
+    document.execCommand = originalExecCommand;
+    useUIStore.setState({ chatMode: previousMode });
   });
 });

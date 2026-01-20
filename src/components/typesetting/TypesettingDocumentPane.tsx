@@ -366,6 +366,30 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
             >
               U
             </button>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs"
+              onClick={() => {
+                editableRef.current?.focus();
+                document.execCommand("insertUnorderedList");
+              }}
+              disabled={chatMode !== "codex"}
+              aria-label="Bulleted list"
+            >
+              •
+            </button>
+            <button
+              type="button"
+              className="rounded border border-border px-2 py-0.5 text-xs"
+              onClick={() => {
+                editableRef.current?.focus();
+                document.execCommand("insertOrderedList");
+              }}
+              disabled={chatMode !== "codex"}
+              aria-label="Numbered list"
+            >
+              1.
+            </button>
           </div>
           <button
             type="button"

@@ -367,3 +367,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/__tests__/setup.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: `npm run test:run` failed (docxPackage tests missing word/document.xml + expected entries; TypesettingPreviewPane tests expect invoke calls without undefined args). Cargo tests not run (no Rust changes).
 
+- 2026-01-20
+  - Task completed: M13 -> Provide a Word-like editing UI (typing, selection, caret, basic formatting) [bulleted/numbered list toolbar]
+  - Key decisions: Added bulleted/numbered list toolbar buttons using execCommand; reuse existing HTML->docx list parsing.
+  - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests ran: npm run test:run -- TypesettingDocumentPane (React act() warning emitted, tests passed).

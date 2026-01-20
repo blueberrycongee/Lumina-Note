@@ -611,7 +611,7 @@ Notes:
 - [x] Bridge Tauri commands for preview metrics and layout runs (invoke wrappers + error handling).
 - [x] Connect export/print UI to PDF output (single source of truth).
 - [x] Docx open pipeline: detect `.docx`, unzip, read document/header/footer XML, map styles, images.
-- [ ] Provide a Word-like editing UI (typing, selection, caret, basic formatting).
+- [x] Provide a Word-like editing UI (typing, selection, caret, basic formatting).
 - [ ] Map editor actions to document ops (insert/delete, apply paragraph/inline styles).
 - [x] Persist document model to storage (save/load) and export to docx/PDF.
 - [x] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
