@@ -487,3 +487,8 @@ pm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx\)
   - Files changed: src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Engine rendering for images/tables still pending; Word PDF baselines still need capture. pm is unavailable, so tests ran via 
 pm run test:run -- src/components/typesetting/TypesettingDocumentPane.test.tsx.
+- 2026-01-20
+  - Task completed: M19 -> Render engine images for body/header/footer via layout placeholders (partial toward engine pipeline rendering)
+  - Key decisions: Use U+FFFC as the image placeholder in layout text; map image blocks in order to layout lines containing placeholders; fallback image size uses line height when EMU extents are missing.
+  - Files changed: src/typesetting/docxText.ts; src/typesetting/docxText.test.ts; src/components/typesetting/TypesettingDocumentPane.tsx; src/components/typesetting/TypesettingDocumentPane.test.tsx
+  - Blockers/next steps: Tables still force HTML fallback; need table layout/rendering in the engine pipeline and PDF diff iteration. pm is unavailable so tests ran via npm; WSL unavailable for full CI/lint.

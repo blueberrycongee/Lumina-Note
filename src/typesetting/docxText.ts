@@ -12,6 +12,8 @@ export type DocxTextLayoutOptions = {
   spaceAfterPx: number;
 };
 
+export const DOCX_IMAGE_PLACEHOLDER = "\uFFFC";
+
 export function docxBlocksToPlainText(blocks: DocxBlock[]): string {
   return blocks
     .map((block) => blockToText(block))
@@ -104,7 +106,7 @@ function blockToText(block: DocxBlock): string | null {
     case "table":
       return tableToText(block);
     case "image":
-      return "[image]";
+      return DOCX_IMAGE_PLACEHOLDER;
     default:
       return null;
   }

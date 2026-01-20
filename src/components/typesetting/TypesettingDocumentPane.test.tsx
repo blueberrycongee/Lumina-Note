@@ -8,6 +8,7 @@ import {
 } from "@/stores/useTypesettingDocStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { DocxBlock } from "@/typesetting/docxImport";
+import { DOCX_IMAGE_PLACEHOLDER } from "@/typesetting/docxText";
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void;
@@ -375,6 +376,93 @@ describe("TypesettingDocumentPane", () => {
 
     const engineBody = screen.getByTestId("typesetting-body-engine");
     expect(engineBody).toHaveTextContent("Engine text");
+
+    layoutSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  it("renders engine body images for image blocks", async () => {
+    vi.useFakeTimers();
+
+    const path = "C:/vault/report.docx";
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path, {
+          blocks: [
+            { type: "paragraph", runs: [{ text: "Intro" }] } as DocxBlock,
+            {
+              type: "image",
+              embedId: "rId1",
+              widthEmu: 914400,
+              heightEmu: 457200,
+            } as DocxBlock,
+            { type: "paragraph", runs: [{ text: "Outro" }] } as DocxBlock,
+          ],
+          relationships: { rId1: "media/image1.png" },
+          media: { "word/media/image1.png": new Uint8Array([1, 2, 3]) },
+        }),
+      },
+    });
+
+    const encoder = new TextEncoder();
+    const beforeBytes = encoder.encode("Intro").length;
+    const placeholderBytes = encoder.encode(DOCX_IMAGE_PLACEHOLDER).length;
+    const afterBytes = encoder.encode("Outro").length;
+    const line2Start = beforeBytes + 1;
+    const line2End = line2Start + placeholderBytes;
+    const line3Start = line2End + 1;
+    const line3End = line3Start + afterBytes;
+
+    const layoutSpy = vi
+      .spyOn(tauri, "getTypesettingLayoutText")
+      .mockResolvedValue({
+        lines: [
+          {
+            start: 0,
+            end: 5,
+            width: 200,
+            x_offset: 0,
+            y_offset: 0,
+            start_byte: 0,
+            end_byte: beforeBytes,
+          },
+          {
+            start: 6,
+            end: 7,
+            width: 120,
+            x_offset: 0,
+            y_offset: 20,
+            start_byte: line2Start,
+            end_byte: line2End,
+          },
+          {
+            start: 8,
+            end: 13,
+            width: 200,
+            x_offset: 0,
+            y_offset: 40,
+            start_byte: line3Start,
+            end_byte: line3End,
+          },
+        ],
+      });
+
+    render(<TypesettingDocumentPane path={path} />);
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("typesetting-body-engine")).toBeInTheDocument();
+    const image = screen.getByTestId("typesetting-body-image");
+    expect(image).toHaveAttribute("data-embed-id", "rId1");
+    expect(image.getAttribute("src")).toContain("data:image/png;base64,");
 
     layoutSpy.mockRestore();
     vi.useRealTimers();

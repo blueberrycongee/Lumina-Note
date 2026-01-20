@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
 import type { DocxBlock } from "./docxImport";
 import {
+  DOCX_IMAGE_PLACEHOLDER,
+  docxBlocksToPlainText,
   docxBlocksToFontSizePx,
   docxBlocksToLayoutTextOptions,
   docxBlocksToLineHeightPx,
 } from "./docxText";
+
+describe("docxBlocksToPlainText", () => {
+  it("replaces image blocks with a layout placeholder", () => {
+    const blocks: DocxBlock[] = [
+      { type: "paragraph", runs: [{ text: "Intro" }] },
+      { type: "image", embedId: "rId1", widthEmu: 914400, heightEmu: 457200 },
+      { type: "paragraph", runs: [{ text: "Outro" }] },
+    ];
+
+    expect(docxBlocksToPlainText(blocks)).toBe(
+      `Intro\n${DOCX_IMAGE_PLACEHOLDER}\nOutro`,
+    );
+  });
+});
 
 describe("docxBlocksToLineHeightPx", () => {
   it("returns the default when no paragraph style is present", () => {

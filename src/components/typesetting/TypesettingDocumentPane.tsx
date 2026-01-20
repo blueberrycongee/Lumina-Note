@@ -21,11 +21,12 @@ import {
   docxBlocksToLineHeightPx,
   docxBlocksToLayoutTextOptions,
   docxBlocksToPlainText,
+  DOCX_IMAGE_PLACEHOLDER,
 } from "@/typesetting/docxText";
 import { docOpFromBeforeInput } from "@/typesetting/docOps";
 import { sliceUtf8 } from "@/typesetting/utf8";
 import type { TypesettingDoc } from "@/stores/useTypesettingDocStore";
-import type { DocxBlock } from "@/typesetting/docxImport";
+import type { DocxBlock, DocxImageBlock } from "@/typesetting/docxImport";
 
 type TypesettingDocumentPaneProps = {
   path: string;
@@ -37,6 +38,7 @@ const DEFAULT_LINE_HEIGHT_PX = 20;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
+const EMU_PER_INCH = 914400;
 
 type LayoutRender = {
   text: string;
@@ -50,6 +52,16 @@ type RenderedLine = {
   x: number;
   y: number;
   width: number;
+};
+
+type RenderedImage = {
+  src: string;
+  alt: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  embedId: string;
 };
 
 const mmToPx = (mm: number, dpi = DEFAULT_DPI) =>
@@ -79,23 +91,108 @@ const scaleBoxPx = (
   height: scalePx(box.height, zoom),
 });
 
-const hasComplexLayoutBlocks = (blocks: DocxBlock[]): boolean =>
-  blocks.some((block) => block.type === "image" || block.type === "table");
+const hasTableBlocks = (blocks: DocxBlock[]): boolean =>
+  blocks.some((block) => block.type === "table");
 
 const defaultLineHeightForFont = (fontSizePx: number) =>
   Math.max(1, Math.round(fontSizePx * 1.2));
+
+const stripImagePlaceholder = (value: string) =>
+  value.replaceAll(DOCX_IMAGE_PLACEHOLDER, "");
 
 const buildRenderedLines = (
   text: string,
   lines: TypesettingTextLine[],
 ): RenderedLine[] => {
   if (!text || lines.length === 0) return [];
-  return lines.map((line) => ({
-    text: sliceUtf8(text, line.start_byte, line.end_byte),
-    x: line.x_offset,
-    y: line.y_offset,
-    width: line.width,
-  }));
+  const rendered: RenderedLine[] = [];
+  for (const line of lines) {
+    const raw = sliceUtf8(text, line.start_byte, line.end_byte);
+    if (!raw) continue;
+    const cleaned = stripImagePlaceholder(raw);
+    if (!cleaned && raw.includes(DOCX_IMAGE_PLACEHOLDER)) {
+      continue;
+    }
+    rendered.push({
+      text: cleaned,
+      x: line.x_offset,
+      y: line.y_offset,
+      width: line.width,
+    });
+  }
+  return rendered;
+};
+
+const collectImageBlocks = (blocks: DocxBlock[]): DocxImageBlock[] => {
+  const images: DocxImageBlock[] = [];
+  for (const block of blocks) {
+    if (block.type === "image") {
+      images.push(block);
+      continue;
+    }
+    if (block.type === "table") {
+      for (const row of block.rows) {
+        for (const cell of row.cells) {
+          images.push(...collectImageBlocks(cell.blocks));
+        }
+      }
+    }
+  }
+  return images;
+};
+
+const emuToPx = (emu: number, dpi = DEFAULT_DPI): number => {
+  if (!Number.isFinite(emu) || emu <= 0) return 0;
+  const px = (emu / EMU_PER_INCH) * dpi;
+  return Math.max(1, Math.round(px));
+};
+
+const imageBlockSizePx = (
+  block: DocxImageBlock,
+  fallbackPx: number,
+): { width: number; height: number } => {
+  const width = block.widthEmu ? emuToPx(block.widthEmu) : 0;
+  const height = block.heightEmu ? emuToPx(block.heightEmu) : 0;
+  return {
+    width: width > 0 ? width : Math.max(1, fallbackPx),
+    height: height > 0 ? height : Math.max(1, fallbackPx),
+  };
+};
+
+const buildRenderedImages = (
+  layout: LayoutRender | null,
+  blocks: DocxBlock[],
+  resolveImage?: (embedId: string) => { src: string; alt?: string } | null,
+): RenderedImage[] => {
+  if (!layout || !resolveImage) return [];
+  const images = collectImageBlocks(blocks);
+  if (images.length === 0) return [];
+  let imageIndex = 0;
+  const rendered: RenderedImage[] = [];
+  for (const line of layout.lines) {
+    if (imageIndex >= images.length) break;
+    const lineText = sliceUtf8(layout.text, line.start_byte, line.end_byte);
+    if (!lineText.includes(DOCX_IMAGE_PLACEHOLDER)) {
+      continue;
+    }
+    const image = images[imageIndex];
+    imageIndex += 1;
+    const resolved = resolveImage(image.embedId);
+    if (!resolved?.src) {
+      continue;
+    }
+    const size = imageBlockSizePx(image, layout.lineHeightPx);
+    rendered.push({
+      src: resolved.src,
+      alt: resolved.alt ?? image.description ?? image.embedId,
+      x: line.x_offset,
+      y: line.y_offset,
+      width: size.width,
+      height: size.height,
+      embedId: image.embedId,
+    });
+  }
+  return rendered;
 };
 
 const imageMimeType = (path: string): string | null => {
@@ -213,9 +310,9 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     const headerText = docxBlocksToPlainText(doc.headerBlocks);
     const footerText = docxBlocksToPlainText(doc.footerBlocks);
     const headerUsesEngine = headerText.trim().length > 0
-      && !hasComplexLayoutBlocks(doc.headerBlocks);
+      && !hasTableBlocks(doc.headerBlocks);
     const footerUsesEngine = footerText.trim().length > 0
-      && !hasComplexLayoutBlocks(doc.footerBlocks);
+      && !hasTableBlocks(doc.footerBlocks);
 
     if (!headerUsesEngine) {
       setHeaderLayout(null);
@@ -375,13 +472,28 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     return buildRenderedLines(bodyLayout.text, bodyLayout.lines);
   }, [bodyLayout]);
 
+  const bodyImages = useMemo(() => {
+    if (!doc) return [];
+    return buildRenderedImages(bodyLayout, doc.blocks, imageResolver);
+  }, [bodyLayout, doc, imageResolver]);
+
+  const headerImages = useMemo(() => {
+    if (!doc) return [];
+    return buildRenderedImages(headerLayout, doc.headerBlocks, imageResolver);
+  }, [doc, headerLayout, imageResolver]);
+
+  const footerImages = useMemo(() => {
+    if (!doc) return [];
+    return buildRenderedImages(footerLayout, doc.footerBlocks, imageResolver);
+  }, [doc, footerLayout, imageResolver]);
+
   const bodyUsesEngine = !!doc
     && !isEditing
-    && !hasComplexLayoutBlocks(doc.blocks)
-    && bodyLines.length > 0;
+    && !hasTableBlocks(doc.blocks)
+    && (bodyLines.length > 0 || bodyImages.length > 0);
 
-  const headerUsesEngine = headerLines.length > 0;
-  const footerUsesEngine = footerLines.length > 0;
+  const headerUsesEngine = headerLines.length > 0 || headerImages.length > 0;
+  const footerUsesEngine = footerLines.length > 0 || footerImages.length > 0;
 
   useEffect(() => {
     if (!editableRef.current || isEditing) return;
@@ -723,6 +835,22 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                       {line.text}
                     </div>
                   ))}
+                  {bodyImages.map((image) => (
+                    <img
+                      key={`body-${image.embedId}-${image.x}-${image.y}`}
+                      src={image.src}
+                      alt={image.alt}
+                      data-embed-id={image.embedId}
+                      data-testid="typesetting-body-image"
+                      style={{
+                        position: "absolute",
+                        left: image.x,
+                        top: image.y,
+                        width: image.width,
+                        height: image.height,
+                      }}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div
@@ -779,6 +907,22 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                       {line.text}
                     </div>
                   ))}
+                  {headerImages.map((image) => (
+                    <img
+                      key={`header-${image.embedId}-${image.x}-${image.y}`}
+                      src={image.src}
+                      alt={image.alt}
+                      data-embed-id={image.embedId}
+                      data-testid="typesetting-header-image"
+                      style={{
+                        position: "absolute",
+                        left: image.x,
+                        top: image.y,
+                        width: image.width,
+                        height: image.height,
+                      }}
+                    />
+                  ))}
                 </div>
               ) : headerHtml ? (
                 <div
@@ -819,6 +963,22 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                     >
                       {line.text}
                     </div>
+                  ))}
+                  {footerImages.map((image) => (
+                    <img
+                      key={`footer-${image.embedId}-${image.x}-${image.y}`}
+                      src={image.src}
+                      alt={image.alt}
+                      data-embed-id={image.embedId}
+                      data-testid="typesetting-footer-image"
+                      style={{
+                        position: "absolute",
+                        left: image.x,
+                        top: image.y,
+                        width: image.width,
+                        height: image.height,
+                      }}
+                    />
                   ))}
                 </div>
               ) : footerHtml ? (
