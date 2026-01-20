@@ -609,7 +609,7 @@ Notes:
 - [x] Integrate engine preview UI (paged view, zoom controls, page navigation, layout summary).
 - [x] Wire document model edits to layout pipeline (incremental reflow + debounced recompute).
 - [x] Bridge Tauri commands for preview metrics and layout runs (invoke wrappers + error handling).
-- [ ] Connect export/print UI to PDF output (single source of truth).
+- [x] Connect export/print UI to PDF output (single source of truth).
 - [x] Docx open pipeline: detect `.docx`, unzip, read document/header/footer XML, map styles, images.
 - [ ] Provide a Word-like editing UI (typing, selection, caret, basic formatting).
 - [ ] Map editor actions to document ops (insert/delete, apply paragraph/inline styles).
