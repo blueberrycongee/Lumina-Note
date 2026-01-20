@@ -1,9 +1,15 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { writeBinaryFile } from "@/lib/tauri";
 import {
   useTypesettingDocStore,
   TypesettingDoc,
 } from "@/stores/useTypesettingDocStore";
 import { DocxBlock } from "@/typesetting/docxImport";
+
+vi.mock("@/lib/tauri", () => ({
+  readBinaryFileBase64: vi.fn(),
+  writeBinaryFile: vi.fn(),
+}));
 
 const buildDoc = (path: string, overrides: Partial<TypesettingDoc> = {}): TypesettingDoc => ({
   path,
@@ -64,5 +70,30 @@ describe("useTypesettingDocStore", () => {
       pageStyleId: "page1",
     });
     expect(useTypesettingDocStore.getState().docs).toEqual(before);
+  });
+
+  it("exports docx without clearing dirty state", async () => {
+    const path = "C:/vault/report.docx";
+    const targetPath = "C:/vault/report-export.docx";
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path, {
+          blocks: [{ type: "paragraph", runs: [{ text: "Draft" }] } as DocxBlock],
+          isDirty: true,
+        }),
+      },
+    });
+
+    const writeMock = vi.mocked(writeBinaryFile);
+    writeMock.mockResolvedValueOnce(undefined);
+
+    await useTypesettingDocStore.getState().exportDocx(path, targetPath);
+
+    expect(writeMock).toHaveBeenCalledTimes(1);
+    const [writtenPath, payload] = writeMock.mock.calls[0] as [string, Uint8Array];
+    expect(writtenPath).toBe(targetPath);
+    expect(payload).toBeInstanceOf(Uint8Array);
+    expect(payload.length).toBeGreaterThan(0);
+    expect(useTypesettingDocStore.getState().docs[path]?.isDirty).toBe(true);
   });
 });

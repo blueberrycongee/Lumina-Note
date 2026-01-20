@@ -356,3 +356,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Treat <s>/<del>/<strike> and text-decoration: line-through as strikethrough; map to w:strike/w:dstrike on import and w:strike on export.
   - Files changed: src/typesetting/docxHtml.ts; src/typesetting/docxHtml.test.ts; src/typesetting/docxImport.ts; src/typesetting/docxImport.test.ts; src/typesetting/docxExport.ts; src/typesetting/docxExport.test.ts
   - Blockers/next steps: Continue mapping remaining editor actions (lists/indent/selection state) and persistence/export wiring as needed. Tests run: npm run test:run -- docxHtml.test.ts docxImport.test.ts docxExport.test.ts
+- 2026-01-20
+  - Task completed: M13 -> Persist document model to storage (save/load) and export to docx/PDF
+  - Key decisions: Added exportDocx to write a DOCX package to a user-selected path without clearing dirty state; wired a new Export DOCX button that uses the same doc blocks/headers/footers as Save.
+  - Files changed: src/stores/useTypesettingDocStore.ts; src/stores/useTypesettingDocStore.test.ts; src/components/typesetting/TypesettingDocumentPane.tsx; docs/TYPESETTING_ENGINE_PLAN.md
+  - Blockers/next steps: `npm run test:run` failed (docxPackage tests: missing word/document.xml and expected entries; TypesettingPreviewPane tests expect invoke calls without undefined args). Cargo tests not run (no Rust changes).

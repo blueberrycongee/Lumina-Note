@@ -62,6 +62,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     updateDocBlocks,
     updateLayoutSummary,
     updateLayoutCache,
+    exportDocx,
   } = useTypesettingDocStore();
   const doc = docs[path];
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +71,8 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
   const [currentPage, setCurrentPage] = useState(1);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [exportingDocx, setExportingDocx] = useState(false);
+  const [exportDocxError, setExportDocxError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const editableRef = useRef<HTMLDivElement | null>(null);
@@ -208,6 +211,27 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     }
   };
 
+  const handleExportDocx = async () => {
+    setExportDocxError(null);
+    setExportingDocx(true);
+    try {
+      const defaultPath = doc?.path
+        ? doc.path.replace(/\.docx$/i, "-export.docx")
+        : "typesetting-export.docx";
+      const filePath = await save({
+        defaultPath,
+        filters: [{ name: "Word Document", extensions: ["docx"] }],
+      });
+      if (!filePath) return;
+      await exportDocx(path, filePath);
+    } catch (err) {
+      console.error("Typesetting DOCX export failed:", err);
+      setExportDocxError("Export failed.");
+    } finally {
+      setExportingDocx(false);
+    }
+  };
+
   if (error) {
     return (
       <div className="flex-1 flex items-center justify-center bg-background">
@@ -326,8 +350,19 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
           >
             {exporting ? "Exporting..." : "Export PDF"}
           </button>
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+            onClick={handleExportDocx}
+            disabled={exportingDocx}
+          >
+            {exportingDocx ? "Exporting DOCX..." : "Export DOCX"}
+          </button>
           {exportError ? (
             <span className="text-xs text-destructive">{exportError}</span>
+          ) : null}
+          {exportDocxError ? (
+            <span className="text-xs text-destructive">{exportDocxError}</span>
           ) : null}
           <span className="text-xs text-muted-foreground">{layoutSummary}</span>
         </div>

@@ -613,7 +613,7 @@ Notes:
 - [x] Docx open pipeline: detect `.docx`, unzip, read document/header/footer XML, map styles, images.
 - [ ] Provide a Word-like editing UI (typing, selection, caret, basic formatting).
 - [ ] Map editor actions to document ops (insert/delete, apply paragraph/inline styles).
-- [ ] Persist document model to storage (save/load) and export to docx/PDF.
+- [x] Persist document model to storage (save/load) and export to docx/PDF.
 - [x] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
 - [x] Expose doc editing only in Lumina Note Codex mode (feature flag + UI gating).
 - [ ] Create a dedicated Codex skill for document ops (apply_intent, insert_text, apply_style, selection ops).

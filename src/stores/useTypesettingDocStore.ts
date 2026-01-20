@@ -45,6 +45,7 @@ type TypesettingDocState = {
   updateLayoutSummary: (path: string, summary: string) => void;
   updateLayoutCache: (path: string, cache: TypesettingLayoutCache) => void;
   saveDoc: (path: string) => Promise<void>;
+  exportDocx: (path: string, targetPath: string) => Promise<void>;
   closeDoc: (path: string) => void;
 };
 
@@ -58,6 +59,24 @@ const emptyDoc = (path: string): TypesettingDoc => ({
   isDirty: false,
   styleRefs: {},
 });
+
+const buildDocxBytes = (doc: TypesettingDoc): Uint8Array => {
+  const documentXml = buildDocxDocumentXml(doc.blocks);
+  const headers = doc.headerBlocks.length > 0
+    ? [buildDocxHeaderXml(doc.headerBlocks)]
+    : [];
+  const footers = doc.footerBlocks.length > 0
+    ? [buildDocxFooterXml(doc.footerBlocks)]
+    : [];
+
+  return buildDocxPackage({
+    documentXml,
+    headers,
+    footers,
+    relationships: doc.relationships,
+    media: doc.media,
+  });
+};
 
 export const useTypesettingDocStore = create<TypesettingDocState>((set, get) => ({
   docs: {},
@@ -164,22 +183,7 @@ export const useTypesettingDocStore = create<TypesettingDocState>((set, get) => 
     if (!doc || !doc.isDirty) {
       return;
     }
-
-    const documentXml = buildDocxDocumentXml(doc.blocks);
-    const headers = doc.headerBlocks.length > 0
-      ? [buildDocxHeaderXml(doc.headerBlocks)]
-      : [];
-    const footers = doc.footerBlocks.length > 0
-      ? [buildDocxFooterXml(doc.footerBlocks)]
-      : [];
-
-    const bytes = buildDocxPackage({
-      documentXml,
-      headers,
-      footers,
-      relationships: doc.relationships,
-      media: doc.media,
-    });
+    const bytes = buildDocxBytes(doc);
 
     await writeBinaryFile(path, bytes);
 
@@ -192,6 +196,15 @@ export const useTypesettingDocStore = create<TypesettingDocState>((set, get) => 
         },
       },
     }));
+  },
+
+  exportDocx: async (path: string, targetPath: string) => {
+    const doc = get().docs[path];
+    if (!doc) {
+      throw new Error(`Typesetting doc not found for export: ${path}`);
+    }
+    const bytes = buildDocxBytes(doc);
+    await writeBinaryFile(targetPath, bytes);
   },
 
   closeDoc: (path: string) => {
