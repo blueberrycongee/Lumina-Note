@@ -12,6 +12,7 @@ import {
 } from "@/typesetting/docxExport";
 import { decodeBase64ToBytes } from "@/typesetting/base64";
 import { buildDocxPackage, parseDocxPackage } from "@/typesetting/docxPackage";
+import type { DocOp } from "@/typesetting/docOps";
 
 export type TypesettingDoc = {
   path: string;
@@ -24,6 +25,7 @@ export type TypesettingDoc = {
   styleRefs: TypesettingStyleRefs;
   layoutSummary?: string;
   layoutCache?: TypesettingLayoutCache;
+  lastOp?: DocOp;
 };
 
 export type TypesettingStyleRefs = {
@@ -44,6 +46,7 @@ type TypesettingDocState = {
   updateStyleRefs: (path: string, refs: TypesettingStyleRefs) => void;
   updateLayoutSummary: (path: string, summary: string) => void;
   updateLayoutCache: (path: string, cache: TypesettingLayoutCache) => void;
+  recordDocOp: (path: string, op: DocOp) => void;
   saveDoc: (path: string) => Promise<void>;
   exportDocx: (path: string, targetPath: string) => Promise<void>;
   closeDoc: (path: string) => void;
@@ -172,6 +175,22 @@ export const useTypesettingDocStore = create<TypesettingDocState>((set, get) => 
           [path]: {
             ...doc,
             layoutCache: cache,
+          },
+        },
+      };
+    });
+  },
+
+  recordDocOp: (path: string, op: DocOp) => {
+    set((state) => {
+      const doc = state.docs[path];
+      if (!doc) return state;
+      return {
+        docs: {
+          ...state.docs,
+          [path]: {
+            ...doc,
+            lastOp: op,
           },
         },
       };

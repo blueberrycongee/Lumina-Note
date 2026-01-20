@@ -5,6 +5,7 @@ import {
   TypesettingDoc,
 } from "@/stores/useTypesettingDocStore";
 import { DocxBlock } from "@/typesetting/docxImport";
+import type { DocOp } from "@/typesetting/docOps";
 
 vi.mock("@/lib/tauri", () => ({
   readBinaryFileBase64: vi.fn(),
@@ -95,5 +96,21 @@ describe("useTypesettingDocStore", () => {
     expect(payload).toBeInstanceOf(Uint8Array);
     expect(payload.length).toBeGreaterThan(0);
     expect(useTypesettingDocStore.getState().docs[path]?.isDirty).toBe(true);
+  });
+
+  it("records the latest document op without marking dirty", () => {
+    const path = "C:/vault/report.docx";
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path),
+      },
+    });
+
+    const op: DocOp = { type: "insert_text", text: "Hi" };
+    useTypesettingDocStore.getState().recordDocOp(path, op);
+
+    const doc = useTypesettingDocStore.getState().docs[path];
+    expect(doc?.lastOp).toEqual(op);
+    expect(doc?.isDirty).toBe(false);
   });
 });

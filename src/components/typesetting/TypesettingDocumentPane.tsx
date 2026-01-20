@@ -17,6 +17,7 @@ import {
 import { decodeBase64ToBytes } from "@/typesetting/base64";
 import { docxBlocksToHtml, docxHtmlToBlocks } from "@/typesetting/docxHtml";
 import { docxBlocksToPlainText } from "@/typesetting/docxText";
+import { docOpFromBeforeInput } from "@/typesetting/docOps";
 
 type TypesettingDocumentPaneProps = {
   path: string;
@@ -64,6 +65,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     updateDocBlocks,
     updateLayoutSummary,
     updateLayoutCache,
+    recordDocOp,
     exportDocx,
   } = useTypesettingDocStore();
   const doc = docs[path];
@@ -193,6 +195,14 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
     const blocks = docxHtmlToBlocks(editableRef.current);
     updateDocBlocks(path, blocks);
     markTypesettingTabDirty(path, true);
+  };
+
+  const handleBeforeInput = (event: React.FormEvent<HTMLDivElement>) => {
+    const inputEvent = event.nativeEvent as InputEvent;
+    const op = docOpFromBeforeInput(inputEvent);
+    if (op) {
+      recordDocOp(path, op);
+    }
   };
 
   const handleExport = async () => {
@@ -457,6 +467,7 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                   className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
                   contentEditable
                   suppressContentEditableWarning
+                  onBeforeInput={handleBeforeInput}
                   onInput={handleInput}
                   onFocus={() => setIsEditing(true)}
                   onBlur={() => {
