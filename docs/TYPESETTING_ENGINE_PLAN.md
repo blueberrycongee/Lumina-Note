@@ -604,7 +604,7 @@ Notes:
 > These milestones extend beyond the current MVP and are suitable for longer loops.
 
 ### M13 Product integration
-- [ ] Add a typesetting document entry point in the app (new doc type + open route).
+- [x] Add a typesetting document entry point in the app (new doc type + open route).
 - [ ] Create a typesetting document store (document model, style refs, layout cache).
 - [ ] Integrate engine preview UI (paged view, zoom controls, page navigation, layout summary).
 - [ ] Wire document model edits to layout pipeline (incremental reflow + debounced recompute).

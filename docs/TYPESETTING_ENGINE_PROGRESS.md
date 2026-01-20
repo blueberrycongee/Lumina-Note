@@ -316,3 +316,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a typesetting tab dirty-state updater in useFileStore; TypesettingDocumentPane now marks tabs dirty on input and uses the shared save action to clear indicators after saving.
   - Files changed: src/stores/useFileStore.ts; src/components/typesetting/TypesettingDocumentPane.tsx; src/__tests__/useFileStore.typesettingDocx.test.ts
   - Blockers/next steps: `npm run test:run` failed (docxPackage tests missing document.xml; TypesettingDocumentPane test timed out). Cargo tests not run (no Rust changes).
+- 2026-01-20
+  - Task completed: M13 -> Add a typesetting document entry point in the app (new doc type + open route) [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox complete based on the existing typesetting-doc tab wiring in useFileStore and App.tsx.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: None for this sync; continue remaining M13 tasks.
