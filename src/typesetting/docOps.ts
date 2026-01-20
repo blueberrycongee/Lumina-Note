@@ -38,6 +38,8 @@ export function docOpFromInputType(
     case "insertFromPaste":
     case "insertFromDrop":
     case "insertFromYank":
+    case "insertCompositionText":
+    case "insertReplacementText":
       return data && data.length > 0 ? buildInsertTextOp(data) : null;
     case "insertParagraph":
     case "insertLineBreak":
@@ -61,6 +63,8 @@ export function docOpFromInputType(
         "line",
       );
     case "deleteByCut":
+    case "deleteByDrag":
+    case "deleteContent":
       return buildDeleteOp("selection", "selection");
     case "formatBold":
       return { type: "apply_inline_style", style: { bold: true } };

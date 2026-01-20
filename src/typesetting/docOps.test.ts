@@ -21,11 +21,45 @@ describe("docOpFromInputType", () => {
     });
   });
 
+  it("maps composition insertions to insert_text", () => {
+    expect(docOpFromInputType("insertCompositionText", "世界")).toEqual({
+      type: "insert_text",
+      text: "世界",
+    });
+  });
+
+  it("ignores composition insertions without data", () => {
+    expect(docOpFromInputType("insertCompositionText", "")).toBeNull();
+  });
+
+  it("maps replacement insertions to insert_text", () => {
+    expect(docOpFromInputType("insertReplacementText", "fixed")).toEqual({
+      type: "insert_text",
+      text: "fixed",
+    });
+  });
+
   it("maps deleteWordBackward to a delete op", () => {
     expect(docOpFromInputType("deleteWordBackward")).toEqual({
       type: "delete_content",
       direction: "backward",
       unit: "word",
+    });
+  });
+
+  it("maps deleteContent to a selection delete op", () => {
+    expect(docOpFromInputType("deleteContent")).toEqual({
+      type: "delete_content",
+      direction: "selection",
+      unit: "selection",
+    });
+  });
+
+  it("maps deleteByDrag to a selection delete op", () => {
+    expect(docOpFromInputType("deleteByDrag")).toEqual({
+      type: "delete_content",
+      direction: "selection",
+      unit: "selection",
     });
   });
 

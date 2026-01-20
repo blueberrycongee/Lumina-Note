@@ -383,3 +383,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src/typesetting/docOps.ts; src/typesetting/docOps.test.ts; src/stores/useTypesettingDocStore.ts; src/stores/useTypesettingDocStore.test.ts; src/components/typesetting/TypesettingDocumentPane.tsx
   - Blockers/next steps: `npm run test:run` timed out after ~11s and reported failures in `src/typesetting/docxPackage.test.ts` (missing word/document.xml, expected parts) and `src/components/typesetting/TypesettingPreviewPane.test.tsx` (invoke expectations). Cargo tests not run (no Rust changes). Next: wire ops to selection ranges + apply ops to the document model; fix failing tests.
 
+- 2026-01-20
+  - Task completed: M13 -> Map editor actions to document ops (insert/delete, apply paragraph/inline styles)
+  - Key decisions: Treat composition/replacement input types as text inserts when data is present; map deleteContent/deleteByDrag to selection deletes.
+  - Files changed: src/typesetting/docOps.ts; src/typesetting/docOps.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests run: npm run test:run -- docOps.test.ts. Remaining M13 item: create dedicated Codex skill for document ops.
