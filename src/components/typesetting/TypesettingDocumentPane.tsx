@@ -5,7 +5,6 @@ import { join, tempDir } from "@tauri-apps/api/path";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useUIStore } from "@/stores/useUIStore";
 import {
   getTypesettingExportPdfBase64,
   getTypesettingFixtureFontPath,
@@ -57,7 +56,6 @@ const scaleBoxPx = (
 });
 
 export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) {
-  const { chatMode } = useUIStore();
   const { save: saveActiveFile, markTypesettingTabDirty } = useFileStore();
   const {
     docs,
@@ -347,7 +345,6 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 editableRef.current?.focus();
                 document.execCommand("bold");
               }}
-              disabled={chatMode !== "codex"}
               aria-label="Bold"
             >
               B
@@ -359,7 +356,6 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 editableRef.current?.focus();
                 document.execCommand("italic");
               }}
-              disabled={chatMode !== "codex"}
               aria-label="Italic"
             >
               I
@@ -371,7 +367,6 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 editableRef.current?.focus();
                 document.execCommand("underline");
               }}
-              disabled={chatMode !== "codex"}
               aria-label="Underline"
             >
               U
@@ -383,7 +378,6 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 editableRef.current?.focus();
                 document.execCommand("insertUnorderedList");
               }}
-              disabled={chatMode !== "codex"}
               aria-label="Bulleted list"
             >
               •
@@ -395,7 +389,6 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 editableRef.current?.focus();
                 document.execCommand("insertOrderedList");
               }}
-              disabled={chatMode !== "codex"}
               aria-label="Numbered list"
             >
               1.
@@ -461,32 +454,26 @@ export function TypesettingDocumentPane({ path }: TypesettingDocumentPaneProps) 
                 height: pagePx.body.height,
               }}
             >
-              {chatMode === "codex" ? (
-                <div
-                  ref={editableRef}
-                  className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
-                  contentEditable
-                  suppressContentEditableWarning
-                  onBeforeInput={handleBeforeInput}
-                  onInput={handleInput}
-                  onFocus={() => setIsEditing(true)}
-                  onBlur={() => {
-                    setIsEditing(false);
-                    handleInput();
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Tab") {
-                      event.preventDefault();
-                      document.execCommand("insertText", false, "\t");
-                    }
-                  }}
-                  dangerouslySetInnerHTML={{ __html: html }}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Switch to Codex mode to edit this document.
-                </div>
-              )}
+              <div
+                ref={editableRef}
+                className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
+                contentEditable
+                suppressContentEditableWarning
+                onBeforeInput={handleBeforeInput}
+                onInput={handleInput}
+                onFocus={() => setIsEditing(true)}
+                onBlur={() => {
+                  setIsEditing(false);
+                  handleInput();
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Tab") {
+                    event.preventDefault();
+                    document.execCommand("insertText", false, "\t");
+                  }
+                }}
+                dangerouslySetInnerHTML={{ __html: html }}
+              />
             </div>
             <div
               className="absolute border border-dotted border-muted-foreground/30"
