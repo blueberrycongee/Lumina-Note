@@ -285,3 +285,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added simple style ref ids (font/paragraph/page) and a layout cache with lineCount + updatedAt; layout cache updates do not mark docs dirty.
   - Files changed: src/stores/useTypesettingDocStore.ts; src/stores/useTypesettingDocStore.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro not found (wsl -l -q empty); unable to run WSL npm test/lint/CI. Next: wire layout cache updates from the layout pipeline and feed style refs from document settings.
+- 2026-01-20
+  - Task completed: M13 -> Bridge Tauri commands for preview/layout runs (validate layout_text input)
+  - Key decisions: Reject non-positive max_width/line_height before layout; add tests that assert field-specific errors.
+  - Files changed: src-tauri/src/commands/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: WSL distro list empty (wsl -l -q returned no distros); unable to run WSL cargo fmt/clippy/test/ci. Run WSL checks once a distro is available.
+

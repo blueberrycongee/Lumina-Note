@@ -121,6 +121,16 @@ pub async fn typesetting_layout_text(
     max_width: i32,
     line_height: i32,
 ) -> Result<TypesettingTextLayout, AppError> {
+    if max_width <= 0 {
+        return Err(AppError::InvalidPath(
+            "Typesetting layout requires a positive max_width".into(),
+        ));
+    }
+    if line_height <= 0 {
+        return Err(AppError::InvalidPath(
+            "Typesetting layout requires a positive line_height".into(),
+        ));
+    }
     let mut manager = FontManager::new();
     let font = manager.load_from_path(&font_path).map_err(|err| {
         AppError::InvalidPath(format!("Typesetting font load failed: {err}"))
@@ -1076,6 +1086,31 @@ mod tests {
         .expect("layout should succeed");
 
         assert!(layout.lines.is_empty());
+    }
+
+    #[tokio::test]
+    async fn typesetting_layout_text_rejects_non_positive_dimensions() {
+        let err = typesetting_layout_text(
+            "Hello".to_string(),
+            fixture_font_path(),
+            0,
+            1200,
+        )
+        .await
+        .expect_err("expected invalid max_width error");
+        let message = format!("{err}");
+        assert!(message.contains("max_width"));
+
+        let err = typesetting_layout_text(
+            "Hello".to_string(),
+            fixture_font_path(),
+            1000,
+            0,
+        )
+        .await
+        .expect_err("expected invalid line_height error");
+        let message = format!("{err}");
+        assert!(message.contains("line_height"));
     }
 
     #[tokio::test]
