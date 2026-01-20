@@ -168,6 +168,7 @@ function extractRuns(element: Element): DocxRun[] {
     if (tag === "u") {
       nextStyle.underline = true;
     }
+    applyInlineStyle(el, nextStyle);
 
     for (const child of Array.from(el.childNodes)) {
       walk(child, nextStyle);
@@ -179,6 +180,28 @@ function extractRuns(element: Element): DocxRun[] {
   }
 
   return runs.length > 0 ? runs : [{ text: "" }];
+}
+
+function applyInlineStyle(element: HTMLElement, style: DocxRunStyle) {
+  if (!element.hasAttribute("style")) return;
+
+  const fontWeight = element.style.fontWeight;
+  if (fontWeight) {
+    const numericWeight = Number.parseInt(fontWeight, 10);
+    if (fontWeight === "bold" || (Number.isFinite(numericWeight) && numericWeight >= 600)) {
+      style.bold = true;
+    }
+  }
+
+  const fontStyle = element.style.fontStyle;
+  if (fontStyle === "italic" || fontStyle === "oblique") {
+    style.italic = true;
+  }
+
+  const textDecoration = element.style.textDecorationLine || element.style.textDecoration;
+  if (textDecoration && textDecoration.includes("underline")) {
+    style.underline = true;
+  }
 }
 
 function escapeHtml(value: string): string {
