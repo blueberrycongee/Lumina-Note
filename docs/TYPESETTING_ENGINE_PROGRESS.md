@@ -291,3 +291,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Files changed: src-tauri/src/commands/mod.rs; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: WSL distro list empty (wsl -l -q returned no distros); unable to run WSL cargo fmt/clippy/test/ci. Run WSL checks once a distro is available.
 
+- 2026-01-20
+  - Task completed: M13 -> Docx open pipeline (detect .docx, unzip, parse document/header/footer XML)
+  - Key decisions: Marked the plan checkbox complete because the pipeline is already wired through useFileStore + useTypesettingDocStore + docxPackage parsing.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only). Next: continue remaining M13 integration tasks (editor action mapping, persistence wiring).

@@ -604,12 +604,19 @@ Notes:
 > These milestones extend beyond the current MVP and are suitable for longer loops.
 
 ### M13 Product integration
-- [ ] Integrate engine preview into the app UI (paged view + zoom controls).
-- [ ] Wire document model edits to layout pipeline (incremental reflow).
+- [ ] Add a typesetting document entry point in the app (new doc type + open route).
+- [ ] Create a typesetting document store (document model, style refs, layout cache).
+- [ ] Integrate engine preview UI (paged view, zoom controls, page navigation, layout summary).
+- [ ] Wire document model edits to layout pipeline (incremental reflow + debounced recompute).
+- [ ] Bridge Tauri commands for preview metrics and layout runs (invoke wrappers + error handling).
 - [ ] Connect export/print UI to PDF output (single source of truth).
+- [x] Docx open pipeline: detect `.docx`, unzip, read document/header/footer XML, map styles, images.
+- [ ] Provide a Word-like editing UI (typing, selection, caret, basic formatting).
+- [ ] Map editor actions to document ops (insert/delete, apply paragraph/inline styles).
+- [ ] Persist document model to storage (save/load) and export to docx/PDF.
 - [x] Add a minimal "apply intent" entrypoint for AI-driven layout changes.
-- [ ] Open `.docx` files with the engine (not WebView), and provide a Word-like editing UI (typing, selection, and formatting changes).
-- [ ] Doc editing is initially exposed only in Lumina Note Codex mode; after integration, create a dedicated Codex skill that teaches the agent how to drive this document model.
+- [ ] Expose doc editing only in Lumina Note Codex mode (feature flag + UI gating).
+- [ ] Create a dedicated Codex skill for document ops (apply_intent, insert_text, apply_style, selection ops).
 
 ### M14 Editing UX and overrides
 - [ ] Style inspector: show computed style vs local override.
