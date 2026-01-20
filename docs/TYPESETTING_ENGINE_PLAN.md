@@ -650,7 +650,7 @@ Goal: minimize visible differences between Lumina rendering and Word for a defin
 - [x] Define a compatibility contract (supported docx features, fonts, page sizes).
 - [ ] Establish Word PDF baselines for golden fixtures on a single machine.
   - [x] Document baseline capture steps + naming + output location.
-- [ ] Build diff tooling (pixel + layout metrics) and acceptance thresholds.
+- [x] Build diff tooling (pixel + layout metrics) and acceptance thresholds.
 - [ ] Map docx styles -> layout engine inputs (font, size, line height, indent, spacing, alignment).
 - [ ] Render images/tables/headers/footers using the engine pipeline (no placeholders).
 - [ ] Drive pagination with real layout results (no fixed line-height placeholders).

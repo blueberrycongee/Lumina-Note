@@ -6,6 +6,28 @@ export type PixelDiffResult = {
   meanChannelDelta: number;
 };
 
+export type PixelDiffThresholds = {
+  maxDiffRatio: number;
+  maxMeanChannelDelta: number;
+  maxMaxChannelDelta: number;
+};
+
+export const DEFAULT_PIXEL_DIFF_THRESHOLDS: PixelDiffThresholds = {
+  maxDiffRatio: 0.002,
+  maxMeanChannelDelta: 1,
+  maxMaxChannelDelta: 255,
+};
+
+export type PixelDiffFailure =
+  | { kind: "diffRatio"; value: number; threshold: number }
+  | { kind: "meanChannelDelta"; value: number; threshold: number }
+  | { kind: "maxChannelDelta"; value: number; threshold: number };
+
+export type PixelDiffEvaluation = {
+  pass: boolean;
+  failures: PixelDiffFailure[];
+};
+
 export function diffPixelData(
   base: Uint8ClampedArray,
   candidate: Uint8ClampedArray,
@@ -56,5 +78,41 @@ export function diffPixelData(
     diffRatio: diffPixels / totalPixels,
     maxChannelDelta,
     meanChannelDelta: sumChannelDelta / (totalPixels * 4),
+  };
+}
+
+export function evaluatePixelDiff(
+  diff: PixelDiffResult,
+  thresholds: PixelDiffThresholds = DEFAULT_PIXEL_DIFF_THRESHOLDS,
+): PixelDiffEvaluation {
+  const failures: PixelDiffFailure[] = [];
+
+  if (diff.diffRatio > thresholds.maxDiffRatio) {
+    failures.push({
+      kind: "diffRatio",
+      value: diff.diffRatio,
+      threshold: thresholds.maxDiffRatio,
+    });
+  }
+
+  if (diff.meanChannelDelta > thresholds.maxMeanChannelDelta) {
+    failures.push({
+      kind: "meanChannelDelta",
+      value: diff.meanChannelDelta,
+      threshold: thresholds.maxMeanChannelDelta,
+    });
+  }
+
+  if (diff.maxChannelDelta > thresholds.maxMaxChannelDelta) {
+    failures.push({
+      kind: "maxChannelDelta",
+      value: diff.maxChannelDelta,
+      threshold: thresholds.maxMaxChannelDelta,
+    });
+  }
+
+  return {
+    pass: failures.length === 0,
+    failures,
   };
 }

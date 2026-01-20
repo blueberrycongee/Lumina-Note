@@ -415,3 +415,9 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Added a pixel diff helper that reports per-pixel change counts plus max/mean channel deltas; throw on length mismatch or non-RGBA buffers.
   - Files changed: src/typesetting/pixelDiff.ts; src/typesetting/pixelDiff.test.ts; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Wire pixel diff to PDF render output and define acceptance thresholds; full test run still pending (known failures in other suites).
+- 2026-01-20
+  - Task completed: M19 -> Build diff tooling (pixel + layout metrics) and acceptance thresholds
+  - Key decisions: Added acceptance evaluation helpers for PDF metrics and pixel diffs; PDF defaults use 0.2mm in points, pixel defaults use diffRatio 0.002 + mean channel delta 1 with max channel delta left permissive (255).
+  - Files changed: src/typesetting/pdfMetrics.ts; src/typesetting/pdfMetrics.test.ts; src/typesetting/pixelDiff.ts; src/typesetting/pixelDiff.test.ts; docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: pm is not available on this machine, so tests ran via 
+pm run test:run -- src/typesetting/pdfMetrics.test.ts src/typesetting/pixelDiff.test.ts. WSL remains unavailable; next up is capturing Word PDF baselines for fixtures or mapping docx styles into layout inputs.
