@@ -326,3 +326,8 @@ Plan: docs/TYPESETTING_ENGINE_PLAN.md
   - Key decisions: Marked the plan checkbox complete because TypesettingDocumentPane already gates editing/formatting via chatMode === "codex" and shows a non-editable placeholder otherwise.
   - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
   - Blockers/next steps: Tests not run (docs-only). Continue remaining M13 integration tasks.
+- 2026-01-20
+  - Task completed: M13 -> Create a typesetting document store (document model, style refs, layout cache) [plan checkbox sync]
+  - Key decisions: Marked the plan checkbox complete to reflect the existing useTypesettingDocStore implementation with style refs and layout cache.
+  - Files changed: docs/TYPESETTING_ENGINE_PLAN.md; docs/TYPESETTING_ENGINE_PROGRESS.md
+  - Blockers/next steps: Tests not run (docs-only). Continue remaining M13 integration items.
