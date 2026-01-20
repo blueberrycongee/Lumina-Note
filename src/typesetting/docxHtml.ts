@@ -219,6 +219,41 @@ function applyInlineStyle(element: HTMLElement, style: DocxRunStyle) {
       style.strikethrough = true;
     }
   }
+
+  const fontFamily = element.style.fontFamily;
+  if (fontFamily) {
+    const parsed = parseFontFamily(fontFamily);
+    if (parsed) {
+      style.font = parsed;
+    }
+  }
+
+  const fontSize = element.style.fontSize;
+  if (fontSize) {
+    const parsed = parseFontSize(fontSize);
+    if (parsed !== null) {
+      style.sizePt = parsed;
+    }
+  }
+}
+
+function parseFontFamily(value: string): string | null {
+  const first = value.split(",")[0]?.trim();
+  if (!first) return null;
+  const cleaned = first.replace(/^['"]|['"]$/g, "").trim();
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+function parseFontSize(value: string): number | null {
+  const trimmed = value.trim().toLowerCase();
+  const match = trimmed.match(/^([0-9]*\.?[0-9]+)(pt|px)$/);
+  if (!match) return null;
+  const amount = Number.parseFloat(match[1]);
+  if (!Number.isFinite(amount)) return null;
+  if (match[2] === "pt") {
+    return amount;
+  }
+  return amount * 0.75;
 }
 
 function escapeHtml(value: string): string {
