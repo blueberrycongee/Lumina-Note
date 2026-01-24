@@ -245,6 +245,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           model: aiConfig.model,
           hasApiKey: !!aiConfig.apiKey,
           baseUrl: aiConfig.baseUrl,
+          routingEnabled: !!aiConfig.routing?.enabled,
+          routingChatProvider: aiConfig.routing?.chatProvider,
         });
         
         // 获取当前历史消息（发送前的消息）
@@ -285,13 +287,34 @@ export const useRustAgentStore = create<RustAgentState>()(
         const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
           ? aiConfig.customModelId
           : aiConfig.model;
+
+        // 如果主配置缺失但启用了 routing，回退到 chat 配置（避免 agent 无法启动）
+        const routing = aiConfig.routing;
+        const shouldFallbackToChatConfig = Boolean(
+          routing?.enabled &&
+          routing.chatProvider &&
+          (!aiConfig.apiKey || !aiConfig.provider || !aiConfig.model)
+        );
+
+        if (shouldFallbackToChatConfig) {
+          console.warn("[RustAgent] 主配置不完整，回退到 routing.chat 配置");
+        }
+
+        const resolvedProvider = shouldFallbackToChatConfig ? routing!.chatProvider! : aiConfig.provider;
+        const resolvedApiKey = shouldFallbackToChatConfig ? (routing!.chatApiKey || aiConfig.apiKey) : aiConfig.apiKey;
+        const resolvedModel = shouldFallbackToChatConfig
+          ? (routing!.chatModel === "custom" && routing!.chatCustomModelId
+              ? routing!.chatCustomModelId
+              : routing!.chatModel || actualModel)
+          : actualModel;
+        const resolvedBaseUrl = shouldFallbackToChatConfig ? (routing!.chatBaseUrl || aiConfig.baseUrl) : aiConfig.baseUrl;
         
         // 构建配置
         const config: AgentConfig = {
-          provider: aiConfig.provider,
-          model: actualModel,
-          api_key: aiConfig.apiKey || "",
-          base_url: aiConfig.baseUrl,
+          provider: resolvedProvider,
+          model: resolvedModel,
+          api_key: resolvedApiKey || "",
+          base_url: resolvedBaseUrl,
           temperature: aiConfig.temperature ?? 0.7,
           max_tokens: 4096,
           max_plan_iterations: 3,
@@ -300,7 +323,10 @@ export const useRustAgentStore = create<RustAgentState>()(
           locale: "zh-CN",
         };
         
-        console.log("[RustAgent] 发送配置到 Rust:", config);
+        console.log("[RustAgent] 发送配置到 Rust:", {
+          ...config,
+          hasApiKey: !!config.api_key,
+        });
 
         try {
           // 将历史消息附加到 context 中传给后端
@@ -310,6 +336,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           };
           await invoke("agent_start_task", { config, task, context: contextWithHistory });
         } catch (e) {
+          console.error("[RustAgent] agent_start_task failed:", e);
           set({
             status: "error",
             error: e instanceof Error ? e.message : String(e),
@@ -719,6 +746,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           case "error": {
             const { message } = event.data as { message: string };
             const stats = state.taskStats;
+            console.error("[RustAgent] error event:", message);
             set({
               error: message,
               streamingContent: "",

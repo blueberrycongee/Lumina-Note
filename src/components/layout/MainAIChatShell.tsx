@@ -956,6 +956,13 @@ export function MainAIChatShell() {
                 {/* Deep Research 卡片 */}
                 <DeepResearchCard className="mb-6" chatId={chatSessionId} />
 
+                {/* Agent 错误提示 */}
+                {chatMode === "agent" && agentStatus === "error" && (
+                  <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded mb-4">
+                    {_rustError || t.ai.errorRetry}
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
             </div>

@@ -186,7 +186,7 @@ export function AgentPanel() {
         {/* 错误状态 */}
         {status === "error" && (
           <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
-            {t.ai.errorRetry}
+            {rustStore.error || t.ai.errorRetry}
           </div>
         )}
 

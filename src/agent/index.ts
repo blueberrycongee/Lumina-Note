@@ -1,16 +1,13 @@
 /**
- * Agent 模块入口
- * 
- * 注意：LangGraph 版本需要 Node.js 环境，不能在浏览器中运行
- * 前端继续使用原生 AgentLoop
- * LangGraph 代码保留在 ./langgraph/ 但不导出（避免浏览器打包）
+ * Agent 模块入口（TS 侧仅保留类型与辅助模块）
+ *
+ * 运行时已由 Rust Agent 负责，前端不再使用 TS AgentLoop。
  */
 
 // 类型导出
 export * from "./types";
 
-// 核心模块（原生版本，前端使用）
-export { AgentLoop, getAgentLoop, resetAgentLoop } from "./core/AgentLoop";
+// 核心辅助模块
 export { StateManager } from "./core/StateManager";
 export { parseResponse, formatToolResult } from "./core/MessageParser";
 

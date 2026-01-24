@@ -1,7 +1,6 @@
 /**
- * Agent 核心模块入口
+ * Agent 核心模块入口（仅保留辅助模块）
  */
 
-export { AgentLoop, getAgentLoop, resetAgentLoop } from "./AgentLoop";
 export { StateManager } from "./StateManager";
 export { parseResponse, formatToolResult, getNoToolUsedPrompt } from "./MessageParser";
