@@ -9,7 +9,6 @@ import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function TitleBar() {
   const { t } = useLocaleStore();
@@ -104,16 +103,7 @@ export function TitleBar() {
             Lumina Note
           </span>
         </div>
-        <div
-          className="w-20 flex items-center justify-end pr-2"
-          data-tauri-drag-region="false"
-        >
-          <LanguageSwitcher
-            compact
-            menuAlign="right"
-            buttonClassName="bg-background/55 hover:bg-accent/60 border-border/60 shadow-ui-card/60"
-          />
-        </div>
+        <div className="w-20" />
       </div>
     );
   }
@@ -137,19 +127,13 @@ export function TitleBar() {
       {/* 中间：拖拽区域 */}
       <div className="flex-1 h-full" />
 
-      {/* 右侧：语言切换 + 窗口控制按钮 */}
+      {/* 右侧：窗口控制按钮 */}
       <div
         className="flex items-center h-full gap-2 pr-1"
         onMouseDown={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         data-tauri-drag-region="false"
       >
-        <LanguageSwitcher
-          compact
-          menuAlign="right"
-          stopPropagation
-          buttonClassName="h-7 bg-background/55 hover:bg-accent/60 border-border/60 shadow-ui-card/60"
-        />
         <div className="flex items-center h-full">
           {/* 最小化 */}
           <button

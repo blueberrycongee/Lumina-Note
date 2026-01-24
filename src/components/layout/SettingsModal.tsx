@@ -19,6 +19,7 @@ import { LiquidGlassEffect } from "../effects/LiquidGlassEffect";
 import { ThemeEditor } from "../ai/ThemeEditor";
 import { WebDAVSettings } from "../settings/WebDAVSettings";
 import { UpdateChecker } from "../settings/UpdateChecker";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -308,6 +309,17 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               {t.settingsModal.editor}
             </h3>
+
+            {/* 语言设置 */}
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <p className="font-medium">{t.settings?.language || t.welcome?.language || "Language"}</p>
+              </div>
+              <LanguageSwitcher
+                menuAlign="right"
+                buttonClassName="bg-white/5 border-white/10 hover:bg-white/10"
+              />
+            </div>
 
             {/* 编辑模式 */}
             <div className="flex items-center justify-between py-2">
