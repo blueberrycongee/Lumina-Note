@@ -63,6 +63,13 @@ pub struct LlmResponse {
     pub total_tokens: usize,
 }
 
+#[derive(Default)]
+struct StreamToolCall {
+    id: Option<String>,
+    name: String,
+    args: String,
+}
+
 /// LLM 客户端
 pub struct LlmClient {
     config: AgentConfig,
@@ -321,6 +328,306 @@ impl LlmClient {
             completion_tokens,
             total_tokens,
         })
+    }
+
+    /// 流式调用（带 delta 回调）
+    pub async fn call_stream_with_delta<F>(
+        &self,
+        app: Option<AppHandle>,
+        request_id: &str,
+        messages: &[Message],
+        tools: Option<&[Value]>,
+        mut on_delta: F,
+    ) -> Result<LlmResponse, String>
+    where
+        F: FnMut(&str) + Send,
+    {
+        if let Some(app) = &app {
+            let start_timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis() as u64;
+            let _ = app.emit(
+                "agent-event",
+                AgentEvent::LlmRequestStart {
+                    request_id: request_id.to_string(),
+                    timestamp: start_timestamp,
+                },
+            );
+        }
+
+        let result = self
+            .call_stream_with_delta_retry(app.clone(), request_id, messages, tools, &mut on_delta)
+            .await;
+
+        if let Some(app) = &app {
+            let _ = app.emit(
+                "agent-event",
+                AgentEvent::LlmRequestEnd {
+                    request_id: request_id.to_string(),
+                },
+            );
+        }
+
+        result
+    }
+
+    async fn call_stream_with_delta_retry<F>(
+        &self,
+        app: Option<AppHandle>,
+        request_id: &str,
+        messages: &[Message],
+        tools: Option<&[Value]>,
+        on_delta: &mut F,
+    ) -> Result<LlmResponse, String>
+    where
+        F: FnMut(&str) + Send,
+    {
+        let max_retries = 3;
+        let base_delay = Duration::from_secs(1);
+        let mut last_error = String::new();
+
+        for attempt in 0..max_retries {
+            if attempt > 0 {
+                let delay_secs = base_delay.as_secs() * 2u64.pow(attempt as u32);
+                let jitter_ms = rand::random::<u64>() % 500;
+                let delay = Duration::from_secs(delay_secs) + Duration::from_millis(jitter_ms);
+
+                println!(
+                    "[LlmClient] stream retry {} (wait {:?}), last error: {}",
+                    attempt, delay, last_error
+                );
+                tokio::time::sleep(delay).await;
+            }
+
+            match self
+                .call_stream_inner_with_delta(app.clone(), request_id, messages, tools, on_delta)
+                .await
+            {
+                Ok(response) => return Ok(response),
+                Err(e) => {
+                    last_error = e.clone();
+                    if !Self::is_retryable_error(&e) {
+                        return Err(e);
+                    }
+                    println!("[LlmClient] stream failed (attempt {}): {}", attempt + 1, e);
+                }
+            }
+        }
+
+        Err(format!(
+            "streaming failed after {} retries: {}",
+            max_retries, last_error
+        ))
+    }
+
+    async fn call_stream_inner_with_delta<F>(
+        &self,
+        app: Option<AppHandle>,
+        _request_id: &str,
+        messages: &[Message],
+        tools: Option<&[Value]>,
+        on_delta: &mut F,
+    ) -> Result<LlmResponse, String>
+    where
+        F: FnMut(&str) + Send,
+    {
+        let url = self.get_api_url();
+        let headers = self.build_headers();
+
+        let chat_messages = self.convert_messages(messages);
+
+        let mut body = json!({
+            "model": self.config.model,
+            "messages": chat_messages,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "stream": true,
+        });
+
+        if let Some(tools) = tools {
+            body["tools"] = json!(tools);
+        }
+
+        let mut req = self.client.post(&url);
+        for (key, value) in headers {
+            req = req.header(&key, &value);
+        }
+        req = req.json(&body);
+
+        let response = req
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            return Err(format!("HTTP {}: {}", status, text));
+        }
+
+        let mut stream = response.bytes_stream();
+        let mut buffer = String::new();
+        let mut full_content = String::new();
+        let mut tool_calls: Vec<StreamToolCall> = Vec::new();
+        let mut prompt_tokens = 0usize;
+        let mut completion_tokens = 0usize;
+        let mut total_tokens = 0usize;
+
+        let heartbeat_interval = Duration::from_secs(15);
+        let stream_timeout = Duration::from_secs(60);
+        let mut last_data_time = Instant::now();
+        let mut heartbeat_timer = interval(heartbeat_interval);
+
+        loop {
+            tokio::select! {
+                chunk_result = stream.next() => {
+                    match chunk_result {
+                        Some(Ok(bytes)) => {
+                            last_data_time = Instant::now();
+                            let text = String::from_utf8_lossy(&bytes);
+                            buffer.push_str(&text);
+
+                            while let Some(newline_pos) = buffer.find('\n') {
+                                let line = buffer[..newline_pos].trim().to_string();
+                                buffer = buffer[newline_pos + 1..].to_string();
+
+                                if line.is_empty() || line.starts_with(": ") {
+                                    continue;
+                                }
+
+                                if line.starts_with("data: ") {
+                                    let data = &line[6..];
+
+                                    if data == "[DONE]" {
+                                        return Ok(Self::build_stream_response(
+                                            full_content,
+                                            tool_calls,
+                                            prompt_tokens,
+                                            completion_tokens,
+                                            total_tokens,
+                                        ));
+                                    }
+
+                                    if let Ok(json) = serde_json::from_str::<Value>(data) {
+                                        if let Some(error) = json.get("error") {
+                                            return Err(format!("API error: {}", error));
+                                        }
+
+                                        if let Some(usage) = json.get("usage") {
+                                            prompt_tokens = usage["prompt_tokens"].as_u64().unwrap_or(prompt_tokens as u64) as usize;
+                                            completion_tokens = usage["completion_tokens"].as_u64().unwrap_or(completion_tokens as u64) as usize;
+                                            total_tokens = usage["total_tokens"].as_u64().unwrap_or(total_tokens as u64) as usize;
+                                        }
+
+                                        let delta = &json["choices"][0]["delta"];
+
+                                        if let Some(tc_array) = delta.get("tool_calls").and_then(|v| v.as_array()) {
+                                            for tc in tc_array {
+                                                let idx = tc["index"].as_u64().unwrap_or(0) as usize;
+                                                while tool_calls.len() <= idx {
+                                                    tool_calls.push(StreamToolCall::default());
+                                                }
+
+                                                if let Some(id) = tc["id"].as_str() {
+                                                    tool_calls[idx].id = Some(id.to_string());
+                                                }
+                                                if let Some(name) = tc["function"]["name"].as_str() {
+                                                    tool_calls[idx].name.push_str(name);
+                                                }
+                                                if let Some(args) = tc["function"]["arguments"].as_str() {
+                                                    tool_calls[idx].args.push_str(args);
+                                                }
+                                            }
+                                        }
+
+                                        if let Some(content) = delta["content"].as_str() {
+                                            if content.is_empty() {
+                                                continue;
+                                            }
+                                            full_content.push_str(content);
+                                            on_delta(content);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Some(Err(e)) => {
+                            return Err(format!("Stream error: {}", e));
+                        }
+                        None => {
+                            return Ok(Self::build_stream_response(
+                                full_content,
+                                tool_calls,
+                                prompt_tokens,
+                                completion_tokens,
+                                total_tokens,
+                            ));
+                        }
+                    }
+                }
+
+                _ = heartbeat_timer.tick() => {
+                    if let Some(app) = &app {
+                        let timestamp = SystemTime::now()
+                            .duration_since(UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_millis() as u64;
+                        let _ = app.emit("agent-event", AgentEvent::Heartbeat { timestamp });
+                    }
+
+                    if last_data_time.elapsed() > stream_timeout {
+                        return Err(format!(
+                            "Stream timeout: no data for {} seconds",
+                            stream_timeout.as_secs()
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    fn build_stream_response(
+        full_content: String,
+        tool_calls: Vec<StreamToolCall>,
+        prompt_tokens: usize,
+        completion_tokens: usize,
+        total_tokens: usize,
+    ) -> LlmResponse {
+        let parsed_calls = Self::parse_stream_tool_calls(tool_calls);
+        let total_tokens = if total_tokens == 0 {
+            prompt_tokens + completion_tokens
+        } else {
+            total_tokens
+        };
+
+        LlmResponse {
+            content: full_content,
+            tool_calls: if parsed_calls.is_empty() { None } else { Some(parsed_calls) },
+            prompt_tokens,
+            completion_tokens,
+            total_tokens,
+        }
+    }
+
+    fn parse_stream_tool_calls(tool_calls: Vec<StreamToolCall>) -> Vec<ToolCall> {
+        tool_calls
+            .into_iter()
+            .enumerate()
+            .filter_map(|(idx, call)| {
+                if call.name.is_empty() {
+                    return None;
+                }
+                let params = serde_json::from_str::<HashMap<String, Value>>(&call.args)
+                    .unwrap_or_default();
+                let id = call.id.unwrap_or_else(|| format!("call_{}", idx));
+                Some(ToolCall {
+                    id,
+                    name: call.name,
+                    params,
+                })
+            })
+            .collect()
     }
 
     /// 流式调用（带心跳和超时检测）

@@ -13,6 +13,7 @@ use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct ForgeRuntime {
@@ -106,6 +107,7 @@ pub async fn run_forge_loop(
         let session_id = session_id.clone();
         let message_id = message_id.clone();
         let cancel = cancel.clone();
+        let app = app.clone();
         move |mut state: GraphState, ctx| {
             let pending = pending.clone();
             let pending_calls = pending_calls.clone();
@@ -114,6 +116,7 @@ pub async fn run_forge_loop(
             let session_id = session_id.clone();
             let message_id = message_id.clone();
             let cancel = cancel.clone();
+            let app = app.clone();
             async move {
                 let mut queued_calls = {
                     let mut locked = pending_calls.lock().unwrap();
@@ -145,8 +148,24 @@ pub async fn run_forge_loop(
                             None
                         };
 
+                        let request_id = Uuid::new_v4().to_string();
+                        let ctx_for_delta = ctx.clone();
+                        let delta_session_id = session_id.clone();
+                        let delta_message_id = message_id.clone();
                         let response = llm
-                            .call(&state.messages, tools)
+                            .call_stream_with_delta(
+                                Some(app.clone()),
+                                &request_id,
+                                &state.messages,
+                                tools,
+                                move |delta| {
+                                    ctx_for_delta.emit(Event::TextDelta {
+                                        session_id: delta_session_id.clone(),
+                                        message_id: delta_message_id.clone(),
+                                        delta: delta.to_string(),
+                                    });
+                                },
+                            )
                             .await
                             .map_err(|err| GraphError::ExecutionError {
                                 node: "llm".to_string(),
