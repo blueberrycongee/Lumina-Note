@@ -5,7 +5,7 @@ use crate::forge_runtime::tools::{build_registry, ToolEnvironment};
 use forge::runtime::cancel::CancellationToken;
 use forge::runtime::error::{GraphError, Interrupt};
 use forge::runtime::event::{Event, EventSink, TokenUsage};
-use forge::runtime::loop::LoopNode;
+use forge::runtime::r#loop::LoopNode;
 use forge::runtime::permission::{PermissionPolicy, PermissionSession};
 use forge::runtime::session_state::SessionState;
 use forge::runtime::tool::{ToolCall as ForgeToolCall, ToolOutput, ToolRegistry};
@@ -106,113 +106,122 @@ pub async fn run_forge_loop(
         let session_id = session_id.clone();
         let message_id = message_id.clone();
         let cancel = cancel.clone();
-        move |mut state: GraphState, ctx| async move {
-            let mut queued_calls = {
-                let mut locked = pending_calls.lock().unwrap();
-                std::mem::take(&mut *locked)
-            };
-            let mut iteration = 0usize;
-            let max_iterations = config.max_steps.max(1);
+        move |mut state: GraphState, ctx| {
+            let pending = pending.clone();
+            let pending_calls = pending_calls.clone();
+            let llm = llm.clone();
+            let tool_defs = tool_defs.clone();
+            let session_id = session_id.clone();
+            let message_id = message_id.clone();
+            let cancel = cancel.clone();
+            async move {
+                let mut queued_calls = {
+                    let mut locked = pending_calls.lock().unwrap();
+                    std::mem::take(&mut *locked)
+                };
+                let mut iteration = 0usize;
+                let max_iterations = config.max_steps.max(1);
 
-            loop {
-                if cancel.is_cancelled() {
-                    return Err(GraphError::Aborted {
-                        reason: cancel.abort_reason(),
-                    });
-                }
-
-                if queued_calls.is_empty() {
-                    iteration += 1;
-                    if iteration > max_iterations {
-                        return Err(GraphError::MaxIterationsExceeded);
-                    }
-
-                    ctx.emit(Event::StepStart {
-                        session_id: session_id.clone(),
-                    });
-
-                    let tools = if llm.supports_fc() {
-                        Some(tool_defs.as_ref().as_slice())
-                    } else {
-                        None
-                    };
-
-                    let response = llm
-                        .call(&state.messages, tools)
-                        .await
-                        .map_err(|err| GraphError::ExecutionError {
-                            node: "llm".to_string(),
-                            message: err,
-                        })?;
-
-                    ctx.emit(Event::StepFinish {
-                        session_id: session_id.clone(),
-                        tokens: TokenUsage {
-                            input: response.prompt_tokens as u64,
-                            output: response.completion_tokens as u64,
-                            reasoning: 0,
-                            cache_read: 0,
-                            cache_write: 0,
-                        },
-                        cost: 0.0,
-                    });
-
-                    let tool_calls = response.tool_calls.unwrap_or_default();
-                    if tool_calls.is_empty() {
-                        let content = response.content;
-                        if !content.trim().is_empty() {
-                            state.messages.push(Message {
-                                role: MessageRole::Assistant,
-                                content: content.clone(),
-                                name: None,
-                                tool_call_id: None,
-                            });
-                        }
-                        ctx.emit(Event::TextFinal {
-                            session_id: session_id.clone(),
-                            message_id: message_id.clone(),
-                            text: content.clone(),
+                loop {
+                    if cancel.is_cancelled() {
+                        return Err(GraphError::Aborted {
+                            reason: cancel.abort_reason(),
                         });
-                        state.final_result = Some(content);
-                        break;
                     }
 
-                    queued_calls = tool_calls;
-                }
-
-                while let Some(call) = pop_next_call(&mut queued_calls) {
-                    let input = serde_json::Value::Object(
-                        call.params
-                            .iter()
-                            .map(|(key, value)| (key.clone(), value.clone()))
-                            .collect(),
-                    );
-                    let forge_call = ForgeToolCall::new(call.name.clone(), call.id.clone(), input);
-                    match ctx.run_tool(forge_call).await {
-                        Ok(output) => {
-                            handle_tool_success(&mut state, &call, output);
+                    if queued_calls.is_empty() {
+                        iteration += 1;
+                        if iteration > max_iterations {
+                            return Err(GraphError::MaxIterationsExceeded);
                         }
-                        Err(GraphError::Interrupted(interrupts)) => {
-                            let mut pending_calls = vec![call];
-                            pending_calls.extend(queued_calls);
-                            let mut locked = pending.lock().unwrap();
-                            *locked = Some(ForgePending {
-                                interrupts,
-                                pending_tool_calls: pending_calls,
+
+                        ctx.emit(Event::StepStart {
+                            session_id: session_id.clone(),
+                        });
+
+                        let tools = if llm.supports_fc() {
+                            Some(tool_defs.as_ref().as_slice())
+                        } else {
+                            None
+                        };
+
+                        let response = llm
+                            .call(&state.messages, tools)
+                            .await
+                            .map_err(|err| GraphError::ExecutionError {
+                                node: "llm".to_string(),
+                                message: err,
+                            })?;
+
+                        ctx.emit(Event::StepFinish {
+                            session_id: session_id.clone(),
+                            tokens: TokenUsage {
+                                input: response.prompt_tokens as u64,
+                                output: response.completion_tokens as u64,
+                                reasoning: 0,
+                                cache_read: 0,
+                                cache_write: 0,
+                            },
+                            cost: 0.0,
+                        });
+
+                        let tool_calls = response.tool_calls.unwrap_or_default();
+                        if tool_calls.is_empty() {
+                            let content = response.content;
+                            if !content.trim().is_empty() {
+                                state.messages.push(Message {
+                                    role: MessageRole::Assistant,
+                                    content: content.clone(),
+                                    name: None,
+                                    tool_call_id: None,
+                                });
+                            }
+                            ctx.emit(Event::TextFinal {
+                                session_id: session_id.clone(),
+                                message_id: message_id.clone(),
+                                text: content.clone(),
                             });
-                            return Ok(state);
+                            state.final_result = Some(content);
+                            break;
                         }
-                        Err(GraphError::Aborted { reason }) => {
-                            return Err(GraphError::Aborted { reason });
-                        }
-                        Err(err) => {
-                            handle_tool_error(&mut state, &call, &err);
+
+                        queued_calls = tool_calls;
+                    }
+
+                    while let Some(call) = pop_next_call(&mut queued_calls) {
+                        let input = serde_json::Value::Object(
+                            call.params
+                                .iter()
+                                .map(|(key, value)| (key.clone(), value.clone()))
+                                .collect(),
+                        );
+                        let forge_call = ForgeToolCall::new(call.name.clone(), call.id.clone(), input);
+                        match ctx.run_tool(forge_call).await {
+                            Ok(output) => {
+                                handle_tool_success(&mut state, &call, output);
+                            }
+                            Err(GraphError::Interrupted(interrupts)) => {
+                                let mut pending_calls = vec![call];
+                                pending_calls.extend(queued_calls);
+                                let mut locked = pending.lock().unwrap();
+                                *locked = Some(ForgePending {
+                                    interrupts,
+                                    pending_tool_calls: pending_calls,
+                                });
+                                return Ok(state);
+                            }
+                            Err(GraphError::Aborted { reason }) => {
+                                return Err(GraphError::Aborted { reason });
+                            }
+                            Err(err) => {
+                                handle_tool_error(&mut state, &call, &err);
+                            }
                         }
                     }
                 }
-            }
 
-            Ok(state)
+                Ok(state)
+            }
         }
     })
     .with_cancel_token(cancel.clone());
@@ -271,11 +280,12 @@ fn wrap_event(event: Event) -> Value {
         Ok(value) => value,
         Err(_) => return json!({ "type": "unknown", "data": null }),
     };
-    if let Value::Object(map) = value {
+    if let Value::Object(ref map) = value {
         if map.len() == 1 {
-            let (key, data) = map.into_iter().next().unwrap();
-            let event_type = to_snake_case(&key);
-            return json!({ "type": event_type, "data": data });
+            if let Some((key, data)) = map.iter().next() {
+                let event_type = to_snake_case(key);
+                return json!({ "type": event_type, "data": data.clone() });
+            }
         }
     }
     json!({ "type": "unknown", "data": value })

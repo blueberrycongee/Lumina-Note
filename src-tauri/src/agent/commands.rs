@@ -14,7 +14,7 @@ use crate::agent::deep_research::{
 use crate::forge_runtime::permissions::{default_ruleset, PermissionRule, PermissionSession as LocalPermissionSession};
 use forge::runtime::cancel::CancellationToken;
 use forge::runtime::error::Interrupt;
-use forge::runtime::event::{Event, PermissionReply};
+use forge::runtime::event::{Event, EventSink, PermissionReply};
 use forge::runtime::permission::PermissionDecision;
 use forge::runtime::session_state::RunStatus;
 use crate::langgraph::executor::{Checkpoint, ExecutionResult};

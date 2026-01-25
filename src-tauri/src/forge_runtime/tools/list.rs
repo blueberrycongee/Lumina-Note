@@ -85,14 +85,17 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
     let mut metadata = Map::new();
     metadata.insert("path".to_string(), json!(search_root.display().to_string()));
 
+    let pattern = metadata
+        .get("path")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
     request_permission(
         &ctx,
         &env.permissions,
         "list",
-        metadata
-            .get("path")
-            .and_then(|v| v.as_str())
-            .unwrap_or(""),
+        &pattern,
         metadata,
         vec!["*".to_string()],
     )?;
@@ -208,7 +211,7 @@ fn render_dir(
             .file_name()
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| dir_path.to_string());
-        output.push_str(&format!("{}{}\/\n", indent, name));
+        output.push_str(&format!("{}{}/\n", indent, name));
     }
 
     let mut children: Vec<String> = dirs

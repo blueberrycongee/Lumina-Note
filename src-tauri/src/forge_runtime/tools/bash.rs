@@ -10,6 +10,7 @@ use serde_json::{json, Map};
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::io::AsyncReadExt;
 use tokio::process::Command;
 
 const DEFAULT_TIMEOUT_MS: u64 = 120_000;
@@ -110,35 +111,50 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
             message: format!("Failed to spawn command: {}", err),
         })?;
 
-    let timed = tokio::time::timeout(Duration::from_millis(timeout), child.wait_with_output()).await;
-
-    let (mut output, status, timed_out) = match timed {
-        Ok(Ok(output)) => {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let combined = format!("{}{}", stdout, stderr);
-            (combined, output.status.code(), false)
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+    let stdout_task = tokio::spawn(async move {
+        let mut buf = Vec::new();
+        if let Some(mut out) = stdout {
+            let _ = out.read_to_end(&mut buf).await;
         }
-        Ok(Err(err)) => {
+        buf
+    });
+    let stderr_task = tokio::spawn(async move {
+        let mut buf = Vec::new();
+        if let Some(mut err) = stderr {
+            let _ = err.read_to_end(&mut buf).await;
+        }
+        buf
+    });
+
+    let status_result = tokio::select! {
+        res = child.wait() => res.map(Some),
+        _ = tokio::time::sleep(Duration::from_millis(timeout)) => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            Ok(None)
+        }
+    };
+
+    let status = match status_result {
+        Ok(status) => status,
+        Err(err) => {
             return Err(GraphError::ExecutionError {
                 node: format!("tool:{}", call.tool),
                 message: format!("Command failed: {}", err),
             });
         }
-        Err(_) => {
-            let _ = child.kill().await;
-            let output = child.wait_with_output().await;
-            let combined = match output {
-                Ok(output) => {
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-                    format!("{}{}", stdout, stderr)
-                }
-                Err(_) => String::new(),
-            };
-            (combined, None, true)
-        }
     };
+    let timed_out = status.is_none();
+    let status = status.and_then(|status| status.code());
+    let stdout = stdout_task.await.unwrap_or_default();
+    let stderr = stderr_task.await.unwrap_or_default();
+    let mut output = format!(
+        "{}{}",
+        String::from_utf8_lossy(&stdout),
+        String::from_utf8_lossy(&stderr)
+    );
 
     if timed_out {
         output.push_str(&format!("\n\n(bash timed out after {} ms)", timeout));

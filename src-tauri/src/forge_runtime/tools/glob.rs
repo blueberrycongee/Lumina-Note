@@ -58,14 +58,17 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
     metadata.insert("pattern".to_string(), json!(input.pattern));
     metadata.insert("path".to_string(), json!(search_root.display().to_string()));
 
+    let pattern = metadata
+        .get("pattern")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
     request_permission(
         &ctx,
         &env.permissions,
         "glob",
-        metadata
-            .get("pattern")
-            .and_then(|v| v.as_str())
-            .unwrap_or(""),
+        &pattern,
         metadata,
         vec!["*".to_string()],
     )?;
