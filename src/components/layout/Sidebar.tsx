@@ -524,6 +524,15 @@ export function Sidebar() {
     }
   }, [openFile, openDatabaseTab, openPDFTab, splitView, activePane, openSecondaryFile, openSecondaryPdf]);
 
+  // 点击空白区域：选中根目录（VS Code 行为）
+  const handleTreeBackgroundClick = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    if (!vaultPath) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("[data-file-tree-item]")) return;
+    setSelectedPath(vaultPath);
+  }, [vaultPath]);
+
   return (
     <aside className="w-full h-full border-r border-border/60 flex flex-col bg-background/55 backdrop-blur-md shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] transition-colors duration-300">
       {/* Header */}
@@ -770,14 +779,21 @@ export function Sidebar() {
         onMouseLeave={() => setIsRootDragOver(false)}
         className={cn(
           "px-3 py-2 text-sm font-medium truncate border-b border-border/60 bg-background/35 transition-colors",
-          isRootDragOver && "bg-primary/15 ring-1 ring-primary/40 ring-inset"
+          isRootDragOver && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
+          selectedPath === vaultPath && "bg-primary/10 ring-1 ring-primary/30 ring-inset text-primary"
         )}
       >
         {vaultPath?.split(/[/\\]/).pop() || "Notes"}
       </div>
 
       {/* File Tree */}
-      <div className="flex-1 overflow-auto py-2">
+      <div
+        className={cn(
+          "flex-1 overflow-auto py-2",
+          selectedPath === vaultPath && "ring-1 ring-primary/20 ring-inset"
+        )}
+        onClick={handleTreeBackgroundClick}
+      >
         {/* 根目录新建输入框 */}
         {creating && creating.parentPath === vaultPath && (
           <CreateInputRow
@@ -935,6 +951,7 @@ function CreateInputRow({ type, value, onChange, onSubmit, onCancel, level }: Cr
 
   return (
     <div
+      data-file-tree-item="true"
       className="flex items-center gap-1.5 py-1 px-1"
       style={{ paddingLeft }}
     >
@@ -1099,10 +1116,11 @@ function FileTreeItem({
     // 文件夹重命名
     if (isRenaming) {
       return (
-        <div
-          className="flex items-center gap-1.5 py-1 px-1"
-          style={{ paddingLeft }}
-        >
+      <div
+        className="flex items-center gap-1.5 py-1 px-1"
+        data-file-tree-item="true"
+        style={{ paddingLeft }}
+      >
           <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
@@ -1123,6 +1141,7 @@ function FileTreeItem({
         <div
           role="button"
           tabIndex={0}
+          data-file-tree-item="true"
           data-folder-path={entry.path}
           onMouseDown={handleFolderMouseDown}
           onClick={() => {
@@ -1258,6 +1277,7 @@ function FileTreeItem({
 
   return (
     <div
+      data-file-tree-item="true"
       onMouseDown={handleMouseDown}
       onClick={() => onSelect(entry)}
       onContextMenu={(e) => onContextMenu(e, entry)}
