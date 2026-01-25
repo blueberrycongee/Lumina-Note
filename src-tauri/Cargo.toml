@@ -30,6 +30,8 @@ rayon = "1.10"
 trash = "5"
 base64 = "0.22"
 regex = "1.10"
+globset = "0.4"
+forge = { path = "../../forge" }
 
 # CEF Integration (Chromium Embedded Framework)
 # Note: CEF requires Ninja build tool to compile

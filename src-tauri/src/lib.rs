@@ -9,6 +9,7 @@ mod typesetting;
 pub mod agent;
 pub mod langgraph;
 pub mod mcp;
+pub mod forge_runtime;
 
 pub use commands::*;
 pub use error::*;
