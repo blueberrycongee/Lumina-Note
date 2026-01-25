@@ -557,8 +557,8 @@ function App() {
 
         {/* Main content - switches between Editor, Graph, Split, Diff, VideoNote and AI Chat based on state */}
         <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {pendingDiff ? (
-            // Show diff view when there's a pending AI edit
+          {pendingDiff && activeTab?.type !== "ai-chat" ? (
+            // Show diff view when there's a pending AI edit (non chat context)
             <DiffViewWrapper />
           ) : activeTab?.type === "database" && activeTab.databaseId ? (
             // 数据库标签页（支持分栏）

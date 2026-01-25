@@ -131,18 +131,20 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
     let mut files_by_dir: HashMap<String, Vec<String>> = HashMap::new();
 
     for file in &files {
-        let dir = Path::new(file)
+        let mut dir = Path::new(file)
             .parent()
             .map(|path| path.to_string_lossy().replace('\\', "/"))
             .unwrap_or_else(|| ".".to_string());
+        if dir.is_empty() {
+            dir = ".".to_string();
+        }
 
         let parts: Vec<&str> = if dir == "." { Vec::new() } else { dir.split('/').collect() };
         for i in 0..=parts.len() {
-            let dir_path = if i == 0 {
-                ".".to_string()
-            } else {
-                parts[..i].join("/")
-            };
+            let mut dir_path = if i == 0 { ".".to_string() } else { parts[..i].join("/") };
+            if dir_path.is_empty() {
+                dir_path = ".".to_string();
+            }
             dirs.insert(dir_path);
         }
 
@@ -254,6 +256,9 @@ fn render_dir(
 }
 
 fn dir_parent(dir: &str) -> &str {
+    if dir.is_empty() {
+        return ".";
+    }
     if dir == "." {
         return "";
     }

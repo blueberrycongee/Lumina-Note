@@ -7,13 +7,17 @@
  * - Text segments (Markdown)
  */
 
-import { useState, useMemo, memo } from "react";
+import { useState, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { Message } from "@/agent/types";
 import type { MessageContent, TextContent } from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";
+import { DiffView } from "@/components/effects/DiffView";
+import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
+import { useFileStore } from "@/stores/useFileStore";
+import { saveFile } from "@/lib/tauri";
 
 // 从消息内容中提取文本（处理多模态内容）
 function getTextFromContent(content: MessageContent): string {
@@ -51,7 +55,8 @@ interface ToolCallInfo {
 type TimelinePart =
   | { type: "text"; content: string }
   | { type: "thinking"; content: string }
-  | { type: "tool"; tool: ToolCallInfo };
+  | { type: "tool"; tool: ToolCallInfo }
+  | { type: "diff"; diff: PendingDiff };
 
 // ============ 解析函数 ============
 
@@ -96,7 +101,7 @@ function appendPartsFromContent(
   const trimmed = content.trim();
 
   // Rust Agent 格式：🔧 tool_name: {...}
-  const rustToolMatch = trimmed.match(/^🔧\s*(\w+)\s*:\s*(.+)$/);
+  const rustToolMatch = trimmed.match(/^🔧\s*(\w+)\s*:\s*([\s\S]+)$/);
   if (rustToolMatch) {
     const tool = {
       name: rustToolMatch[1],
@@ -108,23 +113,64 @@ function appendPartsFromContent(
   }
 
   // Rust Agent 格式：✅ 结果... 或 ❌ 错误...
-  const rustSuccessMatch = trimmed.match(/^✅\s*(.+)$/);
+  const rustSuccessMatch = trimmed.match(/^✅\s*(\w+)\s*:\s*([\s\S]+)$/);
   if (rustSuccessMatch) {
-    const base = lastToolCall.current ?? { name: "tool", params: "" };
-    parts.push({
-      type: "tool",
-      tool: { ...base, result: rustSuccessMatch[1].trim(), success: true },
-    });
+    const toolName = rustSuccessMatch[1];
+    const result = rustSuccessMatch[2].trim();
+    if (lastToolCall.current && lastToolCall.current.name === toolName) {
+      lastToolCall.current.result = result;
+      lastToolCall.current.success = true;
+    } else {
+      parts.push({
+        type: "tool",
+        tool: { name: toolName, params: "", result, success: true },
+      });
+    }
     lastToolCall.current = null;
     return;
   }
-  const rustErrorMatch = trimmed.match(/^❌\s*(.+)$/);
+  if (trimmed.startsWith("✅")) {
+    const result = trimmed.slice(1).trim();
+    if (lastToolCall.current) {
+      lastToolCall.current.result = result;
+      lastToolCall.current.success = true;
+    } else {
+      parts.push({
+        type: "tool",
+        tool: { name: "tool", params: "", result, success: true },
+      });
+    }
+    lastToolCall.current = null;
+    return;
+  }
+
+  const rustErrorMatch = trimmed.match(/^❌\s*(\w+)\s*:\s*([\s\S]+)$/);
   if (rustErrorMatch) {
-    const base = lastToolCall.current ?? { name: "tool", params: "" };
-    parts.push({
-      type: "tool",
-      tool: { ...base, result: rustErrorMatch[1].trim(), success: false },
-    });
+    const toolName = rustErrorMatch[1];
+    const result = rustErrorMatch[2].trim();
+    if (lastToolCall.current && lastToolCall.current.name === toolName) {
+      lastToolCall.current.result = result;
+      lastToolCall.current.success = false;
+    } else {
+      parts.push({
+        type: "tool",
+        tool: { name: toolName, params: "", result, success: false },
+      });
+    }
+    lastToolCall.current = null;
+    return;
+  }
+  if (trimmed.startsWith("❌")) {
+    const result = trimmed.slice(1).trim();
+    if (lastToolCall.current) {
+      lastToolCall.current.result = result;
+      lastToolCall.current.success = false;
+    } else {
+      parts.push({
+        type: "tool",
+        tool: { name: "tool", params: "", result, success: false },
+      });
+    }
     lastToolCall.current = null;
     return;
   }
@@ -153,10 +199,19 @@ function appendPartsFromContent(
       const paramsRaw = attrs.params ?? lastToolCall.current?.params ?? "";
       const params = paramsRaw ? formatToolParams(paramsRaw) : "";
       const result = inner.trim();
-      parts.push({
-        type: "tool",
-        tool: { name, params, result, success: tagNameLower === "tool_result" },
-      });
+      const success = tagNameLower === "tool_result";
+      if (lastToolCall.current && lastToolCall.current.name === name) {
+        if (params && !lastToolCall.current.params) {
+          lastToolCall.current.params = params;
+        }
+        lastToolCall.current.result = result;
+        lastToolCall.current.success = success;
+      } else {
+        parts.push({
+          type: "tool",
+          tool: { name, params, result, success },
+        });
+      }
       lastToolCall.current = null;
     } else if (tagNameLower === "attempt_completion_result") {
       pushTextPart(parts, inner, includeText);
@@ -427,6 +482,35 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     enabled: isRunning,
   });
 
+  const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } = useAIStore();
+  const { openFile } = useFileStore();
+
+  const handleAcceptDiff = useCallback(async () => {
+    if (!pendingDiff) return;
+
+    try {
+      await saveFile(pendingDiff.filePath, pendingDiff.modified);
+      clearPendingEdits();
+      await openFile(pendingDiff.filePath, false, true);
+
+      if (diffResolver) {
+        diffResolver(true);
+      }
+    } catch (error) {
+      console.error("Failed to apply edit:", error);
+      alert(`❌ 应用修改失败: ${error}`);
+    }
+  }, [pendingDiff, clearPendingEdits, openFile, diffResolver]);
+
+  const handleRejectDiff = useCallback(() => {
+    setPendingDiff(null);
+    clearPendingEdits();
+
+    if (diffResolver) {
+      diffResolver(false);
+    }
+  }, [setPendingDiff, clearPendingEdits, diffResolver]);
+
   const { t } = useLocaleStore();
 
   // 按轮次分组计算数据（只计算数据，不创建 JSX）
@@ -438,6 +522,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       roundKey: string;
       hasAIContent: boolean;
     }> = [];
+    let pendingDiffInserted = false;
 
     // 找到所有用户消息的索引
     const userMessageIndices: number[] = [];
@@ -456,6 +541,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       const nextUserIdx = userMessageIndices[roundIndex + 1] ?? messages.length;
       const parts: TimelinePart[] = [];
       const lastToolCall = { current: null as ToolCallInfo | null };
+      let lastEditNoteIndex = -1;
 
       for (let msgIdx = userIdx + 1; msgIdx < nextUserIdx; msgIdx++) {
         const msg = messages[msgIdx];
@@ -468,6 +554,23 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
         if (msg.role === "user" && shouldSkipUserMessage(content)) {
           appendPartsFromContent(content, parts, lastToolCall, false);
+        }
+      }
+
+      if (pendingDiff && !pendingDiffInserted) {
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
+          if (part.type === "tool" && part.tool.name === "edit_note") {
+            lastEditNoteIndex = i;
+          }
+        }
+
+        if (lastEditNoteIndex >= 0) {
+          parts.splice(lastEditNoteIndex + 1, 0, { type: "diff", diff: pendingDiff });
+          pendingDiffInserted = true;
+        } else if (roundIndex === userMessageIndices.length - 1) {
+          parts.push({ type: "diff", diff: pendingDiff });
+          pendingDiffInserted = true;
         }
       }
 
@@ -487,7 +590,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     });
 
     return result;
-  }, [messages]);
+  }, [messages, pendingDiff]);
 
   return (
     <div className={className}>
@@ -507,7 +610,15 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                 <Bot size={16} className="text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0 space-y-2">
-                {round.parts.map((part, partIndex) => {
+                {(() => {
+                  let lastTextIndex = -1;
+                  for (let i = 0; i < round.parts.length; i++) {
+                    if (round.parts[i].type === "text") {
+                      lastTextIndex = i;
+                    }
+                  }
+
+                  return round.parts.map((part, partIndex) => {
                   const key = `${round.roundKey}-part-${partIndex}`;
                   if (part.type === "thinking") {
                     return <ThinkingCollapsible key={key} thinking={part.content} t={t} />;
@@ -515,11 +626,33 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                   if (part.type === "tool") {
                     return <ToolCallCollapsible key={key} tool={part.tool} t={t} />;
                   }
-                  if (part.type === "text") {
+                  if (part.type === "diff") {
                     return (
                       <div
                         key={key}
-                        className="prose prose-sm dark:prose-invert max-w-none leading-relaxed"
+                        className="border border-border rounded-lg overflow-hidden bg-background/70"
+                      >
+                        <DiffView
+                          fileName={part.diff.fileName}
+                          original={part.diff.original}
+                          modified={part.diff.modified}
+                          description={part.diff.description}
+                          onAccept={handleAcceptDiff}
+                          onReject={handleRejectDiff}
+                        />
+                      </div>
+                    );
+                  }
+                  if (part.type === "text") {
+                    const isFinalText = partIndex === lastTextIndex;
+                    return (
+                      <div
+                        key={key}
+                        className={
+                          isFinalText
+                            ? "prose dark:prose-invert max-w-none leading-relaxed text-base font-medium"
+                            : "prose prose-sm dark:prose-invert max-w-none leading-relaxed"
+                        }
                         dangerouslySetInnerHTML={{
                           __html: parseMarkdown(formatMarkdownContent(part.content)),
                         }}
@@ -527,7 +660,8 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                     );
                   }
                   return null;
-                })}
+                });
+                })()}
               </div>
             </div>
           )}

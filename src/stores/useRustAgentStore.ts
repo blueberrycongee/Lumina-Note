@@ -645,6 +645,22 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 处理事件
       _handleEvent: (event: { type: string; data: unknown }) => {
         const state = get();
+        const flushStreamingToMessages = () => {
+          if (!state.streamingContent || !state.streamingContent.trim()) {
+            return { messages: state.messages, flushed: false };
+          }
+          return {
+            messages: [
+              ...state.messages,
+              {
+                role: "assistant" as const,
+                content: state.streamingContent,
+                agent: state.streamingAgent,
+              },
+            ],
+            flushed: true,
+          };
+        };
         
         switch (event.type) {
           case "run_started": {
@@ -729,14 +745,16 @@ export const useRustAgentStore = create<RustAgentState>()(
           case "tool_start": {
             const { tool, input } = event.data as { tool: string; input: unknown };
             const stats = state.taskStats;
+            const { messages: baseMessages, flushed } = flushStreamingToMessages();
             set({
               messages: [
-                ...state.messages,
+                ...baseMessages,
                 {
                   role: "tool",
                   content: `🔧 ${tool}: ${JSON.stringify(input)}`,
                 },
               ],
+              streamingContent: flushed ? "" : state.streamingContent,
               taskStats: {
                 ...stats,
                 toolCalls: stats.toolCalls + 1,
@@ -753,14 +771,16 @@ export const useRustAgentStore = create<RustAgentState>()(
               typeof output?.content === "string"
                 ? output.content
                 : JSON.stringify(output?.content ?? output);
+            const { messages: baseMessages, flushed } = flushStreamingToMessages();
             set({
               messages: [
-                ...state.messages,
+                ...baseMessages,
                 {
                   role: "tool",
                   content: `✅ ${tool}: ${content}`,
                 },
               ],
+              streamingContent: flushed ? "" : state.streamingContent,
               taskStats: {
                 ...stats,
                 toolSuccesses: stats.toolSuccesses + 1,
@@ -773,14 +793,16 @@ export const useRustAgentStore = create<RustAgentState>()(
           case "tool_error": {
             const { tool, error } = event.data as { tool: string; error: string };
             const stats = state.taskStats;
+            const { messages: baseMessages, flushed } = flushStreamingToMessages();
             set({
               messages: [
-                ...state.messages,
+                ...baseMessages,
                 {
                   role: "tool",
                   content: `❌ ${tool}: ${error}`,
                 },
               ],
+              streamingContent: flushed ? "" : state.streamingContent,
               taskStats: {
                 ...stats,
                 toolFailures: stats.toolFailures + 1,
@@ -895,14 +917,16 @@ export const useRustAgentStore = create<RustAgentState>()(
           case "tool_call": {
             const { tool } = event.data as { tool: ToolCall };
             const stats = state.taskStats;
+            const { messages: baseMessages, flushed } = flushStreamingToMessages();
             set({
               messages: [
-                ...state.messages,
+                ...baseMessages,
                 {
                   role: "tool",
                   content: `🔧 ${tool.name}: ${JSON.stringify(tool.params)}`,
                 },
               ],
+              streamingContent: flushed ? "" : state.streamingContent,
               taskStats: {
                 ...stats,
                 toolCalls: stats.toolCalls + 1,
