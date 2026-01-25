@@ -7,6 +7,8 @@ use forge::runtime::error::{GraphError, GraphResult};
 use forge::runtime::tool::{ToolCall, ToolContext, ToolDefinition, ToolOutput, ToolRegistry};
 use serde::Deserialize;
 use serde_json::{json, Map};
+use std::env;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,6 +18,77 @@ use tokio::process::Command;
 const DEFAULT_TIMEOUT_MS: u64 = 120_000;
 const MAX_LINES: usize = 2000;
 const MAX_BYTES: usize = 50 * 1024;
+const SHELL_BLACKLIST: &[&str] = &["fish", "nu"];
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OsKind {
+    Windows,
+    Macos,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ShellFlavor {
+    Cmd,
+    Posix,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ShellCommand {
+    program: PathBuf,
+    flavor: ShellFlavor,
+}
+
+impl ShellCommand {
+    fn cmd<P: Into<PathBuf>>(program: P) -> Self {
+        Self {
+            program: program.into(),
+            flavor: ShellFlavor::Cmd,
+        }
+    }
+
+    fn posix<P: Into<PathBuf>>(program: P) -> Self {
+        Self {
+            program: program.into(),
+            flavor: ShellFlavor::Posix,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct ShellEnv {
+    os: OsKind,
+    shell_env: Option<String>,
+    comspec: Option<String>,
+    path: Vec<PathBuf>,
+    lumina_git_bash_path: Option<PathBuf>,
+    opencode_git_bash_path: Option<PathBuf>,
+}
+
+impl ShellEnv {
+    fn current() -> Self {
+        let os = if cfg!(windows) {
+            OsKind::Windows
+        } else if cfg!(target_os = "macos") {
+            OsKind::Macos
+        } else {
+            OsKind::Other
+        };
+
+        let path = env::var_os("PATH")
+            .map(|value| env::split_paths(&value).collect())
+            .unwrap_or_default();
+
+        Self {
+            os,
+            shell_env: env::var("SHELL").ok(),
+            comspec: env::var("COMSPEC").ok(),
+            path,
+            lumina_git_bash_path: env::var_os("LUMINA_GIT_BASH_PATH").map(PathBuf::from),
+            opencode_git_bash_path: env::var_os("OPENCODE_GIT_BASH_PATH").map(PathBuf::from),
+        }
+    }
+}
 
 #[derive(Deserialize)]
 struct BashInput {
@@ -91,15 +164,17 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
         if always.is_empty() { vec!["*".to_string()] } else { always },
     )?;
 
-    let mut cmd = if cfg!(windows) {
-        let mut cmd = Command::new("cmd");
-        cmd.arg("/C").arg(&input.command);
-        cmd
-    } else {
-        let mut cmd = Command::new("bash");
-        cmd.arg("-lc").arg(&input.command);
-        cmd
-    };
+    let shell_env = ShellEnv::current();
+    let shell = select_shell_command(&shell_env);
+    let mut cmd = Command::new(&shell.program);
+    match shell.flavor {
+        ShellFlavor::Cmd => {
+            cmd.arg("/C").arg(&input.command);
+        }
+        ShellFlavor::Posix => {
+            cmd.arg("-lc").arg(&input.command);
+        }
+    }
 
     let mut child = cmd
         .current_dir(&workdir)
@@ -168,4 +243,195 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
         .with_attribute("exit", json!(status))
         .with_attribute("description", json!(input.description))
         .with_attribute("truncated", json!(is_truncated)))
+}
+
+fn select_shell_command(env: &ShellEnv) -> ShellCommand {
+    if let Some(shell) = env.shell_env.as_deref() {
+        if !is_shell_blacklisted(shell, env.os) {
+            return ShellCommand::posix(shell);
+        }
+    }
+
+    match env.os {
+        OsKind::Windows => select_windows_shell(env),
+        OsKind::Macos => ShellCommand::posix("/bin/zsh"),
+        OsKind::Other => {
+            if let Some(bash) = which_in_paths(&env.path, &["bash"]) {
+                ShellCommand::posix(bash)
+            } else {
+                ShellCommand::posix("/bin/sh")
+            }
+        }
+    }
+}
+
+fn select_windows_shell(env: &ShellEnv) -> ShellCommand {
+    if let Some(path) = env
+        .lumina_git_bash_path
+        .as_ref()
+        .filter(|path| path_exists(path))
+    {
+        return ShellCommand::posix(path.clone());
+    }
+
+    if let Some(path) = env
+        .opencode_git_bash_path
+        .as_ref()
+        .filter(|path| path_exists(path))
+    {
+        return ShellCommand::posix(path.clone());
+    }
+
+    if let Some(git) = which_in_paths(&env.path, &["git.exe", "git.cmd", "git.bat", "git"]) {
+        if let Some(bash) = git_bash_from_git(&git).filter(|path| path_exists(path)) {
+            return ShellCommand::posix(bash);
+        }
+    }
+
+    if let Some(comspec) = env.comspec.as_deref() {
+        return ShellCommand::cmd(comspec);
+    }
+
+    ShellCommand::cmd("cmd.exe")
+}
+
+fn is_shell_blacklisted(shell: &str, os: OsKind) -> bool {
+    let name = Path::new(shell)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(shell);
+    let mut name = name.to_ascii_lowercase();
+    if os == OsKind::Windows {
+        name = name.trim_end_matches(".exe").to_string();
+    }
+    SHELL_BLACKLIST.contains(&name.as_str())
+}
+
+fn which_in_paths(paths: &[PathBuf], names: &[&str]) -> Option<PathBuf> {
+    for dir in paths {
+        for name in names {
+            let candidate = dir.join(name);
+            if path_exists(&candidate) {
+                return Some(candidate);
+            }
+        }
+    }
+    None
+}
+
+fn git_bash_from_git(git_path: &Path) -> Option<PathBuf> {
+    let cmd_dir = git_path.parent()?;
+    let git_root = cmd_dir.parent()?;
+    Some(git_root.join("bin").join("bash.exe"))
+}
+
+fn path_exists(path: &Path) -> bool {
+    std::fs::metadata(path).is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn touch(path: &Path) {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(path, b"").unwrap();
+    }
+
+    #[test]
+    fn prefers_shell_env_when_not_blacklisted() {
+        let env = ShellEnv {
+            os: OsKind::Macos,
+            shell_env: Some("/usr/local/bin/zsh".to_string()),
+            comspec: None,
+            path: Vec::new(),
+            lumina_git_bash_path: None,
+            opencode_git_bash_path: None,
+        };
+
+        let shell = select_shell_command(&env);
+        assert_eq!(shell.program, PathBuf::from("/usr/local/bin/zsh"));
+        assert_eq!(shell.flavor, ShellFlavor::Posix);
+    }
+
+    #[test]
+    fn skips_blacklisted_shells() {
+        let temp = TempDir::new().unwrap();
+        let bash = temp.path().join("bash");
+        touch(&bash);
+
+        let env = ShellEnv {
+            os: OsKind::Other,
+            shell_env: Some("/usr/bin/fish".to_string()),
+            comspec: None,
+            path: vec![temp.path().to_path_buf()],
+            lumina_git_bash_path: None,
+            opencode_git_bash_path: None,
+        };
+
+        let shell = select_shell_command(&env);
+        assert_eq!(shell.program, bash);
+        assert_eq!(shell.flavor, ShellFlavor::Posix);
+    }
+
+    #[test]
+    fn windows_prefers_lumina_git_bash_path() {
+        let temp = TempDir::new().unwrap();
+        let bash = temp.path().join("bash.exe");
+        touch(&bash);
+
+        let env = ShellEnv {
+            os: OsKind::Windows,
+            shell_env: None,
+            comspec: Some("cmd.exe".to_string()),
+            path: Vec::new(),
+            lumina_git_bash_path: Some(bash.clone()),
+            opencode_git_bash_path: None,
+        };
+
+        let shell = select_shell_command(&env);
+        assert_eq!(shell.program, bash);
+        assert_eq!(shell.flavor, ShellFlavor::Posix);
+    }
+
+    #[test]
+    fn windows_falls_back_to_git_bash_from_git() {
+        let temp = TempDir::new().unwrap();
+        let git_cmd = temp.path().join("Git").join("cmd").join("git.exe");
+        let bash = temp.path().join("Git").join("bin").join("bash.exe");
+        touch(&git_cmd);
+        touch(&bash);
+
+        let env = ShellEnv {
+            os: OsKind::Windows,
+            shell_env: None,
+            comspec: Some("cmd.exe".to_string()),
+            path: vec![git_cmd.parent().unwrap().to_path_buf()],
+            lumina_git_bash_path: None,
+            opencode_git_bash_path: None,
+        };
+
+        let shell = select_shell_command(&env);
+        assert_eq!(shell.program, bash);
+        assert_eq!(shell.flavor, ShellFlavor::Posix);
+    }
+
+    #[test]
+    fn windows_falls_back_to_comspec_when_no_bash_found() {
+        let env = ShellEnv {
+            os: OsKind::Windows,
+            shell_env: None,
+            comspec: Some("C:\\Windows\\System32\\cmd.exe".to_string()),
+            path: Vec::new(),
+            lumina_git_bash_path: None,
+            opencode_git_bash_path: None,
+        };
+
+        let shell = select_shell_command(&env);
+        assert_eq!(shell.program, PathBuf::from("C:\\Windows\\System32\\cmd.exe"));
+        assert_eq!(shell.flavor, ShellFlavor::Cmd);
+    }
 }
