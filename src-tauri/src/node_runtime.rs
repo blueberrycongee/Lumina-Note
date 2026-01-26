@@ -115,6 +115,7 @@ pub fn candidate_node_paths(
         candidates.push(resource_dir.join(binary));
         candidates.push(resource_dir.join("node").join(binary));
         candidates.push(resource_dir.join("node").join("bin").join(binary));
+        candidates.push(resource_dir.join("resources").join("node").join(binary));
     }
 
     if let Some(app_data_dir) = app_data_dir {
@@ -283,6 +284,7 @@ mod tests {
         assert!(candidates.contains(&resource.join("node")));
         assert!(candidates.contains(&resource.join("node").join("node")));
         assert!(candidates.contains(&resource.join("node").join("bin").join("node")));
+        assert!(candidates.contains(&resource.join("resources").join("node").join("node")));
         assert!(candidates.contains(&app_data.join("codex").join("node").join("node")));
     }
 }
