@@ -18,6 +18,8 @@ export interface ProfileNoteMeta {
   summary: string;
   tags: string[];
   cover?: string;
+  profileOrder?: number;
+  publishAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

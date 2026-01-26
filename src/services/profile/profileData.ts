@@ -10,6 +10,9 @@ const TITLE_KEYS = ["title", "标题"];
 const TAG_KEYS = ["tags", "标签"];
 const COVER_KEYS = ["cover", "封面"];
 const PUBLISHED_KEYS = ["published", "public", "publish"];
+const VISIBILITY_KEYS = ["visibility", "Visibility"];
+const PROFILE_ORDER_KEYS = ["profileOrder", "profile_order", "order"];
+const PUBLISH_AT_KEYS = ["publishAt", "publish_at", "publishedAt"];
 
 const isTruthy = (value: FrontmatterValue): boolean => {
   if (typeof value === "boolean") return value;
@@ -55,8 +58,47 @@ const getFrontmatterDate = (frontmatter: Record<string, unknown>, key: string): 
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 };
 
-const isPublished = (frontmatter: Record<string, unknown>): boolean =>
-  PUBLISHED_KEYS.some((key) => isTruthy(frontmatter[key] as FrontmatterValue));
+const getFrontmatterNumber = (frontmatter: Record<string, unknown>, keys: string[]): number | undefined => {
+  for (const key of keys) {
+    const value = frontmatter[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+  return undefined;
+};
+
+const getFrontmatterDateByKeys = (frontmatter: Record<string, unknown>, keys: string[]): string | undefined => {
+  for (const key of keys) {
+    const value = getFrontmatterDate(frontmatter, key);
+    if (value) return value;
+  }
+  return undefined;
+};
+
+const getVisibility = (frontmatter: Record<string, unknown>): string | undefined => {
+  for (const key of VISIBILITY_KEYS) {
+    const value = frontmatter[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim().toLowerCase();
+    }
+  }
+  return undefined;
+};
+
+const isPublished = (frontmatter: Record<string, unknown>): boolean => {
+  const visibility = getVisibility(frontmatter);
+  if (visibility) {
+    return visibility === "public";
+  }
+  return PUBLISHED_KEYS.some((key) => isTruthy(frontmatter[key] as FrontmatterValue));
+};
 
 const extractCoverFromContent = (content: string): string => {
   const imgMatch = content.match(/!\[.*?\]\((.*?)\)/);
@@ -124,6 +166,8 @@ export async function buildProfileData(
         const tags = getFrontmatterTags(frontmatter);
         const mergedTags = tags.length > 0 ? tags : extractTags(body);
         const summary = stripMarkdown(body).slice(0, 200);
+        const profileOrder = getFrontmatterNumber(frontmatter, PROFILE_ORDER_KEYS);
+        const publishAt = getFrontmatterDateByKeys(frontmatter, PUBLISH_AT_KEYS);
 
         return {
           path,
@@ -131,6 +175,8 @@ export async function buildProfileData(
           summary,
           tags: mergedTags,
           cover: cover || undefined,
+          profileOrder,
+          publishAt,
           createdAt: getFrontmatterDate(frontmatter, "createdAt"),
           updatedAt: getFrontmatterDate(frontmatter, "updatedAt"),
         };
@@ -147,10 +193,14 @@ export async function buildProfileData(
     .map((path) => publishedNotes.find((note) => note.path === path))
     .filter((note): note is ProfileNoteMeta => Boolean(note));
   const pinnedSet = new Set(pinned.map((note) => note.path));
-  const recent = publishedNotes
-    .filter((note) => !pinnedSet.has(note.path))
-    .sort((a, b) => toTimestamp(b.updatedAt || b.createdAt) - toTimestamp(a.updatedAt || a.createdAt))
-    .slice(0, recentLimit);
+  const candidates = publishedNotes.filter((note) => !pinnedSet.has(note.path));
+  const ordered = candidates.filter((note) => typeof note.profileOrder === "number");
+  const unordered = candidates.filter((note) => typeof note.profileOrder !== "number");
+
+  ordered.sort((a, b) => (a.profileOrder ?? 0) - (b.profileOrder ?? 0));
+  unordered.sort((a, b) => toTimestamp(b.publishAt) - toTimestamp(a.publishAt));
+
+  const recent = [...ordered, ...unordered].slice(0, recentLimit);
 
   const tagMap = new Map<string, number>();
   for (const note of publishedNotes) {
