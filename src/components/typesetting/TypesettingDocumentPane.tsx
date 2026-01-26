@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { exists, writeFile } from "@tauri-apps/plugin-fs";
-import { join, tempDir } from "@tauri-apps/api/path";
+import { homeDir, join, tempDir } from "@tauri-apps/api/path";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
+import { platform } from "@tauri-apps/plugin-os";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { useFileStore } from "@/stores/useFileStore";
 import {
@@ -27,6 +28,13 @@ import {
 import { buildPreviewPageMmFromDocx, getDefaultPreviewPageMm } from "@/typesetting/previewDefaults";
 import { docOpFromBeforeInput } from "@/typesetting/docOps";
 import { sliceUtf8 } from "@/typesetting/utf8";
+import {
+  buildFallbackFontCandidates,
+  buildFamilyFontCandidates,
+  normalizeFontFamily,
+  osKindFromPlatform,
+  OsKind,
+} from "@/typesetting/fontPaths";
 import type { TypesettingDoc } from "@/stores/useTypesettingDocStore";
 import type { DocxBlock, DocxImageBlock, DocxListBlock, DocxParagraphStyle, DocxRun, DocxTableBlock } from "@/typesetting/docxImport";
 
@@ -53,30 +61,6 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
 const EMU_PER_INCH = 914400;
-const WINDOWS_FONT_DIR = "C:\\Windows\\Fonts";
-const DEFAULT_FONT_FILES = [
-  "simsun.ttc",
-  "msyh.ttc",
-  "msyh.ttf",
-  "simhei.ttf",
-  "arial.ttf",
-  "times.ttf",
-  "calibri.ttf",
-  "cambria.ttc",
-];
-
-const FONT_FAMILY_FILES: Record<string, string[]> = {
-  "simsun": ["simsun.ttc"],
-  "宋体": ["simsun.ttc"],
-  "simhei": ["simhei.ttf"],
-  "黑体": ["simhei.ttf"],
-  "microsoft yahei": ["msyh.ttc", "msyh.ttf"],
-  "微软雅黑": ["msyh.ttc", "msyh.ttf"],
-  "times new roman": ["times.ttf", "timesbd.ttf"],
-  "arial": ["arial.ttf"],
-  "calibri": ["calibri.ttf"],
-  "cambria": ["cambria.ttc"],
-};
 
 type LayoutRender = {
   text: string;
@@ -266,24 +250,10 @@ const imageMimeType = (path: string): string | null => {
   }
 };
 
-const normalizeFontFamily = (value: string): string =>
-  value
-    .trim()
-    .replace(/^['"]|['"]$/g, "")
-    .toLowerCase();
-
-const fontCandidatesForFamily = (family: string): string[] => {
-  const normalized = normalizeFontFamily(family);
-  const direct = FONT_FAMILY_FILES[normalized];
-  if (direct) return direct;
-  const noSpaces = normalized.replace(/\s+/g, "");
-  const alias = FONT_FAMILY_FILES[noSpaces];
-  return alias ?? [];
-};
-
-const findFallbackFontPath = async (): Promise<string | null> => {
-  for (const fileName of DEFAULT_FONT_FILES) {
-    const candidatePath = `${WINDOWS_FONT_DIR}\\${fileName}`;
+const findFirstExistingFontPath = async (
+  candidates: string[],
+): Promise<string | null> => {
+  for (const candidatePath of candidates) {
     try {
       if (await exists(candidatePath)) {
         return candidatePath;
@@ -610,6 +580,7 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
   const pageRef = useRef<HTMLDivElement | null>(null);
   const fontPathCache = useRef(new Map<string, string>());
   const layoutRunRef = useRef(0);
+  const osContextRef = useRef<Promise<{ os: OsKind; homeDir?: string }> | null>(null);
   const exportReady = Boolean(pageMm && pageMounted);
 
   const handlePageRef = useCallback((node: HTMLDivElement | null) => {
@@ -654,6 +625,42 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     };
   }, [doc?.pageStyle]);
 
+  const getOsContext = async (): Promise<{ os: OsKind; homeDir?: string }> => {
+    if (!osContextRef.current) {
+      osContextRef.current = (async () => {
+        let os: OsKind = "unknown";
+        try {
+          os = osKindFromPlatform(await platform());
+        } catch {
+          // Ignore platform detection errors.
+        }
+        if (os === "unknown" && typeof navigator !== "undefined") {
+          const ua = navigator.userAgent.toLowerCase();
+          if (ua.includes("mac")) os = "macos";
+          else if (ua.includes("win")) os = "windows";
+          else if (ua.includes("linux")) os = "linux";
+        }
+
+        let resolvedHome: string | undefined;
+        if (tauriAvailable) {
+          try {
+            resolvedHome = await homeDir();
+          } catch {
+            // Ignore home dir errors; fallback paths will skip HOME entries.
+          }
+        }
+        return { os, homeDir: resolvedHome };
+      })();
+    }
+    return osContextRef.current;
+  };
+
+  const findFallbackFontPath = async (): Promise<string | null> => {
+    const { os, homeDir } = await getOsContext();
+    const candidates = buildFallbackFontCandidates(os, homeDir);
+    return findFirstExistingFontPath(candidates);
+  };
+
   const resolveFontPath = async (
     family: string | undefined,
     fallbackPath: string,
@@ -665,20 +672,11 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     if (cached) {
       return cached;
     }
-    const candidates = fontCandidatesForFamily(family);
-    for (const fileName of candidates) {
-      const candidatePath = `${WINDOWS_FONT_DIR}\\${fileName}`;
-      try {
-        if (await exists(candidatePath)) {
-          fontPathCache.current.set(normalized, candidatePath);
-          return candidatePath;
-        }
-      } catch {
-        // Ignore permission errors and fall back to fixture font.
-      }
-    }
-    fontPathCache.current.set(normalized, fallbackPath);
-    return fallbackPath;
+    const { os, homeDir } = await getOsContext();
+    const candidates = buildFamilyFontCandidates(family, os, homeDir);
+    const resolved = (await findFirstExistingFontPath(candidates)) ?? fallbackPath;
+    fontPathCache.current.set(normalized, resolved);
+    return resolved;
   };
 
   useEffect(() => {
