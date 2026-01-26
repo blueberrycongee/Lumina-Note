@@ -377,6 +377,8 @@ export default {
     openGraph: 'グラフを開く',
     switchToGraph: 'グラフに切替',
     graphDesc: 'ノート間のリンク関係を表示',
+    openProfilePreview: 'プロフィール公開プレビューを開く',
+    openProfilePreviewDesc: '公開プロフィールページをプレビュー',
     switchWorkspace: 'ワークスペース切替',
     current: '現在',
     notSelected: '未選択',

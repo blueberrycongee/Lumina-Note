@@ -377,6 +377,8 @@ export default {
     openGraph: '開啟關係圖譜',
     switchToGraph: '切換到關係圖譜',
     graphDesc: '查看筆記之間的鏈接關係',
+    openProfilePreview: '開啟公開首頁預覽',
+    openProfilePreviewDesc: '預覽你的公開首頁頁面',
     switchWorkspace: '切換工作空間',
     current: '目前',
     notSelected: '未選擇',

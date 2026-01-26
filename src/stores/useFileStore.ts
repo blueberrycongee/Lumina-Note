@@ -27,7 +27,8 @@ export type TabType =
   | "ai-chat"
   | "webpage"
   | "flashcard"
-  | "cardflow";
+  | "cardflow"
+  | "profile-preview";
 
 // 孤立视图节点信息
 export interface IsolatedNodeInfo {
@@ -112,6 +113,7 @@ interface FileState {
   openGraphTab: () => void;
   openTypesettingPreviewTab: () => void;
   openTypesettingDocTab: (path: string, addToHistory?: boolean) => Promise<void>;
+  openProfilePreviewTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openVideoNoteTab: (url: string, title?: string) => void;
   openVideoNoteFromContent: (content: string, title?: string) => void;
@@ -739,6 +741,48 @@ export const useFileStore = create<FileState>()(
           type: "typesetting-preview",
           path: "",
           name: "Typesetting Preview",
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        updatedTabs.push(previewTab);
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: null,
+          currentContent: "",
+          isDirty: false,
+        });
+      },
+
+      openProfilePreviewTab: () => {
+        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+
+        const existingIndex = tabs.findIndex(tab => tab.type === "profile-preview");
+        if (existingIndex !== -1) {
+          get().switchTab(existingIndex);
+          return;
+        }
+
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        const previewTab: Tab = {
+          id: "__profile_preview__",
+          type: "profile-preview",
+          path: "",
+          name: "Profile Preview",
           content: "",
           isDirty: false,
           undoStack: [],

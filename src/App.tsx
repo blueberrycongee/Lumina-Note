@@ -36,6 +36,7 @@ import { CodexVscodeHostPanel } from "@/components/debug/CodexVscodeHostPanel";
 import { CodexPanelHost } from "@/components/codex/CodexPanelHost";
 import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
+import { ProfilePreview } from "@/components/profile/ProfilePreview";
 import type { FsChangePayload } from "@/lib/fsChange";
 
 // 启用调试日志收集（开发模式下）
@@ -619,6 +620,11 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <CardFlowView />
+            </div>
+          ) : activeTab?.type === "profile-preview" ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <TabBar />
+              <ProfilePreview />
             </div>
           ) : activeTab?.type === "ai-chat" ? (
             // 主视图区 AI 聊天标签页，交给 Editor 内部根据 tab 类型渲染

@@ -16,6 +16,7 @@ import {
   Network,
   Command,
   FileText,
+  User,
 } from "lucide-react";
 
 export type PaletteMode = "command" | "file" | "search";
@@ -55,6 +56,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     vaultPath,
     openGraphTab,
     openTypesettingPreviewTab,
+    openProfilePreviewTab,
     tabs,
     clearVault,
   } = useFileStore();
@@ -177,6 +179,16 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       },
     },
     {
+      id: "profile-preview",
+      label: t.commandPalette.openProfilePreview,
+      description: t.commandPalette.openProfilePreviewDesc,
+      icon: <User size={16} />,
+      action: () => {
+        onClose();
+        openProfilePreviewTab();
+      },
+    },
+    {
       id: "switch-workspace",
       label: t.commandPalette.switchWorkspace,
       description: `${t.commandPalette.current}: ${vaultPath ? vaultPath.split(/[\/\\]/).pop() : t.commandPalette.notSelected}`,
@@ -197,7 +209,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
         window.dispatchEvent(new CustomEvent("open-global-search"));
       },
     },
-  ], [t, onClose, createNewFile, onModeChange, toggleLeftSidebar, toggleRightSidebar, toggleTheme, isDarkMode, openGraphTab, isGraphOpen, vaultPath]);
+  ], [t, onClose, createNewFile, onModeChange, toggleLeftSidebar, toggleRightSidebar, toggleTheme, isDarkMode, openGraphTab, isGraphOpen, vaultPath, openTypesettingPreviewTab, openProfilePreviewTab]);
 
   // Filter items based on query and mode
   const filteredItems = useMemo(() => {

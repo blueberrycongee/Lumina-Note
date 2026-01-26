@@ -291,6 +291,8 @@ export default {
     openGraph: '打开关系图谱',
     switchToGraph: '切换到关系图谱',
     graphDesc: '查看笔记之间的链接关系',
+    openProfilePreview: '打开公开主页预览',
+    openProfilePreviewDesc: '预览你的公开主页页面',
     switchWorkspace: '切换工作空间',
     current: '当前',
     notSelected: '未选择',

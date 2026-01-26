@@ -291,6 +291,8 @@ export default {
     openGraph: 'Open Graph View',
     switchToGraph: 'Switch to Graph View',
     graphDesc: 'View note connections',
+    openProfilePreview: 'Open Profile Preview',
+    openProfilePreviewDesc: 'Preview your public profile page',
     switchWorkspace: 'Switch Workspace',
     current: 'Current',
     notSelected: 'Not selected',

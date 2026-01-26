@@ -1,7 +1,7 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { X, FileText, Network, Video, Database, Globe, Brain, Pin } from "lucide-react";
+import { X, FileText, Network, Video, Database, Globe, Brain, Pin, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TabItemProps {
@@ -62,6 +62,8 @@ function TabItem({
         <FileText size={12} className="shrink-0 text-emerald-500" />
       ) : tab.type === "webpage" ? (
         <Globe size={12} className="shrink-0 text-blue-500" />
+      ) : tab.type === "profile-preview" ? (
+        <User size={12} className="shrink-0 text-emerald-500" />
       ) : tab.type === "flashcard" ? (
         <Brain size={12} className="shrink-0 text-purple-500" />
       ) : (
