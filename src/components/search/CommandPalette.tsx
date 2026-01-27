@@ -3,6 +3,9 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { usePublishStore } from "@/stores/usePublishStore";
+import { useProfileStore } from "@/stores/useProfileStore";
+import { publishSite } from "@/services/publish/exporter";
 import { FileEntry } from "@/lib/tauri";
 import { cn, getFileName } from "@/lib/utils";
 import {
@@ -17,6 +20,7 @@ import {
   Command,
   FileText,
   User,
+  UploadCloud,
 } from "lucide-react";
 
 export type PaletteMode = "command" | "file" | "search";
@@ -69,6 +73,8 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   } = useUIStore();
 
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
+  const publishConfig = usePublishStore((state) => state.config);
+  const profileConfig = useProfileStore((state) => state.config);
   
   // Check if graph tab is open
   const isGraphOpen = tabs.some(tab => tab.type === "graph");
@@ -189,6 +195,36 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       },
     },
     {
+      id: "publish-site",
+      label: t.commandPalette.publishSite,
+      description: t.commandPalette.publishSiteDesc,
+      icon: <UploadCloud size={16} />,
+      action: async () => {
+        onClose();
+        if (!vaultPath) {
+          alert(t.settingsModal.publishOpenVaultFirst);
+          return;
+        }
+        try {
+          const result = await publishSite({
+            vaultPath,
+            fileTree,
+            profile: profileConfig,
+            options: {
+              outputDir: publishConfig.outputDir || undefined,
+              basePath: publishConfig.basePath || undefined,
+              postsBasePath: publishConfig.postsBasePath || undefined,
+              assetsBasePath: publishConfig.assetsBasePath || undefined,
+            },
+          });
+          alert(t.settingsModal.publishSuccess.replace("{path}", result.outputDir));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          alert(`${t.settingsModal.publishFailed}: ${message}`);
+        }
+      },
+    },
+    {
       id: "switch-workspace",
       label: t.commandPalette.switchWorkspace,
       description: `${t.commandPalette.current}: ${vaultPath ? vaultPath.split(/[\/\\]/).pop() : t.commandPalette.notSelected}`,
@@ -209,7 +245,24 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
         window.dispatchEvent(new CustomEvent("open-global-search"));
       },
     },
-  ], [t, onClose, createNewFile, onModeChange, toggleLeftSidebar, toggleRightSidebar, toggleTheme, isDarkMode, openGraphTab, isGraphOpen, vaultPath, openTypesettingPreviewTab, openProfilePreviewTab]);
+  ], [
+    t,
+    onClose,
+    createNewFile,
+    onModeChange,
+    toggleLeftSidebar,
+    toggleRightSidebar,
+    toggleTheme,
+    isDarkMode,
+    openGraphTab,
+    isGraphOpen,
+    vaultPath,
+    openTypesettingPreviewTab,
+    openProfilePreviewTab,
+    publishConfig,
+    profileConfig,
+    fileTree,
+  ]);
 
   // Filter items based on query and mode
   const filteredItems = useMemo(() => {

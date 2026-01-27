@@ -9,6 +9,7 @@ import { loadPublishedNotes } from "./notes";
 
 export interface PublishOptions {
   outputDir?: string;
+  basePath?: string;
   postsBasePath?: string;
   assetsBasePath?: string;
   generatedAt?: string;
@@ -34,7 +35,7 @@ export const writePublishPlanFiles = async (outputDir: string, plan: PublishPlan
 
 export const copyPublishAssets = async (outputDir: string, plan: PublishPlan): Promise<void> => {
   for (const asset of plan.assetManifest.assets) {
-    const targetPath = join(outputDir, asset.publicUrl.replace(/^\//, ""));
+    const targetPath = join(outputDir, asset.outputPath);
     await ensureDir(dirname(targetPath));
     const base64 = await readBinaryFileBase64(asset.sourcePath);
     const bytes = decodeBase64ToBytes(base64);
@@ -53,6 +54,7 @@ export const publishSite = async (params: {
 
   const notes = await loadPublishedNotes(fileTree);
   const plan = buildPublishPlan(notes, profile, {
+    basePath: options?.basePath,
     postsBasePath: options?.postsBasePath,
     assetsBasePath: options?.assetsBasePath,
     generatedAt: options?.generatedAt,

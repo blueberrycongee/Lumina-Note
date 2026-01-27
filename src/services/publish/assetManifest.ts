@@ -1,10 +1,11 @@
-import { DEFAULT_ASSETS_BASE_PATH } from "./config";
+import { DEFAULT_ASSETS_BASE_PATH, joinBasePath, normalizeBasePath, normalizeSubPath } from "./config";
 import type { PublishNoteSource } from "./notes";
 import { buildAssetOutputName, extractAssetLinks, resolveAssetSourcePath } from "./assets";
 
 export interface PublishAsset {
   sourcePath: string;
   outputName: string;
+  outputPath: string;
   publicUrl: string;
 }
 
@@ -13,17 +14,14 @@ export interface AssetManifest {
   bySourcePath: Map<string, PublishAsset>;
 }
 
-const normalizeAssetsBasePath = (input?: string): string => {
-  const raw = input?.trim() || DEFAULT_ASSETS_BASE_PATH;
-  const stripped = raw.replace(/^\/+/, "").replace(/\/+$/, "");
-  return `/${stripped || "assets"}`;
-};
-
 export const buildAssetManifest = (
   notes: PublishNoteSource[],
-  options?: { assetsBasePath?: string }
+  options?: { assetsBasePath?: string; basePath?: string }
 ): AssetManifest => {
-  const assetsBasePath = normalizeAssetsBasePath(options?.assetsBasePath);
+  const basePath = normalizeBasePath(options?.basePath);
+  const assetsBasePath = normalizeSubPath(options?.assetsBasePath, DEFAULT_ASSETS_BASE_PATH);
+  const publicBasePath = joinBasePath(basePath, assetsBasePath);
+  const outputBasePath = assetsBasePath.replace(/^\//, "");
   const bySourcePath = new Map<string, PublishAsset>();
 
   for (const note of notes) {
@@ -33,10 +31,12 @@ export const buildAssetManifest = (
       if (!resolved) continue;
       if (bySourcePath.has(resolved.sourcePath)) continue;
       const outputName = buildAssetOutputName(resolved.sourcePath);
+      const outputPath = `${outputBasePath}/${outputName}`;
       bySourcePath.set(resolved.sourcePath, {
         sourcePath: resolved.sourcePath,
         outputName,
-        publicUrl: `${assetsBasePath}/${outputName}`,
+        outputPath,
+        publicUrl: `${publicBasePath}/${outputName}`,
       });
     }
   }

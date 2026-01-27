@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 
 export interface PublishConfigState {
   outputDir: string;
+  basePath: string;
   postsBasePath: string;
   assetsBasePath: string;
 }
@@ -15,6 +16,7 @@ interface PublishState {
 
 const defaultConfig: PublishConfigState = {
   outputDir: "",
+  basePath: "",
   postsBasePath: "",
   assetsBasePath: "",
 };

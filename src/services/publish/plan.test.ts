@@ -47,4 +47,16 @@ describe("buildPublishPlan", () => {
     expect(siteJson?.content).toContain("\"profile\"" );
     expect(siteJson?.content).toContain("2026-01-27T00:00:00.000Z");
   });
+
+  it("applies basePath to rendered urls", () => {
+    const notes = [makeNote("/vault/Note A.md", "Hello", { title: "Hello" })];
+
+    const plan = buildPublishPlan(notes, baseProfile, { basePath: "/repo" });
+    const indexHtml = plan.files.find((file) => file.path === "index.html");
+    const postHtml = plan.files.find((file) => file.path === "posts/hello/index.html");
+
+    expect(indexHtml?.content).toContain("href=\"/repo/theme.css\"");
+    expect(postHtml?.content).toContain("href=\"/repo/theme.css\"");
+    expect(postHtml?.content).toContain("href=\"/repo/\"");
+  });
 });

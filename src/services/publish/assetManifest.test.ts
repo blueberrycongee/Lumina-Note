@@ -23,8 +23,20 @@ describe("buildAssetManifest", () => {
     expect(manifest.assets.length).toBe(1);
     expect(manifest.assets[0].sourcePath).toBe("/vault/images/logo.png");
     expect(manifest.assets[0].publicUrl.startsWith("/assets/")).toBe(true);
+    expect(manifest.assets[0].outputPath.startsWith("assets/")).toBe(true);
 
     const mapper = createAssetUrlMapper("/vault/notes/note-a.md", manifest);
     expect(mapper("../images/logo.png?raw=1")).toBe(`${manifest.assets[0].publicUrl}?raw=1`);
+  });
+
+  it("prefixes public urls with basePath but keeps output paths stable", () => {
+    const notes = [
+      makeNote("/vault/notes/note-a.md", "![A](../images/logo.png)"),
+    ];
+
+    const manifest = buildAssetManifest(notes, { basePath: "/repo" });
+
+    expect(manifest.assets[0].publicUrl.startsWith("/repo/assets/")).toBe(true);
+    expect(manifest.assets[0].outputPath.startsWith("assets/")).toBe(true);
   });
 });

@@ -56,6 +56,7 @@ export function PublishSettingsSection({ vaultPath, fileTree }: PublishSettingsS
         profile: profileConfig,
         options: {
           outputDir: config.outputDir || undefined,
+          basePath: config.basePath || undefined,
           postsBasePath: config.postsBasePath || undefined,
           assetsBasePath: config.assetsBasePath || undefined,
         },
@@ -111,6 +112,18 @@ export function PublishSettingsSection({ vaultPath, fileTree }: PublishSettingsS
             )}
           </div>
         </div>
+      </div>
+
+      <div className="grid gap-2 text-sm">
+        <label className="grid gap-1">
+          <span className="text-xs text-muted-foreground">{t.settingsModal.publishBasePath}</span>
+          <input
+            value={config.basePath}
+            onChange={(e) => setPublishConfig({ basePath: e.target.value })}
+            placeholder={t.settingsModal.publishBasePathPlaceholder}
+            className="px-3 py-2 rounded-lg text-sm bg-background/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </label>
       </div>
 
       <div className="flex items-center gap-2">

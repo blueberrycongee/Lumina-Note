@@ -27,10 +27,16 @@ const renderPostCard = (post: PublishPostIndex): string => {
   `;
 };
 
-export const renderIndexPage = (index: PublishIndex): string => {
+export interface PageTemplateOptions {
+  themeUrl?: string;
+  homeUrl?: string;
+}
+
+export const renderIndexPage = (index: PublishIndex, options?: PageTemplateOptions): string => {
   const profile = index.profile;
   const displayName = escapeHtml(profile.displayName || "Untitled");
   const bio = escapeHtml(profile.bio || "");
+  const themeUrl = options?.themeUrl || "/theme.css";
   const pinnedPosts = index.pinned
     .map((slug) => index.posts.find((post) => post.slug === slug))
     .filter((post): post is PublishPostIndex => Boolean(post));
@@ -49,7 +55,7 @@ export const renderIndexPage = (index: PublishIndex): string => {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${displayName}</title>
-    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="${themeUrl}" />
   </head>
   <body>
     <main class="site-shell">
@@ -72,9 +78,11 @@ export const renderIndexPage = (index: PublishIndex): string => {
 </html>`;
 };
 
-export const renderPostPage = (post: PublishPostIndex, html: string): string => {
+export const renderPostPage = (post: PublishPostIndex, html: string, options?: PageTemplateOptions): string => {
   const title = escapeHtml(post.title || "Untitled");
   const publishAt = post.publishAt ? escapeHtml(post.publishAt) : "";
+  const themeUrl = options?.themeUrl || "/theme.css";
+  const homeUrl = options?.homeUrl || "/";
 
   return `<!doctype html>
 <html lang="en">
@@ -82,12 +90,12 @@ export const renderPostPage = (post: PublishPostIndex, html: string): string => 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>${title}</title>
-    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="${themeUrl}" />
   </head>
   <body>
     <main class="site-shell">
       <div class="post-header">
-        <a href="/">Back to home</a>
+        <a href="${homeUrl}">Back to home</a>
         <div class="post-title">${title}</div>
         ${publishAt ? `<div class="post-meta">${publishAt}</div>` : ""}
       </div>
