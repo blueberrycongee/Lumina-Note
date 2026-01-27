@@ -133,7 +133,7 @@ const ensurePositivePx = (value: number, fallback: number) => {
 };
 
 const stripImagePlaceholder = (value: string) =>
-  value.replaceAll(DOCX_IMAGE_PLACEHOLDER, "");
+  value.split(DOCX_IMAGE_PLACEHOLDER).join("");
 
 const buildRenderedLines = (
   text: string,
@@ -410,7 +410,7 @@ const buildParagraphSegment = (
   runs: DocxRun[],
   paragraphStyle: DocxParagraphStyle | undefined,
   defaultFontSizePx: number,
-  defaultLineHeightPx: number,
+  _defaultLineHeightPx: number,
   dpi: number,
 ): ParagraphSegment => {
   const block: DocxBlock = {
@@ -439,7 +439,7 @@ const buildParagraphSegment = (
 const buildSegmentsFromList = (
   block: DocxListBlock,
   defaultFontSizePx: number,
-  defaultLineHeightPx: number,
+  _defaultLineHeightPx: number,
   dpi: number,
 ): ParagraphSegment[] =>
   block.items.map((item) =>
@@ -447,7 +447,7 @@ const buildSegmentsFromList = (
       item.runs,
       item.paragraphStyle,
       defaultFontSizePx,
-      defaultLineHeightPx,
+      _defaultLineHeightPx,
       dpi,
     ),
   );
@@ -455,7 +455,7 @@ const buildSegmentsFromList = (
 const buildSegmentsFromTable = (
   block: DocxTableBlock,
   defaultFontSizePx: number,
-  defaultLineHeightPx: number,
+  _defaultLineHeightPx: number,
   dpi: number,
 ): ParagraphSegment[] => {
   const styleBlock: DocxBlock = block;
@@ -527,7 +527,7 @@ const buildSegmentsFromBlocks = (
         const size = imageBlockSizePx(block, defaultLineHeightPx);
         segments.push({
           text: DOCX_IMAGE_PLACEHOLDER,
-          options: { align: "left", firstLineIndentPx: 0, spaceBeforePx: 0, spaceAfterPx: 0 },
+          options: docxBlocksToLayoutTextOptions([block], dpi),
           lineHeightPx: Math.max(defaultLineHeightPx, size.height),
           fontSizePx: defaultFontSizePx,
           underline: false,
@@ -817,7 +817,7 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
 
         const maxWidth = baseBodyWidthPx;
         const combinedLines: TypesettingTextLine[] = [];
-        const lineStyles: Array<{ fontSizePx: number; lineHeightPx: number }> = [];
+        const lineStyles: Array<{ fontSizePx: number; lineHeightPx: number; underline: boolean }> = [];
         const textParts: string[] = [];
         let yOffset = 0;
         let byteOffset = 0;
@@ -1324,7 +1324,7 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
       onExportReady(null);
       return;
     }
-    onExportReady(() => getExportPdfBytes);
+    onExportReady(getExportPdfBytes);
     return () => {
       onExportReady(null);
     };

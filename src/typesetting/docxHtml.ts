@@ -79,7 +79,7 @@ export function docxHtmlToBlocks(root: HTMLElement): DocxBlock[] {
     if (tag === "table") {
       const rows = Array.from(element.querySelectorAll("tr")).map((row) => ({
         cells: Array.from(row.querySelectorAll("td,th")).map((cell) => ({
-          blocks: [{ type: "paragraph", runs: extractRuns(cell) }],
+          blocks: [{ type: "paragraph" as const, runs: extractRuns(cell) }],
         })),
       }));
       blocks.push({ type: "table", rows });
@@ -336,7 +336,12 @@ function imageSizeAttributes(
 ): { attributes: string; style?: string } {
   const widthEmu = block.widthEmu;
   const heightEmu = block.heightEmu;
-  if (!Number.isFinite(widthEmu) || !Number.isFinite(heightEmu)) {
+  if (
+    typeof widthEmu !== "number" ||
+    typeof heightEmu !== "number" ||
+    !Number.isFinite(widthEmu) ||
+    !Number.isFinite(heightEmu)
+  ) {
     return { attributes: "" };
   }
 

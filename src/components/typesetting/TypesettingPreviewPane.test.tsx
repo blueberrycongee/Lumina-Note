@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, type InvokeArgs } from "@tauri-apps/api/core";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { TypesettingPreviewPane } from "@/components/typesetting/TypesettingPreviewPane";
@@ -31,7 +31,7 @@ describe("TypesettingPreviewPane", () => {
     const invokeMock = vi.mocked(invoke);
     const baseImpl = invokeMock.getMockImplementation();
 
-    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+    invokeMock.mockImplementation((cmd: string, args?: InvokeArgs) => {
       if (cmd === "typesetting_fixture_font_path") {
         return Promise.resolve(null);
       }

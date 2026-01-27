@@ -1,4 +1,4 @@
-import type { PublishIndex, PublishPostIndex } from "./index";
+import type { PublishIndex } from "./index";
 import { buildPublishIndexFromNotes } from "./index";
 import type { PublishNoteSource } from "./notes";
 import { buildAssetManifest, createAssetUrlMapper } from "./assetManifest";

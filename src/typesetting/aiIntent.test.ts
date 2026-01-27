@@ -4,7 +4,10 @@ import { defaultAiInstruction } from "./aiPromptParser";
 import { TypesettingStyleConfig } from "./aiStyleMapper";
 
 const defaultBaseStyles = (): TypesettingStyleConfig => ({
-  page: { ...defaultAiInstruction.page },
+  page: {
+    ...defaultAiInstruction.page,
+    footerHeight: defaultAiInstruction.page.footerHeight ?? "12mm",
+  },
   typography: {
     zh: { ...defaultAiInstruction.typography.zh },
     en: { ...defaultAiInstruction.typography.en },

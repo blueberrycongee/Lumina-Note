@@ -87,6 +87,7 @@ export type DocxBlock =
   | DocxTableBlock
   | DocxImageBlock;
 
+export type DocxStyleDefinition = import("./docxStyles").DocxStyleDefinition;
 export type DocxStyleMap = import("./docxStyles").DocxStyleMap;
 
 export function parseDocxPageStyle(xml: string): DocxPageStyle | undefined {
@@ -763,7 +764,7 @@ function resolveParagraphStyle(
 
   while (currentId && !visited.has(currentId)) {
     visited.add(currentId);
-    const style = styles.paragraph[currentId];
+    const style: DocxStyleDefinition | undefined = styles.paragraph[currentId];
     if (!style) {
       break;
     }
@@ -789,7 +790,7 @@ function resolveCharacterStyle(
 
   while (currentId && !visited.has(currentId)) {
     visited.add(currentId);
-    const style = styles.character[currentId];
+    const style: DocxStyleDefinition | undefined = styles.character[currentId];
     if (!style) {
       break;
     }

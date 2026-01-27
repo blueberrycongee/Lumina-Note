@@ -727,7 +727,7 @@ export const useRustAgentStore = create<RustAgentState>()(
               text && text.trim()
                 ? [
                     ...state.messages,
-                    { role: "assistant", content: text, agent: "coordinator" as AgentType },
+                    { role: "assistant", content: text, agent: "coordinator" as AgentType } as Message,
                   ]
                 : state.messages;
             set({

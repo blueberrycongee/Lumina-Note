@@ -226,7 +226,6 @@ const layoutTextInBrowser = async (params: {
     align,
     firstLineIndent,
     spaceBefore,
-    spaceAfter,
     fontFamily,
   } = params;
   const canvas = document.createElement("canvas");

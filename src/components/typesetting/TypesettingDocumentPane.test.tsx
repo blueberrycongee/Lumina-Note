@@ -8,7 +8,7 @@ import {
 } from "@/stores/useTypesettingDocStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { DocxBlock } from "@/typesetting/docxImport";
-import { DOCX_IMAGE_PLACEHOLDER, docxBlocksToPlainText } from "@/typesetting/docxText";
+import { docxBlocksToPlainText } from "@/typesetting/docxText";
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void;
