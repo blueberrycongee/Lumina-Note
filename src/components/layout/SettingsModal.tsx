@@ -20,6 +20,7 @@ import { WebDAVSettings } from "../settings/WebDAVSettings";
 import { UpdateChecker } from "../settings/UpdateChecker";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
+import { PublishSettingsSection } from "../settings/PublishSettingsSection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -275,6 +276,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </select>
             </div>
           </section>
+
+          <PublishSettingsSection vaultPath={vaultPath} fileTree={fileTree} />
 
           {/* 公开主页设置 */}
           <ProfileSettingsSection fileTree={fileTree} />

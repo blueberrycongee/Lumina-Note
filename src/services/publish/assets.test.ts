@@ -55,18 +55,18 @@ describe("rewriteMarkdownAssetLinks", () => {
 
 describe("resolveAssetSourcePath", () => {
   it("resolves relative asset paths against the note directory", () => {
-    const result = resolveAssetSourcePath(\"/vault/notes/note.md\", \"../images/pic.png?raw=1#hash\");
+    const result = resolveAssetSourcePath("/vault/notes/note.md", "../images/pic.png?raw=1#hash");
 
-    expect(result?.sourcePath).toBe(\"/vault/images/pic.png\");
-    expect(result?.suffix).toBe(\"?raw=1#hash\");
+    expect(result?.sourcePath).toBe("/vault/images/pic.png");
+    expect(result?.suffix).toBe("?raw=1#hash");
   });
 });
 
 describe("buildAssetOutputName", () => {
-  it(\"creates a stable hashed asset filename\", () => {
-    const name = buildAssetOutputName(\"/vault/images/My Logo.png\");
+  it("creates a stable hashed asset filename", () => {
+    const name = buildAssetOutputName("/vault/images/My Logo.png");
 
-    expect(name.startsWith(\"my-logo-\")).toBe(true);
-    expect(name.endsWith(\".png\")).toBe(true);
+    expect(name.startsWith("my-logo-")).toBe(true);
+    expect(name.endsWith(".png")).toBe(true);
   });
 });

@@ -106,7 +106,7 @@ export const resolveAssetSourcePath = (
   if (!path) return null;
   const absolute = isAbsolute(path) ? path : resolve(dirname(notePath), path);
   const normalized = normalize(absolute);
-  const sourcePath = absolute.startsWith(\"/\") && !normalized.startsWith(\"/\") ? `/${normalized}` : normalized;
+  const sourcePath = absolute.startsWith("/") && !normalized.startsWith("/") ? `/${normalized}` : normalized;
   return { sourcePath, suffix };
 };
 
