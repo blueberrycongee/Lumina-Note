@@ -11,6 +11,7 @@ const shouldRun = Boolean(process.env.WEBKIT_E2E);
 async function startViteServer() {
   const server = await createServer({
     root: process.cwd(),
+    configFile: false,
     plugins: [react()],
     resolve: {
       alias: {
@@ -93,6 +94,16 @@ describe("CodeMirror select-all (WebKit e2e)", () => {
       expect(selectionState?.from).toBe(0);
       expect(selectionState?.to).toBe(selectionState?.length);
 
+      await page.waitForFunction(() => {
+        const scroller = document.querySelector(".cm-scroller");
+        if (!scroller) return false;
+        const scrollerRect = scroller.getBoundingClientRect();
+        const selections = Array.from(document.querySelectorAll(".cm-selectionBackground"));
+        return selections.some((el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.bottom > scrollerRect.top && rect.top < scrollerRect.bottom;
+        });
+      });
       const beforeCount = await getVisibleSelectionCount(page);
       expect(beforeCount).toBeGreaterThan(0);
 
