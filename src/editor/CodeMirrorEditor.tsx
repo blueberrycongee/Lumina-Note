@@ -754,10 +754,62 @@ function selectEntireDocument(view: EditorView) {
   view.dispatch(state.update({ selection: { anchor: 0, head: doc.length }, userEvent: "select" }));
 }
 
+function selectAllDebugEnabled() {
+  return typeof window !== "undefined" && (window as any).__cmSelectAllDebug === true;
+}
+
+function logSelectAll(view: EditorView, label: string, data: Record<string, unknown> = {}) {
+  if (!selectAllDebugEnabled()) return;
+  const selection = view.state.selection.main;
+  const docLength = view.state.doc.length;
+  const active = view.dom.ownerDocument.activeElement as HTMLElement | null;
+  const activeTag = active ? `${active.tagName.toLowerCase()}${active.className ? `.${active.className}` : ""}` : "none";
+  console.log(`[cm-selectAll] ${label}`, {
+    from: selection.from,
+    to: selection.to,
+    docLength,
+    viewport: view.viewport,
+    scrollTop: view.scrollDOM?.scrollTop ?? null,
+    activeTag,
+    ...data,
+  });
+}
+
+function isViewActive(view: EditorView, target: EventTarget | null) {
+  if (view.hasFocus) return true;
+  const activeElement = view.dom.ownerDocument.activeElement;
+  if (activeElement && view.dom.contains(activeElement)) return true;
+  return target instanceof Node && view.dom.contains(target);
+}
+
+function shouldUpgradeSelectAll(view: EditorView, selection: Selection | null) {
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+  const anchorNode = selection.anchorNode;
+  const focusNode = selection.focusNode;
+  if (!anchorNode || !focusNode) return false;
+  if (!view.contentDOM.contains(anchorNode) || !view.contentDOM.contains(focusNode)) return false;
+  const range = selection.getRangeAt(0);
+  let domFrom = 0;
+  let domTo = 0;
+  try {
+    domFrom = view.posAtDOM(range.startContainer, range.startOffset);
+    domTo = view.posAtDOM(range.endContainer, range.endOffset);
+  } catch {
+    return false;
+  }
+  const from = Math.min(domFrom, domTo);
+  const to = Math.max(domFrom, domTo);
+  const viewport = view.viewport;
+  const coversViewport = from <= viewport.from && to >= viewport.to;
+  const alreadyFull = from === 0 && to === view.state.doc.length;
+  return coversViewport && !alreadyFull;
+}
+
 // Workaround: ensure Cmd/Ctrl+A selects the full document even when native selectAll is triggered.
 const selectAllDomHandlers = Prec.highest(EditorView.domEventHandlers({
   beforeinput(event, view) {
     if (event.inputType !== "selectAll") return false;
+    logSelectAll(view, "dom-beforeinput", { inputType: event.inputType, viewActive: isViewActive(view, event.target) });
     selectEntireDocument(view);
     event.preventDefault();
     return true;
@@ -767,6 +819,7 @@ const selectAllDomHandlers = Prec.highest(EditorView.domEventHandlers({
     if (!isMod || event.shiftKey || event.altKey) return false;
     const key = event.key?.toLowerCase?.() ?? "";
     if (key !== "a" && event.code !== "KeyA") return false;
+    logSelectAll(view, "dom-keydown", { key: event.key, code: event.code, viewActive: isViewActive(view, event.target) });
     selectEntireDocument(view);
     event.preventDefault();
     return true;
@@ -1138,6 +1191,69 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       view.contentDOM.addEventListener('mousedown', handleMouseDown);
       document.addEventListener('mouseup', handleMouseUp);
 
+      const handleSelectAllBeforeInput = (event: InputEvent) => {
+        const v = viewRef.current;
+        if (!v || event.inputType !== "selectAll") return;
+        if (!isViewActive(v, event.target)) {
+          logSelectAll(v, "doc-beforeinput-skip", { inputType: event.inputType, reason: "inactive", target: event.target?.constructor?.name });
+          return;
+        }
+        logSelectAll(v, "doc-beforeinput", { inputType: event.inputType, target: event.target?.constructor?.name });
+        selectEntireDocument(v);
+        event.preventDefault();
+        event.stopPropagation();
+      };
+
+      const handleSelectAllKeyDown = (event: KeyboardEvent) => {
+        const v = viewRef.current;
+        if (!v) return;
+        const isMod = event.metaKey || event.ctrlKey;
+        if (!isMod || event.shiftKey || event.altKey) return;
+        const key = event.key?.toLowerCase?.() ?? "";
+        if (key !== "a" && event.code !== "KeyA") return;
+        if (!isViewActive(v, event.target)) {
+          logSelectAll(v, "doc-keydown-skip", { key: event.key, code: event.code, reason: "inactive", target: event.target?.constructor?.name });
+          return;
+        }
+        logSelectAll(v, "doc-keydown", { key: event.key, code: event.code, target: event.target?.constructor?.name });
+        selectEntireDocument(v);
+        event.preventDefault();
+        event.stopPropagation();
+      };
+
+      let suppressSelectionChange = false;
+      const handleSelectionChange = () => {
+        const v = viewRef.current;
+        if (!v || suppressSelectionChange) return;
+        if (!isViewActive(v, v.dom.ownerDocument.activeElement)) return;
+        const selection = ownerDoc.getSelection();
+        if (v.state.field(mouseSelectingField, false)) return;
+        if (!shouldUpgradeSelectAll(v, selection)) {
+          if (selectAllDebugEnabled()) {
+            logSelectAll(v, "doc-selectionchange-skip", {
+              rangeCount: selection?.rangeCount ?? 0,
+              domCollapsed: selection?.isCollapsed ?? true,
+            });
+          }
+          return;
+        }
+
+        logSelectAll(v, "doc-selectionchange-upgrade", {
+          rangeCount: selection?.rangeCount ?? 0,
+        });
+
+        suppressSelectionChange = true;
+        selectEntireDocument(v);
+        requestAnimationFrame(() => {
+          suppressSelectionChange = false;
+        });
+      };
+
+      const ownerDoc = view.dom.ownerDocument;
+      ownerDoc.addEventListener('beforeinput', handleSelectAllBeforeInput, true);
+      ownerDoc.addEventListener('keydown', handleSelectAllKeyDown, true);
+      ownerDoc.addEventListener('selectionchange', handleSelectionChange);
+
       // Paste Handler for Images
       const handlePaste = async (e: ClipboardEvent) => {
         const v = viewRef.current;
@@ -1269,6 +1385,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         view.contentDOM.removeEventListener('mousedown', handleClick);
         view.contentDOM.removeEventListener('paste', handlePaste);
         document.removeEventListener('mouseup', handleMouseUp);
+        ownerDoc.removeEventListener('beforeinput', handleSelectAllBeforeInput, true);
+        ownerDoc.removeEventListener('keydown', handleSelectAllKeyDown, true);
+        ownerDoc.removeEventListener('selectionchange', handleSelectionChange);
         view.destroy();
         viewRef.current = null;
       };

@@ -47,6 +47,19 @@ async function getVisibleSelectionCount(page: Page) {
   });
 }
 
+async function getEditorSelectionState(page: Page) {
+  return page.evaluate(() => {
+    const view = (window as typeof window & { __cmView?: any }).__cmView;
+    if (!view) return null;
+    return {
+      from: view.state.selection.main.from,
+      to: view.state.selection.main.to,
+      length: view.state.doc.length,
+      viewport: view.viewport,
+    };
+  });
+}
+
 describe("CodeMirror select-all (WebKit e2e)", () => {
   let server: ViteDevServer | null = null;
   let browser: Browser | null = null;
@@ -61,6 +74,46 @@ describe("CodeMirror select-all (WebKit e2e)", () => {
       server = null;
     }
   });
+
+  it.skipIf(!shouldRun || !isMac)(
+    "upgrades viewport-only DOM selection to full document at top",
+    async () => {
+      const { server: startedServer, baseUrl } = await startViteServer();
+      server = startedServer;
+
+      browser = await webkit.launch({ headless: true });
+      const page = await browser.newPage();
+      await page.goto(`${baseUrl}/e2e/select-all.html`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".cm-editor");
+      await page.waitForFunction(() => Boolean((window as any).__cmView));
+
+      await page.evaluate(() => {
+        const scroller = document.querySelector(".cm-scroller");
+        if (scroller) scroller.scrollTop = 0;
+      });
+
+      await page.evaluate(() => {
+        const content = document.querySelector(".cm-content");
+        const selection = window.getSelection();
+        if (!content || !selection) return;
+        const range = document.createRange();
+        range.selectNodeContents(content);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      });
+
+      await page.waitForFunction(() => {
+        const view = (window as any).__cmView;
+        return view && view.state.selection.main.from === 0 && view.state.selection.main.to === view.state.doc.length;
+      });
+
+      const selectionState = await getEditorSelectionState(page);
+      expect(selectionState?.from).toBe(0);
+      expect(selectionState?.to).toBe(selectionState?.length);
+      expect(selectionState?.viewport?.from).toBe(0);
+    },
+    30_000,
+  );
 
   it.skipIf(!shouldRun || !isMac)(
     "keeps selection highlight visible after scrolling",
@@ -81,15 +134,7 @@ describe("CodeMirror select-all (WebKit e2e)", () => {
         return document.querySelector(".cm-selectionLayer") !== null;
       });
 
-      const selectionState = await page.evaluate(() => {
-        const view = (window as typeof window & { __cmView?: any }).__cmView;
-        if (!view) return null;
-        return {
-          from: view.state.selection.main.from,
-          to: view.state.selection.main.to,
-          length: view.state.doc.length,
-        };
-      });
+      const selectionState = await getEditorSelectionState(page);
 
       expect(selectionState?.from).toBe(0);
       expect(selectionState?.to).toBe(selectionState?.length);
