@@ -12,6 +12,7 @@
     "tauri": "tauri",
     "test": "vitest",
     "test:run": "vitest --run",
+    "test:e2e:webkit": "WEBKIT_E2E=1 vitest --run src/__tests__/codemirrorSelectAll.webkit.e2e.test.ts",
     "test:agent-eval": "npx ts-node --esm tests/agent-eval/runner.ts",
     "test:agent-eval:basic": "npx ts-node --esm tests/agent-eval/runner.ts --category=basic",
     "test:agent-eval:complex": "npx ts-node --esm tests/agent-eval/runner.ts --category=complex"
