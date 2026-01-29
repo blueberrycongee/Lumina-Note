@@ -17,6 +17,7 @@ import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
 import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
+import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { VideoNoteView } from "@/components/video/VideoNoteView";
 import { DatabaseView, CreateDatabaseDialog, DatabaseSplitView } from "@/components/database";
 import { PDFViewer } from "@/components/pdf";
@@ -252,6 +253,8 @@ function App() {
     toggleLeftSidebar,
     toggleRightSidebar,
     splitView,
+    isSkillManagerOpen,
+    setSkillManagerOpen,
   } = useUIStore();
 
   // Build note index when file tree changes
@@ -695,6 +698,12 @@ function App() {
       <CreateDatabaseDialog
         isOpen={createDbOpen}
         onClose={() => setCreateDbOpen(false)}
+      />
+
+      {/* Skill Manager */}
+      <SkillManagerModal
+        isOpen={isSkillManagerOpen}
+        onClose={() => setSkillManagerOpen(false)}
       />
 
       {/* AI Floating Ball */}

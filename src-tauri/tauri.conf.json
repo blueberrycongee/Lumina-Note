@@ -14,7 +14,7 @@
     ],
     "resources": [
       "resources/node/*",
-      "resources/skills/**"
+      "resources/skills/**/*"
     ],
     "icon": [
       "icons/32x32.png",

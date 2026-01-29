@@ -77,6 +77,10 @@ interface UIState {
   // Settings modal
   isSettingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
+
+  // Skills manager
+  isSkillManagerOpen: boolean;
+  setSkillManagerOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -173,12 +177,16 @@ export const useUIStore = create<UIState>()(
       // Settings modal
       isSettingsOpen: false,
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
+
+      // Skills manager
+      isSkillManagerOpen: false,
+      setSkillManagerOpen: (open) => set({ isSkillManagerOpen: open }),
     }),
     {
       name: "neurone-ui",
       // 不持久化视频笔记状态，避免重启后自动打开
       partialize: (state) => {
-        const { videoNoteOpen, videoNoteUrl, ...rest } = state;
+        const { videoNoteOpen, videoNoteUrl, isSkillManagerOpen, ...rest } = state;
         return rest;
       },
       onRehydrateStorage: () => (state) => {

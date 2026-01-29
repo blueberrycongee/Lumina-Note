@@ -113,7 +113,7 @@ function SuggestionCard({
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
-  const { chatMode, setChatMode } = useUIStore();
+  const { chatMode, setChatMode, setSkillManagerOpen } = useUIStore();
   const isCodexMode = chatMode === "codex";
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
@@ -1277,6 +1277,15 @@ export function MainAIChatShell() {
                       title={t.ai.aiChatSettings}
                     >
                       <Settings size={14} />
+                    </button>
+
+                    {/* Skills 管理入口 */}
+                    <button
+                      onClick={() => setSkillManagerOpen(true)}
+                      className="ml-1 flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                      title={t.ai.skillsManagerTitle}
+                    >
+                      <Sparkles size={14} />
                     </button>
                     
                     {/* 调试模式按钮：仅在 Agent 模式下显示（开发模式） */}

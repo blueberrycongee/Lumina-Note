@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SkillManifest {
@@ -48,14 +48,14 @@ fn skill_roots(app: &AppHandle, workspace_path: Option<&str>) -> Vec<(String, Pa
         }
     }
 
-    if let Ok(Some(app_data_dir)) = app.path().app_data_dir() {
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
         let user_root = app_data_dir.join("skills");
         if user_root.exists() {
             roots.push(("user".to_string(), user_root));
         }
     }
 
-    if let Ok(Some(resource_dir)) = app.path().resource_dir() {
+    if let Ok(resource_dir) = app.path().resource_dir() {
         let builtin_root = resource_dir.join("skills");
         if builtin_root.exists() {
             roots.push(("builtin".to_string(), builtin_root));

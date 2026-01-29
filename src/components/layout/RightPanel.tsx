@@ -24,6 +24,7 @@ import {
   Code2,
   Search,
   Lightbulb,
+  Sparkles,
 } from "lucide-react";
 import { AgentPanel } from "../chat/AgentPanel";
 import { ConversationList } from "../chat/ConversationList";
@@ -344,6 +345,7 @@ export function RightPanel() {
     setAIPanelMode,
     setFloatingBallPosition,
     setFloatingBallDragging,
+    setSkillManagerOpen,
   } = useUIStore();
   const { tabs, activeTabIndex } = useFileStore();
   const { 
@@ -645,12 +647,21 @@ export function RightPanel() {
               {/* 返回按钮 */}
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium flex items-center gap-1.5"><Settings size={14} /> {t.settingsPanel.title}</h3>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
-                >
-                  {t.panel.back}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSkillManagerOpen(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors flex items-center gap-1"
+                  >
+                    <Sparkles size={12} />
+                    {t.ai.skillsManagerTitle}
+                  </button>
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
+                  >
+                    {t.panel.back}
+                  </button>
+                </div>
               </div>
               {/* AI Provider Settings */}
               <div className="space-y-2">
