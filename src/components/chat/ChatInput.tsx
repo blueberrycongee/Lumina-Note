@@ -306,7 +306,10 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       } else if (e.key === "Enter" || e.key === "Tab") {
         if (filteredCommands.length > 0) {
           e.preventDefault();
-          selectCommand(filteredCommands[commandIndex]);
+          const selected = filteredCommands[commandIndex] ?? filteredCommands[0];
+          if (selected) {
+            selectCommand(selected);
+          }
         }
       } else if (e.key === "Escape") {
         setShowCommand(false);
@@ -746,6 +749,13 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                         e.stopPropagation();
                         if (confirm("确定要删除这个命令吗？")) {
                           deleteCommand(cmd.id);
+                          setCommandIndex((index) => {
+                            if (filteredCommands.length <= 1) return 0;
+                            if (index >= filteredCommands.length - 1) {
+                              return filteredCommands.length - 2;
+                            }
+                            return index;
+                          });
                         }
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-red-500 hover:bg-background rounded-md transition-all"
