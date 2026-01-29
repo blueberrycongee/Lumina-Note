@@ -1234,6 +1234,21 @@ Parameters:
 - regex: (optional) Enable regex, default false
 - case_sensitive: (optional) Case sensitive`,
       },
+      fetch: {
+        description: 'Fetch content from a URL',
+        params: { url: 'URL to fetch', format: 'text/markdown/html', timeout: 'Timeout in seconds (optional)' },
+        definition: `## fetch
+Description: Fetch content from a URL.
+
+Parameters:
+- url: (required) URL to fetch
+- format: (required) text | markdown | html
+- timeout: (optional) Timeout in seconds (max 120)
+
+Notes:
+- Only http/https is supported
+- Response size is limited to 5MB`,
+      },
       semantic_search: {
         description: 'Semantic search based on content meaning',
         params: { query: 'Search query', directory: 'Directory', limit: 'Number of results', min_score: 'Minimum similarity' },
@@ -1429,6 +1444,7 @@ Parameters:
       delete_note: { desc: 'Delete specified note file (move to trash)', params: { path: 'Note path to delete' } },
       search_notes: { desc: 'Semantic search vault, find related notes based on content similarity', params: { query: 'Search query in natural language', directory: 'Limit search scope to directory', limit: 'Number of results, default 10' } },
       grep_search: { desc: 'Full-text search vault, supports regex', params: { query: 'Search keyword or regex', directory: 'Limit search scope to directory', regex: 'Enable regex mode', case_sensitive: 'Case sensitive search', limit: 'Max number of results' } },
+      fetch: { desc: 'Fetch content from a URL', params: { url: 'URL to fetch', format: 'text/markdown/html', timeout: 'Timeout in seconds (max 120)' } },
       semantic_search: { desc: 'Semantic search using AI embeddings', params: { query: 'Natural language query', directory: 'Limit search scope to directory', limit: 'Number of results', min_score: 'Minimum similarity score (0-1)' } },
       deep_search: { desc: 'Deep search and return note content', params: { query: 'Search keywords', limit: 'Number of results', include_content: 'Include content' } },
       query_database: { desc: 'Query database structure and row data', params: { database_id: 'Database ID', filter_column: 'Filter column name', filter_value: 'Filter value', limit: 'Max rows to return' } },

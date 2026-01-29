@@ -1,5 +1,6 @@
 ﻿pub mod bash;
 pub mod edit;
+pub mod fetch;
 pub mod glob;
 pub mod grep;
 pub mod list;
@@ -33,6 +34,7 @@ pub fn build_registry(env: ToolEnvironment) -> ToolRegistry {
     read::register(&mut registry, env.clone());
     write::register(&mut registry, env.clone());
     edit::register(&mut registry, env.clone());
+    fetch::register(&mut registry, env.clone());
     glob::register(&mut registry, env.clone());
     grep::register(&mut registry, env.clone());
     list::register(&mut registry, env.clone());

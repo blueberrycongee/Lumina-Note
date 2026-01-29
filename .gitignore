@@ -29,6 +29,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+third_party/
 
 # Cache
 .vite/

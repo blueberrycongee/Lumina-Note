@@ -1155,6 +1155,11 @@ export default {
         params: { query: '搜尋關鍵詞', directory: '目錄', regex: '是否正規', case_sensitive: '區分大小寫', limit: '結果上限' },
         definition: `## grep_search\n描述: 全文搜尋，支援正規表示式。`,
       },
+      fetch: {
+        description: '從 URL 取得內容',
+        params: { url: '要取得的 URL', format: '回傳格式：text/markdown/html', timeout: '逾時秒數（可選）' },
+        definition: `## fetch\n描述: 從 URL 取得內容。\n\n參數:\n- url: (必需) URL\n- format: (必需) text | markdown | html\n- timeout: (可選) 逾時秒數（最大 120）\n\n說明:\n- 僅支援 http/https\n- 回應大小上限 5MB`,
+      },
       semantic_search: {
         description: '語意搜尋筆記庫',
         params: { query: '搜尋查詢', directory: '目錄', limit: '結果數量', min_score: '最低相似度' },
@@ -1293,6 +1298,7 @@ export default {
       delete_note: { desc: '刪除指定的筆記檔案（移到資源回收筒）', params: { path: '要刪除的筆記路徑' } },
       search_notes: { desc: '語意搜尋筆記庫，基於內容相似性找到相關筆記', params: { query: '搜尋查詢，用自然語言描述', directory: '限定搜尋範圍的目錄', limit: '傳回結果數量，預設 10' } },
       grep_search: { desc: '全文搜尋筆記庫，支援正規表示式', params: { query: '搜尋關鍵字或正規表示式', directory: '限定搜尋範圍的目錄', regex: '是否啟用正規表示式模式', case_sensitive: '是否區分大小寫', limit: '傳回結果數量上限' } },
+      fetch: { desc: '從 URL 取得內容', params: { url: '要取得的 URL', format: '回傳格式：text/markdown/html', timeout: '逾時秒數（最大 120）' } },
       semantic_search: { desc: '使用 AI 嵌入進行語意搜尋', params: { query: '自然語言查詢', directory: '限定搜尋範圍的目錄', limit: '傳回結果數量', min_score: '最低相似度分數 (0-1)' } },
       deep_search: { desc: '深度搜尋並傳回筆記內容', params: { query: '搜尋關鍵字', limit: '傳回數量', include_content: '是否包含內容' } },
       query_database: { desc: '查詢資料庫結構和列資料', params: { database_id: '資料庫 ID', filter_column: '過濾欄位名', filter_value: '過濾值', limit: '傳回列數上限' } },

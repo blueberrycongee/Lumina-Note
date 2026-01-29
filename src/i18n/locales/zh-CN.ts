@@ -1235,6 +1235,21 @@ export default {
 - regex: (可选) 是否正则，默认 false
 - case_sensitive: (可选) 是否区分大小写`,
       },
+      fetch: {
+        description: '从 URL 获取内容',
+        params: { url: '要获取的 URL', format: '返回格式：text/markdown/html', timeout: '超时秒数（可选）' },
+        definition: `## fetch
+描述: 从 URL 获取内容。
+
+参数:
+- url: (必需) URL
+- format: (必需) text | markdown | html
+- timeout: (可选) 超时秒数（最大 120）
+
+说明:
+- 仅支持 http/https
+- 响应大小上限 5MB`,
+      },
       semantic_search: {
         description: '语义搜索笔记库，基于内容含义',
         params: { query: '搜索查询', directory: '目录', limit: '结果数量', min_score: '最低相似度' },
@@ -1430,6 +1445,7 @@ export default {
       delete_note: { desc: '删除指定的笔记文件（移到回收站）', params: { path: '要删除的笔记路径' } },
       search_notes: { desc: '语义搜索笔记库，基于内容相似性找到相关笔记', params: { query: '搜索查询，用自然语言描述', directory: '限定搜索范围的目录', limit: '返回结果数量，默认 10' } },
       grep_search: { desc: '全文搜索笔记库，支持正则表达式', params: { query: '搜索关键词或正则表达式', directory: '限定搜索范围的目录', regex: '是否启用正则表达式模式', case_sensitive: '是否区分大小写', limit: '返回结果数量上限' } },
+      fetch: { desc: '从 URL 获取内容', params: { url: '要获取的 URL', format: '返回格式：text/markdown/html', timeout: '超时秒数（最大 120）' } },
       semantic_search: { desc: '使用 AI 嵌入进行语义搜索', params: { query: '自然语言查询', directory: '限定搜索范围的目录', limit: '返回结果数量', min_score: '最低相似度分数 (0-1)' } },
       deep_search: { desc: '深度搜索并返回笔记内容', params: { query: '搜索关键词', limit: '返回数量', include_content: '是否包含内容' } },
       query_database: { desc: '查询数据库结构和行数据', params: { database_id: '数据库 ID', filter_column: '过滤列名', filter_value: '过滤值', limit: '返回行数上限' } },

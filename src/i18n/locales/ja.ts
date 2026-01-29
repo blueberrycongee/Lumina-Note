@@ -1082,6 +1082,11 @@ XMLタグ形式を使用してツールを呼び出します：
         params: { query: '検索キーワード', directory: 'ディレクトリ', regex: '正規表現を有効', case_sensitive: '大文字小文字を区別', limit: '結果上限' },
         definition: `## grep_search\n説明: 全文検索（正規表現対応）。`,
       },
+      fetch: {
+        description: 'URL から内容を取得',
+        params: { url: '取得するURL', format: '形式: text/markdown/html', timeout: 'タイムアウト秒（任意）' },
+        definition: `## fetch\n説明: URL から内容を取得。\nパラメータ:\n- url: (必須) URL\n- format: (必須) text | markdown | html\n- timeout: (任意) タイムアウト秒（最大 120）\n注意:\n- http/https のみ対応\n- 応答サイズ上限 5MB`,
+      },
       semantic_search: {
         description: 'セマンティック検索',
         params: { query: '検索クエリ', directory: 'ディレクトリ', limit: '結果数', min_score: '最小類似度' },
@@ -1220,6 +1225,7 @@ XMLタグ形式を使用してツールを呼び出します：
       delete_note: { desc: '指定したノートファイルを削除（ゴミ箱に移動）', params: { path: '削除するノートパス' } },
       search_notes: { desc: 'ボールトのセマンティック検索、内容の類似性に基づいて関連ノートを検索', params: { query: '自然言語での検索クエリ', directory: '検索範囲を制限するディレクトリ', limit: '結果数、デフォルト 10' } },
       grep_search: { desc: 'ボールトの全文検索、正規表現対応', params: { query: '検索キーワードまたは正規表現', directory: '検索範囲を制限するディレクトリ', regex: '正規表現モードを有効にするか', case_sensitive: '大文字小文字を区別するか', limit: '最大結果数' } },
+      fetch: { desc: 'URL から内容を取得', params: { url: '取得するURL', format: '形式: text/markdown/html', timeout: 'タイムアウト秒（最大 120）' } },
       semantic_search: { desc: 'AI埋め込みを使用したセマンティック検索', params: { query: '自然言語クエリ', directory: '検索範囲を制限するディレクトリ', limit: '結果数', min_score: '最小類似度スコア (0-1)' } },
       deep_search: { desc: 'ディープ検索してノート内容を返す', params: { query: '検索キーワード', limit: '結果数', include_content: '内容を含めるか' } },
       query_database: { desc: 'データベース構造と行データをクエリ', params: { database_id: 'データベース ID', filter_column: 'フィルター列名', filter_value: 'フィルター値', limit: '最大行数' } },
