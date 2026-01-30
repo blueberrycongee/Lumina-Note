@@ -47,8 +47,8 @@ pub fn list_dir_recursive(path: &str) -> Result<Vec<FileEntry>, AppError> {
         let path = entry.path();
         let name = entry.file_name().to_string_lossy().to_string();
 
-        // Skip hidden files and directories
-        if name.starts_with('.') {
+        // Skip hidden files and directories (except .lumina)
+        if name.starts_with('.') && name != ".lumina" {
             continue;
         }
         

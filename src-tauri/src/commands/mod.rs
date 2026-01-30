@@ -335,8 +335,8 @@ pub async fn list_directory_tree(path: String, max_depth: Option<usize>) -> Resu
         
         let name = entry.file_name().to_string_lossy().to_string();
         
-        // 跳过隐藏文件和常见忽略目录
-        if name.starts_with('.') || name == "node_modules" || name == "target" {
+        // 跳过隐藏文件和常见忽略目录（允许 .lumina）
+        if (name.starts_with('.') && name != ".lumina") || name == "node_modules" || name == "target" {
             continue;
         }
         
