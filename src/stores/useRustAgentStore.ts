@@ -783,22 +783,34 @@ export const useRustAgentStore = create<RustAgentState>()(
 
       // 自动压缩上下文
       _compactSession: async () => {
-        const { autoCompactEnabled, pendingCompaction, isCompacting } = get();
+        const { autoCompactEnabled, pendingCompaction, isCompacting, currentSessionId, messages } = get();
         if (!autoCompactEnabled || !pendingCompaction || isCompacting) return;
+
+        const snapshotSessionId = currentSessionId;
+        const snapshotMessages = messages;
+        const snapshotLength = snapshotMessages.length;
 
         set({ isCompacting: true });
 
         try {
-          const { summaryMessage, toSummarize, tail } = splitMessagesForCompaction(get().messages);
+          const { summaryMessage, toSummarize, tail } = splitMessagesForCompaction(snapshotMessages);
           if (toSummarize.length === 0) {
-            set({ isCompacting: false, pendingCompaction: false });
+            set((state) => (
+              state.currentSessionId === snapshotSessionId
+                ? { isCompacting: false, pendingCompaction: false }
+                : { isCompacting: false }
+            ));
             return;
           }
 
           const summarySeed = summaryMessage ? [summaryMessage, ...toSummarize] : toSummarize;
           const summarySource = formatMessagesForSummary(summarySeed);
           if (!summarySource.trim()) {
-            set({ isCompacting: false, pendingCompaction: false });
+            set((state) => (
+              state.currentSessionId === snapshotSessionId
+                ? { isCompacting: false, pendingCompaction: false }
+                : { isCompacting: false }
+            ));
             return;
           }
 
@@ -817,12 +829,33 @@ export const useRustAgentStore = create<RustAgentState>()(
 
           const summaryText = response.content?.trim();
           if (!summaryText) {
-            set({ isCompacting: false, pendingCompaction: false });
+            set((state) => (
+              state.currentSessionId === snapshotSessionId
+                ? { isCompacting: false, pendingCompaction: false }
+                : { isCompacting: false }
+            ));
             return;
           }
 
           const summaryTitle = t.ai.contextSummaryTitle || "Context Summary";
           const summaryContent = `[${summaryTitle}]\n${summaryText}`;
+          const latestState = get();
+          if (!latestState.autoCompactEnabled || latestState.currentSessionId !== snapshotSessionId) {
+            set({ isCompacting: false });
+            return;
+          }
+
+          const currentMessages = latestState.messages;
+          if (currentMessages.length < snapshotLength) {
+            set({ isCompacting: false });
+            return;
+          }
+
+          const hasNewMessages = currentMessages.length > snapshotLength;
+          const additionalMessages = currentMessages
+            .slice(snapshotLength)
+            .filter((msg) => msg.id !== SUMMARY_MESSAGE_ID);
+
           const nextMessages: Message[] = [
             {
               role: "assistant",
@@ -831,17 +864,22 @@ export const useRustAgentStore = create<RustAgentState>()(
               id: SUMMARY_MESSAGE_ID,
             },
             ...tail,
+            ...additionalMessages,
           ];
 
           set({
             messages: nextMessages,
             isCompacting: false,
-            pendingCompaction: false,
+            pendingCompaction: hasNewMessages ? latestState.pendingCompaction : false,
           });
           get()._saveCurrentSession();
         } catch (error) {
           console.error("[RustAgent] Context compaction failed:", error);
-          set({ isCompacting: false, pendingCompaction: true });
+          set((state) => (
+            state.currentSessionId === snapshotSessionId
+              ? { isCompacting: false, pendingCompaction: true }
+              : { isCompacting: false }
+          ));
         }
       },
 

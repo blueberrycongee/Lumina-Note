@@ -275,7 +275,7 @@ describe('useRustAgentStore', () => {
   });
 
   describe('_compactSession', () => {
-    it.fails('should preserve messages added during compaction', async () => {
+    it('should preserve messages added during compaction', async () => {
       const store = useRustAgentStore.getState();
 
       const baseMessages = [
@@ -311,7 +311,6 @@ describe('useRustAgentStore', () => {
 
       const finalMessages = useRustAgentStore.getState().messages;
       const hasLateMessage = finalMessages.some((msg) => msg.content === 'late-message');
-      console.log('[Test] compaction late-message retained:', hasLateMessage, 'messageCount:', finalMessages.length);
       expect(hasLateMessage).toBe(true);
     });
   });
