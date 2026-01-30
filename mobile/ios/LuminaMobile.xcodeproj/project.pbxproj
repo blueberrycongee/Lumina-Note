@@ -9,6 +9,7 @@
 		9C0A1B2C3D4E5F60718293B4 /* LuminaMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0A1B2C3D4E5F60718293AD /* LuminaMobileApp.swift */; };
 		9C0A1B2C3D4E5F60718293B5 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0A1B2C3D4E5F60718293AE /* ContentView.swift */; };
 		9C0A1B2C3D4E5F60718293BB /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0A1B2C3D4E5F60718293BC /* QRScannerView.swift */; };
+		9C0A1B2C3D4E5F60718293BD /* MobileGatewayStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0A1B2C3D4E5F60718293BE /* MobileGatewayStore.swift */; };
 		9C0A1B2C3D4E5F60718293B6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9C0A1B2C3D4E5F60718293B0 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -16,6 +17,7 @@
 		9C0A1B2C3D4E5F60718293AD /* LuminaMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LuminaMobileApp.swift; sourceTree = "<group>"; };
 		9C0A1B2C3D4E5F60718293AE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9C0A1B2C3D4E5F60718293BC /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		9C0A1B2C3D4E5F60718293BE /* MobileGatewayStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MobileGatewayStore.swift; sourceTree = "<group>"; };
 		9C0A1B2C3D4E5F60718293AF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9C0A1B2C3D4E5F60718293B0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9C0A1B2C3D4E5F60718293B1 /* LuminaMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LuminaMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -44,6 +46,7 @@
 				9C0A1B2C3D4E5F60718293AD /* LuminaMobileApp.swift */,
 				9C0A1B2C3D4E5F60718293AE /* ContentView.swift */,
 				9C0A1B2C3D4E5F60718293BC /* QRScannerView.swift */,
+				9C0A1B2C3D4E5F60718293BE /* MobileGatewayStore.swift */,
 				9C0A1B2C3D4E5F60718293B3 /* Resources */,
 				9C0A1B2C3D4E5F60718293AF /* Info.plist */,
 			);
@@ -126,6 +129,7 @@
 				9C0A1B2C3D4E5F60718293B4 /* LuminaMobileApp.swift in Sources */,
 				9C0A1B2C3D4E5F60718293B5 /* ContentView.swift in Sources */,
 				9C0A1B2C3D4E5F60718293BB /* QRScannerView.swift in Sources */,
+				9C0A1B2C3D4E5F60718293BD /* MobileGatewayStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

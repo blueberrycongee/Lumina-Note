@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -48,7 +50,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -70,13 +71,21 @@ import com.google.mlkit.vision.barcode.Barcode
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.UUID
 
 private data class Message(
     val id: String = UUID.randomUUID().toString(),
     val text: String,
     val isOutgoing: Boolean,
-    val timeLabel: String
+    val timeLabel: String,
+    val isStreaming: Boolean
 )
 
 private data class AgentSession(
@@ -88,6 +97,13 @@ private data class AgentSession(
     val lastActivityLabel: String
 )
 
+private data class PairingPayload(
+    val token: String,
+    val port: Int,
+    val addresses: List<String>,
+    val wsPath: String
+)
+
 private fun sampleSessions(): List<AgentSession> {
     return listOf(
         AgentSession(
@@ -95,9 +111,9 @@ private fun sampleSessions(): List<AgentSession> {
             isPinned = true,
             unread = 2,
             messages = listOf(
-                Message(text = "Hi, welcome to Lumina Mobile.", isOutgoing = false, timeLabel = "09:39"),
-                Message(text = "How do I pair?", isOutgoing = true, timeLabel = "09:40"),
-                Message(text = "Open Settings > Mobile Connect and scan the QR.", isOutgoing = false, timeLabel = "09:41")
+                Message(text = "Hi, welcome to Lumina Mobile.", isOutgoing = false, timeLabel = "09:39", isStreaming = false),
+                Message(text = "How do I pair?", isOutgoing = true, timeLabel = "09:40", isStreaming = false),
+                Message(text = "Open Settings > Mobile Connect and scan the QR.", isOutgoing = false, timeLabel = "09:41", isStreaming = false)
             ),
             lastActivityLabel = "09:41"
         ),
@@ -106,7 +122,7 @@ private fun sampleSessions(): List<AgentSession> {
             isPinned = false,
             unread = 0,
             messages = listOf(
-                Message(text = "Draft summary looks good.", isOutgoing = false, timeLabel = "Yesterday")
+                Message(text = "Draft summary looks good.", isOutgoing = false, timeLabel = "Yesterday", isStreaming = false)
             ),
             lastActivityLabel = "Yesterday"
         ),
@@ -115,7 +131,7 @@ private fun sampleSessions(): List<AgentSession> {
             isPinned = false,
             unread = 0,
             messages = listOf(
-                Message(text = "3 items extracted.", isOutgoing = false, timeLabel = "Mon")
+                Message(text = "3 items extracted.", isOutgoing = false, timeLabel = "Mon", isStreaming = false)
             ),
             lastActivityLabel = "Mon"
         )
@@ -138,62 +154,226 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LuminaMobileApp() {
     val context = LocalContext.current
-    var isPaired by remember { mutableStateOf(PairingPrefs.isPaired(context)) }
+    val store = remember { MobileGatewayStore(context) }
 
-    if (!isPaired) {
-        PairingScreen(
-            onPaired = {
-                PairingPrefs.setPaired(context, true)
-                isPaired = true
-            }
-        )
+    if (!store.isPaired) {
+        PairingScreen(store = store)
         return
     }
 
-    val sessions = remember { mutableStateListOf(*sampleSessions().toTypedArray()) }
-    var search by remember { mutableStateOf("") }
-    var activeSessionId by remember { mutableStateOf<String?>(null) }
-
-    if (activeSessionId == null) {
-        ChatListScreen(
-            sessions = sessions,
-            search = search,
-            onSearchChange = { search = it },
-            onSelectSession = { activeSessionId = it },
-            onTogglePin = { sessionId ->
-                val index = sessions.indexOfFirst { it.id == sessionId }
-                if (index != -1) {
-                    val session = sessions[index]
-                    sessions[index] = session.copy(isPinned = !session.isPinned)
-                }
-            }
-        )
+    if (store.activeSessionId == null) {
+        ChatListScreen(store = store)
     } else {
-        val index = sessions.indexOfFirst { it.id == activeSessionId }
+        val index = store.sessions.indexOfFirst { it.id == store.activeSessionId }
         if (index == -1) {
-            activeSessionId = null
+            store.activeSessionId = null
         } else {
-            ChatDetailScreen(
-                session = sessions[index],
-                onBack = { activeSessionId = null },
-                onSend = { text ->
-                    val session = sessions[index]
-                    val newMessage = Message(text = text, isOutgoing = true, timeLabel = "Now")
-                    val updated = session.copy(
-                        messages = session.messages + newMessage,
-                        lastActivityLabel = "Now",
-                        unread = 0
-                    )
-                    sessions[index] = updated
-                }
-            )
+            ChatDetailScreen(store = store, sessionIndex = index)
         }
     }
 }
 
+private class MobileGatewayStore(private val context: Context) {
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val okHttp = OkHttpClient()
+    private var webSocket: WebSocket? = null
+
+    var isPaired by mutableStateOf(PairingPrefs.isPaired(context))
+    var pairingPayload by mutableStateOf(PairingPrefs.getPayload(context))
+    var connectionStatus by mutableStateOf("Disconnected")
+    var errorMessage by mutableStateOf<String?>(null)
+    var activeSessionId by mutableStateOf<String?>(null)
+    val sessions = mutableStateListOf<AgentSession>()
+
+    private var lastSessionId: String? = null
+
+    init {
+        sessions.addAll(sampleSessions())
+        if (isPaired && pairingPayload.isNotBlank()) {
+            connect()
+        }
+    }
+
+    fun applyPairing(payload: String) {
+        pairingPayload = payload
+        PairingPrefs.setPayload(context, payload)
+        if (parsePairingPayload(payload) == null) {
+            errorMessage = "Invalid payload"
+            connectionStatus = "Invalid payload"
+            PairingPrefs.setPaired(context, false)
+            isPaired = false
+            return
+        }
+        PairingPrefs.setPaired(context, true)
+        isPaired = true
+        connect()
+    }
+
+    fun connect() {
+        val parsed = parsePairingPayload(pairingPayload) ?: run {
+            connectionStatus = "Invalid payload"
+            PairingPrefs.setPaired(context, false)
+            isPaired = false
+            return
+        }
+        val address = parsed.addresses.firstOrNull() ?: run {
+            connectionStatus = "No address"
+            PairingPrefs.setPaired(context, false)
+            isPaired = false
+            return
+        }
+        val url = "ws://$address:${parsed.port}${parsed.wsPath}"
+        connectionStatus = "Connecting"
+        val request = Request.Builder().url(url).build()
+        webSocket = okHttp.newWebSocket(request, object : WebSocketListener() {
+            override fun onOpen(webSocket: WebSocket, response: Response) {
+                sendPair(parsed.token)
+                postStatus("Connected")
+            }
+
+            override fun onMessage(webSocket: WebSocket, text: String) {
+                mainHandler.post { handleIncoming(text) }
+            }
+
+            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                postStatus("Disconnected")
+                postError(t.message)
+            }
+        })
+    }
+
+    fun sendCommand(text: String, sessionId: String) {
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+        lastSessionId = sessionId
+        appendOutgoing(trimmed, sessionId)
+        val payload = JSONObject()
+            .put("type", "command")
+            .put("data", JSONObject().put("task", trimmed))
+        webSocket?.send(payload.toString())
+    }
+
+    fun setActiveSession(id: String?) {
+        activeSessionId = id
+        if (id != null) {
+            val index = sessions.indexOfFirst { it.id == id }
+            if (index != -1) {
+                val session = sessions[index]
+                sessions[index] = session.copy(unread = 0)
+            }
+        }
+    }
+
+    private fun sendPair(token: String) {
+        val payload = JSONObject()
+            .put("type", "pair")
+            .put("data", JSONObject().put("token", token).put("device_name", "Android"))
+        webSocket?.send(payload.toString())
+    }
+
+    private fun handleIncoming(text: String) {
+        try {
+            val json = JSONObject(text)
+            val type = json.optString("type")
+            if (type == "agent_event") {
+                val event = json.optJSONObject("data") ?: return
+                handleAgentEvent(event)
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun handleAgentEvent(event: JSONObject) {
+        val eventType = event.optString("type")
+        val text = extractText(event) ?: return
+        when (eventType) {
+            "text_delta", "message_chunk" -> appendIncoming(text, streaming = true)
+            "text_final", "message_final" -> appendIncoming(text, streaming = false)
+            "error" -> appendIncoming("Error: $text", streaming = false)
+        }
+    }
+
+    private fun extractText(event: JSONObject): String? {
+        val data = event.optJSONObject("data")
+        return when {
+            data?.has("delta") == true -> data.getString("delta")
+            data?.has("content") == true -> data.getString("content")
+            data?.has("text") == true -> data.getString("text")
+            else -> null
+        }
+    }
+
+    private fun appendOutgoing(text: String, sessionId: String) {
+        val index = sessions.indexOfFirst { it.id == sessionId }
+        if (index == -1) return
+        val message = Message(text = text, isOutgoing = true, timeLabel = "Now", isStreaming = false)
+        val session = sessions[index]
+        sessions[index] = session.copy(
+            messages = session.messages + message,
+            lastActivityLabel = "Now"
+        )
+    }
+
+    private fun appendIncoming(text: String, streaming: Boolean) {
+        val sessionId = lastSessionId ?: sessions.firstOrNull()?.id ?: return
+        val index = sessions.indexOfFirst { it.id == sessionId }
+        if (index == -1) return
+        val session = sessions[index]
+        val updatedMessages = session.messages.toMutableList()
+
+        if (streaming) {
+            val last = updatedMessages.lastOrNull()
+            if (last != null && !last.isOutgoing && last.isStreaming) {
+                updatedMessages[updatedMessages.lastIndex] = last.copy(text = last.text + text)
+            } else {
+                updatedMessages.add(Message(text = text, isOutgoing = false, timeLabel = "Now", isStreaming = true))
+            }
+        } else {
+            val last = updatedMessages.lastOrNull()
+            if (last != null && !last.isOutgoing && last.isStreaming) {
+                updatedMessages[updatedMessages.lastIndex] = last.copy(text = text, isStreaming = false)
+            } else {
+                updatedMessages.add(Message(text = text, isOutgoing = false, timeLabel = "Now", isStreaming = false))
+            }
+        }
+
+        val unread = if (activeSessionId == sessionId) 0 else session.unread + 1
+        sessions[index] = session.copy(
+            messages = updatedMessages,
+            lastActivityLabel = "Now",
+            unread = unread
+        )
+    }
+
+    private fun parsePairingPayload(payload: String): PairingPayload? {
+        return try {
+            val json = JSONObject(payload)
+            val token = json.getString("token")
+            val port = json.getInt("port")
+            val addressesJson = json.optJSONArray("addresses") ?: JSONArray()
+            val addresses = mutableListOf<String>()
+            for (i in 0 until addressesJson.length()) {
+                addresses.add(addressesJson.getString(i))
+            }
+            val wsPath = json.optString("ws_path", "/ws")
+            PairingPayload(token, port, addresses, wsPath)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun postStatus(status: String) {
+        mainHandler.post { connectionStatus = status }
+    }
+
+    private fun postError(message: String?) {
+        mainHandler.post { errorMessage = message }
+    }
+}
+
 @Composable
-private fun PairingScreen(onPaired: () -> Unit) {
-    var payload by remember { mutableStateOf("") }
+private fun PairingScreen(store: MobileGatewayStore) {
+    var payload by remember { mutableStateOf(store.pairingPayload) }
     var showScanner by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val cameraGranted = remember { mutableStateOf(isCameraGranted(context)) }
@@ -211,7 +391,8 @@ private fun PairingScreen(onPaired: () -> Unit) {
             QrScannerView(
                 onResult = { code ->
                     payload = code
-                    onPaired()
+                    store.applyPairing(code)
+                    showScanner = false
                 }
             )
             IconButton(
@@ -270,7 +451,7 @@ private fun PairingScreen(onPaired: () -> Unit) {
             Spacer(modifier = Modifier.height(12.dp))
             Button(onClick = {
                 if (payload.trim().isNotEmpty()) {
-                    onPaired()
+                    store.applyPairing(payload.trim())
                 }
             }) {
                 Text("Pair")
@@ -286,7 +467,7 @@ private fun QrScannerView(onResult: (String) -> Unit) {
     val previewView = remember { PreviewView(context) }
     var hasResult by remember { mutableStateOf(false) }
 
-    DisposableEffect(lifecycleOwner) {
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val executor = ContextCompat.getMainExecutor(context)
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         val listener = Runnable {
@@ -359,16 +540,17 @@ private fun processImageProxy(
 }
 
 @Composable
-private fun ChatListScreen(
-    sessions: List<AgentSession>,
-    search: String,
-    onSearchChange: (String) -> Unit,
-    onSelectSession: (String) -> Unit,
-    onTogglePin: (String) -> Unit
-) {
-    val filtered = sessions
-        .filter {
-            search.isBlank() || it.name.contains(search, true) || it.messages.lastOrNull()?.text?.contains(search, true) == true
+private fun ChatListScreen(store: MobileGatewayStore) {
+    var searchText by remember { mutableStateOf("") }
+    val query = searchText.trim()
+    val filtered = store.sessions
+        .filter { session ->
+            if (query.isEmpty()) {
+                true
+            } else {
+                session.name.contains(query, ignoreCase = true) ||
+                    (session.messages.lastOrNull()?.text?.contains(query, ignoreCase = true) == true)
+            }
         }
         .sortedWith(compareByDescending<AgentSession> { it.isPinned }.thenByDescending { it.lastActivityLabel })
 
@@ -396,8 +578,8 @@ private fun ChatListScreen(
                 .background(Color(0xFFF2F2F7))
         ) {
             TextField(
-                value = search,
-                onValueChange = onSearchChange,
+                value = searchText,
+                onValueChange = { searchText = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
@@ -405,7 +587,13 @@ private fun ChatListScreen(
             )
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filtered) { chat ->
-                    ChatRow(chat = chat, onClick = { onSelectSession(chat.id) }, onTogglePin = { onTogglePin(chat.id) })
+                    ChatRow(chat = chat, onClick = { store.setActiveSession(chat.id) }, onTogglePin = {
+                        val index = store.sessions.indexOfFirst { it.id == chat.id }
+                        if (index != -1) {
+                            val session = store.sessions[index]
+                            store.sessions[index] = session.copy(isPinned = !session.isPinned)
+                        }
+                    })
                     Divider(color = Color(0xFFE5E5EA))
                 }
             }
@@ -480,7 +668,8 @@ private fun ChatRow(chat: AgentSession, onClick: () -> Unit, onTogglePin: () -> 
 }
 
 @Composable
-private fun ChatDetailScreen(session: AgentSession, onBack: () -> Unit, onSend: (String) -> Unit) {
+private fun ChatDetailScreen(store: MobileGatewayStore, sessionIndex: Int) {
+    val session = store.sessions[sessionIndex]
     var draft by remember { mutableStateOf("") }
 
     Scaffold(
@@ -488,7 +677,7 @@ private fun ChatDetailScreen(session: AgentSession, onBack: () -> Unit, onSend: 
             TopAppBar(
                 title = { Text(session.name, fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { store.setActiveSession(null) }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 }
@@ -530,7 +719,7 @@ private fun ChatDetailScreen(session: AgentSession, onBack: () -> Unit, onSend: 
                 Button(onClick = {
                     val trimmed = draft.trim()
                     if (trimmed.isNotEmpty()) {
-                        onSend(trimmed)
+                        store.sendCommand(trimmed, session.id)
                         draft = ""
                     }
                 }) {
@@ -576,6 +765,7 @@ private fun isCameraGranted(context: Context): Boolean {
 private object PairingPrefs {
     private const val PREFS = "lumina_mobile"
     private const val KEY_PAIRED = "paired"
+    private const val KEY_PAYLOAD = "pairing_payload"
 
     fun isPaired(context: Context): Boolean {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -586,6 +776,18 @@ private object PairingPrefs {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_PAIRED, paired)
+            .apply()
+    }
+
+    fun getPayload(context: Context): String {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_PAYLOAD, "") ?: ""
+    }
+
+    fun setPayload(context: Context, payload: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_PAYLOAD, payload)
             .apply()
     }
 }

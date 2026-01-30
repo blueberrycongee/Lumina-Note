@@ -38,6 +38,7 @@ struct Message: Identifiable, Equatable {
     var text: String
     var isOutgoing: Bool
     var timestamp: Date
+    var isStreaming: Bool
 
     var timeLabel: String {
         Message.timeFormatter.string(from: timestamp)
@@ -50,16 +51,16 @@ struct Message: Identifiable, Equatable {
     }()
 }
 
-private let sampleSessions: [AgentSession] = [
+let sampleSessions: [AgentSession] = [
     AgentSession(
         id: UUID(),
         name: "Lumina Agent",
         isPinned: true,
         unread: 2,
         messages: [
-            Message(id: UUID(), text: "Hi, welcome to Lumina Mobile.", isOutgoing: false, timestamp: Date().addingTimeInterval(-3600)),
-            Message(id: UUID(), text: "How do I pair?", isOutgoing: true, timestamp: Date().addingTimeInterval(-3500)),
-            Message(id: UUID(), text: "Open Settings > Mobile Connect and scan the QR.", isOutgoing: false, timestamp: Date().addingTimeInterval(-3400))
+            Message(id: UUID(), text: "Hi, welcome to Lumina Mobile.", isOutgoing: false, timestamp: Date().addingTimeInterval(-3600), isStreaming: false),
+            Message(id: UUID(), text: "How do I pair?", isOutgoing: true, timestamp: Date().addingTimeInterval(-3500), isStreaming: false),
+            Message(id: UUID(), text: "Open Settings > Mobile Connect and scan the QR.", isOutgoing: false, timestamp: Date().addingTimeInterval(-3400), isStreaming: false)
         ],
         lastActivity: Date().addingTimeInterval(-3400)
     ),
@@ -69,7 +70,7 @@ private let sampleSessions: [AgentSession] = [
         isPinned: false,
         unread: 0,
         messages: [
-            Message(id: UUID(), text: "Draft summary looks good.", isOutgoing: false, timestamp: Date().addingTimeInterval(-86400 * 1))
+            Message(id: UUID(), text: "Draft summary looks good.", isOutgoing: false, timestamp: Date().addingTimeInterval(-86400 * 1), isStreaming: false)
         ],
         lastActivity: Date().addingTimeInterval(-86400 * 1)
     ),
@@ -79,28 +80,26 @@ private let sampleSessions: [AgentSession] = [
         isPinned: false,
         unread: 0,
         messages: [
-            Message(id: UUID(), text: "3 items extracted.", isOutgoing: false, timestamp: Date().addingTimeInterval(-86400 * 2))
+            Message(id: UUID(), text: "3 items extracted.", isOutgoing: false, timestamp: Date().addingTimeInterval(-86400 * 2), isStreaming: false)
         ],
         lastActivity: Date().addingTimeInterval(-86400 * 2)
     )
 ]
 
 struct ContentView: View {
-    @AppStorage("lumina_paired") private var isPaired = false
-    @AppStorage("lumina_pairing_payload") private var pairingPayload = ""
+    @StateObject private var store = MobileGatewayStore()
 
     var body: some View {
-        if isPaired {
-            SessionListView()
+        if store.isPaired {
+            SessionListView(store: store)
         } else {
-            PairingView(isPaired: $isPaired, pairingPayload: $pairingPayload)
+            PairingView(store: store)
         }
     }
 }
 
 struct PairingView: View {
-    @Binding var isPaired: Bool
-    @Binding var pairingPayload: String
+    @ObservedObject var store: MobileGatewayStore
     @State private var showScanner = false
 
     var body: some View {
@@ -131,15 +130,15 @@ struct PairingView: View {
                 Text("Or paste pairing payload")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                TextField("{ \"token\": ... }", text: $pairingPayload)
+                TextField("{ \"token\": ... }", text: $store.pairingPayload)
                     .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal, 32)
 
             Button(action: {
-                let trimmed = pairingPayload.trimmingCharacters(in: .whitespacesAndNewlines)
+                let trimmed = store.pairingPayload.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
-                    isPaired = true
+                    store.applyPairingPayload(trimmed)
                 }
             }) {
                 Text("Pair")
@@ -147,7 +146,7 @@ struct PairingView: View {
             }
             .buttonStyle(.bordered)
             .padding(.horizontal, 32)
-            .disabled(pairingPayload.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(store.pairingPayload.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             Spacer()
         }
@@ -156,8 +155,7 @@ struct PairingView: View {
         .sheet(isPresented: $showScanner) {
             ZStack(alignment: .topTrailing) {
                 QRScannerView { code in
-                    pairingPayload = code
-                    isPaired = true
+                    store.applyPairingPayload(code)
                     showScanner = false
                 }
                 Button(action: { showScanner = false }) {
@@ -173,7 +171,7 @@ struct PairingView: View {
 }
 
 struct SessionListView: View {
-    @State private var sessions = sampleSessions
+    @ObservedObject var store: MobileGatewayStore
     @State private var searchText = ""
 
     var body: some View {
@@ -199,8 +197,8 @@ struct SessionListView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Chats")
             .navigationDestination(for: UUID.self) { id in
-                if let index = sessions.firstIndex(where: { $0.id == id }) {
-                    SessionDetailView(session: $sessions[index])
+                if let index = store.sessions.firstIndex(where: { $0.id == id }) {
+                    SessionDetailView(store: store, sessionIndex: index)
                 }
             }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
@@ -222,8 +220,8 @@ struct SessionListView: View {
     private var filteredSessions: [AgentSession] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let visible = query.isEmpty
-            ? sessions
-            : sessions.filter { $0.name.localizedCaseInsensitiveContains(query) || $0.preview.localizedCaseInsensitiveContains(query) }
+            ? store.sessions
+            : store.sessions.filter { $0.name.localizedCaseInsensitiveContains(query) || $0.preview.localizedCaseInsensitiveContains(query) }
         return visible.sorted { lhs, rhs in
             if lhs.isPinned != rhs.isPinned {
                 return lhs.isPinned && !rhs.isPinned
@@ -233,8 +231,8 @@ struct SessionListView: View {
     }
 
     private func togglePin(_ id: UUID) {
-        guard let index = sessions.firstIndex(where: { $0.id == id }) else { return }
-        sessions[index].isPinned.toggle()
+        guard let index = store.sessions.firstIndex(where: { $0.id == id }) else { return }
+        store.sessions[index].isPinned.toggle()
     }
 }
 
@@ -292,10 +290,12 @@ struct SessionRow: View {
 }
 
 struct SessionDetailView: View {
-    @Binding var session: AgentSession
+    @ObservedObject var store: MobileGatewayStore
+    let sessionIndex: Int
     @State private var message = ""
 
     var body: some View {
+        let session = store.sessions[sessionIndex]
         VStack(spacing: 0) {
             ScrollView {
                 LazyVStack(spacing: 8) {
@@ -314,7 +314,7 @@ struct SessionDetailView: View {
                 TextField("Message", text: $message)
                     .textFieldStyle(.roundedBorder)
                 Button("Send") {
-                    sendMessage()
+                    sendMessage(sessionId: session.id)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -324,15 +324,14 @@ struct SessionDetailView: View {
         }
         .navigationTitle(session.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { store.setActiveSession(session.id) }
+        .onDisappear { store.setActiveSession(nil) }
     }
 
-    private func sendMessage() {
+    private func sendMessage(sessionId: UUID) {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        let newMessage = Message(id: UUID(), text: trimmed, isOutgoing: true, timestamp: Date())
-        session.messages.append(newMessage)
-        session.lastActivity = newMessage.timestamp
-        session.unread = 0
+        store.sendCommand(trimmed, sessionId: sessionId)
         message = ""
     }
 }
