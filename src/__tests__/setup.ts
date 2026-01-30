@@ -54,8 +54,6 @@ vi.mock('@tauri-apps/api/core', () => ({
       'agent_get_status': { status: 'idle' },
       
       // RAG 相关
-      'search_notes': [],
-      'semantic_search': [],
       'get_embeddings': [[0.1, 0.2, 0.3]],
       
       // 数据库相关
