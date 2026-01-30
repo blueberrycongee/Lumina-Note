@@ -238,6 +238,17 @@ private class MobileGatewayStore(private val context: Context) {
         webSocket?.send(payload.toString())
     }
 
+    fun requestSessionCreate(title: String? = null) {
+        val data = JSONObject()
+        if (!title.isNullOrBlank()) {
+            data.put("title", title)
+        }
+        val payload = JSONObject()
+            .put("type", "session_create")
+            .put("data", data)
+        webSocket?.send(payload.toString())
+    }
+
     fun setActiveSession(id: String?) {
         activeSessionId = id
         if (id != null) {
@@ -600,7 +611,7 @@ private fun ChatListScreen(store: MobileGatewayStore) {
                     }
                 },
                 actions = {
-                    TextButton(onClick = {}) {
+                    TextButton(onClick = { store.requestSessionCreate() }) {
                         Icon(Icons.Default.Edit, contentDescription = "Compose", tint = Color(0xFF007AFF))
                     }
                 }

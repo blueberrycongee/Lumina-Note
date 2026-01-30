@@ -409,6 +409,12 @@ interface RustAgentState {
   _compactSession: () => Promise<void>;
 }
 
+interface MobileSessionCommand {
+  action: "create" | "switch" | "rename" | "delete";
+  session_id?: string;
+  title?: string;
+}
+
 // ============ Store 实现 ============
 
 export const useRustAgentStore = create<RustAgentState>()(
@@ -1396,13 +1402,31 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 设置监听器
       _setupListeners: async () => {
         try {
-          const unlisten = await listen<{ type: string; data: unknown }>(
+          const unlistenAgent = await listen<{ type: string; data: unknown }>(
             "agent-event",
             (event) => {
               get()._handleEvent(event.payload);
             }
           );
-          return unlisten;
+          const unlistenMobile = await listen<MobileSessionCommand>(
+            "mobile-session-command",
+            (event) => {
+              const payload = event.payload;
+              if (payload.action === "create") {
+                get().createSession(payload.title);
+              } else if (payload.action === "switch" && payload.session_id) {
+                get().switchSession(payload.session_id);
+              } else if (payload.action === "rename" && payload.session_id && payload.title) {
+                get().renameSession(payload.session_id, payload.title);
+              } else if (payload.action === "delete" && payload.session_id) {
+                get().deleteSession(payload.session_id);
+              }
+            }
+          );
+          return () => {
+            unlistenAgent();
+            unlistenMobile();
+          };
         } catch (e) {
           console.error("Failed to setup agent event listener:", e);
           return null;

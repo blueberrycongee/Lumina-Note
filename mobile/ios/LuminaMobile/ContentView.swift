@@ -173,7 +173,7 @@ struct SessionListView: View {
                         .foregroundStyle(.blue)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {}) {
+                    Button(action: { store.requestSessionCreate() }) {
                         Image(systemName: "square.and.pencil")
                     }
                     .foregroundStyle(.blue)

@@ -117,6 +117,18 @@ final class MobileGatewayStore: ObservableObject {
         sendJSON(payload)
     }
 
+    func requestSessionCreate(title: String? = nil) {
+        var data: [String: Any] = [:]
+        if let title, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            data["title"] = title
+        }
+        let payload: [String: Any] = [
+            "type": "session_create",
+            "data": data
+        ]
+        sendJSON(payload)
+    }
+
     func setActiveSession(_ id: String?) {
         activeSessionId = id
         if let id, let index = sessions.firstIndex(where: { $0.id == id }) {

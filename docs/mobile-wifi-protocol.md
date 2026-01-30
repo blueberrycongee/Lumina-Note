@@ -58,6 +58,11 @@ Pair:
 { "type": "pair", "data": { "token": "ABC123XY", "device_name": "iPhone" } }
 ```
 
+Session create:
+```json
+{ "type": "session_create", "data": { "title": "新对话" } }
+```
+
 Command:
 ```json
 {

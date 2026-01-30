@@ -61,6 +61,7 @@ enum MobileClientMessage {
     Pair { token: String, device_name: Option<String> },
     Command { task: String, session_id: Option<String>, context: Option<MobileTaskContext> },
     Ping { timestamp: Option<u64> },
+    SessionCreate { title: Option<String> },
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -452,6 +453,19 @@ async fn handle_connection(
                             let _ = out_tx.send(MobileServerMessage::Pong {
                                 timestamp: timestamp.unwrap_or_else(current_timestamp),
                             });
+                        }
+                        Ok(MobileClientMessage::SessionCreate { title }) => {
+                            if !paired {
+                                let _ = out_tx.send(MobileServerMessage::Error {
+                                    message: "Not paired".to_string(),
+                                });
+                                continue;
+                            }
+                            let payload = json!({
+                                "action": "create",
+                                "title": title,
+                            });
+                            let _ = app.emit("mobile-session-command", payload);
                         }
                         Ok(MobileClientMessage::Command { task, session_id, context }) => {
                             if !paired {
