@@ -278,6 +278,12 @@ private class MobileGatewayStore(private val context: Context) {
             if (type == "agent_event") {
                 val event = json.optJSONObject("data") ?: return
                 handleAgentEvent(event)
+            } else if (type == "paired") {
+                connectionStatus = "Paired"
+            } else if (type == "error") {
+                val message = json.optJSONObject("data")?.optString("message") ?: "Unknown error"
+                errorMessage = message
+                appendIncoming("Error: $message", streaming = false)
             }
         } catch (_: Exception) {
         }

@@ -183,6 +183,17 @@ final class MobileGatewayStore: ObservableObject {
             handleAgentEvent(data)
             return
         }
+
+        if type == "paired" {
+            connectionStatus = "Paired"
+            return
+        }
+
+        if type == "error" {
+            let message = (json["data"] as? [String: Any])?["message"] as? String ?? "Unknown error"
+            errorMessage = message
+            appendIncoming("Error: \(message)", streaming: false)
+        }
     }
 
     private func handleAgentEvent(_ event: [String: Any]) {
