@@ -63,6 +63,7 @@ Command:
 {
   "type": "command",
   "data": {
+    "session_id": "rust-session-123",
     "task": "Summarize this folder",
     "context": {
       "active_note_path": "/path/to/note.md",
@@ -93,8 +94,32 @@ Agent event (streaming):
 {
   "type": "agent_event",
   "data": {
-    "type": "message_chunk",
-    "data": { "content": "Hello", "agent": "executor" }
+    "session_id": "rust-session-123",
+    "event": {
+      "type": "message_chunk",
+      "data": { "content": "Hello", "agent": "executor" }
+    }
+  }
+}
+```
+
+Session list:
+```json
+{
+  "type": "session_list",
+  "data": {
+    "sessions": [
+      {
+        "id": "rust-session-123",
+        "title": "新对话",
+        "session_type": "agent",
+        "created_at": 1738400000000,
+        "updated_at": 1738401234000,
+        "last_message_preview": "你好，我可以帮你…",
+        "last_message_role": "assistant",
+        "message_count": 8
+      }
+    ]
   }
 }
 ```

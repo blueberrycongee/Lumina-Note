@@ -1,15 +1,17 @@
 import SwiftUI
 
 struct AgentSession: Identifiable, Equatable {
-    let id: UUID
+    let id: String
     var name: String
     var isPinned: Bool
     var unread: Int
     var messages: [Message]
     var lastActivity: Date
+    var lastMessagePreview: String?
+    var lastMessageRole: String?
 
     var preview: String {
-        messages.last?.text ?? ""
+        messages.last?.text ?? lastMessagePreview ?? ""
     }
 
     var timeLabel: String {
@@ -50,41 +52,6 @@ struct Message: Identifiable, Equatable {
         return formatter
     }()
 }
-
-let sampleSessions: [AgentSession] = [
-    AgentSession(
-        id: UUID(),
-        name: "Lumina Agent",
-        isPinned: true,
-        unread: 2,
-        messages: [
-            Message(id: UUID(), text: "Hi, welcome to Lumina Mobile.", isOutgoing: false, timestamp: Date().addingTimeInterval(-3600), isStreaming: false),
-            Message(id: UUID(), text: "How do I pair?", isOutgoing: true, timestamp: Date().addingTimeInterval(-3500), isStreaming: false),
-            Message(id: UUID(), text: "Open Settings > Mobile Connect and scan the QR.", isOutgoing: false, timestamp: Date().addingTimeInterval(-3400), isStreaming: false)
-        ],
-        lastActivity: Date().addingTimeInterval(-3400)
-    ),
-    AgentSession(
-        id: UUID(),
-        name: "Research Agent",
-        isPinned: false,
-        unread: 0,
-        messages: [
-            Message(id: UUID(), text: "Draft summary looks good.", isOutgoing: false, timestamp: Date().addingTimeInterval(-86400 * 1), isStreaming: false)
-        ],
-        lastActivity: Date().addingTimeInterval(-86400 * 1)
-    ),
-    AgentSession(
-        id: UUID(),
-        name: "Tasks Agent",
-        isPinned: false,
-        unread: 0,
-        messages: [
-            Message(id: UUID(), text: "3 items extracted.", isOutgoing: false, timestamp: Date().addingTimeInterval(-86400 * 2), isStreaming: false)
-        ],
-        lastActivity: Date().addingTimeInterval(-86400 * 2)
-    )
-]
 
 struct ContentView: View {
     @StateObject private var store = MobileGatewayStore()
@@ -196,10 +163,8 @@ struct SessionListView: View {
             .scrollContentBackground(.hidden)
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Chats")
-            .navigationDestination(for: UUID.self) { id in
-                if let index = store.sessions.firstIndex(where: { $0.id == id }) {
-                    SessionDetailView(store: store, sessionIndex: index)
-                }
+            .navigationDestination(for: String.self) { id in
+                SessionDetailView(store: store, sessionId: id)
             }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
             .toolbar {
@@ -230,7 +195,7 @@ struct SessionListView: View {
         }
     }
 
-    private func togglePin(_ id: UUID) {
+    private func togglePin(_ id: String) {
         guard let index = store.sessions.firstIndex(where: { $0.id == id }) else { return }
         store.sessions[index].isPinned.toggle()
     }
@@ -291,44 +256,54 @@ struct SessionRow: View {
 
 struct SessionDetailView: View {
     @ObservedObject var store: MobileGatewayStore
-    let sessionIndex: Int
+    let sessionId: String
     @State private var message = ""
 
     var body: some View {
-        let session = store.sessions[sessionIndex]
-        VStack(spacing: 0) {
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(session.messages) { msg in
-                        MessageBubble(message: msg)
+        Group {
+            if let index = store.sessions.firstIndex(where: { $0.id == sessionId }) {
+                let session = store.sessions[index]
+                VStack(spacing: 0) {
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(session.messages) { msg in
+                                MessageBubble(message: msg)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 16)
                     }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 16)
-            }
-            .background(Color(.systemGroupedBackground))
+                    .background(Color(.systemGroupedBackground))
 
-            Divider()
+                    Divider()
 
-            HStack(spacing: 8) {
-                TextField("Message", text: $message)
-                    .textFieldStyle(.roundedBorder)
-                Button("Send") {
-                    sendMessage(sessionId: session.id)
+                    HStack(spacing: 8) {
+                        TextField("Message", text: $message)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Send") {
+                            sendMessage(sessionId: session.id)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(12)
+                    .background(Color(.secondarySystemBackground))
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .navigationTitle(session.name)
+                .navigationBarTitleDisplayMode(.inline)
+                .onAppear { store.setActiveSession(session.id) }
+                .onDisappear { store.setActiveSession(nil) }
+            } else {
+                VStack {
+                    Text("Session not found")
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .padding(12)
-            .background(Color(.secondarySystemBackground))
         }
-        .navigationTitle(session.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear { store.setActiveSession(session.id) }
-        .onDisappear { store.setActiveSession(nil) }
     }
 
-    private func sendMessage(sessionId: UUID) {
+    private func sendMessage(sessionId: String) {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         store.sendCommand(trimmed, sessionId: sessionId)

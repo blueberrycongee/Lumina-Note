@@ -146,6 +146,17 @@ export interface RustAgentSession {
   totalTokensUsed: number;
 }
 
+interface MobileSessionSummary {
+  id: string;
+  title: string;
+  session_type: "agent" | "chat" | "research";
+  created_at: number;
+  updated_at: number;
+  last_message_preview?: string;
+  last_message_role?: "user" | "assistant" | "system" | "tool";
+  message_count: number;
+}
+
 // Plan 步骤状态 (Windsurf 风格)
 export type PlanStepStatus = "pending" | "in_progress" | "completed";
 
@@ -389,6 +400,7 @@ interface RustAgentState {
   switchSession: (id: string) => void;
   deleteSession: (id: string) => void;
   renameSession: (id: string, title: string) => void;
+  syncMobileSessions: () => Promise<void>;
   
   // 内部方法
   _handleEvent: (event: { type: string; data: unknown }) => void;
@@ -705,6 +717,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           isCompacting: false,
           lastTokenUsage: null,
         });
+        void get().syncMobileSessions();
       },
 
       // 切换会话
@@ -772,6 +785,7 @@ export const useRustAgentStore = create<RustAgentState>()(
         } else {
           set({ sessions: newSessions });
         }
+        void get().syncMobileSessions();
       },
 
       // 重命名会话
@@ -781,6 +795,30 @@ export const useRustAgentStore = create<RustAgentState>()(
             s.id === id ? { ...s, title, updatedAt: Date.now() } : s
           ),
         }));
+        void get().syncMobileSessions();
+      },
+
+      // 同步会话到移动端
+      syncMobileSessions: async () => {
+        const summaries: MobileSessionSummary[] = get().sessions.map(session => {
+          const lastMessage = session.messages[session.messages.length - 1];
+          const preview = lastMessage?.content?.slice(0, 200);
+          return {
+            id: session.id,
+            title: session.title,
+            session_type: "agent",
+            created_at: session.createdAt,
+            updated_at: session.updatedAt,
+            last_message_preview: preview,
+            last_message_role: lastMessage?.role,
+            message_count: session.messages.length,
+          };
+        });
+        try {
+          await invoke("mobile_sync_sessions", { sessions: summaries });
+        } catch (e) {
+          console.warn("[RustAgent] Failed to sync mobile sessions:", e);
+        }
       },
 
       // 保存当前会话
@@ -804,6 +842,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             ),
           };
         });
+        void get().syncMobileSessions();
       },
 
       // 自动压缩上下文
@@ -1416,6 +1455,7 @@ export async function initRustAgentListeners() {
       unlistenFn = null;
     }
     unlistenFn = await useRustAgentStore.getState()._setupListeners();
+    await useRustAgentStore.getState().syncMobileSessions();
     console.log("[RustAgent] Listener initialized");
   } finally {
     isInitializing = false;

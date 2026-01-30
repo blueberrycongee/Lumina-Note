@@ -27,13 +27,29 @@ pub struct MobileGatewayStatus {
     pub pairing_payload: Option<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct MobileSessionSummary {
+    pub id: String,
+    pub title: String,
+    pub session_type: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_message_preview: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_message_role: Option<String>,
+    pub message_count: usize,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
 enum MobileServerMessage {
     Paired { session_id: String },
     CommandAck { command_id: String, status: String },
-    AgentEvent { event: Value },
+    AgentEvent { session_id: Option<String>, event: Value },
+    SessionList { sessions: Vec<MobileSessionSummary> },
     Pong { timestamp: u64 },
     Error { message: String },
 }
@@ -43,7 +59,7 @@ enum MobileServerMessage {
 #[serde(rename_all = "snake_case")]
 enum MobileClientMessage {
     Pair { token: String, device_name: Option<String> },
-    Command { task: String, context: Option<MobileTaskContext> },
+    Command { task: String, session_id: Option<String>, context: Option<MobileTaskContext> },
     Ping { timestamp: Option<u64> },
 }
 
@@ -70,9 +86,17 @@ pub struct MobileGatewayState {
     server: Mutex<Option<MobileServer>>,
     agent_config: Mutex<Option<AgentConfig>>,
     workspace_path: Mutex<Option<String>>,
-    events: broadcast::Sender<Value>,
+    sessions: Mutex<Vec<MobileSessionSummary>>,
+    current_session_id: Mutex<Option<String>>,
+    events: broadcast::Sender<MobileBroadcast>,
     shutdown: broadcast::Sender<()>,
     starting: Mutex<bool>,
+}
+
+#[derive(Debug, Clone)]
+enum MobileBroadcast {
+    AgentEvent { session_id: Option<String>, event: Value },
+    SessionList { sessions: Vec<MobileSessionSummary> },
 }
 
 impl MobileGatewayState {
@@ -83,6 +107,8 @@ impl MobileGatewayState {
             server: Mutex::new(None),
             agent_config: Mutex::new(None),
             workspace_path: Mutex::new(None),
+            sessions: Mutex::new(Vec::new()),
+            current_session_id: Mutex::new(None),
             events,
             shutdown,
             starting: Mutex::new(false),
@@ -131,8 +157,14 @@ impl MobileGatewayState {
         self.build_status(guard.as_ref())
     }
 
-    fn broadcast(&self, payload: Value) {
-        let _ = self.events.send(payload);
+    fn broadcast_agent_event(&self, session_id: Option<String>, payload: Value) {
+        let _ = self
+            .events
+            .send(MobileBroadcast::AgentEvent { session_id, event: payload });
+    }
+
+    fn broadcast_session_list(&self, sessions: Vec<MobileSessionSummary>) {
+        let _ = self.events.send(MobileBroadcast::SessionList { sessions });
     }
 
     async fn set_workspace(&self, workspace_path: Option<String>) {
@@ -152,6 +184,24 @@ impl MobileGatewayState {
     async fn get_agent_config(&self) -> Option<AgentConfig> {
         self.agent_config.lock().await.clone()
     }
+
+    async fn set_sessions(&self, sessions: Vec<MobileSessionSummary>) {
+        let mut guard = self.sessions.lock().await;
+        *guard = sessions;
+    }
+
+    async fn get_sessions(&self) -> Vec<MobileSessionSummary> {
+        self.sessions.lock().await.clone()
+    }
+
+    async fn set_current_session_id(&self, session_id: Option<String>) {
+        let mut guard = self.current_session_id.lock().await;
+        *guard = session_id;
+    }
+
+    async fn get_current_session_id(&self) -> Option<String> {
+        self.current_session_id.lock().await.clone()
+    }
 }
 
 impl Default for MobileGatewayState {
@@ -169,7 +219,8 @@ pub fn emit_agent_event(app: &AppHandle, event: AgentEvent) {
 pub fn emit_agent_event_payload(app: &AppHandle, payload: Value) {
     let _ = app.emit("agent-event", payload.clone());
     let state = app.state::<MobileGatewayState>();
-    state.broadcast(payload);
+    let session_id = tauri::async_runtime::block_on(state.get_current_session_id());
+    state.broadcast_agent_event(session_id, payload);
 }
 
 pub fn hydrate_state(app: &AppHandle) -> Result<(), String> {
@@ -280,11 +331,21 @@ pub async fn mobile_set_agent_config(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn mobile_sync_sessions(
+    state: State<'_, MobileGatewayState>,
+    sessions: Vec<MobileSessionSummary>,
+) -> Result<(), String> {
+    state.set_sessions(sessions.clone()).await;
+    state.broadcast_session_list(sessions);
+    Ok(())
+}
+
 async fn run_server(
     app: AppHandle,
     listener: TcpListener,
     token: String,
-    events: broadcast::Sender<Value>,
+    events: broadcast::Sender<MobileBroadcast>,
     shutdown: broadcast::Sender<()>,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) {
@@ -322,7 +383,7 @@ async fn handle_connection(
     app: AppHandle,
     stream: tokio::net::TcpStream,
     token: String,
-    events: broadcast::Sender<Value>,
+    events: broadcast::Sender<MobileBroadcast>,
     shutdown: broadcast::Sender<()>,
 ) {
     let ws_stream = match accept_async(stream).await {
@@ -379,6 +440,8 @@ async fn handle_connection(
                                 let _ = out_tx.send(MobileServerMessage::Paired {
                                     session_id: uuid::Uuid::new_v4().to_string(),
                                 });
+                                let sessions = app.state::<MobileGatewayState>().get_sessions().await;
+                                let _ = out_tx.send(MobileServerMessage::SessionList { sessions });
                             } else {
                                 let _ = out_tx.send(MobileServerMessage::Error {
                                     message: "Invalid pairing token".to_string(),
@@ -390,13 +453,22 @@ async fn handle_connection(
                                 timestamp: timestamp.unwrap_or_else(current_timestamp),
                             });
                         }
-                        Ok(MobileClientMessage::Command { task, context }) => {
+                        Ok(MobileClientMessage::Command { task, session_id, context }) => {
                             if !paired {
                                 let _ = out_tx.send(MobileServerMessage::Error {
                                     message: "Not paired".to_string(),
                                 });
                                 continue;
                             }
+                            let session_id = match session_id {
+                                Some(id) => id,
+                                None => {
+                                    let _ = out_tx.send(MobileServerMessage::Error {
+                                        message: "Missing session_id".to_string(),
+                                    });
+                                    continue;
+                                }
+                            };
 
                             let workspace_path = app.state::<MobileGatewayState>().get_workspace().await;
                             let agent_config = app.state::<MobileGatewayState>().get_agent_config().await;
@@ -425,6 +497,9 @@ async fn handle_connection(
                                 command_id: command_id.clone(),
                                 status: "accepted".to_string(),
                             });
+                            app.state::<MobileGatewayState>()
+                                .set_current_session_id(Some(session_id))
+                                .await;
 
                             let app_handle = app.clone();
                             let out_tx_clone = out_tx.clone();
@@ -456,7 +531,14 @@ async fn handle_connection(
             }
             event = event_rx.recv(), if paired => {
                 if let Ok(payload) = event {
-                    let _ = out_tx.send(MobileServerMessage::AgentEvent { event: payload });
+                    match payload {
+                        MobileBroadcast::AgentEvent { session_id, event } => {
+                            let _ = out_tx.send(MobileServerMessage::AgentEvent { session_id, event });
+                        }
+                        MobileBroadcast::SessionList { sessions } => {
+                            let _ = out_tx.send(MobileServerMessage::SessionList { sessions });
+                        }
+                    }
                 }
             }
         }

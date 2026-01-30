@@ -166,6 +166,7 @@ fn main() {
             mobile_gateway::mobile_stop_server,
             mobile_gateway::mobile_set_workspace,
             mobile_gateway::mobile_set_agent_config,
+            mobile_gateway::mobile_sync_sessions,
         ])
         .manage(webdav::commands::WebDAVState::new())
         .manage(agent::AgentState::new())

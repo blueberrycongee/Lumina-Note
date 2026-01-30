@@ -79,6 +79,10 @@ import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 private data class Message(
     val id: String = UUID.randomUUID().toString(),
@@ -94,7 +98,10 @@ private data class AgentSession(
     val isPinned: Boolean,
     val unread: Int,
     val messages: List<Message>,
-    val lastActivityLabel: String
+    val updatedAt: Long,
+    val createdAt: Long,
+    val lastMessagePreview: String?,
+    val lastMessageRole: String?
 )
 
 private data class PairingPayload(
@@ -104,39 +111,16 @@ private data class PairingPayload(
     val wsPath: String
 )
 
-private fun sampleSessions(): List<AgentSession> {
-    return listOf(
-        AgentSession(
-            name = "Lumina Agent",
-            isPinned = true,
-            unread = 2,
-            messages = listOf(
-                Message(text = "Hi, welcome to Lumina Mobile.", isOutgoing = false, timeLabel = "09:39", isStreaming = false),
-                Message(text = "How do I pair?", isOutgoing = true, timeLabel = "09:40", isStreaming = false),
-                Message(text = "Open Settings > Mobile Connect and scan the QR.", isOutgoing = false, timeLabel = "09:41", isStreaming = false)
-            ),
-            lastActivityLabel = "09:41"
-        ),
-        AgentSession(
-            name = "Research Agent",
-            isPinned = false,
-            unread = 0,
-            messages = listOf(
-                Message(text = "Draft summary looks good.", isOutgoing = false, timeLabel = "Yesterday", isStreaming = false)
-            ),
-            lastActivityLabel = "Yesterday"
-        ),
-        AgentSession(
-            name = "Tasks Agent",
-            isPinned = false,
-            unread = 0,
-            messages = listOf(
-                Message(text = "3 items extracted.", isOutgoing = false, timeLabel = "Mon", isStreaming = false)
-            ),
-            lastActivityLabel = "Mon"
-        )
-    )
-}
+private data class SessionSummary(
+    val id: String,
+    val title: String,
+    val sessionType: String,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val lastMessagePreview: String?,
+    val lastMessageRole: String?,
+    val messageCount: Int
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -188,7 +172,6 @@ private class MobileGatewayStore(private val context: Context) {
     private var lastSessionId: String? = null
 
     init {
-        sessions.addAll(sampleSessions())
         if (isPaired && pairingPayload.isNotBlank()) {
             connect()
         }
@@ -249,7 +232,7 @@ private class MobileGatewayStore(private val context: Context) {
         appendOutgoing(trimmed, sessionId)
         val payload = JSONObject()
             .put("type", "command")
-            .put("data", JSONObject().put("task", trimmed))
+            .put("data", JSONObject().put("task", trimmed).put("session_id", sessionId))
         webSocket?.send(payload.toString())
     }
 
@@ -276,26 +259,32 @@ private class MobileGatewayStore(private val context: Context) {
             val json = JSONObject(text)
             val type = json.optString("type")
             if (type == "agent_event") {
-                val event = json.optJSONObject("data") ?: return
-                handleAgentEvent(event)
+                val data = json.optJSONObject("data") ?: return
+                val sessionId = data.optString("session_id").takeIf { it.isNotBlank() }
+                val event = data.optJSONObject("event") ?: data
+                handleAgentEvent(event, sessionId)
             } else if (type == "paired") {
                 connectionStatus = "Paired"
             } else if (type == "error") {
                 val message = json.optJSONObject("data")?.optString("message") ?: "Unknown error"
                 errorMessage = message
                 appendIncoming("Error: $message", streaming = false)
+            } else if (type == "session_list") {
+                val data = json.optJSONObject("data") ?: return
+                val list = data.optJSONArray("sessions") ?: JSONArray()
+                applySessionList(list)
             }
         } catch (_: Exception) {
         }
     }
 
-    private fun handleAgentEvent(event: JSONObject) {
+    private fun handleAgentEvent(event: JSONObject, sessionId: String?) {
         val eventType = event.optString("type")
         val text = extractText(event) ?: return
         when (eventType) {
-            "text_delta", "message_chunk" -> appendIncoming(text, streaming = true)
-            "text_final", "message_final" -> appendIncoming(text, streaming = false)
-            "error" -> appendIncoming("Error: $text", streaming = false)
+            "text_delta", "message_chunk" -> appendIncoming(text, streaming = true, sessionId = sessionId)
+            "text_final", "message_final" -> appendIncoming(text, streaming = false, sessionId = sessionId)
+            "error" -> appendIncoming("Error: $text", streaming = false, sessionId = sessionId)
         }
     }
 
@@ -316,13 +305,13 @@ private class MobileGatewayStore(private val context: Context) {
         val session = sessions[index]
         sessions[index] = session.copy(
             messages = session.messages + message,
-            lastActivityLabel = "Now"
+            updatedAt = System.currentTimeMillis()
         )
     }
 
-    private fun appendIncoming(text: String, streaming: Boolean) {
-        val sessionId = lastSessionId ?: sessions.firstOrNull()?.id ?: return
-        val index = sessions.indexOfFirst { it.id == sessionId }
+    private fun appendIncoming(text: String, streaming: Boolean, sessionId: String?) {
+        val targetId = sessionId ?: lastSessionId ?: sessions.firstOrNull()?.id ?: return
+        val index = sessions.indexOfFirst { it.id == targetId }
         if (index == -1) return
         val session = sessions[index]
         val updatedMessages = session.messages.toMutableList()
@@ -343,10 +332,10 @@ private class MobileGatewayStore(private val context: Context) {
             }
         }
 
-        val unread = if (activeSessionId == sessionId) 0 else session.unread + 1
+        val unread = if (activeSessionId == targetId) 0 else session.unread + 1
         sessions[index] = session.copy(
             messages = updatedMessages,
-            lastActivityLabel = "Now",
+            updatedAt = System.currentTimeMillis(),
             unread = unread
         )
     }
@@ -365,6 +354,45 @@ private class MobileGatewayStore(private val context: Context) {
             PairingPayload(token, port, addresses, wsPath)
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun applySessionList(list: JSONArray) {
+        val summaries = mutableListOf<SessionSummary>()
+        for (i in 0 until list.length()) {
+            val item = list.optJSONObject(i) ?: continue
+            summaries.add(
+                SessionSummary(
+                    id = item.optString("id"),
+                    title = item.optString("title"),
+                    sessionType = item.optString("session_type"),
+                    createdAt = item.optLong("created_at"),
+                    updatedAt = item.optLong("updated_at"),
+                    lastMessagePreview = item.optString("last_message_preview").ifBlank { null },
+                    lastMessageRole = item.optString("last_message_role").ifBlank { null },
+                    messageCount = item.optInt("message_count")
+                )
+            )
+        }
+        val existing = sessions.associateBy { it.id }
+        val next = summaries.map { summary ->
+            val previous = existing[summary.id]
+            AgentSession(
+                id = summary.id,
+                name = summary.title,
+                isPinned = previous?.isPinned ?: false,
+                unread = previous?.unread ?: 0,
+                messages = previous?.messages ?: emptyList(),
+                updatedAt = summary.updatedAt,
+                createdAt = summary.createdAt,
+                lastMessagePreview = summary.lastMessagePreview,
+                lastMessageRole = summary.lastMessageRole
+            )
+        }
+        sessions.clear()
+        sessions.addAll(next)
+        if (activeSessionId != null && sessions.none { it.id == activeSessionId }) {
+            activeSessionId = null
         }
     }
 
@@ -558,7 +586,7 @@ private fun ChatListScreen(store: MobileGatewayStore) {
                     (session.messages.lastOrNull()?.text?.contains(query, ignoreCase = true) == true)
             }
         }
-        .sortedWith(compareByDescending<AgentSession> { it.isPinned }.thenByDescending { it.lastActivityLabel })
+        .sortedWith(compareByDescending<AgentSession> { it.isPinned }.thenByDescending { it.updatedAt })
 
     Scaffold(
         topBar = {
@@ -636,12 +664,12 @@ private fun ChatRow(chat: AgentSession, onClick: () -> Unit, onTogglePin: () -> 
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
-                Text(text = chat.lastActivityLabel, fontSize = 12.sp, color = Color(0xFF8E8E93))
+                Text(text = formatTimeLabel(chat.updatedAt), fontSize = 12.sp, color = Color(0xFF8E8E93))
             }
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = chat.messages.lastOrNull()?.text ?: "",
+                    text = chat.messages.lastOrNull()?.text ?: chat.lastMessagePreview.orEmpty(),
                     fontSize = 14.sp,
                     color = Color(0xFF8E8E93),
                     maxLines = 1,
@@ -766,6 +794,14 @@ private fun MessageBubble(message: Message) {
 
 private fun isCameraGranted(context: Context): Boolean {
     return ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+}
+
+private fun formatTimeLabel(timestamp: Long): String {
+    val zone = ZoneId.systemDefault()
+    val dateTime = Instant.ofEpochMilli(timestamp).atZone(zone)
+    val now = ZonedDateTime.now(zone)
+    val pattern = if (dateTime.toLocalDate() == now.toLocalDate()) "HH:mm" else "MMM d"
+    return DateTimeFormatter.ofPattern(pattern).format(dateTime)
 }
 
 private object PairingPrefs {

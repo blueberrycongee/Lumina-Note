@@ -39,16 +39,16 @@ final class MobileGatewayStore: ObservableObject {
     @Published var pairingPayload: String
     @Published var connectionStatus: String = "Disconnected"
     @Published var errorMessage: String?
-    @Published var activeSessionId: UUID?
+    @Published var activeSessionId: String?
 
     private var webSocketTask: URLSessionWebSocketTask?
-    private var lastSessionId: UUID?
+    private var lastSessionId: String?
 
     init() {
         let defaults = UserDefaults.standard
         pairingPayload = defaults.string(forKey: "lumina_pairing_payload") ?? ""
         isPaired = defaults.bool(forKey: "lumina_paired")
-        sessions = sampleSessions
+        sessions = []
         if isPaired, !pairingPayload.isEmpty {
             connect()
         }
@@ -104,7 +104,7 @@ final class MobileGatewayStore: ObservableObject {
         connectionStatus = "Disconnected"
     }
 
-    func sendCommand(_ text: String, sessionId: UUID) {
+    func sendCommand(_ text: String, sessionId: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         lastSessionId = sessionId
@@ -112,12 +112,12 @@ final class MobileGatewayStore: ObservableObject {
 
         let payload: [String: Any] = [
             "type": "command",
-            "data": ["task": trimmed]
+            "data": ["task": trimmed, "session_id": sessionId]
         ]
         sendJSON(payload)
     }
 
-    func setActiveSession(_ id: UUID?) {
+    func setActiveSession(_ id: String?) {
         activeSessionId = id
         if let id, let index = sessions.firstIndex(where: { $0.id == id }) {
             sessions[index].unread = 0
@@ -180,7 +180,12 @@ final class MobileGatewayStore: ObservableObject {
         guard let type = json["type"] as? String else { return }
 
         if type == "agent_event", let data = json["data"] as? [String: Any] {
-            handleAgentEvent(data)
+            let sessionId = data["session_id"] as? String
+            if let event = data["event"] as? [String: Any] {
+                handleAgentEvent(event, sessionId: sessionId)
+            } else {
+                handleAgentEvent(data, sessionId: sessionId)
+            }
             return
         }
 
@@ -193,10 +198,18 @@ final class MobileGatewayStore: ObservableObject {
             let message = (json["data"] as? [String: Any])?["message"] as? String ?? "Unknown error"
             errorMessage = message
             appendIncoming("Error: \(message)", streaming: false)
+            return
+        }
+
+        if type == "session_list" {
+            if let data = json["data"] as? [String: Any],
+               let sessionsData = data["sessions"] as? [[String: Any]] {
+                applySessionList(sessionsData)
+            }
         }
     }
 
-    private func handleAgentEvent(_ event: [String: Any]) {
+    private func handleAgentEvent(_ event: [String: Any], sessionId: String?) {
         guard let eventType = event["type"] as? String else { return }
         let text = extractText(from: event)
         guard let text else { return }
@@ -205,11 +218,11 @@ final class MobileGatewayStore: ObservableObject {
         let finalTypes = ["text_final", "message_final"]
 
         if streamingTypes.contains(eventType) {
-            appendIncoming(text, streaming: true)
+            appendIncoming(text, streaming: true, sessionId: sessionId)
         } else if finalTypes.contains(eventType) {
-            appendIncoming(text, streaming: false)
+            appendIncoming(text, streaming: false, sessionId: sessionId)
         } else if eventType == "error" {
-            appendIncoming("Error: \(text)", streaming: false)
+            appendIncoming("Error: \(text)", streaming: false, sessionId: sessionId)
         }
     }
 
@@ -223,16 +236,16 @@ final class MobileGatewayStore: ObservableObject {
         return nil
     }
 
-    private func appendOutgoing(_ text: String, sessionId: UUID) {
+    private func appendOutgoing(_ text: String, sessionId: String) {
         guard let index = sessions.firstIndex(where: { $0.id == sessionId }) else { return }
         let message = Message(id: UUID(), text: text, isOutgoing: true, timestamp: Date(), isStreaming: false)
         sessions[index].messages.append(message)
         sessions[index].lastActivity = message.timestamp
     }
 
-    private func appendIncoming(_ text: String, streaming: Bool) {
-        guard let sessionId = lastSessionId ?? sessions.first?.id,
-              let index = sessions.firstIndex(where: { $0.id == sessionId }) else { return }
+    private func appendIncoming(_ text: String, streaming: Bool, sessionId: String?) {
+        guard let targetId = sessionId ?? lastSessionId ?? sessions.first?.id,
+              let index = sessions.firstIndex(where: { $0.id == targetId }) else { return }
 
         if streaming {
             if let last = sessions[index].messages.last, !last.isOutgoing, last.isStreaming {
@@ -252,7 +265,7 @@ final class MobileGatewayStore: ObservableObject {
         }
 
         sessions[index].lastActivity = Date()
-        if activeSessionId != sessionId {
+        if activeSessionId != targetId {
             sessions[index].unread += 1
         }
     }
@@ -261,4 +274,42 @@ final class MobileGatewayStore: ObservableObject {
         guard let data = payload.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(PairingPayload.self, from: data)
     }
+
+    private func applySessionList(_ sessionsData: [[String: Any]]) {
+        let decoder = JSONDecoder()
+        let summaries: [SessionSummary] = sessionsData.compactMap { item in
+            guard let data = try? JSONSerialization.data(withJSONObject: item, options: []) else { return nil }
+            return try? decoder.decode(SessionSummary.self, from: data)
+        }
+        let existing = Dictionary(uniqueKeysWithValues: sessions.map { ($0.id, $0) })
+        sessions = summaries.map { summary in
+            let previous = existing[summary.id]
+            let messages = previous?.messages ?? []
+            let timestamp = summary.updated_at > 0 ? summary.updated_at : Date().timeIntervalSince1970 * 1000
+            return AgentSession(
+                id: summary.id,
+                name: summary.title,
+                isPinned: previous?.isPinned ?? false,
+                unread: previous?.unread ?? 0,
+                messages: messages,
+                lastActivity: Date(timeIntervalSince1970: timestamp / 1000.0),
+                lastMessagePreview: summary.last_message_preview,
+                lastMessageRole: summary.last_message_role
+            )
+        }
+        if let active = activeSessionId, !sessions.contains(where: { $0.id == active }) {
+            activeSessionId = nil
+        }
+    }
+}
+
+private struct SessionSummary: Codable {
+    let id: String
+    let title: String
+    let session_type: String
+    let created_at: Double
+    let updated_at: Double
+    let last_message_preview: String?
+    let last_message_role: String?
+    let message_count: Int
 }
