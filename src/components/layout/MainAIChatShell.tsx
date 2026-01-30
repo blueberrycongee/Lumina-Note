@@ -192,9 +192,6 @@ export function MainAIChatShell() {
       .filter(msg => !msg.content?.includes('🎯 意图分析'))
       .map(msg => ({
         ...msg,
-        // 将 tool 消息显示为 assistant（工具调用结果）
-        role: msg.role === "tool" ? "assistant" as const : msg.role as "user" | "assistant" | "system",
-        // 保留原始内容
         content: msg.content,
       }));
   }, [rustAgentMessages]);
@@ -674,18 +671,21 @@ export function MainAIChatShell() {
 
     const files: string[] = [];
     for (const msg of messages) {
-      const content = getTextFromContent(msg.content);
-      if (msg.role === "user" && content.includes("<tool_result")) {
-        // 匹配 create_note 的结果: "已创建文件: xxx.md" 或 "已覆盖文件: xxx.md"
-        const createMatch = content.match(/<tool_result name="create_note">\s*已(?:创建|覆盖)文件: ([^\n<]+)/);
-        if (createMatch) {
-          files.push(createMatch[1].trim());
+      if (msg.role !== "tool") continue;
+      const content = getTextFromContent(msg.content).trim();
+      const match = content.match(/^(?:🔧|✅|❌)\s+(\w+):\s*(.+)$/s);
+      if (!match) continue;
+      const toolName = match[1];
+      const payload = match[2].trim();
+      if (toolName !== "write" && toolName !== "edit") continue;
+      if (!payload.startsWith("{")) continue;
+      try {
+        const parsed = JSON.parse(payload) as { filePath?: string };
+        if (parsed.filePath) {
+          files.push(parsed.filePath);
         }
-        // 匹配 edit_note 的结果: "文件: xxx.md\n已生成 N 处修改"
-        const editMatch = content.match(/<tool_result name="edit_note">\s*文件: ([^\n<]+)/);
-        if (editMatch) {
-          files.push(editMatch[1].trim());
-        }
+      } catch {
+        // ignore malformed tool payloads
       }
     }
     return [...new Set(files)]; // 去重

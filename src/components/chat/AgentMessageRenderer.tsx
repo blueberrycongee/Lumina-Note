@@ -11,7 +11,6 @@ import { useState, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
-import { Message } from "@/agent/types";
 import type { MessageContent, TextContent } from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
@@ -51,6 +50,13 @@ interface ToolCallInfo {
   result?: string;
   success?: boolean;
 }
+
+type AgentMessage = {
+  role: "user" | "assistant" | "system" | "tool";
+  content: MessageContent;
+  agent?: string;
+  id?: string;
+};
 
 type TimelinePart =
   | { type: "text"; content: string }
@@ -258,6 +264,36 @@ function formatMarkdownContent(content: string): string {
  * 格式化工具参数为可读形式
  */
 function formatToolParams(params: string): string {
+  const trimmed = params.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      const parts: string[] = [];
+      const filePath = parsed.filePath ?? parsed.path;
+      if (typeof filePath === "string" && filePath) {
+        parts.push(`文件: ${filePath}`);
+      }
+      const directory = parsed.directory ?? parsed.dir;
+      if (typeof directory === "string" && directory) {
+        parts.push(`目录: ${directory}`);
+      }
+      if (typeof parsed.url === "string") {
+        parts.push(`URL: ${parsed.url}`);
+      }
+      if (typeof parsed.query === "string") {
+        parts.push(`查询: ${parsed.query}`);
+      }
+      if (typeof parsed.pattern === "string") {
+        parts.push(`模式: ${parsed.pattern}`);
+      }
+      if (parts.length > 0) {
+        return parts.join(" | ");
+      }
+      return JSON.stringify(parsed).slice(0, 100);
+    } catch {
+      // fall through to legacy parsing
+    }
+  }
   const parts: string[] = [];
 
   const dirMatch = params.match(/<directory>([^<]*)<\/directory>/);
@@ -284,19 +320,19 @@ function formatToolParams(params: string): string {
  */
 function getToolSummary(name: string, params: string, result?: string): string {
   // 优先从参数中提取关键信息
-  if (name === "list_notes") {
+  if (name === "list") {
     const dirMatch = params.match(/目录:\s*([^\s|]+)/);
     if (dirMatch) return `目录: ${dirMatch[1] || "/"}`;
   }
-  if (name === "read_note") {
+  if (name === "read") {
     const fileMatch = params.match(/文件:\s*([^\s|]+)/);
     if (fileMatch) return `文件: ${fileMatch[1]}`;
   }
-  if (name === "create_note" || name === "edit_note") {
+  if (name === "write" || name === "edit") {
     const fileMatch = params.match(/文件:\s*([^\s|]+)/);
     if (fileMatch) return `文件: ${fileMatch[1]}`;
   }
-  if (name === "search_notes" || name === "grep_search" || name === "semantic_search") {
+  if (name === "grep" || name === "glob" || name === "fetch") {
     // 搜索工具显示搜索关键词
     return params.slice(0, 30) + (params.length > 30 ? "..." : "");
   }
@@ -319,6 +355,26 @@ function getToolSummary(name: string, params: string, result?: string): string {
  */
 function decodeHtmlEntities(str: string): string {
   return str.replace(/&quot;/g, '"').replace(/&amp;/g, "&");
+}
+
+function parseToolMessage(content: string): { tool: ToolCallInfo; isStart: boolean } | null {
+  const match = content.match(/^(🔧|✅|❌)\s+(\w+):\s*([\s\S]*)$/);
+  if (!match) return null;
+  const symbol = match[1];
+  const name = match[2];
+  const payload = match[3].trim();
+  if (symbol === "🔧") {
+    return { tool: { name, params: formatToolParams(payload) }, isStart: true };
+  }
+  return {
+    tool: {
+      name,
+      params: "",
+      result: payload,
+      success: symbol === "✅",
+    },
+    isStart: false,
+  };
 }
 
 /**
@@ -450,7 +506,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
 // ============ 主组件 ============
 
 interface AgentMessageRendererProps {
-  messages: Message[];
+  messages: AgentMessage[];
   isRunning: boolean;
   className?: string;
   // 超时检测（LLM 请求级别）
@@ -552,6 +608,22 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           continue;
         }
 
+        if (msg.role === "tool") {
+          const parsed = parseToolMessage(content);
+          if (parsed) {
+            if (!parsed.isStart && lastToolCall.current && lastToolCall.current.name === parsed.tool.name && !lastToolCall.current.result) {
+              lastToolCall.current.result = parsed.tool.result;
+              lastToolCall.current.success = parsed.tool.success;
+            } else {
+              parts.push({ type: "tool", tool: parsed.tool });
+              if (parsed.isStart) {
+                lastToolCall.current = parsed.tool;
+              }
+            }
+          }
+          continue;
+        }
+
         if (msg.role === "user" && shouldSkipUserMessage(content)) {
           appendPartsFromContent(content, parts, lastToolCall, false);
         }
@@ -560,7 +632,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       if (pendingDiff && !pendingDiffInserted) {
         for (let i = 0; i < parts.length; i++) {
           const part = parts[i];
-          if (part.type === "tool" && part.tool.name === "edit_note") {
+          if (part.type === "tool" && part.tool.name === "edit") {
             lastEditNoteIndex = i;
           }
         }

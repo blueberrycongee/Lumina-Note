@@ -4,103 +4,25 @@
 //! 
 //! 使用 Forge LoopNode 构建和执行 Agent 循环
 
+use crate::agent::deep_research::{
+    build_deep_research_graph, DeepResearchConfig, DeepResearchContext, DeepResearchEvent,
+    DeepResearchRequest, DeepResearchState, ResearchPhase,
+};
 use crate::agent::forge_loop::{build_runtime, run_forge_loop, ForgeRunResult, ForgeRuntime, TauriEventSink};
 use crate::agent::skills::{list_skills, read_skill, SkillDetail, SkillInfo};
 use crate::agent::types::*;
-use crate::agent::deep_research::{
-    DeepResearchConfig, DeepResearchRequest, DeepResearchState,
-    DeepResearchContext, DeepResearchEvent, ResearchPhase,
-    build_deep_research_graph,
-};
 use crate::forge_runtime::permissions::{default_ruleset, PermissionRule, PermissionSession as LocalPermissionSession};
+use crate::langgraph::error::ResumeCommand;
+use crate::langgraph::executor::{Checkpoint, ExecutionResult};
 use forge::runtime::cancel::CancellationToken;
 use forge::runtime::error::Interrupt;
 use forge::runtime::event::{Event, EventSink, PermissionReply};
 use forge::runtime::permission::PermissionDecision;
 use forge::runtime::session_state::RunStatus;
-use crate::langgraph::executor::{Checkpoint, ExecutionResult};
-use crate::langgraph::error::ResumeCommand;
-use tauri::{AppHandle, Emitter, State};
 use std::sync::Arc;
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
-
-/// 工具审批响应
-#[derive(Debug, Clone)]
-pub struct ToolApprovalResponse {
-    pub approved: bool,
-}
-
-/// 全局审批通道管理器
-/// 使用 lazy_static 实现全局单例
-use once_cell::sync::Lazy;
-
-static APPROVAL_MANAGER: Lazy<ApprovalManager> = Lazy::new(ApprovalManager::new);
-
-/// 审批管理器
-pub struct ApprovalManager {
-    /// 工具审批通道：用于等待用户审批
-    approval_sender: Arc<Mutex<Option<tokio::sync::oneshot::Sender<ToolApprovalResponse>>>>,
-    /// 当前等待审批的请求 ID
-    pending_approval_id: Arc<Mutex<Option<String>>>,
-}
-
-impl ApprovalManager {
-    pub fn new() -> Self {
-        Self {
-            approval_sender: Arc::new(Mutex::new(None)),
-            pending_approval_id: Arc::new(Mutex::new(None)),
-        }
-    }
-    
-    /// 获取全局实例
-    pub fn global() -> &'static ApprovalManager {
-        &APPROVAL_MANAGER
-    }
-    
-    /// 设置审批通道
-    pub async fn set_approval_channel(
-        &self,
-        request_id: String,
-        sender: tokio::sync::oneshot::Sender<ToolApprovalResponse>,
-    ) {
-        let mut approval_sender = self.approval_sender.lock().await;
-        let mut pending_id = self.pending_approval_id.lock().await;
-        *approval_sender = Some(sender);
-        *pending_id = Some(request_id);
-    }
-    
-    /// 发送审批响应
-    pub async fn send_approval(&self, request_id: &str, approved: bool) -> Result<(), String> {
-        let mut approval_sender = self.approval_sender.lock().await;
-        let mut pending_id = self.pending_approval_id.lock().await;
-        
-        // 验证请求 ID
-        if pending_id.as_deref() != Some(request_id) {
-            return Err(format!(
-                "Request ID mismatch: expected {:?}, got {}",
-                *pending_id, request_id
-            ));
-        }
-        
-        if let Some(sender) = approval_sender.take() {
-            sender.send(ToolApprovalResponse { approved })
-                .map_err(|_| "Failed to send approval response".to_string())?;
-            *pending_id = None;
-            Ok(())
-        } else {
-            Err("No pending approval".to_string())
-        }
-    }
-    
-    /// 清除审批状态
-    pub async fn clear_approval(&self) {
-        let mut approval_sender = self.approval_sender.lock().await;
-        let mut pending_id = self.pending_approval_id.lock().await;
-        *approval_sender = None;
-        *pending_id = None;
-    }
-}
 
 #[derive(Clone)]
 struct ForgeRuntimeState {
@@ -245,9 +167,6 @@ pub async fn agent_abort(
     app: AppHandle,
     state: State<'_, AgentState>,
 ) -> Result<(), String> {
-    // 清除审批状态
-    ApprovalManager::global().clear_approval().await;
-
     let runtime = { state.runtime.lock().await.clone() };
     if let Some(runtime) = runtime {
         runtime.cancel.cancel("user aborted");
