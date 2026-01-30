@@ -17,7 +17,7 @@
       "resources/skills/**/*"
     ],
     "macOS": {
-      "infoPlistPath": "Info.plist"
+      "infoPlist": "Info.plist"
     },
     "icon": [
       "icons/32x32.png",
