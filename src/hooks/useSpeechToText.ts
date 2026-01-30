@@ -5,6 +5,14 @@ type SpeechToTextOptions = {
   silenceDurationMs?: number;
 };
 
+const isMacSpeechBlockedInDev = () => {
+  if (!import.meta.env.DEV) return false;
+  if (typeof navigator === "undefined") return false;
+  const isMac = /Mac/i.test(navigator.userAgent);
+  const isDevServer = window.location.protocol.startsWith("http");
+  return isMac && isDevServer;
+};
+
 /**
  * 语音转文字 Hook，基于 Web Speech API。
  * 支持流式显示中间结果和最终结果追加。
@@ -89,7 +97,16 @@ export function useSpeechToText(
       setInterimText("");
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event: any) => {
+      const reason = event?.error;
+      if (reason === "not-allowed" || reason === "service-not-allowed") {
+        alert("语音输入需要开启麦克风和语音识别权限，请在系统设置中授权。");
+      } else if (reason === "audio-capture") {
+        alert("未检测到麦克风设备，请检查麦克风连接或系统设置。");
+      } else if (reason === "network") {
+        alert("语音识别需要联网，请检查网络连接。");
+      }
+      console.error("Speech recognition error:", reason || event);
       clearSilenceTimer();
       setIsRecording(false);
       setInterimText("");
@@ -103,8 +120,25 @@ export function useSpeechToText(
     };
   }, [resetSilenceTimer, clearSilenceTimer]);
 
-  const toggleRecording = useCallback(() => {
+  const ensureMicPermission = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (err) {
+      console.error("Microphone permission denied", err);
+      alert("无法获取麦克风权限，请在系统设置中允许麦克风访问。");
+      return false;
+    }
+  }, []);
+
+  const toggleRecording = useCallback(async () => {
     const recognition = recognitionRef.current;
+    if (isMacSpeechBlockedInDev()) {
+      alert("macOS 开发模式下语音识别会触发系统崩溃，请使用打包后的 .app 测试语音输入。");
+      return;
+    }
     if (!recognition) {
       alert("当前环境不支持语音输入");
       return;
@@ -116,6 +150,11 @@ export function useSpeechToText(
       setIsRecording(false);
     } else {
       try {
+        const ok = await ensureMicPermission();
+        if (!ok) {
+          setIsRecording(false);
+          return;
+        }
         recognition.start();
         setIsRecording(true);
         // 开始录音时启动静音计时器，如果一直没说话也会自动停止
@@ -125,7 +164,7 @@ export function useSpeechToText(
         setIsRecording(false);
       }
     }
-  }, [isRecording, clearSilenceTimer, resetSilenceTimer]);
+  }, [isRecording, clearSilenceTimer, resetSilenceTimer, ensureMicPermission]);
 
   return { isRecording, interimText, toggleRecording };
 }

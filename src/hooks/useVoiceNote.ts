@@ -4,6 +4,14 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { callLLM, type Message } from "@/services/llm";
 
+const isMacSpeechBlockedInDev = () => {
+  if (!import.meta.env.DEV) return false;
+  if (typeof navigator === "undefined") return false;
+  const isMac = /Mac/i.test(navigator.userAgent);
+  const isDevServer = window.location.protocol.startsWith("http");
+  return isMac && isDevServer;
+};
+
 /**
  * 语音笔记 Hook
  * 持续录音，结束后保存为 markdown 文件并自动生成 AI 总结
@@ -104,6 +112,13 @@ export function useVoiceNote() {
         resetSilenceTimer();
         return;
       }
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        alert("语音输入需要开启麦克风和语音识别权限，请在系统设置中授权。");
+      } else if (event.error === "audio-capture") {
+        alert("未检测到麦克风设备，请检查麦克风连接或系统设置。");
+      } else if (event.error === "network") {
+        alert("语音识别需要联网，请检查网络连接。");
+      }
       setIsRecording(false);
       setStatus("idle");
     };
@@ -170,8 +185,25 @@ export function useVoiceNote() {
   }, [config]);
 
   // 开始录音
-  const startRecording = useCallback(() => {
+  const ensureMicPermission = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      return true;
+    } catch (err) {
+      console.error("Microphone permission denied", err);
+      alert("无法获取麦克风权限，请在系统设置中允许麦克风访问。");
+      return false;
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
     const recognition = recognitionRef.current;
+    if (isMacSpeechBlockedInDev()) {
+      alert("macOS 开发模式下语音识别会触发系统崩溃，请使用打包后的 .app 测试语音输入。");
+      return;
+    }
     if (!recognition) {
       alert("当前环境不支持语音输入");
       return;
@@ -188,6 +220,12 @@ export function useVoiceNote() {
     setStatus("recording");
     
     try {
+      const ok = await ensureMicPermission();
+      if (!ok) {
+        setIsRecording(false);
+        setStatus("idle");
+        return;
+      }
       recognition._shouldContinue = true;
       recognition.start();
       setIsRecording(true);
@@ -197,7 +235,7 @@ export function useVoiceNote() {
       setIsRecording(false);
       setStatus("idle");
     }
-  }, [vaultPath, resetSilenceTimer]);
+  }, [vaultPath, resetSilenceTimer, ensureMicPermission]);
 
   // 停止录音并保存
   const stopRecording = useCallback(async () => {
