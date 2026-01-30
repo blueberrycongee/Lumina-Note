@@ -10,6 +10,8 @@ import { persist } from "zustand/middleware";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getAIConfig } from "@/services/ai/ai";
+import { callLLM, PROVIDER_REGISTRY, type Message as LLMMessage } from "@/services/llm";
+import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { SelectedSkill } from "@/types/skills";
 
 // ============ 类型定义 ============
@@ -178,6 +180,108 @@ export interface AgentConfig {
   locale?: string;
 }
 
+// ============ Context Compaction ============
+
+const SUMMARY_MESSAGE_ID = "rust-session-summary";
+const AUTO_COMPACT_RATIO = 0.95;
+const SUMMARY_KEEP_MESSAGES = 6;
+const SUMMARY_MAX_CHARS_PER_MESSAGE = 4000;
+const SUMMARY_MAX_TOTAL_CHARS = 120000;
+const SUMMARY_MAX_OUTPUT_TOKENS = 1200;
+
+function resolveCompactionConfig() {
+  const config = getAIConfig();
+  const routing = config.routing;
+  const shouldFallback = Boolean(
+    routing?.enabled &&
+    routing.chatProvider &&
+    (!config.apiKey || !config.provider || !config.model)
+  );
+
+  if (!shouldFallback) {
+    return {
+      provider: config.provider,
+      apiKey: config.apiKey,
+      model: config.model,
+      customModelId: config.customModelId,
+      baseUrl: config.baseUrl,
+    };
+  }
+
+  const isCustom = routing?.chatModel === "custom" && routing.chatCustomModelId;
+  return {
+    provider: routing!.chatProvider!,
+    apiKey: routing?.chatApiKey || config.apiKey,
+    model: isCustom ? routing!.chatCustomModelId! : (routing?.chatModel || config.model),
+    customModelId: isCustom ? routing!.chatCustomModelId : undefined,
+    baseUrl: routing?.chatBaseUrl || config.baseUrl,
+  };
+}
+
+function resolveModelContextWindow(resolvedConfig: ReturnType<typeof resolveCompactionConfig>) {
+  const providerMeta = PROVIDER_REGISTRY[resolvedConfig.provider];
+  if (!providerMeta) return null;
+
+  const modelId = resolvedConfig.model === "custom" && resolvedConfig.customModelId
+    ? resolvedConfig.customModelId
+    : resolvedConfig.model;
+  const modelMeta = providerMeta.models.find(model => model.id === modelId);
+  if (modelMeta?.contextWindow) return modelMeta.contextWindow;
+
+  const fallback = providerMeta.models.find(model => model.id === "custom");
+  return fallback?.contextWindow ?? null;
+}
+
+function truncateContent(content: string, maxChars: number) {
+  if (content.length <= maxChars) return content;
+  return content.slice(0, maxChars) + "...";
+}
+
+function formatMessagesForSummary(messages: Message[]) {
+  const entries = messages.map((msg) => {
+    const role = msg.role.toUpperCase();
+    const content = truncateContent(String(msg.content ?? ""), SUMMARY_MAX_CHARS_PER_MESSAGE);
+    return `[${role}] ${content}`.trim();
+  });
+
+  let total = 0;
+  const kept: string[] = [];
+  for (let i = entries.length - 1; i >= 0; i -= 1) {
+    const entry = entries[i];
+    if (total + entry.length > SUMMARY_MAX_TOTAL_CHARS) {
+      continue;
+    }
+    kept.push(entry);
+    total += entry.length;
+  }
+  kept.reverse();
+  return kept.join("\n\n");
+}
+
+function splitMessagesForCompaction(messages: Message[]) {
+  const summaryMessage = messages.find(msg => msg.id === SUMMARY_MESSAGE_ID) ?? null;
+  const withoutSummary = messages.filter(msg => msg.id !== SUMMARY_MESSAGE_ID);
+  if (withoutSummary.length <= SUMMARY_KEEP_MESSAGES) {
+    return {
+      summaryMessage,
+      toSummarize: [] as Message[],
+      tail: withoutSummary,
+    };
+  }
+
+  const tail = withoutSummary.slice(-SUMMARY_KEEP_MESSAGES);
+  const toSummarize = withoutSummary.slice(0, -SUMMARY_KEEP_MESSAGES);
+  return { summaryMessage, toSummarize, tail };
+}
+
+function shouldAutoCompact(tokensTotal: number) {
+  if (tokensTotal <= 0) return false;
+  const resolvedConfig = resolveCompactionConfig();
+  const contextWindow = resolveModelContextWindow(resolvedConfig);
+  if (!contextWindow) return false;
+  return tokensTotal / contextWindow >= AUTO_COMPACT_RATIO;
+}
+
 // ============ 任务统计 ============
 
 export interface TaskStats {
@@ -222,6 +326,10 @@ interface RustAgentState {
   
   // 配置
   autoApprove: boolean;
+  autoCompactEnabled: boolean;
+  pendingCompaction: boolean;
+  isCompacting: boolean;
+  lastTokenUsage: { input: number; output: number; total: number } | null;
   
   // 调试模式
   debugEnabled: boolean;
@@ -243,6 +351,7 @@ interface RustAgentState {
   abort: () => Promise<void>;
   clearChat: () => void;
   setAutoApprove: (value: boolean) => void;
+  setAutoCompactEnabled: (value: boolean) => void;
   
   // 工具审批操作（新增）
   approveTool: () => Promise<void>;
@@ -265,6 +374,7 @@ interface RustAgentState {
   _handleEvent: (event: { type: string; data: unknown }) => void;
   _setupListeners: () => Promise<UnlistenFn | null>;
   _saveCurrentSession: () => void;
+  _compactSession: () => Promise<void>;
 }
 
 // ============ Store 实现 ============
@@ -282,6 +392,10 @@ export const useRustAgentStore = create<RustAgentState>()(
       streamingAgent: "coordinator",
       totalTokensUsed: 0,
       autoApprove: false,
+      autoCompactEnabled: true,
+      pendingCompaction: false,
+      isCompacting: false,
+      lastTokenUsage: null,
       
       // 任务统计初始状态
       taskStats: {
@@ -449,12 +563,23 @@ export const useRustAgentStore = create<RustAgentState>()(
           currentPlan: null,
           error: null,
           streamingContent: "",
+          pendingCompaction: false,
+          isCompacting: false,
+          lastTokenUsage: null,
         });
       },
 
       // 设置自动审批
       setAutoApprove: (value: boolean) => {
         set({ autoApprove: value });
+      },
+
+      // 设置自动压缩
+      setAutoCompactEnabled: (value: boolean) => {
+        set({
+          autoCompactEnabled: value,
+          pendingCompaction: value ? get().pendingCompaction : false,
+        });
       },
       
       // 审批工具调用（新增）
@@ -551,6 +676,9 @@ export const useRustAgentStore = create<RustAgentState>()(
           currentPlan: null,
           lastIntent: null,
           streamingContent: "",
+          pendingCompaction: false,
+          isCompacting: false,
+          lastTokenUsage: null,
         });
       },
 
@@ -572,6 +700,9 @@ export const useRustAgentStore = create<RustAgentState>()(
           currentPlan: null,
           lastIntent: null,
           streamingContent: "",
+          pendingCompaction: false,
+          isCompacting: false,
+          lastTokenUsage: null,
         });
       },
 
@@ -589,6 +720,9 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: firstSession.id,
               messages: firstSession.messages,
               totalTokensUsed: firstSession.totalTokensUsed,
+              pendingCompaction: false,
+              isCompacting: false,
+              lastTokenUsage: null,
             });
           } else {
             // 没有会话了，创建一个新的
@@ -605,6 +739,9 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: newSession.id,
               messages: [],
               totalTokensUsed: 0,
+              pendingCompaction: false,
+              isCompacting: false,
+              lastTokenUsage: null,
             });
           }
         } else {
@@ -642,6 +779,70 @@ export const useRustAgentStore = create<RustAgentState>()(
             ),
           };
         });
+      },
+
+      // 自动压缩上下文
+      _compactSession: async () => {
+        const { autoCompactEnabled, pendingCompaction, isCompacting } = get();
+        if (!autoCompactEnabled || !pendingCompaction || isCompacting) return;
+
+        set({ isCompacting: true });
+
+        try {
+          const { summaryMessage, toSummarize, tail } = splitMessagesForCompaction(get().messages);
+          if (toSummarize.length === 0) {
+            set({ isCompacting: false, pendingCompaction: false });
+            return;
+          }
+
+          const summarySeed = summaryMessage ? [summaryMessage, ...toSummarize] : toSummarize;
+          const summarySource = formatMessagesForSummary(summarySeed);
+          if (!summarySource.trim()) {
+            set({ isCompacting: false, pendingCompaction: false });
+            return;
+          }
+
+          const t = getCurrentTranslations();
+          const systemPrompt = t.prompts.contextSummary.system;
+          const configOverride = resolveCompactionConfig();
+
+          const response = await callLLM(
+            [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: summarySource },
+            ] as LLMMessage[],
+            { maxTokens: SUMMARY_MAX_OUTPUT_TOKENS, temperature: 0.2 },
+            configOverride
+          );
+
+          const summaryText = response.content?.trim();
+          if (!summaryText) {
+            set({ isCompacting: false, pendingCompaction: false });
+            return;
+          }
+
+          const summaryTitle = t.ai.contextSummaryTitle || "Context Summary";
+          const summaryContent = `[${summaryTitle}]\n${summaryText}`;
+          const nextMessages: Message[] = [
+            {
+              role: "assistant",
+              content: summaryContent,
+              agent: "coordinator",
+              id: SUMMARY_MESSAGE_ID,
+            },
+            ...tail,
+          ];
+
+          set({
+            messages: nextMessages,
+            isCompacting: false,
+            pendingCompaction: false,
+          });
+          get()._saveCurrentSession();
+        } catch (error) {
+          console.error("[RustAgent] Context compaction failed:", error);
+          set({ isCompacting: false, pendingCompaction: true });
+        }
       },
 
       // 处理事件
@@ -686,6 +887,7 @@ export const useRustAgentStore = create<RustAgentState>()(
 
           case "run_completed": {
             set({ status: "completed" });
+            void get()._compactSession();
             break;
           }
 
@@ -842,9 +1044,20 @@ export const useRustAgentStore = create<RustAgentState>()(
 
           case "step_finish": {
             const { tokens } = event.data as { tokens?: { input?: number; output?: number } };
-            const added = (tokens?.input ?? 0) + (tokens?.output ?? 0);
+            const inputTokens = tokens?.input ?? 0;
+            const outputTokens = tokens?.output ?? 0;
+            const added = inputTokens + outputTokens;
             if (added > 0) {
-              set({ totalTokensUsed: state.totalTokensUsed + added });
+              const shouldCompact = state.autoCompactEnabled && shouldAutoCompact(added);
+              set({
+                totalTokensUsed: state.totalTokensUsed + added,
+                lastTokenUsage: {
+                  input: inputTokens,
+                  output: outputTokens,
+                  total: added,
+                },
+                pendingCompaction: state.pendingCompaction || shouldCompact,
+              });
             }
             break;
           }
@@ -989,6 +1202,7 @@ export const useRustAgentStore = create<RustAgentState>()(
                 // 保存到会话
                 get()._saveCurrentSession();
                 console.log("[RustAgent] Added complete message");
+                void get()._compactSession();
               } else {
                 // 只清空流式内容，但仍然计入完成
                 set({ 
@@ -1001,6 +1215,7 @@ export const useRustAgentStore = create<RustAgentState>()(
                 // 仍然保存会话
                 get()._saveCurrentSession();
                 console.log("[RustAgent] Skipped duplicate message");
+                void get()._compactSession();
               }
             }
             break;
@@ -1093,6 +1308,7 @@ export const useRustAgentStore = create<RustAgentState>()(
       name: "rust-agent-storage",
       partialize: (state) => ({
         autoApprove: state.autoApprove,
+        autoCompactEnabled: state.autoCompactEnabled,
         sessions: state.sessions,
         currentSessionId: state.currentSessionId,
         // 持久化累计统计

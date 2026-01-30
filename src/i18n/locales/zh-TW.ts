@@ -109,6 +109,7 @@ export default {
       translatePrompt: '請將以下內容翻譯成英文：\n\n翻譯要求：\n1. 準確傳達原文含義\n2. 使用地道的英文表達\n3. 保持原文的語氣和風格\n4. 注意專業術語的準確性\n5. 確保語法正確，表達自然\n\n原文：\n',
     },
     thinking: '思考中...',
+    contextSummaryTitle: '上下文摘要',
     askAnything: '問任何問題...',
     settings: 'AI 設定',
     agentMode: 'Agent 模式 - 智慧任務執行',
@@ -299,6 +300,8 @@ export default {
     agentSettings: 'Agent 設定',
     autoApproveTools: '自動批准工具調用',
     noManualConfirm: '無需手動確認',
+    autoCompactContext: '自動壓縮上下文',
+    autoCompactHint: '接近上下文上限時自動生成摘要並保留目前會話 (95%)',
     semanticSearch: '語義搜尋 (RAG)',
     enable: '啟用',
     embeddingService: 'Embedding 服務',
@@ -870,6 +873,18 @@ export default {
 4) **不要**使用過去式或聲稱任何動作已經完成（不要輸出「已刪除」、「已完成」、「已成功」等）；
 5) 輸出必須是請求/任務形式，例如「刪除檔案 foo.md 的末尾總結部分」或「將 xxx 合併到 yyy」；
 6) 只輸出改寫後的單句（不要添加解釋、前綴或多餘標點）。`,
+    },
+
+    // 上下文壓縮提示詞
+    contextSummary: {
+      system: `你是對話上下文壓縮助手。請把對話壓縮成便於繼續協作的摘要。
+
+要求：
+1) 保留使用者目標、關鍵決策、約束、偏好與重要細節
+2) 記錄關鍵檔案/路徑/命令/設定/資料
+3) 列出未完成事項與下一步
+4) 若已有舊摘要，請在其基礎上更新
+5) 輸出簡潔、分條，使用繁體中文`,
     },
   },
 };

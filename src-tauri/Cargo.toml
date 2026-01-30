@@ -31,7 +31,7 @@ trash = "5"
 base64 = "0.22"
 regex = "1.10"
 globset = "0.4"
-forge = { git = "https://github.com/blueberrycongee/forge", rev = "dca3d8dbbdb0cdf7061eee827b1c298b0bbc8c3c" }
+forge = { git = "https://github.com/blueberrycongee/forge", rev = "7f2b5291cac2e209c1faee687720771c4db0e180" }
 
 # CEF Integration (Chromium Embedded Framework)
 # Note: CEF requires Ninja build tool to compile

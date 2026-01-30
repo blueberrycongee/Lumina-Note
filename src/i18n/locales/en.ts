@@ -109,6 +109,7 @@ export default {
       translatePrompt: 'Please translate the following content to Chinese:\n\nTranslation requirements:\n1. Accurately convey the original meaning\n2. Use authentic Chinese expressions\n3. Maintain the tone and style of the original\n4. Pay attention to the accuracy of technical terms\n5. Ensure correct grammar and natural expression\n\nOriginal text:\n',
     },
     thinking: 'Thinking...',
+    contextSummaryTitle: 'Context Summary',
     askAnything: 'Ask anything...',
     settings: 'AI Settings',
     agentMode: 'Agent Mode - Smart Task Execution',
@@ -405,6 +406,8 @@ export default {
     agentSettings: 'Agent Settings',
     autoApproveTools: 'Auto-approve tool calls',
     noManualConfirm: 'No manual confirmation needed',
+    autoCompactContext: 'Auto-compact context',
+    autoCompactHint: 'Auto-generate a summary near the context limit and keep the session (95%)',
     semanticSearch: 'Semantic Search (RAG)',
     enable: 'Enable',
     embeddingService: 'Embedding Service',
@@ -870,6 +873,18 @@ Output only JSON: {"type": "<chat|search|create|edit|organize|flashcard|complex>
 4) **Do not** use past tense or claim any action has been completed (no "deleted", "completed", "succeeded", etc.);
 5) Output must be in request/task form, e.g., "delete the summary section at the end of foo.md" or "merge xxx into yyy";
 6) Output only the rewritten single sentence (no explanations, prefixes, or extra punctuation).`,
+    },
+
+    // Context compaction prompts
+    contextSummary: {
+      system: `You are a conversation compaction assistant. Compress the dialogue into a summary that allows work to continue.
+
+Requirements:
+1) Preserve user goals, key decisions, constraints, preferences, and important details
+2) Record key files/paths/commands/config/data
+3) List unfinished items and next steps
+4) If an older summary exists, update it
+5) Keep it concise, bullet-style, in English`,
     },
   },
 };

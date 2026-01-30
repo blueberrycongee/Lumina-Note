@@ -39,7 +39,7 @@ interface AISettingsModalProps {
 
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { config, setConfig } = useAIStore();
-  const { autoApprove, setAutoApprove } = useRustAgentStore();
+  const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useRustAgentStore();
   const {
     config: ragConfig,
     setConfig: setRAGConfig,
@@ -665,6 +665,18 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               />
               {t.aiSettings.autoApproveTools}
               <span className="text-muted-foreground">({t.aiSettings.noManualConfirm})</span>
+            </label>
+            <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoCompactEnabled}
+                onChange={(e) => setAutoCompactEnabled(e.target.checked)}
+                className="w-3 h-3 rounded border-border mt-0.5"
+              />
+              <div className="flex flex-col gap-0.5">
+                <span>{t.aiSettings.autoCompactContext}</span>
+                <span className="text-[10px] text-muted-foreground">{t.aiSettings.autoCompactHint}</span>
+              </div>
             </label>
           </div>
 

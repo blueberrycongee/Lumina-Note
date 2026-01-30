@@ -1053,7 +1053,7 @@ checksum = "aa9a19cbb55df58761df49b23516a86d432839add4af60fc256da840f66ed35b"
 [[package]]
 name = "forge"
 version = "0.1.0"
-source = "git+https://github.com/blueberrycongee/forge?rev=dca3d8dbbdb0cdf7061eee827b1c298b0bbc8c3c#dca3d8dbbdb0cdf7061eee827b1c298b0bbc8c3c"
+source = "git+https://github.com/blueberrycongee/forge?rev=7f2b5291cac2e209c1faee687720771c4db0e180#7f2b5291cac2e209c1faee687720771c4db0e180"
 dependencies = [
  "chrono",
  "serde",
@@ -1765,7 +1765,7 @@ dependencies = [
  "js-sys",
  "log",
  "wasm-bindgen",
- "windows-core 0.62.2",
+ "windows-core 0.56.0",
 ]
 
 [[package]]
@@ -5899,19 +5899,6 @@ dependencies = [
  "windows-link 0.1.3",
  "windows-result 0.3.4",
  "windows-strings 0.4.2",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.62.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8e83a14d34d0623b51dce9581199302a221863196a1dde71a7663a4c2be9deb"
-dependencies = [
- "windows-implement 0.60.2",
- "windows-interface 0.59.3",
- "windows-link 0.2.1",
- "windows-result 0.4.1",
- "windows-strings 0.5.1",
 ]
 
 [[package]]

@@ -109,6 +109,7 @@ export default {
       translatePrompt: '请将以下内容翻译成英文：\n\n翻译要求：\n1. 准确传达原文含义\n2. 使用地道的英文表达\n3. 保持原文的语气和风格\n4. 注意专业术语的准确性\n5. 确保语法正确，表达自然\n\n原文：\n',
     },
     thinking: '思考中...',
+    contextSummaryTitle: '上下文摘要',
     askAnything: '问任何问题...',
     settings: 'AI 设置',
     agentMode: 'Agent 模式 - 智能任务执行',
@@ -405,6 +406,8 @@ export default {
     agentSettings: 'Agent 设置',
     autoApproveTools: '自动批准工具调用',
     noManualConfirm: '无需手动确认',
+    autoCompactContext: '自动压缩上下文',
+    autoCompactHint: '接近上下文上限时自动生成摘要并保留当前会话 (95%)',
     semanticSearch: '语义搜索 (RAG)',
     enable: '启用',
     embeddingService: 'Embedding 服务',
@@ -871,6 +874,18 @@ export default {
 4) **不要**使用过去时或声称任何动作已经完成（不要输出"已删除"、"已完成"、"已成功"等）；
 5) 输出必须是请求/任务形式，例如"删除文件 foo.md 的末尾总结部分"或"将 xxx 合并到 yyy"；
 6) 只输出改写后的单句（不要添加解释、前缀或多余标点）。`,
+    },
+
+    // 上下文压缩提示词
+    contextSummary: {
+      system: `你是一个对话上下文压缩助手。请把对话压缩成便于继续协作的摘要。
+
+要求：
+1) 保留用户目标、关键决策、约束、偏好和重要细节
+2) 记录关键文件/路径/命令/配置/数据
+3) 列出未完成事项与下一步
+4) 若已有旧摘要，请在其基础上更新
+5) 输出简洁、分条，使用中文`,
     },
   },
 };

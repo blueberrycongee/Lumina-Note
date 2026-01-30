@@ -109,6 +109,7 @@ export default {
       translatePrompt: '以下の内容を中国語に翻訳してください：\n\n翻訳要求：\n1. 原文の意味を正確に伝達\n2. 自然な中国語表現を使用\n3. 原文の語調とスタイルを保持\n4. 専門用語の正確性に注意\n5. 文法が正しく、自然な表現を確保\n\n原文：\n',
     },
     thinking: '考え中...',
+    contextSummaryTitle: 'コンテキスト要約',
     askAnything: '何でも質問してください...',
     settings: 'AI 設定',
     agentMode: 'Agent モード - スマートタスク実行',
@@ -299,6 +300,8 @@ export default {
     agentSettings: 'Agent 設定',
     autoApproveTools: 'ツール呼び出しを自動承認',
     noManualConfirm: '手動確認不要',
+    autoCompactContext: 'コンテキストを自動圧縮',
+    autoCompactHint: 'コンテキスト上限に近づくと自動で要約し、同じセッションに保持します (95%)',
     semanticSearch: 'セマンティック検索 (RAG)',
     enable: '有効',
     embeddingService: 'Embedding サービス',
@@ -870,6 +873,18 @@ JSONのみを出力：{"type": "<chat|search|create|edit|organize|flashcard|comp
 4) 過去形を使用したり、アクションが完了したと主張しないでください
 5) 出力はリクエスト/タスク形式である必要があります
 6) 書き換えられた単一の文のみを出力してください`,
+    },
+
+    // コンテキスト圧縮プロンプト
+    contextSummary: {
+      system: `あなたは会話コンテキストの圧縮アシスタントです。作業を継続できる要約に圧縮してください。
+
+要件：
+1) ユーザー目標、重要な決定、制約、嗜好、重要な詳細を保持
+2) 重要なファイル/パス/コマンド/設定/データを記録
+3) 未完了事項と次のステップを列挙
+4) 既存の要約がある場合は更新
+5) 簡潔な箇条書き、日本語で出力`,
     },
   },
 };
