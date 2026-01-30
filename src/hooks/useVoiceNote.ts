@@ -4,6 +4,14 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { callLLM, type Message } from "@/services/llm";
 
+const isMacSpeechBlockedInDev = () => {
+  if (!import.meta.env.DEV) return false;
+  if (typeof navigator === "undefined") return false;
+  const isMac = /Mac/i.test(navigator.userAgent);
+  const isDevServer = window.location.protocol.startsWith("http");
+  return isMac && isDevServer;
+};
+
 /**
  * 语音笔记 Hook
  * 持续录音，结束后保存为 markdown 文件并自动生成 AI 总结
@@ -192,6 +200,10 @@ export function useVoiceNote() {
 
   const startRecording = useCallback(async () => {
     const recognition = recognitionRef.current;
+    if (isMacSpeechBlockedInDev()) {
+      alert("macOS 开发模式下语音识别会触发系统崩溃，请使用打包后的 .app 测试语音输入。");
+      return;
+    }
     if (!recognition) {
       alert("当前环境不支持语音输入");
       return;
