@@ -202,6 +202,11 @@ export const useFileStore = create<FileState>()(
         try {
           const tree = await listDirectory(path);
           set({ fileTree: tree, isLoadingTree: false });
+          try {
+            await invoke("mobile_set_workspace", { workspace_path: path });
+          } catch (error) {
+            console.warn("Failed to sync mobile workspace:", error);
+          }
         } catch (error) {
           console.error("Failed to load vault:", error);
           set({ isLoadingTree: false });

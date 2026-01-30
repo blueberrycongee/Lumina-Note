@@ -32,6 +32,8 @@ base64 = "0.22"
 regex = "1.10"
 globset = "0.4"
 forge = { git = "https://github.com/blueberrycongee/forge", rev = "dca3d8dbbdb0cdf7061eee827b1c298b0bbc8c3c" }
+tokio-tungstenite = "0.21"
+if-addrs = "0.6"
 
 # CEF Integration (Chromium Embedded Framework)
 # Note: CEF requires Ninja build tool to compile

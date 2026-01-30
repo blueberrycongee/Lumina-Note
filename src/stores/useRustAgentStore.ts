@@ -416,6 +416,11 @@ export const useRustAgentStore = create<RustAgentState>()(
         });
 
         try {
+          try {
+            await invoke("mobile_set_agent_config", { config });
+          } catch (e) {
+            console.warn("[RustAgent] Failed to sync mobile agent config:", e);
+          }
           // 将历史消息附加到 context 中传给后端
           const contextWithHistory = {
             ...context,

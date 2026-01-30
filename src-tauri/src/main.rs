@@ -19,6 +19,7 @@ mod mcp;
 mod codex_vscode_host;
 mod codex_extension;
 mod node_runtime;
+mod mobile_gateway;
 
 use tauri::Manager;
 
@@ -159,12 +160,22 @@ fn main() {
             codex_extension::codex_extension_get_status,
             codex_extension::codex_extension_install_latest,
             codex_extension::codex_extension_install_vsix,
+            // Mobile Gateway commands
+            mobile_gateway::mobile_get_status,
+            mobile_gateway::mobile_start_server,
+            mobile_gateway::mobile_stop_server,
+            mobile_gateway::mobile_set_workspace,
+            mobile_gateway::mobile_set_agent_config,
         ])
         .manage(webdav::commands::WebDAVState::new())
         .manage(agent::AgentState::new())
         .manage(agent::DeepResearchStateManager::new())
         .manage(codex_vscode_host::CodexVscodeHostState::default())
+        .manage(mobile_gateway::MobileGatewayState::new())
         .setup(|app| {
+            if let Err(err) = mobile_gateway::hydrate_state(&app.handle()) {
+                eprintln!("[MobileGateway] Failed to hydrate state: {}", err);
+            }
             let window = app.get_webview_window("main").unwrap();
             
             // Mac 上启用 decorations 并使用透明标题栏，避免无边框窗口的兼容性问题
