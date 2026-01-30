@@ -71,16 +71,21 @@ pub struct MobileGatewayState {
     agent_config: Mutex<Option<AgentConfig>>,
     workspace_path: Mutex<Option<String>>,
     events: broadcast::Sender<Value>,
+    shutdown: broadcast::Sender<()>,
+    starting: Mutex<bool>,
 }
 
 impl MobileGatewayState {
     pub fn new() -> Self {
         let (events, _rx) = broadcast::channel(512);
+        let (shutdown, _shutdown_rx) = broadcast::channel(16);
         Self {
             server: Mutex::new(None),
             agent_config: Mutex::new(None),
             workspace_path: Mutex::new(None),
             events,
+            shutdown,
+            starting: Mutex::new(false),
         }
     }
 
@@ -193,37 +198,56 @@ pub async fn mobile_start_server(
             return Ok(state.build_status(guard.as_ref()));
         }
     }
-
-    let listener = TcpListener::bind("0.0.0.0:0")
-        .await
-        .map_err(|e| format!("Failed to bind mobile gateway: {}", e))?;
-    let addr = listener
-        .local_addr()
-        .map_err(|e| format!("Failed to get server address: {}", e))?;
-    let token = generate_token(8);
-    let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    let events = state.events.clone();
-    let app_handle = app.clone();
-    let token_clone = token.clone();
-
-    tokio::spawn(async move {
-        run_server(app_handle, listener, token_clone, events, shutdown_rx).await;
-    });
-
     {
-        let mut guard = state.server.lock().await;
-        *guard = Some(MobileServer {
-            token,
-            addr,
-            shutdown: Some(shutdown_tx),
-        });
+        let mut starting = state.starting.lock().await;
+        if *starting {
+            return Ok(state.status().await);
+        }
+        *starting = true;
     }
 
-    Ok(state.status().await)
+    let start_result = async {
+        let listener = TcpListener::bind("0.0.0.0:0")
+            .await
+            .map_err(|e| format!("Failed to bind mobile gateway: {}", e))?;
+        let addr = listener
+            .local_addr()
+            .map_err(|e| format!("Failed to get server address: {}", e))?;
+        let token = generate_token(8);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let events = state.events.clone();
+        let shutdown = state.shutdown.clone();
+        let app_handle = app.clone();
+        let token_clone = token.clone();
+
+        tokio::spawn(async move {
+            run_server(app_handle, listener, token_clone, events, shutdown, shutdown_rx).await;
+        });
+
+        {
+            let mut guard = state.server.lock().await;
+            *guard = Some(MobileServer {
+                token,
+                addr,
+                shutdown: Some(shutdown_tx),
+            });
+        }
+
+        Ok(state.status().await)
+    }
+    .await;
+
+    {
+        let mut starting = state.starting.lock().await;
+        *starting = false;
+    }
+
+    start_result
 }
 
 #[tauri::command]
 pub async fn mobile_stop_server(state: State<'_, MobileGatewayState>) -> Result<(), String> {
+    let _ = state.shutdown.send(());
     let mut guard = state.server.lock().await;
     if let Some(server) = guard.as_mut() {
         if let Some(shutdown) = server.shutdown.take() {
@@ -261,10 +285,15 @@ async fn run_server(
     listener: TcpListener,
     token: String,
     events: broadcast::Sender<Value>,
+    shutdown: broadcast::Sender<()>,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) {
+    let mut shutdown_listener = shutdown.subscribe();
     loop {
         tokio::select! {
+            _ = shutdown_listener.recv() => {
+                break;
+            }
             _ = &mut shutdown_rx => {
                 break;
             }
@@ -274,8 +303,9 @@ async fn run_server(
                         let app_handle = app.clone();
                         let token_clone = token.clone();
                         let events_clone = events.clone();
+                        let shutdown_clone = shutdown.clone();
                         tokio::spawn(async move {
-                            handle_connection(app_handle, stream, token_clone, events_clone).await;
+                            handle_connection(app_handle, stream, token_clone, events_clone, shutdown_clone).await;
                         });
                     }
                     Err(err) => {
@@ -293,6 +323,7 @@ async fn handle_connection(
     stream: tokio::net::TcpStream,
     token: String,
     events: broadcast::Sender<Value>,
+    shutdown: broadcast::Sender<()>,
 ) {
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,
@@ -305,6 +336,7 @@ async fn handle_connection(
     let (mut ws_sink, mut ws_stream) = ws_stream.split();
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<MobileServerMessage>();
     let mut event_rx = events.subscribe();
+    let mut shutdown_rx = shutdown.subscribe();
     let mut paired = false;
 
     let writer = tokio::spawn(async move {
@@ -325,6 +357,9 @@ async fn handle_connection(
 
     loop {
         tokio::select! {
+            _ = shutdown_rx.recv() => {
+                break;
+            }
             incoming = ws_stream.next() => {
                 let message = match incoming {
                     Some(Ok(msg)) => msg,
