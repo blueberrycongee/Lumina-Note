@@ -14,6 +14,7 @@ use crate::agent::types::*;
 use crate::forge_runtime::permissions::{default_ruleset, PermissionRule, PermissionSession as LocalPermissionSession};
 use crate::langgraph::error::ResumeCommand;
 use crate::langgraph::executor::{Checkpoint, ExecutionResult};
+use crate::mobile_gateway::emit_agent_event;
 use forge::runtime::cancel::CancellationToken;
 use forge::runtime::error::Interrupt;
 use forge::runtime::event::{Event, EventSink, PermissionReply};
@@ -324,10 +325,13 @@ pub async fn agent_continue_with_answer(
     // TODO: 实现用户回答后继续执行
     // 这需要在状态机中支持暂停和恢复
     
-    let _ = app.emit("agent-event", AgentEvent::MessageChunk {
-        content: format!("用户回答: {}", answer),
-        agent: AgentType::Coordinator,
-    });
+    emit_agent_event(
+        &app,
+        AgentEvent::MessageChunk {
+            content: format!("用户回答: {}", answer),
+            agent: AgentType::Coordinator,
+        },
+    );
 
     Ok(())
 }

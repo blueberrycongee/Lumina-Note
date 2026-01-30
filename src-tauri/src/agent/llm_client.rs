@@ -8,11 +8,12 @@
 //! - 超时检测：检测流式响应假死
 
 use crate::agent::types::*;
+use crate::mobile_gateway::emit_agent_event;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 use futures_util::StreamExt;
 use tokio::time::interval;
 
@@ -347,8 +348,8 @@ impl LlmClient {
                 .duration_since(UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_millis() as u64;
-            let _ = app.emit(
-                "agent-event",
+            emit_agent_event(
+                app,
                 AgentEvent::LlmRequestStart {
                     request_id: request_id.to_string(),
                     timestamp: start_timestamp,
@@ -361,8 +362,8 @@ impl LlmClient {
             .await;
 
         if let Some(app) = &app {
-            let _ = app.emit(
-                "agent-event",
+            emit_agent_event(
+                app,
                 AgentEvent::LlmRequestEnd {
                     request_id: request_id.to_string(),
                 },
@@ -573,7 +574,7 @@ impl LlmClient {
                             .duration_since(UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_millis() as u64;
-                        let _ = app.emit("agent-event", AgentEvent::Heartbeat { timestamp });
+                        emit_agent_event(app, AgentEvent::Heartbeat { timestamp });
                     }
 
                     if last_data_time.elapsed() > stream_timeout {
@@ -645,18 +646,24 @@ impl LlmClient {
             .unwrap_or_default()
             .as_millis() as u64;
         
-        let _ = app.emit("agent-event", AgentEvent::LlmRequestStart {
-            request_id: request_id.to_string(),
-            timestamp: start_timestamp,
-        });
+        emit_agent_event(
+            app,
+            AgentEvent::LlmRequestStart {
+                request_id: request_id.to_string(),
+                timestamp: start_timestamp,
+            },
+        );
         
         // 使用带重试的流式调用
         let result = self.call_stream_with_retry(app, request_id, messages, tools, current_agent).await;
         
         // 发送 LLM 请求结束事件
-        let _ = app.emit("agent-event", AgentEvent::LlmRequestEnd {
-            request_id: request_id.to_string(),
-        });
+        emit_agent_event(
+            app,
+            AgentEvent::LlmRequestEnd {
+                request_id: request_id.to_string(),
+            },
+        );
         
         result
     }
@@ -831,10 +838,13 @@ impl LlmClient {
                                             full_content.push_str(content);
                                             
                                             // 发送事件到前端
-                                            let _ = app.emit("agent-event", AgentEvent::MessageChunk {
-                                                content: content.to_string(),
-                                                agent: current_agent.clone(),
-                                            });
+                                            emit_agent_event(
+                                                app,
+                                                AgentEvent::MessageChunk {
+                                                    content: content.to_string(),
+                                                    agent: current_agent.clone(),
+                                                },
+                                            );
                                         }
                                     }
                                 }
@@ -857,7 +867,7 @@ impl LlmClient {
                         .unwrap_or_default()
                         .as_millis() as u64;
                     
-                    let _ = app.emit("agent-event", AgentEvent::Heartbeat { timestamp });
+                    emit_agent_event(app, AgentEvent::Heartbeat { timestamp });
                     
                     // 检测假死（超时无数据）
                     if last_data_time.elapsed() > stream_timeout {

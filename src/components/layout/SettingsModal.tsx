@@ -21,6 +21,7 @@ import { UpdateChecker } from "../settings/UpdateChecker";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
 import { PublishSettingsSection } from "../settings/PublishSettingsSection";
+import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -300,6 +301,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </span>
             </div>
           </section>
+
+          <MobileGatewaySection />
 
           {/* WebDAV 同步设置 */}
           <section className="rounded-xl overflow-hidden border border-border bg-background/60">

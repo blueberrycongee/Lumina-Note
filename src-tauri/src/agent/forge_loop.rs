@@ -2,6 +2,7 @@ use crate::agent::llm_client::LlmClient;
 use crate::agent::types::{AgentConfig, GraphState, Message, MessageRole, ToolCall};
 use crate::forge_runtime::permissions::PermissionSession as LocalPermissionSession;
 use crate::forge_runtime::tools::{build_registry, ToolEnvironment};
+use crate::mobile_gateway::emit_agent_event_payload;
 use forge::runtime::cancel::CancellationToken;
 use forge::runtime::error::{GraphError, Interrupt};
 use forge::runtime::event::{Event, EventSink, TokenUsage};
@@ -12,7 +13,7 @@ use forge::runtime::tool::{ToolCall as ForgeToolCall, ToolOutput, ToolRegistry};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -45,7 +46,7 @@ impl TauriEventSink {
 impl EventSink for TauriEventSink {
     fn emit(&self, event: Event) {
         let payload = wrap_event(event);
-        let _ = self.app.emit("agent-event", payload);
+        emit_agent_event_payload(&self.app, payload);
     }
 }
 
