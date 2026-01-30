@@ -282,6 +282,26 @@ function shouldAutoCompact(tokensTotal: number) {
   return tokensTotal / contextWindow >= AUTO_COMPACT_RATIO;
 }
 
+function estimateTokensFromText(text: string) {
+  if (!text) return 0;
+  const ascii = text.replace(/[^\x00-\x7F]/g, "");
+  const asciiLen = ascii.length;
+  const nonAsciiLen = text.length - asciiLen;
+  const asciiTokens = Math.ceil(asciiLen / 4);
+  const nonAsciiTokens = Math.ceil(nonAsciiLen / 1.5);
+  return asciiTokens + nonAsciiTokens;
+}
+
+function estimateContextTokens(messages: Message[]) {
+  let total = 0;
+  for (const msg of messages) {
+    if (!msg?.content) continue;
+    total += estimateTokensFromText(String(msg.content));
+    total += 4; // rough role/format overhead
+  }
+  return total;
+}
+
 // ============ 任务统计 ============
 
 export interface TaskStats {
@@ -1086,8 +1106,10 @@ export const useRustAgentStore = create<RustAgentState>()(
             const outputTokens = tokens?.output ?? 0;
             const added = inputTokens + outputTokens;
             if (added > 0) {
-              const totalAfter = state.totalTokensUsed + added;
-              const shouldCompact = state.autoCompactEnabled && shouldAutoCompact(totalAfter);
+              const contextTokens = inputTokens > 0
+                ? inputTokens
+                : estimateContextTokens(state.messages);
+              const shouldCompact = state.autoCompactEnabled && shouldAutoCompact(contextTokens);
               set({
                 totalTokensUsed: state.totalTokensUsed + added,
                 lastTokenUsage: {
