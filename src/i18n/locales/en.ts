@@ -673,6 +673,8 @@ export default {
     agentSettings: 'Agent Settings',
     autoApproveTools: 'Auto-approve tool calls',
     noManualConfirm: 'No manual confirmation needed',
+    autoCompactContext: 'Auto-compact context',
+    autoCompactHint: 'Auto-generate a summary near the context limit and keep the session (95%)',
     semanticSearch: 'Semantic Search (RAG)',
     indexing: 'Indexing',
     indexed: 'Indexed {count} chunks',

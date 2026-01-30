@@ -46,7 +46,7 @@ vi.mock('@/stores/useLocaleStore', () => ({
 }));
 
 // Import after mocks
-import { useRustAgentStore } from './useRustAgentStore';
+import { useRustAgentStore, type Message } from './useRustAgentStore';
 
 describe('useRustAgentStore', () => {
   beforeEach(() => {
@@ -278,7 +278,7 @@ describe('useRustAgentStore', () => {
     it('should preserve messages added during compaction', async () => {
       const store = useRustAgentStore.getState();
 
-      const baseMessages = [
+      const baseMessages: Message[] = [
         { role: 'user', content: 'm1' },
         { role: 'assistant', content: 'm2' },
         { role: 'user', content: 'm3' },
@@ -294,9 +294,9 @@ describe('useRustAgentStore', () => {
         pendingCompaction: true,
       });
 
-      let resolveCall: ((value: { content: string }) => void) | null = null;
+      const resolveRef: { current?: (value: { content: string }) => void } = {};
       const callPromise = new Promise<{ content: string }>((resolve) => {
-        resolveCall = resolve;
+        resolveRef.current = resolve;
       });
       callLLMMock.mockReturnValue(callPromise);
 
@@ -306,7 +306,7 @@ describe('useRustAgentStore', () => {
         messages: [...state.messages, { role: 'user', content: 'late-message' }],
       }));
 
-      resolveCall?.({ content: '- summary' });
+      resolveRef.current?.({ content: '- summary' });
       await compactionPromise;
 
       const finalMessages = useRustAgentStore.getState().messages;
@@ -357,9 +357,9 @@ describe('useRustAgentStore', () => {
         pendingCompaction: true,
       });
 
-      let resolveCall: ((value: { content: string }) => void) | null = null;
+      const resolveRef: { current?: (value: { content: string }) => void } = {};
       const callPromise = new Promise<{ content: string }>((resolve) => {
-        resolveCall = resolve;
+        resolveRef.current = resolve;
       });
       callLLMMock.mockReturnValue(callPromise);
 
@@ -369,7 +369,7 @@ describe('useRustAgentStore', () => {
         store.switchSession('rust-session-2');
       });
 
-      resolveCall?.({ content: '- summary' });
+      resolveRef.current?.({ content: '- summary' });
       await compactionPromise;
 
       const stateAfter = useRustAgentStore.getState();

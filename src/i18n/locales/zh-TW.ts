@@ -674,6 +674,8 @@ export default {
     agentSettings: 'Agent 設定',
     autoApproveTools: '自動批准工具調用',
     noManualConfirm: '無需手動確認',
+    autoCompactContext: '自動壓縮上下文',
+    autoCompactHint: '接近上下文上限時自動生成摘要並保留目前會話 (95%)',
     semanticSearch: '語義搜尋 (RAG)',
     indexing: '正在索引',
     indexed: '已索引 {count} 個片段',

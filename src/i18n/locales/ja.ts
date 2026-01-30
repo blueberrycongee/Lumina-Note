@@ -674,6 +674,8 @@ export default {
     agentSettings: 'Agent 設定',
     autoApproveTools: 'ツール呼び出しを自動承認',
     noManualConfirm: '手動確認不要',
+    autoCompactContext: 'コンテキストを自動圧縮',
+    autoCompactHint: 'コンテキスト上限に近づくと自動で要約し、同じセッションに保持します (95%)',
     semanticSearch: 'セマンティック検索 (RAG)',
     indexing: 'インデックス中',
     indexed: '{count} 個のチャンクをインデックス済み',
