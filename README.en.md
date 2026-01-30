@@ -48,10 +48,11 @@ Go to [Releases](https://github.com/blueberrycongee/Lumina-Note/releases) to dow
 
 ## Features
 
-### AI Agent
+### AI Assistant
+- Modes: Chat / Agent / Deep Research / Codex (embedded VS Code extension in the sidebar)
 - Understands your intent and automatically executes read, edit, search tasks
-- Supports 8 model providers: OpenAI / Claude / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Built-in RAG semantic search based on your note vault
+- Supports multiple providers: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- Built-in local RAG semantic search based on your note vault
 
 ### Editor
 - Source / Live Preview / Reading modes
@@ -83,14 +84,14 @@ Go to [Releases](https://github.com/blueberrycongee/Lumina-Note/releases) to dow
 
 1. Download and install the app
 2. Select a folder as your note vault on first launch
-3. Click settings (bottom left) to configure your AI model API Key
+3. Configure your model and API key in the right-side AI panel
 4. Start using
 
 ---
 
 ## Build from Source
 
-Requires Node.js 18+ and Rust 1.70+
+Requires Node.js 20+ (recommended 20.11.1) and Rust 1.70+
 
 ```bash
 git clone https://github.com/blueberrycongee/Lumina-Note.git

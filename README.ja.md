@@ -48,10 +48,11 @@
 
 ## 主な機能
 
-### AI Agent
+### AI アシスタント
+- モード：チャット / Agent / Deep Research / Codex（サイドバーに VS Code 拡張を埋め込み）
 - 意図を理解し、読み取り・編集・検索タスクを自動実行
-- 8つのモデルプロバイダーに対応：OpenAI / Claude / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- 内蔵 RAG セマンティック検索でノート全体から回答
+- 複数のモデルプロバイダーに対応：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- ローカル RAG セマンティック検索でノート全体から回答
 
 ### エディタ
 - ソース / ライブプレビュー / 閲覧の3モード
@@ -83,14 +84,14 @@
 
 1. アプリをダウンロードしてインストール
 2. 初回起動時にノート保存用フォルダを選択
-3. 左下の設定から AI モデルの API Key を設定
+3. 右側の AI パネルでモデルと API Key を設定
 4. 使用開始
 
 ---
 
 ## ソースからビルド
 
-Node.js 18+ と Rust 1.70+ が必要
+Node.js 20+（推奨 20.11.1）と Rust 1.70+ が必要
 
 ```bash
 git clone https://github.com/blueberrycongee/Lumina-Note.git

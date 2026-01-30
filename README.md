@@ -48,10 +48,11 @@
 
 ## 核心特性
 
-### AI Agent
+### AI 助手
+- 多模式：对话 / Agent / Deep Research / Codex（侧边栏内嵌 VS Code 扩展）
 - 理解你的意图，自动执行读取、编辑、搜索等任务
-- 支持 8 家模型提供商：OpenAI / Claude / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- 内置 RAG 语义搜索，基于你的笔记库回答问题
+- 支持多家模型提供商：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- 内置本地 RAG 语义搜索，基于你的笔记库回答问题
 
 ### 编辑器
 - 源码 / 实时预览 / 阅读三种模式
@@ -83,14 +84,14 @@
 
 1. 下载并安装应用
 2. 首次启动时选择一个文件夹作为笔记库
-3. 点击左下角设置，配置 AI 模型的 API Key
+3. 在右侧 AI 面板配置模型与 API Key
 4. 开始使用
 
 ---
 
 ## 从源码构建
 
-需要 Node.js 18+ 和 Rust 1.70+
+需要 Node.js 20+（推荐 20.11.1）和 Rust 1.70+
 
 ```bash
 git clone https://github.com/blueberrycongee/Lumina-Note.git
