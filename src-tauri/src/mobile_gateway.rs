@@ -224,6 +224,18 @@ pub fn emit_agent_event_payload(app: &AppHandle, payload: Value) {
     state.broadcast_agent_event(session_id, payload);
 }
 
+fn emit_mobile_sync_request(app: &AppHandle, workspace: bool, agent_config: bool) {
+    if !workspace && !agent_config {
+        return;
+    }
+    let payload = json!({
+        "workspace": workspace,
+        "agent_config": agent_config,
+        "timestamp": current_timestamp(),
+    });
+    let _ = app.emit("mobile-sync-request", payload);
+}
+
 pub fn hydrate_state(app: &AppHandle) -> Result<(), String> {
     let settings = load_settings(app).unwrap_or_default();
     let state = app.state::<MobileGatewayState>();
@@ -316,6 +328,7 @@ pub async fn mobile_set_workspace(
     state: State<'_, MobileGatewayState>,
     workspace_path: String,
 ) -> Result<(), String> {
+    eprintln!("[MobileGateway] Update workspace path: {}", workspace_path);
     state.set_workspace(Some(workspace_path)).await;
     persist_settings(&app, &state).await?;
     Ok(())
@@ -327,6 +340,7 @@ pub async fn mobile_set_agent_config(
     state: State<'_, MobileGatewayState>,
     config: AgentConfig,
 ) -> Result<(), String> {
+    eprintln!("[MobileGateway] Update agent config provider: {:?}", config.provider);
     state.set_agent_config(Some(config)).await;
     persist_settings(&app, &state).await?;
     Ok(())
@@ -334,9 +348,25 @@ pub async fn mobile_set_agent_config(
 
 #[tauri::command]
 pub async fn mobile_sync_sessions(
+    app: AppHandle,
     state: State<'_, MobileGatewayState>,
     sessions: Vec<MobileSessionSummary>,
+    workspace_path: Option<String>,
+    agent_config: Option<AgentConfig>,
 ) -> Result<(), String> {
+    eprintln!(
+        "[MobileGateway] Sync sessions: count={}, workspace_present={}, agent_config_present={}",
+        sessions.len(),
+        workspace_path.is_some(),
+        agent_config.is_some()
+    );
+    if let Some(path) = workspace_path.clone() {
+        state.set_workspace(Some(path)).await;
+    }
+    if let Some(config) = agent_config.clone() {
+        state.set_agent_config(Some(config)).await;
+    }
+    persist_settings(&app, &state).await?;
     state.set_sessions(sessions.clone()).await;
     state.broadcast_session_list(sessions);
     Ok(())
@@ -508,6 +538,8 @@ async fn handle_connection(
                             let workspace_path = match workspace_path {
                                 Some(path) => path,
                                 None => {
+                                    eprintln!("[MobileGateway] Workspace missing when handling command.");
+                                    emit_mobile_sync_request(&app, true, agent_config.is_none());
                                     let _ = out_tx.send(MobileServerMessage::Error {
                                         message: "Workspace path not set".to_string(),
                                     });
@@ -517,6 +549,8 @@ async fn handle_connection(
                             let agent_config = match agent_config {
                                 Some(config) => config,
                                 None => {
+                                    eprintln!("[MobileGateway] Agent config missing when handling command.");
+                                    emit_mobile_sync_request(&app, false, true);
                                     let _ = out_tx.send(MobileServerMessage::Error {
                                         message: "Agent config not set".to_string(),
                                     });

@@ -831,9 +831,11 @@ export const useRustAgentStore = create<RustAgentState>()(
             console.warn("[RustAgent] Failed to sync mobile workspace:", e);
           }
         }
+        let mobileAgentConfig: AgentConfig | null = null;
         try {
           const aiConfig = getAIConfig();
           const config = buildAgentConfig(aiConfig, get().autoApprove);
+          mobileAgentConfig = config;
           const configKey = JSON.stringify(config);
           if (configKey !== lastMobileAgentConfigKey) {
             await invoke("mobile_set_agent_config", { config });
@@ -857,7 +859,11 @@ export const useRustAgentStore = create<RustAgentState>()(
           };
         });
         try {
-          await invoke("mobile_sync_sessions", { sessions: summaries });
+          await invoke("mobile_sync_sessions", {
+            sessions: summaries,
+            workspace_path: vaultPath,
+            agent_config: mobileAgentConfig,
+          });
         } catch (e) {
           console.warn("[RustAgent] Failed to sync mobile sessions:", e);
         }
@@ -1459,9 +1465,31 @@ export const useRustAgentStore = create<RustAgentState>()(
               }
             }
           );
+          const unlistenMobileSync = await listen<{ workspace?: boolean; agent_config?: boolean }>(
+            "mobile-sync-request",
+            (event) => {
+              const payload = event.payload ?? {};
+              const shouldSyncWorkspace = payload.workspace !== false;
+              const shouldSyncAgentConfig = payload.agent_config !== false;
+
+              if (shouldSyncWorkspace) {
+                const workspacePath = resolveVaultPath();
+                if (workspacePath) {
+                  useFileStore.getState().syncMobileWorkspace({ path: workspacePath, force: true }).catch((error) => {
+                    console.warn("[RustAgent] Failed to resync mobile workspace:", error);
+                  });
+                }
+              }
+
+              if (shouldSyncAgentConfig) {
+                void get().syncMobileSessions();
+              }
+            }
+          );
           return () => {
             unlistenAgent();
             unlistenMobile();
+            unlistenMobileSync();
           };
         } catch (e) {
           console.error("Failed to setup agent event listener:", e);
