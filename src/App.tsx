@@ -28,6 +28,7 @@ import { TypesettingPreviewPane } from "@/components/typesetting/TypesettingPrev
 import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
 import { TypesettingExportHarness } from "@/components/typesetting/TypesettingExportHarness";
 import { useAIStore } from "@/stores/useAIStore";
+import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
@@ -154,6 +155,11 @@ function App() {
     if (tabs.length === 0) {
       openAIMainTab();
     }
+  }, []);
+
+  // 初始化 Rust Agent 监听（用于移动端会话指令）
+  useEffect(() => {
+    initRustAgentListeners();
   }, []);
 
   // 启动时自动加载保存的工作空间
