@@ -9,7 +9,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { getAIConfig } from "@/services/ai/ai";
+import { getAIConfig, type AIConfig } from "@/services/ai/ai";
+import { useFileStore } from "@/stores/useFileStore";
 import { callLLM, PROVIDER_REGISTRY, type Message as LLMMessage } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { SelectedSkill } from "@/types/skills";
@@ -415,6 +416,44 @@ interface MobileSessionCommand {
   title?: string;
 }
 
+let lastMobileWorkspacePath: string | null = null;
+let lastMobileAgentConfigKey: string | null = null;
+
+const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig => {
+  const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
+    ? aiConfig.customModelId
+    : aiConfig.model;
+
+  const routing = aiConfig.routing;
+  const shouldFallbackToChatConfig = Boolean(
+    routing?.enabled &&
+    routing.chatProvider &&
+    (!aiConfig.apiKey || !aiConfig.provider || !aiConfig.model)
+  );
+
+  const resolvedProvider = shouldFallbackToChatConfig ? routing!.chatProvider! : aiConfig.provider;
+  const resolvedApiKey = shouldFallbackToChatConfig ? (routing!.chatApiKey || aiConfig.apiKey) : aiConfig.apiKey;
+  const resolvedModel = shouldFallbackToChatConfig
+    ? (routing!.chatModel === "custom" && routing!.chatCustomModelId
+        ? routing!.chatCustomModelId
+        : routing!.chatModel || actualModel)
+    : actualModel;
+  const resolvedBaseUrl = shouldFallbackToChatConfig ? (routing!.chatBaseUrl || aiConfig.baseUrl) : aiConfig.baseUrl;
+
+  return {
+    provider: resolvedProvider,
+    model: resolvedModel,
+    api_key: resolvedApiKey || "",
+    base_url: resolvedBaseUrl,
+    temperature: aiConfig.temperature ?? 0.7,
+    max_tokens: 4096,
+    max_plan_iterations: 3,
+    max_steps: 10,
+    auto_approve: autoApprove,
+    locale: "zh-CN",
+  };
+};
+
 // ============ Store 实现 ============
 
 export const useRustAgentStore = create<RustAgentState>()(
@@ -522,45 +561,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             content: m.content,
           }));
 
-        // 获取实际模型名（如果是 custom，使用 customModelId）
-        const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
-          ? aiConfig.customModelId
-          : aiConfig.model;
-
-        // 如果主配置缺失但启用了 routing，回退到 chat 配置（避免 agent 无法启动）
-        const routing = aiConfig.routing;
-        const shouldFallbackToChatConfig = Boolean(
-          routing?.enabled &&
-          routing.chatProvider &&
-          (!aiConfig.apiKey || !aiConfig.provider || !aiConfig.model)
-        );
-
-        if (shouldFallbackToChatConfig) {
-          console.warn("[RustAgent] 主配置不完整，回退到 routing.chat 配置");
-        }
-
-        const resolvedProvider = shouldFallbackToChatConfig ? routing!.chatProvider! : aiConfig.provider;
-        const resolvedApiKey = shouldFallbackToChatConfig ? (routing!.chatApiKey || aiConfig.apiKey) : aiConfig.apiKey;
-        const resolvedModel = shouldFallbackToChatConfig
-          ? (routing!.chatModel === "custom" && routing!.chatCustomModelId
-              ? routing!.chatCustomModelId
-              : routing!.chatModel || actualModel)
-          : actualModel;
-        const resolvedBaseUrl = shouldFallbackToChatConfig ? (routing!.chatBaseUrl || aiConfig.baseUrl) : aiConfig.baseUrl;
-        
-        // 构建配置
-        const config: AgentConfig = {
-          provider: resolvedProvider,
-          model: resolvedModel,
-          api_key: resolvedApiKey || "",
-          base_url: resolvedBaseUrl,
-          temperature: aiConfig.temperature ?? 0.7,
-          max_tokens: 4096,
-          max_plan_iterations: 3,
-          max_steps: 10,
-          auto_approve: get().autoApprove,
-          locale: "zh-CN",
-        };
+        const config = buildAgentConfig(aiConfig, get().autoApprove);
         
         console.log("[RustAgent] 发送配置到 Rust:", {
           ...config,
@@ -806,6 +807,26 @@ export const useRustAgentStore = create<RustAgentState>()(
 
       // 同步会话到移动端
       syncMobileSessions: async () => {
+        const vaultPath = useFileStore.getState().vaultPath;
+        if (vaultPath && vaultPath !== lastMobileWorkspacePath) {
+          try {
+            await invoke("mobile_set_workspace", { workspace_path: vaultPath });
+            lastMobileWorkspacePath = vaultPath;
+          } catch (e) {
+            console.warn("[RustAgent] Failed to sync mobile workspace:", e);
+          }
+        }
+        try {
+          const aiConfig = getAIConfig();
+          const config = buildAgentConfig(aiConfig, get().autoApprove);
+          const configKey = JSON.stringify(config);
+          if (configKey !== lastMobileAgentConfigKey) {
+            await invoke("mobile_set_agent_config", { config });
+            lastMobileAgentConfigKey = configKey;
+          }
+        } catch (e) {
+          console.warn("[RustAgent] Failed to sync mobile agent config:", e);
+        }
         const summaries: MobileSessionSummary[] = get().sessions.map(session => {
           const lastMessage = session.messages[session.messages.length - 1];
           const preview = lastMessage?.content?.slice(0, 200);
