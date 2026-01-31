@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore, initRustAgentListeners } from "@/stores/useRustAgentStore";
@@ -130,6 +130,7 @@ export function MainAIChatShell() {
   const [enableWebSearch, setEnableWebSearch] = useState(false); // 网络搜索开关
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     if (isCodexMode && showHistory) {
@@ -1097,12 +1098,24 @@ export function MainAIChatShell() {
           {!isCodexMode && (
           <div className={`w-full shrink-0 ${hasStarted ? "pb-4" : ""}`}>
             <motion.div
-              layout
-              transition={{ type: "spring", bounce: 0, duration: 0.6 }}
               className="w-full max-w-3xl mx-auto px-4"
+              initial={false}
+              animate={
+                reduceMotion
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : {
+                      opacity: 1,
+                      y: hasStarted ? 0 : 6,
+                      scale: hasStarted ? 1 : 1.01,
+                    }
+              }
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
+              }
             >
               <motion.div
-                layout="position"
                 className={`bg-background rounded-[24px] shadow-lg border border-border transition-shadow duration-300 ${hasStarted ? "shadow-md" : "shadow-xl"
                   }`}
               >
