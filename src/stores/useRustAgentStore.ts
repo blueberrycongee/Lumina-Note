@@ -419,6 +419,21 @@ interface MobileSessionCommand {
 let lastMobileWorkspacePath: string | null = null;
 let lastMobileAgentConfigKey: string | null = null;
 
+const resolveVaultPath = (): string | null => {
+  const storePath = useFileStore.getState().vaultPath;
+  if (storePath) return storePath;
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem("lumina-workspace");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { state?: { vaultPath?: string }; vaultPath?: string };
+    const fallback = parsed?.state?.vaultPath ?? parsed?.vaultPath;
+    return typeof fallback === "string" && fallback.length > 0 ? fallback : null;
+  } catch {
+    return null;
+  }
+};
+
 const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig => {
   const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
     ? aiConfig.customModelId
@@ -807,7 +822,7 @@ export const useRustAgentStore = create<RustAgentState>()(
 
       // 同步会话到移动端
       syncMobileSessions: async () => {
-        const vaultPath = useFileStore.getState().vaultPath;
+        const vaultPath = resolveVaultPath();
         if (vaultPath && vaultPath !== lastMobileWorkspacePath) {
           try {
             await invoke("mobile_set_workspace", { workspace_path: vaultPath });
