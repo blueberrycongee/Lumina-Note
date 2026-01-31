@@ -37,6 +37,13 @@ export function MobileGatewaySection() {
     loadStatus();
   }, []);
 
+  useEffect(() => {
+    if (!status?.running || !vaultPath) return;
+    syncMobileWorkspace({ path: vaultPath, force: true }).catch((err) => {
+      console.warn("Failed to sync mobile workspace after start:", err);
+    });
+  }, [status?.running, vaultPath, syncMobileWorkspace]);
+
   const handleStart = async () => {
     setLoading(true);
     try {
