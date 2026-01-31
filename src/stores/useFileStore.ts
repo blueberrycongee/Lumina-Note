@@ -1935,6 +1935,19 @@ export const useFileStore = create<FileState>()(
         vaultPath: state.vaultPath,  // 只持久化工作空间路径
         recentFiles: state.recentFiles, // 持久化最近文件列表
       }),
+      onRehydrateStorage: () => async (state) => {
+        if (!state?.vaultPath) return;
+        try {
+          await state.refreshFileTree();
+        } catch (error) {
+          console.warn("Failed to refresh file tree after rehydrate:", error);
+        }
+        try {
+          await state.syncMobileWorkspace({ path: state.vaultPath, force: true });
+        } catch (error) {
+          console.warn("Failed to sync mobile workspace after rehydrate:", error);
+        }
+      },
     }
   )
 );

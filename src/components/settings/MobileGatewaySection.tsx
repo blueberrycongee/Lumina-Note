@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Link2, Copy, Power } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useFileStore } from "@/stores/useFileStore";
 
 interface MobileGatewayStatus {
   running: boolean;
@@ -15,6 +16,7 @@ interface MobileGatewayStatus {
 
 export function MobileGatewaySection() {
   const { t } = useLocaleStore();
+  const { vaultPath, syncMobileWorkspace } = useFileStore();
   const [status, setStatus] = useState<MobileGatewayStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -41,6 +43,9 @@ export function MobileGatewaySection() {
       const data = await invoke<MobileGatewayStatus>("mobile_start_server");
       setStatus(data);
       setError(null);
+      if (vaultPath) {
+        await syncMobileWorkspace({ path: vaultPath, force: true });
+      }
     } catch (err) {
       console.error("Failed to start mobile gateway:", err);
       setError(String(err));
