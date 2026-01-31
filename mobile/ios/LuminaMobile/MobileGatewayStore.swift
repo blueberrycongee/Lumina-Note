@@ -105,6 +105,21 @@ final class MobileGatewayStore: ObservableObject {
         connectionStatus = "Disconnected"
     }
 
+    func resetPairing() {
+        disconnect()
+        let defaults = UserDefaults.standard
+        defaults.set("", forKey: "lumina_pairing_payload")
+        defaults.set(false, forKey: "lumina_paired")
+        pairingPayload = ""
+        isPaired = false
+        connectionStatus = "Disconnected"
+        errorMessage = nil
+        activeSessionId = nil
+        sessions = []
+        lastSessionId = nil
+        pendingSessionCreateTitle = nil
+    }
+
     func sendCommand(_ text: String, sessionId: String) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }

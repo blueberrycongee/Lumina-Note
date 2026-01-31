@@ -140,6 +140,7 @@ struct PairingView: View {
 struct SessionListView: View {
     @ObservedObject var store: MobileGatewayStore
     @State private var searchText = ""
+    @State private var showRePairConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -169,8 +170,13 @@ struct SessionListView: View {
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Edit") {}
-                        .foregroundStyle(.blue)
+                    Menu {
+                        Button("重新配对", role: .destructive) {
+                            showRePairConfirm = true
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { store.requestSessionCreate() }) {
@@ -178,6 +184,14 @@ struct SessionListView: View {
                     }
                     .foregroundStyle(.blue)
                 }
+            }
+            .confirmationDialog("重新配对？", isPresented: $showRePairConfirm, titleVisibility: .visible) {
+                Button("重新配对", role: .destructive) {
+                    store.resetPairing()
+                }
+                Button("取消", role: .cancel) {}
+            } message: {
+                Text("将断开当前连接并返回扫码页面。")
             }
         }
     }

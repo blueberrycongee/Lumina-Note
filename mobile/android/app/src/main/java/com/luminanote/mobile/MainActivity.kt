@@ -40,9 +40,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -236,6 +240,21 @@ private class MobileGatewayStore(private val context: Context) {
                 postError(t.message)
             }
         })
+    }
+
+    fun resetPairing() {
+        webSocket?.close(1000, "reset")
+        webSocket = null
+        PairingPrefs.setPaired(context, false)
+        PairingPrefs.setPayload(context, "")
+        isPaired = false
+        pairingPayload = ""
+        connectionStatus = "Disconnected"
+        errorMessage = null
+        activeSessionId = null
+        sessions.clear()
+        lastSessionId = null
+        pendingSessionCreateTitle = null
     }
 
     fun sendCommand(text: String, sessionId: String) {
@@ -661,6 +680,8 @@ private fun processImageProxy(
 @Composable
 private fun ChatListScreen(store: MobileGatewayStore) {
     var searchText by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
+    var showRePairConfirm by remember { mutableStateOf(false) }
     val query = searchText.trim()
     val filtered = store.sessions
         .filter { session ->
@@ -678,11 +699,23 @@ private fun ChatListScreen(store: MobileGatewayStore) {
             TopAppBar(
                 title = { Text("Chats", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
-                    TextButton(onClick = {}) {
-                        Text("Edit", color = Color(0xFF007AFF))
-                    }
+                    TextButton(onClick = {}) { Text("Edit", color = Color(0xFF007AFF)) }
                 },
                 actions = {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("重新配对") },
+                                onClick = {
+                                    showMenu = false
+                                    showRePairConfirm = true
+                                }
+                            )
+                        }
+                    }
                     TextButton(onClick = { store.requestSessionCreate() }) {
                         Icon(Icons.Default.Edit, contentDescription = "Compose", tint = Color(0xFF007AFF))
                     }
@@ -717,6 +750,23 @@ private fun ChatListScreen(store: MobileGatewayStore) {
                 }
             }
         }
+    }
+
+    if (showRePairConfirm) {
+        AlertDialog(
+            onDismissRequest = { showRePairConfirm = false },
+            title = { Text("重新配对") },
+            text = { Text("将断开当前连接并返回扫码页面。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRePairConfirm = false
+                    store.resetPairing()
+                }) { Text("重新配对") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRePairConfirm = false }) { Text("取消") }
+            }
+        )
     }
 }
 
