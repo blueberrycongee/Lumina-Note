@@ -247,7 +247,13 @@ export function TabBar() {
             isDragging={index === draggedIndex && isDragging.current}
             isDropTarget={index === dropTargetIndex}
             dropPosition={index === dropTargetIndex ? dropPosition : null}
-            displayName={tab.type === "ai-chat" ? t.common.aiChatTab : tab.name}
+            displayName={
+              tab.type === "ai-chat"
+                ? t.common.aiChatTab
+                : tab.type === "graph"
+                  ? t.graph.title
+                  : tab.name
+            }
             onSelect={() => switchTab(index)}
             onClose={(e) => handleClose(e, index)}
             onContextMenu={(e) => handleContextMenu(e, index)}

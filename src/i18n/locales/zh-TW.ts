@@ -33,6 +33,7 @@ export default {
     collapse: '收起',
     expand: '展開',
     localGraph: '局部圖譜',
+    openWorkspaceFirst: '請先開啟一個工作區',
   },
   
   // 側邊欄

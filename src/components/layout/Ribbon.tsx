@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
   FileText,
   Network,
@@ -22,6 +23,7 @@ import { SettingsModal } from "./SettingsModal";
 
 export function Ribbon() {
   const [showSettings, setShowSettings] = useState(false);
+  const { t } = useLocaleStore();
   const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
   const {
     tabs,
@@ -173,7 +175,7 @@ export function Ribbon() {
               ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
               : ""
           )}
-          title="关系图谱"
+          title={t.graph.title}
         >
           <Network size={18} />
         </button>

@@ -7,6 +7,7 @@ import { persist } from "zustand/middleware";
 import { RAGManager, RAGConfig, DEFAULT_RAG_CONFIG, IndexStatus, SearchResult } from "@/services/rag";
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
 import { useFileStore } from "./useFileStore";
+import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 interface RAGState {
   // 配置
@@ -126,7 +127,8 @@ export const useRAGStore = create<RAGState>()(
         if (!ragManager) {
           const vaultPath = useFileStore.getState().vaultPath;
           if (!vaultPath) {
-            set({ lastError: "请先打开一个工作区" });
+            const t = getCurrentTranslations();
+            set({ lastError: t.common.openWorkspaceFirst });
             return;
           }
           

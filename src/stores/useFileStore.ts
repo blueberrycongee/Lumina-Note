@@ -5,6 +5,7 @@ import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
 import { invoke } from '@tauri-apps/api/core';
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
+import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 // 历史记录条目
 interface HistoryEntry {
@@ -706,11 +707,12 @@ export const useFileStore = create<FileState>()(
         }
 
         // 创建图谱标签页
+        const t = getCurrentTranslations();
         const graphTab: Tab = {
           id: "__graph__",
           type: "graph",
           path: "",
-          name: "关系图谱",
+          name: t.graph.title,
           content: "",
           isDirty: false,
           undoStack: [],

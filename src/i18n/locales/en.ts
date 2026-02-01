@@ -33,6 +33,7 @@ export default {
     collapse: 'Collapse',
     expand: 'Expand',
     localGraph: 'Local Graph',
+    openWorkspaceFirst: 'Open a workspace first.',
   },
   
   // Sidebar

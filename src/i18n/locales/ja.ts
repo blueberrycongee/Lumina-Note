@@ -33,6 +33,7 @@ export default {
     collapse: '折りたたむ',
     expand: '展開',
     localGraph: 'ローカルグラフ',
+    openWorkspaceFirst: 'まずワークスペースを開いてください。',
   },
   
   // サイドバー

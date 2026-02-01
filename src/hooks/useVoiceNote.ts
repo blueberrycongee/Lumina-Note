@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { saveFile, exists } from "@/lib/tauri";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { callLLM, type Message } from "@/services/llm";
 
 const isMacSpeechBlockedInDev = () => {
@@ -27,6 +28,7 @@ export function useVoiceNote() {
   
   const { vaultPath, refreshFileTree, openFile } = useFileStore();
   const { config } = useAIStore();
+  const { t } = useLocaleStore();
 
   // 清除静音计时器
   const clearSilenceTimer = useCallback(() => {
@@ -210,7 +212,7 @@ export function useVoiceNote() {
     }
 
     if (!vaultPath) {
-      alert("请先打开一个工作区");
+      alert(t.common.openWorkspaceFirst);
       return;
     }
 
@@ -235,7 +237,7 @@ export function useVoiceNote() {
       setIsRecording(false);
       setStatus("idle");
     }
-  }, [vaultPath, resetSilenceTimer, ensureMicPermission]);
+  }, [vaultPath, resetSilenceTimer, ensureMicPermission, t]);
 
   // 停止录音并保存
   const stopRecording = useCallback(async () => {

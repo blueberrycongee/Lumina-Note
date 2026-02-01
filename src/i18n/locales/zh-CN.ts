@@ -33,6 +33,7 @@ export default {
     collapse: '收起',
     expand: '展开',
     localGraph: '局部图谱',
+    openWorkspaceFirst: '请先打开一个工作区',
   },
   
   // 侧边栏
