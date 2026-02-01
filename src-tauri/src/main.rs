@@ -20,8 +20,10 @@ mod codex_vscode_host;
 mod codex_extension;
 mod node_runtime;
 mod mobile_gateway;
+mod doc_tools;
 
 use tauri::Manager;
+use std::env;
 
 fn main() {
     tauri::Builder::default()
@@ -160,6 +162,9 @@ fn main() {
             codex_extension::codex_extension_get_status,
             codex_extension::codex_extension_install_latest,
             codex_extension::codex_extension_install_vsix,
+            // Doc tools pack commands
+            doc_tools::doc_tools_get_status,
+            doc_tools::doc_tools_install_latest,
             // Mobile Gateway commands
             mobile_gateway::mobile_get_status,
             mobile_gateway::mobile_start_server,
@@ -176,6 +181,12 @@ fn main() {
         .setup(|app| {
             if let Err(err) = mobile_gateway::hydrate_state(&app.handle()) {
                 eprintln!("[MobileGateway] Failed to hydrate state: {}", err);
+            }
+            doc_tools::ensure_doc_tools_env(&app.handle());
+            if env::var_os("LUMINA_SKILLS_DIR").is_none() {
+                if let Some(root) = agent::skills::builtin_skills_root(&app.handle()) {
+                    env::set_var("LUMINA_SKILLS_DIR", root);
+                }
             }
             let window = app.get_webview_window("main").unwrap();
             

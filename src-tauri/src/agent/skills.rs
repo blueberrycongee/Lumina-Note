@@ -70,6 +70,20 @@ fn skill_roots(app: &AppHandle, workspace_path: Option<&str>) -> Vec<(String, Pa
     roots
 }
 
+pub fn builtin_skills_root(app: &AppHandle) -> Option<PathBuf> {
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        let direct = resource_dir.join("skills");
+        if direct.exists() {
+            return Some(direct);
+        }
+        let nested = resource_dir.join("resources").join("skills");
+        if nested.exists() {
+            return Some(nested);
+        }
+    }
+    None
+}
+
 fn read_manifest(dir: &Path) -> Option<SkillManifest> {
     let manifest_path = dir.join("skill.json");
     let content = fs::read_to_string(manifest_path).ok()?;

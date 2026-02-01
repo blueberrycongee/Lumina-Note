@@ -63,6 +63,7 @@ struct ShellEnv {
     path: Vec<PathBuf>,
     lumina_git_bash_path: Option<PathBuf>,
     opencode_git_bash_path: Option<PathBuf>,
+    doc_tools_bin_path: Option<PathBuf>,
 }
 
 impl ShellEnv {
@@ -86,6 +87,7 @@ impl ShellEnv {
             path,
             lumina_git_bash_path: env::var_os("LUMINA_GIT_BASH_PATH").map(PathBuf::from),
             opencode_git_bash_path: env::var_os("OPENCODE_GIT_BASH_PATH").map(PathBuf::from),
+            doc_tools_bin_path: env::var_os("LUMINA_DOC_TOOLS_BIN").map(PathBuf::from),
         }
     }
 }
@@ -167,6 +169,16 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
     let shell_env = ShellEnv::current();
     let shell = select_shell_command(&shell_env);
     let mut cmd = Command::new(&shell.program);
+    if let Some(doc_bin) = shell_env.doc_tools_bin_path {
+        let mut paths = Vec::new();
+        paths.push(doc_bin);
+        paths.extend(shell_env.path);
+        let joined = env::join_paths(paths).map_err(|err| GraphError::ExecutionError {
+            node: format!("tool:{}", call.tool),
+            message: format!("Failed to build PATH for doc tools: {}", err),
+        })?;
+        cmd.env("PATH", joined);
+    }
     match shell.flavor {
         ShellFlavor::Cmd => {
             cmd.arg("/C").arg(&input.command);

@@ -18,6 +18,7 @@ import { X, Check, Plus, Trash2, Palette } from "lucide-react";
 import { ThemeEditor } from "../ai/ThemeEditor";
 import { WebDAVSettings } from "../settings/WebDAVSettings";
 import { UpdateChecker } from "../settings/UpdateChecker";
+import { DocToolsSection } from "../settings/DocToolsSection";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
 import { PublishSettingsSection } from "../settings/PublishSettingsSection";
@@ -301,6 +302,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </span>
             </div>
           </section>
+
+          <DocToolsSection />
 
           <MobileGatewaySection />
 

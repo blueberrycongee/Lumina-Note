@@ -12,7 +12,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { join } from "@/lib/path";
-import { listAgentSkills, readAgentSkill } from "@/lib/tauri";
+import { listAgentSkills, readAgentSkill, getDocToolsStatus, installDocTools } from "@/lib/tauri";
 import type { SelectedSkill, SkillInfo } from "@/types/skills";
 import {
   ArrowUp,
@@ -589,6 +589,19 @@ export function MainAIChatShell() {
       return;
     }
     try {
+      if (skill.name === "docx") {
+        try {
+          const status = await getDocToolsStatus();
+          if (!status.installed && status.missing.length > 0) {
+            const shouldInstall = window.confirm(t.settingsModal.docToolsPrompt);
+            if (shouldInstall) {
+              await installDocTools();
+            }
+          }
+        } catch (err) {
+          console.warn("[DocTools] Failed to check/install doc tools:", err);
+        }
+      }
       const detail = await readAgentSkill(skill.name, vaultPath || undefined);
       const nextSkill: SelectedSkill = {
         name: detail.info.name,
@@ -607,7 +620,7 @@ export function MainAIChatShell() {
         prev.replace(/(?:^|\s)\/[^\s]*$/, (match) => (match.startsWith(" ") ? " " : ""))
       );
     }
-  }, [selectedSkills, vaultPath]);
+  }, [selectedSkills, vaultPath, t]);
 
   // 发送消息
   const handleSend = useCallback(async (overrideInput?: string) => {
