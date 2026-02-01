@@ -2,6 +2,8 @@ use crate::error::AppError;
 use crate::node_runtime::{arch_tag, current_arch, current_platform, platform_tag, NodeArch, NodePlatform};
 use futures_util::StreamExt;
 use serde::Serialize;
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
@@ -35,6 +37,30 @@ struct CurrentVersionFile {
 const DOC_TOOLS_ENV_BIN: &str = "LUMINA_DOC_TOOLS_BIN";
 const DOC_TOOLS_ENV_DIR: &str = "LUMINA_DOC_TOOLS_DIR";
 const DOC_TOOLS_ENV_URL: &str = "LUMINA_DOC_TOOLS_URL";
+const DOC_TOOLS_ENV_MANIFEST_URL: &str = "LUMINA_DOC_TOOLS_MANIFEST_URL";
+const DEFAULT_DOC_TOOLS_MANIFEST_URL: &str =
+    "https://github.com/blueberrycongee/Lumina-Note/releases/latest/download/doc-tools-manifest.json";
+
+#[derive(Debug, Deserialize)]
+struct DocToolsManifest {
+    version: String,
+    assets: Vec<DocToolsAsset>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DocToolsAsset {
+    platform: String,
+    arch: String,
+    url: String,
+    #[serde(default)]
+    sha256: Option<String>,
+    #[serde(default)]
+    size: Option<u64>,
+    #[serde(default)]
+    format: Option<String>,
+    #[serde(default)]
+    bin_dir: Option<String>,
+}
 
 pub fn doc_tools_version() -> &'static str {
     include_str!("../../doc-tools-version.txt").trim()
@@ -130,6 +156,87 @@ fn resolve_tool_on_path(names: &[&str], platform: NodePlatform) -> Option<PathBu
         }
     }
     None
+}
+
+async fn sha256_file(path: &Path) -> Result<String, AppError> {
+    let mut file = tokio::fs::File::open(path).await?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 16 * 1024];
+    loop {
+        let n = tokio::io::AsyncReadExt::read(&mut file, &mut buf).await?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hex::encode(hasher.finalize()))
+}
+
+fn normalize_platform_tag(tag: &str) -> Option<NodePlatform> {
+    match tag.to_lowercase().as_str() {
+        "macos" | "darwin" | "osx" => Some(NodePlatform::Macos),
+        "windows" | "win" => Some(NodePlatform::Windows),
+        "linux" => Some(NodePlatform::Linux),
+        _ => None,
+    }
+}
+
+fn normalize_arch_tag(tag: &str) -> Option<NodeArch> {
+    match tag.to_lowercase().as_str() {
+        "arm64" | "aarch64" => Some(NodeArch::Arm64),
+        "x64" | "amd64" => Some(NodeArch::X64),
+        _ => None,
+    }
+}
+
+fn manifest_url() -> String {
+    env::var(DOC_TOOLS_ENV_MANIFEST_URL).unwrap_or_else(|_| DEFAULT_DOC_TOOLS_MANIFEST_URL.to_string())
+}
+
+fn url_filename(url: &str) -> String {
+    url.split('/')
+        .last()
+        .filter(|name| !name.is_empty())
+        .unwrap_or("doc-tools-download")
+        .to_string()
+}
+
+async fn fetch_manifest() -> Result<DocToolsManifest, AppError> {
+    let url = manifest_url();
+    let response = reqwest::get(&url)
+        .await
+        .map_err(|e| AppError::Network(format!("Doc tools manifest download failed: {e}")))?;
+    if !response.status().is_success() {
+        return Err(AppError::Network(format!(
+            "Doc tools manifest download failed: HTTP {}",
+            response.status()
+        )));
+    }
+    let bytes = response.bytes().await?;
+    serde_json::from_slice(&bytes).map_err(|e| {
+        AppError::InvalidPath(format!("Doc tools manifest invalid: {e}"))
+    })
+}
+
+fn select_asset<'a>(
+    manifest: &'a DocToolsManifest,
+    platform: NodePlatform,
+    arch: NodeArch,
+) -> Result<&'a DocToolsAsset, AppError> {
+    manifest
+        .assets
+        .iter()
+        .find(|asset| {
+            normalize_platform_tag(&asset.platform) == Some(platform)
+                && normalize_arch_tag(&asset.arch) == Some(arch)
+        })
+        .ok_or_else(|| {
+            AppError::InvalidPath(format!(
+                "Doc tools asset not found for {}-{}",
+                platform_tag(platform),
+                arch_tag(arch)
+            ))
+        })
 }
 
 fn find_pack_root(version_dir: &Path) -> Option<PathBuf> {
@@ -285,19 +392,37 @@ pub async fn doc_tools_install_latest(app: AppHandle) -> Result<DocToolsStatus, 
         .app_data_dir()
         .map_err(|e| AppError::InvalidPath(format!("Failed to get app_data_dir: {}", e)))?;
 
-    let version = doc_tools_version().to_string();
+    let version_fallback = doc_tools_version().to_string();
     let platform = current_platform();
     let arch = current_arch();
-    let archive_name = doc_tools_archive_name(&version, platform, arch)
-        .ok_or_else(|| AppError::InvalidPath("Unsupported platform for doc tools".into()))?;
-    let url = doc_tools_archive_url(&version, platform, arch)
-        .ok_or_else(|| AppError::InvalidPath("Unsupported platform for doc tools".into()))?;
+    let direct_url = env::var(DOC_TOOLS_ENV_URL).ok().filter(|v| !v.trim().is_empty());
+    let manifest = if direct_url.is_none() {
+        Some(fetch_manifest().await?)
+    } else {
+        None
+    };
+    let (version, url, expected_sha, bin_dir_hint) = if let Some(manifest) = &manifest {
+        let asset = select_asset(manifest, platform, arch)?;
+        (
+            manifest.version.clone(),
+            asset.url.clone(),
+            asset.sha256.clone(),
+            asset.bin_dir.clone(),
+        )
+    } else {
+        (
+            version_fallback.clone(),
+            direct_url.unwrap(),
+            None,
+            None,
+        )
+    };
 
     let base = doc_tools_base_dir(&app_data_dir);
     tokio::fs::create_dir_all(&base).await?;
     let downloads = base.join("downloads");
     tokio::fs::create_dir_all(&downloads).await?;
-    let archive_path = downloads.join(&archive_name);
+    let archive_path = downloads.join(url_filename(&url));
 
     let response = reqwest::get(&url)
         .await
@@ -318,6 +443,15 @@ pub async fn doc_tools_install_latest(app: AppHandle) -> Result<DocToolsStatus, 
 
     let out_dir = version_dir(&base, &version);
     tokio::fs::create_dir_all(&out_dir).await?;
+
+    if let Some(expected) = expected_sha.as_deref() {
+        let actual = sha256_file(&archive_path).await?;
+        if !actual.eq_ignore_ascii_case(expected) {
+            return Err(AppError::InvalidPath(format!(
+                "Doc tools checksum mismatch: expected {expected}, got {actual}"
+            )));
+        }
+    }
 
     let status = if platform == NodePlatform::Windows {
         let cmd = format!(
@@ -347,5 +481,13 @@ pub async fn doc_tools_install_latest(app: AppHandle) -> Result<DocToolsStatus, 
     }
 
     write_current_version(&base, &version)?;
+    if let Some(bin_hint) = bin_dir_hint {
+        let root = find_pack_root(&out_dir).unwrap_or(out_dir.clone());
+        let hinted = root.join(bin_hint);
+        if hinted.is_dir() {
+            env::set_var(DOC_TOOLS_ENV_BIN, hinted);
+            env::set_var(DOC_TOOLS_ENV_DIR, root);
+        }
+    }
     doc_tools_get_status(app).await
 }
