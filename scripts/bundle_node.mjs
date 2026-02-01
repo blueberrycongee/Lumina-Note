@@ -55,6 +55,17 @@ const tmpDir = path.join(root, ".tmp_node");
 const extractDir = path.join(tmpDir, "extract");
 const archivePath = path.join(tmpDir, archiveName);
 
+const resourceDir = path.join(root, "src-tauri", "resources", "node");
+const binaryName = platformTag === "win" ? "node.exe" : "node";
+const binaryTarget = path.join(resourceDir, binaryName);
+if (existsSync(binaryTarget)) {
+  const stat = await fs.stat(binaryTarget);
+  if (stat.size > 0) {
+    console.log(`[bundle-node] Using cached Node runtime at ${binaryTarget}`);
+    process.exit(0);
+  }
+}
+
 await fs.rm(tmpDir, { recursive: true, force: true });
 await fs.mkdir(extractDir, { recursive: true });
 
@@ -96,7 +107,6 @@ if (platformTag === "win") {
 }
 
 const extractedRoot = path.join(extractDir, `node-v${version}-${platformTag}-${archTag}`);
-const binaryName = platformTag === "win" ? "node.exe" : "node";
 const binarySource =
   platformTag === "win"
     ? path.join(extractedRoot, binaryName)
@@ -106,9 +116,7 @@ if (!existsSync(binarySource)) {
   throw new Error(`[bundle-node] Node binary missing at ${binarySource}`);
 }
 
-const resourceDir = path.join(root, "src-tauri", "resources", "node");
 await fs.mkdir(resourceDir, { recursive: true });
-const binaryTarget = path.join(resourceDir, binaryName);
 await fs.copyFile(binarySource, binaryTarget);
 
 if (platformTag !== "win") {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
@@ -42,6 +42,7 @@ import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { PlanCard } from "../chat/PlanCard";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import type { ReferencedFile } from "@/hooks/useChatSend";
+import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
 import type { MessageContent, TextContent } from "@/services/llm";
 import { DeepResearchCard } from "../deep-research";
@@ -130,6 +131,7 @@ export function MainAIChatShell() {
   const [enableWebSearch, setEnableWebSearch] = useState(false); // 网络搜索开关
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoSendMessageRef = useRef<string | null>(null);
   const reduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -145,6 +147,7 @@ export function MainAIChatShell() {
       setSkillQuery("");
     }
   }, [chatMode]);
+
 
   // 随机选择一个 emoji（组件挂载时确定）
   const [welcomeEmoji] = useState(() =>
@@ -198,19 +201,35 @@ export function MainAIChatShell() {
   }, [rustAgentMessages]);
 
   // Chat store - 使用 selector 确保状态变化时正确重新渲染
-  const chatMessages = useAIStore((state) => state.messages);
-  const chatSessions = useAIStore((state) => state.sessions);
-  const chatSessionId = useAIStore((state) => state.currentSessionId);
-  const createChatSession = useAIStore((state) => state.createSession);
-  const switchChatSession = useAIStore((state) => state.switchSession);
-  const deleteChatSession = useAIStore((state) => state.deleteSession);
-  const chatLoading = useAIStore((state) => state.isLoading);
-  const chatStreaming = useAIStore((state) => state.isStreaming);
-  const sendMessageStream = useAIStore((state) => state.sendMessageStream);
-  const stopStreaming = useAIStore((state) => state.stopStreaming);
-  const checkChatFirstLoad = useAIStore((state) => state.checkFirstLoad);
-  const config = useAIStore((state) => state.config);
-  const chatTotalTokens = useAIStore((state) => state.totalTokensUsed);
+  const {
+    messages: chatMessages,
+    sessions: chatSessions,
+    currentSessionId: chatSessionId,
+    createSession: createChatSession,
+    switchSession: switchChatSession,
+    deleteSession: deleteChatSession,
+    isLoading: chatLoading,
+    isStreaming: chatStreaming,
+    sendMessageStream,
+    stopStreaming,
+    checkFirstLoad: checkChatFirstLoad,
+    config,
+    totalTokensUsed: chatTotalTokens,
+  } = useAIStore(useShallow((state) => ({
+    messages: state.messages,
+    sessions: state.sessions,
+    currentSessionId: state.currentSessionId,
+    createSession: state.createSession,
+    switchSession: state.switchSession,
+    deleteSession: state.deleteSession,
+    isLoading: state.isLoading,
+    isStreaming: state.isStreaming,
+    sendMessageStream: state.sendMessageStream,
+    stopStreaming: state.stopStreaming,
+    checkFirstLoad: state.checkFirstLoad,
+    config: state.config,
+    totalTokensUsed: state.totalTokensUsed,
+  })));
 
   useRAGStore();
 
@@ -363,6 +382,24 @@ export function MainAIChatShell() {
         ? agentMessages.length > 0
         : chatMessages.length > 0 || chatStreaming;
 
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof performance === "undefined") {
+      return;
+    }
+    performance.mark(`lumina:hasStarted:${hasStarted ? "true" : "false"}`);
+    if (hasStarted) {
+      try {
+        performance.measure(
+          "lumina:send->started",
+          "lumina:send:start",
+          "lumina:hasStarted:true"
+        );
+      } catch {
+        // ignore missing marks
+      }
+    }
+  }, [hasStarted]);
+
   // 获取当前消息列表
   const messages =
     chatMode === "agent" ? agentMessages : chatMode === "chat" ? chatMessages : [];
@@ -378,8 +415,44 @@ export function MainAIChatShell() {
 
   // 自动滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!messagesEndRef.current) {
+      return;
+    }
+    if (import.meta.env.DEV && typeof performance !== "undefined") {
+      performance.mark("lumina:scroll:before");
+    }
+    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (import.meta.env.DEV && typeof performance !== "undefined") {
+      performance.mark("lumina:scroll:after");
+      performance.measure("lumina:scroll", "lumina:scroll:before", "lumina:scroll:after");
+    }
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof performance === "undefined") {
+      return;
+    }
+    if (typeof PerformanceObserver === "undefined") {
+      return;
+    }
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (!entry.name.startsWith("lumina:")) {
+          continue;
+        }
+        if (entry.entryType === "measure") {
+          const msg = `[perf] ${entry.name} ${entry.duration.toFixed(2)}ms`;
+          console.info(msg);
+          continue;
+        }
+        const timing = `${entry.name} +${entry.startTime.toFixed(2)}ms`;
+        const msg = `[perf] ${timing}`;
+        console.info(msg);
+      }
+    });
+    observer.observe({ entryTypes: ["mark", "measure"], buffered: true });
+    return () => observer.disconnect();
+  }, []);
 
   // 首次加载检查（仅 Chat 模式需要）
   useEffect(() => {
@@ -473,6 +546,22 @@ export function MainAIChatShell() {
       .slice(0, 8);
   }, [skills, skillQuery]);
 
+  const [showMessages, setShowMessages] = useState(hasStarted);
+  useEffect(() => {
+    if (!hasStarted) {
+      setShowMessages(false);
+      return;
+    }
+    if (reduceMotion) {
+      setShowMessages(true);
+      return;
+    }
+    const id = requestAnimationFrame(() => {
+      setShowMessages(true);
+    });
+    return () => cancelAnimationFrame(id);
+  }, [hasStarted, reduceMotion]);
+
   const handleInputChange = useCallback((value: string) => {
     setInput(value);
     if (chatMode !== "agent") {
@@ -521,33 +610,61 @@ export function MainAIChatShell() {
   }, [selectedSkills, vaultPath]);
 
   // 发送消息
-  const handleSend = useCallback(async () => {
-    console.log("[handleSend] Called, chatMode:", chatMode, "input:", input, "isLoading:", isLoading);
+  const handleSend = useCallback(async (overrideInput?: string) => {
+    const finalizePerf = () => {
+      if (!import.meta.env.DEV || typeof performance === "undefined") {
+        return;
+      }
+      performance.mark("lumina:send:done");
+      performance.measure("lumina:send:total", "lumina:send:start", "lumina:send:done");
+      performance.measure("lumina:send:process", "lumina:send:start", "lumina:send:processed");
+      performance.measure("lumina:send:dispatch", "lumina:send:processed", "lumina:send:done");
+    };
+    if (import.meta.env.DEV && typeof performance !== "undefined") {
+      performance.mark("lumina:send:start");
+    }
+    if (import.meta.env.DEV) {
+      console.log("[handleSend] Called, chatMode:", chatMode, "input:", input, "isLoading:", isLoading);
+    }
     if (chatMode === "codex") {
       return;
     }
-    if ((!input.trim() && referencedFiles.length === 0) || isLoading) {
-      console.log("[handleSend] Blocked: input empty or loading");
+    const fallbackMessage = autoSendMessageRef.current?.trim() ?? "";
+    const overrideMessage = overrideInput?.trim() ?? "";
+    const effectiveInput = overrideMessage || input.trim() || fallbackMessage;
+    if ((!effectiveInput && referencedFiles.length === 0) || isLoading) {
+      if (import.meta.env.DEV) {
+        console.log("[handleSend] Blocked: input empty or loading", {
+          overrideMessage,
+          fallbackMessage,
+          referencedCount: referencedFiles.length,
+        });
+      }
       return;
     }
 
     // 检查是否仅仅是一个网页链接
-    const webLink = isOnlyWebLink(input);
+    const webLink = isOnlyWebLink(effectiveInput);
     if (webLink && referencedFiles.length === 0) {
       // 直接打开网页链接
       const { openWebpageTab } = useFileStore.getState();
       openWebpageTab(webLink);
       setInput("");
+      autoSendMessageRef.current = null;
       return;
     }
 
-    const message = input;
+    const message = effectiveInput;
     setInput("");
+    autoSendMessageRef.current = null;
     const files = [...referencedFiles];
     setReferencedFiles([]);
     setShowSkillMenu(false);
 
     const { displayMessage, fullMessage } = await processMessageWithFiles(message, files);
+    if (import.meta.env.DEV && typeof performance !== "undefined") {
+      performance.mark("lumina:send:processed");
+    }
 
     if (chatMode === "research") {
       // Deep Research 模式
@@ -582,6 +699,7 @@ export function MainAIChatShell() {
         includeCitations: true,
         preSearchedNotes: [],
       });
+      finalizePerf();
     } else if (chatMode === "agent") {
       // 使用 Rust Agent
       await rustStartTask(fullMessage, {
@@ -591,6 +709,7 @@ export function MainAIChatShell() {
         skills: selectedSkills.length > 0 ? selectedSkills : undefined,
       });
       setSelectedSkills([]);
+      finalizePerf();
     } else {
       const currentFileInfo = currentFile ? {
         path: currentFile,
@@ -598,8 +717,44 @@ export function MainAIChatShell() {
         content: currentContent,
       } : undefined;
       await sendMessageStream(fullMessage, currentFileInfo, displayMessage);
+      finalizePerf();
     }
   }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config, selectedSkills]);
+
+  const handleSendRef = useRef(handleSend);
+  useLayoutEffect(() => {
+    handleSendRef.current = handleSend;
+  }, [handleSend]);
+
+  const autoSendRef = useRef(false);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+    const autoSendEnabled =
+      localStorage.getItem("lumina_debug_auto_send") === "1" ||
+      import.meta.env.VITE_LUMINA_DEBUG_AUTO_SEND === "1";
+    if (!autoSendEnabled || autoSendRef.current) {
+      return;
+    }
+    if (chatMode === "codex") {
+      return;
+    }
+    autoSendRef.current = true;
+    if (chatMode === "research") {
+      resetResearch();
+    } else if (chatMode === "agent") {
+      rustClearChat();
+    } else {
+      createSession();
+    }
+    autoSendMessageRef.current = "性能调试：首次发送卡顿";
+    setInput("性能调试：首次发送卡顿");
+    setTimeout(() => {
+      handleSendRef.current("性能调试：首次发送卡顿");
+    }, 200);
+  }, [chatMode, resetResearch, rustClearChat, createSession]);
 
   // 键盘事件
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -919,8 +1074,7 @@ export function MainAIChatShell() {
         </AnimatePresence>
 
         {/* 主要内容区域 - 始终居中 */}
-        <main className={`h-full w-full flex flex-col transition-all duration-700 ease-out overflow-hidden min-h-0 min-w-0 ${hasStarted ? "" : "justify-center items-center"
-          }`}>
+        <main className="h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0">
           {isCodexMode ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
               <div className="flex-1 flex overflow-hidden min-h-0">
@@ -955,9 +1109,35 @@ export function MainAIChatShell() {
           </AnimatePresence>
 
           {/* 消息列表区域 (对话模式) */}
-          {hasStarted && (
-            <div className="flex-1 w-full overflow-y-auto scrollbar-thin">
-              <div className="max-w-3xl mx-auto px-4 pt-8">
+          <div
+            className="w-full min-h-0 scrollbar-thin"
+            style={{
+              flexBasis: 0,
+              flexGrow: hasStarted ? 1 : 0,
+              opacity: hasStarted ? 1 : 0,
+              pointerEvents: hasStarted ? "auto" : "none",
+              overflowY: hasStarted ? "auto" : "hidden",
+              transition: reduceMotion
+                ? "none"
+                : "flex-grow 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease-out",
+            }}
+          >
+              <motion.div
+                className="max-w-3xl mx-auto px-4 pt-8"
+                initial={false}
+                animate={
+                  reduceMotion
+                    ? { opacity: 1, y: 0 }
+                    : showMessages
+                      ? { opacity: 1, y: 0 }
+                      : { opacity: 0, y: 6 }
+                }
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }
+                }
+              >
 
                 {/* Agent 模式：任务计划卡片 + 消息渲染 */}
                 {chatMode === "agent" && rustCurrentPlan && rustCurrentPlan.steps.length > 0 && (
@@ -1090,9 +1270,8 @@ export function MainAIChatShell() {
                 )}
 
                 <div ref={messagesEndRef} />
-              </div>
-            </div>
-          )}
+              </motion.div>
+          </div>
 
           {/* 输入框容器 */}
           {!isCodexMode && (
@@ -1105,14 +1284,14 @@ export function MainAIChatShell() {
                   ? { opacity: 1, y: 0, scale: 1 }
                   : {
                       opacity: 1,
-                      y: hasStarted ? 0 : 6,
+                      y: hasStarted ? 0 : 10,
                       scale: hasStarted ? 1 : 1.01,
                     }
               }
               transition={
                 reduceMotion
                   ? { duration: 0 }
-                  : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }
+                  : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
               }
             >
               <motion.div

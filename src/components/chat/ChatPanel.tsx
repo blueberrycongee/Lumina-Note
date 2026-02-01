@@ -19,7 +19,8 @@ import {
   Square,
 } from "lucide-react";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
-import { ChatInput, type ChatInputRef, type AttachedImage } from "./ChatInput";
+import { ChatInput, type ChatInputRef } from "./ChatInput";
+import type { AttachedImage } from "@/types/chat";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
 import type { MessageContent, TextContent, ImageContent } from "@/services/llm";
 

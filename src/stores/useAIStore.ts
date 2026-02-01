@@ -16,7 +16,7 @@ import { readFile } from "@/lib/tauri";
 import { callLLMStream, type ImageContent, type TextContent, type MessageContent } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
-import type { AttachedImage } from "@/components/chat/ChatInput";
+import type { AttachedImage } from "@/types/chat";
 // 流式状态现在完全由 Zustand 管理，不再需要额外的 streamingStore
 
 // Pending diff for preview

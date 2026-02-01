@@ -11,20 +11,13 @@ import { Send, FileText, Folder, X, Loader2, Paperclip, Quote, Image as ImageIco
 import { cn } from "@/lib/utils";
 import { useCommandStore, SlashCommand } from "@/stores/useCommandStore";
 import { CommandManagerModal } from "./CommandManagerModal";
+import type { AttachedImage } from "@/types/chat";
 
 // 引用的文件
 export interface ReferencedFile {
   path: string;
   name: string;
   isFolder: boolean;
-}
-
-// 附加的图片
-export interface AttachedImage {
-  id: string;
-  data: string; // base64
-  mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-  preview: string; // data URL for preview
 }
 
 export interface ChatInputRef {

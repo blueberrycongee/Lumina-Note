@@ -44,6 +44,22 @@ import type { FsChangePayload } from "@/lib/fsChange";
 // 启用调试日志收集（开发模式下）
 if (import.meta.env.DEV) {
   enableDebugLogger();
+  window.addEventListener("error", (event) => {
+    console.error(
+      "[WindowError]",
+      event.message,
+      event.filename,
+      event.lineno,
+      event.colno
+    );
+    if (event.error) {
+      console.error("[WindowErrorStack]", event.error.stack || event.error);
+    }
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = (event.reason && (event.reason.stack || event.reason)) || "unknown";
+    console.error("[UnhandledRejection]", reason);
+  });
 }
 
 const IS_TYPESETTING_HARNESS =
