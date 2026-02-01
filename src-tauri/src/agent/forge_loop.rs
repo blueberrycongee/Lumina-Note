@@ -124,7 +124,7 @@ pub async fn run_forge_loop(
                     std::mem::take(&mut *locked)
                 };
                 let mut iteration = 0usize;
-                let max_iterations = config.max_steps.max(1);
+                let max_iterations = config.max_steps;
 
                 loop {
                     if cancel.is_cancelled() {
@@ -135,7 +135,7 @@ pub async fn run_forge_loop(
 
                     if queued_calls.is_empty() {
                         iteration += 1;
-                        if iteration > max_iterations {
+                        if max_iterations > 0 && iteration > max_iterations {
                             return Err(GraphError::MaxIterationsExceeded);
                         }
 

@@ -463,8 +463,9 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
     base_url: resolvedBaseUrl,
     temperature: aiConfig.temperature ?? 0.7,
     max_tokens: 4096,
-    max_plan_iterations: 3,
-    max_steps: 10,
+    // 0 means unlimited
+    max_plan_iterations: 0,
+    max_steps: 0,
     auto_approve: autoApprove,
     locale: "zh-CN",
   };

@@ -319,8 +319,8 @@ export const useAgentEvalStore = create<EvalState & EvalActions>((set, get) => {
           base_url: aiConfig.baseUrl || null,
           temperature: aiConfig.temperature || 0.7,
           max_tokens: (aiConfig as any).maxTokens || 4096,
-          max_plan_iterations: 3,
-          max_steps: 10,
+          max_plan_iterations: 0,
+          max_steps: 0,
           auto_approve: true,  // 评估时自动审批
           locale: 'zh-CN',
         };

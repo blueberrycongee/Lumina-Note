@@ -222,10 +222,10 @@ pub struct AgentConfig {
     /// 最大 tokens
     #[serde(default = "default_max_tokens")]
     pub max_tokens: usize,
-    /// 最大计划迭代
+    /// 最大计划迭代（0 表示无限制）
     #[serde(default = "default_max_plan_iterations")]
     pub max_plan_iterations: usize,
-    /// 最大步骤数
+    /// 最大步骤数（0 表示无限制）
     #[serde(default = "default_max_steps")]
     pub max_steps: usize,
     /// 是否自动审批
@@ -238,8 +238,9 @@ pub struct AgentConfig {
 
 fn default_temperature() -> f32 { 0.7 }
 fn default_max_tokens() -> usize { 4096 }
-fn default_max_plan_iterations() -> usize { 3 }
-fn default_max_steps() -> usize { 10 }
+// 0 means unlimited (no iteration cap)
+fn default_max_plan_iterations() -> usize { 0 }
+fn default_max_steps() -> usize { 0 }
 fn default_locale() -> String { "zh-CN".to_string() }
 
 impl Default for AgentConfig {
