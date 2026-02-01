@@ -1,11 +1,9 @@
+import "@/pdfWorker";
 import React, { useMemo, useState, useEffect } from 'react';
 import { FileEntry, readBinaryFileBase64 } from '@/lib/tauri';
 import { Folder, Hash, FileText, Loader2 } from 'lucide-react';
 import { getFileName } from '@/lib/utils';
 import { pdfjs } from 'react-pdf';
-
-// 配置 PDF.js worker（复用现有配置）
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // PDF 缩略图缓存（存储渲染后的图片 base64，而不是完整 PDF 数据）
 const pdfThumbnailCache = new Map<string, string>();

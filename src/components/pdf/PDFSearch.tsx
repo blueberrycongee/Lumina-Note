@@ -1,3 +1,4 @@
+import "@/pdfWorker";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { pdfjs } from "react-pdf";
 import { Search, X, ChevronUp, ChevronDown, Loader2 } from "lucide-react";

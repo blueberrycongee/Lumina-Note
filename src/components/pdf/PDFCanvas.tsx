@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
+import "@/pdfWorker";
+import { Document, Page } from "react-pdf";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { InteractiveLayer } from "./InteractiveLayer";
@@ -7,9 +8,6 @@ import { AnnotationLayer } from "./AnnotationLayer";
 import { usePDFAnnotationStore } from "@/stores/usePDFAnnotationStore";
 import type { PDFElement } from "@/types/pdf";
 import type { TextPosition } from "@/types/annotation";
-
-// 配置 PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 // 引入 react-pdf 样式
 import "react-pdf/dist/Page/AnnotationLayer.css";
