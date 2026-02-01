@@ -599,7 +599,7 @@ export const useAIStore = create<AIState>()(
           let reasoningContent = "";
           
           // 流式接收内容
-          for await (const chunk of callLLMStream(llmMessages, undefined, configOverride)) {
+          for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true }, configOverride)) {
             if (chunk.type === "text") {
               finalContent += chunk.text;
               // 直接更新 Zustand 状态

@@ -116,6 +116,7 @@ export interface LLMConfig {
 export interface LLMOptions {
   signal?: AbortSignal;
   temperature?: number;
+  useDefaultTemperature?: boolean;
   maxTokens?: number;
   tools?: unknown[];  // Function Calling 工具定义
 }

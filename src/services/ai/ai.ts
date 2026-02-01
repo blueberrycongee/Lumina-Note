@@ -148,7 +148,7 @@ export async function chat(
 
   try {
     // 使用统一的 LLM 服务
-    const response = await callLLM(fullMessages, undefined, configOverride);
+    const response = await callLLM(fullMessages, { useDefaultTemperature: true }, configOverride);
 
     return {
       content: response.content,

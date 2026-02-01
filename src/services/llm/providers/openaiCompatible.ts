@@ -104,9 +104,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
   /**
    * 获取 temperature（thinking 模型强制 1.0）
    */
-  protected getTemperature(options?: LLMOptions): number {
+  protected getTemperature(options?: LLMOptions): number | undefined {
     const isThinking = this.providerConfig.isThinkingModel?.(this.config.model);
     if (isThinking) return 1.0;
+    if (options?.useDefaultTemperature) return undefined;
     return options?.temperature ?? 0.7;
   }
 
@@ -120,10 +121,14 @@ export class OpenAICompatibleProvider implements LLMProvider {
         role: m.role,
         content: convertContent(m.content),
       })),
-      temperature: this.getTemperature(options),
       max_tokens: options?.maxTokens || 4096,
       stream,
     };
+
+    const temperature = this.getTemperature(options);
+    if (temperature !== undefined) {
+      body.temperature = temperature;
+    }
 
     // 流式时请求 usage
     if (stream) {

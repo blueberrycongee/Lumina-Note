@@ -25,6 +25,13 @@ export class GeminiProvider implements LLMProvider {
     // 转换消息格式为 Gemini 格式
     const contents = this.convertMessages(messages);
 
+    const generationConfig: Record<string, unknown> = {
+      maxOutputTokens: options?.maxTokens || 8192,
+    };
+    if (!options?.useDefaultTemperature) {
+      generationConfig.temperature = options?.temperature ?? 0.7;
+    }
+
     const result = await llmFetchJson<{
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
@@ -32,10 +39,7 @@ export class GeminiProvider implements LLMProvider {
       method: "POST",
       body: {
         contents,
-        generationConfig: {
-          temperature: options?.temperature ?? 0.7,
-          maxOutputTokens: options?.maxTokens || 8192,
-        },
+        generationConfig,
       },
       timeout: 120,
     });

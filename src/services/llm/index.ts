@@ -71,10 +71,12 @@ export async function callLLM(
     try {
       const provider = createProvider(configOverride);
       const config = getLLMConfig();
-      const finalOptions = {
-        ...options,
-        temperature: options?.temperature ?? config.temperature,
-      };
+      const finalOptions = options?.useDefaultTemperature
+        ? { ...options }
+        : {
+            ...options,
+            temperature: options?.temperature ?? config.temperature,
+          };
       console.log('[AI Debug] Provider created, calling provider.call()');
       const response = await provider.call(messages, finalOptions);
       console.log('[AI Debug] Provider.call() returned successfully');
@@ -114,10 +116,12 @@ export async function* callLLMStream(
 ): LLMStream {
   const provider = createProvider(configOverride);
   const config = getLLMConfig();
-  const finalOptions = {
-    ...options,
-    temperature: options?.temperature ?? config.temperature,
-  };
+  const finalOptions = options?.useDefaultTemperature
+    ? { ...options }
+    : {
+        ...options,
+        temperature: options?.temperature ?? config.temperature,
+      };
 
   console.log('[AI Debug] callLLMStream - provider.stream exists:', !!provider.stream);
 
