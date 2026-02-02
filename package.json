@@ -12,6 +12,7 @@
     "build": "tsc && vite build",
     "pretauri": "node scripts/sync_version.mjs",
     "preview": "vite preview",
+    "release:prepare": "node scripts/release_prepare.mjs",
     "tauri": "tauri",
     "test": "vitest",
     "test:run": "vitest --run",
