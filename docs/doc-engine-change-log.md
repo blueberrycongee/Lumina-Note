@@ -47,3 +47,9 @@
 - Scope: `tests/typesetting/failures/README.md`, `tests/typesetting/failures/manifest.json`.
 - Impact: Provides a structured place to track minimal mismatch repros.
 - Rollback: Remove the failure repro folder and manifest.
+
+## 2026-02-02 (perf report aggregation)
+- Change: Add report aggregator to summarize lumina export timings.
+- Scope: `scripts/typesetting_report_aggregate.mjs`, `docs/doc-engine-phase1-report.md`.
+- Impact: Provides a simple performance baseline summary from export reports.
+- Rollback: Remove the script and related doc references.

@@ -35,6 +35,8 @@ Establish a repeatable baseline docx sample set and dual comparison tooling (vis
    - `node scripts/typesetting_baseline_compare.mjs tests/typesetting/openoffice-baselines/basic-paragraphs/basic-paragraphs.pdf tests/typesetting/lumina-baselines/basic-paragraphs.pdf --out tests/typesetting/compare-reports/basic-paragraphs`
 5) Compare manifest batch (all samples):
    - `node scripts/typesetting_baseline_compare_manifest.mjs --baseline tests/typesetting/openoffice-baselines --candidate tests/typesetting/lumina-baselines --out tests/typesetting/compare-reports`
+6) Aggregate performance timings:
+   - `node scripts/typesetting_report_aggregate.mjs --dir tests/typesetting/lumina-baselines --out tests/typesetting/perf/summary.json`
 
 ## Current Results
 - Baseline fixtures generated and versioned.
