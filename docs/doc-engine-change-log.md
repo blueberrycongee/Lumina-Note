@@ -23,3 +23,9 @@
 - Scope: `scripts/typesetting_baseline_compare_manifest.mjs`, `docs/doc-engine-phase1-report.md`.
 - Impact: Enables batch structural+visual comparison and documents Phase 1 demo steps.
 - Rollback: Delete the new script and report.
+
+## 2026-02-02 (ignore generated baselines)
+- Change: Ignore generated baseline outputs (OpenOffice/Lumina/compare reports) from git.
+- Scope: `.gitignore`.
+- Impact: Prevents large binary baseline outputs from polluting the repo.
+- Rollback: Remove the ignore entries.

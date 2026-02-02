@@ -44,6 +44,11 @@ third_party/
 # Test coverage
 coverage/
 
+# Typesetting baselines (generated)
+tests/typesetting/openoffice-baselines/
+tests/typesetting/lumina-baselines/
+tests/typesetting/compare-reports/
+
 # Local config
 *.local
 mobile/android/local.properties
