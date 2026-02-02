@@ -39,6 +39,7 @@ Establish a repeatable baseline docx sample set and dual comparison tooling (vis
    - If IR/layout JSON exists, this also writes `ir-metrics.json` and `layout-metrics.json` per sample.
 6) Aggregate performance timings:
    - `node scripts/typesetting_report_aggregate.mjs --dir tests/typesetting/lumina-baselines --out tests/typesetting/perf/summary.json`
+   - Keep `tests/typesetting/perf/` untracked (see `.gitignore`).
 7) Compute IR structure metrics (optional):
    - `node scripts/typesetting_ir_metrics.mjs tests/typesetting/lumina-baselines/basic-paragraphs/basic-paragraphs.ir.json --out tests/typesetting/compare-reports/basic-paragraphs/ir-metrics.json`
 

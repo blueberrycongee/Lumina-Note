@@ -48,6 +48,7 @@ coverage/
 tests/typesetting/openoffice-baselines/
 tests/typesetting/lumina-baselines/
 tests/typesetting/compare-reports/
+tests/typesetting/perf/
 
 # Local config
 *.local

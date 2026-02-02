@@ -125,3 +125,9 @@
 - Scope: `scripts/typesetting_layout_metrics.mjs`, `scripts/typesetting_baseline_compare_manifest.mjs`.
 - Impact: Produces per-sample pagination metrics from layout JSON.
 - Rollback: Remove the layout metrics script and integration.
+
+## 2026-02-02 (ignore perf outputs)
+- Change: Ignore generated perf summaries under tests/typesetting.
+- Scope: `.gitignore`.
+- Impact: Keeps perf artifacts out of version control.
+- Rollback: Remove the ignore entry.
