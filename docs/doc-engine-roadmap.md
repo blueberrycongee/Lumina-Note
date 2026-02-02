@@ -58,6 +58,9 @@
 
 - 明确“渲染一致性标准”：以 OpenOffice 为参照，定一组对比样例（段落、表格、图片、页眉页脚、分页）。
 - 输出评估用例：挑选 10~20 个 docx 样例作为基线集。
+- 基线样例目录：`tests/typesetting/samples/`（见 `manifest.json` 与生成脚本）。
+- OpenOffice baseline 工具：`scripts/typesetting_baseline_batch.mjs`。
+- Lumina baseline 工具：`scripts/typesetting_lumina_batch_export.mjs`。
 
 ### Phase 2：最短闭环（可用性优先）
 
@@ -92,4 +95,3 @@
 3) 设计 IR schema（初版）
 4) 确定标记语言超集语法（Markdown + 结构块扩展）
 5) 制作“AI 操作指令集”（insert/replace/move/style）
-

@@ -89,3 +89,9 @@
 - Scope: `scripts/typesetting_ir_metrics.mjs`, `scripts/typesetting_ir_diff.mjs`, `docs/doc-engine-phase1-report.md`.
 - Impact: Provides structural comparisons for paragraph/list/table counts independent of rendering.
 - Rollback: Remove the scripts and doc references.
+
+## 2026-02-02 (roadmap update)
+- Change: Document baseline tooling references in roadmap.
+- Scope: `docs/doc-engine-roadmap.md`.
+- Impact: Keeps roadmap aligned with new scripts.
+- Rollback: Revert the roadmap additions.
