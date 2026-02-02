@@ -66,7 +66,7 @@ function parseArgs(argv) {
   const args = [...argv];
   if (args.length < 2) {
     throw new Error(
-      "Usage: node scripts/typesetting_export_harness.mjs <docx> <output.pdf> [--baseline <baseline.pdf>] [--port <port>] [--no-server]",
+      "Usage: node scripts/typesetting_export_harness.mjs <docx> <output.pdf> [--baseline <baseline.pdf>] [--port <port>] [--no-server] [--font <path>] [--report <file>] [--layout-out <file>]",
     );
   }
   const docxPath = args.shift();
@@ -76,6 +76,8 @@ function parseArgs(argv) {
     port: DEFAULT_PORT,
     noServer: false,
     fontPath: null,
+    reportPath: null,
+    layoutPath: null,
   };
 
   while (args.length > 0) {
@@ -89,6 +91,12 @@ function parseArgs(argv) {
         break;
       case "--no-server":
         options.noServer = true;
+        break;
+      case "--report":
+        options.reportPath = args.shift() ?? null;
+        break;
+      case "--layout-out":
+        options.layoutPath = args.shift() ?? null;
         break;
       case "--font":
         options.fontPath = args.shift() ?? null;
@@ -170,6 +178,7 @@ async function main() {
     throw new Error("Microsoft Edge not found.");
   }
 
+  const startedAt = Date.now();
   const absoluteDocx = path.resolve(docxPath);
   const absolutePdf = path.resolve(outPdf);
   const origin = `http://${DEFAULT_HOST}:${options.port}`;
@@ -248,6 +257,26 @@ async function main() {
 
     fs.mkdirSync(path.dirname(absolutePdf), { recursive: true });
     fs.writeFileSync(absolutePdf, Buffer.from(pdfBase64, "base64"));
+
+    if (options.layoutPath) {
+      const layoutJson = await page.evaluate(async () => {
+        return window.__luminaTypesettingHarness.exportLayoutJson();
+      });
+      fs.mkdirSync(path.dirname(options.layoutPath), { recursive: true });
+      fs.writeFileSync(options.layoutPath, layoutJson, "utf8");
+    }
+
+    if (options.reportPath) {
+      const durationMs = Date.now() - startedAt;
+      const report = {
+        inputDocx: absoluteDocx,
+        outputPdf: absolutePdf,
+        durationMs,
+        layoutPath: options.layoutPath ? path.resolve(options.layoutPath) : null,
+      };
+      fs.mkdirSync(path.dirname(options.reportPath), { recursive: true });
+      fs.writeFileSync(options.reportPath, JSON.stringify(report, null, 2), "utf8");
+    }
 
     await browser.close();
 

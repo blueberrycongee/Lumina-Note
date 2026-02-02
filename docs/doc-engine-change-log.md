@@ -35,3 +35,9 @@
 - Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`, `src/components/typesetting/TypesettingExportHarness.tsx`.
 - Impact: Enables white-box inspection of line breaks/layout in headless export runs.
 - Rollback: Remove harness debug payload wiring and API method.
+
+## 2026-02-02 (export harness metrics)
+- Change: Add optional layout dump + timing report outputs to the typesetting export harness.
+- Scope: `scripts/typesetting_export_harness.mjs`.
+- Impact: Enables perf timing capture and layout JSON export during headless PDF runs.
+- Rollback: Remove the new flags and report output logic.
