@@ -67,3 +67,4 @@ Goal: Provide a stable, AI-editable structural IR that becomes the single source
 
 ## References
 - Runtime schema: `src/typesetting/irSchema.ts`
+- Draft converter: `src/typesetting/docxToIr.ts`

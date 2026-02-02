@@ -71,3 +71,9 @@
 - Scope: `src/typesetting/irOps.ts`, `docs/typesetting-ir-ops.md`.
 - Impact: Defines minimal op vocabulary (insert/replace/move/style/delete) for future AI editing.
 - Rollback: Remove the ops file and doc.
+
+## 2026-02-02 (docx -> IR draft)
+- Change: Add draft converter to map current docx blocks into IR.
+- Scope: `src/typesetting/docxToIr.ts`, `docs/typesetting-ir-schema.md`.
+- Impact: Provides a starting point for IR adoption without wiring it into runtime yet.
+- Rollback: Remove the converter file and doc reference.
