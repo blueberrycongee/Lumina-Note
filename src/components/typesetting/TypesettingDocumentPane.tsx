@@ -56,6 +56,7 @@ declare global {
     __luminaTypesettingLayout?: {
       docPath: string;
       updatedAt: string;
+      totalPages?: number;
       pageMm?: TypesettingPreviewPageMm | null;
       pageStyle?: DocxPageStyle;
       contentHeightPx?: number;
@@ -66,6 +67,7 @@ declare global {
         lineHeightPx: number;
         lines: TypesettingTextLine[];
         lineStyles: Array<{ fontSizePx: number; lineHeightPx: number; underline: boolean }>;
+        linePages?: number[];
       } | null;
       header?: {
         text: string;
@@ -1181,9 +1183,15 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     if (!window.__luminaTypesettingHarness) return;
     if (!doc) return;
 
+    const bodyPageHeightPx = pageMm ? mmToPx(pageMm.body.height_mm) : null;
+    const bodyLinePages = bodyLayout && bodyPageHeightPx
+      ? bodyLayout.lines.map((line) => Math.max(1, Math.floor(line.y_offset / bodyPageHeightPx) + 1))
+      : undefined;
+
     window.__luminaTypesettingLayout = {
       docPath: path,
       updatedAt: new Date().toISOString(),
+      totalPages,
       pageMm,
       pageStyle: doc.pageStyle,
       contentHeightPx: doc.layoutCache?.contentHeightPx,
@@ -1195,6 +1203,7 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
           lineHeightPx: bodyLayout.lineHeightPx,
           lines: bodyLayout.lines,
           lineStyles: bodyLineStyles,
+          linePages: bodyLinePages,
         }
         : null,
       header: headerLayout
@@ -1220,7 +1229,7 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
         delete window.__luminaTypesettingLayout;
       }
     };
-  }, [bodyLayout, bodyLineStyles, doc, footerLayout, headerLayout, pageMm, path]);
+  }, [bodyLayout, bodyLineStyles, doc, footerLayout, headerLayout, pageMm, path, totalPages]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(Math.max(1, prev), totalPages));

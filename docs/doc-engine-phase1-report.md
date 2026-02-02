@@ -44,7 +44,7 @@ Establish a repeatable baseline docx sample set and dual comparison tooling (vis
 ## Current Results
 - Baseline fixtures generated and versioned.
 - OpenOffice render outputs are not committed; run the demo commands locally to capture them.
-- White-box layout export is available in the export harness via `exportLayoutJson` (lines + metadata).
+- White-box layout export is available in the export harness via `exportLayoutJson` (lines, pagination info, metadata).
 
 ## Quality Gap Notes
 - Pending: capture visual diff ratios + PDF metrics once OpenOffice baselines are generated.

@@ -101,3 +101,9 @@
 - Scope: `docs/WORD_BASELINE_CAPTURE.md`.
 - Impact: Documents how to produce Word PDF baselines with metadata.
 - Rollback: Remove the guide.
+
+## 2026-02-02 (layout pagination info)
+- Change: Include total page count and per-line page index in layout export.
+- Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
+- Impact: Enables white-box pagination inspection alongside line metrics.
+- Rollback: Remove the new layout fields.
