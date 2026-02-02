@@ -107,3 +107,9 @@
 - Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
 - Impact: Enables white-box pagination inspection alongside line metrics.
 - Rollback: Remove the new layout fields.
+
+## 2026-02-02 (IR conversion tests)
+- Change: Add basic tests for docx -> IR conversion.
+- Scope: `src/typesetting/docxToIr.test.ts`.
+- Impact: Ensures core block mapping stays stable.
+- Rollback: Remove the test file.
