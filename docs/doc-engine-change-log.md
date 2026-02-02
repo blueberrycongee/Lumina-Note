@@ -53,3 +53,9 @@
 - Scope: `scripts/typesetting_report_aggregate.mjs`, `docs/doc-engine-phase1-report.md`.
 - Impact: Provides a simple performance baseline summary from export reports.
 - Rollback: Remove the script and related doc references.
+
+## 2026-02-02 (lumina batch export)
+- Change: Add Lumina batch export script to generate candidate PDFs + layout reports from manifest.
+- Scope: `scripts/typesetting_lumina_batch_export.mjs`, `docs/doc-engine-phase1-report.md`.
+- Impact: Simplifies candidate generation and ensures layout/perf artifacts per sample.
+- Rollback: Remove the batch script and doc references.

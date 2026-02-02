@@ -30,7 +30,7 @@ Establish a repeatable baseline docx sample set and dual comparison tooling (vis
 2) Render OpenOffice baselines:
    - `node scripts/typesetting_baseline_batch.mjs --format pdf`
 3) Export Lumina PDF candidates (requires dev server + Edge):
-   - `node scripts/typesetting_export_harness.mjs tests/typesetting/samples/basic-paragraphs.docx tests/typesetting/lumina-baselines/basic-paragraphs.pdf --report tests/typesetting/lumina-baselines/basic-paragraphs.report.json --layout-out tests/typesetting/lumina-baselines/basic-paragraphs.layout.json`
+   - `node scripts/typesetting_lumina_batch_export.mjs --out tests/typesetting/lumina-baselines`
 4) Compare per-sample (structural + pixel):
    - `node scripts/typesetting_baseline_compare.mjs tests/typesetting/openoffice-baselines/basic-paragraphs/basic-paragraphs.pdf tests/typesetting/lumina-baselines/basic-paragraphs.pdf --out tests/typesetting/compare-reports/basic-paragraphs`
 5) Compare manifest batch (all samples):
