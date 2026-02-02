@@ -17,3 +17,9 @@
 - Scope: `scripts/typesetting_baseline_batch.mjs`.
 - Impact: Enables repeatable baseline PDF/PNG generation across sample fixtures.
 - Rollback: Delete the batch script; manual rendering remains possible.
+
+## 2026-02-02 (baseline manifest compare)
+- Change: Add manifest-level compare script and Phase 1 report for reproducible baseline evaluation.
+- Scope: `scripts/typesetting_baseline_compare_manifest.mjs`, `docs/doc-engine-phase1-report.md`.
+- Impact: Enables batch structural+visual comparison and documents Phase 1 demo steps.
+- Rollback: Delete the new script and report.
