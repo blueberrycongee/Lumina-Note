@@ -8,6 +8,7 @@ const HARNESS_DEFAULT_PATH = "C:/__lumina_harness__/input.docx";
 type TypesettingHarnessApi = {
   loadDocxBase64: (base64: string, fileName?: string) => Promise<void>;
   exportPdfBase64: () => Promise<string>;
+  exportLayoutJson: () => Promise<string>;
   setFontBase64: (base64: string, fontName?: string, fileName?: string) => Promise<void>;
 };
 
@@ -21,6 +22,7 @@ declare global {
       exporterReady: boolean;
       ready: boolean;
     };
+    __luminaTypesettingLayout?: unknown;
     __luminaTypesettingFont?: {
       name: string;
       fileName: string;
@@ -58,6 +60,13 @@ export function TypesettingExportHarness() {
     return encodeBytesToBase64(bytes);
   }, [exporter]);
 
+  const exportLayoutJson = useCallback(async () => {
+    if (!window.__luminaTypesettingLayout) {
+      throw new Error("Typesetting layout not ready");
+    }
+    return JSON.stringify(window.__luminaTypesettingLayout);
+  }, []);
+
   const setFontBase64 = useCallback(async (base64: string, fontName?: string, fileName?: string) => {
     setFontAsset({
       name: fontName ?? "SimHei",
@@ -70,12 +79,13 @@ export function TypesettingExportHarness() {
     window.__luminaTypesettingHarness = {
       loadDocxBase64,
       exportPdfBase64,
+      exportLayoutJson,
       setFontBase64,
     };
     return () => {
       delete window.__luminaTypesettingHarness;
     };
-  }, [exportPdfBase64, loadDocxBase64, setFontBase64]);
+  }, [exportLayoutJson, exportPdfBase64, loadDocxBase64, setFontBase64]);
 
   useEffect(() => {
     window.__luminaTypesettingReady = docReady;

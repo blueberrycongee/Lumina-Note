@@ -36,7 +36,15 @@ import {
   OsKind,
 } from "@/typesetting/fontPaths";
 import type { TypesettingDoc } from "@/stores/useTypesettingDocStore";
-import type { DocxBlock, DocxImageBlock, DocxListBlock, DocxParagraphStyle, DocxRun, DocxTableBlock } from "@/typesetting/docxImport";
+import type {
+  DocxBlock,
+  DocxImageBlock,
+  DocxListBlock,
+  DocxPageStyle,
+  DocxParagraphStyle,
+  DocxRun,
+  DocxTableBlock,
+} from "@/typesetting/docxImport";
 
 declare global {
   interface Window {
@@ -44,6 +52,33 @@ declare global {
       name: string;
       fileName: string;
       data: string;
+    };
+    __luminaTypesettingLayout?: {
+      docPath: string;
+      updatedAt: string;
+      pageMm?: TypesettingPreviewPageMm | null;
+      pageStyle?: DocxPageStyle;
+      contentHeightPx?: number;
+      lineCount?: number;
+      body?: {
+        text: string;
+        fontSizePx: number;
+        lineHeightPx: number;
+        lines: TypesettingTextLine[];
+        lineStyles: Array<{ fontSizePx: number; lineHeightPx: number; underline: boolean }>;
+      } | null;
+      header?: {
+        text: string;
+        fontSizePx: number;
+        lineHeightPx: number;
+        lines: TypesettingTextLine[];
+      } | null;
+      footer?: {
+        text: string;
+        fontSizePx: number;
+        lineHeightPx: number;
+        lines: TypesettingTextLine[];
+      } | null;
     };
   }
 }
@@ -1140,6 +1175,52 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     fallbackContentHeightPx,
     pageMm,
   ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!window.__luminaTypesettingHarness) return;
+    if (!doc) return;
+
+    window.__luminaTypesettingLayout = {
+      docPath: path,
+      updatedAt: new Date().toISOString(),
+      pageMm,
+      pageStyle: doc.pageStyle,
+      contentHeightPx: doc.layoutCache?.contentHeightPx,
+      lineCount: doc.layoutCache?.lineCount,
+      body: bodyLayout
+        ? {
+          text: bodyLayout.text,
+          fontSizePx: bodyLayout.fontSizePx,
+          lineHeightPx: bodyLayout.lineHeightPx,
+          lines: bodyLayout.lines,
+          lineStyles: bodyLineStyles,
+        }
+        : null,
+      header: headerLayout
+        ? {
+          text: headerLayout.text,
+          fontSizePx: headerLayout.fontSizePx,
+          lineHeightPx: headerLayout.lineHeightPx,
+          lines: headerLayout.lines,
+        }
+        : null,
+      footer: footerLayout
+        ? {
+          text: footerLayout.text,
+          fontSizePx: footerLayout.fontSizePx,
+          lineHeightPx: footerLayout.lineHeightPx,
+          lines: footerLayout.lines,
+        }
+        : null,
+    };
+
+    return () => {
+      if (window.__luminaTypesettingLayout?.docPath === path) {
+        delete window.__luminaTypesettingLayout;
+      }
+    };
+  }, [bodyLayout, bodyLineStyles, doc, footerLayout, headerLayout, pageMm, path]);
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(Math.max(1, prev), totalPages));

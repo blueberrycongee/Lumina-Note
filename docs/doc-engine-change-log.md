@@ -29,3 +29,9 @@
 - Scope: `.gitignore`.
 - Impact: Prevents large binary baseline outputs from polluting the repo.
 - Rollback: Remove the ignore entries.
+
+## 2026-02-02 (layout debug export)
+- Change: Expose layout debug payload (lines + layout metadata) via typesetting harness.
+- Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`, `src/components/typesetting/TypesettingExportHarness.tsx`.
+- Impact: Enables white-box inspection of line breaks/layout in headless export runs.
+- Rollback: Remove harness debug payload wiring and API method.
