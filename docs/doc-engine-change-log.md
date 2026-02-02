@@ -113,3 +113,9 @@
 - Scope: `src/typesetting/docxToIr.test.ts`.
 - Impact: Ensures core block mapping stays stable.
 - Rollback: Remove the test file.
+
+## 2026-02-02 (IR metrics in compare manifest)
+- Change: Generate IR metrics alongside batch compare output when IR json is available.
+- Scope: `scripts/typesetting_baseline_compare_manifest.mjs`.
+- Impact: Adds structural metrics to comparison reports.
+- Rollback: Remove the IR metrics integration.

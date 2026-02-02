@@ -86,6 +86,24 @@ const resolveCandidatePdf = (candidateDir, sampleId) => {
   return findFirstPdf(path.join(candidateDir, sampleId));
 };
 
+const resolveCandidateIr = (candidateDir, sampleId) => {
+  const flat = path.join(candidateDir, `${sampleId}.ir.json`);
+  if (fs.existsSync(flat)) return flat;
+  const nested = path.join(candidateDir, sampleId, `${sampleId}.ir.json`);
+  if (fs.existsSync(nested)) return nested;
+  return null;
+};
+
+const runIrMetrics = (irPath, outPath) => {
+  const args = ["scripts/typesetting_ir_metrics.mjs", irPath, "--out", outPath];
+  const result = spawnSync(process.execPath ?? "node", args, { encoding: "utf8" });
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout?.trim() ?? "",
+    stderr: result.stderr?.trim() ?? "",
+  };
+};
+
 const runCompare = (baselinePdf, candidatePdf, outDir, options) => {
   const args = ["scripts/typesetting_baseline_compare.mjs", baselinePdf, candidatePdf, "--out", outDir];
   if (options.dpi) args.push("--dpi", String(options.dpi));
@@ -111,6 +129,7 @@ const main = () => {
 
   const results = [];
   const missing = [];
+  const irMetricsMissing = [];
 
   for (const sample of samples) {
     const sampleId = sample.id;
@@ -125,10 +144,29 @@ const main = () => {
     fs.mkdirSync(sampleOutDir, { recursive: true });
 
     const result = runCompare(baselinePdf, candidatePdf, sampleOutDir, options);
+    const irPath = resolveCandidateIr(candidateDir, sampleId);
+    let irMetrics = null;
+    if (irPath) {
+      const irOutPath = path.join(sampleOutDir, "ir-metrics.json");
+      const irResult = runIrMetrics(irPath, irOutPath);
+      irMetrics = {
+        path: irOutPath,
+        status: irResult.status,
+        stderr: irResult.stderr,
+      };
+      if (irResult.status !== 0) {
+        irMetricsMissing.push({ id: sampleId, irPath, error: irResult.stderr });
+      }
+    } else {
+      irMetricsMissing.push({ id: sampleId, irPath: null, error: "missing IR json" });
+    }
+
     const payload = {
       id: sampleId,
       baselinePdf,
       candidatePdf,
+      irPath,
+      irMetrics,
       status: result.status ?? 1,
       stdout: result.stdout?.trim() ?? "",
       stderr: result.stderr?.trim() ?? "",
@@ -148,6 +186,7 @@ const main = () => {
     total: samples.length,
     compared: results.length,
     missing,
+    irMetricsMissing,
     results,
   };
 
