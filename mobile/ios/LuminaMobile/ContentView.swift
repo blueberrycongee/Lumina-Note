@@ -332,9 +332,7 @@ struct MessageBubble: View {
         HStack {
             if message.isOutgoing { Spacer() }
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.text)
-                    .font(.system(size: 15))
-                    .foregroundStyle(message.isOutgoing ? .white : .primary)
+                MarkdownMessageText(text: message.text, isOutgoing: message.isOutgoing)
                 Text(message.timeLabel)
                     .font(.system(size: 11))
                     .foregroundStyle(message.isOutgoing ? .white.opacity(0.8) : .secondary)
@@ -345,6 +343,24 @@ struct MessageBubble: View {
             if !message.isOutgoing { Spacer() }
         }
         .padding(message.isOutgoing ? .leading : .trailing, 40)
+    }
+}
+
+struct MarkdownMessageText: View {
+    let text: String
+    let isOutgoing: Bool
+
+    var body: some View {
+        if let attributed = try? AttributedString(markdown: text) {
+            Text(attributed)
+                .font(.system(size: 15))
+                .foregroundStyle(isOutgoing ? .white : .primary)
+                .tint(isOutgoing ? .white : .blue)
+        } else {
+            Text(text)
+                .font(.system(size: 15))
+                .foregroundStyle(isOutgoing ? .white : .primary)
+        }
     }
 }
 

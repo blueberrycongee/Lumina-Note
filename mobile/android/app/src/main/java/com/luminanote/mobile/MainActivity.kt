@@ -8,6 +8,9 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.method.LinkMovementMethod
+import android.util.TypedValue
+import android.widget.TextView
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -72,6 +75,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalDensity
@@ -87,6 +91,8 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import io.noties.markwon.Markwon
+import io.noties.markwon.linkify.LinkifyPlugin
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -905,6 +911,8 @@ private fun MessageBubble(message: Message) {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.isOutgoing) Arrangement.End else Arrangement.Start
     ) {
+        val textColor = if (message.isOutgoing) Color.White else Color.Black
+        val linkColor = if (message.isOutgoing) Color.White else Color(0xFF007AFF)
         Column(
             modifier = Modifier
                 .background(
@@ -913,9 +921,10 @@ private fun MessageBubble(message: Message) {
                 )
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text(
+            MarkdownMessageText(
                 text = message.text,
-                color = if (message.isOutgoing) Color.White else Color.Black,
+                color = textColor,
+                linkColor = linkColor,
                 fontSize = 14.sp
             )
             Text(
@@ -925,6 +934,38 @@ private fun MessageBubble(message: Message) {
             )
         }
     }
+}
+
+@Composable
+private fun MarkdownMessageText(
+    text: String,
+    color: Color,
+    linkColor: Color,
+    fontSize: androidx.compose.ui.unit.TextUnit
+) {
+    val context = LocalContext.current
+    val markwon = remember(context) {
+        Markwon.builder(context)
+            .usePlugin(LinkifyPlugin.create())
+            .build()
+    }
+    AndroidView(
+        factory = { ctx ->
+            TextView(ctx).apply {
+                setTextColor(color.toArgb())
+                setLinkTextColor(linkColor.toArgb())
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize.value)
+                setLineSpacing(0f, 1.2f)
+                movementMethod = LinkMovementMethod.getInstance()
+            }
+        },
+        update = { view ->
+            view.setTextColor(color.toArgb())
+            view.setLinkTextColor(linkColor.toArgb())
+            view.setTextSize(TypedValue.COMPLEX_UNIT_SP, fontSize.value)
+            markwon.setMarkdown(view, text)
+        }
+    )
 }
 
 private fun isCameraGranted(context: Context): Boolean {
