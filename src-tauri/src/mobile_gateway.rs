@@ -284,6 +284,15 @@ fn emit_mobile_sync_request(app: &AppHandle, workspace: bool, agent_config: bool
     let _ = app.emit("mobile-sync-request", payload);
 }
 
+fn emit_mobile_workspace_updated(app: &AppHandle, workspace_path: &str, source: &str) {
+    let payload = json!({
+        "path": workspace_path,
+        "timestamp": current_timestamp(),
+        "source": source,
+    });
+    let _ = app.emit("mobile-workspace-updated", payload);
+}
+
 async fn await_sync_requirements(
     app: &AppHandle,
     state: &MobileGatewayState,
@@ -431,8 +440,9 @@ pub async fn mobile_set_workspace(
     workspace_path: String,
 ) -> Result<(), String> {
     eprintln!("[MobileGateway] Update workspace path: {}", workspace_path);
-    state.set_workspace(Some(workspace_path)).await;
+    state.set_workspace(Some(workspace_path.clone())).await;
     persist_settings(&app, &state).await?;
+    emit_mobile_workspace_updated(&app, &workspace_path, "mobile_set_workspace");
     Ok(())
 }
 
@@ -456,6 +466,7 @@ pub async fn mobile_sync_sessions(
     workspace_path: Option<String>,
     agent_config: Option<AgentConfig>,
 ) -> Result<(), String> {
+    let workspace_snapshot = workspace_path.clone();
     eprintln!(
         "[MobileGateway] Sync sessions: count={}, workspace_present={}, agent_config_present={}",
         sessions.len(),
@@ -469,6 +480,9 @@ pub async fn mobile_sync_sessions(
         state.set_agent_config(Some(config)).await;
     }
     persist_settings(&app, &state).await?;
+    if let Some(path) = workspace_snapshot.as_ref() {
+        emit_mobile_workspace_updated(&app, path, "mobile_sync_sessions");
+    }
     state.set_sessions(sessions.clone()).await;
     state.broadcast_session_list(sessions);
     Ok(())

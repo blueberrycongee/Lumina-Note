@@ -1499,10 +1499,26 @@ export const useRustAgentStore = create<RustAgentState>()(
               }
             }
           );
+          const unlistenMobileWorkspace = await listen<{ path?: string; timestamp?: number; source?: string }>(
+            "mobile-workspace-updated",
+            (event) => {
+              const payload = event.payload ?? {};
+              if (!payload.path) return;
+              useFileStore.getState().setMobileWorkspaceSync({
+                status: "confirmed",
+                path: payload.path,
+                lastConfirmedAt: payload.timestamp ?? Date.now(),
+                error: null,
+                source: payload.source ?? "mobile-workspace-updated",
+              });
+              console.log("[MobileGateway] Workspace synced:", payload.path);
+            }
+          );
           return () => {
             unlistenAgent();
             unlistenMobile();
             unlistenMobileSync();
+            unlistenMobileWorkspace();
           };
         } catch (e) {
           console.error("Failed to setup agent event listener:", e);

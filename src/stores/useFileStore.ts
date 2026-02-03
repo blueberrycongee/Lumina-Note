@@ -59,6 +59,15 @@ export interface Tab {
   flashcardDeckId?: string; // 闪卡牌组 ID
 }
 
+type MobileWorkspaceSyncStatus = {
+  status: "idle" | "syncing" | "confirmed" | "error";
+  path: string | null;
+  lastInvokeAt: number | null;
+  lastConfirmedAt: number | null;
+  error: string | null;
+  source: string | null;
+};
+
 interface FileState {
   // Vault
   vaultPath: string | null;
@@ -89,6 +98,10 @@ interface FileState {
   isLoadingTree: boolean;
   isLoadingFile: boolean;
   isSaving: boolean;
+
+  // Mobile workspace sync status
+  mobileWorkspaceSync: MobileWorkspaceSyncStatus;
+  setMobileWorkspaceSync: (patch: Partial<MobileWorkspaceSyncStatus>) => void;
 
   // Actions
   setVaultPath: (path: string) => Promise<void>;
@@ -190,6 +203,22 @@ export const useFileStore = create<FileState>()(
       isLoadingTree: false,
       isLoadingFile: false,
       isSaving: false,
+      mobileWorkspaceSync: {
+        status: "idle",
+        path: null,
+        lastInvokeAt: null,
+        lastConfirmedAt: null,
+        error: null,
+        source: null,
+      },
+      setMobileWorkspaceSync: (patch) => {
+        set((state) => ({
+          mobileWorkspaceSync: {
+            ...state.mobileWorkspaceSync,
+            ...patch,
+          },
+        }));
+      },
 
       // Undo/Redo state
       undoStack: [],
@@ -1791,16 +1820,35 @@ export const useFileStore = create<FileState>()(
 
       syncMobileWorkspace: async (options) => {
         const path = options?.path ?? get().vaultPath;
-        if (!path) return;
+        if (!path) {
+          get().setMobileWorkspaceSync({
+            status: "error",
+            path: null,
+            error: "workspace path missing",
+          });
+          return;
+        }
         const now = Date.now();
         if (!options?.force && lastMobileWorkspaceSync.path === path && now - lastMobileWorkspaceSync.at < MOBILE_WORKSPACE_SYNC_INTERVAL) {
           return;
         }
         try {
+          get().setMobileWorkspaceSync({
+            status: "syncing",
+            path,
+            lastInvokeAt: now,
+            error: null,
+            source: "invoke",
+          });
           await invoke("mobile_set_workspace", { workspace_path: path });
           lastMobileWorkspaceSync = { path, at: now };
         } catch (error) {
           console.warn("Failed to sync mobile workspace:", error);
+          get().setMobileWorkspaceSync({
+            status: "error",
+            path,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       },
 

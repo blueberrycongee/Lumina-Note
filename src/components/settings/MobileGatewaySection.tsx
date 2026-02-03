@@ -16,11 +16,20 @@ interface MobileGatewayStatus {
 
 export function MobileGatewaySection() {
   const { t } = useLocaleStore();
-  const { vaultPath, syncMobileWorkspace } = useFileStore();
+  const { vaultPath, syncMobileWorkspace, mobileWorkspaceSync } = useFileStore();
   const [status, setStatus] = useState<MobileGatewayStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const formatTime = (timestamp?: number | null) => {
+    if (!timestamp) return null;
+    try {
+      return new Date(timestamp).toLocaleTimeString();
+    } catch {
+      return null;
+    }
+  };
 
   const loadStatus = async () => {
     try {
@@ -176,6 +185,21 @@ export function MobileGatewaySection() {
                   </div>
                 </div>
               )}
+              <div className="rounded-lg border border-border bg-background/70 p-2 text-[10px] text-foreground/70 space-y-1">
+                <div>Workspace sync: {mobileWorkspaceSync?.status ?? "unknown"}</div>
+                {mobileWorkspaceSync?.path && (
+                  <div className="break-all">Path: {mobileWorkspaceSync.path}</div>
+                )}
+                {mobileWorkspaceSync?.lastInvokeAt && (
+                  <div>Last invoke: {formatTime(mobileWorkspaceSync.lastInvokeAt)}</div>
+                )}
+                {mobileWorkspaceSync?.lastConfirmedAt && (
+                  <div>Last confirmed: {formatTime(mobileWorkspaceSync.lastConfirmedAt)}</div>
+                )}
+                {mobileWorkspaceSync?.error && (
+                  <div className="text-red-500">Error: {mobileWorkspaceSync.error}</div>
+                )}
+              </div>
             </>
           )}
         </div>
