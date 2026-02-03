@@ -167,3 +167,9 @@
 - Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
 - Impact: Prevents stale preview content across document switches.
 - Rollback: Remove the reset effect.
+
+## 2026-02-02 (doc tools install shortcut)
+- Change: Add install button for doc tools when soffice is missing.
+- Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
+- Impact: Allows users to install rendering tools from the UI.
+- Rollback: Remove the install handler/button.

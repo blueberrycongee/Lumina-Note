@@ -13,6 +13,7 @@ import {
   getTypesettingPreviewPageMm,
   getTypesettingRenderDocxPdfBase64,
   getDocToolsStatus,
+  installDocTools,
   isTauriAvailable,
   TypesettingPreviewBoxMm,
   TypesettingPreviewPageMm,
@@ -612,6 +613,7 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
   const [openOfficeStale, setOpenOfficeStale] = useState(false);
   const [openOfficeAutoRefresh, setOpenOfficeAutoRefresh] = useState(false);
   const openOfficeRefreshRef = useRef<number | null>(null);
+  const [docToolsInstalling, setDocToolsInstalling] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [bodyLayout, setBodyLayout] = useState<LayoutRender | null>(null);
@@ -1511,6 +1513,22 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     await renderOpenOfficePdfBytes();
   };
 
+  const handleInstallDocTools = async () => {
+    if (!tauriAvailable) return;
+    setDocToolsInstalling(true);
+    try {
+      await installDocTools();
+      setOpenOfficeError(null);
+      if (openOfficePreview) {
+        await renderOpenOfficePdfBytes();
+      }
+    } catch (err) {
+      setOpenOfficeError(String(err));
+    } finally {
+      setDocToolsInstalling(false);
+    }
+  };
+
   useEffect(() => {
     setOpenOfficePdf(null);
     setOpenOfficeTotalPages(0);
@@ -1807,6 +1825,16 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
           ) : null}
           {openOfficeError ? (
             <span className="text-xs text-destructive">OpenOffice: {openOfficeError}</span>
+          ) : null}
+          {openOfficeError && openOfficeError.toLowerCase().includes("soffice") ? (
+            <button
+              type="button"
+              className="rounded-md border border-border bg-card px-3 py-1 text-xs text-foreground shadow-sm disabled:opacity-50"
+              onClick={handleInstallDocTools}
+              disabled={docToolsInstalling || !tauriAvailable}
+            >
+              {docToolsInstalling ? "Installing tools..." : "Install Doc Tools"}
+            </button>
           ) : null}
           {openOfficePreview && openOfficeStale ? (
             <span className="text-xs text-amber-600">OpenOffice preview stale</span>

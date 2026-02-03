@@ -15,6 +15,7 @@ Provide a reliable preview/export path aligned with OpenOffice output.
 1) Open a docx in Typesetting Document pane.
 2) Click `OpenOffice Preview` and then `Refresh OpenOffice` to render.
 3) (Optional) Enable `Auto Refresh` to update after edits.
+4) If `soffice` is missing, click `Install Doc Tools` and retry.
 3) Export PDF while OpenOffice preview is active to use the rendered output.
 
 ## Known Limitations
