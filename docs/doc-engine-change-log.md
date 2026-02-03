@@ -173,3 +173,9 @@
 - Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
 - Impact: Allows users to install rendering tools from the UI.
 - Rollback: Remove the install handler/button.
+
+## 2026-02-02 (cleanup temp docx)
+- Change: Remove temporary docx after OpenOffice render.
+- Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
+- Impact: Prevents temp directory growth during preview refresh.
+- Rollback: Remove the cleanup call.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { exists, writeFile } from "@tauri-apps/plugin-fs";
+import { exists, writeFile, remove } from "@tauri-apps/plugin-fs";
 import { homeDir, join, tempDir } from "@tauri-apps/api/path";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { platform } from "@tauri-apps/plugin-os";
@@ -1462,12 +1462,14 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     }
     setOpenOfficeError(null);
     setOpenOfficeLoading(true);
+    let tempDocxPath: string | null = null;
     try {
       const tempRoot = await tempDir();
       const docxPath = await join(
         tempRoot,
         `lumina-openoffice-${Date.now()}.docx`,
       );
+      tempDocxPath = docxPath;
       await exportDocx(path, docxPath);
       const payload = await getTypesettingRenderDocxPdfBase64(docxPath);
       const bytes = decodeBase64ToBytes(payload);
@@ -1479,6 +1481,13 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
       setOpenOfficeError(reason);
       return null;
     } finally {
+      if (tempDocxPath) {
+        try {
+          await remove(tempDocxPath);
+        } catch {
+          // ignore cleanup errors
+        }
+      }
       setOpenOfficeLoading(false);
     }
   }, [doc, ensureOpenOfficeAvailable, exportDocx, path]);
