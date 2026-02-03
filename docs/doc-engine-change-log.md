@@ -149,3 +149,9 @@
 - Scope: `docs/doc-engine-phase2-report.md`.
 - Impact: Tracks Phase 2 progress and limitations.
 - Rollback: Remove the report file.
+
+## 2026-02-02 (OpenOffice auto-refresh)
+- Change: Add optional auto-refresh for OpenOffice preview with debounce.
+- Scope: `src/components/typesetting/TypesettingDocumentPane.tsx`.
+- Impact: Keeps OpenOffice preview updated after edits when enabled.
+- Rollback: Remove auto-refresh state/effects and button.

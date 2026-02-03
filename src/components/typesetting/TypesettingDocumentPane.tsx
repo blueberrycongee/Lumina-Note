@@ -609,6 +609,8 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
   const [openOfficeLoading, setOpenOfficeLoading] = useState(false);
   const [openOfficeTotalPages, setOpenOfficeTotalPages] = useState(0);
   const [openOfficeStale, setOpenOfficeStale] = useState(false);
+  const [openOfficeAutoRefresh, setOpenOfficeAutoRefresh] = useState(false);
+  const openOfficeRefreshRef = useRef<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [bodyLayout, setBodyLayout] = useState<LayoutRender | null>(null);
@@ -1254,6 +1256,15 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     }
   }, [doc?.isDirty, openOfficePreview]);
 
+  useEffect(() => {
+    scheduleOpenOfficeRefresh();
+    return () => {
+      if (openOfficeRefreshRef.current) {
+        clearTimeout(openOfficeRefreshRef.current);
+      }
+    };
+  }, [doc?.lastOp, doc?.isDirty, scheduleOpenOfficeRefresh]);
+
   const handleInput = () => {
     if (!editableRef.current) return;
     const blocks = docxHtmlToBlocks(editableRef.current);
@@ -1482,6 +1493,28 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     await renderOpenOfficePdfBytes();
   };
 
+  const scheduleOpenOfficeRefresh = useCallback(() => {
+    if (!openOfficePreview || !openOfficeAutoRefresh) return;
+    if (openOfficeLoading) return;
+    if (!doc?.isDirty) return;
+    if (isEditing) return;
+
+    setOpenOfficeStale(true);
+    if (openOfficeRefreshRef.current) {
+      clearTimeout(openOfficeRefreshRef.current);
+    }
+    openOfficeRefreshRef.current = window.setTimeout(() => {
+      renderOpenOfficePdfBytes().catch(() => null);
+    }, 1200);
+  }, [
+    doc?.isDirty,
+    isEditing,
+    openOfficeAutoRefresh,
+    openOfficeLoading,
+    openOfficePreview,
+    renderOpenOfficePdfBytes,
+  ]);
+
   useEffect(() => {
     if (!onExportReady) return;
     if (!exportReady) {
@@ -1642,6 +1675,16 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
               disabled={openOfficeLoading || !tauriAvailable}
             >
               {openOfficeLoading ? "Rendering..." : "Refresh OpenOffice"}
+            </button>
+          ) : null}
+          {openOfficePreview ? (
+            <button
+              type="button"
+              className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+              onClick={() => setOpenOfficeAutoRefresh((current) => !current)}
+              disabled={!tauriAvailable}
+            >
+              Auto Refresh: {openOfficeAutoRefresh ? "On" : "Off"}
             </button>
           ) : null}
           <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">

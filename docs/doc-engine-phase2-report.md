@@ -9,10 +9,12 @@ Provide a reliable preview/export path aligned with OpenOffice output.
 - Added OpenOffice/LibreOffice render command on the backend.
 - Added a UI toggle to preview OpenOffice-rendered PDF inside the typesetting pane.
 - Export uses OpenOffice PDF when preview is enabled.
+- Optional auto-refresh (debounced) to keep preview updated after edits.
 
 ## Demo
 1) Open a docx in Typesetting Document pane.
 2) Click `OpenOffice Preview` and then `Refresh OpenOffice` to render.
+3) (Optional) Enable `Auto Refresh` to update after edits.
 3) Export PDF while OpenOffice preview is active to use the rendered output.
 
 ## Known Limitations
