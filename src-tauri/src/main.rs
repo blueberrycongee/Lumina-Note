@@ -63,6 +63,7 @@ fn main() {
             commands::typesetting_preview_page_mm,
             commands::typesetting_fixture_font_path,
             commands::typesetting_export_pdf_base64,
+            commands::typesetting_render_docx_pdf_base64,
             commands::typesetting_layout_text,
             // Browser WebView commands
             commands::create_browser_webview,

@@ -137,3 +137,15 @@
 - Scope: `scripts/typesetting_compare_summary.mjs`, `docs/doc-engine-phase1-report.md`.
 - Impact: Provides a single summary snapshot for Phase 1 quality tracking.
 - Rollback: Remove the summary script and doc reference.
+
+## 2026-02-02 (OpenOffice preview path)
+- Change: Add OpenOffice PDF render command and preview toggle in typesetting UI.
+- Scope: `src-tauri/src/commands/mod.rs`, `src-tauri/src/main.rs`, `src/lib/tauri.ts`, `src/components/typesetting/TypesettingDocumentPane.tsx`.
+- Impact: Users can render OpenOffice/LibreOffice output and export it as PDF when enabled.
+- Rollback: Remove the command registration and UI toggle.
+
+## 2026-02-02 (Phase 2 report stub)
+- Change: Add Phase 2 report stub documenting OpenOffice preview/export path.
+- Scope: `docs/doc-engine-phase2-report.md`.
+- Impact: Tracks Phase 2 progress and limitations.
+- Rollback: Remove the report file.

@@ -183,6 +183,10 @@ export async function getTypesettingExportPdfBase64(): Promise<string> {
   return invokeTypesetting<string>("typesetting_export_pdf_base64");
 }
 
+export async function getTypesettingRenderDocxPdfBase64(docxPath: string): Promise<string> {
+  return invokeTypesetting<string>("typesetting_render_docx_pdf_base64", { docxPath });
+}
+
 const buildTokens = (text: string): string[] => {
   if (!text) return [];
   const hasCjk = /[\u4e00-\u9fff]/.test(text);

@@ -11,11 +11,13 @@ import {
   getTypesettingFixtureFontPath,
   getTypesettingLayoutText,
   getTypesettingPreviewPageMm,
+  getTypesettingRenderDocxPdfBase64,
   isTauriAvailable,
   TypesettingPreviewBoxMm,
   TypesettingPreviewPageMm,
   TypesettingTextLine,
 } from "@/lib/tauri";
+import { PDFCanvas } from "@/components/pdf/PDFCanvas";
 import { decodeBase64ToBytes, encodeBytesToBase64 } from "@/typesetting/base64";
 import { docxBlocksToHtml, docxHtmlToBlocks } from "@/typesetting/docxHtml";
 import {
@@ -601,6 +603,12 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
   const [exportDocxError, setExportDocxError] = useState<string | null>(null);
   const [printing, setPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
+  const [openOfficePreview, setOpenOfficePreview] = useState(false);
+  const [openOfficePdf, setOpenOfficePdf] = useState<Uint8Array | null>(null);
+  const [openOfficeError, setOpenOfficeError] = useState<string | null>(null);
+  const [openOfficeLoading, setOpenOfficeLoading] = useState(false);
+  const [openOfficeTotalPages, setOpenOfficeTotalPages] = useState(0);
+  const [openOfficeStale, setOpenOfficeStale] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [layoutError, setLayoutError] = useState<string | null>(null);
   const [bodyLayout, setBodyLayout] = useState<LayoutRender | null>(null);
@@ -1178,6 +1186,10 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     pageMm,
   ]);
 
+  const displayTotalPages = openOfficePreview && openOfficeTotalPages > 0
+    ? openOfficeTotalPages
+    : totalPages;
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!window.__luminaTypesettingHarness) return;
@@ -1232,8 +1244,15 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
   }, [bodyLayout, bodyLineStyles, doc, footerLayout, headerLayout, pageMm, path, totalPages]);
 
   useEffect(() => {
-    setCurrentPage((prev) => Math.min(Math.max(1, prev), totalPages));
-  }, [totalPages]);
+    setCurrentPage((prev) => Math.min(Math.max(1, prev), displayTotalPages));
+  }, [displayTotalPages]);
+
+  useEffect(() => {
+    if (!openOfficePreview) return;
+    if (doc?.isDirty) {
+      setOpenOfficeStale(true);
+    }
+  }, [doc?.isDirty, openOfficePreview]);
 
   const handleInput = () => {
     if (!editableRef.current) return;
@@ -1401,12 +1420,67 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
     totalPages,
   ]);
 
+  const renderOpenOfficePdfBytes = useCallback(async (): Promise<Uint8Array | null> => {
+    if (!tauriAvailable) {
+      setOpenOfficeError("OpenOffice preview requires desktop app.");
+      return null;
+    }
+    if (!doc) {
+      setOpenOfficeError("OpenOffice preview requires a document.");
+      return null;
+    }
+    setOpenOfficeError(null);
+    setOpenOfficeLoading(true);
+    try {
+      const tempRoot = await tempDir();
+      const docxPath = await join(
+        tempRoot,
+        `lumina-openoffice-${Date.now()}.docx`,
+      );
+      await exportDocx(path, docxPath);
+      const payload = await getTypesettingRenderDocxPdfBase64(docxPath);
+      const bytes = decodeBase64ToBytes(payload);
+      setOpenOfficePdf(bytes);
+      setOpenOfficeStale(false);
+      return bytes;
+    } catch (err) {
+      const reason = String(err);
+      setOpenOfficeError(reason);
+      return null;
+    } finally {
+      setOpenOfficeLoading(false);
+    }
+  }, [doc, exportDocx, path, tauriAvailable]);
+
   const getExportPdfBytes = useCallback(async (): Promise<Uint8Array> => {
+    if (openOfficePreview) {
+      const openOffice = openOfficePdf ?? await renderOpenOfficePdfBytes();
+      if (openOffice) {
+        return openOffice;
+      }
+    }
     const rendered = await renderPagesToPdfBytes();
     if (rendered) return rendered;
     const payload = await getTypesettingExportPdfBase64();
     return decodeBase64ToBytes(payload);
-  }, [renderPagesToPdfBytes]);
+  }, [openOfficePdf, openOfficePreview, renderOpenOfficePdfBytes, renderPagesToPdfBytes]);
+
+  const handleToggleOpenOfficePreview = async () => {
+    if (openOfficePreview) {
+      setOpenOfficePreview(false);
+      setOpenOfficeTotalPages(0);
+      return;
+    }
+    setOpenOfficePreview(true);
+    if (!openOfficePdf || openOfficeStale) {
+      await renderOpenOfficePdfBytes();
+    }
+  };
+
+  const handleRefreshOpenOfficePreview = async () => {
+    setOpenOfficePreview(true);
+    await renderOpenOfficePdfBytes();
+  };
 
   useEffect(() => {
     if (!onExportReady) return;
@@ -1530,15 +1604,15 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
               Prev
             </button>
             <span className="min-w-[5rem] text-center">
-              Page {currentPage} / {totalPages}
+              Page {currentPage} / {displayTotalPages}
             </span>
             <button
               type="button"
               className="rounded border border-border px-2 py-0.5 text-xs disabled:opacity-50"
               onClick={() =>
-                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+                setCurrentPage((prev) => Math.min(displayTotalPages, prev + 1))
               }
-              disabled={currentPage >= totalPages}
+              disabled={currentPage >= displayTotalPages}
               aria-label="Next page"
             >
               Next
@@ -1552,6 +1626,24 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
           >
             Save
           </button>
+          <button
+            type="button"
+            className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+            onClick={handleToggleOpenOfficePreview}
+            disabled={openOfficeLoading || !tauriAvailable}
+          >
+            {openOfficePreview ? "Close OpenOffice" : "OpenOffice Preview"}
+          </button>
+          {openOfficePreview ? (
+            <button
+              type="button"
+              className="rounded-md border border-border bg-card px-3 py-1 text-sm text-foreground shadow-sm disabled:opacity-50"
+              onClick={handleRefreshOpenOfficePreview}
+              disabled={openOfficeLoading || !tauriAvailable}
+            >
+              {openOfficeLoading ? "Rendering..." : "Refresh OpenOffice"}
+            </button>
+          ) : null}
           <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-sm text-foreground shadow-sm">
             <button
               type="button"
@@ -1642,11 +1734,45 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
           {exportDocxError ? (
             <span className="text-xs text-destructive">{exportDocxError}</span>
           ) : null}
+          {openOfficeError ? (
+            <span className="text-xs text-destructive">OpenOffice: {openOfficeError}</span>
+          ) : null}
+          {openOfficePreview && openOfficeStale ? (
+            <span className="text-xs text-amber-600">OpenOffice preview stale</span>
+          ) : null}
           <span className="text-xs text-muted-foreground">{layoutSummary}</span>
         </div>
       </div>
       <div className="flex min-h-full items-center justify-center px-6 py-10">
-        {!pagePx ? (
+        {openOfficePreview ? (
+          <div className="w-full max-w-5xl">
+            {openOfficePdf ? (
+              <PDFCanvas
+                pdfData={openOfficePdf}
+                filePath={doc?.path ?? "OpenOffice Preview"}
+                currentPage={currentPage}
+                scale={zoom}
+                onDocumentLoad={(pages) => setOpenOfficeTotalPages(pages)}
+                onPageChange={setCurrentPage}
+                onScaleChange={setZoom}
+                enableAnnotations={false}
+              />
+            ) : (
+              <div className="text-center space-y-2">
+                <div className="text-lg font-semibold text-foreground">
+                  OpenOffice Preview
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {openOfficeLoading
+                    ? "Rendering OpenOffice output..."
+                    : openOfficeError
+                      ? `Failed to render: ${openOfficeError}`
+                      : "Click Refresh OpenOffice to render."}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : !pagePx ? (
           <div className="text-center space-y-2">
             <div className="text-lg font-semibold text-foreground">
               Typesetting Document

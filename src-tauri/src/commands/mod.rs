@@ -1,4 +1,5 @@
 use crate::error::AppError;
+use crate::doc_tools;
 use crate::fs::{self, FileEntry, watcher};
 use crate::typesetting::{
     layout_text_paragraph, shape_mixed_text, write_empty_pdf, FontManager, Glyph,
@@ -10,6 +11,7 @@ use tauri::webview::NewWindowResponse;
 use tauri::Emitter;
 use std::io::Read;
 use std::path::PathBuf;
+use uuid::Uuid;
 
 // Browser / WebView 调试日志，写入与前端相同的 debug-logs 目录，方便统一排查
 fn browser_debug_log(app: &AppHandle, message: String) {
@@ -196,6 +198,79 @@ pub async fn typesetting_export_pdf_base64() -> Result<String, AppError> {
     })?;
 
     Ok(STANDARD.encode(pdf))
+}
+
+fn find_rendered_pdf(out_dir: &PathBuf, docx_path: &PathBuf) -> Result<PathBuf, AppError> {
+    if let Some(stem) = docx_path.file_stem().and_then(|s| s.to_str()) {
+        let expected = out_dir.join(format!("{stem}.pdf"));
+        if expected.exists() {
+            return Ok(expected);
+        }
+    }
+    let entries = std::fs::read_dir(out_dir)?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.eq_ignore_ascii_case("pdf"))
+            .unwrap_or(false)
+        {
+            return Ok(path);
+        }
+    }
+    Err(AppError::InvalidPath(
+        "OpenOffice render failed to produce a PDF".into(),
+    ))
+}
+
+/// Render docx to PDF via OpenOffice/LibreOffice (soffice). Returns base64 PDF bytes.
+#[tauri::command]
+pub async fn typesetting_render_docx_pdf_base64(
+    app: AppHandle,
+    docx_path: String,
+) -> Result<String, AppError> {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+    let docx_path = PathBuf::from(docx_path);
+    if !docx_path.exists() {
+        return Err(AppError::FileNotFound(docx_path.to_string_lossy().to_string()));
+    }
+
+    let status = doc_tools::doc_tools_get_status(app).await?;
+    let soffice_path = status
+        .tools
+        .get("soffice")
+        .and_then(|tool| tool.path.as_ref())
+        .cloned()
+        .ok_or_else(|| AppError::InvalidPath("soffice not available".into()))?;
+
+    let out_dir = std::env::temp_dir()
+        .join("lumina-typesetting")
+        .join("soffice")
+        .join(Uuid::new_v4().to_string());
+    tokio::fs::create_dir_all(&out_dir).await?;
+
+    let status = tokio::process::Command::new(soffice_path)
+        .arg("--headless")
+        .arg("--convert-to")
+        .arg("pdf")
+        .arg("--outdir")
+        .arg(&out_dir)
+        .arg(&docx_path)
+        .status()
+        .await?;
+    if !status.success() {
+        return Err(AppError::InvalidPath(format!(
+            "OpenOffice render failed: {status}"
+        )));
+    }
+
+    let pdf_path = find_rendered_pdf(&out_dir, &docx_path)?;
+    let bytes = tokio::fs::read(&pdf_path).await?;
+    let _ = tokio::fs::remove_dir_all(&out_dir).await;
+
+    Ok(STANDARD.encode(bytes))
 }
 
 /// Typesetting text layout (placeholder). Returns line metrics for a single paragraph.
