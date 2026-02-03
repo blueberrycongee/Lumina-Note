@@ -41,6 +41,10 @@ third_party/
 *.cache
 .eslintcache
 
+# Server data
+server/data/
+server/target/
+
 # Test coverage
 coverage/
 
