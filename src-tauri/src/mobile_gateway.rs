@@ -53,6 +53,12 @@ pub enum MobileServerMessage {
     CommandAck { command_id: String, status: String },
     AgentEvent { session_id: Option<String>, event: Value },
     SessionList { sessions: Vec<MobileSessionSummary> },
+    Options {
+        workspaces: Vec<MobileWorkspaceOption>,
+        agent_profiles: Vec<MobileAgentProfileOption>,
+        selected_workspace_id: Option<String>,
+        selected_profile_id: Option<String>,
+    },
     Pong { timestamp: u64 },
     Error { message: String },
 }
@@ -65,6 +71,8 @@ pub enum MobileClientMessage {
     Command { task: String, session_id: Option<String>, context: Option<MobileTaskContext> },
     Ping { timestamp: Option<u64> },
     SessionCreate { title: Option<String> },
+    SelectWorkspace { workspace_id: String },
+    SelectAgentProfile { profile_id: String },
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -72,6 +80,29 @@ pub struct MobileTaskContext {
     active_note_path: Option<String>,
     active_note_content: Option<String>,
     file_tree: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct MobileWorkspaceOption {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct MobileAgentProfileOption {
+    pub id: String,
+    pub name: String,
+    pub provider: String,
+    pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct MobileOptions {
+    pub workspaces: Vec<MobileWorkspaceOption>,
+    pub agent_profiles: Vec<MobileAgentProfileOption>,
+    pub selected_workspace_id: Option<String>,
+    pub selected_profile_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -90,6 +121,7 @@ pub struct MobileGatewayState {
     server: Mutex<Option<MobileServer>>,
     agent_config: Mutex<Option<AgentConfig>>,
     workspace_path: Mutex<Option<String>>,
+    options: Mutex<MobileOptions>,
     sessions: Mutex<Vec<MobileSessionSummary>>,
     current_session_id: Mutex<Option<String>>,
     events: broadcast::Sender<MobileBroadcast>,
@@ -104,6 +136,7 @@ const MOBILE_SYNC_POLL_INTERVAL: Duration = Duration::from_millis(100);
 pub enum MobileBroadcast {
     AgentEvent { session_id: Option<String>, event: Value },
     SessionList { sessions: Vec<MobileSessionSummary> },
+    Options { options: MobileOptions },
 }
 
 pub type MobileMessageSender = Arc<dyn Fn(MobileServerMessage) + Send + Sync>;
@@ -116,6 +149,7 @@ impl MobileGatewayState {
             server: Mutex::new(None),
             agent_config: Mutex::new(None),
             workspace_path: Mutex::new(None),
+            options: Mutex::new(MobileOptions::default()),
             sessions: Mutex::new(Vec::new()),
             current_session_id: Mutex::new(None),
             events,
@@ -176,6 +210,10 @@ impl MobileGatewayState {
         let _ = self.events.send(MobileBroadcast::SessionList { sessions });
     }
 
+    fn broadcast_options(&self, options: MobileOptions) {
+        let _ = self.events.send(MobileBroadcast::Options { options });
+    }
+
     async fn set_workspace(&self, workspace_path: Option<String>) {
         let mut guard = self.workspace_path.lock().await;
         *guard = workspace_path;
@@ -201,6 +239,15 @@ impl MobileGatewayState {
 
     pub async fn get_sessions(&self) -> Vec<MobileSessionSummary> {
         self.sessions.lock().await.clone()
+    }
+
+    pub async fn get_options(&self) -> MobileOptions {
+        self.options.lock().await.clone()
+    }
+
+    pub async fn set_options(&self, options: MobileOptions) {
+        let mut guard = self.options.lock().await;
+        *guard = options;
     }
 
     pub fn subscribe_events(&self) -> broadcast::Receiver<MobileBroadcast> {
@@ -336,6 +383,13 @@ pub async fn handle_mobile_message(
                 });
                 let sessions = state.get_sessions().await;
                 send(MobileServerMessage::SessionList { sessions });
+                let options = state.get_options().await;
+                send(MobileServerMessage::Options {
+                    workspaces: options.workspaces,
+                    agent_profiles: options.agent_profiles,
+                    selected_workspace_id: options.selected_workspace_id,
+                    selected_profile_id: options.selected_profile_id,
+                });
                 emit_mobile_sync_request(app, true, true);
             } else {
                 send(MobileServerMessage::Error {
@@ -472,6 +526,28 @@ pub async fn handle_mobile_message(
                     (sender_clone)(MobileServerMessage::Error { message: err });
                 }
             });
+        }
+        MobileClientMessage::SelectWorkspace { workspace_id } => {
+            let mut options = state.get_options().await;
+            options.selected_workspace_id = Some(workspace_id.clone());
+            state.set_options(options.clone()).await;
+            state.broadcast_options(options);
+            let payload = json!({
+                "workspace_id": workspace_id,
+                "timestamp": current_timestamp(),
+            });
+            let _ = app.emit("mobile-select-workspace", payload);
+        }
+        MobileClientMessage::SelectAgentProfile { profile_id } => {
+            let mut options = state.get_options().await;
+            options.selected_profile_id = Some(profile_id.clone());
+            state.set_options(options.clone()).await;
+            state.broadcast_options(options);
+            let payload = json!({
+                "profile_id": profile_id,
+                "timestamp": current_timestamp(),
+            });
+            let _ = app.emit("mobile-select-agent-profile", payload);
         }
     }
 }
@@ -671,6 +747,25 @@ pub async fn mobile_sync_sessions(
     Ok(())
 }
 
+#[tauri::command]
+pub async fn mobile_sync_options(
+    state: State<'_, MobileGatewayState>,
+    workspaces: Vec<MobileWorkspaceOption>,
+    agent_profiles: Vec<MobileAgentProfileOption>,
+    selected_workspace_id: Option<String>,
+    selected_profile_id: Option<String>,
+) -> Result<(), String> {
+    let options = MobileOptions {
+        workspaces,
+        agent_profiles,
+        selected_workspace_id,
+        selected_profile_id,
+    };
+    state.set_options(options.clone()).await;
+    state.broadcast_options(options);
+    Ok(())
+}
+
 async fn run_server(
     app: AppHandle,
     listener: TcpListener,
@@ -799,6 +894,14 @@ async fn handle_connection(
                         }
                         MobileBroadcast::SessionList { sessions } => {
                             let _ = out_tx.send(MobileServerMessage::SessionList { sessions });
+                        }
+                        MobileBroadcast::Options { options } => {
+                            let _ = out_tx.send(MobileServerMessage::Options {
+                                workspaces: options.workspaces,
+                                agent_profiles: options.agent_profiles,
+                                selected_workspace_id: options.selected_workspace_id,
+                                selected_profile_id: options.selected_profile_id,
+                            });
                         }
                     }
                 }

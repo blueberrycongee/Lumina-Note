@@ -145,6 +145,19 @@ private data class SessionSummary(
     val messageCount: Int
 )
 
+private data class WorkspaceOption(
+    val id: String,
+    val name: String,
+    val path: String
+)
+
+private data class AgentProfileOption(
+    val id: String,
+    val name: String,
+    val provider: String,
+    val model: String
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -191,6 +204,10 @@ private class MobileGatewayStore(private val context: Context) {
     var errorMessage by mutableStateOf<String?>(null)
     var activeSessionId by mutableStateOf<String?>(null)
     val sessions = mutableStateListOf<AgentSession>()
+    var workspaces by mutableStateOf(listOf<WorkspaceOption>())
+    var agentProfiles by mutableStateOf(listOf<AgentProfileOption>())
+    var selectedWorkspaceId by mutableStateOf<String?>(null)
+    var selectedProfileId by mutableStateOf<String?>(null)
 
     private var lastSessionId: String? = null
     private var pendingSessionCreateTitle: String? = null
@@ -374,6 +391,9 @@ private class MobileGatewayStore(private val context: Context) {
                 val data = json.optJSONObject("data") ?: return
                 val list = data.optJSONArray("sessions") ?: JSONArray()
                 applySessionList(list)
+            } else if (type == "options") {
+                val data = json.optJSONObject("data") ?: return
+                applyOptions(data)
             }
         } catch (_: Exception) {
         }
@@ -506,6 +526,54 @@ private class MobileGatewayStore(private val context: Context) {
         if (activeSessionId != null && sessions.none { it.id == activeSessionId }) {
             activeSessionId = null
         }
+    }
+
+    private fun applyOptions(data: JSONObject) {
+        val workspacesJson = data.optJSONArray("workspaces") ?: JSONArray()
+        val profilesJson = data.optJSONArray("agent_profiles") ?: JSONArray()
+        val nextWorkspaces = mutableListOf<WorkspaceOption>()
+        val nextProfiles = mutableListOf<AgentProfileOption>()
+        for (i in 0 until workspacesJson.length()) {
+            val item = workspacesJson.optJSONObject(i) ?: continue
+            nextWorkspaces.add(
+                WorkspaceOption(
+                    id = item.optString("id"),
+                    name = item.optString("name"),
+                    path = item.optString("path")
+                )
+            )
+        }
+        for (i in 0 until profilesJson.length()) {
+            val item = profilesJson.optJSONObject(i) ?: continue
+            nextProfiles.add(
+                AgentProfileOption(
+                    id = item.optString("id"),
+                    name = item.optString("name"),
+                    provider = item.optString("provider"),
+                    model = item.optString("model")
+                )
+            )
+        }
+        workspaces = nextWorkspaces
+        agentProfiles = nextProfiles
+        selectedWorkspaceId = data.optString("selected_workspace_id").ifBlank { selectedWorkspaceId }
+        selectedProfileId = data.optString("selected_profile_id").ifBlank { selectedProfileId }
+    }
+
+    fun selectWorkspace(id: String) {
+        selectedWorkspaceId = id
+        val payload = JSONObject()
+            .put("type", "select_workspace")
+            .put("data", JSONObject().put("workspace_id", id))
+        webSocket?.send(payload.toString())
+    }
+
+    fun selectAgentProfile(id: String) {
+        selectedProfileId = id
+        val payload = JSONObject()
+            .put("type", "select_agent_profile")
+            .put("data", JSONObject().put("profile_id", id))
+        webSocket?.send(payload.toString())
     }
 
     private fun postStatus(status: String) {
@@ -724,6 +792,8 @@ private fun ChatListScreen(store: MobileGatewayStore) {
     var searchText by remember { mutableStateOf("") }
     var showMenu by remember { mutableStateOf(false) }
     var showRePairConfirm by remember { mutableStateOf(false) }
+    var showWorkspaceMenu by remember { mutableStateOf(false) }
+    var showProfileMenu by remember { mutableStateOf(false) }
     val query = searchText.trim()
     val filtered = store.sessions
         .filter { session ->
@@ -771,6 +841,50 @@ private fun ChatListScreen(store: MobileGatewayStore) {
                 .padding(paddingValues)
                 .background(Color(0xFFF2F2F7))
         ) {
+            if (store.workspaces.isNotEmpty() || store.agentProfiles.isNotEmpty()) {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    if (store.workspaces.isNotEmpty()) {
+                        Box {
+                            val selectedName = store.workspaces.find { it.id == store.selectedWorkspaceId }?.name
+                                ?: store.workspaces.first().name
+                            TextButton(onClick = { showWorkspaceMenu = true }) {
+                                Text("Workspace: $selectedName", color = Color(0xFF1C1C1E))
+                            }
+                            DropdownMenu(expanded = showWorkspaceMenu, onDismissRequest = { showWorkspaceMenu = false }) {
+                                store.workspaces.forEach { workspace ->
+                                    DropdownMenuItem(
+                                        text = { Text(workspace.name) },
+                                        onClick = {
+                                            showWorkspaceMenu = false
+                                            store.selectWorkspace(workspace.id)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    if (store.agentProfiles.isNotEmpty()) {
+                        Box {
+                            val selectedName = store.agentProfiles.find { it.id == store.selectedProfileId }?.name
+                                ?: store.agentProfiles.first().name
+                            TextButton(onClick = { showProfileMenu = true }) {
+                                Text("Agent: $selectedName", color = Color(0xFF1C1C1E))
+                            }
+                            DropdownMenu(expanded = showProfileMenu, onDismissRequest = { showProfileMenu = false }) {
+                                store.agentProfiles.forEach { profile ->
+                                    DropdownMenuItem(
+                                        text = { Text(profile.name) },
+                                        onClick = {
+                                            showProfileMenu = false
+                                            store.selectAgentProfile(profile.id)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             TextField(
                 value = searchText,
                 onValueChange = { searchText = it },

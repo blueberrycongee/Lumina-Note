@@ -44,6 +44,10 @@ final class MobileGatewayStore: ObservableObject {
     @Published var connectionStatus: String = "Disconnected"
     @Published var errorMessage: String?
     @Published var activeSessionId: String?
+    @Published var workspaces: [WorkspaceOption] = []
+    @Published var agentProfiles: [AgentProfileOption] = []
+    @Published var selectedWorkspaceId: String?
+    @Published var selectedProfileId: String?
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var lastSessionId: String?
@@ -284,6 +288,12 @@ final class MobileGatewayStore: ObservableObject {
                 applySessionList(sessionsData)
             }
         }
+
+        if type == "options" {
+            if let data = json["data"] as? [String: Any] {
+                applyOptions(data)
+            }
+        }
     }
 
     private func handleAgentEvent(_ event: [String: Any], sessionId: String?) {
@@ -388,6 +398,42 @@ final class MobileGatewayStore: ObservableObject {
             activeSessionId = nil
         }
     }
+
+    private func applyOptions(_ data: [String: Any]) {
+        let decoder = JSONDecoder()
+        if let workspacesData = data["workspaces"] as? [[String: Any]] {
+            workspaces = workspacesData.compactMap { item in
+                guard let raw = try? JSONSerialization.data(withJSONObject: item, options: []) else { return nil }
+                return try? decoder.decode(WorkspaceOption.self, from: raw)
+            }
+        }
+        if let profilesData = data["agent_profiles"] as? [[String: Any]] {
+            agentProfiles = profilesData.compactMap { item in
+                guard let raw = try? JSONSerialization.data(withJSONObject: item, options: []) else { return nil }
+                return try? decoder.decode(AgentProfileOption.self, from: raw)
+            }
+        }
+        selectedWorkspaceId = data["selected_workspace_id"] as? String ?? selectedWorkspaceId
+        selectedProfileId = data["selected_profile_id"] as? String ?? selectedProfileId
+    }
+
+    func selectWorkspace(id: String) {
+        selectedWorkspaceId = id
+        let payload: [String: Any] = [
+            "type": "select_workspace",
+            "data": ["workspace_id": id]
+        ]
+        sendJSON(payload)
+    }
+
+    func selectAgentProfile(id: String) {
+        selectedProfileId = id
+        let payload: [String: Any] = [
+            "type": "select_agent_profile",
+            "data": ["profile_id": id]
+        ]
+        sendJSON(payload)
+    }
 }
 
 private struct SessionSummary: Codable {
@@ -399,4 +445,17 @@ private struct SessionSummary: Codable {
     let last_message_preview: String?
     let last_message_role: String?
     let message_count: Int
+}
+
+struct WorkspaceOption: Codable, Identifiable {
+    let id: String
+    let name: String
+    let path: String
+}
+
+struct AgentProfileOption: Codable, Identifiable {
+    let id: String
+    let name: String
+    let provider: String
+    let model: String
 }

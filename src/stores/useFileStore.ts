@@ -4,6 +4,7 @@ import { FileEntry, listDirectory, readFile, saveFile, createFile, createDir } f
 import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
 import { invoke } from '@tauri-apps/api/core';
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
@@ -232,6 +233,7 @@ export const useFileStore = create<FileState>()(
 
       // Set vault path and load file tree
       setVaultPath: async (path: string) => {
+        useWorkspaceStore.getState().registerWorkspace(path);
         set({ vaultPath: path, isLoadingTree: true });
         try {
           try {

@@ -145,6 +145,40 @@ struct SessionListView: View {
     var body: some View {
         NavigationStack {
             List {
+                if !store.workspaces.isEmpty {
+                    Section("Workspace") {
+                        let selected = store.selectedWorkspaceId ?? store.workspaces.first?.id
+                        if let selected {
+                            Picker("Workspace", selection: Binding(
+                                get: { store.selectedWorkspaceId ?? selected },
+                                set: { store.selectWorkspace(id: $0) }
+                            )) {
+                                ForEach(store.workspaces) { workspace in
+                                    Text(workspace.name).tag(workspace.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                    }
+                }
+
+                if !store.agentProfiles.isEmpty {
+                    Section("Agent Profile") {
+                        let selected = store.selectedProfileId ?? store.agentProfiles.first?.id
+                        if let selected {
+                            Picker("Agent Profile", selection: Binding(
+                                get: { store.selectedProfileId ?? selected },
+                                set: { store.selectAgentProfile(id: $0) }
+                            )) {
+                                ForEach(store.agentProfiles) { profile in
+                                    Text(profile.name).tag(profile.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                    }
+                }
+
                 ForEach(filteredSessions) { session in
                     NavigationLink(value: session.id) {
                         SessionRow(session: session)

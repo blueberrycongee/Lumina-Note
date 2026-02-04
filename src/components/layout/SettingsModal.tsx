@@ -24,6 +24,7 @@ import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
 import { PublishSettingsSection } from "../settings/PublishSettingsSection";
 import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 import { CloudRelaySection } from "../settings/CloudRelaySection";
+import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -307,6 +308,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <DocToolsSection />
 
           <MobileGatewaySection />
+          <MobileOptionsSection />
           <CloudRelaySection />
 
           {/* WebDAV 同步设置 */}

@@ -157,6 +157,7 @@ fn main() {
             mobile_gateway::mobile_set_workspace,
             mobile_gateway::mobile_set_agent_config,
             mobile_gateway::mobile_sync_sessions,
+            mobile_gateway::mobile_sync_options,
             // Cloud Relay commands
             cloud_relay::cloud_relay_set_config,
             cloud_relay::cloud_relay_get_config,

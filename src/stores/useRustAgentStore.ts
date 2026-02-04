@@ -11,6 +11,8 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getAIConfig, type AIConfig } from "@/services/ai/ai";
 import { useFileStore } from "@/stores/useFileStore";
+import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
+import { useAgentProfileStore } from "@/stores/useAgentProfileStore";
 import { callLLM, PROVIDER_REGISTRY, type Message as LLMMessage } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { SelectedSkill } from "@/types/skills";
@@ -162,6 +164,19 @@ interface MobileSessionSummary {
   last_message_preview?: string;
   last_message_role?: "user" | "assistant" | "system" | "tool";
   message_count: number;
+}
+
+interface MobileWorkspaceOption {
+  id: string;
+  name: string;
+  path: string;
+}
+
+interface MobileAgentProfileOption {
+  id: string;
+  name: string;
+  provider: string;
+  model: string;
 }
 
 // Plan 步骤状态 (Windsurf 风格)
@@ -537,6 +552,7 @@ interface RustAgentState {
   deleteSession: (id: string) => void;
   renameSession: (id: string, title: string) => void;
   syncMobileSessions: () => Promise<void>;
+  syncMobileOptions: () => Promise<void>;
   
   // 内部方法
   _handleEvent: (event: AgentEventPayload) => void;
@@ -603,6 +619,10 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
     auto_approve: autoApprove,
     locale: "zh-CN",
   };
+};
+
+const buildAgentConfigFromProfile = (profile: { config: AIConfig; autoApprove: boolean }): AgentConfig => {
+  return buildAgentConfig(profile.config, profile.autoApprove);
 };
 
 // ============ Store 实现 ============
@@ -968,6 +988,7 @@ export const useRustAgentStore = create<RustAgentState>()(
 
       // 同步会话到移动端
       syncMobileSessions: async () => {
+        void get().syncMobileOptions();
         const vaultPath = resolveVaultPath();
         if (vaultPath && vaultPath !== lastMobileWorkspacePath) {
           try {
@@ -979,8 +1000,14 @@ export const useRustAgentStore = create<RustAgentState>()(
         }
         let mobileAgentConfig: AgentConfig | null = null;
         try {
+          const profileState = useAgentProfileStore.getState();
+          const selectedProfile = profileState.currentProfileId
+            ? profileState.getProfileById(profileState.currentProfileId)
+            : undefined;
           const aiConfig = getAIConfig();
-          const config = buildAgentConfig(aiConfig, get().autoApprove);
+          const config = selectedProfile
+            ? buildAgentConfigFromProfile(selectedProfile)
+            : buildAgentConfig(aiConfig, get().autoApprove);
           mobileAgentConfig = config;
           const configKey = JSON.stringify(config);
           if (configKey !== lastMobileAgentConfigKey) {
@@ -1012,6 +1039,32 @@ export const useRustAgentStore = create<RustAgentState>()(
           });
         } catch (e) {
           console.warn("[RustAgent] Failed to sync mobile sessions:", e);
+        }
+      },
+
+      syncMobileOptions: async () => {
+        const workspaceState = useWorkspaceStore.getState();
+        const profileState = useAgentProfileStore.getState();
+        const workspaces: MobileWorkspaceOption[] = workspaceState.workspaces.map((ws) => ({
+          id: ws.id,
+          name: ws.name,
+          path: ws.path,
+        }));
+        const agentProfiles: MobileAgentProfileOption[] = profileState.profiles.map((profile) => ({
+          id: profile.id,
+          name: profile.name,
+          provider: profile.config.provider,
+          model: profile.config.model,
+        }));
+        try {
+          await invoke("mobile_sync_options", {
+            workspaces,
+            agentProfiles,
+            selectedWorkspaceId: workspaceState.currentWorkspaceId,
+            selectedProfileId: profileState.currentProfileId,
+          });
+        } catch (e) {
+          console.warn("[RustAgent] Failed to sync mobile options:", e);
         }
       },
 
@@ -1661,6 +1714,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               const shouldSyncWorkspace = payload.workspace !== false;
               const shouldSyncAgentConfig = payload.agent_config !== false;
 
+              void get().syncMobileOptions();
+
               if (shouldSyncWorkspace) {
                 const workspacePath = resolveVaultPath();
                 if (workspacePath) {
@@ -1673,6 +1728,30 @@ export const useRustAgentStore = create<RustAgentState>()(
               if (shouldSyncAgentConfig) {
                 void get().syncMobileSessions();
               }
+            }
+          );
+          const unlistenMobileWorkspaceSelect = await listen<{ workspace_id?: string }>(
+            "mobile-select-workspace",
+            async (event) => {
+              const payload = event.payload ?? {};
+              const workspaceId = payload.workspace_id;
+              if (!workspaceId) return;
+              const workspaceStore = useWorkspaceStore.getState();
+              const target = workspaceStore.getWorkspaceById(workspaceId);
+              if (!target) return;
+              workspaceStore.setCurrentWorkspace(workspaceId);
+              await useFileStore.getState().setVaultPath(target.path);
+              void get().syncMobileOptions();
+            }
+          );
+          const unlistenMobileProfileSelect = await listen<{ profile_id?: string }>(
+            "mobile-select-agent-profile",
+            (event) => {
+              const payload = event.payload ?? {};
+              const profileId = payload.profile_id;
+              if (!profileId) return;
+              useAgentProfileStore.getState().setCurrentProfile(profileId);
+              void get().syncMobileSessions();
             }
           );
           const unlistenMobileWorkspace = await listen<{ path?: string; timestamp?: number; source?: string }>(
@@ -1690,11 +1769,24 @@ export const useRustAgentStore = create<RustAgentState>()(
               console.log("[MobileGateway] Workspace synced:", payload.path);
             }
           );
+          const unsubscribeVault = useFileStore.subscribe(
+            (state) => state.vaultPath,
+            (vaultPath) => {
+              if (vaultPath) {
+                useWorkspaceStore.getState().registerWorkspace(vaultPath);
+              }
+              void get().syncMobileOptions();
+              void get().syncMobileSessions();
+            }
+          );
           return () => {
             unlistenAgent();
             unlistenMobile();
             unlistenMobileSync();
+            unlistenMobileWorkspaceSelect();
+            unlistenMobileProfileSelect();
             unlistenMobileWorkspace();
+            unsubscribeVault();
           };
         } catch (e) {
           console.error("Failed to setup agent event listener:", e);

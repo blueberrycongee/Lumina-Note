@@ -208,6 +208,14 @@ async fn run_relay(
                     crate::mobile_gateway::MobileBroadcast::SessionList { sessions } => {
                         let _ = out_tx.send(MobileServerMessage::SessionList { sessions });
                     }
+                    crate::mobile_gateway::MobileBroadcast::Options { options } => {
+                        let _ = out_tx.send(MobileServerMessage::Options {
+                            workspaces: options.workspaces,
+                            agent_profiles: options.agent_profiles,
+                            selected_workspace_id: options.selected_workspace_id,
+                            selected_profile_id: options.selected_profile_id,
+                        });
+                    }
                 }
             }
         })
@@ -216,6 +224,13 @@ async fn run_relay(
     let initial_sessions = mobile_state.get_sessions().await;
     let _ = out_tx.send(MobileServerMessage::SessionList {
         sessions: initial_sessions,
+    });
+    let initial_options = mobile_state.get_options().await;
+    let _ = out_tx.send(MobileServerMessage::Options {
+        workspaces: initial_options.workspaces,
+        agent_profiles: initial_options.agent_profiles,
+        selected_workspace_id: initial_options.selected_workspace_id,
+        selected_profile_id: initial_options.selected_profile_id,
     });
 
     let mut paired = false;
