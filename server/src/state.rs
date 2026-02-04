@@ -12,6 +12,7 @@ use crate::config::Config;
 pub struct RelayPeer {
     pub id: String,
     pub sender: mpsc::UnboundedSender<Message>,
+    #[allow(dead_code)]
     pub connected_at: Instant,
 }
 

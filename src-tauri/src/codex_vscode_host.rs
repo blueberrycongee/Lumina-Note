@@ -1,6 +1,5 @@
 use crate::error::AppError;
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
 use tauri::{
@@ -25,7 +24,7 @@ struct CodexVscodeHostInner {
 }
 
 #[derive(Default)]
-pub struct CodexVscodeHostState(pub Mutex<CodexVscodeHostInner>);
+pub struct CodexVscodeHostState(Mutex<CodexVscodeHostInner>);
 
 #[derive(Debug, Serialize)]
 pub struct CodexVscodeHostInfo {

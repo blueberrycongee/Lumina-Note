@@ -96,6 +96,7 @@ pub async fn find_user_by_email(
     Ok(row.map(|row| (row.get::<String, _>("id"), row.get::<String, _>("password_hash"))))
 }
 
+#[allow(dead_code)]
 pub async fn get_user_by_id(pool: &SqlitePool, user_id: &str) -> Result<Option<String>, AppError> {
     let row = sqlx::query(
         r#"

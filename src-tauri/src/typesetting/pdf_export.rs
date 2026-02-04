@@ -64,10 +64,8 @@ pub fn write_pdf_with_embedded_font(
         return Err(PdfExportError::InvalidFontData);
     }
 
-    let face =
-        ttf_parser::Face::from_slice(font_bytes, 0).map_err(|_| {
-            PdfExportError::InvalidFontData
-        })?;
+    let face = ttf_parser::Face::parse(font_bytes, 0)
+        .map_err(|_| PdfExportError::InvalidFontData)?;
     let bbox = face.global_bounding_box();
     let ascent = face.ascender() as i32;
     let descent = face.descender() as i32;

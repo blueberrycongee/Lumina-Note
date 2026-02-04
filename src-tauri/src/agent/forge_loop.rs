@@ -82,7 +82,7 @@ pub fn build_tool_definitions(registry: &ToolRegistry) -> Vec<Value> {
 pub async fn run_forge_loop(
     app: AppHandle,
     config: AgentConfig,
-    mut state: GraphState,
+    state: GraphState,
     runtime: ForgeRuntime,
     pending_tool_calls: Vec<ToolCall>,
     session_id: String,

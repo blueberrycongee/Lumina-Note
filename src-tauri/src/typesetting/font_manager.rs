@@ -112,7 +112,7 @@ impl FontManager {
         }
 
         let bytes = std::fs::read(path)?;
-        let face = ttf_parser::Face::from_slice(&bytes, 0)?;
+        let face = ttf_parser::Face::parse(&bytes, 0)?;
         let metrics = FontMetrics {
             units_per_em: face.units_per_em(),
             ascent: face.ascender(),

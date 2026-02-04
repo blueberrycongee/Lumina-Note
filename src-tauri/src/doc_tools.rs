@@ -280,7 +280,7 @@ fn find_pack_bin_dir(root: &Path) -> Option<PathBuf> {
 }
 
 fn tool_status_for(
-    name: &str,
+    _name: &str,
     aliases: &[&str],
     platform: NodePlatform,
     pack_bin: Option<&Path>,
