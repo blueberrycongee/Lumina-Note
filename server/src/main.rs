@@ -4,6 +4,7 @@ mod dav;
 mod db;
 mod error;
 mod models;
+mod relay;
 mod routes;
 mod state;
 
@@ -32,7 +33,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     db::init_db(&pool).await?;
 
-    let state = AppState { pool, config };
+    let state = AppState {
+        pool,
+        config,
+        relay: state::RelayHub::new(),
+    };
 
     let app = Router::new()
         .route("/health", get(routes::health))
@@ -40,6 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/auth/login", post(routes::login))
         .route("/auth/refresh", post(routes::refresh))
         .route("/workspaces", get(routes::list_workspaces).post(routes::create_workspace))
+        .route("/relay", get(relay::relay_handler))
         .route("/dav/:workspace_id", any(dav::handle_dav_root))
         .route("/dav/:workspace_id/*path", any(dav::handle_dav_path))
         .with_state(state)

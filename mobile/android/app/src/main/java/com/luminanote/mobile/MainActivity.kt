@@ -130,7 +130,8 @@ private data class PairingPayload(
     val token: String,
     val port: Int,
     val addresses: List<String>,
-    val wsPath: String
+    val wsPath: String,
+    val relayUrl: String?
 )
 
 private data class SessionSummary(
@@ -220,6 +221,30 @@ private class MobileGatewayStore(private val context: Context) {
             connectionStatus = "Invalid payload"
             PairingPrefs.setPaired(context, false)
             isPaired = false
+            return
+        }
+        if (!parsed.relayUrl.isNullOrBlank()) {
+            val url = ensureClientParam(parsed.relayUrl, "mobile")
+            connectionStatus = "Connecting"
+            val request = Request.Builder()
+                .url(url)
+                .addHeader("Authorization", "Bearer ${parsed.token}")
+                .build()
+            webSocket = okHttp.newWebSocket(request, object : WebSocketListener() {
+                override fun onOpen(webSocket: WebSocket, response: Response) {
+                    sendPair(parsed.token)
+                    postStatus("Connected")
+                }
+
+                override fun onMessage(webSocket: WebSocket, text: String) {
+                    mainHandler.post { handleIncoming(text) }
+                }
+
+                override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                    postStatus("Disconnected")
+                    postError(t.message)
+                }
+            })
             return
         }
         val address = parsed.addresses.firstOrNull() ?: run {
@@ -420,16 +445,27 @@ private class MobileGatewayStore(private val context: Context) {
         return try {
             val json = JSONObject(payload)
             val token = json.getString("token")
-            val port = json.getInt("port")
+            val port = json.optInt("port", 0)
             val addressesJson = json.optJSONArray("addresses") ?: JSONArray()
             val addresses = mutableListOf<String>()
             for (i in 0 until addressesJson.length()) {
                 addresses.add(addressesJson.getString(i))
             }
             val wsPath = json.optString("ws_path", "/ws")
-            PairingPayload(token, port, addresses, wsPath)
+            val relayUrl = json.optString("relay_url").ifBlank { null }
+            PairingPayload(token, port, addresses, wsPath, relayUrl)
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private fun ensureClientParam(relayUrl: String, client: String): String {
+        return if (relayUrl.contains("client=")) {
+            relayUrl
+        } else if (relayUrl.contains("?")) {
+            "$relayUrl&client=$client"
+        } else {
+            "$relayUrl?client=$client"
         }
     }
 
