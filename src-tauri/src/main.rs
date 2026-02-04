@@ -19,6 +19,7 @@ mod codex_vscode_host;
 mod codex_extension;
 mod node_runtime;
 mod mobile_gateway;
+mod cloud_relay;
 mod doc_tools;
 
 use tauri::Manager;
@@ -156,12 +157,19 @@ fn main() {
             mobile_gateway::mobile_set_workspace,
             mobile_gateway::mobile_set_agent_config,
             mobile_gateway::mobile_sync_sessions,
+            // Cloud Relay commands
+            cloud_relay::cloud_relay_set_config,
+            cloud_relay::cloud_relay_get_config,
+            cloud_relay::cloud_relay_get_status,
+            cloud_relay::cloud_relay_start,
+            cloud_relay::cloud_relay_stop,
         ])
         .manage(webdav::commands::WebDAVState::new())
         .manage(agent::AgentState::new())
         .manage(agent::DeepResearchStateManager::new())
         .manage(codex_vscode_host::CodexVscodeHostState::default())
         .manage(mobile_gateway::MobileGatewayState::new())
+        .manage(cloud_relay::CloudRelayState::new())
         .setup(|app| {
             if let Err(err) = mobile_gateway::hydrate_state(&app.handle()) {
                 eprintln!("[MobileGateway] Failed to hydrate state: {}", err);

@@ -50,6 +50,23 @@ Use WebDAV settings:
 
 Then run "Test Connection" and "Sync".
 
+## Cloud relay (dev)
+
+Relay endpoint:
+- `ws://127.0.0.1:8787/relay?client=desktop`
+- `ws://127.0.0.1:8787/relay?client=mobile`
+
+Pairing payload format (cloud):
+```json
+{
+  "v": 1,
+  "token": "<jwt>",
+  "relay_url": "ws://127.0.0.1:8787/relay?client=mobile"
+}
+```
+
+You can obtain the `token` from `/auth/login` response and paste this payload into the mobile app.
+
 ## Notes
 
 - This is a dev-only local setup (HTTP). Production must use TLS.

@@ -11,6 +11,7 @@ pub mod agent;
 pub mod langgraph;
 pub mod mcp;
 pub mod forge_runtime;
+pub mod cloud_relay;
 pub mod mobile_gateway;
 mod doc_tools;
 

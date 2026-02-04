@@ -9,6 +9,7 @@ use serde_json::{json, Value};
 use std::fs;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::net::TcpListener;
@@ -47,7 +48,7 @@ pub struct MobileSessionSummary {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
-enum MobileServerMessage {
+pub enum MobileServerMessage {
     Paired { session_id: String },
     CommandAck { command_id: String, status: String },
     AgentEvent { session_id: Option<String>, event: Value },
@@ -59,7 +60,7 @@ enum MobileServerMessage {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
-enum MobileClientMessage {
+pub enum MobileClientMessage {
     Pair { token: String, device_name: Option<String> },
     Command { task: String, session_id: Option<String>, context: Option<MobileTaskContext> },
     Ping { timestamp: Option<u64> },
@@ -67,7 +68,7 @@ enum MobileClientMessage {
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
-struct MobileTaskContext {
+pub struct MobileTaskContext {
     active_note_path: Option<String>,
     active_note_content: Option<String>,
     file_tree: Option<String>,
@@ -100,10 +101,12 @@ const MOBILE_SYNC_WAIT_TIMEOUT: Duration = Duration::from_secs(3);
 const MOBILE_SYNC_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
 #[derive(Debug, Clone)]
-enum MobileBroadcast {
+pub enum MobileBroadcast {
     AgentEvent { session_id: Option<String>, event: Value },
     SessionList { sessions: Vec<MobileSessionSummary> },
 }
+
+pub type MobileMessageSender = Arc<dyn Fn(MobileServerMessage) + Send + Sync>;
 
 impl MobileGatewayState {
     pub fn new() -> Self {
@@ -196,8 +199,12 @@ impl MobileGatewayState {
         *guard = sessions;
     }
 
-    async fn get_sessions(&self) -> Vec<MobileSessionSummary> {
+    pub async fn get_sessions(&self) -> Vec<MobileSessionSummary> {
         self.sessions.lock().await.clone()
+    }
+
+    pub fn subscribe_events(&self) -> broadcast::Receiver<MobileBroadcast> {
+        self.events.subscribe()
     }
 
     pub async fn set_current_session_id(&self, session_id: Option<String>) {
@@ -301,6 +308,172 @@ fn emit_mobile_workspace_updated(app: &AppHandle, workspace_path: &str, source: 
         "source": source,
     });
     let _ = app.emit("mobile-workspace-updated", payload);
+}
+
+pub async fn handle_mobile_message(
+    app: &AppHandle,
+    state: &MobileGatewayState,
+    paired: &mut bool,
+    msg: MobileClientMessage,
+    expected_token: Option<&str>,
+    allow_any_pair: bool,
+    sender: MobileMessageSender,
+) {
+    let send = |message: MobileServerMessage| {
+        (sender)(message);
+    };
+
+    match msg {
+        MobileClientMessage::Pair { token: incoming_token, .. } => {
+            let token_ok = allow_any_pair
+                || expected_token
+                    .map(|token| token == incoming_token)
+                    .unwrap_or(false);
+            if token_ok {
+                *paired = true;
+                send(MobileServerMessage::Paired {
+                    session_id: uuid::Uuid::new_v4().to_string(),
+                });
+                let sessions = state.get_sessions().await;
+                send(MobileServerMessage::SessionList { sessions });
+                emit_mobile_sync_request(app, true, true);
+            } else {
+                send(MobileServerMessage::Error {
+                    message: "Invalid pairing token".to_string(),
+                });
+            }
+        }
+        MobileClientMessage::Ping { timestamp } => {
+            send(MobileServerMessage::Pong {
+                timestamp: timestamp.unwrap_or_else(current_timestamp),
+            });
+        }
+        MobileClientMessage::SessionCreate { title } => {
+            if !*paired {
+                send(MobileServerMessage::Error {
+                    message: "Not paired".to_string(),
+                });
+                return;
+            }
+            let payload = json!({
+                "action": "create",
+                "title": title,
+            });
+            let _ = app.emit("mobile-session-command", payload);
+        }
+        MobileClientMessage::Command { task, session_id, context } => {
+            if !*paired {
+                send(MobileServerMessage::Error {
+                    message: "Not paired".to_string(),
+                });
+                return;
+            }
+            let session_id = match session_id {
+                Some(id) => id,
+                None => {
+                    send(MobileServerMessage::Error {
+                        message: "Missing session_id".to_string(),
+                    });
+                    return;
+                }
+            };
+            let task_for_event = task.clone();
+            let _ = app.emit(
+                "mobile-command",
+                json!({
+                    "session_id": session_id,
+                    "task": task_for_event,
+                    "timestamp": current_timestamp(),
+                }),
+            );
+
+            let mut workspace_path = state.get_workspace().await;
+            let mut agent_config = state.get_agent_config().await;
+
+            if workspace_path.is_none() || agent_config.is_none() {
+                if let Some(settings) = load_settings(app) {
+                    if workspace_path.is_none() {
+                        if let Some(path) = settings.workspace_path.clone() {
+                            state.set_workspace(Some(path.clone())).await;
+                            workspace_path = Some(path);
+                        }
+                    }
+                    if agent_config.is_none() {
+                        if let Some(config) = settings.agent_config.clone() {
+                            state.set_agent_config(Some(config.clone())).await;
+                            agent_config = Some(config);
+                        }
+                    }
+                }
+            }
+
+            let missing_workspace = workspace_path.is_none();
+            let missing_agent_config = agent_config.is_none();
+            if missing_workspace || missing_agent_config {
+                emit_mobile_sync_request(app, missing_workspace, missing_agent_config);
+                let (synced_workspace, synced_agent_config) = await_sync_requirements(
+                    app,
+                    state,
+                    missing_workspace,
+                    missing_agent_config,
+                )
+                .await;
+                if missing_workspace {
+                    workspace_path = synced_workspace;
+                }
+                if missing_agent_config {
+                    agent_config = synced_agent_config;
+                }
+            }
+
+            let workspace_path = match workspace_path {
+                Some(path) => path,
+                None => {
+                    eprintln!("[MobileGateway] Workspace missing when handling command.");
+                    emit_mobile_sync_request(app, true, agent_config.is_none());
+                    send(MobileServerMessage::Error {
+                        message: "Workspace path not set".to_string(),
+                    });
+                    return;
+                }
+            };
+            let agent_config = match agent_config {
+                Some(config) => config,
+                None => {
+                    eprintln!("[MobileGateway] Agent config missing when handling command.");
+                    emit_mobile_sync_request(app, false, true);
+                    send(MobileServerMessage::Error {
+                        message: "Agent config not set".to_string(),
+                    });
+                    return;
+                }
+            };
+
+            let command_id = uuid::Uuid::new_v4().to_string();
+            send(MobileServerMessage::CommandAck {
+                command_id: command_id.clone(),
+                status: "accepted".to_string(),
+            });
+
+            let app_handle = app.clone();
+            let sender_clone = sender.clone();
+            tokio::spawn(async move {
+                let context = build_task_context(workspace_path, context, Some(session_id));
+                let agent_state = app_handle.state::<AgentState>();
+                let result = agent_start_task(
+                    app_handle.clone(),
+                    agent_state,
+                    agent_config,
+                    task,
+                    context,
+                )
+                .await;
+                if let Err(err) = result {
+                    (sender_clone)(MobileServerMessage::Error { message: err });
+                }
+            });
+        }
+    }
 }
 
 async fn await_sync_requirements(
@@ -589,154 +762,26 @@ async fn handle_connection(
                 };
 
                 if let tokio_tungstenite::tungstenite::Message::Text(text) = message {
+                    let sender: MobileMessageSender = {
+                        let out_tx = out_tx.clone();
+                        Arc::new(move |message| {
+                            let _ = out_tx.send(message);
+                        })
+                    };
                     let parsed = serde_json::from_str::<MobileClientMessage>(&text);
                     match parsed {
-                        Ok(MobileClientMessage::Pair { token: incoming_token, .. }) => {
-                            if incoming_token == token {
-                                paired = true;
-                                let _ = out_tx.send(MobileServerMessage::Paired {
-                                    session_id: uuid::Uuid::new_v4().to_string(),
-                                });
-                                let sessions = app.state::<MobileGatewayState>().get_sessions().await;
-                                let _ = out_tx.send(MobileServerMessage::SessionList { sessions });
-                                emit_mobile_sync_request(&app, true, true);
-                            } else {
-                                let _ = out_tx.send(MobileServerMessage::Error {
-                                    message: "Invalid pairing token".to_string(),
-                                });
-                            }
-                        }
-                        Ok(MobileClientMessage::Ping { timestamp }) => {
-                            let _ = out_tx.send(MobileServerMessage::Pong {
-                                timestamp: timestamp.unwrap_or_else(current_timestamp),
-                            });
-                        }
-                        Ok(MobileClientMessage::SessionCreate { title }) => {
-                            if !paired {
-                                let _ = out_tx.send(MobileServerMessage::Error {
-                                    message: "Not paired".to_string(),
-                                });
-                                continue;
-                            }
-                            let payload = json!({
-                                "action": "create",
-                                "title": title,
-                            });
-                            let _ = app.emit("mobile-session-command", payload);
-                        }
-                        Ok(MobileClientMessage::Command { task, session_id, context }) => {
-                            if !paired {
-                                let _ = out_tx.send(MobileServerMessage::Error {
-                                    message: "Not paired".to_string(),
-                                });
-                                continue;
-                            }
-                            let session_id = match session_id {
-                                Some(id) => id,
-                                None => {
-                                    let _ = out_tx.send(MobileServerMessage::Error {
-                                        message: "Missing session_id".to_string(),
-                                    });
-                                    continue;
-                                }
-                            };
-                            let task_for_event = task.clone();
-                            let _ = app.emit(
-                                "mobile-command",
-                                json!({
-                                    "session_id": session_id,
-                                    "task": task_for_event,
-                                    "timestamp": current_timestamp(),
-                                }),
-                            );
-
+                        Ok(msg) => {
                             let state = app.state::<MobileGatewayState>();
-                            let mut workspace_path = state.get_workspace().await;
-                            let mut agent_config = state.get_agent_config().await;
-
-                            if workspace_path.is_none() || agent_config.is_none() {
-                                if let Some(settings) = load_settings(&app) {
-                                    if workspace_path.is_none() {
-                                        if let Some(path) = settings.workspace_path.clone() {
-                                            state.set_workspace(Some(path.clone())).await;
-                                            workspace_path = Some(path);
-                                        }
-                                    }
-                                    if agent_config.is_none() {
-                                        if let Some(config) = settings.agent_config.clone() {
-                                            state.set_agent_config(Some(config.clone())).await;
-                                            agent_config = Some(config);
-                                        }
-                                    }
-                                }
-                            }
-
-                            let missing_workspace = workspace_path.is_none();
-                            let missing_agent_config = agent_config.is_none();
-                            if missing_workspace || missing_agent_config {
-                                emit_mobile_sync_request(&app, missing_workspace, missing_agent_config);
-                                let (synced_workspace, synced_agent_config) = await_sync_requirements(
-                                    &app,
-                                    &state,
-                                    missing_workspace,
-                                    missing_agent_config,
-                                )
-                                .await;
-                                if missing_workspace {
-                                    workspace_path = synced_workspace;
-                                }
-                                if missing_agent_config {
-                                    agent_config = synced_agent_config;
-                                }
-                            }
-
-                            let workspace_path = match workspace_path {
-                                Some(path) => path,
-                                None => {
-                                    eprintln!("[MobileGateway] Workspace missing when handling command.");
-                                    emit_mobile_sync_request(&app, true, agent_config.is_none());
-                                    let _ = out_tx.send(MobileServerMessage::Error {
-                                        message: "Workspace path not set".to_string(),
-                                    });
-                                    continue;
-                                }
-                            };
-                            let agent_config = match agent_config {
-                                Some(config) => config,
-                                None => {
-                                    eprintln!("[MobileGateway] Agent config missing when handling command.");
-                                    emit_mobile_sync_request(&app, false, true);
-                                    let _ = out_tx.send(MobileServerMessage::Error {
-                                        message: "Agent config not set".to_string(),
-                                    });
-                                    continue;
-                                }
-                            };
-
-                            let command_id = uuid::Uuid::new_v4().to_string();
-                            let _ = out_tx.send(MobileServerMessage::CommandAck {
-                                command_id: command_id.clone(),
-                                status: "accepted".to_string(),
-                            });
-                            let app_handle = app.clone();
-                            let out_tx_clone = out_tx.clone();
-                            tokio::spawn(async move {
-                                let context = build_task_context(workspace_path, context, Some(session_id));
-                                let agent_state = app_handle.state::<AgentState>();
-                                let result = agent_start_task(
-                                    app_handle.clone(),
-                                    agent_state,
-                                    agent_config,
-                                    task,
-                                    context,
-                                )
-                                .await;
-                                if let Err(err) = result {
-                                    let _ = out_tx_clone.send(MobileServerMessage::Error {
-                                        message: err,
-                                    });
-                                }
-                            });
+                            handle_mobile_message(
+                                &app,
+                                &state,
+                                &mut paired,
+                                msg,
+                                Some(&token),
+                                false,
+                                sender,
+                            )
+                            .await;
                         }
                         Err(_) => {
                             let _ = out_tx.send(MobileServerMessage::Error {

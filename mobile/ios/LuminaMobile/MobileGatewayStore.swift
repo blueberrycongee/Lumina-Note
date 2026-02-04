@@ -6,6 +6,7 @@ struct PairingPayload: Codable {
     let port: Int
     let addresses: [String]
     let ws_path: String
+    let relay_url: String?
 
     private enum CodingKeys: String, CodingKey {
         case v
@@ -13,23 +14,26 @@ struct PairingPayload: Codable {
         case port
         case addresses
         case ws_path
+        case relay_url
     }
 
-    init(v: Int?, token: String, port: Int, addresses: [String], ws_path: String) {
+    init(v: Int?, token: String, port: Int, addresses: [String], ws_path: String, relay_url: String?) {
         self.v = v
         self.token = token
         self.port = port
         self.addresses = addresses
         self.ws_path = ws_path
+        self.relay_url = relay_url
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         v = try? container.decode(Int.self, forKey: .v)
         token = try container.decode(String.self, forKey: .token)
-        port = try container.decode(Int.self, forKey: .port)
-        addresses = try container.decode([String].self, forKey: .addresses)
+        port = (try? container.decode(Int.self, forKey: .port)) ?? 0
+        addresses = (try? container.decode([String].self, forKey: .addresses)) ?? []
         ws_path = (try? container.decode(String.self, forKey: .ws_path)) ?? "/ws"
+        relay_url = try? container.decode(String.self, forKey: .relay_url)
     }
 }
 
@@ -78,6 +82,24 @@ final class MobileGatewayStore: ObservableObject {
             isPaired = false
             return
         }
+        if let relayUrl = payload.relay_url, !relayUrl.isEmpty {
+            let urlString = ensureClientParam(relayUrl, client: "mobile")
+            guard let url = URL(string: urlString) else {
+                connectionStatus = "Invalid URL"
+                return
+            }
+            var request = URLRequest(url: url)
+            request.setValue("Bearer \(payload.token)", forHTTPHeaderField: "Authorization")
+            connectionStatus = "Connecting"
+            let task = URLSession.shared.webSocketTask(with: request)
+            webSocketTask = task
+            task.resume()
+            sendPair(token: payload.token)
+            receiveLoop()
+            connectionStatus = "Connected"
+            return
+        }
+
         guard let address = payload.addresses.first else {
             connectionStatus = "No address"
             UserDefaults.standard.set(false, forKey: "lumina_paired")
@@ -328,6 +350,16 @@ final class MobileGatewayStore: ObservableObject {
     private func parsePairingPayload(_ payload: String) -> PairingPayload? {
         guard let data = payload.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode(PairingPayload.self, from: data)
+    }
+
+    private func ensureClientParam(_ relayUrl: String, client: String) -> String {
+        guard var components = URLComponents(string: relayUrl) else { return relayUrl }
+        var items = components.queryItems ?? []
+        if !items.contains(where: { $0.name == "client" }) {
+            items.append(URLQueryItem(name: "client", value: client))
+        }
+        components.queryItems = items
+        return components.string ?? relayUrl
     }
 
     private func applySessionList(_ sessionsData: [[String: Any]]) {
