@@ -1674,16 +1674,18 @@ export const useRustAgentStore = create<RustAgentState>()(
             "mobile-command",
             (event) => {
               const payload = event.payload ?? {};
-              if (!payload.session_id || !payload.task) return;
+              const sessionId = payload.session_id;
+              const task = payload.task;
+              if (!sessionId || !task) return;
               set((state) => {
                 const nextSessions = appendMobileUserMessage(
                   state.sessions,
-                  payload.session_id,
-                  payload.task
+                  sessionId,
+                  task
                 );
-                const isCurrent = state.currentSessionId === payload.session_id;
+                const isCurrent = state.currentSessionId === sessionId;
                 const updatedMessages = isCurrent
-                  ? nextSessions.find(s => s.id === payload.session_id)?.messages ?? state.messages
+                  ? nextSessions.find(s => s.id === sessionId)?.messages ?? state.messages
                   : state.messages;
                 return {
                   sessions: nextSessions,
@@ -1769,18 +1771,20 @@ export const useRustAgentStore = create<RustAgentState>()(
               console.log("[MobileGateway] Workspace synced:", payload.path);
             }
           );
-          const unsubscribeVault = useFileStore.subscribe(
-            (state) => state.vaultPath,
-            (vaultPath) => {
-              if (vaultPath) {
-                useWorkspaceStore.getState().registerWorkspace(vaultPath);
-              }
-              void get().syncMobileOptions();
-              void get().syncMobileSessions();
+          let lastVaultPath: string | null = useFileStore.getState().vaultPath;
+          const unsubscribeVault = useFileStore.subscribe((state) => {
+            const vaultPath = state.vaultPath;
+            if (vaultPath === lastVaultPath) return;
+            lastVaultPath = vaultPath;
+            if (vaultPath) {
+              useWorkspaceStore.getState().registerWorkspace(vaultPath);
             }
-          );
+            void get().syncMobileOptions();
+            void get().syncMobileSessions();
+          });
           return () => {
             unlistenAgent();
+            unlistenMobileCommand();
             unlistenMobile();
             unlistenMobileSync();
             unlistenMobileWorkspaceSelect();
