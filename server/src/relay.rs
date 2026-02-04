@@ -1,14 +1,13 @@
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
-use axum::response::{IntoResponse, Response};
+use axum::response::Response;
 use base64::Engine;
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::mpsc;
 use uuid::Uuid;
-use base64::Engine;
 
 use crate::auth::{decode_token, verify_password};
 use crate::db;
@@ -65,7 +64,7 @@ async fn handle_socket(state: AppState, socket: WebSocket, user_id: String, clie
         }
     }
 
-    let mut send_task = tokio::spawn(async move {
+    let send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             if ws_tx.send(msg).await.is_err() {
                 break;

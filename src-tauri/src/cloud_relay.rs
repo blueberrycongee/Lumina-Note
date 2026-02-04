@@ -8,7 +8,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{AppHandle, Manager, State};
+use tauri::{http, AppHandle, Manager, State};
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio_tungstenite::tungstenite::Message;
 
