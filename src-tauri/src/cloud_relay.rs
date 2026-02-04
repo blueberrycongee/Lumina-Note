@@ -101,10 +101,15 @@ pub async fn cloud_relay_start(
 
     let config = {
         let guard = state.config.lock().await;
-        guard
-            .clone()
-            .or_else(|| load_config(&app))
-            .ok_or_else(|| "Cloud relay config missing".to_string())?
+        guard.clone().or_else(|| load_config(&app))
+    };
+    let config = match config {
+        Some(config) => config,
+        None => {
+            let mut starting = state.starting.lock().await;
+            *starting = false;
+            return Err("Cloud relay config missing".to_string());
+        }
     };
 
     {
@@ -296,10 +301,19 @@ fn build_pairing_payload(relay_url: &str, token: &str) -> String {
 fn ensure_client_query(relay_url: &str, client: &str) -> Result<String, String> {
     let mut url = reqwest::Url::parse(relay_url)
         .map_err(|e| format!("Invalid relay url: {}", e))?;
-    if url.query_pairs().any(|(k, _)| k == "client") {
-        return Ok(url.to_string());
+    let pairs: Vec<(String, String)> = url
+        .query_pairs()
+        .filter(|(k, _)| k != "client")
+        .map(|(k, v)| (k.into_owned(), v.into_owned()))
+        .collect();
+    url.set_query(None);
+    {
+        let mut query = url.query_pairs_mut();
+        for (key, value) in pairs {
+            query.append_pair(&key, &value);
+        }
+        query.append_pair("client", client);
     }
-    url.query_pairs_mut().append_pair("client", client);
     Ok(url.to_string())
 }
 

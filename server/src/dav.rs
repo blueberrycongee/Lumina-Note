@@ -9,6 +9,7 @@ use httpdate::fmt_http_date;
 use mime_guess::MimeGuess;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
+use urlencoding::encode;
 
 use crate::auth::{decode_token, verify_password};
 use crate::db;
@@ -341,8 +342,11 @@ fn build_propfind_xml(entries: &[PropEntry]) -> String {
     xml.push_str("<D:multistatus xmlns:D=\"DAV:\">\n");
 
     for entry in entries {
+        let href = xml_escape(&entry.href);
+        let etag = xml_escape(&entry.etag);
+        let content_type = xml_escape(&entry.content_type);
         xml.push_str("  <D:response>\n");
-        xml.push_str(&format!("    <D:href>{}</D:href>\n", entry.href));
+        xml.push_str(&format!("    <D:href>{}</D:href>\n", href));
         xml.push_str("    <D:propstat>\n");
         xml.push_str("      <D:prop>\n");
         xml.push_str("        <D:resourcetype>");
@@ -358,10 +362,10 @@ fn build_propfind_xml(entries: &[PropEntry]) -> String {
             "        <D:getlastmodified>{}</D:getlastmodified>\n",
             fmt_http_date(entry.modified)
         ));
-        xml.push_str(&format!("        <D:getetag>{}</D:getetag>\n", entry.etag));
+        xml.push_str(&format!("        <D:getetag>{}</D:getetag>\n", etag));
         xml.push_str(&format!(
             "        <D:getcontenttype>{}</D:getcontenttype>\n",
-            entry.content_type
+            content_type
         ));
         xml.push_str("      </D:prop>\n");
         xml.push_str("      <D:status>HTTP/1.1 200 OK</D:status>\n");
@@ -374,13 +378,38 @@ fn build_propfind_xml(entries: &[PropEntry]) -> String {
 }
 
 fn href_for(workspace_id: &str, relative: &Path, is_dir: bool) -> String {
-    let mut href = format!("/{}", workspace_id);
+    let mut href = format!("/dav/{}", workspace_id);
     if !relative.as_os_str().is_empty() {
         href.push('/');
-        href.push_str(&relative.to_string_lossy());
+        href.push_str(&encode_path(relative));
     }
     if is_dir && !href.ends_with('/') {
         href.push('/');
     }
     href
+}
+
+fn encode_path(path: &Path) -> String {
+    let mut parts = Vec::new();
+    for component in path.components() {
+        if let Component::Normal(segment) = component {
+            parts.push(encode(&segment.to_string_lossy()).into_owned());
+        }
+    }
+    parts.join("/")
+}
+
+fn xml_escape(value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+        match ch {
+            '&' => escaped.push_str("&amp;"),
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&apos;"),
+            _ => escaped.push(ch),
+        }
+    }
+    escaped
 }

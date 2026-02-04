@@ -85,7 +85,11 @@ export function MobileOptionsSection() {
               </button>
               <button
                 type="button"
-                onClick={() => removeWorkspace(workspace.id)}
+                onClick={() => {
+                  removeWorkspace(workspace.id);
+                  void syncMobileOptions();
+                  void syncMobileSessions();
+                }}
                 className="ml-2 text-muted-foreground hover:text-foreground"
               >
                 <Trash2 size={12} />
@@ -143,7 +147,11 @@ export function MobileOptionsSection() {
               </button>
               <button
                 type="button"
-                onClick={() => removeProfile(profile.id)}
+                onClick={() => {
+                  removeProfile(profile.id);
+                  void syncMobileOptions();
+                  void syncMobileSessions();
+                }}
                 className="ml-2 text-muted-foreground hover:text-foreground"
               >
                 <Trash2 size={12} />

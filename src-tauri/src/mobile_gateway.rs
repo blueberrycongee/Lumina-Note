@@ -528,6 +528,12 @@ pub async fn handle_mobile_message(
             });
         }
         MobileClientMessage::SelectWorkspace { workspace_id } => {
+            if !*paired {
+                send(MobileServerMessage::Error {
+                    message: "Not paired".to_string(),
+                });
+                return;
+            }
             let mut options = state.get_options().await;
             options.selected_workspace_id = Some(workspace_id.clone());
             state.set_options(options.clone()).await;
@@ -539,6 +545,12 @@ pub async fn handle_mobile_message(
             let _ = app.emit("mobile-select-workspace", payload);
         }
         MobileClientMessage::SelectAgentProfile { profile_id } => {
+            if !*paired {
+                send(MobileServerMessage::Error {
+                    message: "Not paired".to_string(),
+                });
+                return;
+            }
             let mut options = state.get_options().await;
             options.selected_profile_id = Some(profile_id.clone());
             state.set_options(options.clone()).await;
