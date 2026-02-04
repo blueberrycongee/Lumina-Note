@@ -33,6 +33,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     db::init_db(&pool).await?;
 
+    let bind_addr = config
+        .bind
+        .parse()
+        .map_err(|_| "invalid LUMINA_BIND")?;
+
     let state = AppState {
         pool,
         config,
@@ -50,12 +55,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/dav/:workspace_id/*path", any(dav::handle_dav_path))
         .with_state(state)
         .layer(TraceLayer::new_for_http());
-
-    let bind_addr = state
-        .config
-        .bind
-        .parse()
-        .map_err(|_| "invalid LUMINA_BIND")?;
     tracing::info!("Lumina Sync Server listening on {}", bind_addr);
     axum::Server::bind(&bind_addr)
         .serve(app.into_make_service())

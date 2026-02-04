@@ -3,7 +3,7 @@ use std::time::SystemTime;
 
 use axum::body::Body;
 use axum::extract::{Path as AxumPath, State};
-use axum::http::{HeaderMap, Method, Request, Response, StatusCode};
+use axum::http::{HeaderMap, Request, Response, StatusCode};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use httpdate::fmt_http_date;
 use mime_guess::MimeGuess;
@@ -65,14 +65,14 @@ async fn handle_dav_request(
     let relative = sanitize_path(&path)?;
     let absolute = workspace_root.join(&relative);
 
-    match *req.method() {
-        Method::OPTIONS => respond_options(),
-        Method::PROPFIND => respond_propfind(&workspace_id, &relative, &absolute, req.headers()).await,
-        Method::GET => respond_get(&absolute).await,
-        Method::HEAD => respond_head(&absolute).await,
-        Method::PUT => respond_put(&absolute, req).await,
-        Method::MKCOL => respond_mkcol(&absolute).await,
-        Method::DELETE => respond_delete(&absolute).await,
+    match req.method().as_str() {
+        "OPTIONS" => respond_options(),
+        "PROPFIND" => respond_propfind(&workspace_id, &relative, &absolute, req.headers()).await,
+        "GET" => respond_get(&absolute).await,
+        "HEAD" => respond_head(&absolute).await,
+        "PUT" => respond_put(&absolute, req).await,
+        "MKCOL" => respond_mkcol(&absolute).await,
+        "DELETE" => respond_delete(&absolute).await,
         _ => Ok(Response::builder()
             .status(StatusCode::METHOD_NOT_ALLOWED)
             .body(Body::empty())
@@ -139,7 +139,7 @@ async fn respond_propfind(
 async fn build_prop_entry(
     workspace_id: &str,
     relative: &Path,
-    metadata: &tokio::fs::Metadata,
+    metadata: &std::fs::Metadata,
 ) -> Result<PropEntry, AppError> {
     let modified = metadata.modified().unwrap_or(SystemTime::now());
     let size = if metadata.is_file() { metadata.len() } else { 0 };
