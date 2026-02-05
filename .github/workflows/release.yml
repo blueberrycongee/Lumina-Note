@@ -81,7 +81,7 @@ jobs:
         run: npm ci
 
       - name: Download all signatures
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: signatures
           pattern: signatures-*
