@@ -56,7 +56,7 @@ jobs:
           args: ${{ matrix.args }}
 
       - name: Upload signatures as artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: signatures-${{ matrix.platform }}-${{ matrix.rust_target || 'x64' }}
           path: |
