@@ -33,7 +33,7 @@ regex = "1.10"
 globset = "0.4"
 forge = { git = "https://github.com/blueberrycongee/forge", rev = "7f2b5291cac2e209c1faee687720771c4db0e180" }
 tokio-tungstenite = "0.21"
-if-addrs = "0.6"
+if-addrs = "0.14"
 
 # RAG / Vector Storage
 rusqlite = { version = "0.32", features = ["bundled"] }
