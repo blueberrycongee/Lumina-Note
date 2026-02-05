@@ -707,7 +707,7 @@ pub async fn mobile_start_server(
 
     let start_result = async {
         let bind_addr = std::env::var("LUMINA_MOBILE_BIND")
-            .unwrap_or_else(|_| "127.0.0.1:0".to_string());
+            .unwrap_or_else(|_| "0.0.0.0:0".to_string());
         let listener = TcpListener::bind(&bind_addr)
             .await
             .map_err(|e| format!("Failed to bind mobile gateway: {}", e))?;

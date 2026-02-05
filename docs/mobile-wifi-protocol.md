@@ -17,10 +17,10 @@ This doc defines the LAN-only mobile pairing and command protocol used by Lumina
 - Stop: `invoke("mobile_stop_server")`
 - Status: `invoke("mobile_get_status")`
 
-默认只绑定本机回环地址（`127.0.0.1:0`）以降低 LAN 暴露风险。如需局域网配对，请设置：
+默认绑定 `0.0.0.0:0` 以便同一局域网内设备配对。如需仅本机访问，请设置：
 
 ```
-LUMINA_MOBILE_BIND=0.0.0.0:0
+LUMINA_MOBILE_BIND=127.0.0.1:0
 ```
 
 `mobile_start_server` returns:
