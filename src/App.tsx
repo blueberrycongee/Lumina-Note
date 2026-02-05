@@ -34,7 +34,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
-import { enableDebugLogger } from "@/lib/debugLogger";
+import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
 import { AgentEvalPanel } from "@/tests/agent-eval/AgentEvalPanel";
 import { CodexVscodeHostPanel } from "@/components/debug/CodexVscodeHostPanel";
 import { CodexPanelHost } from "@/components/codex/CodexPanelHost";
@@ -43,26 +43,7 @@ import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import { ProfilePreview } from "@/components/profile/ProfilePreview";
 import type { FsChangePayload } from "@/lib/fsChange";
 
-// 启用调试日志收集（开发模式下）
-if (import.meta.env.DEV) {
-  enableDebugLogger();
-  window.addEventListener("error", (event) => {
-    console.error(
-      "[WindowError]",
-      event.message,
-      event.filename,
-      event.lineno,
-      event.colno
-    );
-    if (event.error) {
-      console.error("[WindowErrorStack]", event.error.stack || event.error);
-    }
-  });
-  window.addEventListener("unhandledrejection", (event) => {
-    const reason = (event.reason && (event.reason.stack || event.reason)) || "unknown";
-    console.error("[UnhandledRejection]", reason);
-  });
-}
+// Debug logging is enabled via a runtime toggle (or always in dev).
 
 const IS_TYPESETTING_HARNESS =
   new URLSearchParams(window.location.search).get("typesettingHarness") === "1";
@@ -361,6 +342,7 @@ function App() {
     splitView,
     isSkillManagerOpen,
     setSkillManagerOpen,
+    diagnosticsEnabled,
   } = useUIStore(
     useShallow((state) => ({
       leftSidebarOpen: state.leftSidebarOpen,
@@ -375,8 +357,48 @@ function App() {
       splitView: state.splitView,
       isSkillManagerOpen: state.isSkillManagerOpen,
       setSkillManagerOpen: state.setSkillManagerOpen,
+      diagnosticsEnabled: state.diagnosticsEnabled,
     }))
   );
+  const diagnosticsActive = diagnosticsEnabled || import.meta.env.DEV;
+
+  // Diagnostics logging (runtime toggle)
+  useEffect(() => {
+    if (diagnosticsActive) {
+      enableDebugLogger();
+    } else {
+      disableDebugLogger();
+    }
+  }, [diagnosticsActive]);
+
+  // Attach crash handlers only when diagnostics are enabled.
+  useEffect(() => {
+    if (!diagnosticsActive) return;
+    const onError = (event: ErrorEvent) => {
+      console.error(
+        "[WindowError]",
+        event.message,
+        event.filename,
+        event.lineno,
+        event.colno
+      );
+      if (event.error) {
+        console.error("[WindowErrorStack]", event.error.stack || event.error);
+      }
+    };
+    const onUnhandled = (event: PromiseRejectionEvent) => {
+      const reason =
+        (event.reason && ((event.reason as any).stack || event.reason)) ||
+        "unknown";
+      console.error("[UnhandledRejection]", reason);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
+  }, [diagnosticsActive]);
 
   // Build note index when file tree changes
   useEffect(() => {

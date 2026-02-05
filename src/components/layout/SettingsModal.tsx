@@ -25,6 +25,7 @@ import { PublishSettingsSection } from "../settings/PublishSettingsSection";
 import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 import { CloudRelaySection } from "../settings/CloudRelaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
+import { DiagnosticsSection } from "../settings/DiagnosticsSection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -320,6 +321,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <section className="space-y-4">
             <UpdateChecker />
           </section>
+
+          <DiagnosticsSection />
 
           {/* 关于 */}
           <section className="space-y-4">

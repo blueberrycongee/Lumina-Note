@@ -81,6 +81,10 @@ interface UIState {
   // Skills manager
   isSkillManagerOpen: boolean;
   setSkillManagerOpen: (open: boolean) => void;
+
+  // Diagnostics
+  diagnosticsEnabled: boolean;
+  setDiagnosticsEnabled: (enabled: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -181,6 +185,10 @@ export const useUIStore = create<UIState>()(
       // Skills manager
       isSkillManagerOpen: false,
       setSkillManagerOpen: (open) => set({ isSkillManagerOpen: open }),
+
+      // Diagnostics
+      diagnosticsEnabled: false,
+      setDiagnosticsEnabled: (enabled) => set({ diagnosticsEnabled: enabled }),
     }),
     {
       name: "neurone-ui",

@@ -21,6 +21,7 @@ mod node_runtime;
 mod mobile_gateway;
 mod cloud_relay;
 mod doc_tools;
+mod diagnostics;
 
 use tauri::Manager;
 use std::env;
@@ -93,6 +94,7 @@ fn main() {
             // Debug logging
             llm::append_debug_log,
             llm::get_debug_log_path,
+            diagnostics::export_diagnostics,
             // WebDAV commands
             webdav::commands::webdav_set_config,
             webdav::commands::webdav_get_config,
