@@ -10,7 +10,7 @@ base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
 httpdate = "1"
-hyper = { version = "0.14", features = ["full"] }
+hyper = { version = "1.8", features = ["full"] }
 jsonwebtoken = "9"
 mime_guess = "2"
 futures-util = "0.3"
