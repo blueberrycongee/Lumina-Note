@@ -14,7 +14,8 @@
     ],
     "resources": [
       "resources/node/*",
-      "resources/skills/**/*"
+      "resources/skills/**/*",
+      "resources/plugins/**/*"
     ],
     "macOS": {
       "infoPlist": "Info.plist"

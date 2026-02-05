@@ -1,0 +1,14 @@
+{
+  "id": "hello-lumina",
+  "name": "Hello Lumina",
+  "version": "0.1.0",
+  "description": "Built-in example plugin demonstrating Lumina plugin APIs.",
+  "author": "Lumina",
+  "entry": "index.js",
+  "permissions": [
+    "commands:register",
+    "events:subscribe",
+    "storage:write"
+  ],
+  "enabled_by_default": false
+}

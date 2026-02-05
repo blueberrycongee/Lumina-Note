@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { SkillDetail, SkillInfo } from "@/types/skills";
+import type { PluginEntry, PluginInfo } from "@/types/plugins";
 import {
   exists as tauriExists,
   readDir as tauriReadDir,
@@ -416,6 +417,13 @@ export async function moveFolder(sourcePath: string, targetFolder: string): Prom
 }
 
 /**
+ * Show file/folder in the system file explorer.
+ */
+export async function showInExplorer(path: string): Promise<void> {
+  return invoke("show_in_explorer", { path });
+}
+
+/**
  * Open a new window
  */
 export async function openNewWindow(): Promise<void> {
@@ -435,6 +443,27 @@ export async function readAgentSkill(
   workspacePath?: string
 ): Promise<SkillDetail> {
   return invoke("agent_read_skill", { name, workspace_path: workspacePath });
+}
+
+// ============ Plugin ecosystem ============
+
+export async function listPlugins(workspacePath?: string): Promise<PluginInfo[]> {
+  return invoke("plugin_list", { workspace_path: workspacePath });
+}
+
+export async function readPluginEntry(
+  pluginId: string,
+  workspacePath?: string
+): Promise<PluginEntry> {
+  return invoke("plugin_read_entry", { plugin_id: pluginId, workspace_path: workspacePath });
+}
+
+export async function getWorkspacePluginDir(workspacePath: string): Promise<string> {
+  return invoke("plugin_get_workspace_dir", { workspace_path: workspacePath });
+}
+
+export async function scaffoldWorkspaceExamplePlugin(workspacePath: string): Promise<string> {
+  return invoke("plugin_scaffold_example", { workspace_path: workspacePath });
 }
 
 // ============ Doc tools ============

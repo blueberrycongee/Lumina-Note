@@ -26,6 +26,7 @@ import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 import { CloudRelaySection } from "../settings/CloudRelaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { DiagnosticsSection } from "../settings/DiagnosticsSection";
+import { PluginSection } from "../settings/PluginSection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -323,6 +324,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
 
           <DiagnosticsSection />
+          <PluginSection />
 
           {/* 关于 */}
           <section className="space-y-4">

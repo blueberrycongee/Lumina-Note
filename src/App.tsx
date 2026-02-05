@@ -42,6 +42,8 @@ import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import { ProfilePreview } from "@/components/profile/ProfilePreview";
 import type { FsChangePayload } from "@/lib/fsChange";
+import { usePluginStore } from "@/stores/usePluginStore";
+import { pluginRuntime } from "@/services/plugins/runtime";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -214,6 +216,7 @@ function App() {
     }))
   );
   const t = useLocaleStore((state) => state.t);
+  const loadPlugins = usePluginStore((state) => state.loadPlugins);
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -244,6 +247,24 @@ function App() {
       refreshFileTree().finally(() => setIsLoadingVault(false));
     }
   }, []);
+
+  // Load and sync plugins whenever workspace changes.
+  useEffect(() => {
+    void loadPlugins(vaultPath || undefined);
+  }, [vaultPath, loadPlugins]);
+
+  // Plugin lifecycle events.
+  useEffect(() => {
+    pluginRuntime.emit("app:ready", { timestamp: Date.now() });
+  }, []);
+
+  useEffect(() => {
+    pluginRuntime.emit("workspace:changed", { workspacePath: vaultPath ?? null });
+  }, [vaultPath]);
+
+  useEffect(() => {
+    pluginRuntime.emit("active-file:changed", { path: currentFile ?? null });
+  }, [currentFile]);
 
   // 兼容兜底：确保移动端网关拿到当前 workspace
   useEffect(() => {

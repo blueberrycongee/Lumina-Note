@@ -4,27 +4,28 @@
 )]
 #![allow(dead_code)]
 
-mod commands;
-mod fs;
-mod error;
-mod vector_db;
-mod llm;
-mod typesetting;
-mod webdav;
-mod langgraph;
 mod agent;
-mod forge_runtime;
-mod mcp;
-mod codex_vscode_host;
-mod codex_extension;
-mod node_runtime;
-mod mobile_gateway;
 mod cloud_relay;
-mod doc_tools;
+mod codex_extension;
+mod codex_vscode_host;
+mod commands;
 mod diagnostics;
+mod doc_tools;
+mod error;
+mod forge_runtime;
+mod fs;
+mod langgraph;
+mod llm;
+mod mcp;
+mod mobile_gateway;
+mod node_runtime;
+mod plugins;
+mod typesetting;
+mod vector_db;
+mod webdav;
 
-use tauri::Manager;
 use std::env;
+use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
@@ -95,6 +96,11 @@ fn main() {
             llm::append_debug_log,
             llm::get_debug_log_path,
             diagnostics::export_diagnostics,
+            // Plugin ecosystem commands
+            plugins::plugin_list,
+            plugins::plugin_read_entry,
+            plugins::plugin_get_workspace_dir,
+            plugins::plugin_scaffold_example,
             // WebDAV commands
             webdav::commands::webdav_set_config,
             webdav::commands::webdav_get_config,
@@ -184,7 +190,7 @@ fn main() {
                 }
             }
             let window = app.get_webview_window("main").unwrap();
-            
+
             // Mac 上启用 decorations 并使用透明标题栏，避免无边框窗口的兼容性问题
             #[cfg(target_os = "macos")]
             {
@@ -192,12 +198,12 @@ fn main() {
                 let _ = window.set_decorations(true);
                 let _ = window.set_title_bar_style(TitleBarStyle::Overlay);
             }
-            
+
             #[cfg(debug_assertions)]
             {
                 window.open_devtools();
             }
-            
+
             Ok(())
         })
         .run(tauri::generate_context!())

@@ -246,6 +246,11 @@ export const useFileStore = create<FileState>()(
           } catch (error) {
             console.warn("Failed to ensure workspace skills dir:", error);
           }
+          try {
+            await createDir(`${path}/.lumina/plugins`);
+          } catch (error) {
+            console.warn("Failed to ensure workspace plugins dir:", error);
+          }
           const tree = await listDirectory(path);
           set({ fileTree: tree, isLoadingTree: false });
           await get().syncMobileWorkspace({ path, force: true });

@@ -78,6 +78,12 @@ Go to [Releases](https://github.com/blueberrycongee/Lumina-Note/releases) to dow
 - Flashcard review
 - 15 themes
 
+### Plugin Ecosystem (Developer Preview)
+- Supports loading plugins from workspace / user / built-in directories
+- Runtime permission model for plugin capabilities
+- Slash command extension API for plugin developers
+- Developer guide: `docs/plugin-ecosystem.md`
+
 ---
 
 ## Quick Start
