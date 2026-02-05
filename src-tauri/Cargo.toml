@@ -32,7 +32,7 @@ base64 = "0.22"
 regex = "1.10"
 globset = "0.4"
 forge = { git = "https://github.com/blueberrycongee/forge", rev = "7f2b5291cac2e209c1faee687720771c4db0e180" }
-tokio-tungstenite = "0.21"
+tokio-tungstenite = "0.28"
 if-addrs = "0.6"
 
 # RAG / Vector Storage
