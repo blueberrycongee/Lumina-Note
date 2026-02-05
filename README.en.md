@@ -112,6 +112,13 @@ npm run tauri dev
 
 ---
 
+## Open Source Components
+
+- Editor core component is open-sourced: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
+- Rust orchestration framework is open-sourced: [forge](https://github.com/blueberrycongee/forge)
+
+---
+
 ## Contributors
 
 <a href="https://github.com/blueberrycongee/Lumina-Note/graphs/contributors">

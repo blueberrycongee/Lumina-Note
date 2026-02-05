@@ -121,6 +121,13 @@ npm run tauri dev
 
 ---
 
+## 开源组件
+
+- 编辑器核心组件已开源：[codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
+- Rust 编排框架已开源：[forge](https://github.com/blueberrycongee/forge)
+
+---
+
 ## 贡献者
 
 <a href="https://github.com/blueberrycongee/Lumina-Note/graphs/contributors">
