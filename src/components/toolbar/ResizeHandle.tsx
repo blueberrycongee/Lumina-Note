@@ -24,7 +24,6 @@ export function ResizeHandle({
       e.stopPropagation();
       lastXRef.current = e.clientX;
       setIsDragging(true);
-      console.log("[ResizeHandle] Mouse down, starting drag");
       
       // 拖动时禁用侧边栏的过渡动画
       document.body.classList.add("resizing");
@@ -88,12 +87,26 @@ export function ResizeHandle({
         className
       )}
     >
-      {/* Visual indicator - 悬停和拖动时显示 */}
+      {/* Soft glow layer */}
       <div
         className={cn(
-          "absolute inset-y-0 left-1/2 -translate-x-1/2 w-[3px] rounded-full transition-colors duration-150 pointer-events-none",
-          "bg-border/30 group-hover:bg-primary/50",
-          isDragging && "bg-primary w-[4px]"
+          "absolute inset-y-4 left-1/2 -translate-x-1/2 w-3 rounded-full blur-md pointer-events-none",
+          "bg-primary/20 opacity-0 transition-opacity duration-200",
+          "group-hover:opacity-100",
+          isDragging && "opacity-100 bg-primary/35"
+        )}
+      />
+
+      {/* Visual indicator - hover/drag reveal only */}
+      <div
+        className={cn(
+          "absolute inset-y-3 left-1/2 -translate-x-1/2 w-[2px] rounded-full pointer-events-none",
+          "bg-gradient-to-b from-foreground/45 via-foreground/18 to-transparent",
+          "opacity-0 transition-[opacity,width,background-image,box-shadow] duration-200 ease-out",
+          "shadow-[0_0_0_1px_hsl(var(--foreground)/0.08),0_0_16px_hsl(var(--foreground)/0.14)]",
+          "group-hover:opacity-100",
+          isDragging &&
+            "opacity-100 w-[3px] bg-gradient-to-b from-primary/75 via-primary/40 to-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.35),0_0_18px_hsl(var(--primary)/0.35)]"
         )}
       />
       
