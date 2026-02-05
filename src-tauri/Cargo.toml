@@ -48,7 +48,7 @@ chrono = "0.4"
 rand = "0.8"
 uuid = { version = "1.0", features = ["v4"] }
 once_cell = "1.19"
-ttf-parser = "0.19"
+ttf-parser = "0.20"
 rustybuzz = "0.11"
 scraper = "0.25.0"
 html2md = "0.2.15"
