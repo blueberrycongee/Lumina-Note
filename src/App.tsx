@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState, useRef } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
@@ -196,11 +197,42 @@ function App() {
   if (IS_TYPESETTING_HARNESS) {
     return <TypesettingExportHarness />;
   }
-  const { vaultPath, setVaultPath, currentFile, save, createNewFile, tabs, activeTabIndex, fileTree, refreshFileTree, openAIMainTab, syncMobileWorkspace } = useFileStore();
-  const { pendingDiff } = useAIStore();
-  const { buildIndex } = useNoteIndexStore();
-  const { initialize: initializeRAG, config: ragConfig } = useRAGStore();
-  const { t } = useLocaleStore();
+  const {
+    vaultPath,
+    setVaultPath,
+    currentFile,
+    save,
+    createNewFile,
+    tabs,
+    activeTabIndex,
+    fileTree,
+    refreshFileTree,
+    openAIMainTab,
+    syncMobileWorkspace,
+  } = useFileStore(
+    useShallow((state) => ({
+      vaultPath: state.vaultPath,
+      setVaultPath: state.setVaultPath,
+      currentFile: state.currentFile,
+      save: state.save,
+      createNewFile: state.createNewFile,
+      tabs: state.tabs,
+      activeTabIndex: state.activeTabIndex,
+      fileTree: state.fileTree,
+      refreshFileTree: state.refreshFileTree,
+      openAIMainTab: state.openAIMainTab,
+      syncMobileWorkspace: state.syncMobileWorkspace,
+    }))
+  );
+  const pendingDiff = useAIStore((state) => state.pendingDiff);
+  const buildIndex = useNoteIndexStore((state) => state.buildIndex);
+  const { initialize: initializeRAG, config: ragConfig } = useRAGStore(
+    useShallow((state) => ({
+      initialize: state.initialize,
+      config: state.config,
+    }))
+  );
+  const t = useLocaleStore((state) => state.t);
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -329,7 +361,22 @@ function App() {
     splitView,
     isSkillManagerOpen,
     setSkillManagerOpen,
-  } = useUIStore();
+  } = useUIStore(
+    useShallow((state) => ({
+      leftSidebarOpen: state.leftSidebarOpen,
+      rightSidebarOpen: state.rightSidebarOpen,
+      leftSidebarWidth: state.leftSidebarWidth,
+      rightSidebarWidth: state.rightSidebarWidth,
+      setLeftSidebarOpen: state.setLeftSidebarOpen,
+      setLeftSidebarWidth: state.setLeftSidebarWidth,
+      setRightSidebarWidth: state.setRightSidebarWidth,
+      toggleLeftSidebar: state.toggleLeftSidebar,
+      toggleRightSidebar: state.toggleRightSidebar,
+      splitView: state.splitView,
+      isSkillManagerOpen: state.isSkillManagerOpen,
+      setSkillManagerOpen: state.setSkillManagerOpen,
+    }))
+  );
 
   // Build note index when file tree changes
   useEffect(() => {
