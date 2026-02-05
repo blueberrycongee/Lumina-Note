@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createBoundsSnapshot, shouldUpdateBounds, type BoundsSnapshot } from "./bounds";
 import { useBrowserStore } from "@/stores/useBrowserStore";
 
@@ -19,6 +19,7 @@ export function CodexEmbeddedWebview({
   const globalHidden = useBrowserStore((s) => s.globalHidden);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const lastBoundsRef = useRef<BoundsSnapshot | null>(null);
+  const nativeVisibleRef = useRef<boolean | null>(null);
   const boundsRetryRef = useRef<{ timer: number | null; count: number }>({
     timer: null,
     count: 0,
@@ -26,20 +27,24 @@ export function CodexEmbeddedWebview({
   const [created, setCreated] = useState(false);
   const shouldShow = visible && !globalHidden;
 
-  const syncBounds = async () => {
-    if (!containerRef.current) return;
+  const setNativeVisible = useCallback(
+    async (next: boolean) => {
+      // Even when `created` is false, the native webview may already exist (e.g. previous mount).
+      if (nativeVisibleRef.current !== null && nativeVisibleRef.current === next) return;
+      nativeVisibleRef.current = next;
+      await invoke("set_codex_webview_visible", { visible: next });
+    },
+    [],
+  );
+
+  const syncBounds = async (): Promise<boolean> => {
+    if (!containerRef.current) return false;
     const rect = containerRef.current.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) {
-      if (boundsRetryRef.current.count < 60) {
-        boundsRetryRef.current.count += 1;
-        if (boundsRetryRef.current.timer) {
-          window.clearTimeout(boundsRetryRef.current.timer);
-        }
-        boundsRetryRef.current.timer = window.setTimeout(() => {
-          syncBounds().catch(() => {});
-        }, 50);
-      }
-      return;
+      // When the container is collapsed/hidden (e.g. right panel closed), ensure the native
+      // webview is also hidden so it doesn't "float" above unrelated UI.
+      setNativeVisible(false).catch(() => {});
+      return false;
     }
     const nextRaw = {
       x: rect.left,
@@ -47,7 +52,7 @@ export function CodexEmbeddedWebview({
       width: rect.width,
       height: rect.height,
     };
-    if (!shouldUpdateBounds(lastBoundsRef.current, nextRaw)) return;
+    if (!shouldUpdateBounds(lastBoundsRef.current, nextRaw)) return true;
     const next = createBoundsSnapshot(nextRaw);
     lastBoundsRef.current = next;
     boundsRetryRef.current.count = 0;
@@ -57,7 +62,39 @@ export function CodexEmbeddedWebview({
       width: next.normalized.width,
       height: next.normalized.height,
     });
+    return true;
   };
+
+  const syncLayout = useCallback(async () => {
+    if (!shouldShow) {
+      setNativeVisible(false).catch(() => {});
+      boundsRetryRef.current.count = 0;
+      if (boundsRetryRef.current.timer) {
+        window.clearTimeout(boundsRetryRef.current.timer);
+        boundsRetryRef.current.timer = null;
+      }
+      return;
+    }
+    const ok = await syncBounds();
+    if (ok) {
+      boundsRetryRef.current.count = 0;
+      if (boundsRetryRef.current.timer) {
+        window.clearTimeout(boundsRetryRef.current.timer);
+        boundsRetryRef.current.timer = null;
+      }
+      await setNativeVisible(true);
+      return;
+    }
+    if (boundsRetryRef.current.count < 60) {
+      boundsRetryRef.current.count += 1;
+      if (boundsRetryRef.current.timer) {
+        window.clearTimeout(boundsRetryRef.current.timer);
+      }
+      boundsRetryRef.current.timer = window.setTimeout(() => {
+        syncLayout().catch(() => {});
+      }, 50);
+    }
+  }, [setNativeVisible, shouldShow]);
 
   useEffect(() => {
     let canceled = false;
@@ -68,7 +105,7 @@ export function CodexEmbeddedWebview({
     const run = async () => {
       if (!url) {
         if (created) {
-          await invoke("set_codex_webview_visible", { visible: false });
+          await setNativeVisible(false);
         }
         return;
       }
@@ -107,7 +144,7 @@ export function CodexEmbeddedWebview({
       } else {
         setCreated(true);
         await invoke("navigate_codex_webview", { url });
-        await syncBounds();
+        await syncLayout();
       }
     };
 
@@ -123,31 +160,27 @@ export function CodexEmbeddedWebview({
 
   useEffect(() => {
     if (!shouldShow) {
-      invoke("set_codex_webview_visible", { visible: false }).catch(() => {});
+      setNativeVisible(false).catch(() => {});
       return;
     }
 
     lastBoundsRef.current = null;
-    const ensureVisible = async () => {
-      await syncBounds();
-      await invoke("set_codex_webview_visible", { visible: true });
-    };
-    ensureVisible().catch(() => {});
+    syncLayout().catch(() => {});
 
     let attempts = 0;
     const interval = window.setInterval(() => {
       attempts += 1;
-      syncBounds().catch(() => {});
+      syncLayout().catch(() => {});
       if (attempts >= 8) {
         window.clearInterval(interval);
       }
     }, 120);
     return () => window.clearInterval(interval);
-  }, [created, shouldShow]);
+  }, [created, shouldShow, syncLayout, setNativeVisible]);
 
   useEffect(() => {
     if (!created) return;
-    const handle = () => syncBounds().catch(() => {});
+    const handle = () => syncLayout().catch(() => {});
     const observer = new ResizeObserver(handle);
     if (containerRef.current) observer.observe(containerRef.current);
     window.addEventListener("scroll", handle, true);
@@ -158,7 +191,7 @@ export function CodexEmbeddedWebview({
       window.removeEventListener("resize", handle);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [created]);
+  }, [created, syncLayout]);
 
   useEffect(() => {
     return () => {
@@ -178,7 +211,7 @@ export function CodexEmbeddedWebview({
   useEffect(() => {
     if (closeOnUnmount) return;
     return () => {
-      invoke("set_codex_webview_visible", { visible: false }).catch(() => {});
+      setNativeVisible(false).catch(() => {});
     };
   }, [closeOnUnmount]);
 
