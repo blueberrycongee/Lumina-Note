@@ -37,7 +37,7 @@ if-addrs = "0.6"
 
 # RAG / Vector Storage
 rusqlite = { version = "0.32", features = ["bundled"] }
-bincode = "1.3"
+bincode = "3.0"
 
 # HTTP client for Bilibili API & LLM streaming & WebDAV
 reqwest = { version = "0.12", features = ["json", "stream"] }
