@@ -24,7 +24,7 @@ interface AISettingsModalProps {
 }
 
 function formatModelOptionLabel(model: { name: string; supportsThinking?: boolean }): string {
-  return model.supportsThinking ? `${model.name} [Thinking]` : model.name;
+  return model.name;
 }
 
 function getModelMeta(provider: LLMProviderType, modelId?: string) {

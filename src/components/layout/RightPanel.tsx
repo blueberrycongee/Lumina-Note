@@ -60,7 +60,7 @@ function parseHeadings(content: string): HeadingItem[] {
 }
 
 function formatModelOptionLabel(model: { name: string; supportsThinking?: boolean }): string {
-  return model.supportsThinking ? `${model.name} [Thinking]` : model.name;
+  return model.name;
 }
 
 // Backlinks view component
