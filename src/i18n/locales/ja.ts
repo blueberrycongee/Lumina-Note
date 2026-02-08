@@ -1406,6 +1406,7 @@ export default {
       reading_notes: 'ノート読解',
       generating_outline: 'アウトライン生成',
       writing_report: 'レポート作成',
+      reviewing_report: 'レポート査読',
       completed: '完了',
       error: 'エラー',
     },

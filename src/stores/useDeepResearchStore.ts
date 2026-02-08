@@ -23,6 +23,7 @@ export type ResearchPhase =
   | "reading_notes"
   | "generating_outline"
   | "writing_report"
+  | "reviewing_report"
   | "completed"
   | "error";
 
@@ -608,6 +609,7 @@ export function getPhaseProgress(phase: ResearchPhase): number {
     reading_notes: 55,
     generating_outline: 70,
     writing_report: 85,
+    reviewing_report: 92,
     completed: 100,
     error: 0,
   };
@@ -623,4 +625,5 @@ export const RESEARCH_PHASES: ResearchPhase[] = [
   "reading_notes",
   "generating_outline",
   "writing_report",
+  "reviewing_report",
 ];

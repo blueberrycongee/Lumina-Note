@@ -25,6 +25,8 @@ pub enum ResearchPhase {
     GeneratingOutline,
     /// 撰写报告
     WritingReport,
+    /// 审校报告
+    ReviewingReport,
     /// 完成
     Completed,
     /// 错误

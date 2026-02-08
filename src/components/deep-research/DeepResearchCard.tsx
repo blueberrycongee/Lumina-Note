@@ -61,6 +61,7 @@ function PhaseIcon({ phase }: { phase: ResearchPhase }) {
     reading_notes: <BookOpen className="w-4 h-4" />,
     generating_outline: <ListTree className="w-4 h-4" />,
     writing_report: <PenLine className="w-4 h-4" />,
+    reviewing_report: <Check className="w-4 h-4" />,
   };
   return icons[phase] || <Clock className="w-4 h-4" />;
 }
@@ -573,7 +574,9 @@ export function DeepResearchCard({ className, chatId }: DeepResearchCardProps) {
   }, [currentSession?.finalReport, currentSession?.reportChunks]);
 
   const isStreaming =
-    isRunning && currentSession?.phase === "writing_report";
+    isRunning &&
+    (currentSession?.phase === "writing_report" ||
+      currentSession?.phase === "reviewing_report");
 
   // 没有会话或不属于当前聊天时不渲染
   if (!shouldShow) return null;
@@ -750,7 +753,9 @@ ${reportContent}`;
               )}
 
               {/* 报告内容 */}
-              {(showReport || phase === "writing_report") &&
+              {(showReport ||
+                phase === "writing_report" ||
+                phase === "reviewing_report") &&
                 reportContent && (
                   <div className="mt-3">
                     {!showReport && phase !== "completed" && (

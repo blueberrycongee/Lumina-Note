@@ -1406,6 +1406,7 @@ export default {
       reading_notes: '阅读笔记',
       generating_outline: '生成大纲',
       writing_report: '撰写报告',
+      reviewing_report: '审校报告',
       completed: '已完成',
       error: '出错',
     },

@@ -10,6 +10,8 @@ use crate::agent::deep_research::tavily::TavilyClient;
 use crate::agent::deep_research::types::*;
 use crate::agent::llm_client::LlmClient;
 use forge::runtime::error::Interrupt;
+use regex::Regex;
+use std::collections::{HashMap, HashSet};
 
 /// 节点执行结果
 pub struct NodeResult {
@@ -142,6 +144,82 @@ fn parse_json<T: serde::de::DeserializeOwned>(text: &str, context: &str) -> Resu
         let preview: String = json_str.chars().take(200).collect();
         format!("{}: {} (响应预览: {}...)", context, e, preview)
     })
+}
+
+fn normalize_note_key(input: &str) -> String {
+    input.trim().trim_end_matches(".md").to_lowercase()
+}
+
+fn dedupe_notes_keep_best(notes: Vec<NoteReference>) -> Vec<NoteReference> {
+    let mut by_path: HashMap<String, NoteReference> = HashMap::new();
+    for note in notes {
+        let key = note.path.to_lowercase();
+        match by_path.get(&key) {
+            Some(existing) if existing.score >= note.score => {}
+            _ => {
+                by_path.insert(key, note);
+            }
+        }
+    }
+    by_path.into_values().collect()
+}
+
+fn normalize_url(url: &str) -> String {
+    url.trim().trim_end_matches('/').to_lowercase()
+}
+
+fn dedupe_web_results(results: Vec<WebSearchResult>) -> Vec<WebSearchResult> {
+    let mut seen = HashSet::new();
+    let mut deduped = Vec::new();
+    for result in results {
+        let key = normalize_url(&result.url);
+        if seen.insert(key) {
+            deduped.push(result);
+        }
+    }
+    deduped
+}
+
+fn collect_known_note_references(state: &DeepResearchState) -> HashSet<String> {
+    let mut known = HashSet::new();
+    for note in &state.read_notes {
+        known.insert(normalize_note_key(&note.title));
+        known.insert(normalize_note_key(&note.path));
+        if let Some(stem) = Path::new(&note.path).file_stem().and_then(|s| s.to_str()) {
+            known.insert(normalize_note_key(stem));
+        }
+    }
+    for note in &state.found_notes {
+        known.insert(normalize_note_key(&note.title));
+        known.insert(normalize_note_key(&note.path));
+        if let Some(stem) = Path::new(&note.path).file_stem().and_then(|s| s.to_str()) {
+            known.insert(normalize_note_key(stem));
+        }
+    }
+    known
+}
+
+fn collect_unknown_wikilinks(report: &str, known_refs: &HashSet<String>) -> Vec<String> {
+    let re = Regex::new(r"\[\[([^\[\]]+)\]\]").expect("valid wikilink regex");
+    let mut unknown = Vec::new();
+    for capture in re.captures_iter(report) {
+        if let Some(raw) = capture.get(1) {
+            let key = normalize_note_key(raw.as_str());
+            if !key.is_empty() && !known_refs.contains(&key) {
+                unknown.push(raw.as_str().to_string());
+            }
+        }
+    }
+    unknown.sort();
+    unknown.dedup();
+    unknown
+}
+
+fn count_markdown_headings(report: &str) -> usize {
+    report
+        .lines()
+        .filter(|line| line.trim_start().starts_with("## "))
+        .count()
 }
 
 // ============ 节点实现 ============
@@ -478,7 +556,8 @@ pub async fn search_notes_node(
         }
     }
 
-    // 按分数排序，取前 N 个
+    // 去重后按分数排序，取前 N 个
+    all_results = dedupe_notes_keep_best(all_results);
     all_results.sort_by(|a, b| {
         b.score
             .partial_cmp(&a.score)
@@ -515,9 +594,13 @@ pub async fn search_notes_node(
 
         match tavily_client.search(&query, max_web_results).await {
             Ok(web_results) => {
+                let deduped_results = dedupe_web_results(web_results);
                 #[cfg(debug_assertions)]
-                println!("[DeepResearch] 网络搜索找到 {} 个结果", web_results.len());
-                state.web_search_results = web_results;
+                println!(
+                    "[DeepResearch] 网络搜索找到 {} 个结果（去重后）",
+                    deduped_results.len()
+                );
+                state.web_search_results = deduped_results;
 
                 emit_event(
                     app,
@@ -1309,9 +1392,144 @@ pub async fn write_report_node(
     }
 
     state.report = Some(report.clone());
-    state.phase = ResearchPhase::Completed;
 
-    emit_event(app, DeepResearchEvent::Complete { report });
+    Ok(NodeResult {
+        state,
+        next_node: Some("review_report".to_string()),
+    })
+}
+
+/// 审校报告节点
+///
+/// 对报告进行结构、引用和完整性审查，必要时自动修订。
+pub async fn review_report_node(
+    app: &AppHandle,
+    llm: &Arc<LlmClient>,
+    mut state: DeepResearchState,
+    include_citations: bool,
+) -> Result<NodeResult, String> {
+    state.phase = ResearchPhase::ReviewingReport;
+    emit_event(
+        app,
+        DeepResearchEvent::PhaseChange {
+            phase: state.phase.clone(),
+            message: "正在审校报告质量与引用...".to_string(),
+        },
+    );
+
+    let report = state.report.clone().ok_or("缺少初稿报告")?;
+    let heading_count = count_markdown_headings(&report);
+    let outline_sections = state
+        .outline
+        .as_ref()
+        .map(|outline| outline.sections.len())
+        .unwrap_or(0);
+    let known_note_refs = collect_known_note_references(&state);
+    let unknown_wikilinks = collect_unknown_wikilinks(&report, &known_note_refs);
+    let has_wikilinks = report.contains("[[");
+    let has_web_links = report.contains("http://") || report.contains("https://");
+
+    let citation_ok = if include_citations {
+        unknown_wikilinks.is_empty() && (has_wikilinks || has_web_links)
+    } else {
+        true
+    };
+    let structure_ok = heading_count >= outline_sections.saturating_sub(1).max(1);
+    let length_ok = report.chars().count() >= 500;
+
+    let needs_revision = !structure_ok
+        || !length_ok
+        || (include_citations && (!citation_ok || !unknown_wikilinks.is_empty()));
+
+    let mut final_report = report;
+    if needs_revision {
+        let notes_catalog = state
+            .read_notes
+            .iter()
+            .map(|note| format!("- {} ({})", note.title.trim_end_matches(".md"), note.path))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let web_catalog = state
+            .crawled_pages
+            .iter()
+            .map(|page| format!("- {} ({})", page.title, page.url))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let issue_hint = if unknown_wikilinks.is_empty() {
+            "无未知笔记引用".to_string()
+        } else {
+            format!("未知笔记引用: {}", unknown_wikilinks.join(", "))
+        };
+
+        let revision_prompt = format!(
+            r#"你是资深研究编辑。请修订下面这份 Markdown 报告。
+
+目标：
+1. 严格对齐既有大纲章节，不减少关键章节。
+2. 不引入新事实，只能重写表达、补全结构、修复引用。
+3. 保留并增强可追溯引用：笔记引用用 [[笔记名]]，网络引用用 [标题](URL)。
+4. 如果存在未知引用，请替换为可用来源。
+5. 最终中文报告不少于 500 字。
+
+审校发现：
+- 结构通过: {}
+- 篇幅通过: {}
+- 引用通过: {}
+- {}
+
+可用笔记来源：
+{}
+
+可用网络来源：
+{}
+
+目标大纲：
+{}
+
+原始报告：
+{}
+
+请直接输出修订后的完整 Markdown 报告，不要解释。"#,
+            structure_ok,
+            length_ok,
+            citation_ok,
+            issue_hint,
+            if notes_catalog.is_empty() {
+                "（无）"
+            } else {
+                &notes_catalog
+            },
+            if web_catalog.is_empty() {
+                "（无）"
+            } else {
+                &web_catalog
+            },
+            serde_json::to_string_pretty(&state.outline).unwrap_or_default(),
+            final_report
+        );
+
+        if let Ok(response) = llm.call_simple_with_usage(&revision_prompt).await {
+            emit_token_usage(
+                app,
+                response.prompt_tokens,
+                response.completion_tokens,
+                response.total_tokens,
+            );
+            let revised = response.content.trim();
+            if !revised.is_empty() {
+                final_report = revised.to_string();
+            }
+        }
+    }
+
+    state.report = Some(final_report.clone());
+    state.phase = ResearchPhase::Completed;
+    emit_event(
+        app,
+        DeepResearchEvent::Complete {
+            report: final_report,
+        },
+    );
 
     Ok(NodeResult {
         state,

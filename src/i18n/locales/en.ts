@@ -1405,6 +1405,7 @@ export default {
       reading_notes: 'Reading notes',
       generating_outline: 'Generating outline',
       writing_report: 'Writing report',
+      reviewing_report: 'Reviewing report',
       completed: 'Completed',
       error: 'Error',
     },

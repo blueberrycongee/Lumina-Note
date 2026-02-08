@@ -202,6 +202,24 @@ pub fn build_deep_research_graph(
         }
     });
 
+    // 6. 审校报告节点
+    let ctx_review = ctx.clone();
+    graph.add_node("review_report", move |state: DeepResearchState| {
+        let ctx = ctx_review.clone();
+        let include_citations = ctx.config.include_citations;
+        async move {
+            let result = review_report_node(&ctx.app, &ctx.llm, state, include_citations)
+                .await
+                .map_err(|e| GraphError::ExecutionError {
+                    node: "review_report".to_string(),
+                    message: e,
+                })?;
+            let mut state = result.state;
+            state.goto = result.next_node.unwrap_or_default();
+            Ok(state)
+        }
+    });
+
     // ============ 定义边 ============
 
     // 入口点
@@ -278,8 +296,22 @@ pub fn build_deep_research_graph(
         None,
     );
 
+    graph.add_conditional_edges_sync(
+        "write_report",
+        |state: &DeepResearchState| {
+            if matches!(state.phase, ResearchPhase::Error) {
+                END.to_string()
+            } else if !state.goto.is_empty() {
+                state.goto.clone()
+            } else {
+                "review_report".to_string()
+            }
+        },
+        None,
+    );
+
     // 结束点
-    graph.set_finish_point("write_report");
+    graph.set_finish_point("review_report");
 
     // 编译图
     graph.compile()
@@ -307,6 +339,11 @@ Deep Research Graph Structure:
              │
              ▼
     ┌─────────────────┐
+    │    crawl_web    │ ─── 爬取网络内容（可选）
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
     │   read_notes    │ ─── 批量读取笔记内容
     └────────┬────────┘
              │
@@ -318,6 +355,11 @@ Deep Research Graph Structure:
              ▼
     ┌─────────────────┐
     │  write_report   │ ─── 撰写研究报告（流式输出）
+    └────────┬────────┘
+             │
+             ▼
+    ┌─────────────────┐
+    │ review_report   │ ─── 审校结构/引用并必要修订
     └────────┬────────┘
              │
              ▼

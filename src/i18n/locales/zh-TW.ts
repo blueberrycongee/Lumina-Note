@@ -1406,6 +1406,7 @@ export default {
       reading_notes: '閱讀筆記',
       generating_outline: '產生大綱',
       writing_report: '撰寫報告',
+      reviewing_report: '審校報告',
       completed: '已完成',
       error: '發生錯誤',
     },
