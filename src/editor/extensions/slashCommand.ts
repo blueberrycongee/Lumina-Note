@@ -296,6 +296,22 @@ export const slashCommandPlugin = ViewPlugin.fromClass(
     constructor(readonly view: EditorView) {}
     
     update(update: ViewUpdate) {
+      const nextMenuState = update.state.field(slashMenuField, false);
+      const prevMenuState = update.startState.field(slashMenuField, false);
+      if (
+        nextMenuState?.active !== prevMenuState?.active ||
+        nextMenuState?.filter !== prevMenuState?.filter ||
+        nextMenuState?.pos !== prevMenuState?.pos
+      ) {
+        window.dispatchEvent(new CustomEvent("slash-menu-state", {
+          detail: {
+            active: nextMenuState?.active ?? false,
+            filter: nextMenuState?.filter ?? "",
+            pos: nextMenuState?.pos ?? 0,
+          }
+        }));
+      }
+
       // 检测是否输入了 "/"
       if (update.docChanged && !update.state.field(slashMenuField).active) {
         for (const tr of update.transactions) {

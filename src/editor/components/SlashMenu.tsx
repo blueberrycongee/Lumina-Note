@@ -89,26 +89,19 @@ export function SlashMenu({ view }: SlashMenuProps) {
     return () => window.removeEventListener("slash-menu-show", handleShow as EventListener);
   }, []);
 
-  // 监听编辑器状态变化
+  // 监听编辑器状态变化（事件驱动，避免轮询）
   useEffect(() => {
-    if (!view || !visible) return;
-
-    const checkState = () => {
-      const state = view.state.field(slashMenuField, false);
-      if (!state?.active) {
+    const handleState = (e: CustomEvent<{ active: boolean; filter: string }>) => {
+      if (!e.detail.active) {
         setVisible(false);
         return;
       }
-      setFilter(state.filter);
+      setFilter(e.detail.filter);
     };
 
-    // 初始检查
-    checkState();
-
-    // 通过轮询来检查状态变化
-    const interval = setInterval(checkState, 50);
-    return () => clearInterval(interval);
-  }, [view, visible]);
+    window.addEventListener("slash-menu-state", handleState as EventListener);
+    return () => window.removeEventListener("slash-menu-state", handleState as EventListener);
+  }, []);
 
   // 键盘导航
   useEffect(() => {
