@@ -11,7 +11,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
 import { parseMarkdown } from "@/services/markdown/markdown";
-import { join } from "@/lib/path";
+import { resolve } from "@/lib/path";
 import { listAgentSkills, readAgentSkill, getDocToolsStatus, installDocTools } from "@/lib/tauri";
 import type { SelectedSkill, SkillInfo } from "@/types/skills";
 import {
@@ -835,11 +835,28 @@ export function MainAIChatShell() {
     }
   };
 
+  const resolveCreatedFilePath = useCallback((path: string): string => {
+    const cleaned = path.trim().replace(/^["'`](.*)["'`]$/, "$1");
+    return resolve(vaultPath || "", cleaned);
+  }, [vaultPath]);
+
   // 从消息历史中提取创建/编辑的文件
   const extractCreatedFiles = useCallback((): string[] => {
     if (chatMode !== "agent") return [];
 
-    const files: string[] = [];
+    const uniqueFiles = new Map<string, string>();
+    const addFile = (candidate: unknown) => {
+      if (typeof candidate !== "string" || !candidate.trim()) return;
+      const resolvedPath = resolveCreatedFilePath(candidate);
+      const dedupKey = resolvedPath
+        .replace(/\\/g, "/")
+        .replace(/\/+/g, "/")
+        .replace(/\/$/, "");
+      if (!uniqueFiles.has(dedupKey)) {
+        uniqueFiles.set(dedupKey, resolvedPath);
+      }
+    };
+
     for (const msg of messages) {
       if (msg.role !== "tool") continue;
       const content = getTextFromContent(msg.content).trim();
@@ -848,18 +865,42 @@ export function MainAIChatShell() {
       const toolName = match[1];
       const payload = match[2].trim();
       if (toolName !== "write" && toolName !== "edit") continue;
-      if (!payload.startsWith("{")) continue;
-      try {
-        const parsed = JSON.parse(payload) as { filePath?: string };
-        if (parsed.filePath) {
-          files.push(parsed.filePath);
+
+      if (payload.startsWith("{") || payload.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(payload) as
+            | Record<string, unknown>
+            | Array<Record<string, unknown>>;
+          const items = Array.isArray(parsed) ? parsed : [parsed];
+          for (const item of items) {
+            addFile(item.filePath);
+            addFile(item.file_path);
+            addFile(item.path);
+            addFile(item.file);
+            if (Array.isArray(item.paths)) {
+              item.paths.forEach(addFile);
+            } else {
+              addFile(item.paths);
+            }
+          }
+          continue;
+        } catch {
+          // Fallback to regex parsing below.
         }
-      } catch {
-        // ignore malformed tool payloads
+      }
+
+      // 兼容非 JSON 参数格式（如 filePath: xxx 或 <path>xxx</path>）
+      const fieldMatch = payload.match(/(?:filePath|file_path|path|file)\s*[:=]\s*["']?([^"'\n|]+)["']?/i);
+      if (fieldMatch?.[1]) {
+        addFile(fieldMatch[1]);
+      }
+      const tagMatch = payload.match(/<path>([^<]+)<\/path>/i);
+      if (tagMatch?.[1]) {
+        addFile(tagMatch[1]);
       }
     }
-    return [...new Set(files)]; // 去重
-  }, [messages, chatMode]);
+    return [...uniqueFiles.values()];
+  }, [messages, chatMode, resolveCreatedFilePath]);
 
   // 新建对话
   const handleNewChat = () => {
@@ -1216,7 +1257,7 @@ export function MainAIChatShell() {
                         {createdFiles.map((file) => (
                           <button
                             key={file}
-                            onClick={() => openFile(join(vaultPath || "", file))}
+                            onClick={() => openFile(file)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-sm transition-colors border border-primary/20"
                           >
                             <FileText size={14} />
