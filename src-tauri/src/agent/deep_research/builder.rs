@@ -8,8 +8,10 @@ use crate::agent::deep_research::nodes::*;
 use crate::agent::deep_research::tavily::TavilyClient;
 use crate::agent::deep_research::types::*;
 use crate::agent::llm_client::LlmClient;
-use crate::langgraph::error::{GraphResult, Interrupt};
-use crate::langgraph::prelude::{CompiledGraph, GraphError, StateGraph, END};
+use forge::runtime::constants::END;
+use forge::runtime::error::{GraphError, GraphResult, Interrupt};
+use forge::runtime::executor::CompiledGraph;
+use forge::runtime::graph::StateGraph;
 
 /// Deep Research 执行上下文
 #[derive(Clone)]

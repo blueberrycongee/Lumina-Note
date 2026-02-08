@@ -16,12 +16,11 @@ use crate::agent::types::*;
 use crate::forge_runtime::permissions::{
     default_ruleset, PermissionRule, PermissionSession as LocalPermissionSession,
 };
-use crate::langgraph::error::ResumeCommand;
-use crate::langgraph::executor::{Checkpoint, ExecutionResult};
 use crate::mobile_gateway::{emit_agent_event, MobileGatewayState};
 use forge::runtime::cancel::CancellationToken;
-use forge::runtime::error::Interrupt;
+use forge::runtime::error::{Interrupt, ResumeCommand};
 use forge::runtime::event::{Event, EventSink, PermissionReply};
+use forge::runtime::executor::{Checkpoint, ExecutionResult};
 use forge::runtime::permission::PermissionDecision;
 use forge::runtime::session_state::RunStatus;
 use std::sync::Arc;
@@ -790,18 +789,9 @@ pub async fn deep_research_resume(
     }
 
     // 更新状态，添加用户澄清
-    let mut resumed_state = checkpoint.state.clone();
-    resumed_state.clarification = Some(clarification.clone());
-    resumed_state.phase = ResearchPhase::AnalyzingTopic; // 重新进入分析阶段
-
-    // 创建新的检查点
-    let resumed_checkpoint = Checkpoint {
-        state: resumed_state,
-        next_node: checkpoint.next_node,
-        pending_interrupts: vec![], // 清空中断
-        iterations: checkpoint.iterations,
-        resume_values: checkpoint.resume_values,
-    };
+    let mut resumed_checkpoint = checkpoint;
+    resumed_checkpoint.state.clarification = Some(clarification.clone());
+    resumed_checkpoint.state.phase = ResearchPhase::AnalyzingTopic; // 重新进入分析阶段
 
     // 发送恢复事件
     let _ = app.emit(
@@ -835,8 +825,24 @@ pub async fn deep_research_resume(
             }
         };
 
-        // 恢复执行
-        let resume_cmd = ResumeCommand::new(clarification);
+        // 恢复执行（兼容 Forge 多中断恢复规则）
+        let resume_cmd = if resumed_checkpoint.pending_interrupts.len() > 1 {
+            let values = resumed_checkpoint
+                .pending_interrupts
+                .iter()
+                .map(|interrupt| {
+                    (
+                        interrupt.id.clone(),
+                        serde_json::json!(clarification.clone()),
+                    )
+                })
+                .collect();
+            ResumeCommand::with_map(values)
+        } else if let Some(interrupt) = resumed_checkpoint.pending_interrupts.first() {
+            ResumeCommand::with_id(clarification.clone(), interrupt.id.clone())
+        } else {
+            ResumeCommand::new(clarification.clone())
+        };
         let result = graph.resume(resumed_checkpoint, resume_cmd).await;
 
         match result {

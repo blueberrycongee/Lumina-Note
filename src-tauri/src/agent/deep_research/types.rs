@@ -1,6 +1,6 @@
 //! Deep Research 类型定义
 
-use crate::langgraph::state::GraphState as LangGraphState;
+use forge::runtime::state::GraphState as ForgeGraphState;
 use serde::{Deserialize, Serialize};
 
 /// 研究阶段
@@ -265,7 +265,7 @@ pub struct DeepResearchState {
     pub clarification: Option<String>,
 }
 
-impl LangGraphState for DeepResearchState {
+impl ForgeGraphState for DeepResearchState {
     fn get_next(&self) -> Option<&str> {
         if self.goto.is_empty() {
             None

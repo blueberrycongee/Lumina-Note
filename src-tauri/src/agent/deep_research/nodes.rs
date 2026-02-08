@@ -9,7 +9,7 @@ use crate::agent::deep_research::crawler::JinaClient;
 use crate::agent::deep_research::tavily::TavilyClient;
 use crate::agent::deep_research::types::*;
 use crate::agent::llm_client::LlmClient;
-use crate::langgraph::error::Interrupt;
+use forge::runtime::error::Interrupt;
 
 /// 节点执行结果
 pub struct NodeResult {
