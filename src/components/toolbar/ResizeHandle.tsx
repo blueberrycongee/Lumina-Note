@@ -15,6 +15,7 @@ export function ResizeHandle({
   className,
 }: ResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const rafRef = useRef<number | null>(null);
   const lastXRef = useRef(0);
 
@@ -83,17 +84,17 @@ export function ResizeHandle({
   return (
     <div
       className={cn(
-        "group relative w-1 h-full flex-shrink-0",
+        "group relative h-full w-2 -mx-[1px] flex-shrink-0 cursor-col-resize select-none z-20",
         className
       )}
     >
       {/* Soft glow layer */}
       <div
         className={cn(
-          "absolute inset-y-4 left-1/2 -translate-x-1/2 w-3 rounded-full blur-md pointer-events-none",
-          "bg-primary/20 opacity-0 transition-opacity duration-200",
-          "group-hover:opacity-100",
-          isDragging && "opacity-100 bg-primary/35"
+          "absolute inset-y-4 left-1/2 -translate-x-1/2 w-4 rounded-full blur-md pointer-events-none",
+          "bg-primary/20 opacity-0 transition-[opacity,transform] duration-200 ease-out",
+          "group-hover:opacity-100 group-hover:scale-x-110",
+          (isDragging || isHovering) && "opacity-100 bg-primary/35"
         )}
       />
 
@@ -102,19 +103,21 @@ export function ResizeHandle({
         className={cn(
           "absolute inset-y-3 left-1/2 -translate-x-1/2 w-[2px] rounded-full pointer-events-none",
           "bg-gradient-to-b from-foreground/45 via-foreground/18 to-transparent",
-          "opacity-0 transition-[opacity,width,background-image,box-shadow] duration-200 ease-out",
-          "shadow-[0_0_0_1px_hsl(var(--foreground)/0.08),0_0_16px_hsl(var(--foreground)/0.14)]",
-          "group-hover:opacity-100",
-          isDragging &&
+          "opacity-35 transition-[opacity,width,background-image,box-shadow,transform] duration-200 ease-out",
+          "shadow-[0_0_0_1px_hsl(var(--foreground)/0.06),0_0_10px_hsl(var(--foreground)/0.08)]",
+          "group-hover:opacity-100 group-hover:w-[3px]",
+          (isDragging || isHovering) &&
             "opacity-100 w-[3px] bg-gradient-to-b from-primary/75 via-primary/40 to-primary/5 shadow-[0_0_0_1px_hsl(var(--primary)/0.35),0_0_18px_hsl(var(--primary)/0.35)]"
         )}
       />
       
       {/* Clickable area - 这是实际的点击区域 */}
       <div 
-        className="absolute inset-y-0 -left-3 -right-3 cursor-col-resize z-10"
+        className="absolute inset-y-0 -left-4 -right-4 cursor-col-resize z-30"
         onMouseDown={handleMouseDown}
         onDoubleClick={onDoubleClick}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
       />
     </div>
   );
