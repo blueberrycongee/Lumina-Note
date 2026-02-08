@@ -1143,7 +1143,7 @@ export function MainAIChatShell() {
           <AnimatePresence>
             {!hasStarted && (
               <motion.div
-                className="text-center mb-8 space-y-6"
+                className="text-center mt-10 md:mt-12 mb-8 space-y-6"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.3 } }}
