@@ -346,12 +346,23 @@ export class AgentEditAnimator {
   }
   
   private sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    if (!signal) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    if (signal.aborted) {
+      return Promise.reject(new Error("Aborted"));
+    }
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(resolve, ms);
-      signal?.addEventListener("abort", () => {
+      const onAbort = () => {
         clearTimeout(timeout);
+        signal.removeEventListener("abort", onAbort);
         reject(new Error("Aborted"));
-      });
+      };
+      const timeout = setTimeout(() => {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+      }, ms);
+      signal.addEventListener("abort", onAbort, { once: true });
     });
   }
 }
