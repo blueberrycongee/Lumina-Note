@@ -31,6 +31,7 @@ import { ConversationList } from "../chat/ConversationList";
 import { ChatPanel } from "../chat/ChatPanel";
 import { useConversationManager } from "@/hooks/useConversationManager";
 import { CodexPanelSlot } from "@/components/codex/CodexPanelSlot";
+import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 
 // Heading item in outline
 interface HeadingItem {
@@ -56,6 +57,10 @@ function parseHeadings(content: string): HeadingItem[] {
   });
   
   return headings;
+}
+
+function formatModelOptionLabel(model: { name: string; supportsThinking?: boolean }): string {
+  return model.supportsThinking ? `${model.name} [Thinking]` : model.name;
 }
 
 // Backlinks view component
@@ -704,7 +709,12 @@ export function RightPanel() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground block mb-1">{t.settingsPanel.model}</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs text-muted-foreground">{t.settingsPanel.model}</label>
+                    {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.find((m) => m.id === config.model)?.supportsThinking && (
+                      <ThinkingModelIcon />
+                    )}
+                  </div>
                   <select
                     value={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.some(m => m.id === config.model) ? config.model : "custom"}
                     onChange={(e) => {
@@ -720,7 +730,7 @@ export function RightPanel() {
                   >
                     {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
                       <option key={model.id} value={model.id}>
-                        {model.name} {model.supportsThinking ? "🧠" : ""}
+                        {formatModelOptionLabel(model)}
                       </option>
                     ))}
                   </select>

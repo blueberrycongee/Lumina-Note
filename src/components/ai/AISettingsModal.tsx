@@ -7,6 +7,7 @@ import { useBrowserStore } from "@/stores/useBrowserStore";
 import { PROVIDER_REGISTRY, type LLMProviderType, createProvider } from "@/services/llm";
 import { Settings, Tag, Loader2, Check, X, Zap, AlertTriangle } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 
 // 测试连接状态类型
 type TestStatus = "idle" | "testing" | "success" | "error";
@@ -20,6 +21,15 @@ interface TestResult {
 interface AISettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+function formatModelOptionLabel(model: { name: string; supportsThinking?: boolean }): string {
+  return model.supportsThinking ? `${model.name} [Thinking]` : model.name;
+}
+
+function getModelMeta(provider: LLMProviderType, modelId?: string) {
+  if (!modelId || modelId === "custom") return undefined;
+  return PROVIDER_REGISTRY[provider]?.models.find((m) => m.id === modelId);
 }
 
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
@@ -37,6 +47,11 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const { t } = useLocaleStore();
   const errorMessages = t.aiSettings.errors as Record<string, string>;
+  const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);
+  const intentProvider = (config.routing?.intentProvider || config.provider) as LLMProviderType;
+  const intentModelMeta = getModelMeta(intentProvider, config.routing?.intentModel);
+  const chatProvider = config.routing?.chatProvider as LLMProviderType | undefined;
+  const chatModelMeta = chatProvider ? getModelMeta(chatProvider, config.routing?.chatModel) : undefined;
 
   // 测试连接状态
   const [testResult, setTestResult] = useState<TestResult>({ status: "idle" });
@@ -248,7 +263,10 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
             </div>
 
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.model}</label>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs text-muted-foreground">{t.aiSettings.model}</label>
+                {mainModelMeta?.supportsThinking && <ThinkingModelIcon />}
+              </div>
               <select
                 value={
                   PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.some(m => m.id === config.model)
@@ -267,7 +285,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               >
                 {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
                   <option key={model.id} value={model.id}>
-                    {model.name} {model.supportsThinking ? "🧠" : ""}
+                    {formatModelOptionLabel(model)}
                   </option>
                 ))}
               </select>
@@ -357,7 +375,10 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
 
                 {/* 1. 意图识别模型配置 */}
                 <div className="space-y-2">
-                  <div className="text-xs font-medium text-foreground">🧠 {t.aiSettings.intentModel}</div>
+                  <div className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                    <ThinkingModelIcon />
+                    <span>{t.aiSettings.intentModel}</span>
+                  </div>
                   <div className="text-[10px] text-muted-foreground mb-1">{t.aiSettings.intentModelDesc}</div>
                   
                   <div>
@@ -406,7 +427,10 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   </div>
 
                   <div>
-                    <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.model}</label>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-muted-foreground">{t.aiSettings.model}</label>
+                      {intentModelMeta?.supportsThinking && <ThinkingModelIcon />}
+                    </div>
                     <select
                       value={
                         PROVIDER_REGISTRY[(config.routing.intentProvider || config.provider) as LLMProviderType]?.models.some(m => m.id === config.routing?.intentModel)
@@ -430,7 +454,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     >
                       {PROVIDER_REGISTRY[(config.routing.intentProvider || config.provider) as LLMProviderType]?.models.map((model) => (
                         <option key={model.id} value={model.id}>
-                          {model.name}
+                          {formatModelOptionLabel(model)}
                         </option>
                       ))}
                     </select>
@@ -550,7 +574,10 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       </div>
 
                       <div>
-                        <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.model}</label>
+                        <div className="flex items-center gap-1 mb-1">
+                          <label className="text-xs text-muted-foreground">{t.aiSettings.model}</label>
+                          {chatModelMeta?.supportsThinking && <ThinkingModelIcon />}
+                        </div>
                         <select
                           value={
                             PROVIDER_REGISTRY[config.routing.chatProvider as LLMProviderType]?.models.some(m => m.id === config.routing?.chatModel)
@@ -574,7 +601,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                         >
                           {PROVIDER_REGISTRY[config.routing.chatProvider as LLMProviderType]?.models.map((model) => (
                             <option key={model.id} value={model.id}>
-                              {model.name}
+                              {formatModelOptionLabel(model)}
                             </option>
                           ))}
                         </select>
