@@ -153,6 +153,29 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 @layer utilities {
+  .ui-compact-row {
+    container-type: inline-size;
+    min-width: 0;
+  }
+
+  .ui-compact-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @container (max-width: 560px) {
+    .ui-compact-hide {
+      display: none !important;
+    }
+  }
+
+  @container (max-width: 460px) {
+    .ui-compact-hide-md {
+      display: none !important;
+    }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;

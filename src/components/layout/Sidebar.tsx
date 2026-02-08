@@ -534,10 +534,10 @@ export function Sidebar() {
   }, [vaultPath]);
 
   return (
-    <aside className="relative overflow-hidden w-full h-full border-r border-border/60 flex flex-col bg-background/55 backdrop-blur-md shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] transition-colors duration-300 after:absolute after:pointer-events-none after:top-6 after:bottom-6 after:right-1 after:w-[3px] after:rounded-full after:bg-gradient-to-b after:from-foreground/42 after:via-foreground/15 after:to-transparent after:opacity-0 after:transition-opacity after:duration-200 hover:after:opacity-100 dark:after:from-foreground/30 dark:after:via-foreground/12">
+    <aside className="ui-compact-row relative overflow-hidden w-full h-full border-r border-border/60 flex flex-col bg-background/55 backdrop-blur-md shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] transition-colors duration-300 after:absolute after:pointer-events-none after:top-6 after:bottom-6 after:right-1 after:w-[3px] after:rounded-full after:bg-gradient-to-b after:from-foreground/42 after:via-foreground/15 after:to-transparent after:opacity-0 after:transition-opacity after:duration-200 hover:after:opacity-100 dark:after:from-foreground/30 dark:after:via-foreground/12">
       {/* Header */}
       <div className="p-3 flex items-center justify-between text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase">
-        <span>{t.sidebar.files}</span>
+        <span className="ui-compact-text ui-compact-hide-md">{t.sidebar.files}</span>
         <div className="flex items-center gap-1">
           <button
             onClick={() => {
@@ -597,11 +597,11 @@ export function Sidebar() {
         <button 
           onClick={handleQuickNote}
           disabled={!vaultPath}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground bg-background/45 hover:bg-accent/60 border border-border/60 rounded-ui-md transition-colors shadow-ui-card/70 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground bg-background/45 hover:bg-accent/60 border border-border/60 rounded-ui-md transition-colors shadow-ui-card/70 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
           title={t.file.quickNote}
         >
           <Calendar size={14} />
-          <span>{t.file.quickNote}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.file.quickNote}</span>
         </button>
         
         {/* 语音笔记按钮 */}
@@ -651,11 +651,11 @@ export function Sidebar() {
           <button 
             onClick={startRecording}
             disabled={!vaultPath}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground bg-background hover:bg-accent border border-border rounded-md transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground bg-background hover:bg-accent border border-border rounded-md transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
             title={t.file.voiceRecordHint}
           >
             <Mic size={14} />
-            <span>{t.file.voiceNote}</span>
+            <span className="ui-compact-text ui-compact-hide">{t.file.voiceNote}</span>
           </button>
         )}
       </div>
@@ -668,7 +668,7 @@ export function Sidebar() {
             <button
               onClick={() => setFavoriteSortMode("manual")}
               className={cn(
-                "px-1.5 py-0.5 text-[10px] rounded border transition-colors",
+                "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
                 favoriteSortMode === "manual"
                   ? "bg-accent text-foreground border-border"
                   : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
@@ -680,7 +680,7 @@ export function Sidebar() {
             <button
               onClick={() => setFavoriteSortMode("recentAdded")}
               className={cn(
-                "px-1.5 py-0.5 text-[10px] rounded border transition-colors",
+                "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
                 favoriteSortMode === "recentAdded"
                   ? "bg-accent text-foreground border-border"
                   : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"
@@ -692,7 +692,7 @@ export function Sidebar() {
             <button
               onClick={() => setFavoriteSortMode("recentOpened")}
               className={cn(
-                "px-1.5 py-0.5 text-[10px] rounded border transition-colors",
+                "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
                 favoriteSortMode === "recentOpened"
                   ? "bg-accent text-foreground border-border"
                   : "text-muted-foreground border-transparent hover:border-border hover:text-foreground"

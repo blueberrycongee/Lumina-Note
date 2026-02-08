@@ -509,7 +509,7 @@ export function RightPanel() {
       }`}
     >
       {/* Tabs */}
-      <div className="flex border-b border-border/60 bg-background/45">
+      <div className="ui-compact-row flex border-b border-border/60 bg-background/45 min-w-0">
         {/* AI Tab - 只在 docked 模式且主视图未处于 AI 聊天时显示 */}
         {aiPanelMode === "docked" && !isMainAIActive && (
           <button
@@ -529,7 +529,7 @@ export function RightPanel() {
             ) : (
               <BrainCircuit size={12} />
             )}
-            <span className="hidden xl:inline">AI</span>
+            <span className="ui-compact-text ui-compact-hide">AI</span>
           </button>
         )}
         <button
@@ -542,7 +542,7 @@ export function RightPanel() {
           title={t.graph.outline}
         >
           <List size={12} />
-          <span className="hidden xl:inline">{t.graph.outline}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.graph.outline}</span>
         </button>
         <button
           onClick={() => setRightPanelTab("backlinks")}
@@ -554,7 +554,7 @@ export function RightPanel() {
           title={t.graph.backlinks}
         >
           <Link2 size={12} />
-          <span className="hidden xl:inline">{t.graph.backlinks}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.graph.backlinks}</span>
         </button>
         <button
           onClick={() => setRightPanelTab("tags")}
@@ -566,7 +566,7 @@ export function RightPanel() {
           title={t.graph.tags}
         >
           <Tag size={12} />
-          <span className="hidden xl:inline">{t.graph.tags}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.graph.tags}</span>
         </button>
       </div>
 
@@ -579,13 +579,13 @@ export function RightPanel() {
           {/* 右侧主内容区 */}
           <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header with Mode Toggle */}
-          <div className="p-2 border-b border-border/60 bg-background/35 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="ui-compact-row p-2 border-b border-border/60 bg-background/35 flex items-center justify-between min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               {/* Mode Toggle */}
-              <div className="flex bg-background/40 border border-border/60 rounded-ui-md p-0.5">
+              <div className="ui-compact-row flex bg-background/40 border border-border/60 rounded-ui-md p-0.5 min-w-0">
                 <button
                   onClick={() => setChatMode("agent")}
-                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
+                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap min-w-0 ${
                     chatMode === "agent"
                       ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
@@ -593,11 +593,11 @@ export function RightPanel() {
                   title={t.ai.agentMode}
                 >
                   <Bot size={12} />
-                  <span className="hidden 2xl:inline">Agent</span>
+                  <span className="ui-compact-text ui-compact-hide">Agent</span>
                 </button>
                 <button
                   onClick={() => setChatMode("chat")}
-                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
+                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap min-w-0 ${
                     chatMode === "chat"
                       ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
@@ -605,11 +605,11 @@ export function RightPanel() {
                   title={t.ai.chatMode}
                 >
                   <BrainCircuit size={12} />
-                  <span className="hidden 2xl:inline">{t.ai.conversation}</span>
+                  <span className="ui-compact-text ui-compact-hide">{t.ai.conversation}</span>
                 </button>
                 <button
                   onClick={() => setChatMode("codex")}
-                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
+                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap min-w-0 ${
                     chatMode === "codex"
                       ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
@@ -617,11 +617,11 @@ export function RightPanel() {
                   title="Codex"
                 >
                   <Code2 size={12} />
-                  <span className="hidden 2xl:inline">Codex</span>
+                  <span className="ui-compact-text ui-compact-hide">Codex</span>
                 </button>
               </div>
               {chatMode !== "codex" && (
-                <span className="hidden 2xl:inline text-xs text-muted-foreground whitespace-nowrap">
+                <span className="text-xs text-muted-foreground whitespace-nowrap ui-compact-text ui-compact-hide-md">
                   {config.apiKey ? "Configured" : t.settingsModal.notConfigured}
                 </span>
               )}

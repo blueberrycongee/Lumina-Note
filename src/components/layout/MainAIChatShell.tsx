@@ -933,57 +933,57 @@ export function MainAIChatShell() {
   };
 
   const renderModeToggle = (className?: string) => (
-    <div className={`flex items-center bg-muted rounded-lg p-0.5 ${className ?? ""}`}>
+    <div className={`ui-compact-row flex items-center bg-muted rounded-lg p-0.5 min-w-0 ${className ?? ""}`}>
       <button
         onClick={() => setChatMode("chat")}
         title={t.ai.chatModeHint}
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "chat"
+        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "chat"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
       >
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 min-w-0">
           <Sparkles size={12} />
-          <span className="hidden xl:inline">{t.ai.modeChat}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.ai.modeChat}</span>
         </span>
       </button>
       <button
         onClick={() => setChatMode("agent")}
         title={t.ai.agentModeHint}
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "agent"
+        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "agent"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
       >
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 min-w-0">
           <Bot size={12} />
-          <span className="hidden xl:inline">{t.ai.modeAgent}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.ai.modeAgent}</span>
         </span>
       </button>
       <button
         onClick={() => setChatMode("research")}
         title={t.deepResearch.modeTitle}
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "research"
+        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "research"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
       >
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 min-w-0">
           <Microscope size={12} />
-          <span className="hidden xl:inline">{t.deepResearch.modeLabel}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.deepResearch.modeLabel}</span>
         </span>
       </button>
       <button
         onClick={() => setChatMode("codex")}
         title="Codex"
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "codex"
+        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "codex"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
       >
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 min-w-0">
           <Code2 size={12} />
-          <span className="hidden xl:inline">{t.ai.modeCodex}</span>
+          <span className="ui-compact-text ui-compact-hide">{t.ai.modeCodex}</span>
         </span>
       </button>
     </div>
@@ -993,16 +993,16 @@ export function MainAIChatShell() {
     <div ref={chatContainerRef} className="h-full bg-background text-foreground flex flex-col overflow-hidden relative">
       {/* 顶部工具栏 */}
       {isCodexMode ? (
-        <div className="h-10 flex items-center justify-between px-4 border-b border-border shrink-0">
+        <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border shrink-0 min-w-0">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Code2 size={14} />
-            <span>{t.ai.modeCodex}</span>
+            <span className="ui-compact-text ui-compact-hide-md">{t.ai.modeCodex}</span>
           </div>
           {renderModeToggle()}
         </div>
       ) : (
-        <div className="h-10 flex items-center justify-between px-4 border-b border-border shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border shrink-0 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               onClick={() => setShowHistory(!showHistory)}
               className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap ${showHistory
@@ -1011,9 +1011,9 @@ export function MainAIChatShell() {
                 }`}
             >
               <History size={14} />
-              <span className="hidden xl:inline">{t.ai.historyChats}</span>
+              <span className="ui-compact-text ui-compact-hide">{t.ai.historyChats}</span>
             </button>
-            <span className="hidden 2xl:inline ml-3 text-[11px] text-muted-foreground select-none whitespace-nowrap">
+            <span className="ml-3 text-[11px] text-muted-foreground select-none whitespace-nowrap ui-compact-text ui-compact-hide-md">
               {t.ai.sessionTokens}: {chatMode === "agent" ? rustTotalTokens : chatTotalTokens}
             </span>
           </div>
@@ -1023,7 +1023,7 @@ export function MainAIChatShell() {
               className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap"
             >
               <Plus size={14} />
-              <span className="hidden xl:inline">{t.ai.newChat}</span>
+              <span className="ui-compact-text ui-compact-hide">{t.ai.newChat}</span>
             </button>
           </div>
         </div>
