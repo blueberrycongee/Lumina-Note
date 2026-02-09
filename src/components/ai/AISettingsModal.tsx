@@ -105,7 +105,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
       // 发送简单测试请求
       const response = await provider.call(
         [{ role: "user", content: "Reply with exactly: OK" }],
-        { maxTokens: 10, temperature: 0 }
+        { maxTokens: 10, useDefaultTemperature: true }
       );
 
       const latency = Date.now() - startTime;
