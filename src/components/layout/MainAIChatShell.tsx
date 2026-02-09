@@ -1104,7 +1104,7 @@ export function MainAIChatShell() {
   };
 
   const renderModeToggle = (className?: string) => (
-    <div className={`ui-compact-fixed flex items-center bg-muted rounded-lg p-0.5 ${className ?? ""}`}>
+    <div className={`ai-mode-toggle flex items-center gap-0.5 bg-muted rounded-lg p-0.5 shrink-0 ${className ?? ""}`}>
       <button
         onClick={() => setChatMode("chat")}
         title={t.ai.chatModeHint}
@@ -1115,7 +1115,7 @@ export function MainAIChatShell() {
       >
         <span className="flex items-center gap-1 min-w-0">
           <Sparkles size={12} />
-          <span className="ui-compact-text ui-compact-hide">{t.ai.modeChat}</span>
+          <span className="ai-mode-label ui-compact-text">{t.ai.modeChat}</span>
         </span>
       </button>
       <button
@@ -1128,7 +1128,7 @@ export function MainAIChatShell() {
       >
         <span className="flex items-center gap-1 min-w-0">
           <Bot size={12} />
-          <span className="ui-compact-text ui-compact-hide">{t.ai.modeAgent}</span>
+          <span className="ai-mode-label ui-compact-text">{t.ai.modeAgent}</span>
         </span>
       </button>
       <button
@@ -1141,7 +1141,7 @@ export function MainAIChatShell() {
       >
         <span className="flex items-center gap-1 min-w-0">
           <Microscope size={12} />
-          <span className="ui-compact-text ui-compact-hide">{t.deepResearch.modeLabel}</span>
+          <span className="ai-mode-label ui-compact-text">{t.deepResearch.modeLabel}</span>
         </span>
       </button>
       <button
@@ -1154,7 +1154,7 @@ export function MainAIChatShell() {
       >
         <span className="flex items-center gap-1 min-w-0">
           <Code2 size={12} />
-          <span className="ui-compact-text ui-compact-hide">{t.ai.modeCodex}</span>
+          <span className="ai-mode-label ui-compact-text">{t.ai.modeCodex}</span>
         </span>
       </button>
     </div>
@@ -1661,7 +1661,7 @@ export function MainAIChatShell() {
 
                 {/* 底部工具栏 */}
                 <div className="px-4 pb-3 pt-1 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="ai-toolbar-left flex items-center gap-2 min-w-0 overflow-hidden">
                     {/* 附件按钮 - 工作区文件选择器 */}
                     <div className="relative" data-file-picker>
                       <button
