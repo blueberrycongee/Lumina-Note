@@ -1104,11 +1104,11 @@ export function MainAIChatShell() {
   };
 
   const renderModeToggle = (className?: string) => (
-    <div className={`ui-compact-row flex items-center bg-muted rounded-lg p-0.5 min-w-0 ${className ?? ""}`}>
+    <div className={`ui-compact-fixed flex items-center bg-muted rounded-lg p-0.5 ${className ?? ""}`}>
       <button
         onClick={() => setChatMode("chat")}
         title={t.ai.chatModeHint}
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "chat"
+        className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "chat"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
@@ -1121,7 +1121,7 @@ export function MainAIChatShell() {
       <button
         onClick={() => setChatMode("agent")}
         title={t.ai.agentModeHint}
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "agent"
+        className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "agent"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
@@ -1134,7 +1134,7 @@ export function MainAIChatShell() {
       <button
         onClick={() => setChatMode("research")}
         title={t.deepResearch.modeTitle}
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "research"
+        className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "research"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}
@@ -1147,7 +1147,7 @@ export function MainAIChatShell() {
       <button
         onClick={() => setChatMode("codex")}
         title="Codex"
-        className={`px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap min-w-0 ${chatMode === "codex"
+        className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${chatMode === "codex"
             ? "bg-background text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
           }`}

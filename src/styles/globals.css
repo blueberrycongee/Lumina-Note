@@ -158,6 +158,12 @@ body.resizing iframe[data-codex-iframe="true"] {
     min-width: 0;
   }
 
+  .ui-compact-fixed {
+    container-type: inline-size;
+    min-width: max-content;
+    flex-shrink: 0;
+  }
+
   .ui-compact-text {
     white-space: nowrap;
     overflow: hidden;
