@@ -176,6 +176,18 @@ body.resizing iframe[data-codex-iframe="true"] {
     display: inline;
   }
 
+  .right-ai-mode-toggle {
+    min-width: max-content;
+  }
+
+  .right-ai-mode-label {
+    display: inline;
+  }
+
+  .right-ai-status {
+    display: inline;
+  }
+
   @container (max-width: 560px) {
     .ui-compact-hide {
       display: none !important;
@@ -184,6 +196,18 @@ body.resizing iframe[data-codex-iframe="true"] {
 
   @container (max-width: 820px) {
     .ai-mode-label {
+      display: none !important;
+    }
+  }
+
+  @container (max-width: 700px) {
+    .right-ai-mode-label {
+      display: none !important;
+    }
+  }
+
+  @container (max-width: 520px) {
+    .right-ai-status {
       display: none !important;
     }
   }

@@ -580,12 +580,12 @@ export function RightPanel() {
           <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header with Mode Toggle */}
           <div className="ui-compact-row p-2 border-b border-border/60 bg-background/35 flex items-center justify-between min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
               {/* Mode Toggle */}
-              <div className="ui-compact-row flex bg-background/40 border border-border/60 rounded-ui-md p-0.5 min-w-0">
+              <div className="right-ai-mode-toggle flex bg-background/40 border border-border/60 rounded-ui-md p-0.5 shrink-0">
                 <button
                   onClick={() => setChatMode("agent")}
-                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap min-w-0 ${
+                  className={`shrink-0 px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
                     chatMode === "agent"
                       ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
@@ -593,11 +593,11 @@ export function RightPanel() {
                   title={t.ai.agentMode}
                 >
                   <Bot size={12} />
-                  <span className="ui-compact-text ui-compact-hide">Agent</span>
+                  <span className="right-ai-mode-label ui-compact-text">Agent</span>
                 </button>
                 <button
                   onClick={() => setChatMode("chat")}
-                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap min-w-0 ${
+                  className={`shrink-0 px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
                     chatMode === "chat"
                       ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
@@ -605,11 +605,11 @@ export function RightPanel() {
                   title={t.ai.chatMode}
                 >
                   <BrainCircuit size={12} />
-                  <span className="ui-compact-text ui-compact-hide">{t.ai.conversation}</span>
+                  <span className="right-ai-mode-label ui-compact-text">{t.ai.conversation}</span>
                 </button>
                 <button
                   onClick={() => setChatMode("codex")}
-                  className={`px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap min-w-0 ${
+                  className={`shrink-0 px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
                     chatMode === "codex"
                       ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
                       : "text-muted-foreground hover:text-foreground"
@@ -617,11 +617,11 @@ export function RightPanel() {
                   title="Codex"
                 >
                   <Code2 size={12} />
-                  <span className="ui-compact-text ui-compact-hide">Codex</span>
+                  <span className="right-ai-mode-label ui-compact-text">Codex</span>
                 </button>
               </div>
               {chatMode !== "codex" && (
-                <span className="text-xs text-muted-foreground whitespace-nowrap ui-compact-text ui-compact-hide-md">
+                <span className="right-ai-status text-xs text-muted-foreground whitespace-nowrap ui-compact-text">
                   {config.apiKey ? "Configured" : t.settingsModal.notConfigured}
                 </span>
               )}
