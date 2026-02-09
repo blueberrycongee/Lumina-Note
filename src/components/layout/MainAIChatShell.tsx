@@ -12,7 +12,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { resolve } from "@/lib/path";
-import { listAgentSkills, readAgentSkill, getDocToolsStatus, installDocTools, createDir, saveFile } from "@/lib/tauri";
+import { listAgentSkills, readAgentSkill, getDocToolsStatus, installDocTools, createDir, saveFile, exists } from "@/lib/tauri";
 import type { SelectedSkill, SkillInfo } from "@/types/skills";
 import {
   ArrowUp,
@@ -540,11 +540,15 @@ export function MainAIChatShell() {
       });
 
       const safeTitle = sanitizeExportFileName(currentConversationTitle);
-      const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "").replace("T", "-");
       const exportDir = await joinPath(vaultPath, "Exports", "Conversations");
       await createDir(exportDir, { recursive: true });
 
-      const exportFilePath = await joinPath(exportDir, `${modeName}-${safeTitle}-${stamp}.md`);
+      let suffix = 1;
+      let exportFilePath = await joinPath(exportDir, `${modeName}-${safeTitle}.md`);
+      while (await exists(exportFilePath)) {
+        suffix += 1;
+        exportFilePath = await joinPath(exportDir, `${modeName}-${safeTitle}-${suffix}.md`);
+      }
       await saveFile(exportFilePath, markdown);
       await refreshFileTree();
       await openFile(exportFilePath);
