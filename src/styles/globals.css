@@ -164,9 +164,8 @@ body.resizing iframe[data-codex-iframe="true"] {
     text-overflow: ellipsis;
   }
 
-  .ai-toolbar-left {
+  .ai-toolbar-row {
     container-type: inline-size;
-    min-width: 0;
   }
 
   .ai-mode-toggle {

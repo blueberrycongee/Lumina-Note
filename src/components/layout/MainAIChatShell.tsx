@@ -1660,7 +1660,7 @@ export function MainAIChatShell() {
                 )}
 
                 {/* 底部工具栏 */}
-                <div className="px-4 pb-3 pt-1 flex items-center justify-between">
+                <div className="ai-toolbar-row px-4 pb-3 pt-1 flex items-center justify-between">
                   <div className="ai-toolbar-left flex items-center gap-2 min-w-0 overflow-hidden">
                     {/* 附件按钮 - 工作区文件选择器 */}
                     <div className="relative" data-file-picker>
