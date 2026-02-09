@@ -126,6 +126,24 @@ impl LlmClient {
         }
     }
 
+    fn requires_temperature_one(provider: &str, model: &str) -> bool {
+        if provider != "moonshot" {
+            return false;
+        }
+        let normalized = model.to_ascii_lowercase();
+        normalized.contains("thinking")
+            || normalized.contains("k2.5")
+            || normalized.contains("k2-5")
+    }
+
+    fn resolved_temperature(&self) -> f32 {
+        if Self::requires_temperature_one(&self.config.provider, &self.config.model) {
+            1.0
+        } else {
+            self.config.temperature
+        }
+    }
+
     /// 构建请求头
     fn build_headers(&self) -> HashMap<String, String> {
         let mut headers = HashMap::new();
@@ -175,11 +193,12 @@ impl LlmClient {
         let headers = self.build_headers();
 
         let chat_messages = self.convert_messages(messages);
+        let temperature = self.resolved_temperature();
 
         let mut body = json!({
             "model": self.config.model,
             "messages": chat_messages,
-            "temperature": self.config.temperature,
+            "temperature": temperature,
             "max_tokens": self.config.max_tokens,
             "stream": false,
         });
@@ -452,11 +471,12 @@ impl LlmClient {
         let headers = self.build_headers();
 
         let chat_messages = self.convert_messages(messages);
+        let temperature = self.resolved_temperature();
 
         let mut body = json!({
             "model": self.config.model,
             "messages": chat_messages,
-            "temperature": self.config.temperature,
+            "temperature": temperature,
             "max_tokens": self.config.max_tokens,
             "stream": true,
         });
@@ -767,11 +787,12 @@ impl LlmClient {
         let headers = self.build_headers();
 
         let chat_messages = self.convert_messages(messages);
+        let temperature = self.resolved_temperature();
 
         let mut body = json!({
             "model": self.config.model,
             "messages": chat_messages,
-            "temperature": self.config.temperature,
+            "temperature": temperature,
             "max_tokens": self.config.max_tokens,
             "stream": true,
         });
@@ -1007,7 +1028,7 @@ impl LlmClient {
                 "role": "user",
                 "content": prompt_chars
             }],
-            "temperature": self.config.temperature,
+            "temperature": self.resolved_temperature(),
             "max_tokens": self.config.max_tokens,
             "stream": true,
         });
