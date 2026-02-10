@@ -154,6 +154,11 @@ export function PluginSection() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{plugin.name}</p>
                         <p className="text-xs text-muted-foreground">{plugin.id} · v{plugin.version}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          API {plugin.api_version || "1"}
+                          {plugin.min_app_version ? ` · min app ${plugin.min_app_version}` : ""}
+                          {plugin.is_desktop_only ? " · desktop-only" : ""}
+                        </p>
                         {plugin.description && (
                           <p className="text-xs text-muted-foreground mt-1">{plugin.description}</p>
                         )}
