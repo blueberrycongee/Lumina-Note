@@ -4,6 +4,7 @@
 >
 > - `docs/plugin-open-strategy.md`
 > - `docs/plugin-manifest.v1.md`
+> - `docs/appearance-plugin-guide.md`
 > - `packages/plugin-api/index.d.ts`
 > - `packages/plugin-ui/README.md`
 
