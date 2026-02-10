@@ -28,4 +28,25 @@ describe("plugin theme runtime", () => {
     pluginThemeRuntime.clearPlugin("test-plugin");
     dispose();
   });
+
+  it("reapplies overrides after host theme writes root vars", () => {
+    const root = document.documentElement;
+    root.style.removeProperty("--lumina-reapply");
+
+    const cleanup = pluginThemeRuntime.setToken(
+      "test-plugin",
+      "--lumina-reapply",
+      "111 11% 11%",
+      "light",
+    );
+    expect(root.style.getPropertyValue("--lumina-reapply").trim()).toBe("111 11% 11%");
+
+    root.style.setProperty("--lumina-reapply", "10 10% 10%");
+    expect(root.style.getPropertyValue("--lumina-reapply").trim()).toBe("10 10% 10%");
+
+    pluginThemeRuntime.reapply();
+    expect(root.style.getPropertyValue("--lumina-reapply").trim()).toBe("111 11% 11%");
+
+    cleanup();
+  });
 });

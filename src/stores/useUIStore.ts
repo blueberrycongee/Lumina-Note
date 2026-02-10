@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { applyTheme, getThemeById } from "@/config/themePlugin";
+import { pluginThemeRuntime } from "@/services/plugins/themeRuntime";
 
 // Editor modes similar to Obsidian
 export type EditorMode = "reading" | "live" | "source";
@@ -106,6 +107,7 @@ export const useUIStore = create<UIState>()(
           const theme = getThemeById(state.themeId);
           if (theme) {
             applyTheme(theme, newMode);
+            pluginThemeRuntime.reapply();
           }
           return { isDarkMode: newMode };
         }),
@@ -114,6 +116,7 @@ export const useUIStore = create<UIState>()(
           const theme = getThemeById(id);
           if (theme) {
             applyTheme(theme, state.isDarkMode);
+            pluginThemeRuntime.reapply();
           }
           return { themeId: id };
         }),
@@ -207,6 +210,7 @@ export const useUIStore = create<UIState>()(
         const theme = getThemeById(themeId);
         if (theme) {
           applyTheme(theme, state?.isDarkMode || false);
+          pluginThemeRuntime.reapply();
         }
         // 强制重置视频笔记状态（不应从 localStorage 恢复）
         if (state) {

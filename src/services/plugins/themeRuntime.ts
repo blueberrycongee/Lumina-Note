@@ -125,6 +125,10 @@ class ThemeRuntime {
     this.recompute();
   }
 
+  reapply() {
+    this.recompute();
+  }
+
   private setTokenMap(pluginId: string, map: TokenMap, mode: ThemeMode) {
     for (const [token, value] of Object.entries(map)) {
       this.overrides = this.overrides.filter(
