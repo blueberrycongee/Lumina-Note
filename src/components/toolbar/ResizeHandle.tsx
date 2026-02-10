@@ -94,7 +94,7 @@ export function ResizeHandle({
   const hitAreaStyle =
     direction === "left"
       ? { left: "-1px", right: "-7px" }
-      : { left: "-7px", right: "-1px" };
+      : { left: "-1px", right: "-7px" };
 
   return (
     <div
