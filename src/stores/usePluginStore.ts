@@ -42,6 +42,23 @@ const isAppearancePlugin = (permissions: string[]) =>
     ].includes(perm),
   );
 
+const toEffectiveEnabledById = (
+  plugins: PluginInfo[],
+  enabledById: Record<string, boolean>,
+  appearanceSafeMode: boolean,
+) => {
+  if (!appearanceSafeMode) {
+    return { ...enabledById };
+  }
+  const next = { ...enabledById };
+  for (const plugin of plugins) {
+    if (isAppearancePlugin(plugin.permissions || [])) {
+      next[plugin.id] = false;
+    }
+  }
+  return next;
+};
+
 export const usePluginStore = create<PluginStoreState>()(
   persist(
     (set, get) => ({
@@ -58,14 +75,11 @@ export const usePluginStore = create<PluginStoreState>()(
         try {
           const discovered = await listPlugins(workspacePath);
           const plugins = Array.isArray(discovered) ? discovered : [];
-          const effectiveEnabledById = { ...get().enabledById };
-          if (get().appearanceSafeMode) {
-            for (const plugin of plugins) {
-              if (isAppearancePlugin(plugin.permissions || [])) {
-                effectiveEnabledById[plugin.id] = false;
-              }
-            }
-          }
+          const effectiveEnabledById = toEffectiveEnabledById(
+            plugins,
+            get().enabledById,
+            get().appearanceSafeMode,
+          );
           const runtimeStatus = await pluginRuntime.sync({
             plugins,
             workspacePath,
@@ -94,10 +108,15 @@ export const usePluginStore = create<PluginStoreState>()(
         }));
 
         const plugins = get().plugins;
+        const effectiveEnabledById = toEffectiveEnabledById(
+          plugins,
+          get().enabledById,
+          get().appearanceSafeMode,
+        );
         const runtimeStatus = await pluginRuntime.sync({
           plugins,
           workspacePath,
-          enabledById: get().enabledById,
+          enabledById: effectiveEnabledById,
         });
         set({ runtimeStatus });
       },

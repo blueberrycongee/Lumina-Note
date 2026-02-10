@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -27,6 +27,8 @@ import { InstalledPluginsModal } from "@/components/plugins/InstalledPluginsModa
 export function Ribbon() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPlugins, setShowPlugins] = useState(false);
+  const closeSettings = useCallback(() => setShowSettings(false), []);
+  const closePlugins = useCallback(() => setShowPlugins(false), []);
   const { t } = useLocaleStore();
   const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
   const {
@@ -321,9 +323,9 @@ export function Ribbon() {
       {/* Settings Modal */}
       <SettingsModal 
         isOpen={showSettings} 
-        onClose={() => setShowSettings(false)} 
+        onClose={closeSettings} 
       />
-      <InstalledPluginsModal isOpen={showPlugins} onClose={() => setShowPlugins(false)} />
+      <InstalledPluginsModal isOpen={showPlugins} onClose={closePlugins} />
     </div>
   );
 }

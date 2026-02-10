@@ -11,11 +11,27 @@ interface InstalledPluginsModalProps {
 }
 
 const SOURCE_ORDER = ["workspace", "user", "builtin"];
+const isAppearancePlugin = (permissions: string[]) =>
+  permissions.some((perm) =>
+    ["ui:*", "ui:decorate", "ui:theme", "editor:decorate", "workspace:panel", "workspace:tab"].includes(
+      perm,
+    ),
+  );
 
 export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModalProps) {
   const { vaultPath } = useFileStore();
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
-  const { plugins, enabledById, runtimeStatus, loading, error, loadPlugins, setPluginEnabled } = usePluginStore();
+  const {
+    plugins,
+    enabledById,
+    runtimeStatus,
+    loading,
+    error,
+    loadPlugins,
+    setPluginEnabled,
+    appearanceSafeMode,
+    setAppearanceSafeMode,
+  } = usePluginStore();
 
   const grouped = useMemo(() => {
     const groups: Record<string, typeof plugins> = {};
@@ -30,7 +46,18 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
   useEffect(() => {
     if (!isOpen) return;
     hideAllWebViews();
+    return () => {
+      showAllWebViews();
+    };
+  }, [hideAllWebViews, isOpen, showAllWebViews]);
+
+  useEffect(() => {
+    if (!isOpen) return;
     void loadPlugins(vaultPath || undefined);
+  }, [isOpen, loadPlugins, vaultPath]);
+
+  useEffect(() => {
+    if (!isOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         onClose();
@@ -38,10 +65,9 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      showAllWebViews();
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [hideAllWebViews, isOpen, loadPlugins, onClose, showAllWebViews, vaultPath]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -76,15 +102,32 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
             <p className="text-sm text-muted-foreground">
               Installed plugins from workspace, user directory, and built-in resources.
             </p>
-            <button
-              type="button"
-              onClick={() => loadPlugins(vaultPath || undefined)}
-              disabled={loading}
-              className="h-8 px-3 rounded-lg text-xs font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
-            >
-              {loading ? "Refreshing..." : "Refresh"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => loadPlugins(vaultPath || undefined)}
+                disabled={loading}
+                className="h-8 px-3 rounded-lg text-xs font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
+              >
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
           </div>
+
+          {appearanceSafeMode && (
+            <div className="text-xs text-amber-700 bg-amber-500/10 border border-amber-500/30 rounded-md p-2 flex items-center justify-between gap-3">
+              <span>
+                Appearance Safe Mode is ON. UI/theme/editor decoration plugins are blocked and may look like they only flash once.
+              </span>
+              <button
+                type="button"
+                onClick={() => setAppearanceSafeMode(false, vaultPath || undefined)}
+                className="h-7 px-2 rounded-md border border-amber-500/40 bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 whitespace-nowrap"
+              >
+                Turn Off Safe Mode
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-md p-2">
@@ -112,6 +155,8 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
                   {items.map((plugin) => {
                     const enabled = isEnabled(plugin.id, plugin.enabled_by_default);
                     const status = runtimeStatus[plugin.id];
+                    const blockedBySafeMode =
+                      appearanceSafeMode && isAppearancePlugin(plugin.permissions || []);
                     return (
                       <div
                         key={`${plugin.source}:${plugin.id}`}
@@ -130,13 +175,14 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
                             onClick={() =>
                               setPluginEnabled(plugin.id, !enabled, vaultPath || undefined)
                             }
+                            disabled={blockedBySafeMode}
                             className={`h-8 px-3 rounded-lg text-xs font-medium border transition-colors ${
                               enabled
                                 ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
                                 : "bg-background/60 border-border hover:bg-muted"
-                            }`}
+                            } ${blockedBySafeMode ? "opacity-50 cursor-not-allowed" : ""}`}
                           >
-                            {enabled ? "Enabled" : "Disabled"}
+                            {blockedBySafeMode ? "Blocked by Safe Mode" : enabled ? "Enabled" : "Disabled"}
                           </button>
                         </div>
 
