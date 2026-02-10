@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
@@ -22,6 +22,16 @@ struct PluginManifestRaw {
     min_app_version: Option<String>,
     api_version: Option<String>,
     is_desktop_only: Option<bool>,
+    theme: Option<PluginThemeRaw>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+struct PluginThemeRaw {
+    auto_apply: Option<bool>,
+    tokens: Option<HashMap<String, String>>,
+    light: Option<HashMap<String, String>>,
+    dark: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,6 +59,15 @@ pub struct PluginInfo {
     pub root_path: String,
     pub entry_path: String,
     pub validation_error: Option<PluginValidationError>,
+    pub theme: Option<PluginThemeInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PluginThemeInfo {
+    pub auto_apply: bool,
+    pub tokens: HashMap<String, String>,
+    pub light: HashMap<String, String>,
+    pub dark: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -244,6 +263,7 @@ fn build_info(source: &str, root: &Path, dir: &Path, manifest: PluginManifestRaw
                 root_path: root.to_string_lossy().to_string(),
                 entry_path: dir.join(DEFAULT_ENTRYPOINT).to_string_lossy().to_string(),
                 validation_error: Some(err),
+                theme: None,
             };
         }
     };
@@ -270,6 +290,12 @@ fn build_info(source: &str, root: &Path, dir: &Path, manifest: PluginManifestRaw
         root_path: root.to_string_lossy().to_string(),
         entry_path: entry_path.to_string_lossy().to_string(),
         validation_error: None,
+        theme: normalized.theme.map(|theme| PluginThemeInfo {
+            auto_apply: theme.auto_apply.unwrap_or(false),
+            tokens: theme.tokens.unwrap_or_default(),
+            light: theme.light.unwrap_or_default(),
+            dark: theme.dark.unwrap_or_default(),
+        }),
     }
 }
 

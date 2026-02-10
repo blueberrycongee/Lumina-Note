@@ -54,6 +54,34 @@
     "is_desktop_only": {
       "type": "boolean",
       "default": false
+    },
+    "theme": {
+      "type": "object",
+      "properties": {
+        "auto_apply": {
+          "type": "boolean",
+          "default": false
+        },
+        "tokens": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "light": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "dark": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

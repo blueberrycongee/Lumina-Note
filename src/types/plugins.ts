@@ -55,6 +55,12 @@ export interface PluginInfo {
     field?: string;
     message: string;
   } | null;
+  theme?: {
+    auto_apply?: boolean;
+    tokens?: Record<string, string>;
+    light?: Record<string, string>;
+    dark?: Record<string, string>;
+  } | null;
 }
 
 export interface PluginEntry {

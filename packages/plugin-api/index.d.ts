@@ -55,6 +55,12 @@ export interface LuminaPluginManifestV1 {
   permissions?: string[];
   enabled_by_default?: boolean;
   is_desktop_only?: boolean;
+  theme?: {
+    auto_apply?: boolean;
+    tokens?: Record<string, string>;
+    light?: Record<string, string>;
+    dark?: Record<string, string>;
+  };
 }
 
 export interface LuminaPluginApi {
@@ -68,6 +74,18 @@ export interface LuminaPluginApi {
     notify: (message: string) => void;
     injectStyle: (css: string, scopeId?: string) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
+  };
+  theme: {
+    registerPreset: (input: {
+      id: string;
+      name?: string;
+      tokens?: Record<string, string>;
+      light?: Record<string, string>;
+      dark?: Record<string, string>;
+    }) => () => void;
+    applyPreset: (id: string) => void;
+    setToken: (input: { token: string; value: string; mode?: "all" | "light" | "dark" }) => () => void;
+    resetToken: (input: { token: string; mode?: "all" | "light" | "dark" }) => void;
   };
   commands: {
     registerSlashCommand: (input: {

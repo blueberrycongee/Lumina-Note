@@ -103,6 +103,13 @@ Plugin metadata:
 - `injectStyle(css, scopeId?)`
 - `setThemeVariables(record)`
 
+### `api.theme`
+
+- `registerPreset({ id, name?, tokens?, light?, dark? })`
+- `applyPreset(id)`
+- `setToken({ token, value, mode? })`
+- `resetToken({ token, mode? })`
+
 ### `api.vault`
 
 - `getPath()`

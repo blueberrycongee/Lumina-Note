@@ -11,6 +11,7 @@ import {
 import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
+import { pluginThemeRuntime, type ThemeMode } from "@/services/plugins/themeRuntime";
 import type { PluginInfo, PluginPermission, PluginRuntimeStatus } from "@/types/plugins";
 
 type PluginHostEvent = "app:ready" | "workspace:changed" | "active-file:changed";
@@ -83,6 +84,18 @@ interface LuminaPluginApi {
     notify: (message: string) => void;
     injectStyle: (css: string, scopeId?: string) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
+  };
+  theme: {
+    registerPreset: (input: {
+      id: string;
+      name?: string;
+      tokens?: Record<string, string>;
+      light?: Record<string, string>;
+      dark?: Record<string, string>;
+    }) => () => void;
+    applyPreset: (id: string) => void;
+    setToken: (input: { token: string; value: string; mode?: ThemeMode }) => () => void;
+    resetToken: (input: { token: string; mode?: ThemeMode }) => void;
   };
   commands: {
     registerSlashCommand: (input: SlashCommandInput) => () => void;
@@ -664,6 +677,37 @@ return exported(api, plugin);
 
     const storageKey = (key: string) => `lumina-plugin:${info.id}:${key}`;
 
+    const registerThemePreset = (input: {
+      id: string;
+      name?: string;
+      tokens?: Record<string, string>;
+      light?: Record<string, string>;
+      dark?: Record<string, string>;
+    }) => {
+      requirePermission("ui:theme");
+      const cleanup = withOnce(pluginThemeRuntime.registerPreset(info.id, input));
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const setupManifestThemePreset = () => {
+      const manifestTheme = info.theme;
+      if (!manifestTheme) return;
+      const removePreset = pluginThemeRuntime.registerPreset(info.id, {
+        id: "__manifest__",
+        name: `${info.name} (manifest)`,
+        tokens: manifestTheme.tokens || undefined,
+        light: manifestTheme.light || undefined,
+        dark: manifestTheme.dark || undefined,
+      });
+      unsubscribers.push(withOnce(removePreset));
+      if (manifestTheme.auto_apply) {
+        pluginThemeRuntime.applyPreset(info.id, "__manifest__");
+      }
+    };
+
+    setupManifestThemePreset();
+
     return {
       meta: {
         id: info.id,
@@ -720,6 +764,25 @@ return exported(api, plugin);
           });
           unsubscribers.push(cleanup);
           return cleanup;
+        },
+      },
+      theme: {
+        registerPreset: registerThemePreset,
+        applyPreset: (id: string) => {
+          requirePermission("ui:theme");
+          pluginThemeRuntime.applyPreset(info.id, id);
+        },
+        setToken: (input: { token: string; value: string; mode?: ThemeMode }) => {
+          requirePermission("ui:theme");
+          const cleanup = withOnce(
+            pluginThemeRuntime.setToken(info.id, input.token, input.value, input.mode ?? "all"),
+          );
+          unsubscribers.push(cleanup);
+          return cleanup;
+        },
+        resetToken: (input: { token: string; mode?: ThemeMode }) => {
+          requirePermission("ui:theme");
+          pluginThemeRuntime.resetToken(info.id, input.token, input.mode ?? "all");
         },
       },
       commands: {
@@ -917,6 +980,7 @@ return exported(api, plugin);
         this.pluginCommands.delete(id);
       }
     }
+    pluginThemeRuntime.clearPlugin(pluginId);
     window.dispatchEvent(new CustomEvent("lumina-plugin-commands-updated"));
     this.removePluginCommands(pluginId);
     this.removePluginListeners(pluginId);
