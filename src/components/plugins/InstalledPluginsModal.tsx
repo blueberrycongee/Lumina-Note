@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useBrowserStore } from "@/stores/useBrowserStore";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { PluginSection } from "@/components/settings/PluginSection";
 import { PluginStyleDevSection } from "@/components/settings/PluginStyleDevSection";
 
@@ -12,6 +13,7 @@ interface InstalledPluginsModalProps {
 }
 
 export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModalProps) {
+  const { t } = useLocaleStore();
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const pluginSettingSections = usePluginUiStore((state) => state.settingSections);
 
@@ -42,7 +44,7 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
 
       <div className="relative w-[860px] max-h-[85vh] rounded-xl shadow-2xl overflow-hidden border border-border bg-background/95">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50">
-          <h2 className="text-lg font-semibold text-foreground/90">Plugins</h2>
+          <h2 className="text-lg font-semibold text-foreground/90">{t.plugins.modalTitle}</h2>
           <button onClick={onClose} className="p-2 rounded-full transition-colors hover:bg-muted">
             <X size={18} className="text-foreground/70" />
           </button>
@@ -55,7 +57,7 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
           {pluginSettingSections.length > 0 && (
             <section className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                Plugin Settings
+                {t.plugins.pluginSettingsTitle}
               </h3>
               {pluginSettingSections.map((section) => (
                 <div

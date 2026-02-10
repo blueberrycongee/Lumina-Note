@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { usePluginStore } from "@/stores/usePluginStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { showInExplorer } from "@/lib/tauri";
 
 const SOURCE_ORDER = ["workspace", "user", "builtin"];
 
 export function PluginSection() {
+  const { t } = useLocaleStore();
   const { vaultPath } = useFileStore();
   const {
     plugins,
@@ -38,10 +40,10 @@ export function PluginSection() {
   }, [plugins]);
 
   const sourceLabel = (source: string) => {
-    if (source === "workspace") return "Workspace";
-    if (source === "user") return "User";
-    if (source === "builtin") return "Built-in";
-    return source;
+    if (source === "workspace") return t.plugins.sourceWorkspace;
+    if (source === "user") return t.plugins.sourceUser;
+    if (source === "builtin") return t.plugins.sourceBuiltin;
+    return t.plugins.sourceUnknown;
   };
 
   const isEnabled = (pluginId: string, fallback: boolean) => {
@@ -97,10 +99,12 @@ export function PluginSection() {
 
   return (
     <section className="space-y-4">
-      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Plugins (Developer Preview)</h3>
+      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        {t.plugins.title}
+      </h3>
 
       <p className="text-sm text-muted-foreground">
-        Lumina loads plugins from <code>.lumina/plugins</code> (workspace), app data plugins (user), and bundled plugins.
+        {t.plugins.intro}
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -113,14 +117,14 @@ export function PluginSection() {
               : "border-border bg-background/60 hover:bg-muted"
           }`}
         >
-          {appearanceSafeMode ? "Appearance Safe Mode: ON" : "Appearance Safe Mode: OFF"}
+          {appearanceSafeMode ? t.plugins.safeModeOn : t.plugins.safeModeOff}
         </button>
         <button
           type="button"
           onClick={() => isolatePluginStyles()}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted"
         >
-          Unload All Plugin Styles
+          {t.plugins.unloadStyles}
         </button>
         <button
           type="button"
@@ -128,7 +132,7 @@ export function PluginSection() {
           disabled={loading}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
-          {loading ? "Refreshing..." : "Refresh List"}
+          {loading ? t.plugins.refreshing : t.plugins.refreshList}
         </button>
         <button
           type="button"
@@ -136,7 +140,7 @@ export function PluginSection() {
           disabled={loading}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
-          Reload Runtime
+          {t.plugins.reloadRuntime}
         </button>
         <button
           type="button"
@@ -144,7 +148,7 @@ export function PluginSection() {
           disabled={!vaultPath || busyAction === "open-dir"}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
-          Open Workspace Plugin Folder
+          {t.plugins.openWorkspaceFolder}
         </button>
         <button
           type="button"
@@ -152,7 +156,7 @@ export function PluginSection() {
           disabled={!vaultPath || busyAction === "scaffold"}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
-          Scaffold Example Plugin
+          {t.plugins.scaffoldExample}
         </button>
         <button
           type="button"
@@ -160,7 +164,7 @@ export function PluginSection() {
           disabled={!vaultPath || busyAction === "scaffold-theme"}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
-          Scaffold Theme Plugin
+          {t.plugins.scaffoldTheme}
         </button>
         <button
           type="button"
@@ -168,13 +172,13 @@ export function PluginSection() {
           disabled={!vaultPath || busyAction === "scaffold-ui-overhaul"}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
-          Scaffold UI Overhaul Plugin
+          {t.plugins.scaffoldUiOverhaul}
         </button>
       </div>
 
       {workspacePluginDir && (
         <p className="text-xs text-muted-foreground break-all">
-          Workspace plugins dir: <code>{workspacePluginDir}</code>
+          {t.plugins.workspaceDirLabel}: <code>{workspacePluginDir}</code>
         </p>
       )}
 
@@ -184,7 +188,7 @@ export function PluginSection() {
 
       {!loading && plugins.length === 0 && (
         <div className="text-xs text-muted-foreground border border-border rounded-lg p-3">
-          No plugins found yet. Use "Scaffold Example Plugin" to create your first plugin.
+          {t.plugins.noPluginsFound}
         </div>
       )}
 
@@ -212,9 +216,11 @@ export function PluginSection() {
                         <p className="text-sm font-medium text-foreground truncate">{plugin.name}</p>
                         <p className="text-xs text-muted-foreground">{plugin.id} · v{plugin.version}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          API {plugin.api_version || "1"}
-                          {plugin.min_app_version ? ` · min app ${plugin.min_app_version}` : ""}
-                          {plugin.is_desktop_only ? " · desktop-only" : ""}
+                          {t.plugins.labelApi} {plugin.api_version || "1"}
+                          {plugin.min_app_version
+                            ? ` · ${t.plugins.labelMinApp} ${plugin.min_app_version}`
+                            : ""}
+                          {plugin.is_desktop_only ? ` · ${t.plugins.labelDesktopOnly}` : ""}
                         </p>
                         {plugin.description && (
                           <p className="text-xs text-muted-foreground mt-1">{plugin.description}</p>
@@ -228,13 +234,13 @@ export function PluginSection() {
                             ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
                             : "bg-background/60 border-border hover:bg-muted"
                         }`}
-                      >
-                        {enabled ? "Enabled" : "Disabled"}
+                        >
+                        {enabled ? t.plugins.statusEnabled : t.plugins.statusDisabled}
                       </button>
                     </div>
 
                     <div className="text-xs text-muted-foreground break-all">
-                      Entry: <code>{plugin.entry_path}</code>
+                      {t.plugins.labelEntry}: <code>{plugin.entry_path}</code>
                     </div>
 
                     <div className="flex flex-wrap gap-1">
@@ -247,27 +253,29 @@ export function PluginSection() {
                         </span>
                       ))}
                       {(plugin.permissions || []).length === 0 && (
-                        <span className="text-[10px] text-muted-foreground">No permissions declared</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {t.plugins.statusNoPermissions}
+                        </span>
                       )}
                     </div>
 
                     {status?.error && !status?.incompatible && (
                       <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-md p-2">
-                        Runtime error: {status.error}
+                        {t.plugins.statusRuntimeError}: {status.error}
                       </div>
                     )}
                     {status?.incompatible && status?.reason && (
                       <div className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md p-2">
-                        Incompatible: {status.reason}
+                        {t.plugins.statusIncompatible}: {status.reason}
                         {status.error_detail?.field ? (
                           <div className="mt-1 text-[11px] text-amber-700/80">
-                            Field: <code>{status.error_detail.field}</code>
+                            {t.plugins.labelField}: <code>{status.error_detail.field}</code>
                           </div>
                         ) : null}
                       </div>
                     )}
                     {enabled && status?.loaded && !status?.error && (
-                      <div className="text-[11px] text-emerald-500">Loaded</div>
+                      <div className="text-[11px] text-emerald-500">{t.plugins.statusLoaded}</div>
                     )}
                   </div>
                 );

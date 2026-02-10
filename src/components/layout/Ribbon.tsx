@@ -262,7 +262,7 @@ export function Ribbon() {
         <button
           onClick={() => setShowPlugins(true)}
           className="w-8 h-8 ui-icon-btn"
-          title="Plugins"
+          title={t.ribbon.plugins}
         >
           <Puzzle size={18} />
         </button>
