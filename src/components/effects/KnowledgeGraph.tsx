@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useShallow } from "zustand/react/shallow";
 import {
   ZoomIn,
   ZoomOut,
@@ -229,7 +230,14 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
   const nodesRef = useRef<GraphNode[]>([]);
   const edgesRef = useRef<GraphEdge[]>([]);
 
-  const { fileTree, currentFile, openFile, openIsolatedGraphTab } = useFileStore();
+  const { fileTree, currentFile, openFile, openIsolatedGraphTab } = useFileStore(
+    useShallow((state) => ({
+      fileTree: state.fileTree,
+      currentFile: state.currentFile,
+      openFile: state.openFile,
+      openIsolatedGraphTab: state.openIsolatedGraphTab,
+    }))
+  );
   const { t } = useLocaleStore();
 
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);

@@ -7,6 +7,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { parseLuminaLink } from "@/services/pdf/annotations";
 import { readBinaryFileBase64 } from "@/lib/tauri";
 import mermaid from "mermaid";
+import { useShallow } from "zustand/react/shallow";
 
 // 初始化 mermaid
 mermaid.initialize({
@@ -22,7 +23,13 @@ interface ReadingViewProps {
 }
 
 export function ReadingView({ content, className = "" }: ReadingViewProps) {
-  const { fileTree, openFile, vaultPath } = useFileStore();
+  const { fileTree, openFile, vaultPath } = useFileStore(
+    useShallow((state) => ({
+      fileTree: state.fileTree,
+      openFile: state.openFile,
+      vaultPath: state.vaultPath,
+    }))
+  );
   const { openSecondaryPdf } = useSplitStore();
   const { setSplitView } = useUIStore();
   const containerRef = useRef<HTMLDivElement>(null);

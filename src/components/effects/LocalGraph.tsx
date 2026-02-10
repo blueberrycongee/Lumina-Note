@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { extractWikiLinks } from "./KnowledgeGraph";
 import { readFile } from "@/lib/tauri";
+import { useShallow } from "zustand/react/shallow";
 
 interface LocalNode {
   id: string;
@@ -36,7 +37,14 @@ export function LocalGraph({ className = "" }: LocalGraphProps) {
   const lastScannedFile = useRef<string | null>(null); // 上次完整扫描的文件
   const buildTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { fileTree, currentFile, openFile, currentContent } = useFileStore();
+  const { fileTree, currentFile, openFile, currentContent } = useFileStore(
+    useShallow((state) => ({
+      fileTree: state.fileTree,
+      currentFile: state.currentFile,
+      openFile: state.openFile,
+      currentContent: state.currentContent,
+    }))
+  );
 
   const [dimensions, setDimensions] = useState({ width: 200, height: 150 });
   const [hoverNode, setHoverNode] = useState<string | null>(null);
