@@ -27,6 +27,7 @@ import { CloudRelaySection } from "../settings/CloudRelaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { DiagnosticsSection } from "../settings/DiagnosticsSection";
 import { PluginSection } from "../settings/PluginSection";
+import { PluginStyleDevSection } from "../settings/PluginStyleDevSection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -325,6 +326,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
           <DiagnosticsSection />
           <PluginSection />
+          <PluginStyleDevSection />
 
           {/* 关于 */}
           <section className="space-y-4">

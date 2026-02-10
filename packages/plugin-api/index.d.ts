@@ -72,7 +72,17 @@ export interface LuminaPluginApi {
   };
   ui: {
     notify: (message: string) => void;
-    injectStyle: (css: string, scopeId?: string) => () => void;
+    injectStyle: (
+      css:
+        | string
+        | {
+            css: string;
+            scopeId?: string;
+            global?: boolean;
+            layer?: "base" | "theme" | "component" | "override";
+          },
+      scopeId?: string
+    ) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
   };
   theme: {

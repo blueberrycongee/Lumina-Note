@@ -1,11 +1,12 @@
 interface PluginViewPaneProps {
   title: string;
   html: string;
+  scopeId?: string;
 }
 
-export function PluginViewPane({ title, html }: PluginViewPaneProps) {
+export function PluginViewPane({ title, html, scopeId }: PluginViewPaneProps) {
   return (
-    <div className="flex-1 overflow-auto bg-background">
+    <div className="flex-1 overflow-auto bg-background" data-lumina-plugin-scope={scopeId}>
       <div className="px-4 py-3 border-b border-border">
         <h2 className="text-sm font-medium text-foreground">{title}</h2>
       </div>

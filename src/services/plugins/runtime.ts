@@ -12,6 +12,7 @@ import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { pluginThemeRuntime, type ThemeMode } from "@/services/plugins/themeRuntime";
+import { pluginStyleRuntime, type PluginStyleLayer } from "@/services/plugins/styleRuntime";
 import type { PluginInfo, PluginPermission, PluginRuntimeStatus } from "@/types/plugins";
 
 type PluginHostEvent = "app:ready" | "workspace:changed" | "active-file:changed";
@@ -82,7 +83,17 @@ interface LuminaPluginApi {
   };
   ui: {
     notify: (message: string) => void;
-    injectStyle: (css: string, scopeId?: string) => () => void;
+    injectStyle: (
+      css:
+        | string
+        | {
+            css: string;
+            scopeId?: string;
+            global?: boolean;
+            layer?: PluginStyleLayer;
+          },
+      scopeId?: string
+    ) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
   };
   theme: {
@@ -731,16 +742,23 @@ return exported(api, plugin);
             })
           );
         },
-        injectStyle: (css: string, scopeId?: string) => {
+        injectStyle: (
+          css:
+            | string
+            | {
+                css: string;
+                scopeId?: string;
+                global?: boolean;
+                layer?: PluginStyleLayer;
+              },
+          scopeId?: string
+        ) => {
           requirePermission("ui:decorate");
-          const style = document.createElement("style");
-          style.setAttribute("data-lumina-plugin-style", info.id);
-          if (scopeId) {
-            style.setAttribute("data-lumina-plugin-scope", scopeId);
-          }
-          style.textContent = css;
-          document.head.appendChild(style);
-          const cleanup = withOnce(() => style.remove());
+          const styleInput =
+            typeof css === "string"
+              ? { css, scopeId, global: !scopeId, layer: "component" as PluginStyleLayer }
+              : css;
+          const cleanup = withOnce(pluginStyleRuntime.registerStyle(info.id, styleInput));
           unsubscribers.push(cleanup);
           return cleanup;
         },
@@ -981,6 +999,7 @@ return exported(api, plugin);
       }
     }
     pluginThemeRuntime.clearPlugin(pluginId);
+    pluginStyleRuntime.clearPlugin(pluginId);
     window.dispatchEvent(new CustomEvent("lumina-plugin-commands-updated"));
     this.removePluginCommands(pluginId);
     this.removePluginListeners(pluginId);

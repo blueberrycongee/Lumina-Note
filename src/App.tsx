@@ -853,6 +853,7 @@ function App() {
               <PluginViewPane
                 title={activeTab.name}
                 html={activeTab.pluginViewHtml || "<p>Empty plugin view</p>"}
+                scopeId={activeTab.pluginViewType}
               />
             </div>
           ) : activeTab?.type === "ai-chat" ? (

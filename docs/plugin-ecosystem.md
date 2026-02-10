@@ -101,6 +101,8 @@ Plugin metadata:
 
 - `notify(message)`
 - `injectStyle(css, scopeId?)`
+  - `css` also supports `{ css, scopeId?, global?, layer? }`
+  - `layer`: `base | theme | component | override` (injection order low -> high)
 - `setThemeVariables(record)`
 
 ### `api.theme`
@@ -211,6 +213,11 @@ Open `Settings -> Plugins (Developer Preview)` to:
 - Enable/disable plugins
 - Open workspace plugin folder
 - Scaffold an example plugin
+
+Open `Settings -> Plugin Style Runtime (Dev)` to inspect:
+
+- active style layers
+- selector conflicts across plugins
 
 ## Quick start
 
