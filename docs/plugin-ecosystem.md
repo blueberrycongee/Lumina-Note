@@ -104,6 +104,11 @@ Plugin metadata:
   - `css` also supports `{ css, scopeId?, global?, layer? }`
   - `layer`: `base | theme | component | override` (injection order low -> high)
 - `setThemeVariables(record)`
+- `registerRibbonItem({ id, title, icon?, section?, order?, run })`
+- `registerStatusBarItem({ id, text, align?, order?, run? })`
+- `registerSettingSection({ id, title, html })`
+- `registerContextMenuItem({ id, title, order?, run })`
+- `registerCommandPaletteGroup({ id, title, commands })`
 
 ### `api.theme`
 

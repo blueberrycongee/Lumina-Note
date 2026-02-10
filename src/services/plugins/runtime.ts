@@ -43,6 +43,7 @@ type PluginCommandRecord = {
   id: string;
   title: string;
   description?: string;
+  groupTitle?: string;
   hotkey?: string;
   normalizedHotkey?: string;
   run: () => void;
@@ -95,6 +96,39 @@ interface LuminaPluginApi {
       scopeId?: string
     ) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
+    registerRibbonItem: (input: {
+      id: string;
+      title: string;
+      icon?: string;
+      section?: "top" | "bottom";
+      order?: number;
+      run: () => void;
+    }) => () => void;
+    registerStatusBarItem: (input: {
+      id: string;
+      text: string;
+      align?: "left" | "right";
+      order?: number;
+      run?: () => void;
+    }) => () => void;
+    registerSettingSection: (input: { id: string; title: string; html: string }) => () => void;
+    registerContextMenuItem: (input: {
+      id: string;
+      title: string;
+      order?: number;
+      run: (payload: { x: number; y: number; targetTag: string }) => void;
+    }) => () => void;
+    registerCommandPaletteGroup: (input: {
+      id: string;
+      title: string;
+      commands: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        hotkey?: string;
+        run: () => void;
+      }>;
+    }) => () => void;
   };
   theme: {
     registerPreset: (input: {
@@ -447,6 +481,7 @@ class PluginRuntime {
       pluginId: item.pluginId,
       title: item.title,
       description: item.description,
+      groupTitle: item.groupTitle,
       hotkey: item.hotkey,
     }));
   }
@@ -593,9 +628,12 @@ return exported(api, plugin);
       return unregister;
     };
 
-    const registerCommand = (input: PluginCommandInput) => {
+    const registerPluginCommand = (
+      input: PluginCommandInput,
+      opts: { scopedId?: string; groupTitle?: string } = {},
+    ) => {
       requirePermission("commands:register");
-      const rawId = input.id.trim();
+      const rawId = (opts.scopedId || input.id).trim();
       if (!rawId) {
         throw new Error("Command id cannot be empty");
       }
@@ -618,6 +656,7 @@ return exported(api, plugin);
         id,
         title: input.title || rawId,
         description: input.description,
+        groupTitle: opts.groupTitle,
         hotkey: input.hotkey,
         normalizedHotkey: normalizedHotkey || undefined,
         run: input.run,
@@ -626,6 +665,145 @@ return exported(api, plugin);
       const cleanup = withOnce(() => {
         this.pluginCommands.delete(id);
         window.dispatchEvent(new CustomEvent("lumina-plugin-commands-updated"));
+      });
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const registerCommand = (input: PluginCommandInput) => registerPluginCommand(input);
+
+    const registerRibbonItem = (input: {
+      id: string;
+      title: string;
+      icon?: string;
+      section?: "top" | "bottom";
+      order?: number;
+      run: () => void;
+    }) => {
+      requirePermission("ui:decorate");
+      const itemId = input.id.trim();
+      if (!itemId) throw new Error("Ribbon item id cannot be empty");
+      usePluginUiStore.getState().registerRibbonItem({
+        pluginId: info.id,
+        itemId,
+        title: input.title || itemId,
+        icon: input.icon,
+        section: input.section || "top",
+        order: input.order ?? 1000,
+        run: input.run,
+      });
+      const cleanup = withOnce(() => usePluginUiStore.getState().unregisterRibbonItem(info.id, itemId));
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const registerStatusBarItem = (input: {
+      id: string;
+      text: string;
+      align?: "left" | "right";
+      order?: number;
+      run?: () => void;
+    }) => {
+      requirePermission("ui:decorate");
+      const itemId = input.id.trim();
+      if (!itemId) throw new Error("Status bar item id cannot be empty");
+      usePluginUiStore.getState().registerStatusBarItem({
+        pluginId: info.id,
+        itemId,
+        text: input.text || itemId,
+        align: input.align || "left",
+        order: input.order ?? 1000,
+        run: input.run,
+      });
+      const cleanup = withOnce(() =>
+        usePluginUiStore.getState().unregisterStatusBarItem(info.id, itemId),
+      );
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const registerSettingSection = (input: { id: string; title: string; html: string }) => {
+      requirePermission("ui:decorate");
+      const sectionId = input.id.trim();
+      if (!sectionId) throw new Error("Settings section id cannot be empty");
+      usePluginUiStore.getState().registerSettingSection({
+        pluginId: info.id,
+        sectionId,
+        title: input.title || sectionId,
+        html: input.html || "",
+      });
+      const cleanup = withOnce(() =>
+        usePluginUiStore.getState().unregisterSettingSection(info.id, sectionId),
+      );
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const registerContextMenuItem = (input: {
+      id: string;
+      title: string;
+      order?: number;
+      run: (payload: { x: number; y: number; targetTag: string }) => void;
+    }) => {
+      requirePermission("ui:decorate");
+      const itemId = input.id.trim();
+      if (!itemId) throw new Error("Context menu item id cannot be empty");
+      usePluginUiStore.getState().registerContextMenuItem({
+        pluginId: info.id,
+        itemId,
+        title: input.title || itemId,
+        order: input.order ?? 1000,
+        run: input.run,
+      });
+      const cleanup = withOnce(() =>
+        usePluginUiStore.getState().unregisterContextMenuItem(info.id, itemId),
+      );
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const registerCommandPaletteGroup = (input: {
+      id: string;
+      title: string;
+      commands: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        hotkey?: string;
+        run: () => void;
+      }>;
+    }) => {
+      requirePermission("commands:register");
+      const groupId = input.id.trim();
+      if (!groupId) throw new Error("Command palette group id cannot be empty");
+      usePluginUiStore.getState().registerPaletteGroup({
+        pluginId: info.id,
+        groupId,
+        title: input.title || groupId,
+      });
+      const cleanupFns: Array<() => void> = [];
+      cleanupFns.push(withOnce(() =>
+        usePluginUiStore.getState().unregisterPaletteGroup(info.id, groupId),
+      ));
+      for (const command of input.commands || []) {
+        cleanupFns.push(
+          registerPluginCommand(
+            {
+              id: command.id,
+              title: command.title,
+              description: command.description,
+              hotkey: command.hotkey,
+              run: command.run,
+            },
+            {
+              scopedId: `${groupId}:${command.id}`,
+              groupTitle: input.title || groupId,
+            },
+          ),
+        );
+      }
+      const cleanup = withOnce(() => {
+        for (const fn of cleanupFns) fn();
       });
       unsubscribers.push(cleanup);
       return cleanup;
@@ -783,6 +961,11 @@ return exported(api, plugin);
           unsubscribers.push(cleanup);
           return cleanup;
         },
+        registerRibbonItem,
+        registerStatusBarItem,
+        registerSettingSection,
+        registerContextMenuItem,
+        registerCommandPaletteGroup,
       },
       theme: {
         registerPreset: registerThemePreset,
@@ -987,7 +1170,7 @@ return exported(api, plugin);
         console.error(`[PluginRuntime:${pluginId}] cleanup failed`, err);
       }
     }
-    usePluginUiStore.getState().clearPluginPanels(pluginId);
+    usePluginUiStore.getState().clearPluginUi(pluginId);
     for (const [type, def] of this.pluginTabTypes.entries()) {
       if (def.pluginId === pluginId) {
         this.pluginTabTypes.delete(type);

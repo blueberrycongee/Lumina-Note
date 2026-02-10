@@ -84,6 +84,39 @@ export interface LuminaPluginApi {
       scopeId?: string
     ) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
+    registerRibbonItem: (input: {
+      id: string;
+      title: string;
+      icon?: string;
+      section?: "top" | "bottom";
+      order?: number;
+      run: () => void;
+    }) => () => void;
+    registerStatusBarItem: (input: {
+      id: string;
+      text: string;
+      align?: "left" | "right";
+      order?: number;
+      run?: () => void;
+    }) => () => void;
+    registerSettingSection: (input: { id: string; title: string; html: string }) => () => void;
+    registerContextMenuItem: (input: {
+      id: string;
+      title: string;
+      order?: number;
+      run: (payload: { x: number; y: number; targetTag: string }) => void;
+    }) => () => void;
+    registerCommandPaletteGroup: (input: {
+      id: string;
+      title: string;
+      commands: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        hotkey?: string;
+        run: () => void;
+      }>;
+    }) => () => void;
   };
   theme: {
     registerPreset: (input: {

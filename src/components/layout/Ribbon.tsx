@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { exists } from "@/lib/tauri";
 import { SettingsModal } from "./SettingsModal";
+import { usePluginUiStore } from "@/stores/usePluginUiStore";
 
 export function Ribbon() {
   const [showSettings, setShowSettings] = useState(false);
@@ -40,6 +41,7 @@ export function Ribbon() {
     openFlashcardTab,
     openCardFlowTab,
   } = useFileStore();
+  const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
 
   // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -250,6 +252,20 @@ export function Ribbon() {
         >
           <Globe size={18} />
         </button>
+
+        {ribbonItems
+          .filter((item) => item.section === "top")
+          .sort((a, b) => a.order - b.order)
+          .map((item) => (
+            <button
+              key={`${item.pluginId}:${item.itemId}`}
+              onClick={() => item.run()}
+              className="w-8 h-8 ui-icon-btn text-xs"
+              title={item.title}
+            >
+              <span>{item.icon || "◎"}</span>
+            </button>
+          ))}
       </div>
 
       {/* Spacer */}
@@ -257,6 +273,20 @@ export function Ribbon() {
 
       {/* Bottom icons */}
       <div className="flex flex-col items-center gap-0.5">
+        {ribbonItems
+          .filter((item) => item.section === "bottom")
+          .sort((a, b) => a.order - b.order)
+          .map((item) => (
+            <button
+              key={`${item.pluginId}:${item.itemId}`}
+              onClick={() => item.run()}
+              className="w-8 h-8 ui-icon-btn text-xs"
+              title={item.title}
+            >
+              <span>{item.icon || "◎"}</span>
+            </button>
+          ))}
+
         {/* Theme toggle */}
         <button
           onClick={toggleTheme}

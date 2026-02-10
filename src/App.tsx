@@ -47,6 +47,8 @@ import { usePluginStore } from "@/stores/usePluginStore";
 import { pluginRuntime } from "@/services/plugins/runtime";
 import { PluginViewPane } from "@/components/plugins/PluginViewPane";
 import { PluginPanelDock } from "@/components/plugins/PluginPanelDock";
+import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
+import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHost";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -972,6 +974,8 @@ function App() {
         </div>
       )}
 
+      <PluginStatusBar />
+      <PluginContextMenuHost />
       <MobileWorkspaceToast />
       <PluginPanelDock />
     </div>

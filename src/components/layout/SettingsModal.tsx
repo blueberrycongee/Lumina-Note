@@ -12,6 +12,7 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { OFFICIAL_THEMES, Theme } from "@/config/themes";
 import { loadUserThemes, getUserThemes, deleteUserTheme } from "@/config/themePlugin";
 import { X, Check, Plus, Trash2, Palette } from "lucide-react";
@@ -40,6 +41,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { config } = useAIStore();
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const { vaultPath, fileTree } = useFileStore();
+  const pluginSettingSections = usePluginUiStore((state) => state.settingSections);
 
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [editingTheme, setEditingTheme] = useState<Theme | undefined>();
@@ -327,6 +329,29 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           <DiagnosticsSection />
           <PluginSection />
           <PluginStyleDevSection />
+
+          {pluginSettingSections.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Plugin Settings
+              </h3>
+              {pluginSettingSections.map((section) => (
+                <div
+                  key={`${section.pluginId}:${section.sectionId}`}
+                  className="rounded-lg border border-border bg-background/60 p-3 space-y-2"
+                  data-lumina-plugin-scope={`${section.pluginId}:${section.sectionId}`}
+                >
+                  <div className="text-xs font-medium text-foreground">
+                    {section.title} <span className="text-muted-foreground">({section.pluginId})</span>
+                  </div>
+                  <div
+                    className="prose prose-sm max-w-none dark:prose-invert"
+                    dangerouslySetInnerHTML={{ __html: section.html }}
+                  />
+                </div>
+              ))}
+            </section>
+          )}
 
           {/* 关于 */}
           <section className="space-y-4">

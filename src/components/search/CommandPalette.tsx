@@ -30,6 +30,7 @@ interface CommandItem {
   id: string;
   label: string;
   description?: string;
+  groupTitle?: string;
   icon: React.ReactNode;
   shortcut?: string;
   action: () => void;
@@ -257,6 +258,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       id: cmd.id,
       label: cmd.title,
       description: cmd.description || `Plugin command from ${cmd.pluginId}`,
+      groupTitle: cmd.groupTitle,
       icon: <Command size={16} />,
       shortcut: cmd.hotkey,
       action: () => {
@@ -452,6 +454,9 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                           <div className="text-xs text-muted-foreground truncate">
                             {cmd.description}
                           </div>
+                        )}
+                        {cmd.groupTitle && (
+                          <div className="text-[10px] text-primary/80 truncate">{cmd.groupTitle}</div>
                         )}
                       </div>
                       {cmd.shortcut && (

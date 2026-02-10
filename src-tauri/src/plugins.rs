@@ -486,6 +486,39 @@ fn write_example_plugin(plugin_dir: &Path) -> Result<(), String> {
   const cleanupTheme = api.ui.setThemeVariables({
     "--lumina-plugin-accent": "#0ea5e9"
   });
+  const removeRibbon = api.ui.registerRibbonItem({
+    id: "hello-ribbon",
+    title: "Hello Ribbon",
+    icon: "🌈",
+    section: "top",
+    run: () => api.ui.notify("hello-lumina ribbon clicked")
+  });
+  const removeStatus = api.ui.registerStatusBarItem({
+    id: "hello-status",
+    text: "hello-lumina ready",
+    align: "right",
+    run: () => api.ui.notify("hello-lumina status clicked")
+  });
+  const removeSettings = api.ui.registerSettingSection({
+    id: "hello-settings",
+    title: "Hello Lumina Settings",
+    html: "<p>Example plugin settings section.</p>"
+  });
+  const removeContextMenu = api.ui.registerContextMenuItem({
+    id: "hello-context",
+    title: "Hello from context menu",
+    run: ({ targetTag }) => api.ui.notify(`Context on <${targetTag}>`)
+  });
+  const removePaletteGroup = api.ui.registerCommandPaletteGroup({
+    id: "hello-group",
+    title: "Hello Lumina",
+    commands: [{
+      id: "say-hi",
+      title: "Say hi",
+      description: "Show hello message",
+      run: () => api.ui.notify("hi from palette group")
+    }]
+  });
   const cleanupStyle = api.ui.injectStyle(`
     :root {
       --plugin-hello-ring: color-mix(in srgb, var(--lumina-plugin-accent) 40%, transparent);
@@ -515,6 +548,11 @@ fn write_example_plugin(plugin_dir: &Path) -> Result<(), String> {
     unregisterCommand();
     unregisterView();
     removePanel();
+    removeRibbon();
+    removeStatus();
+    removeSettings();
+    removeContextMenu();
+    removePaletteGroup();
     offWorkspace();
     api.runtime.clearInterval(timer);
     cleanupStyle();
