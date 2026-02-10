@@ -234,6 +234,39 @@ body.resizing iframe[data-codex-iframe="true"] {
       transform: translateX(120%);
     }
   }
+
+  @keyframes stream-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes stream-dot-pulse {
+    0%,
+    100% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.72;
+    }
+  }
+
+  .streaming-content-enter {
+    animation: stream-fade-in 220ms ease-out;
+  }
+
+  .streaming-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: hsl(var(--muted-foreground) / 0.9);
+    animation: stream-dot-pulse 1.35s ease-in-out infinite;
+  }
 }
 
 * {

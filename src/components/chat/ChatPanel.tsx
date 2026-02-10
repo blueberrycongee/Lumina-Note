@@ -351,20 +351,20 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
           <div>
             {streamingContent ? (
               <div 
-                className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_*]:!text-xs [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-xs"
+                className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none streaming-content-enter [&_*]:!text-xs [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-xs"
               >
                 <span dangerouslySetInnerHTML={{ __html: parseMarkdown(streamingContent) }} />
-                {/* 闪烁光标 | */}
-                <span 
-                  className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle animate-pulse"
-                  style={{ animationDuration: '1s' }}
-                />
+                <div className="mt-2 flex items-center gap-1.5" aria-hidden>
+                  <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
+                  <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
+                  <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
+                </div>
               </div>
             ) : (
-              <div className="flex items-center gap-1 h-6">
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                <span className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+              <div className="flex items-center gap-1.5 h-6 streaming-content-enter" aria-hidden>
+                <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
+                <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
+                <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
               </div>
             )}
           </div>

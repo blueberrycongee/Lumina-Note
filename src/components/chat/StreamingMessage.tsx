@@ -57,13 +57,13 @@ export const StreamingMessage = memo(function StreamingMessage({
         <Bot size={16} className="text-muted-foreground" />
       </div>
       <div className="max-w-[80%] text-foreground">
-        <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
+        <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed streaming-content-enter">
           <span dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }} />
-          {/* 闪烁光标 */}
-          <span
-            className="inline-block w-0.5 h-4 bg-primary ml-0.5 align-middle animate-pulse"
-            style={{ animationDuration: "1s" }}
-          />
+        </div>
+        <div className="mt-2 flex items-center gap-1.5" aria-hidden>
+          <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
+          <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
+          <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
         </div>
       </div>
     </div>
@@ -112,19 +112,10 @@ export const TypingIndicator = memo(function TypingIndicator({
       <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
         <Bot size={16} className="text-muted-foreground" />
       </div>
-      <div className="flex items-center gap-1 h-8">
-        <span 
-          className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" 
-          style={{ animationDelay: "0ms" }} 
-        />
-        <span 
-          className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" 
-          style={{ animationDelay: "150ms" }} 
-        />
-        <span 
-          className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" 
-          style={{ animationDelay: "300ms" }} 
-        />
+      <div className="flex items-center gap-1.5 h-8 streaming-content-enter" aria-hidden>
+        <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
+        <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
+        <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
       </div>
     </div>
   );

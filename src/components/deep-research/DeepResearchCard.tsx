@@ -519,7 +519,11 @@ function ReportContent({
         {content}
       </ReactMarkdown>
       {isStreaming && (
-        <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
+        <span className="ml-1 inline-flex items-center gap-1 align-middle" aria-hidden>
+          <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
+          <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
+          <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
+        </span>
       )}
     </div>
   );
