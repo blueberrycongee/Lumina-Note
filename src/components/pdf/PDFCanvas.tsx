@@ -81,7 +81,7 @@ export function PDFCanvas({
   }, []);
   
   // 处理文本选择
-  const handleMouseUp = useCallback((_e: React.MouseEvent) => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     if (!enableAnnotations || !pageSize) return;
     
     const selection = window.getSelection();
@@ -121,9 +121,32 @@ export function PDFCanvas({
     
     // 打开批注弹窗
     const lastRect = rects[rects.length - 1];
+    let anchorX = e.clientX;
+    let anchorY = e.clientY;
+
+    // Fallback for edge cases where mouse coordinates are unreliable.
+    if (!Number.isFinite(anchorX) || !Number.isFinite(anchorY) || (anchorX === 0 && anchorY === 0)) {
+      try {
+        if (selection.focusNode) {
+          const focusRange = document.createRange();
+          focusRange.setStart(selection.focusNode, selection.focusOffset);
+          focusRange.setEnd(selection.focusNode, selection.focusOffset);
+          const focusRect = focusRange.getBoundingClientRect();
+          anchorX = focusRect.right || lastRect.right;
+          anchorY = focusRect.bottom || lastRect.bottom;
+        } else {
+          anchorX = lastRect.right;
+          anchorY = lastRect.bottom;
+        }
+      } catch {
+        anchorX = lastRect.right;
+        anchorY = lastRect.bottom;
+      }
+    }
+
     openPopover({
-      x: lastRect.right,
-      y: lastRect.bottom,
+      x: anchorX,
+      y: anchorY,
       selectedText,
       position: {
         pageIndex: currentPage,
