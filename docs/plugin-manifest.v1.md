@@ -2,6 +2,8 @@
 
 本文档定义 Lumina 插件 `plugin.json` 的推荐字段与约束，用于手动安装阶段和后续生态演进。
 
+配套 schema：`docs/plugin-manifest.schema.json`
+
 ## Example
 
 ```json
