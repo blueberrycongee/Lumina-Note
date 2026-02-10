@@ -17,6 +17,111 @@ import { getCurrentTranslations } from '@/stores/useLocaleStore';
 /** 填空正则：{{c1::answer}} 或 {{c1::answer::hint}} */
 const CLOZE_REGEX = /\{\{c(\d+)::([^}]+?)(?:::([^}]+))?\}\}/g;
 
+function normalizeScalarString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const lower = trimmed.toLowerCase();
+  if (lower === 'undefined' || lower === 'null') return undefined;
+  return trimmed;
+}
+
+function normalizeStringArray(value: unknown): string[] | undefined {
+  if (Array.isArray(value)) {
+    const result = value
+      .map(item => String(item).trim())
+      .filter(Boolean);
+    return result.length > 0 ? result : undefined;
+  }
+
+  const scalar = normalizeScalarString(value);
+  if (!scalar) return undefined;
+
+  const candidates = [scalar, scalar.replace(/\\"/g, '"')];
+  for (const candidate of candidates) {
+    if (candidate.startsWith('[') && candidate.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (Array.isArray(parsed)) {
+          const result = parsed
+            .map(item => String(item).trim())
+            .filter(Boolean);
+          return result.length > 0 ? result : undefined;
+        }
+      } catch {
+        // ignore parse failure and continue fallback
+      }
+    }
+  }
+
+  if (scalar.includes(',')) {
+    const split = scalar
+      .split(',')
+      .map(item => item.trim())
+      .filter(Boolean);
+    return split.length > 0 ? split : undefined;
+  }
+
+  return [scalar];
+}
+
+function normalizeNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function normalizeBoolean(value: unknown): boolean | undefined {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lowered = value.trim().toLowerCase();
+    if (lowered === 'true') return true;
+    if (lowered === 'false') return false;
+  }
+  return undefined;
+}
+
+function stripFrontmatter(markdown: string): string {
+  const match = markdown.match(/^---\n[\s\S]*?\n---\n?/);
+  return match ? markdown.slice(match[0].length) : markdown;
+}
+
+function extractBasicFromBody(markdownContent?: string): { front?: string; back?: string } {
+  if (!markdownContent) return {};
+
+  const body = stripFrontmatter(markdownContent).trim();
+  if (!body) return {};
+
+  const lines = body.split('\n');
+  const headingIndex = lines.findIndex(line => line.trim().startsWith('## '));
+
+  if (headingIndex >= 0) {
+    const heading = lines[headingIndex]
+      .trim()
+      .slice(3)
+      .trim()
+      .replace(/^(问[:：]\s*|問[:：]\s*|q[:：]\s*|question[:：]\s*)/i, '');
+    const back = lines.slice(headingIndex + 1).join('\n').trim();
+    return {
+      front: normalizeScalarString(heading),
+      back: normalizeScalarString(back),
+    };
+  }
+
+  const firstContentIndex = lines.findIndex(line => line.trim().length > 0);
+  if (firstContentIndex < 0) return {};
+
+  const front = lines[firstContentIndex].trim();
+  const back = lines.slice(firstContentIndex + 1).join('\n').trim();
+  return {
+    front: normalizeScalarString(front),
+    back: normalizeScalarString(back),
+  };
+}
+
 /**
  * 解析填空文本，提取所有填空
  */
@@ -148,16 +253,19 @@ export function cardToYaml(card: Partial<Flashcard>): Record<string, any> {
   if (card.type) yaml.type = card.type;
   if (card.deck) yaml.deck = card.deck;
   if (card.source) yaml.source = card.source;
-  if (card.tags?.length) yaml.tags = card.tags;
+  const tags = normalizeStringArray(card.tags as unknown);
+  if (tags?.length) yaml.tags = tags;
   
   // 内容字段（根据类型）
   if (card.front) yaml.front = card.front;
   if (card.back) yaml.back = card.back;
   if (card.text) yaml.text = card.text;
   if (card.question) yaml.question = card.question;
-  if (card.options) yaml.options = card.options;
+  const options = normalizeStringArray(card.options as unknown);
+  if (options?.length) yaml.options = options;
   if (card.answer !== undefined) yaml.answer = card.answer;
-  if (card.items) yaml.items = card.items;
+  const items = normalizeStringArray(card.items as unknown);
+  if (items?.length) yaml.items = items;
   if (card.ordered !== undefined) yaml.ordered = card.ordered;
   if (card.explanation) yaml.explanation = card.explanation;
   
@@ -177,25 +285,34 @@ export function cardToYaml(card: Partial<Flashcard>): Record<string, any> {
 /**
  * 从 YAML frontmatter 解析卡片数据
  */
-export function yamlToCard(yaml: Record<string, any>, notePath: string): Flashcard | null {
+export function yamlToCard(
+  yaml: Record<string, any>,
+  notePath: string,
+  markdownContent?: string
+): Flashcard | null {
   if (yaml.db !== 'flashcards') return null;
-  
+
+  const type = normalizeScalarString(yaml.type) || 'basic';
+  const basicFallback = (type === 'basic' || type === 'basic-reversed')
+    ? extractBasicFromBody(markdownContent)
+    : {};
+
   return {
     id: notePath,
     notePath,
-    type: yaml.type || 'basic',
+    type: type as Flashcard['type'],
     deck: yaml.deck || 'Default',
     
     // 内容字段
-    front: yaml.front,
-    back: yaml.back,
-    text: yaml.text,
-    question: yaml.question,
-    options: yaml.options,
-    answer: yaml.answer,
-    items: yaml.items,
-    ordered: yaml.ordered,
-    explanation: yaml.explanation,
+    front: normalizeScalarString(yaml.front) || basicFallback.front,
+    back: normalizeScalarString(yaml.back) || basicFallback.back,
+    text: normalizeScalarString(yaml.text),
+    question: normalizeScalarString(yaml.question),
+    options: normalizeStringArray(yaml.options),
+    answer: normalizeNumber(yaml.answer),
+    items: normalizeStringArray(yaml.items),
+    ordered: normalizeBoolean(yaml.ordered),
+    explanation: normalizeScalarString(yaml.explanation),
     
     // SM-2 状态
     ease: yaml.ease ?? INITIAL_SM2_STATE.ease,
@@ -206,7 +323,7 @@ export function yamlToCard(yaml: Record<string, any>, notePath: string): Flashca
     
     // 元数据
     source: yaml.source,
-    tags: yaml.tags,
+    tags: normalizeStringArray(yaml.tags),
     created: yaml.created ?? new Date().toISOString().split('T')[0],
   };
 }
@@ -238,22 +355,22 @@ export function generateCardMarkdown(card: Partial<Flashcard>): string {
   
   // 添加卡片内容作为笔记正文（方便阅读）
   if (card.type === 'basic' || card.type === 'basic-reversed') {
-    yamlLines.push(`## ${t.flashcard.markdownQuestionPrefix} ${card.front}`);
+    yamlLines.push(`## ${t.flashcard.markdownQuestionPrefix} ${card.front ?? ''}`);
     yamlLines.push('');
-    yamlLines.push(card.back || '');
+    yamlLines.push(card.back ?? '');
   } else if (card.type === 'cloze') {
     yamlLines.push(`## ${t.flashcard.markdownClozeTitle}`);
     yamlLines.push('');
     yamlLines.push(card.text || '');
   } else if (card.type === 'mcq') {
-    yamlLines.push(`## ${card.question}`);
+    yamlLines.push(`## ${card.question ?? ''}`);
     yamlLines.push('');
     card.options?.forEach((opt, i) => {
       const marker = i === card.answer ? '✓' : ' ';
       yamlLines.push(`- [${marker}] ${opt}`);
     });
   } else if (card.type === 'list') {
-    yamlLines.push(`## ${card.question}`);
+    yamlLines.push(`## ${card.question ?? ''}`);
     yamlLines.push('');
     card.items?.forEach((item, i) => {
       yamlLines.push(`${i + 1}. ${item}`);

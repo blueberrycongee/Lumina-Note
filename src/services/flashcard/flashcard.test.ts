@@ -9,6 +9,8 @@ import {
   renderClozeBack,
   expandClozeCard,
   expandReversedCard,
+  yamlToCard,
+  generateCardMarkdown,
 } from './flashcard';
 
 describe('Cloze 填空语法解析', () => {
@@ -198,5 +200,53 @@ describe('卡片生成', () => {
       expect(result[0].source).toBe('source.md');
       expect(result[1].source).toBe('source.md');
     });
+  });
+});
+
+describe('YAML 兼容与回写', () => {
+  it('should recover basic front/back from markdown body when YAML fields are missing', () => {
+    const yaml = {
+      db: 'flashcards',
+      type: 'basic',
+      deck: '数学',
+      tags: '["数学", "微积分", "泰勒公式"]',
+      ease: 2.3,
+      interval: 1,
+      repetitions: 0,
+      due: '2026-02-11',
+      lastReview: '2026-02-10',
+      created: '2026-01-29',
+    };
+
+    const markdown = `---
+db: "flashcards"
+type: "basic"
+deck: "数学"
+tags: "[\\"数学\\", \\"微积分\\", \\"泰勒公式\\"]"
+ease: 2.3
+interval: 1
+repetitions: 0
+due: "2026-02-11"
+lastReview: "2026-02-10"
+created: "2026-01-29"
+---
+
+## 问： 泰勒公式是什么？
+
+用一个多项式在某点附近近似函数。`;
+
+    const card = yamlToCard(yaml, 'Flashcards/test.md', markdown);
+    expect(card).not.toBeNull();
+    expect(card?.front).toBe('泰勒公式是什么？');
+    expect(card?.back).toBe('用一个多项式在某点附近近似函数。');
+    expect(card?.tags).toEqual(['数学', '微积分', '泰勒公式']);
+  });
+
+  it('should not output undefined in generated markdown', () => {
+    const markdown = generateCardMarkdown({
+      type: 'basic',
+      deck: 'Default',
+    });
+    expect(markdown).not.toContain('undefined');
   });
 });

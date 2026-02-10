@@ -161,7 +161,7 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
                 
                 if (yaml.db === 'flashcards') {
                   const notePath = `Flashcards/${entry.name}`;
-                  const card = yamlToCard(yaml, notePath);
+                  const card = yamlToCard(yaml, notePath, content);
                   if (card) {
                     newCards.set(notePath, card);
                   }
