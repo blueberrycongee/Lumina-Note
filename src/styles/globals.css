@@ -1112,11 +1112,12 @@ mark {
 
 /* CodeMirror Code Block Widget */
 .cm-code-block-widget {
-  margin: 1rem 0;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background: hsl(var(--muted));
-  border: 1px solid hsl(var(--border));
+  margin: 0;
+  padding: 0.5rem 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
 }
 
 .cm-code-block-widget pre {
@@ -1126,6 +1127,9 @@ mark {
   font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.6;
+  border-radius: 0.5rem;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
 }
 
 .cm-code-block-widget code {

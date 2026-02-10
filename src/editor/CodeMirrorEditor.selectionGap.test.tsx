@@ -92,4 +92,51 @@ describe("CodeMirror live selection gap bridge", () => {
     });
     expect(container.querySelector(".cm-selectionLayer")).not.toBeNull();
   });
+
+  it("does not expand code block when selection only touches its boundary", () => {
+    const content = "## JSON\n```json\n{\"name\":\"demo\"}\n```";
+    const { container, view } = setupEditor(content);
+
+    // Select heading line including newline; selection end equals code fence start.
+    act(() => {
+      view.dispatch({ selection: { anchor: 0, head: 8 } });
+    });
+
+    // Code block should remain rendered as widget, not source text.
+    expect(container.querySelector(".cm-code-block-widget")).not.toBeNull();
+    expect(container.textContent ?? "").not.toContain("```json");
+  });
+
+  it("does not expand code block when selection crosses into it from heading", () => {
+    const content = "## JSON\n```json\n{\"name\":\"demo\"}\n```";
+    const { container, view } = setupEditor(content);
+
+    // Slightly overshoot from heading into the first fence char.
+    act(() => {
+      view.dispatch({ selection: { anchor: 0, head: 9 } });
+    });
+
+    expect(container.querySelector(".cm-code-block-widget")).not.toBeNull();
+    expect(container.textContent ?? "").not.toContain("```json");
+  });
+
+  it("expands code block when selection is inside code block content", () => {
+    const content = "## JSON\n```json\n{\"name\":\"demo\"}\n```";
+    const { container, view } = setupEditor(content);
+
+    // Place caret inside fenced code content.
+    act(() => {
+      view.dispatch({ selection: { anchor: 12, head: 12 } });
+    });
+
+    expect(container.textContent ?? "").toContain("```json");
+  });
+
+  it("renders code block widget without external margin utility classes", () => {
+    const content = "```json\n{\"name\":\"demo\"}\n```";
+    const { container } = setupEditor(content);
+    const widget = container.querySelector(".cm-code-block-widget");
+    expect(widget).not.toBeNull();
+    expect(widget?.className.includes("my-2")).toBe(false);
+  });
 });

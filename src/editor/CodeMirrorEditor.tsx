@@ -348,9 +348,9 @@ class CodeBlockWidget extends WidgetType {
   eq(other: CodeBlockWidget) { return other.code === this.code && other.language === this.language; }
   toDOM() {
     const c = document.createElement("div");
-    c.className = "cm-code-block-widget relative group rounded-md overflow-hidden border my-2";
+    c.className = "cm-code-block-widget relative group";
     c.dataset.widgetType = "codeblock";
-    c.innerHTML = `<pre class="p-3 m-0 bg-muted/50 overflow-auto text-sm"><code class="hljs font-mono ${this.language ? 'language-' + this.language : ''}"></code></pre>`;
+    c.innerHTML = `<pre class="p-3 m-0 overflow-auto text-sm"><code class="hljs font-mono ${this.language ? 'language-' + this.language : ''}"></code></pre>`;
     const codeEl = c.querySelector("code")!;
     if (this.language && lowlight.registered(this.language)) {
       try { const tree = lowlight.highlight(this.language, this.code); this.hastToDOM(tree.children, codeEl); } catch { }
@@ -613,6 +613,23 @@ const codeBlockStateField = StateField.define<DecorationSet>({
   provide: f => EditorView.decorations.from(f),
 });
 
+function shouldShowCodeBlockSource(state: EditorState, from: number, to: number): boolean {
+  const shouldCollapse = state.facet(collapseOnSelectionFacet);
+  if (!shouldCollapse) return false;
+  const isDragging = state.field(mouseSelectingField, false);
+  if (isDragging) return false;
+  return state.selection.ranges.some((range) => {
+    if (range.from === range.to) {
+      // Caret inside code block should reveal source for direct editing.
+      return range.from > from && range.from < to;
+    }
+    // Only expand when the selected range is fully inside the code block.
+    // This avoids cross-boundary selection (e.g. selecting a heading near a block)
+    // from unexpectedly expanding the block.
+    return range.from >= from && range.to <= to;
+  });
+}
+
 function buildCodeBlockDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
   codeBlockPositionsCache = [];
@@ -620,7 +637,7 @@ function buildCodeBlockDecorations(state: EditorState): DecorationSet {
     enter: (node) => {
       if (node.name === "FencedCode") {
         codeBlockPositionsCache.push({ from: node.from, to: node.to });
-        if (shouldShowSource(state, node.from, node.to)) return;
+        if (shouldShowCodeBlockSource(state, node.from, node.to)) return;
         const text = state.doc.sliceString(node.from, node.to);
         const lines = text.split('\n');
         if (lines.length < 2) return;
