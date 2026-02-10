@@ -229,6 +229,8 @@ export function MainAIChatShell() {
     checkFirstLoad: checkChatFirstLoad,
     config,
     totalTokensUsed: chatTotalTokens,
+    pendingInputAppends,
+    consumeInputAppends,
   } = useAIStore(useShallow((state) => ({
     messages: state.messages,
     sessions: state.sessions,
@@ -243,6 +245,8 @@ export function MainAIChatShell() {
     checkFirstLoad: state.checkFirstLoad,
     config: state.config,
     totalTokensUsed: state.totalTokensUsed,
+    pendingInputAppends: state.pendingInputAppends,
+    consumeInputAppends: state.consumeInputAppends,
   })));
 
   useRAGStore();
@@ -684,6 +688,18 @@ export function MainAIChatShell() {
     window.addEventListener('ai-input-append', handleAppendInput as EventListener);
     return () => window.removeEventListener('ai-input-append', handleAppendInput as EventListener);
   }, []);
+
+  useEffect(() => {
+    if (pendingInputAppends.length === 0) {
+      return;
+    }
+    setInput((prev) => {
+      const appended = pendingInputAppends.join("\n\n");
+      return prev ? `${prev}\n\n${appended}` : appended;
+    });
+    consumeInputAppends();
+    textareaRef.current?.focus();
+  }, [pendingInputAppends, consumeInputAppends]);
 
   // 检测输入是否仅仅是一个网页链接
   const isOnlyWebLink = useCallback((text: string): string | null => {

@@ -107,7 +107,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     setFloatingPanelOpen(true);
 
     if (mode === 'research') {
-      window.dispatchEvent(new CustomEvent('ai-input-append', { detail: { text: citationText } }));
+      useAIStore.getState().enqueueInputAppend(citationText);
     } else if (mode === 'codex') {
       try {
         await navigator.clipboard.writeText(citationText);

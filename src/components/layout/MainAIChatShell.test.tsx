@@ -4,12 +4,14 @@ import { MainAIChatShell } from "./MainAIChatShell";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useCodexPanelDockStore } from "@/stores/useCodexPanelDock";
+import { useAIStore } from "@/stores/useAIStore";
 
 describe("MainAIChatShell", () => {
   beforeEach(() => {
     useUIStore.setState({ chatMode: "chat" });
     useFileStore.setState({ vaultPath: "/tmp" });
     useCodexPanelDockStore.setState({ targets: {} });
+    useAIStore.setState({ pendingInputAppends: [] });
   });
 
   it("renders Codex slot and hides chat input when in codex mode", () => {
@@ -48,5 +50,15 @@ describe("MainAIChatShell", () => {
     fireEvent(window, new CustomEvent("ai-input-append", { detail: { text: "PDF Quote" } }));
 
     expect(input.value).toBe("Initial prompt\n\nPDF Quote");
+  });
+
+  it("consumes queued input appends from store on mount", () => {
+    useUIStore.setState({ chatMode: "research" });
+    useAIStore.getState().enqueueInputAppend("Queued from PDF");
+    render(<MainAIChatShell />);
+
+    const input = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(input.value).toContain("Queued from PDF");
+    expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 });
