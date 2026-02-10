@@ -34,6 +34,12 @@ const SUMMARY_INTERVAL_MS = 20_000;
 
 let summaryTimer: number | null = null;
 
+declare global {
+  interface Window {
+    __luminaRecordRenderSample?: (sample: DevRenderSample) => void;
+  }
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -231,6 +237,7 @@ export function bootstrapDevPerfMonitor(): void {
   host.__luminaDevPerfInitialized = true;
 
   getSnapshot();
+  window.__luminaRecordRenderSample = recordDevRenderSample;
   setupPerformanceObservers();
   setupStoreObserver();
   scheduleStartupSmoke();

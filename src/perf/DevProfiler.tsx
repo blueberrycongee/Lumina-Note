@@ -1,5 +1,4 @@
 import { Profiler, type ReactNode } from "react";
-import { recordDevRenderSample } from "@/perf/devPerfMonitor";
 
 interface DevProfilerProps {
   id: string;
@@ -15,7 +14,16 @@ export function DevProfiler({ id, children }: DevProfilerProps) {
     <Profiler
       id={id}
       onRender={(_id, phase, actualDuration, baseDuration, _startTime, commitTime) => {
-        recordDevRenderSample({
+        const host = window as unknown as {
+          __luminaRecordRenderSample?: (sample: {
+            id: string;
+            phase: "mount" | "update" | "nested-update";
+            actualDuration: number;
+            baseDuration: number;
+            commitTime: number;
+          }) => void;
+        };
+        host.__luminaRecordRenderSample?.({
           id,
           phase,
           actualDuration,
@@ -28,4 +36,3 @@ export function DevProfiler({ id, children }: DevProfilerProps) {
     </Profiler>
   );
 }
-
