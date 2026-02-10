@@ -38,4 +38,15 @@ describe("MainAIChatShell", () => {
     const input = screen.getByRole("textbox") as HTMLTextAreaElement;
     expect(input.value).toContain("Quoted from PDF");
   });
+
+  it("appends incoming ai-input-append text as a new paragraph", () => {
+    useUIStore.setState({ chatMode: "chat" });
+    render(<MainAIChatShell />);
+
+    const input = screen.getByRole("textbox") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "Initial prompt" } });
+    fireEvent(window, new CustomEvent("ai-input-append", { detail: { text: "PDF Quote" } }));
+
+    expect(input.value).toBe("Initial prompt\n\nPDF Quote");
+  });
 });
