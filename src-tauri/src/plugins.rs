@@ -316,6 +316,10 @@ fn list_plugins_in_root(root: &Path, source: &str) -> Vec<PluginInfo> {
 
 pub fn list_plugins(app: &AppHandle, workspace_path: Option<&str>) -> Vec<PluginInfo> {
     let roots = plugin_roots(app, workspace_path);
+    merge_discovered_plugins(roots)
+}
+
+fn merge_discovered_plugins(roots: Vec<(String, PathBuf)>) -> Vec<PluginInfo> {
     let mut seen = HashSet::<String>::new();
     let mut ordered = Vec::new();
 
@@ -342,7 +346,13 @@ pub fn read_plugin_entry(
     workspace_path: Option<&str>,
 ) -> Result<PluginEntry, String> {
     let roots = plugin_roots(app, workspace_path);
+    read_plugin_entry_from_roots(roots, plugin_id)
+}
 
+fn read_plugin_entry_from_roots(
+    roots: Vec<(String, PathBuf)>,
+    plugin_id: &str,
+) -> Result<PluginEntry, String> {
     for (source, root) in roots {
         let entries =
             fs::read_dir(&root).map_err(|e| format!("Failed to read {}: {}", root.display(), e))?;
@@ -523,4 +533,92 @@ pub async fn plugin_scaffold_example(workspace_path: String) -> Result<String, S
     let example_dir = plugins_dir.join("hello-lumina");
     write_example_plugin(&example_dir)?;
     Ok(example_dir.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn test_root(name: &str) -> PathBuf {
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("time")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("lumina-plugin-tests-{}-{}", name, ts));
+        fs::create_dir_all(&path).expect("create test root");
+        path
+    }
+
+    fn write_plugin(root: &Path, folder: &str, manifest: &str, entry: Option<&str>) -> PathBuf {
+        let dir = root.join(folder);
+        fs::create_dir_all(&dir).expect("create plugin dir");
+        fs::write(dir.join("plugin.json"), manifest).expect("write plugin manifest");
+        if let Some(code) = entry {
+            fs::write(dir.join("index.js"), code).expect("write plugin entry");
+        }
+        dir
+    }
+
+    #[test]
+    fn merge_keeps_invalid_without_shadowing_valid_plugin() {
+        let workspace_root = test_root("workspace");
+        let user_root = test_root("user");
+
+        write_plugin(
+            &workspace_root,
+            "hello-lumina",
+            r#"{"id":"hello-lumina","name":"Bad","version":"bad","entry":"index.js"}"#,
+            Some("module.exports = () => {};"),
+        );
+        write_plugin(
+            &user_root,
+            "hello-lumina",
+            r#"{"id":"hello-lumina","name":"Good","version":"1.0.0","entry":"index.js"}"#,
+            Some("module.exports = () => {};"),
+        );
+
+        let merged = merge_discovered_plugins(vec![
+            ("workspace".to_string(), workspace_root.clone()),
+            ("user".to_string(), user_root.clone()),
+        ]);
+
+        let invalid = merged
+            .iter()
+            .find(|p| p.source == "workspace")
+            .expect("workspace plugin should be present");
+        assert!(invalid.validation_error.is_some());
+
+        let valid = merged
+            .iter()
+            .find(|p| p.source == "user" && p.id == "hello-lumina")
+            .expect("user plugin should not be shadowed by invalid one");
+        assert!(valid.validation_error.is_none());
+
+        let _ = fs::remove_dir_all(workspace_root);
+        let _ = fs::remove_dir_all(user_root);
+    }
+
+    #[test]
+    fn read_entry_skips_other_invalid_plugins_until_target() {
+        let root = test_root("read-entry");
+        write_plugin(
+            &root,
+            "bad-plugin",
+            r#"{"id":"bad-plugin","name":"Bad","version":"bad","entry":"index.js"}"#,
+            Some("module.exports = () => {};"),
+        );
+        write_plugin(
+            &root,
+            "good-plugin",
+            r#"{"id":"good-plugin","name":"Good","version":"1.0.0","entry":"index.js"}"#,
+            Some("module.exports = () => {};"),
+        );
+
+        let entry = read_plugin_entry_from_roots(vec![("workspace".to_string(), root.clone())], "good-plugin")
+            .expect("target plugin should still load");
+        assert_eq!(entry.info.id, "good-plugin");
+
+        let _ = fs::remove_dir_all(root);
+    }
 }

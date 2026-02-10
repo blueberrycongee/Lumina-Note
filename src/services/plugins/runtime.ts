@@ -60,7 +60,11 @@ type SyncInput = {
 };
 
 const HOST_API_VERSION = "1";
-const HOST_APP_VERSION = __LUMINA_APP_VERSION__;
+const HOST_APP_VERSION =
+  typeof globalThis !== "undefined" &&
+  typeof (globalThis as { __LUMINA_APP_VERSION__?: unknown }).__LUMINA_APP_VERSION__ === "string"
+    ? ((globalThis as { __LUMINA_APP_VERSION__?: string }).__LUMINA_APP_VERSION__ as string)
+    : "0.0.0";
 
 interface LuminaPluginApi {
   meta: {
@@ -275,7 +279,7 @@ const matchHotkey = (event: KeyboardEvent, pattern: string) => {
   return event.key.toLowerCase() === keyToken;
 };
 
-const normalizeHotkeyPattern = (pattern: string) => {
+export const normalizeHotkeyPattern = (pattern: string) => {
   const tokens = pattern
     .split("+")
     .map(normalizeHotkeyToken)
