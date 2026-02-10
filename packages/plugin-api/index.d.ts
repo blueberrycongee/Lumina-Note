@@ -173,6 +173,17 @@ export interface LuminaPluginApi {
       render: (payload: Record<string, unknown>) => string;
     }) => () => void;
     openRegisteredTab: (type: string, payload?: Record<string, unknown>) => void;
+    mountView: (input: { viewType: string; title: string; html: string }) => void;
+    registerShellSlot: (input: { slotId: string; html: string; order?: number }) => () => void;
+    registerLayoutPreset: (input: {
+      id: string;
+      name?: string;
+      leftSidebarOpen?: boolean;
+      rightSidebarOpen?: boolean;
+      leftSidebarWidth?: number;
+      rightSidebarWidth?: number;
+    }) => () => void;
+    applyLayoutPreset: (id: string) => void;
   };
   editor: {
     getActiveFile: () => string | null;
@@ -180,6 +191,13 @@ export interface LuminaPluginApi {
     setActiveContent: (next: string) => void;
     replaceRange: (start: number, end: number, next: string) => void;
     registerDecoration: (className: string, css: string) => () => void;
+    getSelection: () => { from: number; to: number; text: string } | null;
+    registerEditorExtension: (input: {
+      id: string;
+      css?: string;
+      layer?: "base" | "theme" | "component" | "override";
+      scopeId?: string;
+    }) => () => void;
   };
   storage: {
     get: (key: string) => string | null;
@@ -203,6 +221,17 @@ export interface LuminaPluginApi {
   };
   interop: {
     openExternal: (url: string) => void;
+  };
+  render: {
+    registerMarkdownPostProcessor: (input: {
+      id: string;
+      process: (html: string) => string;
+    }) => () => void;
+    registerCodeBlockRenderer: (input: {
+      id: string;
+      language: string;
+      render: (payload: { language: string; code: string; html: string }) => string;
+    }) => () => void;
   };
 }
 

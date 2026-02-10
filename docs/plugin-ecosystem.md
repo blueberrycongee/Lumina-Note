@@ -152,6 +152,10 @@ Plugin metadata:
 - `registerPanel({ id, title, html })`
 - `registerTabType({ type, title, render(payload) })`
 - `openRegisteredTab(type, payload?)`
+- `mountView({ viewType, title, html })`
+- `registerShellSlot({ slotId, html, order? })`
+- `registerLayoutPreset({ id, ...layout })`
+- `applyLayoutPreset(id)`
 
 Workspace/vault operations are restricted to the current workspace path.
 
@@ -162,6 +166,13 @@ Workspace/vault operations are restricted to the current workspace path.
 - `setActiveContent(next)`
 - `replaceRange(start, end, next)`
 - `registerDecoration(className, css)`
+- `getSelection()`
+- `registerEditorExtension({ id, css?, layer?, scopeId? })`
+
+### `api.render`
+
+- `registerMarkdownPostProcessor({ id, process })`
+- `registerCodeBlockRenderer({ id, language, render })`
 
 ### `api.storage`
 

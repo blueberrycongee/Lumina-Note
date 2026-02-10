@@ -49,6 +49,7 @@ import { PluginViewPane } from "@/components/plugins/PluginViewPane";
 import { PluginPanelDock } from "@/components/plugins/PluginPanelDock";
 import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
 import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHost";
+import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -749,6 +750,7 @@ function App() {
   return (
     <div className="h-full flex flex-col bg-background ui-app-bg">
       <TitleBar />
+      <PluginShellSlotHost slotId="app-top" />
       <div ref={layoutRef} className="flex-1 flex overflow-hidden transition-colors duration-300">
         {/* Left Ribbon (Icon Bar) */}
         <div ref={ribbonRef} className="flex-shrink-0">
@@ -975,6 +977,7 @@ function App() {
       )}
 
       <PluginStatusBar />
+      <PluginShellSlotHost slotId="app-bottom" />
       <PluginContextMenuHost />
       <MobileWorkspaceToast />
       <PluginPanelDock />

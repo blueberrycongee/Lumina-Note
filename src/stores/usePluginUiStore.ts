@@ -47,6 +47,13 @@ export interface PluginPaletteGroup {
   title: string;
 }
 
+export interface PluginShellSlot {
+  pluginId: string;
+  slotId: string;
+  html: string;
+  order: number;
+}
+
 interface PluginUiState {
   panels: PluginPanelDefinition[];
   ribbonItems: PluginRibbonItem[];
@@ -54,6 +61,7 @@ interface PluginUiState {
   settingSections: PluginSettingSection[];
   contextMenuItems: PluginContextMenuItem[];
   paletteGroups: PluginPaletteGroup[];
+  shellSlots: PluginShellSlot[];
   registerPanel: (panel: PluginPanelDefinition) => void;
   unregisterPanel: (pluginId: string, panelId: string) => void;
   clearPluginPanels: (pluginId: string) => void;
@@ -67,6 +75,8 @@ interface PluginUiState {
   unregisterContextMenuItem: (pluginId: string, itemId: string) => void;
   registerPaletteGroup: (group: PluginPaletteGroup) => void;
   unregisterPaletteGroup: (pluginId: string, groupId: string) => void;
+  registerShellSlot: (slot: PluginShellSlot) => void;
+  unregisterShellSlot: (pluginId: string, slotId: string) => void;
   clearPluginUi: (pluginId: string) => void;
 }
 
@@ -77,6 +87,7 @@ export const usePluginUiStore = create<PluginUiState>((set) => ({
   settingSections: [],
   contextMenuItems: [],
   paletteGroups: [],
+  shellSlots: [],
   registerPanel: (panel) =>
     set((state) => {
       const next = state.panels.filter(
@@ -171,6 +182,21 @@ export const usePluginUiStore = create<PluginUiState>((set) => ({
         (entry) => !(entry.pluginId === pluginId && entry.groupId === groupId),
       ),
     })),
+  registerShellSlot: (slot) =>
+    set((state) => ({
+      shellSlots: [
+        ...state.shellSlots.filter(
+          (entry) => !(entry.pluginId === slot.pluginId && entry.slotId === slot.slotId),
+        ),
+        slot,
+      ],
+    })),
+  unregisterShellSlot: (pluginId, slotId) =>
+    set((state) => ({
+      shellSlots: state.shellSlots.filter(
+        (entry) => !(entry.pluginId === pluginId && entry.slotId === slotId),
+      ),
+    })),
   clearPluginUi: (pluginId) =>
     set((state) => ({
       panels: state.panels.filter((item) => item.pluginId !== pluginId),
@@ -179,5 +205,6 @@ export const usePluginUiStore = create<PluginUiState>((set) => ({
       settingSections: state.settingSections.filter((item) => item.pluginId !== pluginId),
       contextMenuItems: state.contextMenuItems.filter((item) => item.pluginId !== pluginId),
       paletteGroups: state.paletteGroups.filter((item) => item.pluginId !== pluginId),
+      shellSlots: state.shellSlots.filter((item) => item.pluginId !== pluginId),
     })),
 }));

@@ -11,8 +11,11 @@ import {
 import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
+import { useUIStore } from "@/stores/useUIStore";
 import { pluginThemeRuntime, type ThemeMode } from "@/services/plugins/themeRuntime";
 import { pluginStyleRuntime, type PluginStyleLayer } from "@/services/plugins/styleRuntime";
+import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
+import { pluginEditorRuntime } from "@/services/plugins/editorRuntime";
 import type { PluginInfo, PluginPermission, PluginRuntimeStatus } from "@/types/plugins";
 
 type PluginHostEvent = "app:ready" | "workspace:changed" | "active-file:changed";
@@ -175,6 +178,17 @@ interface LuminaPluginApi {
       render: (payload: Record<string, unknown>) => string;
     }) => () => void;
     openRegisteredTab: (type: string, payload?: Record<string, unknown>) => void;
+    mountView: (input: { viewType: string; title: string; html: string }) => void;
+    registerShellSlot: (input: { slotId: string; html: string; order?: number }) => () => void;
+    registerLayoutPreset: (input: {
+      id: string;
+      name?: string;
+      leftSidebarOpen?: boolean;
+      rightSidebarOpen?: boolean;
+      leftSidebarWidth?: number;
+      rightSidebarWidth?: number;
+    }) => () => void;
+    applyLayoutPreset: (id: string) => void;
   };
   editor: {
     getActiveFile: () => string | null;
@@ -182,6 +196,13 @@ interface LuminaPluginApi {
     setActiveContent: (next: string) => void;
     replaceRange: (start: number, end: number, next: string) => void;
     registerDecoration: (className: string, css: string) => () => void;
+    getSelection: () => { from: number; to: number; text: string } | null;
+    registerEditorExtension: (input: {
+      id: string;
+      css?: string;
+      layer?: PluginStyleLayer;
+      scopeId?: string;
+    }) => () => void;
   };
   storage: {
     get: (key: string) => string | null;
@@ -202,6 +223,17 @@ interface LuminaPluginApi {
   };
   interop: {
     openExternal: (url: string) => void;
+  };
+  render: {
+    registerMarkdownPostProcessor: (input: {
+      id: string;
+      process: (html: string) => string;
+    }) => () => void;
+    registerCodeBlockRenderer: (input: {
+      id: string;
+      language: string;
+      render: (payload: { language: string; code: string; html: string }) => string;
+    }) => () => void;
   };
 }
 
@@ -361,6 +393,17 @@ class PluginRuntime {
   private listeners = new Map<PluginHostEvent, Map<string, Set<PluginEventHandler>>>();
   private pluginTabTypes = new Map<string, { pluginId: string; title: string; render: PluginTabRenderer }>();
   private pluginCommands = new Map<string, PluginCommandRecord>();
+  private pluginLayoutPresets = new Map<
+    string,
+    {
+      pluginId: string;
+      id: string;
+      leftSidebarOpen?: boolean;
+      rightSidebarOpen?: boolean;
+      leftSidebarWidth?: number;
+      rightSidebarWidth?: number;
+    }
+  >();
 
   async sync(input: SyncInput): Promise<Record<string, PluginRuntimeStatus>> {
     const statuses: Record<string, PluginRuntimeStatus> = {};
@@ -864,6 +907,74 @@ return exported(api, plugin);
       useFileStore.getState().openPluginViewTab(scopedType, def.title, html);
     };
 
+    const mountView = (input: { viewType: string; title: string; html: string }) => {
+      requirePermission("workspace:tab");
+      const viewType = input.viewType.trim();
+      if (!viewType) throw new Error("viewType cannot be empty");
+      const scopedType = `${info.id}:${viewType}`;
+      useFileStore
+        .getState()
+        .openPluginViewTab(scopedType, input.title || viewType, input.html || "");
+    };
+
+    const registerShellSlot = (input: { slotId: string; html: string; order?: number }) => {
+      requirePermission("workspace:panel");
+      const slotId = input.slotId.trim();
+      if (!slotId) throw new Error("slotId cannot be empty");
+      usePluginUiStore.getState().registerShellSlot({
+        pluginId: info.id,
+        slotId,
+        html: input.html || "",
+        order: input.order ?? 1000,
+      });
+      const cleanup = withOnce(() =>
+        usePluginUiStore.getState().unregisterShellSlot(info.id, slotId),
+      );
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const registerLayoutPreset = (input: {
+      id: string;
+      name?: string;
+      leftSidebarOpen?: boolean;
+      rightSidebarOpen?: boolean;
+      leftSidebarWidth?: number;
+      rightSidebarWidth?: number;
+    }) => {
+      requirePermission("workspace:panel");
+      const id = input.id.trim();
+      if (!id) throw new Error("layout preset id cannot be empty");
+      const key = `${info.id}:${id}`;
+      this.pluginLayoutPresets.set(key, {
+        pluginId: info.id,
+        id,
+        leftSidebarOpen: input.leftSidebarOpen,
+        rightSidebarOpen: input.rightSidebarOpen,
+        leftSidebarWidth: input.leftSidebarWidth,
+        rightSidebarWidth: input.rightSidebarWidth,
+      });
+      const cleanup = withOnce(() => {
+        this.pluginLayoutPresets.delete(key);
+      });
+      unsubscribers.push(cleanup);
+      return cleanup;
+    };
+
+    const applyLayoutPreset = (id: string) => {
+      requirePermission("workspace:panel");
+      const key = `${info.id}:${id.trim()}`;
+      const preset = this.pluginLayoutPresets.get(key);
+      if (!preset) throw new Error(`Layout preset not found: ${id}`);
+      const store = useUIStore.getState();
+      if (typeof preset.leftSidebarOpen === "boolean") store.setLeftSidebarOpen(preset.leftSidebarOpen);
+      if (typeof preset.rightSidebarOpen === "boolean")
+        store.setRightSidebarOpen(preset.rightSidebarOpen);
+      if (typeof preset.leftSidebarWidth === "number") store.setLeftSidebarWidth(preset.leftSidebarWidth);
+      if (typeof preset.rightSidebarWidth === "number")
+        store.setRightSidebarWidth(preset.rightSidebarWidth);
+    };
+
     const storageKey = (key: string) => `lumina-plugin:${info.id}:${key}`;
 
     const registerThemePreset = (input: {
@@ -1061,6 +1172,10 @@ return exported(api, plugin);
         registerPanel,
         registerTabType,
         openRegisteredTab,
+        mountView,
+        registerShellSlot,
+        registerLayoutPreset,
+        applyLayoutPreset,
       },
       editor: {
         getActiveFile: () => useFileStore.getState().currentFile,
@@ -1096,6 +1211,34 @@ return exported(api, plugin);
           style.textContent = `.cm-editor .${className} { ${css} }`;
           document.head.appendChild(style);
           const cleanup = withOnce(() => style.remove());
+          unsubscribers.push(cleanup);
+          return cleanup;
+        },
+        getSelection: () => {
+          requirePermission("editor:read");
+          return pluginEditorRuntime.getSelection();
+        },
+        registerEditorExtension: (input: {
+          id: string;
+          css?: string;
+          layer?: PluginStyleLayer;
+          scopeId?: string;
+        }) => {
+          requirePermission("editor:decorate");
+          if (!input.id.trim()) {
+            throw new Error("Editor extension id cannot be empty");
+          }
+          if (!input.css) {
+            return () => undefined;
+          }
+          const cleanup = withOnce(
+            pluginStyleRuntime.registerStyle(info.id, {
+              css: input.css,
+              scopeId: input.scopeId || "codemirror",
+              global: !input.scopeId,
+              layer: input.layer || "component",
+            }),
+          );
           unsubscribers.push(cleanup);
           return cleanup;
         },
@@ -1154,6 +1297,38 @@ return exported(api, plugin);
           window.open(url, "_blank", "noopener,noreferrer");
         },
       },
+      render: {
+        registerMarkdownPostProcessor: (input: {
+          id: string;
+          process: (html: string) => string;
+        }) => {
+          requirePermission("ui:decorate");
+          if (!input.id.trim()) throw new Error("Markdown post processor id cannot be empty");
+          const cleanup = withOnce(
+            pluginRenderRuntime.registerMarkdownPostProcessor(info.id, input.id, input.process),
+          );
+          unsubscribers.push(cleanup);
+          return cleanup;
+        },
+        registerCodeBlockRenderer: (input: {
+          id: string;
+          language: string;
+          render: (payload: { language: string; code: string; html: string }) => string;
+        }) => {
+          requirePermission("ui:decorate");
+          if (!input.id.trim()) throw new Error("Code block renderer id cannot be empty");
+          if (!input.language.trim()) throw new Error("Code block language cannot be empty");
+          const cleanup = withOnce(
+            pluginRenderRuntime.registerCodeBlockRenderer(info.id, {
+              id: input.id,
+              language: input.language,
+              render: input.render,
+            }),
+          );
+          unsubscribers.push(cleanup);
+          return cleanup;
+        },
+      },
     };
   }
 
@@ -1181,8 +1356,14 @@ return exported(api, plugin);
         this.pluginCommands.delete(id);
       }
     }
+    for (const [id, preset] of this.pluginLayoutPresets.entries()) {
+      if (preset.pluginId === pluginId) {
+        this.pluginLayoutPresets.delete(id);
+      }
+    }
     pluginThemeRuntime.clearPlugin(pluginId);
     pluginStyleRuntime.clearPlugin(pluginId);
+    pluginRenderRuntime.clearPlugin(pluginId);
     window.dispatchEvent(new CustomEvent("lumina-plugin-commands-updated"));
     this.removePluginCommands(pluginId);
     this.removePluginListeners(pluginId);

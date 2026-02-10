@@ -27,6 +27,7 @@ import { syntaxTree } from "@codemirror/language";
 import katex from "katex";
 import { common, createLowlight } from "lowlight";
 import mermaid from "mermaid";
+import { PLUGIN_EDITOR_SELECTION_EVENT } from "@/services/plugins/editorRuntime";
 import {
   livePreviewPlugin,
   collapseOnSelectionFacet,
@@ -735,6 +736,15 @@ const selectionStatePlugin = ViewPlugin.fromClass(class {
   private updateClass(view: EditorView) {
     const hasSelection = view.state.selection.ranges.some((range) => range.from !== range.to);
     view.dom.classList.toggle("cm-has-selection", hasSelection);
+    const main = view.state.selection.main;
+    const detail = hasSelection
+      ? {
+          from: main.from,
+          to: main.to,
+          text: view.state.doc.sliceString(main.from, main.to),
+        }
+      : null;
+    window.dispatchEvent(new CustomEvent(PLUGIN_EDITOR_SELECTION_EVENT, { detail }));
   }
 }, { decorations: () => Decoration.none });
 

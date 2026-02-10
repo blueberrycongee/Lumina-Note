@@ -538,9 +538,21 @@ fn write_example_plugin(plugin_dir: &Path) -> Result<(), String> {
     render: (payload) =>
       `<h3>Hello from ${plugin.id}</h3><p>Opened at: ${payload.now || "unknown"}</p>`
   });
+  const removeShellSlot = api.workspace.registerShellSlot({
+    slotId: "app-top",
+    order: 900,
+    html: "<div>Hello slot from hello-lumina</div>"
+  });
+  const removeLayoutPreset = api.workspace.registerLayoutPreset({
+    id: "focus-left",
+    leftSidebarOpen: true,
+    rightSidebarOpen: false,
+    leftSidebarWidth: 320
+  });
 
   api.storage.set("installedAt", new Date().toISOString());
   api.ui.notify("hello-lumina loaded");
+  api.workspace.applyLayoutPreset("focus-left");
   api.logger.info(`[${plugin.id}] plugin loaded`);
 
   return () => {
@@ -548,6 +560,8 @@ fn write_example_plugin(plugin_dir: &Path) -> Result<(), String> {
     unregisterCommand();
     unregisterView();
     removePanel();
+    removeShellSlot();
+    removeLayoutPreset();
     removeRibbon();
     removeStatus();
     removeSettings();
