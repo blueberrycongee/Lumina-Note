@@ -21,6 +21,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
   const { popover, closePopover, addAnnotation } = usePDFAnnotationStore();
   const { currentPage } = usePDFStore();
   const { t } = useLocaleStore();
+  const chatMode = useUIStore((state) => state.chatMode);
   const setRightPanelTab = useUIStore((state) => state.setRightPanelTab);
   const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
   const setFloatingPanelOpen = useUIStore((state) => state.setFloatingPanelOpen);
@@ -99,10 +100,18 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     setRightSidebarOpen(true);
     setRightPanelTab('chat');
     setFloatingPanelOpen(true);
-    useAIStore.getState().addTextSelection(citationText, source);
+    if (chatMode === 'research') {
+      useAIStore.getState().enqueueInputAppend(citationText);
+    } else if (chatMode === 'codex') {
+      navigator.clipboard.writeText(citationText).catch((err) => {
+        console.warn('Failed to copy PDF selection for Codex:', err);
+      });
+    } else {
+      useAIStore.getState().addTextSelection(citationText, source);
+    }
     closePopover();
     window.getSelection()?.removeAllRanges();
-  }, [popover.selectedText, currentPage, setRightSidebarOpen, setRightPanelTab, setFloatingPanelOpen, closePopover]);
+  }, [popover.selectedText, currentPage, chatMode, setRightSidebarOpen, setRightPanelTab, setFloatingPanelOpen, closePopover]);
   
   if (!popover.isOpen) return null;
   
