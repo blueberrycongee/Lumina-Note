@@ -1,0 +1,19 @@
+{
+  "id": "pixel-noir",
+  "name": "Pixel Noir",
+  "version": "0.1.0",
+  "description": "High-contrast black-and-white pixel aesthetic for Lumina.",
+  "author": "Lumina",
+  "entry": "index.js",
+  "min_app_version": "0.1.0",
+  "api_version": "1",
+  "permissions": [
+    "commands:*",
+    "ui:*",
+    "editor:decorate",
+    "workspace:panel",
+    "storage:*"
+  ],
+  "enabled_by_default": false,
+  "is_desktop_only": false
+}
