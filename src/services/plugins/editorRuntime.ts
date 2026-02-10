@@ -4,6 +4,8 @@ export interface EditorSelectionSnapshot {
   from: number;
   to: number;
   text: string;
+  lineFrom?: number;
+  lineTo?: number;
 }
 
 const SELECTION_EVENT = "lumina-editor-selection";

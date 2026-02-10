@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useCommandStore, SlashCommand } from "@/stores/useCommandStore";
 import { CommandManagerModal } from "./CommandManagerModal";
 import type { AttachedImage } from "@/types/chat";
+import type { QuoteReference } from "@/types/chat";
 
 // 引用的文件
 export interface ReferencedFile {
@@ -29,7 +30,7 @@ export interface ChatInputRef {
 interface ChatInputProps {
   value: string;
   onChange: (value: string) => void;
-  onSend: (message: string, files: ReferencedFile[], images?: AttachedImage[]) => void;
+  onSend: (message: string, files: ReferencedFile[], images?: AttachedImage[], quotedSelections?: QuoteReference[]) => void;
   onCanSendChange?: (canSend: boolean) => void;
   isLoading?: boolean;
   isStreaming?: boolean;
@@ -401,14 +402,12 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       messageToSend = `${activeCommand.prompt}\n${messageToSend}`;
     }
 
-    if (textSelections.length > 0) {
-      const quotedTexts = textSelections.map(sel =>
-        `> ${t.ai.quoteFrom} ${sel.source}:\n> ${sel.text.split('\n').join('\n> ')}`
-      ).join('\n\n');
-      messageToSend = quotedTexts + (messageToSend ? `\n\n${messageToSend}` : '');
-    }
-
-    onSend(messageToSend, referencedFiles, attachedImages.length > 0 ? attachedImages : undefined);
+    onSend(
+      messageToSend,
+      referencedFiles,
+      attachedImages.length > 0 ? attachedImages : undefined,
+      textSelections
+    );
     onChange("");
     setReferencedFiles([]);
     setAttachedImages([]);
@@ -516,8 +515,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               title={sel.text}
             >
               <Quote size={12} className="shrink-0" />
-              <span className="truncate">{sel.text.slice(0, 30)}{sel.text.length > 30 ? '...' : ''}</span>
-              <span className="text-muted-foreground shrink-0">({sel.source})</span>
+              <span className="truncate">{sel.summary || `${sel.text.slice(0, 30)}${sel.text.length > 30 ? '...' : ''}`}</span>
+              <span className="text-muted-foreground shrink-0">({sel.locator || sel.source})</span>
               <button
                 onClick={() => removeTextSelection(sel.id)}
                 className="hover:bg-accent/80 rounded p-0.5 shrink-0"

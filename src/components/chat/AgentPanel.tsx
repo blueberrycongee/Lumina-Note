@@ -14,6 +14,8 @@ import { PlanCard } from "./PlanCard";
 import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
+import type { AttachedImage, QuoteReference } from "@/types/chat";
+import type { MessageAttachment } from "@/services/llm";
 import {
   Square,
   Check,
@@ -58,11 +60,22 @@ export function AgentPanel() {
   const retryTimeout = rustStore.retryTimeout;
   
   // startTask
-  const startTask = async (message: string, context: { workspacePath: string; activeNote?: string; activeNoteContent?: string; displayMessage?: string }) => {
+  const startTask = async (
+    message: string,
+    context: {
+      workspacePath: string;
+      activeNote?: string;
+      activeNoteContent?: string;
+      displayMessage?: string;
+      attachments?: MessageAttachment[];
+    }
+  ) => {
     await rustStore.startTask(message, {
       workspace_path: context.workspacePath,
       active_note_path: context.activeNote,
       active_note_content: context.activeNoteContent,
+      display_message: context.displayMessage,
+      attachments: context.attachments,
     });
   };
 
@@ -74,20 +87,26 @@ export function AgentPanel() {
   }, [messages]);
 
   // 发送消息（支持引用文件）
-  const handleSendWithFiles = async (message: string, referencedFiles: ReferencedFile[]) => {
-    if ((!message.trim() && referencedFiles.length === 0) || status === "running") return;
+  const handleSendWithFiles = async (
+    message: string,
+    referencedFiles: ReferencedFile[],
+    _images?: AttachedImage[],
+    quotedSelections: QuoteReference[] = [],
+  ) => {
+    if ((!message.trim() && referencedFiles.length === 0 && quotedSelections.length === 0) || status === "running") return;
 
     setInput("");
     const { currentFile, currentContent } = useFileStore.getState();
 
     // 使用共享函数处理消息和文件
-    const { displayMessage, fullMessage } = await processMessageWithFiles(message, referencedFiles);
+    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, referencedFiles, quotedSelections);
 
     await startTask(fullMessage, {
       workspacePath: vaultPath || "",
       activeNote: currentFile || undefined,
       activeNoteContent: currentFile ? currentContent : undefined,
       displayMessage,
+      attachments,
     });
   };
 
@@ -200,10 +219,12 @@ export function AgentPanel() {
                 const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
                 if (lastUserMsg && vaultPath) {
                   const { currentFile, currentContent } = useFileStore.getState();
-                  startTask(lastUserMsg.content, {
+                  startTask(lastUserMsg.rawContent || lastUserMsg.content, {
                     workspacePath: vaultPath,
                     activeNote: currentFile || undefined,
                     activeNoteContent: currentContent || undefined,
+                    displayMessage: lastUserMsg.content,
+                    attachments: lastUserMsg.attachments,
                   });
                 }
               }}

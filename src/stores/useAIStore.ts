@@ -13,10 +13,10 @@ import {
   getAIConfig,
 } from "@/services/ai/ai";
 import { readFile } from "@/lib/tauri";
-import { callLLMStream, type FileAttachment, type ImageContent, type TextContent, type MessageContent } from "@/services/llm";
+import { callLLMStream, type MessageAttachment, type ImageContent, type TextContent, type MessageContent } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
-import type { AttachedImage } from "@/types/chat";
+import type { AttachedImage, QuoteReference } from "@/types/chat";
 // 流式状态现在完全由 Zustand 管理，不再需要额外的 streamingStore
 
 // Pending diff for preview
@@ -28,13 +28,7 @@ export interface PendingDiff {
   description: string;
 }
 
-// 文本片段引用 (Add to Chat)
-export interface TextSelection {
-  id: string;
-  text: string;
-  source: string;  // 来源文件名
-  sourcePath?: string;  // 来源文件路径
-}
+export type TextSelection = QuoteReference;
 
 // Token usage tracking
 export interface TokenUsage {
@@ -137,7 +131,7 @@ interface AIState {
 
   // Text selections (Add to Chat)
   textSelections: TextSelection[];
-  addTextSelection: (text: string, source: string, sourcePath?: string) => void;
+  addTextSelection: (selection: Omit<TextSelection, "id">) => void;
   removeTextSelection: (id: string) => void;
   clearTextSelections: () => void;
   pendingInputAppends: string[];
@@ -150,14 +144,14 @@ interface AIState {
     currentFile?: { path: string; name: string; content: string },
     displayContent?: string,
     images?: AttachedImage[],
-    attachments?: FileAttachment[],
+    attachments?: MessageAttachment[],
   ) => Promise<void>;
   sendMessageStream: (
     content: string,
     currentFile?: { path: string; name: string; content: string },
     displayContent?: string,
     images?: AttachedImage[],
-    attachments?: FileAttachment[],
+    attachments?: MessageAttachment[],
   ) => Promise<void>;
   stopStreaming: () => void;
   clearChat: () => void;
@@ -302,10 +296,10 @@ export const useAIStore = create<AIState>()(
 
       // Text selections (Add to Chat)
       textSelections: [],
-      addTextSelection: (text, source, sourcePath) => {
+      addTextSelection: (selection) => {
         const id = `sel-${Date.now()}`;
         set((state) => ({
-          textSelections: [...state.textSelections, { id, text, source, sourcePath }],
+          textSelections: [...state.textSelections, { id, ...selection }],
         }));
       },
       removeTextSelection: (id) => {
@@ -423,8 +417,15 @@ export const useAIStore = create<AIState>()(
           try {
             // Call AI - 使用最新的 messages 状态
             // 强制使用 "chat" 意图以启用灵感助手 Prompt
+            const modelMessages = [...get().messages];
+            for (let i = modelMessages.length - 1; i >= 0; i -= 1) {
+              if (modelMessages[i].role === "user") {
+                modelMessages[i] = { ...modelMessages[i], content };
+                break;
+              }
+            }
             response = await chat(
-              [...get().messages],
+              modelMessages,
               filesToSend,
               configOverride,
               { intent: "chat" }
@@ -521,26 +522,35 @@ export const useAIStore = create<AIState>()(
 
         // 构建用户消息内容（支持多模态）
         let userMessageContent: MessageContent;
+        let userMessageContentForModel: MessageContent;
         const visibleContent = displayContent ?? content;
         if (images && images.length > 0) {
           // 多模态消息：文本 + 图片
           const parts: (TextContent | ImageContent)[] = [];
+          const modelParts: (TextContent | ImageContent)[] = [];
           if (visibleContent.trim().length > 0) {
             parts.push({ type: "text", text: visibleContent });
           }
+          if (content.trim().length > 0) {
+            modelParts.push({ type: "text", text: content });
+          }
           for (const img of images) {
-            parts.push({
+            const imagePart: ImageContent = {
               type: "image",
               source: {
                 type: "base64",
                 mediaType: img.mediaType,
                 data: img.data,
               },
-            });
+            };
+            parts.push(imagePart);
+            modelParts.push(imagePart);
           }
           userMessageContent = parts.length > 0 ? parts : visibleContent;
+          userMessageContentForModel = modelParts.length > 0 ? modelParts : content;
         } else {
           userMessageContent = visibleContent;
+          userMessageContentForModel = content;
         }
 
         // Add user message (use displayContent for showing, content for AI)
@@ -603,7 +613,16 @@ export const useAIStore = create<AIState>()(
             : basePrompt;
 
           // 从 store 获取最新的 messages，而不是使用闭包中的旧值
-          const currentMessages = get().messages;
+          const currentMessages = [...get().messages];
+          for (let i = currentMessages.length - 1; i >= 0; i -= 1) {
+            if (currentMessages[i].role === "user") {
+              currentMessages[i] = {
+                ...currentMessages[i],
+                content: userMessageContentForModel,
+              };
+              break;
+            }
+          }
           
           // 包装用户消息（处理多模态内容）
           const llmMessages: Message[] = [

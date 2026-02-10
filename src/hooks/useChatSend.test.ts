@@ -10,6 +10,7 @@ vi.mock('@/lib/tauri', () => ({
 
 import { processMessageWithFiles, type ReferencedFile } from './useChatSend';
 import { readFile } from '@/lib/tauri';
+import type { QuoteReference } from '@/types/chat';
 
 describe('processMessageWithFiles', () => {
   beforeEach(() => {
@@ -130,5 +131,38 @@ describe('processMessageWithFiles', () => {
     
     expect(result.fileContext).toContain('引用文件: note.md');
     expect(result.fileContext).toContain('File content here');
+  });
+
+  it('should build quote attachments and quote context for model', async () => {
+    const quotes: QuoteReference[] = [
+      {
+        id: 'q1',
+        text: 'Selected paragraph from document',
+        source: 'note.md',
+        sourcePath: '/notes/note.md',
+        locator: 'L12-18',
+        summary: 'Core argument',
+        range: { kind: 'line', startLine: 12, endLine: 18 },
+      },
+    ];
+
+    const result = await processMessageWithFiles('Explain this quote', [], quotes);
+
+    expect(result.attachments).toEqual([
+      {
+        type: 'quote',
+        text: 'Selected paragraph from document',
+        source: 'note.md',
+        sourcePath: '/notes/note.md',
+        locator: 'L12-18',
+        summary: 'Core argument',
+        range: { kind: 'line', startLine: 12, endLine: 18 },
+      },
+    ]);
+    expect(result.quoteContext).toContain('[QUOTE 1]');
+    expect(result.quoteContext).toContain('source: note.md');
+    expect(result.quoteContext).toContain('path: /notes/note.md');
+    expect(result.quoteContext).toContain('locator: L12-18');
+    expect(result.fullMessage).toContain('[Quoted references]');
   });
 });

@@ -9,6 +9,13 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { callLLM, type Message } from '@/services/llm';
 import { useLocaleStore } from '@/stores/useLocaleStore';
+import { pluginEditorRuntime } from "@/services/plugins/editorRuntime";
+
+function summarizeSelection(text: string): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return normalized.length > 64 ? `${normalized.slice(0, 64)}...` : normalized;
+}
 
 interface SelectionToolbarProps {
   containerRef: React.RefObject<HTMLElement>;
@@ -133,8 +140,28 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     const fileName = currentFile 
       ? currentFile.split(/[/\\]/).pop()?.replace(".md", "") || t.selectionToolbar.unknown
       : t.selectionToolbar.unknown;
-    
-    addTextSelection(selectedText, fileName, currentFile || undefined);
+    const selectionSnapshot = pluginEditorRuntime.getSelection();
+    const lineFrom = selectionSnapshot?.lineFrom;
+    const lineTo = selectionSnapshot?.lineTo;
+
+    addTextSelection({
+      text: selectedText,
+      source: fileName,
+      sourcePath: currentFile || undefined,
+      summary: summarizeSelection(selectedText),
+      locator: lineFrom
+        ? (lineTo && lineTo !== lineFrom ? `L${lineFrom}-${lineTo}` : `L${lineFrom}`)
+        : undefined,
+      range: lineFrom
+        ? {
+            kind: "line",
+            startLine: lineFrom,
+            endLine: lineTo || lineFrom,
+            startOffset: selectionSnapshot?.from,
+            endOffset: selectionSnapshot?.to,
+          }
+        : undefined,
+    });
     
     // 清除选区
     window.getSelection()?.removeAllRanges();

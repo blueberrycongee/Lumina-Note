@@ -743,6 +743,8 @@ const selectionStatePlugin = ViewPlugin.fromClass(class {
           from: main.from,
           to: main.to,
           text: view.state.doc.sliceString(main.from, main.to),
+          lineFrom: view.state.doc.lineAt(main.from).number,
+          lineTo: view.state.doc.lineAt(main.to).number,
         }
       : null;
     window.dispatchEvent(new CustomEvent(PLUGIN_EDITOR_SELECTION_EVENT, { detail }));

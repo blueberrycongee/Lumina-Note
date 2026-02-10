@@ -19,6 +19,7 @@ import {
   Bot,
   Code2,
   FileText,
+  Quote,
   Sparkles,
   X,
   Zap,
@@ -218,6 +219,9 @@ export function MainAIChatShell() {
     checkFirstLoad: checkChatFirstLoad,
     config,
     totalTokensUsed: chatTotalTokens,
+    textSelections,
+    removeTextSelection,
+    clearTextSelections,
     pendingInputAppends,
     consumeInputAppends,
   } = useAIStore(useShallow((state) => ({
@@ -234,6 +238,9 @@ export function MainAIChatShell() {
     checkFirstLoad: state.checkFirstLoad,
     config: state.config,
     totalTokensUsed: state.totalTokensUsed,
+    textSelections: state.textSelections,
+    removeTextSelection: state.removeTextSelection,
+    clearTextSelections: state.clearTextSelections,
     pendingInputAppends: state.pendingInputAppends,
     consumeInputAppends: state.consumeInputAppends,
   })));
@@ -834,12 +841,13 @@ export function MainAIChatShell() {
     const fallbackMessage = autoSendMessageRef.current?.trim() ?? "";
     const overrideMessage = overrideInput?.trim() ?? "";
     const effectiveInput = overrideMessage || input.trim() || fallbackMessage;
-    if ((!effectiveInput && referencedFiles.length === 0) || isLoading) {
+    if ((!effectiveInput && referencedFiles.length === 0 && textSelections.length === 0) || isLoading) {
       if (import.meta.env.DEV) {
         console.log("[handleSend] Blocked: input empty or loading", {
           overrideMessage,
           fallbackMessage,
           referencedCount: referencedFiles.length,
+          quoteCount: textSelections.length,
         });
       }
       return;
@@ -847,7 +855,7 @@ export function MainAIChatShell() {
 
     // 检查是否仅仅是一个网页链接
     const webLink = isOnlyWebLink(effectiveInput);
-    if (webLink && referencedFiles.length === 0) {
+    if (webLink && referencedFiles.length === 0 && textSelections.length === 0) {
       // 直接打开网页链接
       const { openWebpageTab } = useFileStore.getState();
       openWebpageTab(webLink);
@@ -860,17 +868,19 @@ export function MainAIChatShell() {
     setInput("");
     autoSendMessageRef.current = null;
     const files = [...referencedFiles];
+    const quotedSelections = [...textSelections];
     setReferencedFiles([]);
+    clearTextSelections();
     setShowSkillMenu(false);
 
-    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, files);
+    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, files, quotedSelections);
     if (import.meta.env.DEV && typeof performance !== "undefined") {
       performance.mark("lumina:send:processed");
     }
 
     if (chatMode === "research") {
       // Deep Research 模式
-      console.log("[DeepResearch] Research mode triggered, topic:", message);
+      console.log("[DeepResearch] Research mode triggered, topic:", fullMessage);
       // 使用 store 中的 config（已从持久化存储恢复）
       // 处理 model === 'custom' 的情况
       const actualModel = config.model === 'custom' ? (config.customModelId || config.model) : config.model;
@@ -895,7 +905,7 @@ export function MainAIChatShell() {
         tavily_api_key: config.tavilyApiKey || undefined,
         max_web_search_results: 10,
       };
-      await startResearch(message, vaultPath || "", researchConfig, {
+      await startResearch(fullMessage, vaultPath || "", researchConfig, {
         chatId: chatSessionId || undefined,
         reportStyle: "detailed",
         includeCitations: true,
@@ -908,6 +918,8 @@ export function MainAIChatShell() {
         workspace_path: vaultPath || "",
         active_note_path: currentFile || undefined,
         active_note_content: currentFile ? currentContent : undefined,
+        display_message: displayMessage,
+        attachments,
         skills: selectedSkills.length > 0 ? selectedSkills : undefined,
       });
       setSelectedSkills([]);
@@ -921,7 +933,7 @@ export function MainAIChatShell() {
       await sendMessageStream(fullMessage, currentFileInfo, displayMessage, undefined, attachments);
       finalizePerf();
     }
-  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config, selectedSkills, isExportSelectionMode]);
+  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, textSelections, clearTextSelections, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config, selectedSkills, isExportSelectionMode]);
 
   const handleSendRef = useRef(handleSend);
   useLayoutEffect(() => {
@@ -1477,11 +1489,23 @@ export function MainAIChatShell() {
                                     <div className="mb-2 flex flex-wrap gap-1.5">
                                       {attachments.map((attachment, attachmentIdx) => (
                                         <span
-                                          key={`${attachment.path ?? attachment.name}-${attachmentIdx}`}
+                                          key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? attachment.path ?? attachment.name : attachment.sourcePath ?? attachment.source}`}
                                           className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-xs"
                                         >
-                                          <FileText size={10} />
-                                          <span className="max-w-[220px] truncate">{attachment.name}</span>
+                                          {attachment.type === "file" ? (
+                                            <>
+                                              <FileText size={10} />
+                                              <span className="max-w-[220px] truncate">{attachment.name}</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Quote size={10} />
+                                              <span className="max-w-[240px] truncate">
+                                                {attachment.source}
+                                                {attachment.locator ? ` (${attachment.locator})` : ""}
+                                              </span>
+                                            </>
+                                          )}
                                         </span>
                                       ))}
                                     </div>
@@ -1712,6 +1736,32 @@ export function MainAIChatShell() {
                   </div>
                 )}
 
+                {textSelections.length > 0 && (
+                  <div className="px-4 pt-2 flex flex-wrap gap-1">
+                    {textSelections.map((selection) => (
+                      <div
+                        key={selection.id}
+                        className="flex items-center gap-1 px-2 py-1 bg-accent text-accent-foreground rounded-md text-xs max-w-[280px]"
+                        title={selection.text}
+                      >
+                        <Quote size={12} className="shrink-0" />
+                        <span className="truncate">
+                          {selection.summary || selection.text.slice(0, 36)}
+                        </span>
+                        <span className="text-muted-foreground shrink-0">
+                          ({selection.locator || selection.source})
+                        </span>
+                        <button
+                          onClick={() => removeTextSelection(selection.id)}
+                          className="hover:bg-accent/80 rounded p-0.5 shrink-0"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* 底部工具栏 */}
                 <div className="ai-toolbar-row px-4 pb-3 pt-1 flex items-center justify-between">
                   <div className="ai-toolbar-left flex items-center gap-2 min-w-0 overflow-hidden">
@@ -1854,10 +1904,10 @@ export function MainAIChatShell() {
                     {/* 发送/停止按钮 */}
                     <button
                       onClick={() => isLoading ? handleStop() : handleSend()}
-                      disabled={!input.trim() && !isLoading}
+                      disabled={!input.trim() && referencedFiles.length === 0 && textSelections.length === 0 && !isLoading}
                       className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading
                           ? "bg-red-500 text-white hover:bg-red-600"
-                          : input.trim()
+                          : (input.trim() || referencedFiles.length > 0 || textSelections.length > 0)
                             ? "bg-foreground text-background hover:opacity-80 shadow-md"
                             : "bg-muted text-muted-foreground cursor-not-allowed"
                         }`}

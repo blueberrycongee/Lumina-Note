@@ -2,6 +2,8 @@
  * LLM Service 统一类型定义
  */
 
+import type { QuoteRange } from "@/types/chat";
+
 // ============ 消息类型 ============
 
 // 图片内容
@@ -29,10 +31,22 @@ export interface FileAttachment {
   path?: string;
 }
 
+export interface QuoteAttachment {
+  type: "quote";
+  text: string;
+  source: string;
+  sourcePath?: string;
+  summary: string;
+  locator?: string;
+  range?: QuoteRange;
+}
+
+export type MessageAttachment = FileAttachment | QuoteAttachment;
+
 export interface Message {
   role: "user" | "assistant" | "system";
   content: MessageContent;
-  attachments?: FileAttachment[];
+  attachments?: MessageAttachment[];
 }
 
 // ============ Provider 类型 ============

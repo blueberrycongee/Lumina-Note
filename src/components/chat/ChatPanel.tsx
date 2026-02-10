@@ -14,6 +14,7 @@ import {
   Send,
   X,
   FileText,
+  Quote,
   Mic,
   MicOff,
   RefreshCw,
@@ -21,7 +22,7 @@ import {
 } from "lucide-react";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { ChatInput, type ChatInputRef } from "./ChatInput";
-import type { AttachedImage } from "@/types/chat";
+import type { AttachedImage, QuoteReference } from "@/types/chat";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
 import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
 
@@ -153,11 +154,16 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   }, [currentFile]);
 
   // Handle send message with referenced files and images
-  const handleSendWithFiles = useCallback(async (message: string, files: ReferencedFile[], images?: AttachedImage[]) => {
-    if (!message.trim() && files.length === 0 && (!images || images.length === 0)) return;
+  const handleSendWithFiles = useCallback(async (
+    message: string,
+    files: ReferencedFile[],
+    images?: AttachedImage[],
+    quotedSelections: QuoteReference[] = [],
+  ) => {
+    if (!message.trim() && files.length === 0 && quotedSelections.length === 0 && (!images || images.length === 0)) return;
     if (isLoading || isStreaming) return;
 
-    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, files);
+    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, files, quotedSelections);
     const latestFileInfo = getCurrentFileInfo();
 
     setInputValue("");
@@ -275,11 +281,23 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                         <div className="mb-2 flex flex-wrap gap-1.5">
                           {attachments.map((attachment, attachmentIdx) => (
                             <span
-                              key={`${attachment.path ?? attachment.name}-${attachmentIdx}`}
+                              key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? attachment.path ?? attachment.name : attachment.sourcePath ?? attachment.source}`}
                               className="inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs"
                             >
-                              <FileText size={10} />
-                              <span className="max-w-[180px] truncate">{attachment.name}</span>
+                              {attachment.type === "file" ? (
+                                <>
+                                  <FileText size={10} />
+                                  <span className="max-w-[180px] truncate">{attachment.name}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Quote size={10} />
+                                  <span className="max-w-[220px] truncate">
+                                    {attachment.source}
+                                    {attachment.locator ? ` (${attachment.locator})` : ""}
+                                  </span>
+                                </>
+                              )}
                             </span>
                           ))}
                         </div>

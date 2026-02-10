@@ -1,12 +1,14 @@
-import type { FileAttachment, ImageContent, MessageContent, TextContent } from "@/services/llm";
+import type { FileAttachment, ImageContent, MessageAttachment, MessageContent, TextContent } from "@/services/llm";
 
 const LEGACY_FILE_LABEL_REGEX = /\[📎\s*([^\]]+)\]/g;
 
-function dedupeAttachments(attachments: FileAttachment[]): FileAttachment[] {
+function dedupeAttachments(attachments: MessageAttachment[]): MessageAttachment[] {
   const seen = new Set<string>();
-  const result: FileAttachment[] = [];
+  const result: MessageAttachment[] = [];
   for (const attachment of attachments) {
-    const key = `${attachment.path ?? ""}::${attachment.name}`;
+    const key = attachment.type === "file"
+      ? `file::${attachment.path ?? ""}::${attachment.name}`
+      : `quote::${attachment.sourcePath ?? ""}::${attachment.source}::${attachment.locator ?? ""}::${attachment.text}`;
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(attachment);
@@ -35,8 +37,8 @@ export function getImagesFromContent(content: MessageContent): ImageContent[] {
 
 export function getUserMessageDisplay(
   content: MessageContent,
-  attachments: FileAttachment[] = [],
-): { text: string; attachments: FileAttachment[] } {
+  attachments: MessageAttachment[] = [],
+): { text: string; attachments: MessageAttachment[] } {
   const rawText = getTextFromContent(content);
   const legacyAttachments: FileAttachment[] = [];
 

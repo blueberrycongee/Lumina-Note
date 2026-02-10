@@ -14,6 +14,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useAgentProfileStore } from "@/stores/useAgentProfileStore";
 import { callLLM, PROVIDER_REGISTRY, type Message as LLMMessage } from "@/services/llm";
+import type { MessageAttachment } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { SelectedSkill } from "@/types/skills";
 
@@ -40,6 +41,8 @@ export type AgentType =
 export interface Message {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
+  rawContent?: string;
+  attachments?: MessageAttachment[];
   agent?: AgentType;
   id?: string;
 }
@@ -199,6 +202,8 @@ export interface TaskContext {
   history?: Message[];  // 历史对话消息（多轮对话支持）
   skills?: SelectedSkill[];
   mobile_session_id?: string;
+  display_message?: string;
+  attachments?: MessageAttachment[];
 }
 
 export interface AgentConfig {
@@ -720,7 +725,14 @@ export const useRustAgentStore = create<RustAgentState>()(
           streamingContent: "",
           messages: [
             ...currentMessages,
-            { role: "user", content: task },
+            {
+              role: "user",
+              content: context.display_message || task,
+              rawContent: task,
+              ...(context.attachments && context.attachments.length > 0
+                ? { attachments: context.attachments }
+                : {}),
+            },
           ],
           taskStats: {
             ...stats,
@@ -738,7 +750,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           .filter(m => m.role === "user" || m.role === "assistant")
           .map(m => ({
             role: m.role,
-            content: m.content,
+            content: m.role === "user" ? (m.rawContent || m.content) : m.content,
           }));
 
         const config = buildAgentConfig(aiConfig, get().autoApprove);
@@ -755,8 +767,13 @@ export const useRustAgentStore = create<RustAgentState>()(
             console.warn("[RustAgent] Failed to sync mobile agent config:", e);
           }
           // 将历史消息附加到 context 中传给后端
+          const {
+            display_message: _displayMessage,
+            attachments: _displayAttachments,
+            ...contextForBackend
+          } = context;
           const contextWithHistory = {
-            ...context,
+            ...contextForBackend,
             history: historyForBackend,
           };
           await invoke("agent_start_task", { config, task, context: contextWithHistory });

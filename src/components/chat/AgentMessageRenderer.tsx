@@ -11,7 +11,7 @@ import { useState, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore, getCurrentTranslations } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
-import type { MessageContent } from "@/services/llm";
+import type { MessageAttachment, MessageContent } from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
 import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   RefreshCw,
   FileText,
+  Quote,
 } from "lucide-react";
 
 // ============ 类型定义 ============
@@ -45,7 +46,7 @@ interface ToolCallInfo {
 type AgentMessage = {
   role: "user" | "assistant" | "system" | "tool";
   content: MessageContent;
-  attachments?: { type: "file"; name: string; path?: string }[];
+  attachments?: MessageAttachment[];
   agent?: string;
   id?: string;
 };
@@ -568,7 +569,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     const result: Array<{
       userIdx: number;
       userContent: string;
-      userAttachments: { type: "file"; name: string; path?: string }[];
+      userAttachments: MessageAttachment[];
       parts: TimelinePart[];
       roundKey: string;
       hasAIContent: boolean;
@@ -672,11 +673,23 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                 <div className="mb-2 flex flex-wrap gap-1.5">
                   {round.userAttachments.map((attachment, attachmentIdx) => (
                     <span
-                      key={`${attachment.path ?? attachment.name}-${attachmentIdx}`}
+                      key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? attachment.path ?? attachment.name : attachment.sourcePath ?? attachment.source}`}
                       className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-xs"
                     >
-                      <FileText size={10} />
-                      <span className="max-w-[220px] truncate">{attachment.name}</span>
+                      {attachment.type === "file" ? (
+                        <>
+                          <FileText size={10} />
+                          <span className="max-w-[220px] truncate">{attachment.name}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Quote size={10} />
+                          <span className="max-w-[260px] truncate">
+                            {attachment.source}
+                            {attachment.locator ? ` (${attachment.locator})` : ""}
+                          </span>
+                        </>
+                      )}
                     </span>
                   ))}
                 </div>

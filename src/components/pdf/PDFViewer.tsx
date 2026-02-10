@@ -145,19 +145,29 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
     
     const referenceText = `# ${t.pdfViewer.referenceHeader} - ${pdfFileName}\n\n${citations}`;
     
-    // 添加到 AI Store 的文本选择
-    useAIStore.getState().addTextSelection(
-      referenceText,
-      pdfFileName,
-      filePath
-    );
+    // 添加到 AI Store 的结构化引用
+    const pages = Array.from(new Set(selectedElements.map((el) => el.pageIndex))).sort((a, b) => a - b);
+    const locator = pages.length === 1
+      ? `P${pages[0]}`
+      : `P${pages[0]}-${pages[pages.length - 1]}`;
+    useAIStore.getState().addTextSelection({
+      text: referenceText,
+      source: pdfFileName,
+      sourcePath: filePath,
+      summary: `${t.pdfViewer.referenceHeader} (${selectedElements.length})`,
+      locator,
+      range: {
+        kind: "pdf",
+        page: pages[0] || currentPage,
+      },
+    });
     
     // 打开 AI 悬浮面板
     useUIStore.getState().setFloatingPanelOpen(true);
     
     // 清空选择
     clearSelection();
-  }, [selectedElements, filePath, clearSelection, t]);
+  }, [selectedElements, filePath, clearSelection, t, currentPage]);
 
   // 为不同组件创建独立的数据副本，避免 ArrayBuffer detached 错误
   const pdfDataForSearch = useMemo(() => {
