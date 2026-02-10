@@ -670,6 +670,21 @@ export function MainAIChatShell() {
     return () => window.removeEventListener('lumina-drop', handleLuminaDrop);
   }, []);
 
+  useEffect(() => {
+    const handleAppendInput = (event: Event) => {
+      const detail = (event as CustomEvent<{ text?: string }>).detail;
+      const text = detail?.text?.trim();
+      if (!text) {
+        return;
+      }
+      setInput((prev) => (prev ? `${prev}\n\n${text}` : text));
+      textareaRef.current?.focus();
+    };
+
+    window.addEventListener('ai-input-append', handleAppendInput as EventListener);
+    return () => window.removeEventListener('ai-input-append', handleAppendInput as EventListener);
+  }, []);
+
   // 检测输入是否仅仅是一个网页链接
   const isOnlyWebLink = useCallback((text: string): string | null => {
     const trimmed = text.trim();

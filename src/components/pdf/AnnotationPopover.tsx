@@ -7,9 +7,11 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { usePDFAnnotationStore } from '@/stores/usePDFAnnotationStore';
 import { usePDFStore } from '@/stores/usePDFStore';
+import { useAIStore } from '@/stores/useAIStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { ANNOTATION_COLORS, type AnnotationColor, type AnnotationType } from '@/types/annotation';
-import { Highlighter, Underline, StickyNote, X } from 'lucide-react';
+import { Highlighter, Underline, StickyNote, X, Sparkles, Bot, Microscope, Code2 } from 'lucide-react';
 
 interface AnnotationPopoverProps {
   className?: string;
@@ -19,6 +21,10 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
   const { popover, closePopover, addAnnotation } = usePDFAnnotationStore();
   const { currentPage } = usePDFStore();
   const { t } = useLocaleStore();
+  const setChatMode = useUIStore((state) => state.setChatMode);
+  const setRightPanelTab = useUIStore((state) => state.setRightPanelTab);
+  const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
+  const setFloatingPanelOpen = useUIStore((state) => state.setFloatingPanelOpen);
   const [selectedColor, setSelectedColor] = useState<AnnotationColor>('yellow');
   const [selectedType, setSelectedType] = useState<AnnotationType>('highlight');
   const [note, setNote] = useState('');
@@ -84,6 +90,34 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     
     closePopover();
   }, [popover, currentPage, selectedType, selectedColor, note, addAnnotation, closePopover]);
+
+  const handleSendToMode = useCallback(async (mode: 'chat' | 'agent' | 'research' | 'codex') => {
+    const text = popover.selectedText.trim();
+    if (!text) return;
+
+    const citationText = `> PDF Selection (P${currentPage})\n> ${text.split('\n').join('\n> ')}`;
+    const source = `PDF P${currentPage}`;
+
+    setChatMode(mode);
+    setRightSidebarOpen(true);
+    setRightPanelTab('chat');
+    setFloatingPanelOpen(true);
+
+    if (mode === 'research') {
+      window.dispatchEvent(new CustomEvent('ai-input-append', { detail: { text: citationText } }));
+    } else if (mode === 'codex') {
+      try {
+        await navigator.clipboard.writeText(citationText);
+      } catch (err) {
+        console.warn('Failed to copy PDF selection for Codex:', err);
+      }
+    } else {
+      useAIStore.getState().addTextSelection(citationText, source);
+    }
+
+    closePopover();
+    window.getSelection()?.removeAllRanges();
+  }, [popover.selectedText, currentPage, setChatMode, setRightSidebarOpen, setRightPanelTab, setFloatingPanelOpen, closePopover]);
   
   if (!popover.isOpen) return null;
   
@@ -129,6 +163,37 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
             title={t.pdfViewer.annotation.addNote}
           >
             <StickyNote size={18} />
+          </button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <button
+            onClick={() => handleSendToMode('chat')}
+            className="p-2 hover:bg-accent rounded transition-colors"
+            title={t.ai.modeChat}
+          >
+            <Sparkles size={16} />
+          </button>
+          <button
+            onClick={() => handleSendToMode('agent')}
+            className="p-2 hover:bg-accent rounded transition-colors"
+            title={t.ai.modeAgent}
+          >
+            <Bot size={16} />
+          </button>
+          <button
+            onClick={() => handleSendToMode('research')}
+            className="p-2 hover:bg-accent rounded transition-colors"
+            title={t.deepResearch.modeLabel}
+          >
+            <Microscope size={16} />
+          </button>
+          <button
+            onClick={() => handleSendToMode('codex')}
+            className="p-2 hover:bg-accent rounded transition-colors"
+            title={t.ai.modeCodex}
+          >
+            <Code2 size={16} />
           </button>
           
           {/* 分隔线 */}

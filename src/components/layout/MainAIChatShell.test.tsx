@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MainAIChatShell } from "./MainAIChatShell";
 import { useUIStore } from "@/stores/useUIStore";
@@ -27,5 +27,15 @@ describe("MainAIChatShell", () => {
     const { container } = render(<MainAIChatShell />);
 
     expect(container.querySelector('[data-codex-slot="main"]')).toBeNull();
+  });
+
+  it("appends text into input when receiving ai-input-append event", () => {
+    useUIStore.setState({ chatMode: "chat" });
+    render(<MainAIChatShell />);
+
+    fireEvent(window, new CustomEvent("ai-input-append", { detail: { text: "Quoted from PDF" } }));
+
+    const input = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(input.value).toContain("Quoted from PDF");
   });
 });
