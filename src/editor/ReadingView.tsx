@@ -8,6 +8,7 @@ import { parseLuminaLink } from "@/services/pdf/annotations";
 import { readBinaryFileBase64 } from "@/lib/tauri";
 import mermaid from "mermaid";
 import { useShallow } from "zustand/react/shallow";
+import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
 
 // 初始化 mermaid
 mermaid.initialize({
@@ -66,6 +67,13 @@ export function ReadingView({ content, className = "" }: ReadingViewProps) {
     };
     
     renderMermaid();
+  }, [html]);
+
+  // Plugin reading view post-processors (DOM lifecycle).
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const unmount = pluginRenderRuntime.mountReadingView(containerRef.current);
+    return () => unmount();
   }, [html]);
 
   // 转换本地图片路径为 base64 data URL

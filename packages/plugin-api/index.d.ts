@@ -55,6 +55,12 @@ export interface LuminaPluginManifestV1 {
   permissions?: string[];
   enabled_by_default?: boolean;
   is_desktop_only?: boolean;
+  theme?: {
+    auto_apply?: boolean;
+    tokens?: Record<string, string>;
+    light?: Record<string, string>;
+    dark?: Record<string, string>;
+  };
 }
 
 export interface LuminaPluginApi {
@@ -66,8 +72,63 @@ export interface LuminaPluginApi {
   };
   ui: {
     notify: (message: string) => void;
-    injectStyle: (css: string, scopeId?: string) => () => void;
+    injectStyle: (
+      css:
+        | string
+        | {
+            css: string;
+            scopeId?: string;
+            global?: boolean;
+            layer?: "base" | "theme" | "component" | "override";
+          },
+      scopeId?: string
+    ) => () => void;
     setThemeVariables: (variables: Record<string, string>) => () => void;
+    registerRibbonItem: (input: {
+      id: string;
+      title: string;
+      icon?: string;
+      section?: "top" | "bottom";
+      order?: number;
+      run: () => void;
+    }) => () => void;
+    registerStatusBarItem: (input: {
+      id: string;
+      text: string;
+      align?: "left" | "right";
+      order?: number;
+      run?: () => void;
+    }) => () => void;
+    registerSettingSection: (input: { id: string; title: string; html: string }) => () => void;
+    registerContextMenuItem: (input: {
+      id: string;
+      title: string;
+      order?: number;
+      run: (payload: { x: number; y: number; targetTag: string }) => void;
+    }) => () => void;
+    registerCommandPaletteGroup: (input: {
+      id: string;
+      title: string;
+      commands: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        hotkey?: string;
+        run: () => void;
+      }>;
+    }) => () => void;
+  };
+  theme: {
+    registerPreset: (input: {
+      id: string;
+      name?: string;
+      tokens?: Record<string, string>;
+      light?: Record<string, string>;
+      dark?: Record<string, string>;
+    }) => () => void;
+    applyPreset: (id: string) => void;
+    setToken: (input: { token: string; value: string; mode?: "all" | "light" | "dark" }) => () => void;
+    resetToken: (input: { token: string; mode?: "all" | "light" | "dark" }) => void;
   };
   commands: {
     registerSlashCommand: (input: {
@@ -112,6 +173,17 @@ export interface LuminaPluginApi {
       render: (payload: Record<string, unknown>) => string;
     }) => () => void;
     openRegisteredTab: (type: string, payload?: Record<string, unknown>) => void;
+    mountView: (input: { viewType: string; title: string; html: string }) => void;
+    registerShellSlot: (input: { slotId: string; html: string; order?: number }) => () => void;
+    registerLayoutPreset: (input: {
+      id: string;
+      name?: string;
+      leftSidebarOpen?: boolean;
+      rightSidebarOpen?: boolean;
+      leftSidebarWidth?: number;
+      rightSidebarWidth?: number;
+    }) => () => void;
+    applyLayoutPreset: (id: string) => void;
   };
   editor: {
     getActiveFile: () => string | null;
@@ -119,6 +191,17 @@ export interface LuminaPluginApi {
     setActiveContent: (next: string) => void;
     replaceRange: (start: number, end: number, next: string) => void;
     registerDecoration: (className: string, css: string) => () => void;
+    getSelection: () => { from: number; to: number; text: string } | null;
+    registerEditorExtension: (
+      input:
+        | unknown
+        | {
+            id: string;
+            css?: string;
+            layer?: "base" | "theme" | "component" | "override";
+            scopeId?: string;
+          }
+    ) => () => void;
   };
   storage: {
     get: (key: string) => string | null;
@@ -142,6 +225,21 @@ export interface LuminaPluginApi {
   };
   interop: {
     openExternal: (url: string) => void;
+  };
+  render: {
+    registerMarkdownPostProcessor: (input: {
+      id: string;
+      process: (html: string) => string;
+    }) => () => void;
+    registerCodeBlockRenderer: (input: {
+      id: string;
+      language: string;
+      render: (payload: { language: string; code: string; html: string }) => string;
+    }) => () => void;
+    registerReadingViewPostProcessor: (input: {
+      id: string;
+      process: (container: HTMLElement) => void | (() => void);
+    }) => () => void;
   };
 }
 

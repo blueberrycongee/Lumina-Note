@@ -19,6 +19,11 @@ export function PluginSection() {
     setPluginEnabled,
     ensureWorkspacePluginDir,
     scaffoldExamplePlugin,
+    scaffoldThemePlugin,
+    scaffoldUiOverhaulPlugin,
+    appearanceSafeMode,
+    setAppearanceSafeMode,
+    isolatePluginStyles,
   } = usePluginStore();
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -72,6 +77,28 @@ export function PluginSection() {
     }
   };
 
+  const handleScaffoldTheme = async () => {
+    if (!vaultPath) return;
+    try {
+      setBusyAction("scaffold-theme");
+      const dir = await scaffoldThemePlugin(vaultPath);
+      await showInExplorer(dir);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const handleScaffoldUiOverhaul = async () => {
+    if (!vaultPath) return;
+    try {
+      setBusyAction("scaffold-ui-overhaul");
+      const dir = await scaffoldUiOverhaulPlugin(vaultPath);
+      await showInExplorer(dir);
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Plugins (Developer Preview)</h3>
@@ -81,6 +108,24 @@ export function PluginSection() {
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setAppearanceSafeMode(!appearanceSafeMode, vaultPath || undefined)}
+          className={`h-9 px-3 rounded-lg text-sm font-medium border ${
+            appearanceSafeMode
+              ? "bg-amber-500/20 text-amber-700 border-amber-500/40"
+              : "border-border bg-background/60 hover:bg-muted"
+          }`}
+        >
+          {appearanceSafeMode ? "Appearance Safe Mode: ON" : "Appearance Safe Mode: OFF"}
+        </button>
+        <button
+          type="button"
+          onClick={() => isolatePluginStyles()}
+          className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted"
+        >
+          Unload All Plugin Styles
+        </button>
         <button
           type="button"
           onClick={() => loadPlugins(vaultPath || undefined)}
@@ -112,6 +157,22 @@ export function PluginSection() {
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
         >
           Scaffold Example Plugin
+        </button>
+        <button
+          type="button"
+          onClick={handleScaffoldTheme}
+          disabled={!vaultPath || busyAction === "scaffold-theme"}
+          className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
+        >
+          Scaffold Theme Plugin
+        </button>
+        <button
+          type="button"
+          onClick={handleScaffoldUiOverhaul}
+          disabled={!vaultPath || busyAction === "scaffold-ui-overhaul"}
+          className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50"
+        >
+          Scaffold UI Overhaul Plugin
         </button>
       </div>
 

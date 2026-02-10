@@ -29,7 +29,16 @@
     "runtime:*"
   ],
   "enabled_by_default": true,
-  "is_desktop_only": false
+  "is_desktop_only": false,
+  "theme": {
+    "auto_apply": false,
+    "tokens": {
+      "--primary": "200 70% 48%"
+    },
+    "dark": {
+      "--background": "222 34% 9%"
+    }
+  }
 }
 ```
 
@@ -54,6 +63,9 @@
   - 权限列表。支持精细权限（如 `vault:read`）和命名空间通配符（如 `vault:*`）以及全量通配符（`*`）。
 - `enabled_by_default` (`boolean`, optional, default `true`)
 - `is_desktop_only` (`boolean`, optional, default `false`)
+- `theme` (`object`, optional)
+  - `auto_apply` (`boolean`, optional, default `false`)
+  - `tokens` / `light` / `dark` (`Record<string, string>`, optional)
 
 ## Permission model
 

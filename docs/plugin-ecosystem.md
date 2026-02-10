@@ -4,7 +4,9 @@
 >
 > - `docs/plugin-open-strategy.md`
 > - `docs/plugin-manifest.v1.md`
+> - `docs/appearance-plugin-guide.md`
 > - `packages/plugin-api/index.d.ts`
+> - `packages/plugin-ui/README.md`
 
 Lumina now exposes a first-party plugin runtime for developers.
 
@@ -101,7 +103,21 @@ Plugin metadata:
 
 - `notify(message)`
 - `injectStyle(css, scopeId?)`
+  - `css` also supports `{ css, scopeId?, global?, layer? }`
+  - `layer`: `base | theme | component | override` (injection order low -> high)
 - `setThemeVariables(record)`
+- `registerRibbonItem({ id, title, icon?, section?, order?, run })`
+- `registerStatusBarItem({ id, text, align?, order?, run? })`
+- `registerSettingSection({ id, title, html })`
+- `registerContextMenuItem({ id, title, order?, run })`
+- `registerCommandPaletteGroup({ id, title, commands })`
+
+### `api.theme`
+
+- `registerPreset({ id, name?, tokens?, light?, dark? })`
+- `applyPreset(id)`
+- `setToken({ token, value, mode? })`
+- `resetToken({ token, mode? })`
 
 ### `api.vault`
 
@@ -138,6 +154,10 @@ Plugin metadata:
 - `registerPanel({ id, title, html })`
 - `registerTabType({ type, title, render(payload) })`
 - `openRegisteredTab(type, payload?)`
+- `mountView({ viewType, title, html })`
+- `registerShellSlot({ slotId, html, order? })`
+- `registerLayoutPreset({ id, ...layout })`
+- `applyLayoutPreset(id)`
 
 Workspace/vault operations are restricted to the current workspace path.
 
@@ -148,6 +168,15 @@ Workspace/vault operations are restricted to the current workspace path.
 - `setActiveContent(next)`
 - `replaceRange(start, end, next)`
 - `registerDecoration(className, css)`
+- `getSelection()`
+- `registerEditorExtension(cmExtension)` for CodeMirror extensions
+- `registerEditorExtension({ id, css?, layer?, scopeId? })` for style-only editor extensions
+
+### `api.render`
+
+- `registerMarkdownPostProcessor({ id, process })`
+- `registerCodeBlockRenderer({ id, language, render })`
+- `registerReadingViewPostProcessor({ id, process(container) })` (supports cleanup return)
 
 ### `api.storage`
 
@@ -204,6 +233,15 @@ Open `Settings -> Plugins (Developer Preview)` to:
 - Enable/disable plugins
 - Open workspace plugin folder
 - Scaffold an example plugin
+- Scaffold a theme plugin template
+- Scaffold a UI-overhaul plugin template
+- Toggle `Appearance Safe Mode` (disables appearance-heavy plugins)
+- Unload all plugin styles with one click
+
+Open `Settings -> Plugin Style Runtime (Dev)` to inspect:
+
+- active style layers
+- selector conflicts across plugins
 
 ## Quick start
 

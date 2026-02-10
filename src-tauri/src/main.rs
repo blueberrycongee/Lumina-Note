@@ -101,6 +101,8 @@ fn main() {
             plugins::plugin_read_entry,
             plugins::plugin_get_workspace_dir,
             plugins::plugin_scaffold_example,
+            plugins::plugin_scaffold_theme,
+            plugins::plugin_scaffold_ui_overhaul,
             // WebDAV commands
             webdav::commands::webdav_set_config,
             webdav::commands::webdav_get_config,

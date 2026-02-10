@@ -1,6 +1,7 @@
 import { Marked, Renderer } from "marked";
 import TurndownService from "turndown";
 import katex from "katex";
+import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
 
 // Callout type icons and colors
 const calloutTypes: Record<string, { icon: string; color: string }> = {
@@ -329,7 +330,7 @@ export function parseMarkdown(markdown: string): string {
     html = (html as string).replace(/<table>/g, '<div class="table-wrapper"><table>');
     html = (html as string).replace(/<\/table>/g, '</table></div>');
 
-    return html as string;
+    return pluginRenderRuntime.apply(html as string);
   } catch (error) {
     console.error("Markdown parse error:", error);
     return markdown; // Return raw text as fallback

@@ -47,6 +47,9 @@ import { usePluginStore } from "@/stores/usePluginStore";
 import { pluginRuntime } from "@/services/plugins/runtime";
 import { PluginViewPane } from "@/components/plugins/PluginViewPane";
 import { PluginPanelDock } from "@/components/plugins/PluginPanelDock";
+import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
+import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHost";
+import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -225,6 +228,7 @@ function App() {
   );
   const t = useLocaleStore((state) => state.t);
   const loadPlugins = usePluginStore((state) => state.loadPlugins);
+  const setAppearanceSafeMode = usePluginStore((state) => state.setAppearanceSafeMode);
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -273,6 +277,26 @@ function App() {
   useEffect(() => {
     pluginRuntime.emit("active-file:changed", { path: currentFile ?? null });
   }, [currentFile]);
+
+  // Crash recovery for appearance plugins and theme overrides.
+  useEffect(() => {
+    const crashFlagKey = "lumina-plugin-appearance-crash-flag";
+    const marked = localStorage.getItem(crashFlagKey) === "1";
+    if (marked) {
+      document.documentElement.removeAttribute("style");
+      document.head
+        .querySelectorAll(
+          "style[data-lumina-plugin-style], style[data-lumina-plugin-theme-dark], style[data-lumina-plugin-editor-decoration]",
+        )
+        .forEach((node) => node.remove());
+      void setAppearanceSafeMode(true, vaultPath || undefined);
+      localStorage.removeItem(crashFlagKey);
+    }
+    localStorage.setItem(crashFlagKey, "1");
+    return () => {
+      localStorage.removeItem(crashFlagKey);
+    };
+  }, [setAppearanceSafeMode, vaultPath]);
 
   // 兼容兜底：确保移动端网关拿到当前 workspace
   useEffect(() => {
@@ -747,6 +771,7 @@ function App() {
   return (
     <div className="h-full flex flex-col bg-background ui-app-bg">
       <TitleBar />
+      <PluginShellSlotHost slotId="app-top" />
       <div ref={layoutRef} className="flex-1 flex overflow-hidden transition-colors duration-300">
         {/* Left Ribbon (Icon Bar) */}
         <div ref={ribbonRef} className="flex-shrink-0">
@@ -853,6 +878,7 @@ function App() {
               <PluginViewPane
                 title={activeTab.name}
                 html={activeTab.pluginViewHtml || "<p>Empty plugin view</p>"}
+                scopeId={activeTab.pluginViewType}
               />
             </div>
           ) : activeTab?.type === "ai-chat" ? (
@@ -971,6 +997,9 @@ function App() {
         </div>
       )}
 
+      <PluginStatusBar />
+      <PluginShellSlotHost slotId="app-bottom" />
+      <PluginContextMenuHost />
       <MobileWorkspaceToast />
       <PluginPanelDock />
     </div>

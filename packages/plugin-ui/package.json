@@ -1,0 +1,8 @@
+{
+  "name": "@lumina/plugin-ui",
+  "version": "0.1.0",
+  "description": "UI helpers and token presets for Lumina plugins",
+  "types": "index.d.ts",
+  "private": false,
+  "main": "index.js"
+}
