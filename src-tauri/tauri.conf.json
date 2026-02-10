@@ -55,6 +55,9 @@
       }
     ],
     "security": {
+      "dangerousDisableAssetCspModification": [
+        "script-src"
+      ],
       "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: asset: https://asset.localhost; img-src * data: blob: asset: https://asset.localhost; media-src * data: blob:; frame-src *; connect-src * data: blob:;",
       "assetProtocol": {
         "enable": true,
