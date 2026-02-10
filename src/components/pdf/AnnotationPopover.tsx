@@ -7,9 +7,11 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { usePDFAnnotationStore } from '@/stores/usePDFAnnotationStore';
 import { usePDFStore } from '@/stores/usePDFStore';
+import { useAIStore } from '@/stores/useAIStore';
+import { useUIStore } from '@/stores/useUIStore';
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { ANNOTATION_COLORS, type AnnotationColor, type AnnotationType } from '@/types/annotation';
-import { Highlighter, Underline, StickyNote, X } from 'lucide-react';
+import { Highlighter, Underline, StickyNote, X, Sparkles, Bot, Microscope, Code2 } from 'lucide-react';
 
 interface AnnotationPopoverProps {
   className?: string;
@@ -19,10 +21,15 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
   const { popover, closePopover, addAnnotation } = usePDFAnnotationStore();
   const { currentPage } = usePDFStore();
   const { t } = useLocaleStore();
+  const setChatMode = useUIStore((state) => state.setChatMode);
+  const setRightPanelTab = useUIStore((state) => state.setRightPanelTab);
+  const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
+  const setFloatingPanelOpen = useUIStore((state) => state.setFloatingPanelOpen);
   const [selectedColor, setSelectedColor] = useState<AnnotationColor>('yellow');
   const [selectedType, setSelectedType] = useState<AnnotationType>('highlight');
   const [note, setNote] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isSendMenuOpen, setIsSendMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   
   // 重置状态
@@ -30,6 +37,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     if (!popover.isOpen) {
       setNote('');
       setIsExpanded(false);
+      setIsSendMenuOpen(false);
       setSelectedColor('yellow');
       setSelectedType('highlight');
     }
@@ -67,6 +75,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
   // 展开笔记编辑
   const handleExpandNote = useCallback(() => {
     setIsExpanded(true);
+    setIsSendMenuOpen(false);
   }, []);
   
   // 添加带笔记的批注
@@ -84,6 +93,35 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     
     closePopover();
   }, [popover, currentPage, selectedType, selectedColor, note, addAnnotation, closePopover]);
+
+  const handleSendToMode = useCallback(async (mode: 'chat' | 'agent' | 'research' | 'codex') => {
+    const text = popover.selectedText.trim();
+    if (!text) return;
+
+    const citationText = `> PDF Selection (P${currentPage})\n> ${text.split('\n').join('\n> ')}`;
+    const source = `PDF P${currentPage}`;
+
+    setChatMode(mode);
+    setRightSidebarOpen(true);
+    setRightPanelTab('chat');
+    setFloatingPanelOpen(true);
+
+    if (mode === 'research') {
+      useAIStore.getState().enqueueInputAppend(citationText);
+    } else if (mode === 'codex') {
+      try {
+        await navigator.clipboard.writeText(citationText);
+      } catch (err) {
+        console.warn('Failed to copy PDF selection for Codex:', err);
+      }
+    } else {
+      useAIStore.getState().addTextSelection(citationText, source);
+    }
+
+    setIsSendMenuOpen(false);
+    closePopover();
+    window.getSelection()?.removeAllRanges();
+  }, [popover.selectedText, currentPage, setChatMode, setRightSidebarOpen, setRightPanelTab, setFloatingPanelOpen, closePopover]);
   
   if (!popover.isOpen) return null;
   
@@ -130,6 +168,53 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
           >
             <StickyNote size={18} />
           </button>
+
+          <div className="w-px h-6 bg-border mx-1" />
+
+          <div className="relative">
+            <button
+              onClick={() => setIsSendMenuOpen((prev) => !prev)}
+              className={cn(
+                "p-2 rounded transition-colors",
+                isSendMenuOpen ? "bg-accent" : "hover:bg-accent"
+              )}
+              title={t.pdfViewer.elementPanel.chatWithAi}
+            >
+              <Sparkles size={16} />
+            </button>
+            {isSendMenuOpen && (
+              <div className="absolute top-full left-0 mt-1 min-w-[180px] bg-popover border border-border rounded-md shadow-lg p-1 z-10">
+                <button
+                  onClick={() => handleSendToMode('chat')}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent rounded"
+                >
+                  <Sparkles size={14} />
+                  <span>{t.ai.modeChat}</span>
+                </button>
+                <button
+                  onClick={() => handleSendToMode('agent')}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent rounded"
+                >
+                  <Bot size={14} />
+                  <span>{t.ai.modeAgent}</span>
+                </button>
+                <button
+                  onClick={() => handleSendToMode('research')}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent rounded"
+                >
+                  <Microscope size={14} />
+                  <span>{t.deepResearch.modeLabel}</span>
+                </button>
+                <button
+                  onClick={() => handleSendToMode('codex')}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-accent rounded"
+                >
+                  <Code2 size={14} />
+                  <span>{t.ai.modeCodex}</span>
+                </button>
+              </div>
+            )}
+          </div>
           
           {/* 分隔线 */}
           <div className="w-px h-6 bg-border mx-1" />

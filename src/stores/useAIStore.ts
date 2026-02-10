@@ -140,6 +140,9 @@ interface AIState {
   addTextSelection: (text: string, source: string, sourcePath?: string) => void;
   removeTextSelection: (id: string) => void;
   clearTextSelections: () => void;
+  pendingInputAppends: string[];
+  enqueueInputAppend: (text: string) => void;
+  consumeInputAppends: () => string[];
 
   // Actions
   sendMessage: (content: string, currentFile?: { path: string; name: string; content: string }, displayContent?: string, images?: AttachedImage[]) => Promise<void>;
@@ -300,6 +303,21 @@ export const useAIStore = create<AIState>()(
       },
       clearTextSelections: () => {
         set({ textSelections: [] });
+      },
+      pendingInputAppends: [],
+      enqueueInputAppend: (text) => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        set((state) => ({
+          pendingInputAppends: [...state.pendingInputAppends, trimmed],
+        }));
+      },
+      consumeInputAppends: () => {
+        const pending = get().pendingInputAppends;
+        if (pending.length > 0) {
+          set({ pendingInputAppends: [] });
+        }
+        return pending;
       },
 
       // Send message
