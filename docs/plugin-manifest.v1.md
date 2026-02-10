@@ -80,3 +80,4 @@
 - 手动安装阶段，推荐插件在启动时自行检测关键 API 是否存在。
 - Lumina 宿主应使用 `min_app_version` 与 `api_version` 做兼容判断并在 UI 显示状态。
 - Lumina 会对 manifest 执行严格校验：缺失必填字段、非法 `id`、非法 `entry`、非法语义化版本将阻止加载，并返回结构化错误信息。
+  - 错误结构：`code` / `field` / `message`

@@ -363,10 +363,11 @@ pub fn read_plugin_entry(
                 continue;
             }
             if let Some(err) = info.validation_error.clone() {
-                return Err(format!(
-                    "PLUGIN_MANIFEST_VALIDATION:{}:{}",
-                    err.code, err.message
-                ));
+                let payload = serde_json::to_string(&err).unwrap_or_else(|_| {
+                    "{\"code\":\"manifest_validation_error\",\"message\":\"invalid plugin manifest\"}"
+                        .to_string()
+                });
+                return Err(format!("PLUGIN_MANIFEST_VALIDATION_JSON:{}", payload));
             }
 
             let code = fs::read_to_string(&info.entry_path)

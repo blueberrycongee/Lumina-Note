@@ -66,4 +66,9 @@ export interface PluginRuntimeStatus {
   error?: string;
   incompatible?: boolean;
   reason?: string;
+  error_detail?: {
+    code: string;
+    field?: string;
+    message: string;
+  };
 }

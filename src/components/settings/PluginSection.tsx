@@ -202,6 +202,11 @@ export function PluginSection() {
                     {status?.incompatible && status?.reason && (
                       <div className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md p-2">
                         Incompatible: {status.reason}
+                        {status.error_detail?.field ? (
+                          <div className="mt-1 text-[11px] text-amber-700/80">
+                            Field: <code>{status.error_detail.field}</code>
+                          </div>
+                        ) : null}
                       </div>
                     )}
                     {enabled && status?.loaded && !status?.error && (

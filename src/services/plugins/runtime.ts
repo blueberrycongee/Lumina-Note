@@ -190,6 +190,27 @@ const getCompatibilityIssue = (plugin: PluginInfo): string | null => {
   return null;
 };
 
+const parseStructuredManifestError = (message: string) => {
+  const prefix = "PLUGIN_MANIFEST_VALIDATION_JSON:";
+  if (!message.startsWith(prefix)) return null;
+  const payload = message.slice(prefix.length);
+  try {
+    const parsed = JSON.parse(payload) as {
+      code?: string;
+      field?: string;
+      message?: string;
+    };
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      code: parsed.code || "manifest_validation_error",
+      field: parsed.field,
+      message: parsed.message || "Invalid plugin manifest",
+    };
+  } catch {
+    return null;
+  }
+};
+
 const withOnce = (fn: () => void) => {
   let called = false;
   return () => {
@@ -352,7 +373,17 @@ class PluginRuntime {
         statuses[plugin.id] = { enabled: true, loaded: true };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        statuses[plugin.id] = { enabled: true, loaded: false, error: message };
+        const structured = parseStructuredManifestError(message);
+        statuses[plugin.id] = structured
+          ? {
+              enabled: true,
+              loaded: false,
+              incompatible: true,
+              reason: `[${structured.code}] ${structured.message}`,
+              error: `[${structured.code}] ${structured.message}`,
+              error_detail: structured,
+            }
+          : { enabled: true, loaded: false, error: message };
         this.removePluginCommands(plugin.id);
         this.removePluginListeners(plugin.id);
       }
