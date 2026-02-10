@@ -228,6 +228,7 @@ function App() {
   );
   const t = useLocaleStore((state) => state.t);
   const loadPlugins = usePluginStore((state) => state.loadPlugins);
+  const setAppearanceSafeMode = usePluginStore((state) => state.setAppearanceSafeMode);
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -276,6 +277,26 @@ function App() {
   useEffect(() => {
     pluginRuntime.emit("active-file:changed", { path: currentFile ?? null });
   }, [currentFile]);
+
+  // Crash recovery for appearance plugins and theme overrides.
+  useEffect(() => {
+    const crashFlagKey = "lumina-plugin-appearance-crash-flag";
+    const marked = localStorage.getItem(crashFlagKey) === "1";
+    if (marked) {
+      document.documentElement.removeAttribute("style");
+      document.head
+        .querySelectorAll(
+          "style[data-lumina-plugin-style], style[data-lumina-plugin-theme-dark], style[data-lumina-plugin-editor-decoration]",
+        )
+        .forEach((node) => node.remove());
+      void setAppearanceSafeMode(true, vaultPath || undefined);
+      localStorage.removeItem(crashFlagKey);
+    }
+    localStorage.setItem(crashFlagKey, "1");
+    return () => {
+      localStorage.removeItem(crashFlagKey);
+    };
+  }, [setAppearanceSafeMode, vaultPath]);
 
   // 兼容兜底：确保移动端网关拿到当前 workspace
   useEffect(() => {

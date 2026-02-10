@@ -455,6 +455,123 @@ fn write_example_plugin(plugin_dir: &Path) -> Result<(), String> {
   "enabled_by_default": true,
   "is_desktop_only": false
 }
+
+fn write_theme_plugin(plugin_dir: &Path) -> Result<(), String> {
+    fs::create_dir_all(plugin_dir)
+        .map_err(|e| format!("Failed to create {}: {}", plugin_dir.display(), e))?;
+    let manifest_path = plugin_dir.join(PLUGIN_MANIFEST);
+    let entry_path = plugin_dir.join(DEFAULT_ENTRYPOINT);
+    if !manifest_path.exists() {
+        fs::write(
+            &manifest_path,
+            r#"{
+  "id": "theme-oceanic",
+  "name": "Theme Oceanic",
+  "version": "0.1.0",
+  "entry": "index.js",
+  "permissions": ["ui:theme", "ui:decorate"],
+  "enabled_by_default": true
+}
+"#,
+        )
+        .map_err(|e| format!("Failed to write {}: {}", manifest_path.display(), e))?;
+    }
+    if !entry_path.exists() {
+        fs::write(
+            &entry_path,
+            r#"module.exports = function setup(api) {
+  const removePreset = api.theme.registerPreset({
+    id: "oceanic",
+    tokens: {
+      "--primary": "199 82% 48%",
+      "--ui-radius-md": "16px",
+      "--ui-radius-lg": "22px"
+    },
+    dark: {
+      "--background": "210 35% 9%",
+      "--foreground": "205 40% 95%"
+    }
+  });
+  api.theme.applyPreset("oceanic");
+  const removeStyle = api.ui.injectStyle({
+    layer: "theme",
+    global: true,
+    css: ".ui-card { box-shadow: 0 10px 32px hsl(var(--primary) / 0.18); }"
+  });
+  return () => {
+    removeStyle();
+    removePreset();
+  };
+};
+"#,
+        )
+        .map_err(|e| format!("Failed to write {}: {}", entry_path.display(), e))?;
+    }
+    Ok(())
+}
+
+fn write_ui_overhaul_plugin(plugin_dir: &Path) -> Result<(), String> {
+    fs::create_dir_all(plugin_dir)
+        .map_err(|e| format!("Failed to create {}: {}", plugin_dir.display(), e))?;
+    let manifest_path = plugin_dir.join(PLUGIN_MANIFEST);
+    let entry_path = plugin_dir.join(DEFAULT_ENTRYPOINT);
+    if !manifest_path.exists() {
+        fs::write(
+            &manifest_path,
+            r#"{
+  "id": "ui-overhaul-lab",
+  "name": "UI Overhaul Lab",
+  "version": "0.1.0",
+  "entry": "index.js",
+  "permissions": ["commands:*", "ui:*", "workspace:panel", "workspace:tab"],
+  "enabled_by_default": true
+}
+"#,
+        )
+        .map_err(|e| format!("Failed to write {}: {}", manifest_path.display(), e))?;
+    }
+    if !entry_path.exists() {
+        fs::write(
+            &entry_path,
+            r#"module.exports = function setup(api) {
+  const removeRibbon = api.ui.registerRibbonItem({
+    id: "launch-ui-overhaul",
+    title: "UI Lab",
+    icon: "🧪",
+    run: () => api.workspace.mountView({
+      viewType: "ui-lab",
+      title: "UI Overhaul Lab",
+      html: "<h2>UI Overhaul Lab</h2><p>This view is mounted from a plugin.</p>"
+    })
+  });
+  const removeStatus = api.ui.registerStatusBarItem({
+    id: "ui-overhaul-status",
+    text: "UI Lab Active",
+    align: "right"
+  });
+  const removeSlot = api.workspace.registerShellSlot({
+    slotId: "app-top",
+    order: 950,
+    html: "<div>UI Overhaul banner from plugin</div>"
+  });
+  const removeStyle = api.ui.injectStyle({
+    layer: "override",
+    global: true,
+    css: ".ui-panel { border-color: hsl(var(--primary) / 0.55); }"
+  });
+  return () => {
+    removeStyle();
+    removeSlot();
+    removeStatus();
+    removeRibbon();
+  };
+};
+"#,
+        )
+        .map_err(|e| format!("Failed to write {}: {}", entry_path.display(), e))?;
+    }
+    Ok(())
+}
 "#,
         )
         .map_err(|e| format!("Failed to write {}: {}", manifest_path.display(), e))?;
@@ -611,6 +728,22 @@ pub async fn plugin_scaffold_example(workspace_path: String) -> Result<String, S
     let example_dir = plugins_dir.join("hello-lumina");
     write_example_plugin(&example_dir)?;
     Ok(example_dir.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn plugin_scaffold_theme(workspace_path: String) -> Result<String, String> {
+    let plugins_dir = ensure_workspace_plugin_dir(&workspace_path)?;
+    let dir = plugins_dir.join("theme-oceanic");
+    write_theme_plugin(&dir)?;
+    Ok(dir.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn plugin_scaffold_ui_overhaul(workspace_path: String) -> Result<String, String> {
+    let plugins_dir = ensure_workspace_plugin_dir(&workspace_path)?;
+    let dir = plugins_dir.join("ui-overhaul-lab");
+    write_ui_overhaul_plugin(&dir)?;
+    Ok(dir.to_string_lossy().to_string())
 }
 
 #[cfg(test)]

@@ -466,6 +466,14 @@ export async function scaffoldWorkspaceExamplePlugin(workspacePath: string): Pro
   return invoke("plugin_scaffold_example", { workspace_path: workspacePath });
 }
 
+export async function scaffoldWorkspaceThemePlugin(workspacePath: string): Promise<string> {
+  return invoke("plugin_scaffold_theme", { workspace_path: workspacePath });
+}
+
+export async function scaffoldWorkspaceUiOverhaulPlugin(workspacePath: string): Promise<string> {
+  return invoke("plugin_scaffold_ui_overhaul", { workspace_path: workspacePath });
+}
+
 // ============ Doc tools ============
 
 export interface DocToolsStatus {

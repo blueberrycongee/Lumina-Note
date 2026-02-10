@@ -5,6 +5,7 @@
 > - `docs/plugin-open-strategy.md`
 > - `docs/plugin-manifest.v1.md`
 > - `packages/plugin-api/index.d.ts`
+> - `packages/plugin-ui/README.md`
 
 Lumina now exposes a first-party plugin runtime for developers.
 
@@ -229,6 +230,10 @@ Open `Settings -> Plugins (Developer Preview)` to:
 - Enable/disable plugins
 - Open workspace plugin folder
 - Scaffold an example plugin
+- Scaffold a theme plugin template
+- Scaffold a UI-overhaul plugin template
+- Toggle `Appearance Safe Mode` (disables appearance-heavy plugins)
+- Unload all plugin styles with one click
 
 Open `Settings -> Plugin Style Runtime (Dev)` to inspect:
 

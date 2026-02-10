@@ -104,6 +104,16 @@ class PluginStyleRuntime {
     this.emitUpdate();
   }
 
+  clearAll() {
+    this.entries.clear();
+    for (const node of this.styleNodes.values()) {
+      node.remove();
+    }
+    this.styleNodes.clear();
+    this.reorder();
+    this.emitUpdate();
+  }
+
   listEntries(): PluginStyleEntry[] {
     return Array.from(this.entries.values()).sort((a, b) => {
       const layerDiff = LAYER_ORDER.indexOf(a.layer) - LAYER_ORDER.indexOf(b.layer);
