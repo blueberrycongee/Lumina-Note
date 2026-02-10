@@ -11,7 +11,8 @@
     "commands:*",
     "events:*",
     "storage:*",
-    "ui:notify"
+    "ui:*",
+    "runtime:*"
   ],
   "enabled_by_default": false,
   "is_desktop_only": false
