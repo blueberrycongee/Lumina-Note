@@ -41,6 +41,7 @@ import { CodexPanelHost } from "@/components/codex/CodexPanelHost";
 import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import { ProfilePreview } from "@/components/profile/ProfilePreview";
+import { DevProfiler } from "@/perf/DevProfiler";
 import type { FsChangePayload } from "@/lib/fsChange";
 import { usePluginStore } from "@/stores/usePluginStore";
 import { pluginRuntime } from "@/services/plugins/runtime";
@@ -747,7 +748,9 @@ function App() {
             }`}
           style={{ width: leftSidebarOpen ? leftSidebarWidth : 0 }}
         >
-          <Sidebar />
+          <DevProfiler id="Sidebar">
+            <Sidebar />
+          </DevProfiler>
         </div>
 
         {/* Left Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
@@ -879,7 +882,9 @@ function App() {
           } ${isMainCollapsed && rightSidebarOpen ? "flex-1" : "flex-shrink-0"}`}
           style={{ width: rightSidebarOpen && !isMainCollapsed ? rightSidebarWidth : rightSidebarOpen ? undefined : 0 }}
         >
-          <RightPanel />
+          <DevProfiler id="RightPanel">
+            <RightPanel />
+          </DevProfiler>
         </div>
       </div>
 
