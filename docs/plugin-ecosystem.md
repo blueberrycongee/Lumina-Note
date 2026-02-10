@@ -168,12 +168,14 @@ Workspace/vault operations are restricted to the current workspace path.
 - `replaceRange(start, end, next)`
 - `registerDecoration(className, css)`
 - `getSelection()`
-- `registerEditorExtension({ id, css?, layer?, scopeId? })`
+- `registerEditorExtension(cmExtension)` for CodeMirror extensions
+- `registerEditorExtension({ id, css?, layer?, scopeId? })` for style-only editor extensions
 
 ### `api.render`
 
 - `registerMarkdownPostProcessor({ id, process })`
 - `registerCodeBlockRenderer({ id, language, render })`
+- `registerReadingViewPostProcessor({ id, process(container) })` (supports cleanup return)
 
 ### `api.storage`
 

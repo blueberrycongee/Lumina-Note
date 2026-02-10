@@ -27,7 +27,7 @@ import { syntaxTree } from "@codemirror/language";
 import katex from "katex";
 import { common, createLowlight } from "lowlight";
 import mermaid from "mermaid";
-import { PLUGIN_EDITOR_SELECTION_EVENT } from "@/services/plugins/editorRuntime";
+import { PLUGIN_EDITOR_SELECTION_EVENT, pluginEditorRuntime } from "@/services/plugins/editorRuntime";
 import {
   livePreviewPlugin,
   collapseOnSelectionFacet,
@@ -56,6 +56,7 @@ export type ViewMode = 'reading' | 'live' | 'source';
 const viewModeCompartment = new Compartment();
 const readOnlyCompartment = new Compartment();
 const themeCompartment = new Compartment();
+const pluginExtensionsCompartment = new Compartment();
 
 // ============ 2. 全局状态 ============
 // mouseSelectingField 和 setMouseSelecting 从 codemirror-live-markdown 导入
@@ -1245,6 +1246,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           viewModeCompartment.of(getModeExtensions(effectiveMode)),
           readOnlyCompartment.of(EditorState.readOnly.of(isReadOnly)),
           themeCompartment.of([]),
+          pluginExtensionsCompartment.of([]),
           history(),
           keymap.of([...tableKeymap, ...defaultKeymap, ...historyKeymap]),
           selectAllDomHandlers,
@@ -1280,6 +1282,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
 
       const view = new EditorView({ state, parent: containerRef.current });
       viewRef.current = view;
+      const unbindPluginExtensions = pluginEditorRuntime.bindReconfigure((extensions) => {
+        view.dispatch({
+          effects: pluginExtensionsCompartment.reconfigure(extensions),
+        });
+      });
 
       // 拖动选择检测：mousedown 时设为 true，mouseup 时设为 false
       const handleMouseDown = () => {
@@ -1491,6 +1498,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         ownerDoc.removeEventListener('beforeinput', handleSelectAllBeforeInput, true);
         ownerDoc.removeEventListener('keydown', handleSelectAllKeyDown, true);
         ownerDoc.removeEventListener('selectionchange', handleSelectionChange);
+        unbindPluginExtensions();
         view.destroy();
         viewRef.current = null;
       };

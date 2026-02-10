@@ -192,12 +192,16 @@ export interface LuminaPluginApi {
     replaceRange: (start: number, end: number, next: string) => void;
     registerDecoration: (className: string, css: string) => () => void;
     getSelection: () => { from: number; to: number; text: string } | null;
-    registerEditorExtension: (input: {
-      id: string;
-      css?: string;
-      layer?: "base" | "theme" | "component" | "override";
-      scopeId?: string;
-    }) => () => void;
+    registerEditorExtension: (
+      input:
+        | unknown
+        | {
+            id: string;
+            css?: string;
+            layer?: "base" | "theme" | "component" | "override";
+            scopeId?: string;
+          }
+    ) => () => void;
   };
   storage: {
     get: (key: string) => string | null;
@@ -231,6 +235,10 @@ export interface LuminaPluginApi {
       id: string;
       language: string;
       render: (payload: { language: string; code: string; html: string }) => string;
+    }) => () => void;
+    registerReadingViewPostProcessor: (input: {
+      id: string;
+      process: (container: HTMLElement) => void | (() => void);
     }) => () => void;
   };
 }

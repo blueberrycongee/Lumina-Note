@@ -197,12 +197,16 @@ interface LuminaPluginApi {
     replaceRange: (start: number, end: number, next: string) => void;
     registerDecoration: (className: string, css: string) => () => void;
     getSelection: () => { from: number; to: number; text: string } | null;
-    registerEditorExtension: (input: {
-      id: string;
-      css?: string;
-      layer?: PluginStyleLayer;
-      scopeId?: string;
-    }) => () => void;
+    registerEditorExtension: (
+      input:
+        | unknown
+        | {
+            id: string;
+            css?: string;
+            layer?: PluginStyleLayer;
+            scopeId?: string;
+          }
+    ) => () => void;
   };
   storage: {
     get: (key: string) => string | null;
@@ -233,6 +237,10 @@ interface LuminaPluginApi {
       id: string;
       language: string;
       render: (payload: { language: string; code: string; html: string }) => string;
+    }) => () => void;
+    registerReadingViewPostProcessor: (input: {
+      id: string;
+      process: (container: HTMLElement) => void | (() => void);
     }) => () => void;
   };
 }
@@ -1218,26 +1226,45 @@ return exported(api, plugin);
           requirePermission("editor:read");
           return pluginEditorRuntime.getSelection();
         },
-        registerEditorExtension: (input: {
-          id: string;
-          css?: string;
-          layer?: PluginStyleLayer;
-          scopeId?: string;
-        }) => {
+        registerEditorExtension: (
+          input:
+            | unknown
+            | {
+                id: string;
+                css?: string;
+                layer?: PluginStyleLayer;
+                scopeId?: string;
+              }
+        ) => {
           requirePermission("editor:decorate");
-          if (!input.id.trim()) {
-            throw new Error("Editor extension id cannot be empty");
-          }
-          if (!input.css) {
-            return () => undefined;
+          const maybeStyle = input as
+            | {
+                id?: string;
+                css?: string;
+                layer?: PluginStyleLayer;
+                scopeId?: string;
+              }
+            | undefined;
+          if (maybeStyle && typeof maybeStyle === "object" && typeof maybeStyle.css === "string") {
+            if (!maybeStyle.id?.trim()) {
+              throw new Error("Editor extension id cannot be empty");
+            }
+            const cleanup = withOnce(
+              pluginStyleRuntime.registerStyle(info.id, {
+                css: maybeStyle.css,
+                scopeId: maybeStyle.scopeId || "codemirror",
+                global: !maybeStyle.scopeId,
+                layer: maybeStyle.layer || "component",
+              }),
+            );
+            unsubscribers.push(cleanup);
+            return cleanup;
           }
           const cleanup = withOnce(
-            pluginStyleRuntime.registerStyle(info.id, {
-              css: input.css,
-              scopeId: input.scopeId || "codemirror",
-              global: !input.scopeId,
-              layer: input.layer || "component",
-            }),
+            pluginEditorRuntime.registerExtension(
+              info.id,
+              input as import("@codemirror/state").Extension,
+            ),
           );
           unsubscribers.push(cleanup);
           return cleanup;
@@ -1328,6 +1355,18 @@ return exported(api, plugin);
           unsubscribers.push(cleanup);
           return cleanup;
         },
+        registerReadingViewPostProcessor: (input: {
+          id: string;
+          process: (container: HTMLElement) => void | (() => void);
+        }) => {
+          requirePermission("ui:decorate");
+          if (!input.id.trim()) throw new Error("Reading view post processor id cannot be empty");
+          const cleanup = withOnce(
+            pluginRenderRuntime.registerReadingViewPostProcessor(info.id, input.id, input.process),
+          );
+          unsubscribers.push(cleanup);
+          return cleanup;
+        },
       },
     };
   }
@@ -1364,6 +1403,7 @@ return exported(api, plugin);
     pluginThemeRuntime.clearPlugin(pluginId);
     pluginStyleRuntime.clearPlugin(pluginId);
     pluginRenderRuntime.clearPlugin(pluginId);
+    pluginEditorRuntime.clearPlugin(pluginId);
     window.dispatchEvent(new CustomEvent("lumina-plugin-commands-updated"));
     this.removePluginCommands(pluginId);
     this.removePluginListeners(pluginId);
