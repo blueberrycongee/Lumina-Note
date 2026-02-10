@@ -194,9 +194,14 @@ export function PluginSection() {
                       )}
                     </div>
 
-                    {status?.error && (
+                    {status?.error && !status?.incompatible && (
                       <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-md p-2">
                         Runtime error: {status.error}
+                      </div>
+                    )}
+                    {status?.incompatible && status?.reason && (
+                      <div className="text-xs text-amber-600 bg-amber-500/10 border border-amber-500/30 rounded-md p-2">
+                        Incompatible: {status.reason}
                       </div>
                     )}
                     {enabled && status?.loaded && !status?.error && (

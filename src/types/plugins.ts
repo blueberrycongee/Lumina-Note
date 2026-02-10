@@ -59,4 +59,6 @@ export interface PluginRuntimeStatus {
   enabled: boolean;
   loaded: boolean;
   error?: string;
+  incompatible?: boolean;
+  reason?: string;
 }

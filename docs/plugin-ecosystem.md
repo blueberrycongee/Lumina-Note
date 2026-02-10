@@ -61,6 +61,12 @@ Each plugin lives in its own folder and must include `plugin.json`:
 - `permissions`: capability list
 - `enabled_by_default`: defaults to `true`
 
+### Compatibility behavior
+
+- If `api_version` does not match host API version, plugin will not load.
+- If `min_app_version` is greater than current app version, plugin will not load.
+- Incompatible reasons are shown in `Settings -> Plugins`.
+
 ## Entry contract
 
 Lumina executes plugin entry as CommonJS-style code. The entry must export a setup function:

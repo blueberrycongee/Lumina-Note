@@ -41,6 +41,9 @@ type SyncInput = {
   enabledById: Record<string, boolean>;
 };
 
+const HOST_API_VERSION = "1";
+const HOST_APP_VERSION = __LUMINA_APP_VERSION__;
+
 interface LuminaPluginApi {
   meta: {
     id: string;
@@ -121,6 +124,45 @@ const hasPermission = (permissions: Set<string>, required: string) => {
   return permissions.has(`${namespace}:*`);
 };
 
+const normalizePermissionSet = (rawPermissions: string[]) => {
+  const next = new Set<string>(rawPermissions);
+  if (next.has("workspace:read")) next.add("vault:read");
+  if (next.has("workspace:write")) next.add("vault:write");
+  if (next.has("network:fetch")) next.add("network:*");
+  if (next.has("storage:read")) next.add("storage:*");
+  if (next.has("storage:write")) next.add("storage:*");
+  if (next.has("events:subscribe")) next.add("events:*");
+  if (next.has("commands:register")) next.add("commands:*");
+  return next;
+};
+
+const parseVersion = (value: string) => {
+  const match = value.trim().match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2]), Number(match[3])] as const;
+};
+
+const versionLt = (left: string, right: string) => {
+  const l = parseVersion(left);
+  const r = parseVersion(right);
+  if (!l || !r) return false;
+  for (let i = 0; i < 3; i += 1) {
+    if (l[i] < r[i]) return true;
+    if (l[i] > r[i]) return false;
+  }
+  return false;
+};
+
+const getCompatibilityIssue = (plugin: PluginInfo): string | null => {
+  if (plugin.api_version && plugin.api_version !== HOST_API_VERSION) {
+    return `Unsupported api_version=${plugin.api_version}. Host supports ${HOST_API_VERSION}.`;
+  }
+  if (plugin.min_app_version && versionLt(HOST_APP_VERSION, plugin.min_app_version)) {
+    return `Requires app >= ${plugin.min_app_version}, current is ${HOST_APP_VERSION}.`;
+  }
+  return null;
+};
+
 const withOnce = (fn: () => void) => {
   let called = false;
   return () => {
@@ -177,6 +219,20 @@ class PluginRuntime {
         continue;
       }
 
+      const compatibilityIssue = getCompatibilityIssue(plugin);
+      if (compatibilityIssue) {
+        statuses[plugin.id] = {
+          enabled: true,
+          loaded: false,
+          incompatible: true,
+          reason: compatibilityIssue,
+          error: compatibilityIssue,
+        };
+        this.removePluginCommands(plugin.id);
+        this.removePluginListeners(plugin.id);
+        continue;
+      }
+
       const signature = this.signatureOf(plugin);
       const existing = this.loaded.get(plugin.id);
       if (existing && existing.signature === signature) {
@@ -190,7 +246,7 @@ class PluginRuntime {
 
       try {
         const entry = await readPluginEntry(plugin.id, input.workspacePath);
-        const permissions = new Set(entry.info.permissions || []);
+        const permissions = normalizePermissionSet(entry.info.permissions || []);
         const unsubscribers: Array<() => void> = [];
         const api = this.createApi(entry.info, permissions, input.workspacePath, unsubscribers);
         const dispose = await this.runPlugin(entry.info, entry.code, api);
