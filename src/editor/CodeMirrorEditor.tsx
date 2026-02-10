@@ -4,6 +4,7 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useSplitStore } from "@/stores/useSplitStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useShallow } from "zustand/react/shallow";
 import { parseLuminaLink } from "@/services/pdf/annotations";
 import { writeBinaryFile, readBinaryFileBase64 } from "@/lib/tauri";
 import { EditorState, StateField, StateEffect, Compartment, Prec, ChangeSet } from "@codemirror/state";
@@ -1168,7 +1169,15 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
     const isExternalChange = useRef(false);
     const lastInternalContent = useRef<string>(content);
 
-    const { openVideoNoteTab, openPDFTab, fileTree, openFile, vaultPath } = useFileStore();
+    const { openVideoNoteTab, openPDFTab, fileTree, openFile, vaultPath } = useFileStore(
+      useShallow((state) => ({
+        openVideoNoteTab: state.openVideoNoteTab,
+        openPDFTab: state.openPDFTab,
+        fileTree: state.fileTree,
+        openFile: state.openFile,
+        vaultPath: state.vaultPath,
+      }))
+    );
     const { openSecondaryPdf } = useSplitStore();
     const { setSplitView } = useUIStore();
 
