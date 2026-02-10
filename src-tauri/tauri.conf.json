@@ -14,7 +14,7 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "both"
+        "installMode": "currentUser"
       }
     },
     "resources": [
