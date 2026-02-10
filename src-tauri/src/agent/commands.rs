@@ -458,6 +458,7 @@ const PROMPT_GEMINI: &str =
     "You are Lumina, a note assistant. Keep responses brief and structured. Use tools to read or edit files when needed and avoid guessing.";
 const PROMPT_OLLAMA: &str =
     "You are Lumina, a note assistant. Keep responses brief and avoid unnecessary tool calls. Use tools to read or edit files when needed and avoid guessing.";
+const LEGACY_DEFAULT_AGENT_INSTRUCTIONS: &str = "Project instructions (edit this file as needed):\n- Follow existing note/project conventions.\n- Prefer minimal, correct changes.\n- Ask before making broad refactors.";
 const DEFAULT_AGENT_INSTRUCTIONS: &str = r#"Project instructions (edit this file as needed):
 - Follow existing note/project conventions.
 - Prefer minimal, correct changes.
@@ -526,7 +527,24 @@ fn load_agent_instructions(workspace_path: &str) -> Option<String> {
     let dir = Path::new(workspace_path).join(".lumina");
     let file_path = dir.join("AGENT.md");
     if file_path.exists() {
-        return fs::read_to_string(file_path).ok();
+        return match fs::read_to_string(&file_path) {
+            Ok(content) => {
+                let trimmed = content.trim();
+                // Upgrade legacy or empty default file to the current richer template.
+                if trimmed.is_empty() || trimmed == LEGACY_DEFAULT_AGENT_INSTRUCTIONS {
+                    if let Err(err) = fs::write(&file_path, DEFAULT_AGENT_INSTRUCTIONS) {
+                        eprintln!("[Agent] Failed to upgrade AGENT.md: {}", err);
+                        return Some(content);
+                    }
+                    return Some(DEFAULT_AGENT_INSTRUCTIONS.to_string());
+                }
+                Some(content)
+            }
+            Err(err) => {
+                eprintln!("[Agent] Failed to read AGENT.md: {}", err);
+                None
+            }
+        };
     }
     if let Err(err) = fs::create_dir_all(&dir) {
         eprintln!("[Agent] Failed to create .lumina dir: {}", err);
