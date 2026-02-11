@@ -158,6 +158,7 @@ export interface Database {
   name: string;
   icon?: string; // emoji 或 lucide 图标名
   description?: string;
+  noteFolder?: string; // 新建/复制行时笔记默认落盘目录（相对 vault）
   
   // 列定义
   columns: DatabaseColumn[];
@@ -189,6 +190,7 @@ export interface LegacyDatabase {
   name: string;
   icon?: string;
   description?: string;
+  noteFolder?: string;
   columns: DatabaseColumn[];
   rows: LegacyDatabaseRow[];  // 旧版直接存储行
   views: DatabaseView[];

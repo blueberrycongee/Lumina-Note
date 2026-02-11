@@ -85,6 +85,54 @@ function getDbPath(dbId: string): string {
   return `${getDbDir()}/${dbId}.db.json`;
 }
 
+function normalizeFolderSegments(input: string): string[] {
+  return input
+    .replace(/\\/g, '/')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment && segment !== '.' && segment !== '..');
+}
+
+function resolveDatabaseNoteFolder(db: Database): string {
+  const configuredFolder = typeof db.noteFolder === 'string' ? db.noteFolder.trim() : '';
+  const normalizedConfigured = normalizeFolderSegments(configuredFolder).join('/');
+  if (normalizedConfigured) {
+    return normalizedConfigured;
+  }
+  return `Databases/${db.id}`;
+}
+
+function getDatabaseNoteDirectory(vaultPath: string, db: Database): string {
+  const folder = resolveDatabaseNoteFolder(db);
+  return `${vaultPath}/${folder}`;
+}
+
+async function ensureDirectoryRecursive(path: string): Promise<void> {
+  const normalizedPath = path.replace(/\\/g, '/').replace(/\/+$/, '');
+  if (!normalizedPath) return;
+
+  const isAbsolute = normalizedPath.startsWith('/');
+  const segments = normalizedPath.split('/').filter(Boolean);
+  if (segments.length === 0) return;
+
+  let cursor = '';
+  const isDriveRoot = /^[A-Za-z]:$/.test(segments[0]);
+
+  if (isAbsolute) {
+    cursor = '/';
+  } else if (isDriveRoot) {
+    cursor = segments[0];
+    segments.shift();
+  }
+
+  for (const segment of segments) {
+    cursor = cursor === '/' ? `/${segment}` : (cursor ? `${cursor}/${segment}` : segment);
+    if (!(await exists(cursor))) {
+      await createDir(cursor);
+    }
+  }
+}
+
 // 格式化 YAML 值
 function formatYamlValue(value: CellValue): string {
   if (value === null || value === undefined) return '';
@@ -428,6 +476,7 @@ export const useDatabaseStore = create<DatabaseState>()(
           name: options.name,
           icon: options.icon,
           description: options.description,
+          noteFolder: `Databases/${dbId}`,
           columns: template.columns?.map(col => ({ ...col, id: col.id || generateId() })) || [
             { id: generateId(), name: t.database.templateContent.blank.columns.title, type: 'text' as ColumnType }
           ],
@@ -606,7 +655,9 @@ export const useDatabaseStore = create<DatabaseState>()(
         
         // 生成安全的文件名
         const safeFileName = slugify(titleValue) || generateId();
-        const basePath = `${vaultPath}/${safeFileName}`;
+        const noteDirectory = getDatabaseNoteDirectory(vaultPath, db);
+        await ensureDirectoryRecursive(noteDirectory);
+        const basePath = `${noteDirectory}/${safeFileName}`;
         const notePath = await ensureUniquePath(basePath, '.md');
         const noteName = notePath.split('/').pop()?.replace('.md', '') || safeFileName;
         
@@ -794,7 +845,10 @@ ${yamlLines.join('\n')}
         
         const now = new Date().toISOString();
         const newTitle = `${sourceRow.noteTitle} (副本)`;
-        const notePath = `${vaultPath}/${newTitle.replace(/[\\/:*?"<>|]/g, '-')}.md`;
+        const safeFileName = slugify(newTitle) || generateId();
+        const noteDirectory = getDatabaseNoteDirectory(vaultPath, db);
+        await ensureDirectoryRecursive(noteDirectory);
+        const notePath = await ensureUniquePath(`${noteDirectory}/${safeFileName}`, '.md');
         
         // 复制笔记内容
         try {

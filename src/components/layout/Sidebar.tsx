@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { FileEntry, deleteFile, renameFile, createFile, createDir, exists, openNewWindow, saveFile } from "@/lib/tauri";
+import { FileEntry, deleteFile, renameFile, createFile, createDir, exists, openNewWindow, saveFile, readFile } from "@/lib/tauri";
+import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { cn, getFileName } from "@/lib/utils";
@@ -332,11 +333,25 @@ export function Sidebar() {
     
     try {
       await renameFile(renamingPath, newPath);
-      refreshFileTree();
+      await refreshFileTree();
       
       // 更新标签页中的路径和名称（如果文件在标签页中打开）
       const { updateTabPath } = useFileStore.getState();
       updateTabPath(renamingPath, newPath);
+
+      const { useDatabaseStore } = await import("@/stores/useDatabaseStore");
+      if (isDir) {
+        const dbIds = Object.keys(useDatabaseStore.getState().databases);
+        for (const dbId of dbIds) {
+          await useDatabaseStore.getState().refreshRows(dbId);
+        }
+      } else {
+        const content = await readFile(newPath);
+        const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
+        if (hasFrontmatter && frontmatter.db) {
+          await useDatabaseStore.getState().refreshRows(String(frontmatter.db));
+        }
+      }
     } catch (error) {
       console.error("Rename failed:", error);
       alert(t.file.renameFailed);

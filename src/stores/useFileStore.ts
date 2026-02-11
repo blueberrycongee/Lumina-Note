@@ -7,6 +7,7 @@ import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { parseFrontmatter } from "@/services/markdown/frontmatter";
 
 // 历史记录条目
 interface HistoryEntry {
@@ -72,6 +73,32 @@ type MobileWorkspaceSyncStatus = {
   error: string | null;
   source: string | null;
 };
+
+async function refreshDatabaseRowsForPath(path: string): Promise<void> {
+  if (!path.toLowerCase().endsWith(".md")) return;
+  try {
+    const content = await readFile(path);
+    const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
+    const dbId = hasFrontmatter ? frontmatter.db : null;
+    if (!dbId) return;
+    const { useDatabaseStore } = await import("./useDatabaseStore");
+    await useDatabaseStore.getState().refreshRows(String(dbId));
+  } catch (error) {
+    console.warn("[FileStore] Failed to refresh database rows for path:", path, error);
+  }
+}
+
+async function refreshAllLoadedDatabases(): Promise<void> {
+  try {
+    const { useDatabaseStore } = await import("./useDatabaseStore");
+    const dbIds = Object.keys(useDatabaseStore.getState().databases);
+    for (const dbId of dbIds) {
+      await useDatabaseStore.getState().refreshRows(dbId);
+    }
+  } catch (error) {
+    console.warn("[FileStore] Failed to refresh loaded databases:", error);
+  }
+}
 
 interface FileState {
   // Vault
@@ -2105,6 +2132,7 @@ export const useFileStore = create<FileState>()(
           
           // Refresh file tree
           await refreshFileTree();
+          await refreshDatabaseRowsForPath(newPath);
         } catch (error) {
           console.error("Failed to move file:", error);
           throw error;
@@ -2167,6 +2195,7 @@ export const useFileStore = create<FileState>()(
           
           // Refresh file tree
           await refreshFileTree();
+          await refreshAllLoadedDatabases();
         } catch (error) {
           console.error("Failed to move folder:", error);
           throw error;
