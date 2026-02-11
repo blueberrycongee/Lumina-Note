@@ -45,6 +45,7 @@ import { DevProfiler } from "@/perf/DevProfiler";
 import type { FsChangePayload } from "@/lib/fsChange";
 import { usePluginStore } from "@/stores/usePluginStore";
 import { pluginRuntime } from "@/services/plugins/runtime";
+import { applyTheme, getThemeById } from "@/config/themePlugin";
 import { PluginViewPane } from "@/components/plugins/PluginViewPane";
 import { PluginPanelDock } from "@/components/plugins/PluginPanelDock";
 import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
@@ -290,9 +291,23 @@ function App() {
       document.documentElement.removeAttribute("style");
       document.head
         .querySelectorAll(
-          "style[data-lumina-plugin-style], style[data-lumina-plugin-theme-dark], style[data-lumina-plugin-editor-decoration]",
+          "style[data-lumina-plugin-style], style[data-lumina-plugin-theme-light], style[data-lumina-plugin-theme-dark], style[data-lumina-plugin-editor-decoration]",
         )
         .forEach((node) => node.remove());
+
+      // 关键兜底：清理插件样式后要立即恢复用户基础主题变量，
+      // 否则会退回到 globals.css 的默认 dark 配色（偏蓝），看起来像主题错乱。
+      const uiState = useUIStore.getState();
+      const baseTheme = getThemeById(uiState.themeId || "default");
+      if (baseTheme) {
+        if (uiState.isDarkMode) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+        applyTheme(baseTheme, uiState.isDarkMode);
+      }
+
       void setAppearanceSafeMode(true, vaultPath || undefined);
       localStorage.removeItem(crashFlagKey);
     }
