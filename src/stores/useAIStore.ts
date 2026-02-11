@@ -503,9 +503,15 @@ export const useAIStore = create<AIState>()(
 
       // 流式发送消息
       sendMessageStream: async (content, currentFile, displayContent, images, attachments) => {
-        const { referencedFiles, currentSessionId } = get();
+        const { referencedFiles, currentSessionId, isStreaming, isLoading } = get();
         const runtimeConfig = getAIConfig();
         const t = getCurrentTranslations();
+
+        // 兜底防重入：UI 层已经做了禁用，但键盘/点击竞争态仍可能触发两次发送。
+        // 这里必须在 store 层二次保护，避免同一轮 chat 出现双请求导致“回复被覆盖/跳变”。
+        if (isStreaming || isLoading) {
+          return;
+        }
 
         // 构建用户消息内容（支持多模态）
         let userMessageContent: MessageContent;
@@ -642,12 +648,12 @@ export const useAIStore = create<AIState>()(
           for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true })) {
             if (chunk.type === "text") {
               finalContent += chunk.text;
-              // 直接更新 Zustand 状态
+              // chat 流式阶段只渲染最终回答文本，避免 reasoning 与正文来回覆盖造成“像两次回复”。
               set({ streamingContent: finalContent });
             } else if (chunk.type === "reasoning") {
               reasoningContent += chunk.text;
-              // reasoning 暂时也放到 streamingContent 里显示
-              set({ streamingContent: `<thinking>\n${reasoningContent}\n</thinking>` });
+              // reasoning 单独保存（用于调试/后续扩展），不再覆盖 streamingContent。
+              set({ streamingReasoning: reasoningContent });
             } else if (chunk.type === "usage") {
               // Update token usage
               set((state) => ({
@@ -663,10 +669,8 @@ export const useAIStore = create<AIState>()(
             }
           }
           
-          // 如果有 reasoning content，添加到最终内容前面
-          if (reasoningContent) {
-            finalContent = `<thinking>\n${reasoningContent}\n</thinking>\n\n${finalContent}`;
-          }
+          // chat 消息正文保持单一答案内容，不把中间 reasoning 注入最终消息，
+          // 否则用户会看到一次流式正文后又被 thinking 块“替换成另一版”。
           
           // Parse edit suggestions from content
           const edits = parseEditSuggestions(finalContent);

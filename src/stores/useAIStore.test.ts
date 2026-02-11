@@ -15,6 +15,7 @@ const getAIConfigMock = vi.hoisted(() =>
 
 vi.mock("@/services/llm", () => ({
   callLLMStream: callLLMStreamMock.mockImplementation(async function* () {
+    yield { type: "reasoning", text: "thinking..." };
     yield { type: "text", text: "pong" };
     yield { type: "usage", inputTokens: 1, outputTokens: 1, totalTokens: 2 };
   }),
@@ -76,6 +77,7 @@ describe("useAIStore sendMessageStream", () => {
       currentSessionId: null,
       error: null,
       isStreaming: false,
+      isLoading: false,
       streamingContent: "",
       streamingReasoning: "",
       pendingEdits: [],
@@ -88,5 +90,19 @@ describe("useAIStore sendMessageStream", () => {
 
     expect(callLLMStreamMock).toHaveBeenCalledTimes(1);
     expect(useAIStore.getState().error).toBeNull();
+    const messages = useAIStore.getState().messages;
+    expect(messages[messages.length - 1]).toMatchObject({
+      role: "assistant",
+      content: "pong",
+    });
+  });
+
+  it("should ignore duplicate stream requests while streaming", async () => {
+    useAIStore.setState({ isStreaming: true });
+
+    await useAIStore.getState().sendMessageStream("hello");
+
+    expect(callLLMStreamMock).not.toHaveBeenCalled();
+    expect(useAIStore.getState().messages).toHaveLength(0);
   });
 });
