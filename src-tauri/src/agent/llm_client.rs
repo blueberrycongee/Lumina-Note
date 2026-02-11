@@ -441,6 +441,8 @@ impl LlmClient {
 
         let message = &json["choices"][0]["message"];
 
+        let reasoning = Self::extract_reasoning_content(message);
+
         // 检查是否有 tool_calls（Function Call）
         if let Some(fc_tool_calls) = message.get("tool_calls").and_then(|v| v.as_array()) {
             if self.supports_fc() {
@@ -463,6 +465,7 @@ impl LlmClient {
 
                 // 文本内容（如果有）
                 let content = message["content"].as_str().unwrap_or("").to_string();
+                let content = Self::attach_reasoning_block(reasoning.as_deref(), &content);
 
                 return Ok(LlmResponse {
                     content,
@@ -504,6 +507,7 @@ impl LlmClient {
 
         // 提取文本内容
         let content = message["content"].as_str().unwrap_or("").to_string();
+        let content = Self::attach_reasoning_block(reasoning.as_deref(), &content);
 
         Ok(LlmResponse {
             content,
@@ -666,6 +670,7 @@ impl LlmClient {
 
         let mut stream = response.bytes_stream();
         let mut buffer = String::new();
+        let mut reasoning_content = String::new();
         let mut full_content = String::new();
         let mut tool_calls: Vec<StreamToolCall> = Vec::new();
         let mut prompt_tokens = 0usize;
@@ -699,6 +704,7 @@ impl LlmClient {
 
                                     if data == "[DONE]" {
                                         return Ok(Self::build_stream_response(
+                                            reasoning_content,
                                             full_content,
                                             tool_calls,
                                             prompt_tokens,
@@ -719,6 +725,10 @@ impl LlmClient {
                                         }
 
                                         let delta = &json["choices"][0]["delta"];
+
+                                        if let Some(reasoning) = Self::extract_reasoning_content(delta) {
+                                            reasoning_content.push_str(reasoning.as_str());
+                                        }
 
                                         if let Some(tc_array) = delta.get("tool_calls").and_then(|v| v.as_array()) {
                                             for tc in tc_array {
@@ -755,6 +765,7 @@ impl LlmClient {
                         }
                         None => {
                             return Ok(Self::build_stream_response(
+                                reasoning_content,
                                 full_content,
                                 tool_calls,
                                 prompt_tokens,
@@ -904,6 +915,7 @@ impl LlmClient {
     }
 
     fn build_stream_response(
+        reasoning_content: String,
         full_content: String,
         tool_calls: Vec<StreamToolCall>,
         prompt_tokens: usize,
@@ -918,7 +930,7 @@ impl LlmClient {
         };
 
         LlmResponse {
-            content: full_content,
+            content: Self::attach_reasoning_block(Some(reasoning_content.as_str()), &full_content),
             tool_calls: if parsed_calls.is_empty() {
                 None
             } else {
@@ -948,6 +960,34 @@ impl LlmClient {
                 })
             })
             .collect()
+    }
+
+    /// 统一提取 reasoning 字段（不同 provider 字段名不同）。
+    fn extract_reasoning_content(message: &Value) -> Option<String> {
+        message
+            .get("reasoning_content")
+            .and_then(|v| v.as_str())
+            .or_else(|| message.get("reasoning").and_then(|v| v.as_str()))
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+    }
+
+    /// 把 reasoning 作为 <thinking> 块附加到正文前，供前端折叠展示。
+    fn attach_reasoning_block(reasoning: Option<&str>, content: &str) -> String {
+        let Some(reasoning) = reasoning else {
+            return content.to_string();
+        };
+        let trimmed_reasoning = reasoning.trim();
+        if trimmed_reasoning.is_empty() {
+            return content.to_string();
+        }
+        if content.trim().is_empty() {
+            return format!("<thinking>\n{}\n</thinking>", trimmed_reasoning);
+        }
+        format!(
+            "<thinking>\n{}\n</thinking>\n\n{}",
+            trimmed_reasoning, content
+        )
     }
 
     /// 流式调用（带心跳和超时检测）
