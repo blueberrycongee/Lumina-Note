@@ -622,6 +622,11 @@ export default {
       formula: '数式',
       relation: '関連',
     },
+    formula: {
+      expression: '数式',
+      expressionPlaceholder: '例: {工数} * {単価}',
+      empty: '空の数式',
+    },
     unsupportedType: 'サポートされていない列タイプ：{type}',
     createDialog: {
       title: 'データベースを作成',

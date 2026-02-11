@@ -622,6 +622,11 @@ export default {
       formula: '公式',
       relation: '關聯',
     },
+    formula: {
+      expression: '公式表達式',
+      expressionPlaceholder: '例如：{預估工時} * {費率}',
+      empty: '空公式',
+    },
     unsupportedType: '不支援的欄位類型：{type}',
     createDialog: {
       title: '建立資料庫',

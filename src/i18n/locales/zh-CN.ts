@@ -622,6 +622,11 @@ export default {
       formula: '公式',
       relation: '关联',
     },
+    formula: {
+      expression: '公式表达式',
+      expressionPlaceholder: '例如：{预计工时} * {费率}',
+      empty: '空公式',
+    },
     unsupportedType: '不支持的列类型：{type}',
     createDialog: {
       title: '创建数据库',

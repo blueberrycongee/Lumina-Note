@@ -20,6 +20,7 @@ import { useFileStore } from "./useFileStore";
 import { useSplitStore } from "./useSplitStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { applyFilters } from "./databaseFilter";
+import { applyFormulaColumns } from "./databaseFormula";
 
 // ==================== 工具函数 ====================
 
@@ -1049,7 +1050,7 @@ ${yamlLines.join('\n')}
         const view = db.views.find(v => v.id === db.activeViewId);
         if (!view) return db.rows;
         
-        let rows = [...db.rows];
+        let rows = applyFormulaColumns(db.rows, db.columns);
         
         // 应用筛选
         if (view.filters && view.filters.rules.length > 0) {

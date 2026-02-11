@@ -47,6 +47,7 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
   
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(column.name);
+  const [formulaInput, setFormulaInput] = useState(column.formula || "");
   const [showMenu, setShowMenu] = useState(false);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   
@@ -72,6 +73,10 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
       inputRef.current.select();
     }
   }, [isEditing]);
+
+  useEffect(() => {
+    setFormulaInput(column.formula || "");
+  }, [column.formula]);
   
   const handleNameSubmit = () => {
     if (editName.trim() && editName !== column.name) {
@@ -86,6 +91,11 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
     updateColumn(dbId, column.id, { type });
     setShowTypeMenu(false);
     setShowMenu(false);
+  };
+
+  const handleFormulaSubmit = () => {
+    const normalized = formulaInput.trim();
+    updateColumn(dbId, column.id, { formula: normalized || undefined });
   };
   
   const handleDelete = () => {
@@ -193,6 +203,36 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
                   </DatabaseMenuSurface>
                 )}
               </div>
+
+              {column.type === "formula" && (
+                <>
+                  <div className="my-1 border-t border-border/70" />
+                  <div className="px-2 pb-2">
+                    <label className="text-[11px] text-muted-foreground" htmlFor={`formula-input-${column.id}`}>
+                      {t.database.formula.expression}
+                    </label>
+                    <input
+                      id={`formula-input-${column.id}`}
+                      value={formulaInput}
+                      onChange={(event) => setFormulaInput(event.target.value)}
+                      onBlur={handleFormulaSubmit}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleFormulaSubmit();
+                          setShowMenu(false);
+                        }
+                        if (event.key === "Escape") {
+                          setFormulaInput(column.formula || "");
+                        }
+                      }}
+                      placeholder={t.database.formula.expressionPlaceholder}
+                      aria-label={t.database.formula.expression}
+                      className="db-input mt-1 h-8 w-full px-2 text-xs"
+                    />
+                  </div>
+                </>
+              )}
               
               <div className="my-1 border-t border-border/70" />
               

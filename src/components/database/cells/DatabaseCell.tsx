@@ -71,8 +71,8 @@ export function DatabaseCell({
     
     case 'formula':
       return (
-        <div className="h-9 px-2 flex items-center text-sm text-muted-foreground">
-          {t.database.columnTypes.formula}
+        <div className="h-9 px-2 flex items-center text-sm">
+          {renderReadOnlyCellValue(value, t.database.formula.empty)}
         </div>
       );
     
@@ -90,4 +90,18 @@ export function DatabaseCell({
         </div>
       );
   }
+}
+
+function renderReadOnlyCellValue(value: CellValue, emptyLabel: string) {
+  if (value === null || value === undefined || value === "") {
+    return <span className="text-muted-foreground">{emptyLabel}</span>;
+  }
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return <span className="truncate">{value}</span>;
+  if (Array.isArray(value)) return <span className="truncate">{value.join(", ")}</span>;
+  if (typeof value === "object" && "start" in value) {
+    return <span className="truncate">{value.start}</span>;
+  }
+  return <span className="truncate">{String(value)}</span>;
 }

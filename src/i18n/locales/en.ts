@@ -622,6 +622,11 @@ export default {
       formula: 'Formula',
       relation: 'Relation',
     },
+    formula: {
+      expression: 'Formula expression',
+      expressionPlaceholder: 'e.g. {Estimate} * {Rate}',
+      empty: 'Empty formula',
+    },
     unsupportedType: 'Unsupported column type: {type}',
     createDialog: {
       title: 'Create database',
