@@ -292,6 +292,84 @@ describe('useRustAgentStore', () => {
       
       expect(useRustAgentStore.getState().error).toBe('Something went wrong');
     });
+
+    it('should handle llm_retry_scheduled event', () => {
+      const store = useRustAgentStore.getState();
+
+      act(() => {
+        store._handleEvent({
+          type: 'llm_retry_scheduled',
+          data: {
+            request_id: 'req-123',
+            attempt: 2,
+            max_retries: 3,
+            delay_ms: 1500,
+            reason: 'HTTP 429',
+            next_retry_at: 1700000000000,
+          },
+        });
+      });
+
+      expect(useRustAgentStore.getState().llmRetryState).toEqual({
+        requestId: 'req-123',
+        attempt: 2,
+        maxRetries: 3,
+        delayMs: 1500,
+        reason: 'HTTP 429',
+        nextRetryAt: 1700000000000,
+      });
+    });
+
+    it('should clear llmRetryState on llm_request_end', () => {
+      useRustAgentStore.setState({
+        llmRetryState: {
+          requestId: 'req-123',
+          attempt: 1,
+          maxRetries: 3,
+          delayMs: 1000,
+          reason: 'timeout',
+          nextRetryAt: 1700000000000,
+        },
+        llmRequestId: 'req-123',
+        llmRequestStartTime: 1700000000000,
+      });
+      const store = useRustAgentStore.getState();
+
+      act(() => {
+        store._handleEvent({
+          type: 'llm_request_end',
+          data: { request_id: 'req-123' },
+        });
+      });
+
+      const state = useRustAgentStore.getState();
+      expect(state.llmRetryState).toBeNull();
+      expect(state.llmRequestId).toBeNull();
+      expect(state.llmRequestStartTime).toBeNull();
+    });
+
+    it('should clear llmRetryState on run_completed', () => {
+      useRustAgentStore.setState({
+        llmRetryState: {
+          requestId: 'req-123',
+          attempt: 3,
+          maxRetries: 3,
+          delayMs: 3000,
+          reason: 'gateway timeout',
+          nextRetryAt: 1700000003000,
+        },
+      });
+      const store = useRustAgentStore.getState();
+
+      act(() => {
+        store._handleEvent({
+          type: 'run_completed',
+          data: {},
+        });
+      });
+
+      expect(useRustAgentStore.getState().llmRetryState).toBeNull();
+    });
   });
 
   describe('_compactSession', () => {
