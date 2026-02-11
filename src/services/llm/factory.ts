@@ -6,6 +6,7 @@ import {
   GeminiProvider,
   MoonshotProvider,
   DeepSeekProvider,
+  ZAIProvider,
   GroqProvider,
   OpenRouterProvider,
   OllamaProvider,
@@ -58,6 +59,8 @@ export function createProvider(configOverride?: Partial<LLMConfig>): LLMProvider
       return new MoonshotProvider(finalConfig);
     case "deepseek":
       return new DeepSeekProvider(finalConfig);
+    case "zai":
+      return new ZAIProvider(finalConfig);
     case "groq":
       return new GroqProvider(finalConfig);
     case "openrouter":

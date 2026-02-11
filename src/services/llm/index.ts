@@ -39,6 +39,7 @@ export {
   GeminiProvider,
   MoonshotProvider,
   DeepSeekProvider,
+  ZAIProvider,
   GroqProvider,
   OpenRouterProvider,
   OllamaProvider,

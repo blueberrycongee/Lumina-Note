@@ -13,6 +13,7 @@ export { OpenAIProvider } from "./openai";
 export { GeminiProvider } from "./gemini";
 export { MoonshotProvider } from "./moonshot";
 export { DeepSeekProvider } from "./deepseek";
+export { ZAIProvider } from "./zai";
 export { GroqProvider } from "./groq";
 export { OpenRouterProvider } from "./openrouter";
 export { OllamaProvider } from "./ollama";

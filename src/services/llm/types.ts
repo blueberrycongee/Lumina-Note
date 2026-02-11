@@ -57,6 +57,7 @@ export type LLMProviderType =
   | "gemini"
   | "moonshot" 
   | "deepseek"
+  | "zai"
   | "groq"
   | "openrouter"
   | "ollama";
@@ -261,6 +262,19 @@ export const PROVIDER_REGISTRY: Record<LLMProviderType, ProviderMeta> = {
       { id: "deepseek-chat", name: "DeepSeek V3.2 (Chat)", contextWindow: 128000 },
       { id: "deepseek-reasoner", name: "DeepSeek V3.2 (Reasoner)", contextWindow: 128000, supportsThinking: true },
       { id: "custom", name: "Custom Model", contextWindow: 128000 },
+    ],
+  },
+  zai: {
+    name: "zai",
+    label: "Z.ai (GLM)",
+    description: "Zhipu GLM models",
+    defaultBaseUrl: "https://open.bigmodel.cn/api/paas/v4",
+    supportsFunctionCalling: true,
+    models: [
+      { id: "glm-5", name: "GLM-5", contextWindow: 128000, supportsVision: true },
+      { id: "glm-4.7", name: "GLM-4.7", contextWindow: 128000, supportsVision: true },
+      { id: "glm-4.7-flash", name: "GLM-4.7 Flash", contextWindow: 128000, supportsVision: true },
+      { id: "custom", name: "Custom Model", contextWindow: 128000, supportsVision: true },
     ],
   },
   groq: {

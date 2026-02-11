@@ -11,6 +11,7 @@ describe('PROVIDER_REGISTRY', () => {
     'gemini',
     'moonshot',
     'deepseek',
+    'zai',
     'groq',
     'openrouter',
     'ollama',
@@ -78,6 +79,14 @@ describe('PROVIDER_REGISTRY', () => {
       const deepseek = PROVIDER_REGISTRY.deepseek;
       const reasoner = deepseek.models.find((m) => m.id === 'deepseek-reasoner');
       expect(reasoner?.supportsThinking).toBe(true);
+    });
+
+    it('zai should expose GLM models with official base URL', () => {
+      const zai = PROVIDER_REGISTRY.zai;
+      expect(zai.defaultBaseUrl).toBe('https://open.bigmodel.cn/api/paas/v4');
+      expect(zai.models.some((m) => m.id === 'glm-5')).toBe(true);
+      expect(zai.models.some((m) => m.id === 'glm-4.7')).toBe(true);
+      expect(zai.models.some((m) => m.id === 'glm-4.7-flash')).toBe(true);
     });
 
     it('ollama should have local default URL', () => {

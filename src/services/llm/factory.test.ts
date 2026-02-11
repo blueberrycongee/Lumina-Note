@@ -44,6 +44,7 @@ describe('createProvider', () => {
       { name: 'gemini', model: 'gemini-2.5-pro' },
       { name: 'moonshot', model: 'kimi-k2.5' },
       { name: 'deepseek', model: 'deepseek-chat' },
+      { name: 'zai', model: 'glm-4.7' },
       { name: 'groq', model: 'meta-llama/llama-4-maverick-17b-128e-instruct' },
       { name: 'openrouter', model: 'openai/gpt-5.2' },
     ] as const;
