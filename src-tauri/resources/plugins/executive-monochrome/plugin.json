@@ -1,0 +1,18 @@
+{
+  "id": "executive-monochrome",
+  "name": "Executive Monochrome",
+  "version": "0.1.0",
+  "description": "Minimal business monochrome theme focused on readability and consistent information density.",
+  "author": "Lumina",
+  "entry": "index.js",
+  "min_app_version": "0.1.0",
+  "api_version": "1",
+  "permissions": [
+    "commands:*",
+    "ui:*",
+    "editor:decorate",
+    "storage:*"
+  ],
+  "enabled_by_default": false,
+  "is_desktop_only": false
+}
