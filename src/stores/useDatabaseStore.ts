@@ -28,6 +28,13 @@ function generateId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function generateNoteId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `note-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 // 将名称转换为安全的文件名/ID
 function slugify(name: string): string {
   return name
@@ -328,6 +335,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         const fileTree = useFileStore.getState().fileTree;
         const rows: DatabaseRow[] = [];
         const seenPaths = new Set<string>();
+        const seenRowIds = new Set<string>();
         
         // 递归收集所有 .md 文件
         const collectMdFiles = (entries: typeof fileTree): string[] => {
@@ -380,15 +388,32 @@ export const useDatabaseStore = create<DatabaseState>()(
         // 读取每个文件的 frontmatter
         for (const filePath of allMdFiles) {
           try {
-            const content = await readFile(filePath);
+            let content = await readFile(filePath);
             const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
             
             // 检查是否属于此数据库
             if (hasFrontmatter && belongsToDatabase(frontmatter, dbId)) {
+              let rowId = frontmatter.noteId ? String(frontmatter.noteId).trim() : "";
+              if (!rowId || seenRowIds.has(rowId)) {
+                rowId = generateNoteId();
+                const contentWithNoteId = updateFrontmatter(content, { noteId: rowId });
+                try {
+                  await saveFile(filePath, contentWithNoteId);
+                  content = contentWithNoteId;
+                } catch (error) {
+                  console.warn(`[Database] Failed to persist noteId for ${filePath}:`, error);
+                }
+              }
+
+              while (seenRowIds.has(rowId)) {
+                rowId = generateNoteId();
+              }
+              seenRowIds.add(rowId);
+
               // 构建 cells，使用列 ID 作为键
               const cells: Record<string, CellValue> = {};
               for (const [key, value] of Object.entries(frontmatter)) {
-                if (!['db', 'createdAt', 'updatedAt'].includes(key)) {
+                if (!['db', 'createdAt', 'updatedAt', 'noteId'].includes(key)) {
                   // 尝试通过列名找到列 ID，否则直接使用 key
                   const columnId = nameToId.get(key.toLowerCase()) || key;
                   
@@ -410,7 +435,7 @@ export const useDatabaseStore = create<DatabaseState>()(
               
               if (!seenPaths.has(filePath)) {
                 const row: DatabaseRow = {
-                  id: filePath,
+                  id: rowId,
                   notePath: filePath,
                   noteTitle: (frontmatter.title as string) || getTitleFromPath(filePath),
                   cells,
@@ -669,6 +694,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         
         // 最终标题值（用于 frontmatter）
         const finalTitle = titleValue || noteName;
+        const noteId = generateNoteId();
 
         if (titleColumn) {
           draftCells[titleColumn.id] = finalTitle;
@@ -678,6 +704,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         // 构建 YAML 内容（使用列名）
         const yamlLines = [
           `db: ${JSON.stringify(dbId)}`,
+          `noteId: ${JSON.stringify(noteId)}`,
           `title: ${finalTitle}`,
           `createdAt: ${now}`,
           `updatedAt: ${now}`,
@@ -685,7 +712,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         
         for (const [columnId, value] of Object.entries(draftCells)) {
             const columnName = idToName.get(columnId) || columnId;
-            if (!['db', 'title', 'createdAt', 'updatedAt'].includes(columnName.toLowerCase())) {
+            if (!['db', 'noteid', 'title', 'createdat', 'updatedat'].includes(columnName.toLowerCase())) {
               yamlLines.push(`${columnName}: ${formatYamlValue(value)}`);
             }
         }
@@ -703,7 +730,7 @@ ${yamlLines.join('\n')}
         
         // 创建新行并添加到状态
         const newRow: DatabaseRow = {
-          id: notePath,
+          id: noteId,
           notePath,
           noteTitle: finalTitle,
           cells: draftCells,
@@ -845,6 +872,7 @@ ${yamlLines.join('\n')}
         
         const now = new Date().toISOString();
         const newTitle = `${sourceRow.noteTitle} (副本)`;
+        const noteId = generateNoteId();
         const safeFileName = slugify(newTitle) || generateId();
         const noteDirectory = getDatabaseNoteDirectory(vaultPath, db);
         await ensureDirectoryRecursive(noteDirectory);
@@ -854,6 +882,7 @@ ${yamlLines.join('\n')}
         try {
           const originalContent = await readFile(sourceRow.notePath);
           const newContent = updateFrontmatter(originalContent, {
+            noteId,
             title: newTitle,
             createdAt: now,
             updatedAt: now,
@@ -863,7 +892,7 @@ ${yamlLines.join('\n')}
           
           // 添加到状态
           const newRow: DatabaseRow = {
-            id: notePath,
+            id: noteId,
             notePath,
             noteTitle: newTitle,
             cells: { ...sourceRow.cells, title: newTitle },

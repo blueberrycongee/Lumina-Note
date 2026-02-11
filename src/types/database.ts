@@ -76,7 +76,7 @@ export interface DateValue {
  * 数据库行（从笔记 YAML 动态读取）
  */
 export interface DatabaseRow {
-  id: string;                        // 笔记路径作为 ID
+  id: string;                        // 稳定行 ID（frontmatter.noteId）
   notePath: string;                  // 笔记文件路径
   noteTitle: string;                 // 笔记标题（从文件名或 YAML title 读取）
   cells: Record<string, CellValue>;  // columnId/columnName -> value
