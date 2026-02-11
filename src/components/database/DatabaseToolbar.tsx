@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useDatabaseStore } from "@/stores/useDatabaseStore";
-import type { ViewType, SortRule } from "@/types/database";
+import type { ViewType, SortRule, DatabaseColumn, FilterGroup, FilterOperator, FilterRule, CellValue } from "@/types/database";
 import { cn } from "@/lib/utils";
 import {
   Plus,
@@ -28,9 +28,60 @@ interface DatabaseToolbarProps {
   dbId: string;
 }
 
+const EMPTY_VALUE_OPERATORS = new Set<FilterOperator>(["is_empty", "is_not_empty", "is_checked", "is_not_checked"]);
+
+const createLocalId = () => Math.random().toString(36).slice(2, 10);
+
+function getOperatorsForColumnType(type: DatabaseColumn["type"]): FilterOperator[] {
+  switch (type) {
+    case "number":
+      return [
+        "equals",
+        "not_equals",
+        "greater_than",
+        "greater_equal",
+        "less_than",
+        "less_equal",
+        "is_empty",
+        "is_not_empty",
+      ];
+    case "date":
+      return ["date_is", "date_before", "date_after", "is_empty", "is_not_empty"];
+    case "checkbox":
+      return ["is_checked", "is_not_checked"];
+    case "select":
+      return ["equals", "not_equals", "is_empty", "is_not_empty"];
+    case "multi-select":
+      return ["contains", "not_contains", "is_empty", "is_not_empty"];
+    case "text":
+    case "url":
+    case "formula":
+    case "relation":
+    default:
+      return ["contains", "not_contains", "starts_with", "ends_with", "equals", "not_equals", "is_empty", "is_not_empty"];
+  }
+}
+
+function getDefaultFilterValue(column: DatabaseColumn | undefined, operator: FilterOperator): CellValue {
+  if (!column || EMPTY_VALUE_OPERATORS.has(operator)) return null;
+  switch (column.type) {
+    case "number":
+      return 0;
+    case "date":
+      return new Date().toISOString().slice(0, 10);
+    case "select":
+    case "multi-select":
+      return column.options?.[0]?.id ?? null;
+    case "checkbox":
+      return false;
+    default:
+      return "";
+  }
+}
+
 export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
   const { t } = useLocaleStore();
-  const { databases, addView, setActiveView, addRow, setSorts } = useDatabaseStore();
+  const { databases, addView, setActiveView, addRow, setSorts, setFilters } = useDatabaseStore();
   const db = databases[dbId];
 
   const [showViewMenu, setShowViewMenu] = useState(false);
@@ -63,7 +114,9 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
 
   const activeView = db.views.find((v) => v.id === db.activeViewId);
   const sorts = activeView?.sorts || [];
-  const hasFilters = Boolean(activeView?.filters?.rules?.length);
+  const filterGroup: FilterGroup = activeView?.filters || { type: "and", rules: [] };
+  const filterRules = filterGroup.rules.filter((rule): rule is FilterRule => !("type" in rule));
+  const hasFilters = filterRules.length > 0;
 
   const viewIcons: Record<ViewType, React.ReactNode> = {
     table: <Table className="w-4 h-4" />,
@@ -101,6 +154,131 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
       i === index ? { ...s, direction: s.direction === "asc" ? ("desc" as const) : ("asc" as const) } : s,
     );
     setSorts(dbId, activeView.id, newSorts);
+  };
+
+  const applyFilterRules = (nextRules: FilterRule[]) => {
+    if (!activeView) return;
+    setFilters(
+      dbId,
+      activeView.id,
+      nextRules.length === 0
+        ? undefined
+        : {
+            ...filterGroup,
+            rules: nextRules,
+          },
+    );
+  };
+
+  const handleAddFilterRule = () => {
+    const column = db.columns[0];
+    if (!column) return;
+    const operator = getOperatorsForColumnType(column.type)[0];
+    const newRule: FilterRule = {
+      id: createLocalId(),
+      columnId: column.id,
+      operator,
+      value: getDefaultFilterValue(column, operator),
+    };
+    applyFilterRules([...filterRules, newRule]);
+  };
+
+  const handleFilterLogicChange = (type: FilterGroup["type"]) => {
+    if (!activeView) return;
+    if (filterRules.length === 0) return;
+    setFilters(dbId, activeView.id, {
+      ...filterGroup,
+      type,
+      rules: filterRules,
+    });
+  };
+
+  const handleFilterRuleChange = (ruleId: string, updater: (rule: FilterRule) => FilterRule) => {
+    const nextRules = filterRules.map((rule) => (rule.id === ruleId ? updater(rule) : rule));
+    applyFilterRules(nextRules);
+  };
+
+  const handleRemoveFilterRule = (ruleId: string) => {
+    const nextRules = filterRules.filter((rule) => rule.id !== ruleId);
+    applyFilterRules(nextRules);
+  };
+
+  const renderFilterValueInput = (rule: FilterRule, column: DatabaseColumn) => {
+    if (EMPTY_VALUE_OPERATORS.has(rule.operator)) return null;
+
+    if (column.type === "select" || column.type === "multi-select") {
+      return (
+        <select
+          value={typeof rule.value === "string" ? rule.value : ""}
+          onChange={(e) =>
+            handleFilterRuleChange(rule.id, (prev) => ({
+              ...prev,
+              value: e.target.value || null,
+            }))
+          }
+          className="db-input h-8 min-w-[120px] px-2"
+          aria-label={t.database.filterPanel.value}
+        >
+          <option value="">{t.database.filterPanel.selectValue}</option>
+          {(column.options || []).map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (column.type === "number") {
+      return (
+        <DatabaseTextInput
+          type="number"
+          value={typeof rule.value === "number" ? String(rule.value) : ""}
+          onChange={(e) =>
+            handleFilterRuleChange(rule.id, (prev) => ({
+              ...prev,
+              value: e.target.value === "" ? null : Number(e.target.value),
+            }))
+          }
+          className="h-8 min-w-[100px] px-2"
+          aria-label={t.database.filterPanel.value}
+          placeholder={t.database.filterPanel.valuePlaceholder}
+        />
+      );
+    }
+
+    if (column.type === "date") {
+      return (
+        <DatabaseTextInput
+          type="date"
+          value={typeof rule.value === "string" ? rule.value.slice(0, 10) : ""}
+          onChange={(e) =>
+            handleFilterRuleChange(rule.id, (prev) => ({
+              ...prev,
+              value: e.target.value || null,
+            }))
+          }
+          className="h-8 min-w-[132px] px-2"
+          aria-label={t.database.filterPanel.value}
+        />
+      );
+    }
+
+    return (
+      <DatabaseTextInput
+        type="text"
+        value={typeof rule.value === "string" ? rule.value : ""}
+        onChange={(e) =>
+          handleFilterRuleChange(rule.id, (prev) => ({
+            ...prev,
+            value: e.target.value,
+          }))
+        }
+        className="h-8 min-w-[120px] px-2"
+        aria-label={t.database.filterPanel.value}
+        placeholder={t.database.filterPanel.valuePlaceholder}
+      />
+    );
   };
 
   return (
@@ -168,8 +346,118 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
         >
           <Filter className="w-4 h-4" />
           {t.database.filter}
-          {hasFilters && <span className="db-count-badge">{activeView?.filters?.rules?.length}</span>}
+          {hasFilters && <span className="db-count-badge">{filterRules.length}</span>}
         </button>
+
+        {showFilterMenu && (
+          <DatabaseMenuSurface className="absolute top-full left-0 mt-1 p-2 min-w-[400px] max-w-[480px] z-50 space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs text-muted-foreground">{t.database.filterPanel.match}</span>
+              <div className="db-panel flex items-center p-0.5">
+                <button
+                  className="db-toggle-btn h-7 px-2"
+                  data-active={filterGroup.type === "and"}
+                  onClick={() => handleFilterLogicChange("and")}
+                  aria-label={t.database.filterPanel.allConditions}
+                >
+                  {t.database.filterPanel.allConditions}
+                </button>
+                <button
+                  className="db-toggle-btn h-7 px-2"
+                  data-active={filterGroup.type === "or"}
+                  onClick={() => handleFilterLogicChange("or")}
+                  aria-label={t.database.filterPanel.anyCondition}
+                >
+                  {t.database.filterPanel.anyCondition}
+                </button>
+              </div>
+            </div>
+
+            {filterRules.length === 0 ? (
+              <div className="db-empty-state py-4">{t.database.filterPanel.empty}</div>
+            ) : (
+              <div className="space-y-2">
+                {filterRules.map((rule) => {
+                  const column = db.columns.find((col) => col.id === rule.columnId) || db.columns[0];
+                  if (!column) return null;
+                  const operators = getOperatorsForColumnType(column.type);
+                  const currentOperator = operators.includes(rule.operator) ? rule.operator : operators[0];
+
+                  return (
+                    <div key={rule.id} className="db-panel p-2">
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={rule.columnId}
+                          onChange={(e) => {
+                            const nextColumn = db.columns.find((col) => col.id === e.target.value) || db.columns[0];
+                            const nextOperator = getOperatorsForColumnType(nextColumn.type)[0];
+                            handleFilterRuleChange(rule.id, (prev) => ({
+                              ...prev,
+                              columnId: nextColumn.id,
+                              operator: nextOperator,
+                              value: getDefaultFilterValue(nextColumn, nextOperator),
+                            }));
+                          }}
+                          className="db-input h-8 min-w-[132px] px-2"
+                          aria-label={t.database.filterPanel.column}
+                        >
+                          {db.columns.map((col) => (
+                            <option key={col.id} value={col.id}>
+                              {col.name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={currentOperator}
+                          onChange={(e) => {
+                            const nextOperator = e.target.value as FilterOperator;
+                            handleFilterRuleChange(rule.id, (prev) => ({
+                              ...prev,
+                              operator: nextOperator,
+                              value: getDefaultFilterValue(column, nextOperator),
+                            }));
+                          }}
+                          className="db-input h-8 min-w-[138px] px-2"
+                          aria-label={t.database.filterPanel.operator}
+                        >
+                          {operators.map((operator) => (
+                            <option key={operator} value={operator}>
+                              {t.database.filterOperators[operator]}
+                            </option>
+                          ))}
+                        </select>
+
+                        {renderFilterValueInput({ ...rule, operator: currentOperator }, column)}
+
+                        <DatabaseIconButton
+                          variant="subtle"
+                          onClick={() => handleRemoveFilterRule(rule.id)}
+                          aria-label={t.common.delete}
+                          title={t.common.delete}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </DatabaseIconButton>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-1">
+              <button className="db-toggle-btn h-8 px-3" onClick={handleAddFilterRule}>
+                <Plus className="w-4 h-4" />
+                {t.database.filterPanel.addRule}
+              </button>
+              {filterRules.length > 0 && (
+                <button className="db-toggle-btn h-8 px-3" onClick={() => applyFilterRules([])}>
+                  {t.database.filterPanel.clearAll}
+                </button>
+              )}
+            </div>
+          </DatabaseMenuSurface>
+        )}
       </div>
 
       {/* 排序 */}

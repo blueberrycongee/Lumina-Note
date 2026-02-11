@@ -19,6 +19,7 @@ import { parseFrontmatter, updateFrontmatter, getTitleFromPath } from "@/service
 import { useFileStore } from "./useFileStore";
 import { useSplitStore } from "./useSplitStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { applyFilters } from "./databaseFilter";
 
 // ==================== 工具函数 ====================
 
@@ -1074,58 +1075,6 @@ ${yamlLines.join('\n')}
 );
 
 // ==================== 筛选/排序辅助函数 ====================
-
-function applyFilters(rows: DatabaseRow[], filterGroup: FilterGroup, columns: DatabaseColumn[]): DatabaseRow[] {
-  return rows.filter(row => evaluateFilterGroup(row, filterGroup, columns));
-}
-
-function evaluateFilterGroup(row: DatabaseRow, group: FilterGroup, columns: DatabaseColumn[]): boolean {
-  if (group.rules.length === 0) return true;
-  
-  const results = group.rules.map(rule => {
-    if ('type' in rule) {
-      return evaluateFilterGroup(row, rule as FilterGroup, columns);
-    }
-    return evaluateFilterRule(row, rule, columns);
-  });
-  
-  if (group.type === 'and') {
-    return results.every(Boolean);
-  } else {
-    return results.some(Boolean);
-  }
-}
-
-function evaluateFilterRule(row: DatabaseRow, rule: { columnId: string; operator: string; value: CellValue }, columns: DatabaseColumn[]): boolean {
-  const cellValue = row.cells[rule.columnId];
-  const column = columns.find(c => c.id === rule.columnId);
-  if (!column) return true;
-  
-  switch (rule.operator) {
-    case 'is_empty':
-      return cellValue === null || cellValue === undefined || cellValue === '';
-    case 'is_not_empty':
-      return cellValue !== null && cellValue !== undefined && cellValue !== '';
-    case 'equals':
-      return cellValue === rule.value;
-    case 'not_equals':
-      return cellValue !== rule.value;
-    case 'contains':
-      return typeof cellValue === 'string' && cellValue.includes(String(rule.value));
-    case 'not_contains':
-      return typeof cellValue === 'string' && !cellValue.includes(String(rule.value));
-    case 'is_checked':
-      return cellValue === true;
-    case 'is_not_checked':
-      return cellValue !== true;
-    case 'greater_than':
-      return typeof cellValue === 'number' && typeof rule.value === 'number' && cellValue > rule.value;
-    case 'less_than':
-      return typeof cellValue === 'number' && typeof rule.value === 'number' && cellValue < rule.value;
-    default:
-      return true;
-  }
-}
 
 function applySorts(rows: DatabaseRow[], sorts: SortRule[], columns: DatabaseColumn[]): DatabaseRow[] {
   return [...rows].sort((a, b) => {
