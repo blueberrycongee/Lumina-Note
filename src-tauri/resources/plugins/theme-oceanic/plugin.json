@@ -4,5 +4,5 @@
   "version": "0.1.0",
   "entry": "index.js",
   "permissions": ["ui:theme", "ui:decorate"],
-  "enabled_by_default": true
+  "enabled_by_default": false
 }

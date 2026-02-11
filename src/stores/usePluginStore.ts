@@ -45,6 +45,7 @@ const isAppearancePlugin = (permissions: string[]) =>
 const DEFAULT_DISABLED_SAMPLE_PLUGIN_IDS = new Set<string>([
   "hello-lumina",
   "ui-overhaul-lab",
+  "theme-oceanic",
 ]);
 
 const toEffectiveEnabledById = (
