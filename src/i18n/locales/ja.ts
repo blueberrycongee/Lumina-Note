@@ -1248,6 +1248,8 @@ export default {
   agentMessage: {
     steps: '{count} ステップ',
     thinking: '思考中...',
+    thinkingDone: '思考完了',
+    thinkingWaiting: '思考内容を待機中...',
     params: 'パラメータ',
     result: '結果',
     executing: '実行中...',

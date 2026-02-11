@@ -13,7 +13,16 @@ import {
   getAIConfig,
 } from "@/services/ai/ai";
 import { readFile } from "@/lib/tauri";
-import { callLLMStream, type MessageAttachment, type ImageContent, type TextContent, type MessageContent } from "@/services/llm";
+import {
+  callLLMStream,
+  normalizeThinkingMode,
+  supportsThinkingModeSwitch,
+  type LLMProviderType,
+  type MessageAttachment,
+  type ImageContent,
+  type TextContent,
+  type MessageContent,
+} from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
 import type { AttachedImage, QuoteReference } from "@/types/chat";
@@ -36,6 +45,8 @@ export interface TokenUsage {
   completion: number;
   total: number;
 }
+
+export type StreamingReasoningStatus = "idle" | "streaming" | "done";
 
 interface ChatSession {
   id: string;
@@ -87,6 +98,16 @@ function generateTitleFromAssistantContent(content: string, fallback?: string): 
   return result || finalFallback;
 }
 
+function shouldStreamThinking(config: AIConfig): boolean {
+  const model = config.model === "custom" && config.customModelId
+    ? config.customModelId
+    : config.model;
+  return (
+    normalizeThinkingMode(config.thinkingMode) === "thinking" &&
+    supportsThinkingModeSwitch(config.provider as LLMProviderType, model)
+  );
+}
+
 interface AIState {
   // Config
   config: AIConfig;
@@ -108,6 +129,7 @@ interface AIState {
   isStreaming: boolean;
   streamingContent: string;
   streamingReasoning: string;
+  streamingReasoningStatus: StreamingReasoningStatus;
   
   // Token usage
   tokenUsage: TokenUsage;
@@ -249,6 +271,7 @@ export const useAIStore = create<AIState>()(
       isStreaming: false,
       streamingContent: "",
       streamingReasoning: "",
+      streamingReasoningStatus: "idle",
       
       // Token usage
       tokenUsage: { prompt: 0, completion: 0, total: 0 },
@@ -353,6 +376,8 @@ export const useAIStore = create<AIState>()(
         if (!currentSessionId) {
           get().createSession();
         }
+
+        const streamingThinkingEnabled = shouldStreamThinking(runtimeConfig);
 
         // 先显示用户消息
         set((state) => {
@@ -557,6 +582,8 @@ export const useAIStore = create<AIState>()(
           get().createSession();
         }
 
+        const streamingThinkingEnabled = shouldStreamThinking(runtimeConfig);
+
         // 先显示用户消息
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
@@ -566,6 +593,7 @@ export const useAIStore = create<AIState>()(
             messages: newMessages,
             streamingContent: "",
             streamingReasoning: "",
+            streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
             error: null,
             sessions: state.sessions.map((s) =>
               s.id === state.currentSessionId
@@ -581,10 +609,15 @@ export const useAIStore = create<AIState>()(
         });
 
         // 重置流式内容并开始流式状态
-        set({ isStreaming: true, streamingContent: "", streamingReasoning: "" });
+        set({
+          isStreaming: true,
+          streamingContent: "",
+          streamingReasoning: "",
+          streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
+        });
 
         if (!runtimeConfig.apiKey && runtimeConfig.provider !== "ollama") {
-          set({ error: t.ai.apiKeyRequired });
+          set({ error: t.ai.apiKeyRequired, isStreaming: false, streamingReasoningStatus: "idle" });
           return;
         }
 
@@ -649,11 +682,17 @@ export const useAIStore = create<AIState>()(
             if (chunk.type === "text") {
               finalContent += chunk.text;
               // chat 流式阶段只渲染最终回答文本，避免 reasoning 与正文来回覆盖造成“像两次回复”。
-              set({ streamingContent: finalContent });
+              set((state) => ({
+                streamingContent: finalContent,
+                streamingReasoningStatus:
+                  state.streamingReasoningStatus === "streaming" && reasoningContent.trim().length > 0
+                    ? "done"
+                    : state.streamingReasoningStatus,
+              }));
             } else if (chunk.type === "reasoning") {
               reasoningContent += chunk.text;
               // reasoning 单独保存（用于调试/后续扩展），不再覆盖 streamingContent。
-              set({ streamingReasoning: reasoningContent });
+              set({ streamingReasoning: reasoningContent, streamingReasoningStatus: "streaming" });
             } else if (chunk.type === "usage") {
               // Update token usage
               set((state) => ({
@@ -689,6 +728,7 @@ export const useAIStore = create<AIState>()(
               isStreaming: false,
               streamingContent: "",
               streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               sessions: state.sessions.map((s) =>
                 s.id === state.currentSessionId
                   ? {
@@ -731,13 +771,19 @@ export const useAIStore = create<AIState>()(
           set({
             error: error instanceof Error ? error.message : t.ai.sendFailed,
             isStreaming: false,
+            streamingReasoning: "",
+            streamingReasoningStatus: "idle",
           });
         }
       },
 
       // 停止流式
       stopStreaming: () => {
-        set({ isStreaming: false });
+        set({
+          isStreaming: false,
+          streamingReasoning: "",
+          streamingReasoningStatus: "idle",
+        });
       },
 
       // Clear chat
@@ -748,6 +794,7 @@ export const useAIStore = create<AIState>()(
           error: null,
           streamingContent: "",
           streamingReasoning: "",
+          streamingReasoningStatus: "idle",
           sessions: state.sessions.map((s) =>
             s.id === state.currentSessionId
               ? { ...s, messages: [], updatedAt: Date.now() }

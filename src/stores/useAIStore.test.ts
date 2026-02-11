@@ -19,6 +19,11 @@ vi.mock("@/services/llm", () => ({
     yield { type: "text", text: "pong" };
     yield { type: "usage", inputTokens: 1, outputTokens: 1, totalTokens: 2 };
   }),
+  normalizeThinkingMode: (mode?: "auto" | "thinking" | "instant") => {
+    if (mode === "thinking" || mode === "instant") return mode;
+    return "auto";
+  },
+  supportsThinkingModeSwitch: () => true,
 }));
 
 vi.mock("@/services/ai/ai", () => ({
@@ -80,6 +85,7 @@ describe("useAIStore sendMessageStream", () => {
       isLoading: false,
       streamingContent: "",
       streamingReasoning: "",
+      streamingReasoningStatus: "idle",
       pendingEdits: [],
       referencedFiles: [],
     });

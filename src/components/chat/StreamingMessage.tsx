@@ -12,6 +12,8 @@ import { parseMarkdown } from "@/services/markdown/markdown";
 import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useUIStore } from "@/stores/useUIStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
+import { ThinkingCollapsible } from "./AgentMessageRenderer";
 
 interface StreamingMessageProps {
   /** 强制指定模式，不指定则自动从 UIStore 获取 */
@@ -29,25 +31,35 @@ export const StreamingMessage = memo(function StreamingMessage({
   mode,
   className = "",
 }: StreamingMessageProps) {
+  const { t } = useLocaleStore();
   const chatMode = useUIStore((state) => state.chatMode);
   const currentMode = mode ?? chatMode;
   
   // Agent 模式数据
   const agentContent = useRustAgentStore((state) => state.streamingContent);
   const agentStatus = useRustAgentStore((state) => state.status);
-  const isAgentStreaming = agentStatus === "running" && agentContent.length > 0;
   
   // Chat 模式数据
   const chatContent = useAIStore((state) => state.streamingContent);
   const chatStreaming = useAIStore((state) => state.isStreaming);
-  const isChatStreaming = chatStreaming && chatContent.length > 0;
+  const chatReasoning = useAIStore((state) => state.streamingReasoning);
+  const chatReasoningStatus = useAIStore((state) => state.streamingReasoningStatus);
+
+  // Agent 思考流
+  const agentReasoning = useRustAgentStore((state) => state.streamingReasoning);
+  const agentReasoningStatus = useRustAgentStore((state) => state.streamingReasoningStatus);
   
   // 根据模式选择数据
   const content = currentMode === "agent" ? agentContent : chatContent;
-  const isStreaming = currentMode === "agent" ? isAgentStreaming : isChatStreaming;
+  const reasoning = currentMode === "agent" ? agentReasoning : chatReasoning;
+  const reasoningStatus = currentMode === "agent" ? agentReasoningStatus : chatReasoningStatus;
+  const hasReasoningPanel = reasoningStatus !== "idle" || reasoning.trim().length > 0;
+  const isStreaming = currentMode === "agent"
+    ? agentStatus === "running" && (agentContent.length > 0 || hasReasoningPanel)
+    : chatStreaming && (chatContent.length > 0 || hasReasoningPanel);
 
   // 不在流式状态或没有内容时不渲染
-  if (!isStreaming || !content) {
+  if (!isStreaming || (!content && !hasReasoningPanel)) {
     return null;
   }
 
@@ -57,14 +69,25 @@ export const StreamingMessage = memo(function StreamingMessage({
         <Bot size={16} className="text-muted-foreground" />
       </div>
       <div className="max-w-[80%] text-foreground">
-        <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed streaming-content-enter">
-          <span dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }} />
-        </div>
-        <div className="mt-2 flex items-center gap-1.5" aria-hidden>
-          <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
-          <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
-          <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
-        </div>
+        {hasReasoningPanel && (
+          <ThinkingCollapsible
+            thinking={reasoning}
+            t={t}
+            status={reasoningStatus === "streaming" ? "thinking" : "done"}
+          />
+        )}
+        {content && (
+          <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed streaming-content-enter">
+            <span dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }} />
+          </div>
+        )}
+        {content && (
+          <div className="mt-2 flex items-center gap-1.5" aria-hidden>
+            <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
+            <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
+            <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -92,14 +115,22 @@ export const TypingIndicator = memo(function TypingIndicator({
   // Agent 模式数据
   const agentContent = useRustAgentStore((state) => state.streamingContent);
   const agentStatus = useRustAgentStore((state) => state.status);
-  const isAgentWaiting = agentStatus === "running" && agentContent.length === 0;
   
   // Chat 模式数据
   const chatContent = useAIStore((state) => state.streamingContent);
   const chatStreaming = useAIStore((state) => state.isStreaming);
   const chatLoading = useAIStore((state) => state.isLoading);
-  const isChatWaiting = (chatStreaming || chatLoading) && chatContent.length === 0;
-  
+  const chatReasoningStatus = useAIStore((state) => state.streamingReasoningStatus);
+  const isChatWaiting =
+    (chatStreaming || chatLoading) &&
+    chatContent.length === 0 &&
+    chatReasoningStatus === "idle";
+
+  const agentReasoningStatus = useRustAgentStore((state) => state.streamingReasoningStatus);
+  const isAgentWaiting =
+    agentStatus === "running" &&
+    agentContent.length === 0 &&
+    agentReasoningStatus === "idle";
   // 根据模式选择
   const isWaiting = currentMode === "agent" ? isAgentWaiting : isChatWaiting;
 

@@ -13,7 +13,14 @@ import { getAIConfig, type AIConfig } from "@/services/ai/ai";
 import { useFileStore } from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useAgentProfileStore } from "@/stores/useAgentProfileStore";
-import { callLLM, PROVIDER_REGISTRY, type Message as LLMMessage } from "@/services/llm";
+import {
+  callLLM,
+  normalizeThinkingMode,
+  PROVIDER_REGISTRY,
+  supportsThinkingModeSwitch,
+  type LLMProviderType,
+  type Message as LLMMessage,
+} from "@/services/llm";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
 import type { MessageAttachment } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
@@ -160,6 +167,8 @@ export interface LlmRetryState {
   reason: string;
   nextRetryAt: number;
 }
+
+export type StreamingReasoningStatus = "idle" | "streaming" | "done";
 
 export interface RustAgentSession {
   id: string;
@@ -500,6 +509,8 @@ interface RustAgentState {
   
   // 流式消息累积
   streamingContent: string;
+  streamingReasoning: string;
+  streamingReasoningStatus: StreamingReasoningStatus;
   streamingAgent: AgentType;
   
   // Token 统计
@@ -622,6 +633,16 @@ const buildAgentConfigFromProfile = (profile: { config: AIConfig; autoApprove: b
   return buildAgentConfig(profile.config, profile.autoApprove);
 };
 
+function shouldStreamThinkingForAgent(config: AIConfig): boolean {
+  const model = config.model === "custom" && config.customModelId
+    ? config.customModelId
+    : config.model;
+  return (
+    normalizeThinkingMode(config.thinkingMode) === "thinking" &&
+    supportsThinkingModeSwitch(config.provider as LLMProviderType, model)
+  );
+}
+
 // ============ Store 实现 ============
 
 export const useRustAgentStore = create<RustAgentState>()(
@@ -634,6 +655,8 @@ export const useRustAgentStore = create<RustAgentState>()(
       error: null,
       lastIntent: null,
       streamingContent: "",
+      streamingReasoning: "",
+      streamingReasoningStatus: "idle",
       streamingAgent: "coordinator",
       totalTokensUsed: 0,
       autoApprove: false,
@@ -687,6 +710,7 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 启动任务
       startTask: async (task: string, context: TaskContext) => {
         const aiConfig = getAIConfig();
+        const streamingThinkingEnabled = shouldStreamThinkingForAgent(aiConfig);
 
         if (!aiConfig.apiKey && aiConfig.provider !== "ollama") {
           const t = getCurrentTranslations();
@@ -720,6 +744,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 currentPlan: null,
                 lastIntent: null,
                 streamingContent: "",
+                streamingReasoning: "",
+                streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
               }),
           messages: [
             ...currentMessages,
@@ -793,6 +819,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           await invoke("agent_abort");
           set({
             status: "aborted",
+            streamingReasoning: "",
+            streamingReasoningStatus: "idle",
             llmRequestStartTime: null,
             llmRequestId: null,
             llmRetryState: null,
@@ -810,6 +838,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           currentPlan: null,
           error: null,
           streamingContent: "",
+          streamingReasoning: "",
+          streamingReasoningStatus: "idle",
           pendingCompaction: false,
           isCompacting: false,
           lastTokenUsage: null,
@@ -955,6 +985,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           currentPlan: null,
           lastIntent: null,
           streamingContent: "",
+          streamingReasoning: "",
+          streamingReasoningStatus: "idle",
           pendingCompaction: false,
           isCompacting: false,
           lastTokenUsage: null,
@@ -980,6 +1012,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           currentPlan: null,
           lastIntent: null,
           streamingContent: "",
+          streamingReasoning: "",
+          streamingReasoningStatus: "idle",
           pendingCompaction: false,
           isCompacting: false,
           lastTokenUsage: null,
@@ -1000,6 +1034,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: firstSession.id,
               messages: firstSession.messages,
               totalTokensUsed: firstSession.totalTokensUsed,
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               pendingCompaction: false,
               isCompacting: false,
               lastTokenUsage: null,
@@ -1019,6 +1055,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: newSession.id,
               messages: [],
               totalTokensUsed: 0,
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               pendingCompaction: false,
               isCompacting: false,
               lastTokenUsage: null,
@@ -1272,8 +1310,21 @@ export const useRustAgentStore = create<RustAgentState>()(
           });
           return;
         }
+        const composeAssistantContent = (reasoning: string, content: string) => {
+          const trimmedReasoning = reasoning.trim();
+          const trimmedContent = content.trim();
+          if (!trimmedReasoning) return content;
+          if (!trimmedContent) {
+            return `<thinking>\n${trimmedReasoning}\n</thinking>`;
+          }
+          return `<thinking>\n${trimmedReasoning}\n</thinking>\n\n${content}`;
+        };
         const flushStreamingToMessages = () => {
-          if (!state.streamingContent || !state.streamingContent.trim()) {
+          const mergedContent = composeAssistantContent(
+            state.streamingReasoning,
+            state.streamingContent
+          );
+          if (!mergedContent.trim()) {
             return { messages: state.messages, flushed: false };
           }
           return {
@@ -1281,7 +1332,7 @@ export const useRustAgentStore = create<RustAgentState>()(
               ...state.messages,
               {
                 role: "assistant" as const,
-                content: state.streamingContent,
+                content: mergedContent,
                 agent: state.streamingAgent,
               },
             ],
@@ -1291,10 +1342,14 @@ export const useRustAgentStore = create<RustAgentState>()(
         
         switch (event.type) {
           case "run_started": {
+            const aiConfig = getAIConfig();
+            const streamingThinkingEnabled = shouldStreamThinkingForAgent(aiConfig);
             set({
               status: "running",
               error: null,
               streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
               llmRetryState: null,
             });
             break;
@@ -1313,6 +1368,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           case "run_completed": {
             set({
               status: "completed",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               llmRequestStartTime: null,
               llmRequestId: null,
               llmRetryState: null,
@@ -1328,6 +1385,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               status: "error",
               error,
               streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               llmRequestStartTime: null,
               llmRequestId: null,
               llmRetryState: null,
@@ -1343,6 +1402,8 @@ export const useRustAgentStore = create<RustAgentState>()(
             set({
               status: "aborted",
               streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               pendingTool: null,
               llmRequestStartTime: null,
               llmRequestId: null,
@@ -1355,7 +1416,28 @@ export const useRustAgentStore = create<RustAgentState>()(
             const { delta } = event.data as { delta: string };
             set({
               streamingContent: state.streamingContent + delta,
+              streamingReasoningStatus:
+                state.streamingReasoningStatus === "streaming" && state.streamingReasoning.trim().length > 0
+                  ? "done"
+                  : state.streamingReasoningStatus,
               streamingAgent: "coordinator",
+            });
+            break;
+          }
+
+          case "reasoning_delta": {
+            const { content } = event.data as { content: string };
+            set({
+              streamingReasoning: state.streamingReasoning + content,
+              streamingReasoningStatus: "streaming",
+            });
+            break;
+          }
+
+          case "reasoning_done": {
+            set({
+              streamingReasoningStatus:
+                state.streamingReasoning.trim().length > 0 ? "done" : "idle",
             });
             break;
           }
@@ -1373,6 +1455,8 @@ export const useRustAgentStore = create<RustAgentState>()(
             set({
               messages: nextMessages,
               streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               taskStats: {
                 ...stats,
                 completedTasks: stats.completedTasks + 1,
@@ -1395,6 +1479,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 },
               ],
               streamingContent: flushed ? "" : state.streamingContent,
+              streamingReasoning: flushed ? "" : state.streamingReasoning,
+              streamingReasoningStatus: flushed ? "idle" : state.streamingReasoningStatus,
               taskStats: {
                 ...stats,
                 toolCalls: stats.toolCalls + 1,
@@ -1421,6 +1507,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 },
               ],
               streamingContent: flushed ? "" : state.streamingContent,
+              streamingReasoning: flushed ? "" : state.streamingReasoning,
+              streamingReasoningStatus: flushed ? "idle" : state.streamingReasoningStatus,
               taskStats: {
                 ...stats,
                 toolSuccesses: stats.toolSuccesses + 1,
@@ -1443,6 +1531,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 },
               ],
               streamingContent: flushed ? "" : state.streamingContent,
+              streamingReasoning: flushed ? "" : state.streamingReasoning,
+              streamingReasoningStatus: flushed ? "idle" : state.streamingReasoningStatus,
               taskStats: {
                 ...stats,
                 toolFailures: stats.toolFailures + 1,
@@ -1529,6 +1619,8 @@ export const useRustAgentStore = create<RustAgentState>()(
             set({ 
               status,
               streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
             });
             break;
           }
@@ -1545,17 +1637,26 @@ export const useRustAgentStore = create<RustAgentState>()(
                   ...state.messages,
                   {
                     role: "assistant",
-                    content: state.streamingContent,
+                    content: composeAssistantContent(
+                      state.streamingReasoning,
+                      state.streamingContent
+                    ),
                     agent: state.streamingAgent,
                   },
                 ],
                 streamingContent: content,
+                streamingReasoning: "",
+                streamingReasoningStatus: "idle",
                 streamingAgent: agent,
               });
             } else {
               // 直接累积内容
               set({
                 streamingContent: state.streamingContent + content,
+                streamingReasoningStatus:
+                  state.streamingReasoningStatus === "streaming" && state.streamingReasoning.trim().length > 0
+                    ? "done"
+                    : state.streamingReasoningStatus,
                 streamingAgent: agent,
               });
             }
@@ -1602,6 +1703,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 },
               ],
               streamingContent: flushed ? "" : state.streamingContent,
+              streamingReasoning: flushed ? "" : state.streamingReasoning,
+              streamingReasoningStatus: flushed ? "idle" : state.streamingReasoningStatus,
               taskStats: {
                 ...stats,
                 toolCalls: stats.toolCalls + 1,
@@ -1654,6 +1757,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 set({
                   messages: newMessages,
                   streamingContent: "",
+                  streamingReasoning: "",
+                  streamingReasoningStatus: "idle",
                   taskStats: {
                     ...stats,
                     completedTasks: stats.completedTasks + 1,
@@ -1667,6 +1772,8 @@ export const useRustAgentStore = create<RustAgentState>()(
                 // 只清空流式内容，但仍然计入完成
                 set({ 
                   streamingContent: "",
+                  streamingReasoning: "",
+                  streamingReasoningStatus: "idle",
                   taskStats: {
                     ...stats,
                     completedTasks: stats.completedTasks + 1,
@@ -1688,6 +1795,8 @@ export const useRustAgentStore = create<RustAgentState>()(
             set({
               error: message,
               streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
               taskStats: {
                 ...stats,
                 failedTasks: stats.failedTasks + 1,
@@ -1733,6 +1842,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               llmRequestStartTime: null,
               llmRequestId: null,
               llmRetryState: null,
+              streamingReasoningStatus:
+                state.streamingReasoning.trim().length > 0 ? "done" : "idle",
             });
             break;
           }

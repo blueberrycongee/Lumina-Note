@@ -1247,6 +1247,8 @@ export default {
   agentMessage: {
     steps: '{count} steps',
     thinking: 'Thinking...',
+    thinkingDone: 'Thinking Done',
+    thinkingWaiting: 'Waiting for reasoning...',
     params: 'Params',
     result: 'Result',
     executing: 'Executing...',

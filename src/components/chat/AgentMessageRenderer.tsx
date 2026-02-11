@@ -402,8 +402,19 @@ function cleanUserMessage(content: string): string {
 /**
  * 思考块折叠组件
  */
-export const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking, t }: { thinking: string, t: any }) {
+export const ThinkingCollapsible = memo(function ThinkingCollapsible({
+  thinking,
+  t,
+  status = "done",
+}: {
+  thinking: string;
+  t: any;
+  status?: "thinking" | "done";
+}) {
   const [expanded, setExpanded] = useState(false);
+  const title = status === "thinking"
+    ? t.agentMessage.thinking
+    : (t.agentMessage.thinkingDone || t.agentMessage.thinking);
 
   return (
     <div className="text-xs text-muted-foreground/70">
@@ -413,7 +424,7 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking,
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Brain size={12} />
-        <span>{t.agentMessage.thinking}</span>
+        <span>{title}</span>
       </button>
       <AnimatePresence>
         {expanded && (
@@ -424,7 +435,7 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({ thinking,
             className="overflow-hidden"
           >
             <div className="pl-5 py-1 text-[11px] text-muted-foreground/60 whitespace-pre-wrap border-l border-muted-foreground/20 ml-1.5">
-              {thinking}
+              {thinking || t.agentMessage.thinkingWaiting}
             </div>
           </motion.div>
         )}
@@ -716,7 +727,14 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                   return round.parts.map((part, partIndex) => {
                   const key = `${round.roundKey}-part-${partIndex}`;
                   if (part.type === "thinking") {
-                    return <ThinkingCollapsible key={key} thinking={part.content} t={t} />;
+                    return (
+                      <ThinkingCollapsible
+                        key={key}
+                        thinking={part.content}
+                        t={t}
+                        status="done"
+                      />
+                    );
                   }
                   if (part.type === "tool") {
                     return <ToolCallCollapsible key={key} tool={part.tool} t={t} />;

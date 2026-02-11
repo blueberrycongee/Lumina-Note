@@ -112,7 +112,7 @@ describe("MainAIChatShell", () => {
     render(<MainAIChatShell />);
 
     const { t } = useLocaleStore.getState();
-    const thinkingToggle = screen.getByText(t.agentMessage.thinking);
+    const thinkingToggle = screen.getByText(t.agentMessage.thinkingDone);
     expect(screen.queryByText("step by step")).toBeNull();
     fireEvent.click(thinkingToggle);
     expect(screen.getByText("step by step")).toBeTruthy();
