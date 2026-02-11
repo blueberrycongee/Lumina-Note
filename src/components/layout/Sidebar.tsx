@@ -23,6 +23,7 @@ import {
   Database,
   Image,
   FileText,
+  Shapes,
   Mic,
   Loader2,
   Bot,
@@ -60,6 +61,7 @@ export function Sidebar() {
     closeFile,
     openDatabaseTab,
     openPDFTab,
+    openDiagramTab,
     tabs,
     activeTabIndex,
     moveFileToFolder,
@@ -75,6 +77,7 @@ export function Sidebar() {
       closeFile: state.closeFile,
       openDatabaseTab: state.openDatabaseTab,
       openPDFTab: state.openPDFTab,
+      openDiagramTab: state.openDiagramTab,
       tabs: state.tabs,
       activeTabIndex: state.activeTabIndex,
       moveFileToFolder: state.moveFileToFolder,
@@ -532,6 +535,8 @@ export function Sidebar() {
         const dbId = entry.name.replace('.db.json', '');
         const dbName = dbId; // 可以后续从文件内容读取真实名称
         openDatabaseTab(dbId, dbName);
+      } else if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json")) {
+        openDiagramTab(entry.path);
       } else if (name.endsWith('.pdf')) {
         // PDF 文件 - 根据活动面板打开
         if (splitView && activePane === 'secondary') {
@@ -548,7 +553,7 @@ export function Sidebar() {
         }
       }
     }
-  }, [openFile, openDatabaseTab, openPDFTab, splitView, activePane, openSecondaryFile, openSecondaryPdf]);
+  }, [openFile, openDatabaseTab, openPDFTab, openDiagramTab, splitView, activePane, openSecondaryFile, openSecondaryPdf]);
 
   // 点击空白区域：选中根目录（VS Code 行为）
   const handleTreeBackgroundClick = useCallback((e: React.MouseEvent) => {
@@ -1279,6 +1284,9 @@ function FileTreeItem({
     const name = entry.name.toLowerCase();
     if (name.endsWith('.db.json')) {
       return <Database className="w-4 h-4 text-slate-500 shrink-0" />;
+    }
+    if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json")) {
+      return <Shapes className="w-4 h-4 text-cyan-500 shrink-0" />;
     }
     if (name.endsWith('.pdf')) {
       return <FileText className="w-4 h-4 text-red-500 shrink-0" />;

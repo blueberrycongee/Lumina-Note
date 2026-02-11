@@ -22,6 +22,7 @@ import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { VideoNoteView } from "@/components/video/VideoNoteView";
 import { DatabaseView, CreateDatabaseDialog, DatabaseSplitView } from "@/components/database";
 import { PDFViewer } from "@/components/pdf";
+import { DiagramView } from "@/components/diagram/DiagramView";
 import { BrowserView } from "@/components/browser";
 import { FlashcardView } from "@/components/flashcard";
 import { CardFlowView } from "@/components/cardflow/CardFlowView";
@@ -844,6 +845,11 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
+            </div>
+          ) : activeTab?.type === "diagram" && activeTab.path ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <TabBar />
+              <DiagramView filePath={activeTab.path} className="flex-1" />
             </div>
           ) : activeTab?.type === "typesetting-doc" && activeTab.path ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
