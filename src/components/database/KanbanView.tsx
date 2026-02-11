@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDatabaseStore } from "@/stores/useDatabaseStore";
+import { useFileStore } from "@/stores/useFileStore";
 import type { DatabaseRow } from "@/types/database";
 import { SELECT_COLORS } from "@/types/database";
 import { DatabaseIconButton, DatabasePanel } from "./primitives";
@@ -20,6 +21,7 @@ export function KanbanView({ dbId }: KanbanViewProps) {
     updateView,
     getFilteredSortedRows,
   } = useDatabaseStore();
+  const openFile = useFileStore((state) => state.openFile);
   
   const db = databases[dbId];
   const rows = useMemo(() => getFilteredSortedRows(dbId), [dbId, getFilteredSortedRows, db?.rows, db?.views]);
@@ -147,6 +149,7 @@ export function KanbanView({ dbId }: KanbanViewProps) {
                     titleColumnId={titleColumn?.id}
                     isDragging={draggedCard === row.id}
                     onDragStart={(e) => handleDragStart(e, row.id)}
+                    onOpenNote={() => void openFile(row.notePath)}
                   />
                 ))}
                 
@@ -186,6 +189,7 @@ export function KanbanView({ dbId }: KanbanViewProps) {
                   titleColumnId={titleColumn?.id}
                   isDragging={draggedCard === row.id}
                   onDragStart={(e) => handleDragStart(e, row.id)}
+                  onOpenNote={() => void openFile(row.notePath)}
                 />
               ))}
             </div>
@@ -202,19 +206,24 @@ interface KanbanCardProps {
   titleColumnId?: string;
   isDragging: boolean;
   onDragStart: (e: React.DragEvent) => void;
+  onOpenNote: () => void;
 }
 
-function KanbanCard({ row, titleColumnId, isDragging, onDragStart }: KanbanCardProps) {
+function KanbanCard({ row, titleColumnId, isDragging, onDragStart, onOpenNote }: KanbanCardProps) {
   const { t } = useLocaleStore();
   const title = titleColumnId ? (row.cells[titleColumnId] as string) || t.database.noTitle : t.database.noTitle;
   
   return (
-    <div
+    <button
+      type="button"
       draggable
+      onClick={onOpenNote}
       onDragStart={onDragStart}
-      className={`db-surface p-3 cursor-grab active:cursor-grabbing transition-[transform,opacity,box-shadow] duration-150 ease-out ${
+      className={`db-focus-ring group db-surface w-full p-3 text-left cursor-grab active:cursor-grabbing transition-[transform,opacity,box-shadow] duration-150 ease-out ${
         isDragging ? 'opacity-50 scale-95' : 'hover:-translate-y-[1px] hover:shadow-ui-float'
       }`}
+      aria-label={`${t.common.open}: ${title}`}
+      title={t.common.open}
     >
       <div className="flex items-start gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100" />
@@ -223,6 +232,6 @@ function KanbanCard({ row, titleColumnId, isDragging, onDragStart }: KanbanCardP
           {/* 可以添加更多字段预览 */}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
