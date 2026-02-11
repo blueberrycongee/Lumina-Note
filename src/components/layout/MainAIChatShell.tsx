@@ -181,6 +181,8 @@ export function MainAIChatShell() {
     pendingTool: rustPendingTool,
     approveTool: approve,
     rejectTool: reject,
+    queuedTasks: rustQueuedTasks,
+    activeTaskPreview: rustActiveTaskPreview,
     llmRequestStartTime,
     retryTimeout,
   } = useRustAgentStore();
@@ -435,6 +437,8 @@ export function MainAIChatShell() {
       : chatMode === "chat"
         ? chatLoading || chatStreaming
         : false;
+  const isAgentWaitingApproval = chatMode === "agent" && agentStatus === "waiting_approval";
+  const agentQueueCount = rustQueuedTasks.length;
 
   const isConversationMode = chatMode === "chat" || chatMode === "agent";
 
@@ -841,13 +845,19 @@ export function MainAIChatShell() {
     const fallbackMessage = autoSendMessageRef.current?.trim() ?? "";
     const overrideMessage = overrideInput?.trim() ?? "";
     const effectiveInput = overrideMessage || input.trim() || fallbackMessage;
-    if ((!effectiveInput && referencedFiles.length === 0 && textSelections.length === 0) || isLoading) {
+    const shouldBlockForLoading = chatMode !== "agent" && isLoading;
+    if (
+      (!effectiveInput && referencedFiles.length === 0 && textSelections.length === 0)
+      || shouldBlockForLoading
+      || isAgentWaitingApproval
+    ) {
       if (import.meta.env.DEV) {
         console.log("[handleSend] Blocked: input empty or loading", {
           overrideMessage,
           fallbackMessage,
           referencedCount: referencedFiles.length,
           quoteCount: textSelections.length,
+          isAgentWaitingApproval,
         });
       }
       return;
@@ -933,7 +943,7 @@ export function MainAIChatShell() {
       await sendMessageStream(fullMessage, currentFileInfo, displayMessage, undefined, attachments);
       finalizePerf();
     }
-  }, [input, chatMode, isLoading, vaultPath, currentFile, currentContent, referencedFiles, textSelections, clearTextSelections, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config, selectedSkills, isExportSelectionMode]);
+  }, [input, chatMode, isLoading, isAgentWaitingApproval, vaultPath, currentFile, currentContent, referencedFiles, textSelections, clearTextSelections, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config, selectedSkills, isExportSelectionMode]);
 
   const handleSendRef = useRef(handleSend);
   useLayoutEffect(() => {
@@ -1538,6 +1548,45 @@ export function MainAIChatShell() {
                   })
                 )}
 
+                {!isExportSelectionMode && chatMode === "agent" && (agentQueueCount > 0 || rustActiveTaskPreview) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 max-w-[80%]"
+                  >
+                    <div className="bg-muted/50 border border-border rounded-xl p-3">
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <History className="w-4 h-4 text-muted-foreground" />
+                          <span>{t.ai.agentQueueTitle}</span>
+                        </div>
+                        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                          {t.ai.agentQueuePending.replace("{count}", String(agentQueueCount))}
+                        </span>
+                      </div>
+                      {rustActiveTaskPreview && (
+                        <p className="text-xs text-muted-foreground mb-2">
+                          {t.ai.agentQueueCurrent}: <span className="text-foreground">{rustActiveTaskPreview}</span>
+                        </p>
+                      )}
+                      {agentQueueCount > 0 && (
+                        <div className="space-y-1">
+                          {rustQueuedTasks.slice(0, 3).map((item) => (
+                            <div key={item.id} className="text-xs text-muted-foreground truncate">
+                              #{item.position} {item.task}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {isAgentWaitingApproval && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                          {t.ai.agentQueueWaitingApprovalHint}
+                        </p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* 创建/编辑的文件链接 */}
                 {!isExportSelectionMode && chatMode === "agent" && agentStatus !== "running" && (() => {
                   const createdFiles = extractCreatedFiles();
@@ -1902,22 +1951,41 @@ export function MainAIChatShell() {
                     </button>
 
                     {/* 发送/停止按钮 */}
-                    <button
-                      onClick={() => isLoading ? handleStop() : handleSend()}
-                      disabled={!input.trim() && referencedFiles.length === 0 && textSelections.length === 0 && !isLoading}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading
-                          ? "bg-red-500 text-white hover:bg-red-600"
-                          : (input.trim() || referencedFiles.length > 0 || textSelections.length > 0)
-                            ? "bg-foreground text-background hover:opacity-80 shadow-md"
-                            : "bg-muted text-muted-foreground cursor-not-allowed"
-                        }`}
-                    >
-                      {isLoading ? (
-                        <Square size={12} fill="currentColor" />
-                      ) : (
-                        <ArrowUp size={16} strokeWidth={3} />
-                      )}
-                    </button>
+                    {(() => {
+                      const hasPayload = Boolean(input.trim() || referencedFiles.length > 0 || textSelections.length > 0);
+                      const queueSend = chatMode === "agent" && agentStatus === "running" && hasPayload;
+                      const stopCurrent = isLoading && !queueSend;
+                      const disabled = (isAgentWaitingApproval || (!hasPayload && !stopCurrent));
+                      return (
+                        <button
+                          onClick={() => {
+                            if (queueSend) {
+                              void handleSend();
+                              return;
+                            }
+                            if (stopCurrent) {
+                              handleStop();
+                              return;
+                            }
+                            void handleSend();
+                          }}
+                          disabled={disabled}
+                          title={queueSend ? t.ai.sendToQueue : stopCurrent ? t.ai.stop : t.ai.send}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${stopCurrent
+                              ? "bg-red-500 text-white hover:bg-red-600"
+                              : hasPayload
+                                ? "bg-foreground text-background hover:opacity-80 shadow-md"
+                                : "bg-muted text-muted-foreground cursor-not-allowed"
+                            }`}
+                        >
+                          {stopCurrent ? (
+                            <Square size={12} fill="currentColor" />
+                          ) : (
+                            <ArrowUp size={16} strokeWidth={3} />
+                          )}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
 

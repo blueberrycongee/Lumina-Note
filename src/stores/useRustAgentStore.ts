@@ -143,6 +143,14 @@ export interface PendingToolApproval {
   requestId: string;
 }
 
+export interface AgentQueuedTask {
+  id: string;
+  task: string;
+  workspace_path: string;
+  enqueued_at: number;
+  position: number;
+}
+
 export interface RustAgentSession {
   id: string;
   title: string;
@@ -524,6 +532,8 @@ interface RustAgentState {
   
   // 工具审批（新增）
   pendingTool: PendingToolApproval | null;
+  queuedTasks: AgentQueuedTask[];
+  activeTaskPreview: string | null;
   
   // LLM 请求超时检测（新增）
   llmRequestStartTime: number | null;
@@ -543,6 +553,7 @@ interface RustAgentState {
   // 工具审批操作（新增）
   approveTool: () => Promise<void>;
   rejectTool: () => Promise<void>;
+  syncQueueStatus: () => Promise<void>;
   
   // 超时重试（新增）
   retryTimeout: () => Promise<void>;
@@ -680,6 +691,8 @@ export const useRustAgentStore = create<RustAgentState>()(
       
       // 工具审批初始状态（新增）
       pendingTool: null,
+      queuedTasks: [],
+      activeTaskPreview: null,
       
       // LLM 请求超时检测初始状态（新增）
       llmRequestStartTime: null,
@@ -715,14 +728,19 @@ export const useRustAgentStore = create<RustAgentState>()(
         // 获取当前历史消息（发送前的消息）
         const currentMessages = get().messages;
         
-        // 重置状态 + 更新任务统计
         const stats = get().taskStats;
+        const currentStatus = get().status;
+        const isBusy = currentStatus === "running" || currentStatus === "waiting_approval";
         set({
-          status: "running",
-          error: null,
-          currentPlan: null,
-          lastIntent: null,
-          streamingContent: "",
+          ...(isBusy
+            ? { error: null }
+            : {
+                status: "running",
+                error: null,
+                currentPlan: null,
+                lastIntent: null,
+                streamingContent: "",
+              }),
           messages: [
             ...currentMessages,
             {
@@ -736,11 +754,13 @@ export const useRustAgentStore = create<RustAgentState>()(
           ],
           taskStats: {
             ...stats,
-            // 重置当前任务统计
-            toolCalls: 0,
-            toolSuccesses: 0,
-            toolFailures: 0,
-            // 累计任务数+1
+            ...(isBusy
+              ? {}
+              : {
+                  toolCalls: 0,
+                  toolSuccesses: 0,
+                  toolFailures: 0,
+                }),
             totalTasks: stats.totalTasks + 1,
           },
         });
@@ -777,6 +797,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             history: historyForBackend,
           };
           await invoke("agent_start_task", { config, task, context: contextWithHistory });
+          await get().syncQueueStatus();
         } catch (e) {
           console.error("[RustAgent] agent_start_task failed:", e);
           set({
@@ -807,6 +828,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           pendingCompaction: false,
           isCompacting: false,
           lastTokenUsage: null,
+          queuedTasks: [],
+          activeTaskPreview: null,
         });
       },
 
@@ -858,6 +881,32 @@ export const useRustAgentStore = create<RustAgentState>()(
           set({ pendingTool: null });
         } catch (e) {
           console.error("[RustAgent] Failed to reject tool:", e);
+        }
+      },
+
+      syncQueueStatus: async () => {
+        try {
+          const snapshot = await invoke<{
+            running?: boolean;
+            active_task?: string | null;
+            queued?: AgentQueuedTask[];
+          }>("agent_get_queue_status");
+          const queuedTasks = Array.isArray(snapshot?.queued) ? snapshot.queued : [];
+          const activeTaskPreview = typeof snapshot?.active_task === "string"
+            ? snapshot.active_task
+            : null;
+          const currentStatus = get().status;
+          const nextStatus = snapshot?.running
+            ? (currentStatus === "idle" ? "running" : currentStatus)
+            : (currentStatus === "running" ? "idle" : currentStatus);
+
+          set({
+            queuedTasks,
+            activeTaskPreview,
+            status: nextStatus,
+          });
+        } catch (e) {
+          console.warn("[RustAgent] Failed to sync queue status:", e);
         }
       },
       
@@ -1429,6 +1478,27 @@ export const useRustAgentStore = create<RustAgentState>()(
             break;
           }
 
+          case "queue_updated": {
+            const data = event.data as {
+              running?: boolean;
+              active_task?: string | null;
+              queued?: AgentQueuedTask[];
+            };
+            const queuedTasks = Array.isArray(data?.queued) ? data.queued : [];
+            const activeTaskPreview = typeof data?.active_task === "string"
+              ? data.active_task
+              : null;
+            const nextStatus = data?.running
+              ? (state.status === "idle" ? "running" : state.status)
+              : (state.status === "running" ? "idle" : state.status);
+            set({
+              status: nextStatus,
+              queuedTasks,
+              activeTaskPreview,
+            });
+            break;
+          }
+
           case "step_finish": {
             const { tokens } = event.data as { tokens?: { input?: number; output?: number } };
             const inputTokens = tokens?.input ?? 0;
@@ -1861,6 +1931,7 @@ export async function initRustAgentListeners() {
       unlistenFn = null;
     }
     unlistenFn = await useRustAgentStore.getState()._setupListeners();
+    await useRustAgentStore.getState().syncQueueStatus();
     await useRustAgentStore.getState().syncMobileSessions();
     console.log("[RustAgent] Listener initialized");
   } finally {

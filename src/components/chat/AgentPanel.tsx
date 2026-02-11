@@ -58,6 +58,9 @@ export function AgentPanel() {
   const reject = rustStore.rejectTool;
   const llmRequestStartTime = rustStore.llmRequestStartTime;
   const retryTimeout = rustStore.retryTimeout;
+  const queuedTasks = rustStore.queuedTasks;
+  const activeTaskPreview = rustStore.activeTaskPreview;
+  const isWaitingApproval = status === "waiting_approval";
   
   // startTask
   const startTask = async (
@@ -93,7 +96,7 @@ export function AgentPanel() {
     _images?: AttachedImage[],
     quotedSelections: QuoteReference[] = [],
   ) => {
-    if ((!message.trim() && referencedFiles.length === 0 && quotedSelections.length === 0) || status === "running") return;
+    if ((!message.trim() && referencedFiles.length === 0 && quotedSelections.length === 0) || isWaitingApproval) return;
 
     setInput("");
     const { currentFile, currentContent } = useFileStore.getState();
@@ -182,6 +185,32 @@ export function AgentPanel() {
           <PlanCard plan={rustStore.currentPlan} className="mb-2" />
         )}
 
+        {(queuedTasks.length > 0 || activeTaskPreview) && (
+          <div className="bg-muted/40 border border-border rounded-lg p-3">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-medium">{t.ai.agentQueueTitle}</span>
+              <span className="text-muted-foreground">
+                {t.ai.agentQueuePending.replace('{count}', String(queuedTasks.length))}
+              </span>
+            </div>
+            {activeTaskPreview && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t.ai.agentQueueCurrent}: <span className="text-foreground">{activeTaskPreview}</span>
+              </p>
+            )}
+            {queuedTasks.slice(0, 3).map((item) => (
+              <div key={item.id} className="mt-1 text-xs text-muted-foreground truncate">
+                #{item.position} {item.task}
+              </div>
+            ))}
+            {isWaitingApproval && (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                {t.ai.agentQueueWaitingApprovalHint}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* 消息列表 - 使用 AgentMessageRenderer 组件 */}
         <AgentMessageRenderer
           messages={messages}
@@ -211,7 +240,7 @@ export function AgentPanel() {
         )}
 
         {/* Retry 按钮 - 只在有消息且不在运行时显示 */}
-        {messages.length > 0 && messages.some(m => m.role === "assistant") && status !== "running" && (
+        {messages.length > 0 && messages.some(m => m.role === "assistant") && status !== "running" && status !== "waiting_approval" && (
           <div className="flex justify-end">
             <button
               onClick={() => {
@@ -249,8 +278,8 @@ export function AgentPanel() {
             value={input}
             onChange={setInput}
             onSend={handleSendWithFiles}
-            isLoading={status === "running"}
-            isStreaming={status === "running"}
+            isLoading={isWaitingApproval}
+            isStreaming={false}
             onStop={abort}
             placeholder={t.ai.agentPlaceholder}
             rows={3}
@@ -280,15 +309,22 @@ export function AgentPanel() {
                 {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
               </button>
               <button
-                onClick={() => status === "running" ? abort() : handleSendWithFiles(input, [])}
-                disabled={(!input.trim() && status !== "running")}
-                className={`${status === "running"
+                onClick={() => {
+                  const hasPayload = Boolean(input.trim());
+                  if (status === "running" && !hasPayload) {
+                    abort();
+                    return;
+                  }
+                  void handleSendWithFiles(input, []);
+                }}
+                disabled={isWaitingApproval || (!input.trim() && status !== "running")}
+                className={`${status === "running" && !input.trim()
                     ? "bg-red-500 hover:bg-red-600 text-white"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
                   } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
-                title={status === "running" ? t.ai.stop : t.ai.send}
+                title={status === "running" && !input.trim() ? t.ai.stop : (status === "running" ? t.ai.sendToQueue : t.ai.send)}
               >
-                {status === "running" ? (
+                {status === "running" && !input.trim() ? (
                   <Square size={14} fill="currentColor" />
                 ) : (
                   <Send size={14} />
