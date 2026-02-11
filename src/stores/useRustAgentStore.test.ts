@@ -27,6 +27,9 @@ vi.mock('@/services/ai/ai', () => ({
 
 vi.mock('@/services/llm', () => ({
   callLLM: callLLMMock,
+  normalizeThinkingMode: (mode: unknown) =>
+    mode === "thinking" || mode === "instant" || mode === "auto" ? mode : "auto",
+  supportsThinkingModeSwitch: () => false,
   PROVIDER_REGISTRY: {
     openai: {
       models: [

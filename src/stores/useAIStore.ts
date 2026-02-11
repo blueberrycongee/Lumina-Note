@@ -377,8 +377,6 @@ export const useAIStore = create<AIState>()(
           get().createSession();
         }
 
-        const streamingThinkingEnabled = shouldStreamThinking(runtimeConfig);
-
         // 先显示用户消息
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
