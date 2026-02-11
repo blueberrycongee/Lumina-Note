@@ -3,8 +3,8 @@ import { useDatabaseStore } from "@/stores/useDatabaseStore";
 import { useFileStore } from "@/stores/useFileStore";
 import type { DatabaseRow } from "@/types/database";
 import { SELECT_COLORS } from "@/types/database";
-import { DatabaseIconButton, DatabasePanel } from "./primitives";
-import { Plus, MoreHorizontal, GripVertical } from "lucide-react";
+import { DatabaseIconButton, DatabasePanel, DatabaseTextInput } from "./primitives";
+import { Plus, MoreHorizontal, GripVertical, Pencil } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { resolveKanbanGroupColumnId } from "./kanbanUtils";
 
@@ -150,6 +150,11 @@ export function KanbanView({ dbId }: KanbanViewProps) {
                     isDragging={draggedCard === row.id}
                     onDragStart={(e) => handleDragStart(e, row.id)}
                     onOpenNote={() => void openFile(row.notePath)}
+                    onRenameTitle={
+                      titleColumn
+                        ? (nextTitle: string) => updateCell(dbId, row.id, titleColumn.id, nextTitle)
+                        : undefined
+                    }
                   />
                 ))}
                 
@@ -190,6 +195,11 @@ export function KanbanView({ dbId }: KanbanViewProps) {
                   isDragging={draggedCard === row.id}
                   onDragStart={(e) => handleDragStart(e, row.id)}
                   onOpenNote={() => void openFile(row.notePath)}
+                  onRenameTitle={
+                    titleColumn
+                      ? (nextTitle: string) => updateCell(dbId, row.id, titleColumn.id, nextTitle)
+                      : undefined
+                  }
                 />
               ))}
             </div>
@@ -207,31 +217,95 @@ interface KanbanCardProps {
   isDragging: boolean;
   onDragStart: (e: React.DragEvent) => void;
   onOpenNote: () => void;
+  onRenameTitle?: (nextTitle: string) => Promise<boolean>;
 }
 
-function KanbanCard({ row, titleColumnId, isDragging, onDragStart, onOpenNote }: KanbanCardProps) {
+function KanbanCard({
+  row,
+  titleColumnId,
+  isDragging,
+  onDragStart,
+  onOpenNote,
+  onRenameTitle,
+}: KanbanCardProps) {
   const { t } = useLocaleStore();
-  const title = titleColumnId ? (row.cells[titleColumnId] as string) || t.database.noTitle : t.database.noTitle;
+  const titleFromCell =
+    typeof titleColumnId === "string" ? String(row.cells[titleColumnId] || "").trim() : "";
+  const displayTitle = titleFromCell || row.noteTitle || t.database.noTitle;
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(displayTitle);
+
+  useEffect(() => {
+    if (!isEditingTitle) {
+      setDraftTitle(displayTitle);
+    }
+  }, [displayTitle, isEditingTitle]);
+
+  const commitTitleEdit = () => {
+    const nextTitle = draftTitle.trim();
+    setIsEditingTitle(false);
+    if (!onRenameTitle || !nextTitle || nextTitle === displayTitle) return;
+    void onRenameTitle(nextTitle);
+  };
   
   return (
-    <button
-      type="button"
-      draggable
-      onClick={onOpenNote}
+    <div
+      draggable={!isEditingTitle}
       onDragStart={onDragStart}
       className={`db-focus-ring group db-surface w-full p-3 text-left cursor-grab active:cursor-grabbing transition-[transform,opacity,box-shadow] duration-150 ease-out ${
         isDragging ? 'opacity-50 scale-95' : 'hover:-translate-y-[1px] hover:shadow-ui-float'
       }`}
-      aria-label={`${t.common.open}: ${title}`}
-      title={t.common.open}
     >
       <div className="flex items-start gap-2">
         <GripVertical className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100" />
         <div className="flex-1 min-w-0">
-          <p className="font-medium truncate">{title}</p>
-          {/* 可以添加更多字段预览 */}
+          {isEditingTitle ? (
+            <DatabaseTextInput
+              value={draftTitle}
+              onChange={(event) => setDraftTitle(event.target.value)}
+              onBlur={commitTitleEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitTitleEdit();
+                }
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setDraftTitle(displayTitle);
+                  setIsEditingTitle(false);
+                }
+              }}
+              aria-label={`${t.common.edit}: ${displayTitle}`}
+              className="h-8 px-2 text-sm font-medium"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              className="db-focus-ring w-full rounded-sm text-left"
+              onClick={onOpenNote}
+              aria-label={`${t.common.open}: ${displayTitle}`}
+              title={t.common.open}
+            >
+              <p className="font-medium truncate">{displayTitle}</p>
+            </button>
+          )}
         </div>
+        {onRenameTitle && !isEditingTitle && (
+          <DatabaseIconButton
+            aria-label={`${t.common.edit}: ${displayTitle}`}
+            title={t.common.edit}
+            variant="subtle"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDraftTitle(displayTitle);
+              setIsEditingTitle(true);
+            }}
+          >
+            <Pencil className="w-4 h-4" />
+          </DatabaseIconButton>
+        )}
       </div>
-    </button>
+    </div>
   );
 }

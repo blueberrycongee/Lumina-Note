@@ -98,6 +98,29 @@ function formatYamlValue(value: CellValue): string {
   return String(value);
 }
 
+function getTitleColumnNames(): string[] {
+  const t = getCurrentTranslations();
+  return [
+    t.database.templateContent.blank.columns.title,
+    t.database.templateContent.task.columns.title,
+    t.database.templateContent.project.columns.title,
+    t.database.templateContent.reading.columns.title,
+    'title',
+    'name',
+  ].map((name) => name.toLowerCase());
+}
+
+function findTitleColumn(columns: DatabaseColumn[]): DatabaseColumn | undefined {
+  const titleColumnNames = getTitleColumnNames();
+  return columns.find(
+    (column) => column.type === 'text' && titleColumnNames.includes(column.name.toLowerCase())
+  );
+}
+
+function isBlankCellValue(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === 'string' && value.trim() === '');
+}
+
 // ==================== Store Interface ====================
 
 interface DatabaseState {
@@ -252,6 +275,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         for (const col of columns) {
           nameToId.set(col.name.toLowerCase(), col.id);
         }
+        const titleColumn = findTitleColumn(columns);
         
         const fileTree = useFileStore.getState().fileTree;
         const rows: DatabaseRow[] = [];
@@ -329,6 +353,11 @@ export const useDatabaseStore = create<DatabaseState>()(
                     cells[columnId] = value as CellValue;
                   }
                 }
+              }
+
+              if (titleColumn && isBlankCellValue(cells[titleColumn.id])) {
+                const fallbackTitle = (frontmatter.title as string) || getTitleFromPath(filePath);
+                cells[titleColumn.id] = fallbackTitle;
               }
               
               if (!seenPaths.has(filePath)) {
@@ -551,7 +580,6 @@ export const useDatabaseStore = create<DatabaseState>()(
       
       // ===== 行操作 (Dataview: 操作笔记 YAML) =====
       addRow: async (dbId: string, cells?: Record<string, CellValue>) => {
-        const t = getCurrentTranslations();
         const vaultPath = useFileStore.getState().vaultPath;
         if (!vaultPath) throw new Error("No vault path");
         
@@ -559,25 +587,15 @@ export const useDatabaseStore = create<DatabaseState>()(
         if (!db) throw new Error("Database not found");
         
         const now = new Date().toISOString();
-        
-        // 查找标题列（支持常见列名 + 当前语言模板名）
-        const titleColumnNames = [
-          t.database.templateContent.blank.columns.title,
-          t.database.templateContent.task.columns.title,
-          t.database.templateContent.project.columns.title,
-          t.database.templateContent.reading.columns.title,
-          'title',
-          'name',
-        ].map((name) => name.toLowerCase());
-        const titleColumn = db.columns.find(c => 
-          titleColumnNames.includes(c.name.toLowerCase())
-        );
+
+        const draftCells = { ...(cells || {}) };
+        const titleColumn = findTitleColumn(db.columns);
         
         // 获取标题值：优先从 cells 中获取，否则用默认名
         let titleValue = '';
-        if (titleColumn && cells) {
+        if (titleColumn) {
           // cells 可能用列名或列 ID 作为 key
-          titleValue = String(cells[titleColumn.id] || cells[titleColumn.name] || '');
+          titleValue = String(draftCells[titleColumn.id] || draftCells[titleColumn.name] || '');
         }
         
         // 如果没有标题，用数据库名 + 日期时间
@@ -600,6 +618,11 @@ export const useDatabaseStore = create<DatabaseState>()(
         
         // 最终标题值（用于 frontmatter）
         const finalTitle = titleValue || noteName;
+
+        if (titleColumn) {
+          draftCells[titleColumn.id] = finalTitle;
+          delete draftCells[titleColumn.name];
+        }
         
         // 构建 YAML 内容（使用列名）
         const yamlLines = [
@@ -609,13 +632,11 @@ export const useDatabaseStore = create<DatabaseState>()(
           `updatedAt: ${now}`,
         ];
         
-        if (cells) {
-          for (const [columnId, value] of Object.entries(cells)) {
+        for (const [columnId, value] of Object.entries(draftCells)) {
             const columnName = idToName.get(columnId) || columnId;
             if (!['db', 'title', 'createdAt', 'updatedAt'].includes(columnName.toLowerCase())) {
               yamlLines.push(`${columnName}: ${formatYamlValue(value)}`);
             }
-          }
         }
         
         // 创建笔记文件
@@ -634,7 +655,7 @@ ${yamlLines.join('\n')}
           id: notePath,
           notePath,
           noteTitle: finalTitle,
-          cells: cells || {},
+          cells: draftCells,
           createdAt: now,
           updatedAt: now,
         };
@@ -669,6 +690,12 @@ ${yamlLines.join('\n')}
         // 找到列名（YAML 使用列名作为键）
         const column = db.columns.find(c => c.id === columnId);
         const yamlKey = column?.name || columnId;
+        const titleColumnNames = getTitleColumnNames();
+        const shouldSyncNoteTitle =
+          column?.type === 'text' && titleColumnNames.includes((column.name || '').toLowerCase());
+        const normalizedTitleValue = shouldSyncNoteTitle
+          ? String(value ?? '').trim() || row.noteTitle
+          : null;
         
         const now = new Date().toISOString();
         
@@ -679,6 +706,7 @@ ${yamlLines.join('\n')}
           // 更新 YAML（使用列名）
           const newContent = updateFrontmatter(content, {
             [yamlKey]: value,
+            ...(shouldSyncNoteTitle ? { title: normalizedTitleValue } : {}),
             updatedAt: now,
           });
           
@@ -702,7 +730,12 @@ ${yamlLines.join('\n')}
                   ...currentDb,
                   rows: currentDb.rows.map(r =>
                     r.id === rowId
-                      ? { ...r, cells: { ...r.cells, [columnId]: value }, updatedAt: now }
+                      ? {
+                          ...r,
+                          noteTitle: normalizedTitleValue || r.noteTitle,
+                          cells: { ...r.cells, [columnId]: value },
+                          updatedAt: now,
+                        }
                       : r
                   ),
                 }
