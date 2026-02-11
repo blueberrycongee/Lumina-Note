@@ -57,17 +57,6 @@ describe('LLM Config', () => {
       expect(config.model).toBe('claude-3-opus');
     });
 
-    it('should update routing config', () => {
-      setLLMConfig({
-        routing: {
-          enabled: true,
-          targetIntents: ['chat', 'search'],
-        },
-      });
-      const config = getLLMConfig();
-      expect(config.routing?.enabled).toBe(true);
-      expect(config.routing?.targetIntents).toEqual(['chat', 'search']);
-    });
   });
 
   describe('resetLLMConfig', () => {

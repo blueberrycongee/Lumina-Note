@@ -249,30 +249,12 @@ const SUMMARY_MAX_OUTPUT_TOKENS = 1200;
 
 function resolveCompactionConfig() {
   const config = getAIConfig();
-  const routing = config.routing;
-  const shouldFallback = Boolean(
-    routing?.enabled &&
-    routing.chatProvider &&
-    (!config.apiKey || !config.provider || !config.model)
-  );
-
-  if (!shouldFallback) {
-    return {
-      provider: config.provider,
-      apiKey: config.apiKey,
-      model: config.model,
-      customModelId: config.customModelId,
-      baseUrl: config.baseUrl,
-    };
-  }
-
-  const isCustom = routing?.chatModel === "custom" && routing.chatCustomModelId;
   return {
-    provider: routing!.chatProvider!,
-    apiKey: routing?.chatApiKey || config.apiKey,
-    model: isCustom ? routing!.chatCustomModelId! : (routing?.chatModel || config.model),
-    customModelId: isCustom ? routing!.chatCustomModelId : undefined,
-    baseUrl: routing?.chatBaseUrl || config.baseUrl,
+    provider: config.provider,
+    apiKey: config.apiKey,
+    model: config.model,
+    customModelId: config.customModelId,
+    baseUrl: config.baseUrl,
   };
 }
 
@@ -618,30 +600,14 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
     ? aiConfig.customModelId
     : aiConfig.model;
 
-  const routing = aiConfig.routing;
-  const shouldFallbackToChatConfig = Boolean(
-    routing?.enabled &&
-    routing.chatProvider &&
-    (!aiConfig.apiKey || !aiConfig.provider || !aiConfig.model)
-  );
-
-  const resolvedProvider = shouldFallbackToChatConfig ? routing!.chatProvider! : aiConfig.provider;
-  const resolvedApiKey = shouldFallbackToChatConfig ? (routing!.chatApiKey || aiConfig.apiKey) : aiConfig.apiKey;
-  const resolvedModel = shouldFallbackToChatConfig
-    ? (routing!.chatModel === "custom" && routing!.chatCustomModelId
-        ? routing!.chatCustomModelId
-        : routing!.chatModel || actualModel)
-    : actualModel;
-  const resolvedBaseUrl = shouldFallbackToChatConfig ? (routing!.chatBaseUrl || aiConfig.baseUrl) : aiConfig.baseUrl;
-
   return {
-    provider: resolvedProvider,
-    model: resolvedModel,
-    api_key: resolvedApiKey || "",
-    base_url: resolvedBaseUrl,
+    provider: aiConfig.provider,
+    model: actualModel,
+    api_key: aiConfig.apiKey || "",
+    base_url: aiConfig.baseUrl,
     temperature:
       aiConfig.temperature ??
-      getRecommendedTemperature(resolvedProvider, resolvedModel),
+      getRecommendedTemperature(aiConfig.provider, actualModel),
     thinking_mode: aiConfig.thinkingMode ?? "auto",
     max_tokens: 4096,
     // 0 means unlimited
@@ -737,8 +703,6 @@ export const useRustAgentStore = create<RustAgentState>()(
           model: aiConfig.model,
           hasApiKey: !!aiConfig.apiKey,
           baseUrl: aiConfig.baseUrl,
-          routingEnabled: !!aiConfig.routing?.enabled,
-          routingChatProvider: aiConfig.routing?.chatProvider,
         });
         
         // 获取当前历史消息（发送前的消息）

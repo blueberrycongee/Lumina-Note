@@ -10,7 +10,6 @@ const getAIConfigMock = vi.hoisted(() =>
     model: "kimi-k2-0711-preview",
     apiKey: "sk-test-key",
     temperature: 0.5,
-    routing: { enabled: false, targetIntents: ["chat"] },
   }))
 );
 
@@ -71,7 +70,6 @@ describe("useAIStore sendMessageStream", () => {
         model: "kimi-k2-0711-preview",
         apiKey: "",
         temperature: 0.5,
-        routing: { enabled: false, targetIntents: ["chat"] },
       },
       messages: [],
       sessions: [],

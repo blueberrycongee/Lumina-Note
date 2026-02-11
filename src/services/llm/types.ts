@@ -92,30 +92,6 @@ export interface Intent {
   reasoning: string;
 }
 
-// ============ 路由配置 ============
-
-export interface RoutingConfig {
-  enabled: boolean;
-  
-  // 意图识别模型 (用于分析用户意图)
-  intentProvider?: LLMProviderType;
-  intentApiKey?: string;
-  intentModel?: string;
-  intentCustomModelId?: string;
-  intentBaseUrl?: string;
-
-  // 聊天/轻量级模型 (用于 Chat 模式和简单意图)
-  chatProvider?: LLMProviderType;
-  chatApiKey?: string;
-  chatModel?: string;
-  chatCustomModelId?: string;
-  chatBaseUrl?: string;
-
-  // 路由规则：哪些意图路由到聊天模型
-  // 例如: ["chat", "search"] -> 这些意图使用 chatModel，其他使用主模型
-  targetIntents: IntentType[];
-}
-
 // ============ LLM 配置 ============
 
 export interface LLMConfig {
@@ -126,10 +102,7 @@ export interface LLMConfig {
   baseUrl?: string;
   temperature?: number;
   thinkingMode?: ThinkingMode;
-  
-  // 路由配置
-  routing?: RoutingConfig;
-  
+
   // Deep Research 网络搜索
   tavilyApiKey?: string;
 }

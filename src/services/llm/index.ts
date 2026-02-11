@@ -53,9 +53,6 @@ import { getLLMConfig } from "./config";
 import { createProvider } from "./factory";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
-// 导出 Router
-export { IntentRouter, intentRouter } from "./router";
-export { QueryRewriter, queryRewriter } from "./rewrite";
 export { createProvider } from "./factory";
 export {
   normalizeThinkingMode,

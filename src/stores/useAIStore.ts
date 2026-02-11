@@ -400,19 +400,6 @@ export const useAIStore = create<AIState>()(
             filesToSend = [currentFile];
           }
 
-          // 准备配置覆盖 (如果启用了路由且配置了聊天模型)
-          let configOverride: Partial<AIConfig> | undefined = undefined;
-          if (config.routing?.enabled && config.routing.chatProvider) {
-             configOverride = {
-               provider: config.routing.chatProvider,
-               apiKey: config.routing.chatApiKey || config.apiKey,
-               model: config.routing.chatModel,
-               customModelId: config.routing.chatCustomModelId,
-               baseUrl: config.routing.chatBaseUrl,
-             };
-             console.log('[AI] Using chat model:', configOverride.model);
-          }
-
           let response;
           try {
             // Call AI - 使用最新的 messages 状态
@@ -427,7 +414,7 @@ export const useAIStore = create<AIState>()(
             response = await chat(
               modelMessages,
               filesToSend,
-              configOverride,
+              undefined,
               { intent: "chat" }
             );
           } catch (chatError) {
@@ -647,24 +634,12 @@ export const useAIStore = create<AIState>()(
             }),
           ];
 
-          // 准备配置覆盖 (如果启用了路由且配置了聊天模型)
-          let configOverride: Partial<AIConfig> | undefined = undefined;
-          if (runtimeConfig.routing?.enabled && runtimeConfig.routing.chatProvider) {
-             configOverride = {
-               provider: runtimeConfig.routing.chatProvider,
-               apiKey: runtimeConfig.routing.chatApiKey || runtimeConfig.apiKey,
-               model: runtimeConfig.routing.chatModel,
-               customModelId: runtimeConfig.routing.chatCustomModelId,
-               baseUrl: runtimeConfig.routing.chatBaseUrl,
-             };
-          }
-
           // 使用流式调用
           let finalContent = "";
           let reasoningContent = "";
           
           // 流式接收内容
-          for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true }, configOverride)) {
+          for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true })) {
             if (chunk.type === "text") {
               finalContent += chunk.text;
               // 直接更新 Zustand 状态

@@ -10,10 +10,6 @@ const DEFAULT_CONFIG: LLMConfig = {
   apiKey: "",
   model: "kimi-k2.5",
   thinkingMode: "auto",
-  routing: {
-    enabled: false,
-    targetIntents: ["chat"], // 默认规则
-  },
 };
 
 let config: LLMConfig = { ...DEFAULT_CONFIG };
