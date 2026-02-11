@@ -621,7 +621,7 @@ impl LlmClient {
     async fn call_stream_inner_with_delta<F>(
         &self,
         app: Option<AppHandle>,
-        _request_id: &str,
+        request_id: &str,
         messages: &[Message],
         tools: Option<&[Value]>,
         on_delta: &mut F,
@@ -703,6 +703,16 @@ impl LlmClient {
                                     let data = &line[6..];
 
                                     if data == "[DONE]" {
+                                        if !reasoning_content.trim().is_empty() {
+                                            if let Some(app) = &app {
+                                                emit_agent_event(
+                                                    app,
+                                                    AgentEvent::ReasoningDone {
+                                                        request_id: request_id.to_string(),
+                                                    },
+                                                );
+                                            }
+                                        }
                                         return Ok(Self::build_stream_response(
                                             reasoning_content,
                                             full_content,
@@ -727,6 +737,15 @@ impl LlmClient {
                                         let delta = &json["choices"][0]["delta"];
 
                                         if let Some(reasoning) = Self::extract_reasoning_content(delta) {
+                                            if let Some(app) = &app {
+                                                emit_agent_event(
+                                                    app,
+                                                    AgentEvent::ReasoningDelta {
+                                                        content: reasoning.clone(),
+                                                        agent: AgentType::Coordinator,
+                                                    },
+                                                );
+                                            }
                                             reasoning_content.push_str(reasoning.as_str());
                                         }
 
@@ -764,6 +783,16 @@ impl LlmClient {
                             return Err(Self::to_reqwest_error("Stream error", e));
                         }
                         None => {
+                            if !reasoning_content.trim().is_empty() {
+                                if let Some(app) = &app {
+                                    emit_agent_event(
+                                        app,
+                                        AgentEvent::ReasoningDone {
+                                            request_id: request_id.to_string(),
+                                        },
+                                    );
+                                }
+                            }
                             return Ok(Self::build_stream_response(
                                 reasoning_content,
                                 full_content,

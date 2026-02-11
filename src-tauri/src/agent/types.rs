@@ -300,6 +300,10 @@ pub enum AgentEvent {
     StatusChange { status: AgentStatus },
     /// 消息块（流式输出）
     MessageChunk { content: String, agent: AgentType },
+    /// 思考块（流式输出）
+    ReasoningDelta { content: String, agent: AgentType },
+    /// 思考流结束
+    ReasoningDone { request_id: String },
     /// 意图分析结果
     IntentAnalysis {
         intent: String,
