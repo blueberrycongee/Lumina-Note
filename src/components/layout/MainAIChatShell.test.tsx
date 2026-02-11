@@ -63,7 +63,7 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 
-  it("renders thinking mode selector under input for supported models", () => {
+  it("renders thinking mode selector in chat composer for supported models", () => {
     useUIStore.setState({ chatMode: "chat" });
     useAIStore.setState((state) => ({
       config: {
@@ -83,7 +83,7 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().config.thinkingMode).toBe("instant");
   });
 
-  it("hides thinking mode selector for unsupported models", () => {
+  it("hides thinking mode selector in chat composer for unsupported models", () => {
     useUIStore.setState({ chatMode: "chat" });
     useAIStore.setState((state) => ({
       config: {

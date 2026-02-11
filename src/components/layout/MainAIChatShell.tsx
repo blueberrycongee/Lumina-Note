@@ -1789,28 +1789,6 @@ export function MainAIChatShell() {
                   />
                 </div>
 
-                {supportsThinkingMode && (
-                  <div className="px-4 pb-1">
-                    <div className="flex items-center gap-2">
-                      <label className="text-xs text-muted-foreground whitespace-nowrap">
-                        {t.aiSettings.thinkingMode}
-                      </label>
-                      <select
-                        value={displayThinkingMode}
-                        onChange={(e) => setConfig({ thinkingMode: e.target.value as ThinkingMode })}
-                        className="h-7 min-w-[108px] text-xs px-2 rounded-md border border-border bg-background"
-                      >
-                        <option value="auto">{t.aiSettings.thinkingModeAuto}</option>
-                        <option value="thinking">{t.aiSettings.thinkingModeThinking}</option>
-                        <option value="instant">{t.aiSettings.thinkingModeInstant}</option>
-                      </select>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {t.aiSettings.thinkingModeHint}
-                    </p>
-                  </div>
-                )}
-
                 {/* 已选中的 skills */}
                 {chatMode === "agent" && selectedSkills.length > 0 && (
                   <div className="px-4 pt-1 flex flex-wrap gap-1">
@@ -2055,6 +2033,25 @@ export function MainAIChatShell() {
                     })()}
                   </div>
                 </div>
+
+                {supportsThinkingMode && (
+                  <div className="px-4 pb-2 pt-0.5">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground whitespace-nowrap">
+                        {t.aiSettings.thinkingMode}
+                      </label>
+                      <select
+                        value={displayThinkingMode}
+                        onChange={(e) => setConfig({ thinkingMode: e.target.value as ThinkingMode })}
+                        className="h-7 min-w-[108px] text-xs px-2 rounded-md border border-border bg-background"
+                      >
+                        <option value="auto">{t.aiSettings.thinkingModeAuto}</option>
+                        <option value="thinking">{t.aiSettings.thinkingModeThinking}</option>
+                        <option value="instant">{t.aiSettings.thinkingModeInstant}</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
 
                 {/* 应用集成栏 - 仅在未开始时显示 */}
                 <AnimatePresence>
