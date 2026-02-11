@@ -5,6 +5,7 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useCodexPanelDockStore } from "@/stores/useCodexPanelDock";
 import { useAIStore } from "@/stores/useAIStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 describe("MainAIChatShell", () => {
   beforeEach(() => {
@@ -60,5 +61,42 @@ describe("MainAIChatShell", () => {
     const input = screen.getByRole("textbox") as HTMLTextAreaElement;
     expect(input.value).toContain("Queued from PDF");
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
+  });
+
+  it("renders thinking mode selector under input for supported models", () => {
+    useUIStore.setState({ chatMode: "chat" });
+    useAIStore.setState((state) => ({
+      config: {
+        ...state.config,
+        provider: "moonshot",
+        model: "kimi-k2.5",
+        thinkingMode: "auto",
+      },
+    }));
+
+    render(<MainAIChatShell />);
+
+    const { t } = useLocaleStore.getState();
+    expect(screen.getByText(t.aiSettings.thinkingMode)).toBeTruthy();
+    const selector = screen.getByRole("combobox");
+    fireEvent.change(selector, { target: { value: "instant" } });
+    expect(useAIStore.getState().config.thinkingMode).toBe("instant");
+  });
+
+  it("hides thinking mode selector for unsupported models", () => {
+    useUIStore.setState({ chatMode: "chat" });
+    useAIStore.setState((state) => ({
+      config: {
+        ...state.config,
+        provider: "openai",
+        model: "gpt-5.2",
+        thinkingMode: "auto",
+      },
+    }));
+
+    render(<MainAIChatShell />);
+
+    const { t } = useLocaleStore.getState();
+    expect(screen.queryByText(t.aiSettings.thinkingMode)).toBeNull();
   });
 });

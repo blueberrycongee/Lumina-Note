@@ -10,9 +10,6 @@ import { getFileName } from "@/lib/utils";
 import {
   PROVIDER_REGISTRY,
   type LLMProviderType,
-  type ThinkingMode,
-  normalizeThinkingMode,
-  supportsThinkingModeSwitch,
 } from "@/services/llm";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
 import {
@@ -388,11 +385,6 @@ export function RightPanel() {
     effectiveModelForTemp
   );
   const displayTemperature = config.temperature ?? recommendedTemperature;
-  const supportsThinkingMode = supportsThinkingModeSwitch(
-    config.provider as LLMProviderType,
-    effectiveModelForTemp
-  );
-  const displayThinkingMode = normalizeThinkingMode(config.thinkingMode);
   const { 
     config: ragConfig, 
     setConfig: setRAGConfig, 
@@ -811,27 +803,6 @@ export function RightPanel() {
                     className="ui-input h-9 text-xs"
                   />
                 </div>
-
-                {/* 温度设置 */}
-                {supportsThinkingMode && (
-                  <div>
-                    <label className="text-xs text-muted-foreground block mb-1">
-                      {t.settingsPanel.thinkingMode}
-                    </label>
-                    <select
-                      value={displayThinkingMode}
-                      onChange={(e) => setConfig({ thinkingMode: e.target.value as ThinkingMode })}
-                      className="ui-input h-9 text-xs"
-                    >
-                      <option value="auto">{t.settingsPanel.thinkingModeAuto}</option>
-                      <option value="thinking">{t.settingsPanel.thinkingModeThinking}</option>
-                      <option value="instant">{t.settingsPanel.thinkingModeInstant}</option>
-                    </select>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {t.settingsPanel.thinkingModeHint}
-                    </p>
-                  </div>
-                )}
 
                 {/* 温度设置 */}
                 <div>

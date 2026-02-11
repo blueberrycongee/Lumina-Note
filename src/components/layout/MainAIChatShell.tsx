@@ -64,6 +64,12 @@ import {
   type ExportMessage,
   type RawConversationMessage,
 } from "@/features/conversation-export/exportUtils";
+import {
+  normalizeThinkingMode,
+  supportsThinkingModeSwitch,
+  type LLMProviderType,
+  type ThinkingMode,
+} from "@/services/llm";
 
 // 随机黄豆 emoji 列表
 const WELCOME_EMOJIS = [
@@ -233,6 +239,7 @@ export function MainAIChatShell() {
     stopStreaming,
     checkFirstLoad: checkChatFirstLoad,
     config,
+    setConfig,
     totalTokensUsed: chatTotalTokens,
     textSelections,
     removeTextSelection,
@@ -252,6 +259,7 @@ export function MainAIChatShell() {
     stopStreaming: state.stopStreaming,
     checkFirstLoad: state.checkFirstLoad,
     config: state.config,
+    setConfig: state.setConfig,
     totalTokensUsed: state.totalTokensUsed,
     textSelections: state.textSelections,
     removeTextSelection: state.removeTextSelection,
@@ -259,6 +267,13 @@ export function MainAIChatShell() {
     pendingInputAppends: state.pendingInputAppends,
     consumeInputAppends: state.consumeInputAppends,
   })));
+  const effectiveModelForThinking =
+    config.model === "custom" ? (config.customModelId || "custom") : config.model;
+  const supportsThinkingMode = supportsThinkingModeSwitch(
+    config.provider as LLMProviderType,
+    effectiveModelForThinking
+  );
+  const displayThinkingMode = normalizeThinkingMode(config.thinkingMode);
 
   useRAGStore();
 
@@ -1773,6 +1788,28 @@ export function MainAIChatShell() {
                     autoFocus
                   />
                 </div>
+
+                {supportsThinkingMode && (
+                  <div className="px-4 pb-1">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground whitespace-nowrap">
+                        {t.aiSettings.thinkingMode}
+                      </label>
+                      <select
+                        value={displayThinkingMode}
+                        onChange={(e) => setConfig({ thinkingMode: e.target.value as ThinkingMode })}
+                        className="h-7 min-w-[108px] text-xs px-2 rounded-md border border-border bg-background"
+                      >
+                        <option value="auto">{t.aiSettings.thinkingModeAuto}</option>
+                        <option value="thinking">{t.aiSettings.thinkingModeThinking}</option>
+                        <option value="instant">{t.aiSettings.thinkingModeInstant}</option>
+                      </select>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {t.aiSettings.thinkingModeHint}
+                    </p>
+                  </div>
+                )}
 
                 {/* 已选中的 skills */}
                 {chatMode === "agent" && selectedSkills.length > 0 && (
