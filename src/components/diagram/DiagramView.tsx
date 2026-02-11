@@ -1,83 +1,47 @@
+import "@excalidraw/excalidraw/index.css";
+import { Excalidraw, restore, serializeAsJSON } from "@excalidraw/excalidraw";
+import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
+import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { readFile, saveFile } from "@/lib/tauri";
+import { useUIStore } from "@/stores/useUIStore";
 
 interface DiagramViewProps {
   filePath: string;
   className?: string;
 }
 
-interface DiagramDocument {
-  type: "excalidraw";
-  version: number;
-  source: string;
-  elements: unknown[];
-  appState: Record<string, unknown>;
-  files: Record<string, unknown>;
-}
-
-const DIAGRAM_SOURCE = "https://lumina-note.app";
 const SAVE_DEBOUNCE_MS = 700;
 
-const createEmptyDiagramDocument = (): DiagramDocument => ({
-  type: "excalidraw",
-  version: 2,
-  source: DIAGRAM_SOURCE,
-  elements: [],
-  appState: {},
-  files: {},
-});
-
-const normalizeDiagramDocument = (value: unknown): DiagramDocument => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return createEmptyDiagramDocument();
-  }
-  const obj = value as Record<string, unknown>;
+const createInitialScene = (): ExcalidrawInitialDataState => {
+  const restored = restore({ elements: [], appState: {}, files: {} }, null, null);
   return {
-    type: "excalidraw",
-    version: typeof obj.version === "number" ? obj.version : 2,
-    source: typeof obj.source === "string" ? obj.source : DIAGRAM_SOURCE,
-    elements: Array.isArray(obj.elements) ? obj.elements : [],
-    appState:
-      obj.appState && typeof obj.appState === "object" && !Array.isArray(obj.appState)
-        ? (obj.appState as Record<string, unknown>)
-        : {},
-    files:
-      obj.files && typeof obj.files === "object" && !Array.isArray(obj.files)
-        ? (obj.files as Record<string, unknown>)
-        : {},
+    elements: restored.elements,
+    appState: restored.appState,
+    files: restored.files,
   };
 };
 
 export function DiagramView({ filePath, className }: DiagramViewProps) {
+  const isDarkMode = useUIStore((state) => state.isDarkMode);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [text, setText] = useState("");
+  const [initialData, setInitialData] = useState<ExcalidrawInitialDataState>(() => createInitialScene());
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const saveTimerRef = useRef<number | null>(null);
-  const lastSavedTextRef = useRef("");
-  const pendingTextRef = useRef<string | null>(null);
+  const lastSavedSerializedRef = useRef("");
+  const pendingSerializedRef = useRef<string | null>(null);
 
   const saveNow = useCallback(
-    async (raw: string) => {
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(raw);
-      } catch {
-        setError("Diagram JSON is invalid. Fix syntax before saving.");
-        return;
-      }
-
-      const normalized = normalizeDiagramDocument(parsed);
-      const serialized = `${JSON.stringify(normalized, null, 2)}\n`;
-      if (serialized === lastSavedTextRef.current) {
+    async (serialized: string) => {
+      if (serialized === lastSavedSerializedRef.current) {
         return;
       }
 
       await saveFile(filePath, serialized);
-      lastSavedTextRef.current = serialized;
-      setText(serialized);
+      lastSavedSerializedRef.current = serialized;
       setLastSavedAt(Date.now());
       setError(null);
     },
@@ -85,14 +49,14 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
   );
 
   const scheduleSave = useCallback(
-    (nextText: string) => {
-      pendingTextRef.current = nextText;
+    (nextSerialized: string) => {
+      pendingSerializedRef.current = nextSerialized;
       if (saveTimerRef.current) {
         window.clearTimeout(saveTimerRef.current);
       }
       saveTimerRef.current = window.setTimeout(() => {
-        const pending = pendingTextRef.current;
-        pendingTextRef.current = null;
+        const pending = pendingSerializedRef.current;
+        pendingSerializedRef.current = null;
         if (pending == null) return;
         void saveNow(pending).catch((err) => {
           const message = err instanceof Error ? err.message : String(err);
@@ -110,17 +74,28 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
         setLoading(true);
         setError(null);
         const raw = await readFile(filePath);
-        const parsed = raw.trim().length > 0 ? JSON.parse(raw) : createEmptyDiagramDocument();
-        const normalized = normalizeDiagramDocument(parsed);
-        const serialized = `${JSON.stringify(normalized, null, 2)}\n`;
+        const parsed = raw.trim().length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : null;
+        const restored = restore(parsed as any, null, null);
+        const normalizedState: ExcalidrawInitialDataState = {
+          elements: restored.elements,
+          appState: restored.appState,
+          files: restored.files,
+        };
+        const serialized = serializeAsJSON(
+          normalizedState.elements as OrderedExcalidrawElement[],
+          normalizedState.appState || {},
+          normalizedState.files || {},
+          "local",
+        );
         if (cancelled) return;
-        setText(serialized);
-        lastSavedTextRef.current = serialized;
+        setInitialData(normalizedState);
+        lastSavedSerializedRef.current = serialized;
         setLoading(false);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (cancelled) return;
-        setError(`Failed to load diagram: ${message}`);
+        setInitialData(createInitialScene());
+        setError(`Failed to load diagram, started with a blank canvas: ${message}`);
         setLoading(false);
       }
     };
@@ -128,6 +103,12 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
     void load();
     return () => {
       cancelled = true;
+      const pending = pendingSerializedRef.current;
+      if (pending && pending !== lastSavedSerializedRef.current) {
+        void saveNow(pending).catch((err) => {
+          console.error("Failed to flush diagram save:", err);
+        });
+      }
       if (saveTimerRef.current) {
         window.clearTimeout(saveTimerRef.current);
       }
@@ -149,17 +130,32 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
         <span className="truncate">{filePath}</span>
         <span>{lastSavedAt ? `Auto-saved ${new Date(lastSavedAt).toLocaleTimeString()}` : "Not saved yet"}</span>
       </div>
-      {error ? <div className="border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div> : null}
-      <textarea
-        value={text}
-        onChange={(event) => {
-          const nextValue = event.target.value;
-          setText(nextValue);
-          scheduleSave(nextValue);
-        }}
-        spellCheck={false}
-        className="flex-1 resize-none border-0 bg-background px-4 py-3 font-mono text-xs leading-6 outline-none"
-      />
+      {error ? (
+        <div className="flex items-center justify-between border-b border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          <span className="pr-3">{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setInitialData(createInitialScene());
+            }}
+            className="inline-flex items-center gap-1 rounded-ui-sm border border-destructive/30 px-2 py-1 text-[11px] hover:bg-destructive/15"
+          >
+            <RotateCcw className="h-3 w-3" />
+            Reset
+          </button>
+        </div>
+      ) : null}
+      <div className="min-h-0 flex-1">
+        <Excalidraw
+          initialData={initialData}
+          theme={isDarkMode ? "dark" : "light"}
+          onChange={(elements, appState, files) => {
+            const serialized = serializeAsJSON(elements, appState, files, "local");
+            scheduleSave(serialized);
+          }}
+        />
+      </div>
     </div>
   );
 }
