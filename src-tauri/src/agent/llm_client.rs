@@ -151,36 +151,56 @@ impl LlmClient {
     /// 判断当前 provider 是否支持 Function Calling
     pub fn supports_fc(&self) -> bool {
         match self.config.provider.as_str() {
-            "openai"
-            | "anthropic"
-            | "deepseek"
-            | "moonshot"
-            | "zai"
-            | "gemini"
-            | "groq"
-            | "openrouter" => {
-                true
-            }
+            "openai" | "anthropic" | "deepseek" | "moonshot" | "zai" | "gemini" | "groq"
+            | "openrouter" => true,
             "ollama" => false, // 本地模型 FC 支持不稳定，使用 XML 模式
             _ => false,        // 未知 provider 默认不支持
         }
     }
 
-    fn requires_temperature_one(provider: &str, model: &str) -> bool {
-        if provider != "moonshot" {
-            return false;
-        }
+    fn recommended_temperature(provider: &str, model: &str) -> f32 {
         let normalized = model.to_ascii_lowercase();
-        normalized.contains("thinking")
+        if normalized.contains("thinking")
+            || normalized.contains("reasoner")
+            || normalized.contains("r1")
             || normalized.contains("k2.5")
             || normalized.contains("k2-5")
+        {
+            return 1.0;
+        }
+        if normalized.contains("codex")
+            || normalized.contains("coder")
+            || normalized.contains("code")
+        {
+            return 0.2;
+        }
+        if normalized.contains("flash-lite")
+            || normalized.contains("nano")
+            || normalized.contains("mini")
+        {
+            return 0.5;
+        }
+        if normalized.contains("flash")
+            || normalized.contains("turbo")
+            || normalized.contains("haiku")
+        {
+            return 0.6;
+        }
+
+        if provider == "ollama" {
+            return 0.6;
+        }
+
+        0.7
     }
 
     fn resolved_temperature(&self) -> f32 {
-        if Self::requires_temperature_one(&self.config.provider, &self.config.model) {
-            1.0
+        let recommended = Self::recommended_temperature(&self.config.provider, &self.config.model);
+        let configured = self.config.temperature;
+        if configured.is_finite() {
+            configured.clamp(0.0, 2.0)
         } else {
-            self.config.temperature
+            recommended
         }
     }
 
