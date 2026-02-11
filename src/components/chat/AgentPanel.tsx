@@ -57,10 +57,25 @@ export function AgentPanel() {
   const approve = rustStore.approveTool;
   const reject = rustStore.rejectTool;
   const llmRequestStartTime = rustStore.llmRequestStartTime;
+  const llmRetryState = rustStore.llmRetryState;
   const retryTimeout = rustStore.retryTimeout;
   const queuedTasks = rustStore.queuedTasks;
   const activeTaskPreview = rustStore.activeTaskPreview;
   const isWaitingApproval = status === "waiting_approval";
+  const [retryNow, setRetryNow] = useState(Date.now());
+
+  useEffect(() => {
+    if (!llmRetryState || status !== "running") return;
+    const timer = window.setInterval(() => {
+      setRetryNow(Date.now());
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [llmRetryState, status]);
+
+  const retrySecondsLeft =
+    llmRetryState && status === "running"
+      ? Math.max(0, Math.ceil((llmRetryState.nextRetryAt - retryNow) / 1000))
+      : null;
   
   // startTask
   const startTask = async (
@@ -185,7 +200,7 @@ export function AgentPanel() {
           <PlanCard plan={rustStore.currentPlan} className="mb-2" />
         )}
 
-        {(queuedTasks.length > 0 || activeTaskPreview) && (
+        {(queuedTasks.length > 0 || activeTaskPreview || (llmRetryState && status === "running")) && (
           <div className="bg-muted/40 border border-border rounded-lg p-3">
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-medium">{t.ai.agentQueueTitle}</span>
@@ -207,6 +222,23 @@ export function AgentPanel() {
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                 {t.ai.agentQueueWaitingApprovalHint}
               </p>
+            )}
+            {llmRetryState && status === "running" && (
+              <div className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-300">
+                <p className="font-medium">
+                  {t.ai.agentRetryTitle}
+                  {" "}
+                  {t.ai.agentRetryAttempt
+                    .replace('{attempt}', String(llmRetryState.attempt))
+                    .replace('{max}', String(llmRetryState.maxRetries))}
+                </p>
+                <p className="mt-0.5 text-amber-700/90 dark:text-amber-300/90">
+                  {t.ai.agentRetryReason}: {llmRetryState.reason}
+                </p>
+                <p className="mt-0.5">
+                  {t.ai.agentRetryIn.replace('{seconds}', String(retrySecondsLeft ?? 0))}
+                </p>
+              </div>
             )}
           </div>
         )}

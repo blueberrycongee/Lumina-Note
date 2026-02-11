@@ -184,6 +184,7 @@ export function MainAIChatShell() {
     queuedTasks: rustQueuedTasks,
     activeTaskPreview: rustActiveTaskPreview,
     llmRequestStartTime,
+    llmRetryState,
     retryTimeout,
   } = useRustAgentStore();
 
@@ -194,6 +195,18 @@ export function MainAIChatShell() {
   
   // 工具审批 - 提取 tool 对象
   const pendingTool = rustPendingTool?.tool;
+  const [retryNow, setRetryNow] = useState(Date.now());
+  useEffect(() => {
+    if (!llmRetryState || chatMode !== "agent" || agentStatus !== "running") return;
+    const timer = window.setInterval(() => {
+      setRetryNow(Date.now());
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [llmRetryState, chatMode, agentStatus]);
+  const retrySecondsLeft =
+    llmRetryState && chatMode === "agent" && agentStatus === "running"
+      ? Math.max(0, Math.ceil((llmRetryState.nextRetryAt - retryNow) / 1000))
+      : null;
   
   // 转换 Rust Agent 消息格式以兼容 UI
   const agentMessages = useMemo(() => {
@@ -1548,7 +1561,7 @@ export function MainAIChatShell() {
                   })
                 )}
 
-                {!isExportSelectionMode && chatMode === "agent" && (agentQueueCount > 0 || rustActiveTaskPreview) && (
+                {!isExportSelectionMode && chatMode === "agent" && (agentQueueCount > 0 || rustActiveTaskPreview || (llmRetryState && agentStatus === "running")) && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1582,6 +1595,23 @@ export function MainAIChatShell() {
                         <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
                           {t.ai.agentQueueWaitingApprovalHint}
                         </p>
+                      )}
+                      {llmRetryState && agentStatus === "running" && (
+                        <div className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-300">
+                          <p className="font-medium">
+                            {t.ai.agentRetryTitle}
+                            {" "}
+                            {t.ai.agentRetryAttempt
+                              .replace('{attempt}', String(llmRetryState.attempt))
+                              .replace('{max}', String(llmRetryState.maxRetries))}
+                          </p>
+                          <p className="mt-0.5 text-amber-700/90 dark:text-amber-300/90">
+                            {t.ai.agentRetryReason}: {llmRetryState.reason}
+                          </p>
+                          <p className="mt-0.5">
+                            {t.ai.agentRetryIn.replace('{seconds}', String(retrySecondsLeft ?? 0))}
+                          </p>
+                        </div>
                       )}
                     </div>
                   </motion.div>
