@@ -10,12 +10,19 @@
 use crate::agent::types::*;
 use crate::mobile_gateway::emit_agent_event;
 use futures_util::StreamExt;
+use reqwest::header::HeaderMap;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
 use tokio::time::interval;
+
+const STREAM_MAX_RETRIES: u32 = 3;
+const STREAM_RETRY_BASE_DELAY_MS: u64 = 1_000;
+const STREAM_RETRY_MAX_DELAY_MS: u64 = 30_000;
+const STREAM_RETRY_JITTER_MS: u64 = 500;
 
 /// OpenAI 格式的请求
 #[derive(Debug, Serialize)]
@@ -69,6 +76,31 @@ struct StreamToolCall {
     id: Option<String>,
     name: String,
     args: String,
+}
+
+#[derive(Debug, Clone)]
+struct StreamRequestError {
+    message: String,
+    retryable: bool,
+    retry_after_ms: Option<u64>,
+}
+
+impl StreamRequestError {
+    fn retryable(message: impl Into<String>, retry_after_ms: Option<u64>) -> Self {
+        Self {
+            message: message.into(),
+            retryable: true,
+            retry_after_ms,
+        }
+    }
+
+    fn fatal(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            retryable: false,
+            retry_after_ms: None,
+        }
+    }
 }
 
 /// LLM 客户端
@@ -418,23 +450,9 @@ impl LlmClient {
     where
         F: FnMut(&str) + Send,
     {
-        let max_retries = 3;
-        let base_delay = Duration::from_secs(1);
-        let mut last_error = String::new();
+        let mut last_error = StreamRequestError::fatal("unknown stream error");
 
-        for attempt in 0..max_retries {
-            if attempt > 0 {
-                let delay_secs = base_delay.as_secs() * 2u64.pow(attempt as u32);
-                let jitter_ms = rand::random::<u64>() % 500;
-                let delay = Duration::from_secs(delay_secs) + Duration::from_millis(jitter_ms);
-
-                println!(
-                    "[LlmClient] stream retry {} (wait {:?}), last error: {}",
-                    attempt, delay, last_error
-                );
-                tokio::time::sleep(delay).await;
-            }
-
+        for attempt in 0..=STREAM_MAX_RETRIES {
             match self
                 .call_stream_inner_with_delta(app.clone(), request_id, messages, tools, on_delta)
                 .await
@@ -442,17 +460,40 @@ impl LlmClient {
                 Ok(response) => return Ok(response),
                 Err(e) => {
                     last_error = e.clone();
-                    if !Self::is_retryable_error(&e) {
-                        return Err(e);
+                    if !e.retryable || attempt >= STREAM_MAX_RETRIES {
+                        return Err(e.message);
                     }
-                    println!("[LlmClient] stream failed (attempt {}): {}", attempt + 1, e);
+                    let retry_attempt = attempt + 1;
+                    let delay_ms = Self::retry_delay_ms(retry_attempt, e.retry_after_ms);
+                    let next_retry_at = Self::current_timestamp_ms() + delay_ms;
+
+                    println!(
+                        "[LlmClient] stream retry {}/{} (wait {}ms), last error: {}",
+                        retry_attempt, STREAM_MAX_RETRIES, delay_ms, e.message
+                    );
+
+                    if let Some(app) = &app {
+                        emit_agent_event(
+                            app,
+                            AgentEvent::LlmRetryScheduled {
+                                request_id: request_id.to_string(),
+                                attempt: retry_attempt,
+                                max_retries: STREAM_MAX_RETRIES,
+                                delay_ms,
+                                reason: Self::retry_reason(&e.message),
+                                next_retry_at,
+                            },
+                        );
+                    }
+
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
                 }
             }
         }
 
         Err(format!(
             "streaming failed after {} retries: {}",
-            max_retries, last_error
+            STREAM_MAX_RETRIES, last_error.message
         ))
     }
 
@@ -463,7 +504,7 @@ impl LlmClient {
         messages: &[Message],
         tools: Option<&[Value]>,
         on_delta: &mut F,
-    ) -> Result<LlmResponse, String>
+    ) -> Result<LlmResponse, StreamRequestError>
     where
         F: FnMut(&str) + Send,
     {
@@ -494,12 +535,13 @@ impl LlmClient {
         let response = req
             .send()
             .await
-            .map_err(|e| format!("Request failed: {}", e))?;
+            .map_err(|e| Self::to_reqwest_error("Request failed", e))?;
 
         if !response.status().is_success() {
             let status = response.status();
+            let headers = response.headers().clone();
             let text = response.text().await.unwrap_or_default();
-            return Err(format!("HTTP {}: {}", status, text));
+            return Err(Self::to_http_error(status, &text, &headers));
         }
 
         let mut stream = response.bytes_stream();
@@ -547,7 +589,7 @@ impl LlmClient {
 
                                     if let Ok(json) = serde_json::from_str::<Value>(data) {
                                         if let Some(error) = json.get("error") {
-                                            return Err(format!("API error: {}", error));
+                                            return Err(Self::to_api_error(error));
                                         }
 
                                         if let Some(usage) = json.get("usage") {
@@ -589,7 +631,7 @@ impl LlmClient {
                             }
                         }
                         Some(Err(e)) => {
-                            return Err(format!("Stream error: {}", e));
+                            return Err(Self::to_reqwest_error("Stream error", e));
                         }
                         None => {
                             return Ok(Self::build_stream_response(
@@ -613,14 +655,132 @@ impl LlmClient {
                     }
 
                     if last_data_time.elapsed() > stream_timeout {
-                        return Err(format!(
+                        return Err(StreamRequestError::retryable(
+                            format!(
                             "Stream timeout: no data for {} seconds",
                             stream_timeout.as_secs()
+                        ),
+                            None,
                         ));
                     }
                 }
             }
         }
+    }
+
+    fn current_timestamp_ms() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64
+    }
+
+    fn retry_reason(message: &str) -> String {
+        let trimmed = message.lines().next().unwrap_or(message).trim();
+        if trimmed.chars().count() <= 160 {
+            return trimmed.to_string();
+        }
+        let mut result = String::new();
+        for ch in trimmed.chars().take(157) {
+            result.push(ch);
+        }
+        result.push_str("...");
+        result
+    }
+
+    fn retry_delay_ms(attempt: u32, retry_after_ms: Option<u64>) -> u64 {
+        if let Some(ms) = retry_after_ms {
+            if ms > 0 {
+                return ms.min(STREAM_RETRY_MAX_DELAY_MS.saturating_mul(20));
+            }
+        }
+
+        let exponent = attempt.saturating_sub(1);
+        let backoff = STREAM_RETRY_BASE_DELAY_MS
+            .saturating_mul(2_u64.saturating_pow(exponent))
+            .min(STREAM_RETRY_MAX_DELAY_MS);
+        let jitter = rand::random::<u64>() % STREAM_RETRY_JITTER_MS;
+        backoff.saturating_add(jitter)
+    }
+
+    fn parse_retry_after_ms(headers: &HeaderMap) -> Option<u64> {
+        if let Some(value) = headers.get("retry-after-ms").and_then(|v| v.to_str().ok()) {
+            if let Ok(parsed) = value.trim().parse::<f64>() {
+                if parsed.is_finite() && parsed > 0.0 {
+                    return Some(parsed.ceil() as u64);
+                }
+            }
+        }
+
+        if let Some(value) = headers.get("retry-after").and_then(|v| v.to_str().ok()) {
+            let raw = value.trim();
+            if let Ok(seconds) = raw.parse::<f64>() {
+                if seconds.is_finite() && seconds > 0.0 {
+                    return Some((seconds * 1000.0).ceil() as u64);
+                }
+            }
+            if let Ok(date) = chrono::DateTime::parse_from_rfc2822(raw) {
+                let target = date.timestamp_millis();
+                let now = Self::current_timestamp_ms() as i64;
+                if target > now {
+                    return Some((target - now) as u64);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn is_retryable_http_status(status: StatusCode) -> bool {
+        matches!(
+            status,
+            StatusCode::REQUEST_TIMEOUT
+                | StatusCode::CONFLICT
+                | StatusCode::TOO_EARLY
+                | StatusCode::TOO_MANY_REQUESTS
+                | StatusCode::INTERNAL_SERVER_ERROR
+                | StatusCode::BAD_GATEWAY
+                | StatusCode::SERVICE_UNAVAILABLE
+                | StatusCode::GATEWAY_TIMEOUT
+        )
+    }
+
+    fn to_http_error(status: StatusCode, body: &str, headers: &HeaderMap) -> StreamRequestError {
+        let message = format!("HTTP {}: {}", status, body);
+        if Self::is_retryable_http_status(status) {
+            return StreamRequestError::retryable(message, Self::parse_retry_after_ms(headers));
+        }
+        StreamRequestError::fatal(message)
+    }
+
+    fn to_reqwest_error(prefix: &str, error: reqwest::Error) -> StreamRequestError {
+        let message = format!("{}: {}", prefix, error);
+        if let Some(status) = error.status() {
+            if Self::is_retryable_http_status(status) {
+                return StreamRequestError::retryable(message, None);
+            }
+        }
+
+        if error.is_timeout() || error.is_connect() || error.is_request() || error.is_body() {
+            return StreamRequestError::retryable(message, None);
+        }
+
+        StreamRequestError::fatal(message)
+    }
+
+    fn to_api_error(error: &Value) -> StreamRequestError {
+        let message = format!("API error: {}", error);
+        let normalized = error.to_string().to_lowercase();
+        let retryable = normalized.contains("too_many_requests")
+            || normalized.contains("rate_limit")
+            || normalized.contains("overloaded")
+            || normalized.contains("resource_exhausted")
+            || normalized.contains("temporar")
+            || normalized.contains("unavailable");
+        if retryable {
+            return StreamRequestError::retryable(message, None);
+        }
+        StreamRequestError::fatal(message)
     }
 
     fn build_stream_response(

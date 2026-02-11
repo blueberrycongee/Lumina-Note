@@ -307,6 +307,15 @@ pub enum AgentEvent {
     LlmRequestStart { request_id: String, timestamp: u64 },
     /// LLM 请求结束
     LlmRequestEnd { request_id: String },
+    /// LLM 自动重试计划（有限重试）
+    LlmRetryScheduled {
+        request_id: String,
+        attempt: u32,
+        max_retries: u32,
+        delay_ms: u64,
+        reason: String,
+        next_retry_at: u64,
+    },
     /// 心跳（用于连接状态监控）
     Heartbeat { timestamp: u64 },
     /// 队列状态变化
