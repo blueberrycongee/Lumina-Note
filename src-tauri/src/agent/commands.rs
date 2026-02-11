@@ -23,6 +23,7 @@ use forge::runtime::event::{Event, EventSink, PermissionReply};
 use forge::runtime::executor::{Checkpoint, ExecutionResult};
 use forge::runtime::permission::PermissionDecision;
 use forge::runtime::session_state::RunStatus;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::{fs, path::Path};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -46,12 +47,22 @@ struct ForgeCheckpoint {
     interrupts: Vec<Interrupt>,
 }
 
+#[derive(Clone)]
+struct QueuedTaskRequest {
+    id: String,
+    config: AgentConfig,
+    task: String,
+    context: TaskContext,
+    enqueued_at: u64,
+}
+
 /// Agent 状态管理
 pub struct AgentState {
     current_state: Arc<Mutex<Option<GraphState>>>,
     is_running: Arc<Mutex<bool>>,
     runtime: Arc<Mutex<Option<ForgeRuntimeState>>>,
     checkpoint: Arc<Mutex<Option<ForgeCheckpoint>>>,
+    queue: Arc<Mutex<VecDeque<QueuedTaskRequest>>>,
 }
 
 impl AgentState {
@@ -61,6 +72,7 @@ impl AgentState {
             is_running: Arc::new(Mutex::new(false)),
             runtime: Arc::new(Mutex::new(None)),
             checkpoint: Arc::new(Mutex::new(None)),
+            queue: Arc::new(Mutex::new(VecDeque::new())),
         }
     }
 }
@@ -77,31 +89,86 @@ fn emit_agent_event_safe(sink: &TauriEventSink, event: Event) {
     }
 }
 
-/// 启动 Agent 任务
-#[tauri::command]
-pub async fn agent_start_task(
+fn now_unix_millis() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn task_preview(task: &str, limit: usize) -> String {
+    let trimmed = task.trim();
+    if trimmed.chars().count() <= limit {
+        return trimmed.to_string();
+    }
+    let mut out = String::new();
+    for ch in trimmed.chars().take(limit.saturating_sub(1)) {
+        out.push(ch);
+    }
+    out.push('…');
+    out
+}
+
+async fn build_queue_snapshot(state: &AgentState) -> AgentQueueSnapshot {
+    let running = *state.is_running.lock().await;
+    let active_task = if running {
+        state
+            .current_state
+            .lock()
+            .await
+            .as_ref()
+            .map(|graph| task_preview(&graph.user_task, 80))
+    } else {
+        None
+    };
+    let queued = {
+        let queue = state.queue.lock().await;
+        queue
+            .iter()
+            .enumerate()
+            .map(|(index, item)| QueuedTaskSummary {
+                id: item.id.clone(),
+                task: task_preview(&item.task, 80),
+                workspace_path: item.context.workspace_path.clone(),
+                enqueued_at: item.enqueued_at,
+                position: index + 1,
+            })
+            .collect::<Vec<_>>()
+    };
+
+    AgentQueueSnapshot {
+        running,
+        active_task,
+        queued,
+    }
+}
+
+async fn emit_queue_updated(app: &AppHandle, state: &AgentState) {
+    let snapshot = build_queue_snapshot(state).await;
+    emit_agent_event(
+        app,
+        AgentEvent::QueueUpdated {
+            running: snapshot.running,
+            active_task: snapshot.active_task,
+            queued: snapshot.queued,
+        },
+    );
+}
+
+async fn execute_task_inner(
     app: AppHandle,
-    state: State<'_, AgentState>,
+    state: &AgentState,
     config: AgentConfig,
     task: String,
     context: TaskContext,
-) -> Result<(), String> {
-    // 检查是否已在运行
-    {
-        let mut is_running = state.is_running.lock().await;
-        if *is_running {
-            return Err("Agent is already running".to_string());
-        }
-        *is_running = true;
-    }
-
+) -> Result<bool, String> {
     if let Some(mobile_state) = app.try_state::<MobileGatewayState>() {
         mobile_state
             .set_current_session_id(context.mobile_session_id.clone())
             .await;
     }
 
-    // 调试日志：记录配置和任务
     {
         use crate::agent::debug_log as dbg;
         dbg::log_config(&config.provider, &config.model, config.temperature);
@@ -109,7 +176,6 @@ pub async fn agent_start_task(
         dbg::log_skills(&context.skills);
     }
 
-    // 构建初始状态（使用前端传入的历史消息）
     let messages = build_initial_messages(&task, &context, &config.provider);
     let initial_state = GraphState {
         messages,
@@ -126,7 +192,7 @@ pub async fn agent_start_task(
         current_step_index: 0,
         observations: vec![],
         final_result: None,
-        goto: String::new(), // 空字符串，让图从 START 开始
+        goto: String::new(),
         auto_approve: config.auto_approve,
         status: AgentStatus::Running,
         error: None,
@@ -136,6 +202,7 @@ pub async fn agent_start_task(
         let mut current_state = state.current_state.lock().await;
         *current_state = Some(initial_state.clone());
     }
+    emit_queue_updated(&app, state).await;
 
     let permissions = build_permission_session(config.auto_approve);
     let runtime = build_runtime(&initial_state.workspace_path, permissions);
@@ -176,9 +243,98 @@ pub async fn agent_start_task(
     )
     .await;
 
-    handle_forge_result(app.clone(), state, runtime_state, result).await?;
+    handle_forge_result(app, state, runtime_state, result).await
+}
 
-    Ok(())
+async fn drain_queued_tasks(app: AppHandle, state: &AgentState) {
+    loop {
+        let next_task = {
+            let mut is_running = state.is_running.lock().await;
+            if *is_running {
+                None
+            } else {
+                let mut queue = state.queue.lock().await;
+                let next = queue.pop_front();
+                if next.is_some() {
+                    *is_running = true;
+                }
+                next
+            }
+        };
+
+        let Some(next) = next_task else {
+            emit_queue_updated(&app, state).await;
+            return;
+        };
+
+        emit_queue_updated(&app, state).await;
+        let result =
+            execute_task_inner(app.clone(), state, next.config, next.task, next.context).await;
+        match result {
+            Ok(finished) => {
+                if !finished {
+                    // Paused waiting for approval; keep remaining tasks queued.
+                    return;
+                }
+            }
+            Err(err) => {
+                eprintln!("[Agent] queued task failed: {}", err);
+            }
+        }
+
+        if *state.is_running.lock().await {
+            return;
+        }
+    }
+}
+
+/// 启动 Agent 任务
+#[tauri::command]
+pub async fn agent_start_task(
+    app: AppHandle,
+    state: State<'_, AgentState>,
+    config: AgentConfig,
+    task: String,
+    context: TaskContext,
+) -> Result<(), String> {
+    let should_enqueue = {
+        let mut is_running = state.is_running.lock().await;
+        if *is_running {
+            true
+        } else {
+            *is_running = true;
+            false
+        }
+    };
+
+    if should_enqueue {
+        {
+            let mut queue = state.queue.lock().await;
+            queue.push_back(QueuedTaskRequest {
+                id: Uuid::new_v4().to_string(),
+                config,
+                task,
+                context,
+                enqueued_at: now_unix_millis(),
+            });
+        }
+        emit_queue_updated(&app, &state).await;
+        return Ok(());
+    }
+
+    let result = execute_task_inner(app.clone(), &state, config, task, context).await;
+    match result {
+        Ok(finished) => {
+            if finished {
+                drain_queued_tasks(app, &state).await;
+            }
+            Ok(())
+        }
+        Err(err) => {
+            drain_queued_tasks(app.clone(), &state).await;
+            Err(err)
+        }
+    }
 }
 
 /// 中止 Agent 任务
@@ -210,11 +366,16 @@ pub async fn agent_abort(app: AppHandle, state: State<'_, AgentState>) -> Result
         *runtime = None;
     }
     {
+        let mut queue = state.queue.lock().await;
+        queue.clear();
+    }
+    {
         let mut current_state = state.current_state.lock().await;
         if let Some(ref mut current) = *current_state {
             current.status = AgentStatus::Aborted;
         }
     }
+    emit_queue_updated(&app, &state).await;
 
     Ok(())
 }
@@ -297,6 +458,7 @@ pub async fn agent_approve_tool(
             current.status = AgentStatus::Running;
         }
     }
+    emit_queue_updated(&app, &state).await;
 
     let sink = TauriEventSink::new(app.clone());
     emit_agent_event_safe(
@@ -326,7 +488,18 @@ pub async fn agent_approve_tool(
     )
     .await;
 
-    handle_forge_result(app.clone(), state, runtime_state, result).await?;
+    let handled = handle_forge_result(app.clone(), &state, runtime_state, result).await;
+    match handled {
+        Ok(finished) => {
+            if finished {
+                drain_queued_tasks(app, &state).await;
+            }
+        }
+        Err(err) => {
+            drain_queued_tasks(app.clone(), &state).await;
+            return Err(err);
+        }
+    }
 
     Ok(())
 }
@@ -339,6 +512,14 @@ pub async fn agent_get_status(state: State<'_, AgentState>) -> Result<AgentStatu
         return Ok(current.status.clone());
     }
     Ok(AgentStatus::Idle)
+}
+
+/// 获取 Agent 任务队列状态
+#[tauri::command]
+pub async fn agent_get_queue_status(
+    state: State<'_, AgentState>,
+) -> Result<AgentQueueSnapshot, String> {
+    Ok(build_queue_snapshot(&state).await)
 }
 
 /// 继续任务（用户回答问题后）
@@ -558,10 +739,10 @@ fn load_agent_instructions(workspace_path: &str) -> Option<String> {
 
 async fn handle_forge_result(
     app: AppHandle,
-    state: State<'_, AgentState>,
+    state: &AgentState,
     runtime_state: ForgeRuntimeState,
     result: Result<ForgeRunResult, String>,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     let sink = TauriEventSink::new(app.clone());
     match result {
         Ok(run) => {
@@ -589,7 +770,8 @@ async fn handle_forge_result(
                         checkpoint_id,
                     },
                 );
-                return Ok(());
+                emit_queue_updated(&app, state).await;
+                return Ok(false);
             }
 
             final_state.status = AgentStatus::Completed;
@@ -628,6 +810,7 @@ async fn handle_forge_result(
                 let mut runtime = state.runtime.lock().await;
                 *runtime = None;
             }
+            emit_queue_updated(&app, state).await;
             return Err(err);
         }
     }
@@ -644,8 +827,9 @@ async fn handle_forge_result(
         let mut checkpoint = state.checkpoint.lock().await;
         *checkpoint = None;
     }
+    emit_queue_updated(&app, state).await;
 
-    Ok(())
+    Ok(true)
 }
 
 // ============ Deep Research 状态管理 ============

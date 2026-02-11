@@ -31,8 +31,8 @@ pub use vector_db::{
 // Re-export agent commands
 pub use agent::{
     agent_abort, agent_approve_tool, agent_continue_with_answer, agent_disable_debug,
-    agent_enable_debug, agent_get_debug_log_path, agent_get_status, agent_is_debug_enabled,
-    agent_start_task, AgentState,
+    agent_enable_debug, agent_get_debug_log_path, agent_get_queue_status, agent_get_status,
+    agent_is_debug_enabled, agent_start_task, AgentState,
 };
 
 // Re-export MCP commands

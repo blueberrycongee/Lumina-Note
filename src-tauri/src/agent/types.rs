@@ -309,6 +309,32 @@ pub enum AgentEvent {
     LlmRequestEnd { request_id: String },
     /// 心跳（用于连接状态监控）
     Heartbeat { timestamp: u64 },
+    /// 队列状态变化
+    QueueUpdated {
+        running: bool,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        active_task: Option<String>,
+        queued: Vec<QueuedTaskSummary>,
+    },
+}
+
+/// 队列任务摘要（用于前端展示）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct QueuedTaskSummary {
+    pub id: String,
+    pub task: String,
+    pub workspace_path: String,
+    pub enqueued_at: u64,
+    pub position: usize,
+}
+
+/// Agent 队列快照
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentQueueSnapshot {
+    pub running: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub active_task: Option<String>,
+    pub queued: Vec<QueuedTaskSummary>,
 }
 
 /// Skill context injected from frontend

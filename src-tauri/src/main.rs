@@ -122,6 +122,7 @@ fn main() {
             agent::agent_abort,
             agent::agent_approve_tool,
             agent::agent_get_status,
+            agent::agent_get_queue_status,
             agent::agent_continue_with_answer,
             agent::agent_list_skills,
             agent::agent_read_skill,
