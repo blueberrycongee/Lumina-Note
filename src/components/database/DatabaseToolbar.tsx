@@ -382,7 +382,7 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
       <div className="relative" ref={filterMenuRef}>
         <button
           onClick={() => setShowFilterMenu(!showFilterMenu)}
-          className={cn("db-toggle-btn", hasFilters && "border-border/70 bg-background text-foreground shadow-ui-card")}
+          className={cn("db-toggle-btn", hasFilters && "border-border/70 bg-background text-foreground")}
           aria-label={t.database.filter}
           title={t.database.filter}
         >
@@ -506,7 +506,7 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
       <div className="relative" ref={sortMenuRef}>
         <button
           onClick={() => setShowSortMenu(!showSortMenu)}
-          className={cn("db-toggle-btn", sorts.length > 0 && "border-border/70 bg-background text-foreground shadow-ui-card")}
+          className={cn("db-toggle-btn", sorts.length > 0 && "border-border/70 bg-background text-foreground")}
           aria-label={t.database.sort}
           title={t.database.sort}
         >

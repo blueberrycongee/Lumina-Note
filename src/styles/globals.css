@@ -171,7 +171,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-surface {
-    @apply rounded-ui-lg border border-border/60 bg-background/55 backdrop-blur-md shadow-ui-card;
+    @apply rounded-ui-lg border border-border/60 bg-background/55 backdrop-blur-md;
   }
 
   .db-panel {
@@ -182,7 +182,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-menu {
-    @apply rounded-ui-md border border-border/70 bg-popover/95 shadow-ui-float backdrop-blur-md;
+    @apply rounded-ui-md border border-border/70 bg-popover/95 backdrop-blur-md;
     animation: fadeIn var(--db-motion-panel) var(--db-motion-ease);
   }
 
@@ -193,7 +193,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   .db-input {
     @apply h-9 w-full rounded-ui-md border border-border/60 bg-background/40 px-3 text-sm text-foreground;
     @apply placeholder:text-muted-foreground/70;
-    @apply focus-visible:outline-none focus-visible:border-primary/60 focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)];
+    @apply focus-visible:outline-none focus-visible:border-primary/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/35;
     transition-property: border-color, background-color, box-shadow;
     transition-duration: var(--db-motion-feedback);
     transition-timing-function: var(--db-motion-ease);
@@ -201,7 +201,7 @@ body.resizing iframe[data-codex-iframe="true"] {
 
   .db-icon-btn {
     @apply inline-flex h-8 w-8 items-center justify-center rounded-ui-md border border-transparent;
-    @apply focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)];
+    @apply focus-visible:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/35;
     transition-property: transform, background-color, border-color, color, opacity;
     transition-duration: var(--db-motion-feedback);
     transition-timing-function: var(--db-motion-ease);
@@ -210,7 +210,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   .db-action-btn {
     @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-ui-md bg-primary px-3 text-sm font-medium text-primary-foreground;
     @apply hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50;
-    @apply focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)];
+    @apply focus-visible:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/35;
     transition-property: transform, background-color, border-color, box-shadow, color;
     transition-duration: var(--db-motion-feedback);
     transition-timing-function: var(--db-motion-ease);
@@ -219,14 +219,14 @@ body.resizing iframe[data-codex-iframe="true"] {
   .db-toggle-btn {
     @apply inline-flex h-8 items-center gap-1.5 rounded-ui-md border border-transparent px-2.5 text-sm text-muted-foreground;
     @apply hover:bg-accent/55 hover:text-foreground hover:border-border/60;
-    @apply focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)];
+    @apply focus-visible:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/35;
     transition-property: transform, background-color, border-color, color, box-shadow;
     transition-duration: var(--db-motion-feedback);
     transition-timing-function: var(--db-motion-ease);
   }
 
   .db-toggle-btn[data-active="true"] {
-    @apply border-border/70 bg-background text-foreground shadow-ui-card;
+    @apply border-border/70 bg-background text-foreground;
   }
 
   .db-count-badge {
@@ -248,7 +248,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-focus-ring {
-    @apply focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)];
+    @apply focus-visible:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/35;
   }
 
   .db-empty-state {

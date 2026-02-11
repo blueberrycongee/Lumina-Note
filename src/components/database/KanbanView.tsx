@@ -252,8 +252,8 @@ function KanbanCard({
     <div
       draggable={!isEditingTitle}
       onDragStart={onDragStart}
-      className={`db-focus-ring group db-surface w-full p-3 text-left cursor-grab active:cursor-grabbing transition-[transform,opacity,box-shadow] duration-150 ease-out ${
-        isDragging ? 'opacity-50 scale-95' : 'hover:-translate-y-[1px] hover:shadow-ui-float'
+      className={`db-focus-ring group db-surface w-full p-3 text-left cursor-grab active:cursor-grabbing transition-[transform,opacity] duration-150 ease-out ${
+        isDragging ? 'opacity-50 scale-95' : 'hover:-translate-y-[1px]'
       }`}
     >
       <div className="flex items-start gap-2">
