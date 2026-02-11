@@ -55,6 +55,7 @@ export default {
     search: '搜索',
     graph: '图谱',
     newNote: '新建笔记',
+    newDiagram: '新建图表',
     newFolder: '新建文件夹',
     refresh: '刷新',
     toggleSidebar: '切换侧边栏',
@@ -1314,6 +1315,23 @@ export default {
       summarySystem: '你是一个内容总结助手。请总结用户选中的内容，提取关键点。',
       summaryUser: '请总结以下内容：\n\n{text}',
     },
+  },
+
+  // 图表编辑器
+  diagramView: {
+    loading: '加载图表中...',
+    loadFailed: '图表加载失败，已切换为空白画布：{message}',
+    saveFailed: '图表保存失败：{message}',
+    autoSavedAt: '自动保存于 {time}',
+    notSavedYet: '尚未保存',
+    reset: '重置',
+    sendToChat: '发送到对话',
+    sendToChatHint: '将当前选中元素（或整个画布）作为引用发送到 AI 对话',
+    defaultSource: '图表',
+    selectionSummary: '图表选区（{count} 个元素）',
+    canvasSummary: '图表画布（{count} 个元素）',
+    selectionLocator: '图选 {count}',
+    canvasLocator: '画布 {count}',
   },
 
   // AI 设置弹窗

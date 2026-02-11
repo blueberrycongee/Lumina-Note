@@ -165,4 +165,33 @@ describe('processMessageWithFiles', () => {
     expect(result.quoteContext).toContain('locator: L12-18');
     expect(result.fullMessage).toContain('[Quoted references]');
   });
+
+  it('should support diagram quote range locator formatting', async () => {
+    const quotes: QuoteReference[] = [
+      {
+        id: 'q-diagram',
+        text: '[DIAGRAM REFERENCE]\npath: /vault/diagram.excalidraw.json',
+        source: 'diagram.excalidraw.json',
+        sourcePath: '/vault/diagram.excalidraw.json',
+        summary: 'Diagram selection (3 elements)',
+        range: {
+          kind: 'diagram',
+          filePath: '/vault/diagram.excalidraw.json',
+          elementCount: 3,
+          elementIds: ['a1', 'b2', 'c3'],
+        },
+      },
+    ];
+
+    const result = await processMessageWithFiles('Analyze this diagram selection', [], quotes);
+
+    expect(result.quoteContext).toContain('locator: Elements:3');
+    expect(result.quoteContext).toContain('path: /vault/diagram.excalidraw.json');
+    expect(result.attachments[0]).toMatchObject({
+      type: 'quote',
+      source: 'diagram.excalidraw.json',
+      summary: 'Diagram selection (3 elements)',
+      locator: 'Elements:3',
+    });
+  });
 });

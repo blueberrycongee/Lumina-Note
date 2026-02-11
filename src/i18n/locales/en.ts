@@ -55,6 +55,7 @@ export default {
     search: 'Search',
     graph: 'Graph',
     newNote: 'New Note',
+    newDiagram: 'New Diagram',
     newFolder: 'New Folder',
     refresh: 'Refresh',
     toggleSidebar: 'Toggle Sidebar',
@@ -1313,6 +1314,23 @@ export default {
       summarySystem: 'You are a summarization assistant. Summarize the selected content and extract key points.',
       summaryUser: 'Please summarize the following content:\n\n{text}',
     },
+  },
+
+  // Diagram editor
+  diagramView: {
+    loading: 'Loading diagram...',
+    loadFailed: 'Failed to load diagram, started with a blank canvas: {message}',
+    saveFailed: 'Failed to save diagram: {message}',
+    autoSavedAt: 'Auto-saved {time}',
+    notSavedYet: 'Not saved yet',
+    reset: 'Reset',
+    sendToChat: 'Send to Chat',
+    sendToChatHint: 'Send selected elements (or the whole canvas) to chat as references',
+    defaultSource: 'Diagram',
+    selectionSummary: 'Diagram selection ({count} elements)',
+    canvasSummary: 'Diagram canvas ({count} elements)',
+    selectionLocator: 'Selection {count}',
+    canvasLocator: 'Canvas {count}',
   },
 
   // AI Settings Modal

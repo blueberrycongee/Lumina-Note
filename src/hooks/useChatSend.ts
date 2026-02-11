@@ -47,6 +47,9 @@ function formatQuoteRange(range?: QuoteRange): string | undefined {
   if (range.kind === "pdf") {
     return `P${range.page}`;
   }
+  if (range.kind === "diagram") {
+    return range.elementCount > 0 ? `Elements:${range.elementCount}` : "Canvas";
+  }
   return undefined;
 }
 

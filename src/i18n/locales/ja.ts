@@ -55,6 +55,7 @@ export default {
     search: '検索',
     graph: 'グラフ',
     newNote: '新規ノート',
+    newDiagram: '新規図',
     newFolder: '新規フォルダ',
     refresh: '更新',
     toggleSidebar: 'サイドバーを切替',
@@ -1314,6 +1315,23 @@ export default {
       summarySystem: 'あなたは要約アシスタントです。選択内容を要約し、要点を抽出してください。',
       summaryUser: '次の内容を要約してください:\n\n{text}',
     },
+  },
+
+  // 図エディタ
+  diagramView: {
+    loading: '図を読み込み中...',
+    loadFailed: '図の読み込みに失敗したため、空のキャンバスで開始しました: {message}',
+    saveFailed: '図の保存に失敗しました: {message}',
+    autoSavedAt: '{time} に自動保存',
+    notSavedYet: '未保存',
+    reset: 'リセット',
+    sendToChat: 'チャットへ送信',
+    sendToChatHint: '選択中の要素（またはキャンバス全体）を参照としてチャットへ送信',
+    defaultSource: '図',
+    selectionSummary: '図の選択範囲（{count} 要素）',
+    canvasSummary: '図のキャンバス（{count} 要素）',
+    selectionLocator: '選択 {count}',
+    canvasLocator: 'キャンバス {count}',
   },
 
   // AI 設定ダイアログ

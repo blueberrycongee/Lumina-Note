@@ -19,6 +19,7 @@ interface HistoryEntry {
 // 标签页类型
 export type TabType =
   | "file"
+  | "diagram"
   | "graph"
   | "isolated-graph"
   | "typesetting-preview"
@@ -137,6 +138,7 @@ interface FileState {
   openVideoNoteFromContent: (content: string, title?: string) => void;
   openDatabaseTab: (dbId: string, dbName: string) => void;
   openPDFTab: (pdfPath: string) => void;
+  openDiagramTab: (diagramPath: string) => void;
   openAIMainTab: () => void;
   openWebpageTab: (url: string, title?: string) => void;
   updateWebpageTab: (tabId: string, url?: string, title?: string) => void;
@@ -180,6 +182,23 @@ let lastUserEditTime = 0;
 const MAX_UNDO_HISTORY = 50;
 
 const isDocxPath = (path: string) => path.toLowerCase().endsWith(".docx");
+const DIAGRAM_FILE_SUFFIXES = [".excalidraw.json", ".diagram.json", ".drawio.json"] as const;
+
+const isDiagramPath = (path: string) => {
+  const normalized = path.toLowerCase();
+  return DIAGRAM_FILE_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+};
+
+const getDiagramDisplayName = (path: string) => {
+  const fileName = path.split(/[/\\]/).pop() || "diagram";
+  const lower = fileName.toLowerCase();
+  for (const suffix of DIAGRAM_FILE_SUFFIXES) {
+    if (lower.endsWith(suffix)) {
+      return fileName.slice(0, fileName.length - suffix.length) || "diagram";
+    }
+  }
+  return fileName;
+};
 
 const MOBILE_WORKSPACE_SYNC_INTERVAL = 10_000;
 let lastMobileWorkspaceSync: { path: string | null; at: number } = { path: null, at: 0 };
@@ -345,6 +364,10 @@ export const useFileStore = create<FileState>()(
 
         if (isDocxPath(path)) {
           await get().openTypesettingDocTab(path, addToHistory);
+          return;
+        }
+        if (isDiagramPath(path)) {
+          get().openDiagramTab(path);
           return;
         }
 
@@ -637,15 +660,21 @@ export const useFileStore = create<FileState>()(
       updateTabPath: (oldPath: string, newPath: string) => {
         const t = getCurrentTranslations();
         const { tabs, currentFile } = get();
-        const newFileName = newPath.split(/[/\\/]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
 
         // 查找并更新所有匹配的标签页
         const updatedTabs = tabs.map(tab => {
-          if ((tab.type === "file" || tab.type === "typesetting-doc") && tab.path === oldPath) {
+          if (
+            (tab.type === "file" || tab.type === "typesetting-doc" || tab.type === "diagram") &&
+            tab.path === oldPath
+          ) {
+            const nextName =
+              tab.type === "diagram"
+                ? getDiagramDisplayName(newPath)
+                : newPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
             return {
               ...tab,
               path: newPath,
-              name: newFileName,
+              name: nextName,
               id: newPath, // 更新 id 以匹配新路径
             };
           }
@@ -1338,6 +1367,72 @@ export const useFileStore = create<FileState>()(
         });
       },
 
+      // 打开 Diagram 标签页
+      openDiagramTab: (diagramPath: string) => {
+        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+
+        const existingDiagramIndex = tabs.findIndex(
+          (t) => t.type === "diagram" && t.path === diagramPath
+        );
+
+        if (existingDiagramIndex >= 0) {
+          let updatedTabs = [...tabs];
+          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+            updatedTabs[activeTabIndex] = {
+              ...updatedTabs[activeTabIndex],
+              content: currentContent,
+              isDirty,
+              undoStack,
+              redoStack,
+            };
+          }
+
+          set({
+            tabs: updatedTabs,
+            activeTabIndex: existingDiagramIndex,
+            currentFile: diagramPath,
+            currentContent: "",
+            isDirty: false,
+          });
+          return;
+        }
+
+        const diagramName = getDiagramDisplayName(diagramPath);
+        const tabId = `__diagram_${diagramPath}__`;
+
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        const diagramTab: Tab = {
+          id: tabId,
+          type: "diagram",
+          path: diagramPath,
+          name: diagramName,
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        updatedTabs.push(diagramTab);
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: diagramPath,
+          currentContent: "",
+          isDirty: false,
+        });
+      },
+
       // 打开卡片流标签页
       openCardFlowTab: () => {
         const t = getCurrentTranslations();
@@ -1929,7 +2024,9 @@ export const useFileStore = create<FileState>()(
         const { tabs, activeTabIndex, currentFile, currentContent, isDirty } = get();
 
         // 查找该文件是否在标签页中打开
-        const tabIndex = tabs.findIndex(t => t.type === 'file' && t.path === path);
+        const tabIndex = tabs.findIndex(
+          (t) => (t.type === "file" || t.type === "diagram") && t.path === path
+        );
         if (tabIndex === -1) return;
 
         try {
@@ -1979,9 +2076,15 @@ export const useFileStore = create<FileState>()(
           useFavoriteStore.getState().updatePath(sourcePath, newPath);
           
           // Update tab path if the moved file is open
-          const tabIndex = tabs.findIndex(t => t.type === 'file' && t.path === sourcePath);
+          const tabIndex = tabs.findIndex(
+            (t) => (t.type === "file" || t.type === "diagram") && t.path === sourcePath
+          );
           if (tabIndex !== -1) {
-            const newFileName = newPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+            const targetTab = tabs[tabIndex];
+            const newFileName =
+              targetTab?.type === "diagram"
+                ? getDiagramDisplayName(newPath)
+                : newPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
             const updatedTabs = tabs.map((tab, i) => {
               if (i === tabIndex) {
                 return {
@@ -2026,13 +2129,16 @@ export const useFileStore = create<FileState>()(
           
           // Update all tabs that are inside the moved folder
           const updatedTabs = tabs.map(tab => {
-            if (tab.type === 'file') {
+            if (tab.type === "file" || tab.type === "diagram") {
               const normalizedTabPath = normalize(tab.path);
               if (normalizedTabPath.startsWith(normalizedSource + "/") || normalizedTabPath === normalizedSource) {
                 // Replace the old folder path with the new one
                 const relativePath = normalizedTabPath.slice(normalizedSource.length);
                 const newTabPath = normalizedNew + relativePath;
-                const newFileName = newTabPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+                const newFileName =
+                  tab.type === "diagram"
+                    ? getDiagramDisplayName(newTabPath)
+                    : newTabPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
                 return {
                   ...tab,
                   path: newTabPath,

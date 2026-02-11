@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState, useRef } from "react";
+import { Suspense, lazy, useEffect, useCallback, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -55,6 +55,10 @@ import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
 
 const IS_TYPESETTING_HARNESS =
   new URLSearchParams(window.location.search).get("typesettingHarness") === "1";
+const DiagramView = lazy(async () => {
+  const mod = await import("@/components/diagram/DiagramView");
+  return { default: mod.DiagramView };
+});
 
 // Component that shows tabs + graph/editor content
 function EditorWithGraph() {
@@ -844,6 +848,19 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
+            </div>
+          ) : activeTab?.type === "diagram" && activeTab.path ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <TabBar />
+              <Suspense
+                fallback={
+                  <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                    Loading diagram editor...
+                  </div>
+                }
+              >
+                <DiagramView key={activeTab.path} filePath={activeTab.path} className="flex-1" />
+              </Suspense>
             </div>
           ) : activeTab?.type === "typesetting-doc" && activeTab.path ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">

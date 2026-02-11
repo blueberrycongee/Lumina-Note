@@ -55,6 +55,7 @@ export default {
     search: '搜尋',
     graph: '圖譜',
     newNote: '新增筆記',
+    newDiagram: '新增圖表',
     newFolder: '新增資料夾',
     refresh: '重新整理',
     toggleSidebar: '切換側邊欄',
@@ -1314,6 +1315,23 @@ export default {
       summarySystem: '你是一位內容摘要助手。請總結選取內容並提取重點。',
       summaryUser: '請總結以下內容：\n\n{text}',
     },
+  },
+
+  // 圖表編輯器
+  diagramView: {
+    loading: '載入圖表中...',
+    loadFailed: '圖表載入失敗，已改用空白畫布：{message}',
+    saveFailed: '圖表儲存失敗：{message}',
+    autoSavedAt: '已自動儲存於 {time}',
+    notSavedYet: '尚未儲存',
+    reset: '重設',
+    sendToChat: '發送到對話',
+    sendToChatHint: '將目前選取元素（或整個畫布）作為引用發送到 AI 對話',
+    defaultSource: '圖表',
+    selectionSummary: '圖表選取（{count} 個元素）',
+    canvasSummary: '圖表畫布（{count} 個元素）',
+    selectionLocator: '選取 {count}',
+    canvasLocator: '畫布 {count}',
   },
 
   // AI 設定彈窗
