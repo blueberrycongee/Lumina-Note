@@ -1316,6 +1316,23 @@ export default {
     },
   },
 
+  // 图表编辑器
+  diagramView: {
+    loading: '加载图表中...',
+    loadFailed: '图表加载失败，已切换为空白画布：{message}',
+    saveFailed: '图表保存失败：{message}',
+    autoSavedAt: '自动保存于 {time}',
+    notSavedYet: '尚未保存',
+    reset: '重置',
+    sendToChat: '发送到对话',
+    sendToChatHint: '将当前选中元素（或整个画布）作为引用发送到 AI 对话',
+    defaultSource: '图表',
+    selectionSummary: '图表选区（{count} 个元素）',
+    canvasSummary: '图表画布（{count} 个元素）',
+    selectionLocator: '图选 {count}',
+    canvasLocator: '画布 {count}',
+  },
+
   // AI 设置弹窗
   aiSettings: {
     title: 'AI 对话设置',

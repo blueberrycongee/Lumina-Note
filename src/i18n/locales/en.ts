@@ -1315,6 +1315,23 @@ export default {
     },
   },
 
+  // Diagram editor
+  diagramView: {
+    loading: 'Loading diagram...',
+    loadFailed: 'Failed to load diagram, started with a blank canvas: {message}',
+    saveFailed: 'Failed to save diagram: {message}',
+    autoSavedAt: 'Auto-saved {time}',
+    notSavedYet: 'Not saved yet',
+    reset: 'Reset',
+    sendToChat: 'Send to Chat',
+    sendToChatHint: 'Send selected elements (or the whole canvas) to chat as references',
+    defaultSource: 'Diagram',
+    selectionSummary: 'Diagram selection ({count} elements)',
+    canvasSummary: 'Diagram canvas ({count} elements)',
+    selectionLocator: 'Selection {count}',
+    canvasLocator: 'Canvas {count}',
+  },
+
   // AI Settings Modal
   aiSettings: {
     title: 'AI Chat Settings',

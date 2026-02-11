@@ -22,6 +22,12 @@ export type QuoteRange =
       kind: "pdf";
       page: number;
       rectCount?: number;
+    }
+  | {
+      kind: "diagram";
+      elementCount: number;
+      elementIds?: string[];
+      filePath?: string;
     };
 
 export interface QuoteReference {

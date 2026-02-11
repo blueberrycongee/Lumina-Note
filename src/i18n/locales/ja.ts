@@ -1316,6 +1316,23 @@ export default {
     },
   },
 
+  // 図エディタ
+  diagramView: {
+    loading: '図を読み込み中...',
+    loadFailed: '図の読み込みに失敗したため、空のキャンバスで開始しました: {message}',
+    saveFailed: '図の保存に失敗しました: {message}',
+    autoSavedAt: '{time} に自動保存',
+    notSavedYet: '未保存',
+    reset: 'リセット',
+    sendToChat: 'チャットへ送信',
+    sendToChatHint: '選択中の要素（またはキャンバス全体）を参照としてチャットへ送信',
+    defaultSource: '図',
+    selectionSummary: '図の選択範囲（{count} 要素）',
+    canvasSummary: '図のキャンバス（{count} 要素）',
+    selectionLocator: '選択 {count}',
+    canvasLocator: 'キャンバス {count}',
+  },
+
   // AI 設定ダイアログ
   aiSettings: {
     title: 'AI チャット設定',
