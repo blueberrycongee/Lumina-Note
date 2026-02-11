@@ -18,6 +18,7 @@ import type {
 import { llmFetchJson, llmFetchStream, HttpRequest } from "../httpClient";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { resolveTemperature } from "../temperature";
+import { getThinkingRequestBodyPatch } from "../thinking";
 
 // ============ 消息格式转换 ============
 
@@ -139,6 +140,16 @@ export class OpenAICompatibleProvider implements LLMProvider {
     // 自定义字段
     if (this.providerConfig.customBodyFields) {
       Object.assign(body, this.providerConfig.customBodyFields);
+    }
+
+    // 思考模式参数（仅在 provider/model 支持时注入）
+    const thinkingPatch = getThinkingRequestBodyPatch({
+      provider: this.config.provider,
+      model: this.config.model,
+      thinkingMode: this.config.thinkingMode,
+    });
+    if (thinkingPatch) {
+      Object.assign(body, thinkingPatch);
     }
 
     // Function Calling

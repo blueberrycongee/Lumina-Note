@@ -1,5 +1,6 @@
 import { LLMProvider, LLMConfig } from "./types";
 import { getLLMConfig } from "./config";
+import { normalizeThinkingMode, resolveThinkingModel } from "./thinking";
 import { 
   AnthropicProvider, 
   OpenAIProvider,
@@ -41,11 +42,17 @@ export function createProvider(configOverride?: Partial<LLMConfig>): LLMProvider
   }
 
   // 处理自定义模型
+  const selectedModel = config.model === "custom" && config.customModelId
+    ? config.customModelId
+    : config.model;
   const finalConfig = {
     ...config,
-    model: config.model === "custom" && config.customModelId 
-      ? config.customModelId 
-      : config.model,
+    thinkingMode: normalizeThinkingMode(config.thinkingMode),
+    model: resolveThinkingModel({
+      provider: config.provider,
+      model: selectedModel,
+      thinkingMode: config.thinkingMode,
+    }),
   };
 
   switch (finalConfig.provider) {

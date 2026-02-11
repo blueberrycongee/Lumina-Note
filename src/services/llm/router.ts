@@ -24,6 +24,7 @@ export class IntentRouter {
         model: config.routing.intentModel,
         customModelId: config.routing.intentCustomModelId,
         baseUrl: config.routing.intentBaseUrl,
+        thinkingMode: "auto",
       } : {};
 
       const provider = createProvider(routerConfig);

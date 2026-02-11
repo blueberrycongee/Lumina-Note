@@ -9,6 +9,7 @@ const DEFAULT_CONFIG: LLMConfig = {
   provider: "moonshot",
   apiKey: "",
   model: "kimi-k2.5",
+  thinkingMode: "auto",
   routing: {
     enabled: false,
     targetIntents: ["chat"], // 默认规则

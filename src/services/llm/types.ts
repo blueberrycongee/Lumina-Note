@@ -125,6 +125,7 @@ export interface LLMConfig {
   customModelId?: string;
   baseUrl?: string;
   temperature?: number;
+  thinkingMode?: ThinkingMode;
   
   // 路由配置
   routing?: RoutingConfig;
@@ -142,6 +143,8 @@ export interface LLMOptions {
   maxTokens?: number;
   tools?: unknown[];  // Function Calling 工具定义
 }
+
+export type ThinkingMode = "auto" | "thinking" | "instant";
 
 // ============ LLM 响应 ============
 

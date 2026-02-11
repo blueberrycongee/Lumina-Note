@@ -24,6 +24,7 @@ export type {
   LLMStream,
   IntentType,
   Intent,
+  ThinkingMode,
 } from "./types";
 
 // Provider 注册表
@@ -56,6 +57,13 @@ import { getCurrentTranslations } from "@/stores/useLocaleStore";
 export { IntentRouter, intentRouter } from "./router";
 export { QueryRewriter, queryRewriter } from "./rewrite";
 export { createProvider } from "./factory";
+export {
+  normalizeThinkingMode,
+  getThinkingCapability,
+  supportsThinkingModeSwitch,
+  resolveThinkingModel,
+  getThinkingRequestBodyPatch,
+} from "./thinking";
 
 /**
  * 调用 LLM (统一入口)

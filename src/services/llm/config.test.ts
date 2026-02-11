@@ -15,6 +15,7 @@ describe('LLM Config', () => {
       const config = getLLMConfig();
       expect(config.provider).toBe('moonshot');
       expect(config.model).toBe('kimi-k2.5');
+      expect(config.thinkingMode).toBe('auto');
       expect(config.temperature).toBeUndefined();
       expect(config.apiKey).toBe('');
     });
@@ -85,6 +86,7 @@ describe('LLM Config', () => {
       expect(config.provider).toBe('moonshot');
       expect(config.apiKey).toBe('');
       expect(config.model).toBe('kimi-k2.5');
+      expect(config.thinkingMode).toBe('auto');
     });
   });
 });

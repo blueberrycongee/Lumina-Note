@@ -99,6 +99,34 @@ describe('createProvider', () => {
     });
   });
 
+  describe('Thinking mode resolution', () => {
+    it('should switch deepseek chat to reasoner when thinking mode is enabled', () => {
+      setLLMConfig({
+        provider: 'deepseek',
+        model: 'deepseek-chat',
+        apiKey: 'test-key',
+        thinkingMode: 'thinking',
+      });
+
+      const provider = createProvider() as any;
+      expect(provider.config.model).toBe('deepseek-reasoner');
+      expect(provider.config.thinkingMode).toBe('thinking');
+    });
+
+    it('should switch deepseek reasoner to chat when instant mode is enabled', () => {
+      setLLMConfig({
+        provider: 'deepseek',
+        model: 'deepseek-reasoner',
+        apiKey: 'test-key',
+        thinkingMode: 'instant',
+      });
+
+      const provider = createProvider() as any;
+      expect(provider.config.model).toBe('deepseek-chat');
+      expect(provider.config.thinkingMode).toBe('instant');
+    });
+  });
+
   describe('Custom model handling', () => {
     it('should use customModelId when model is "custom"', () => {
       setLLMConfig({ 
