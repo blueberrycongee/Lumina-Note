@@ -64,17 +64,6 @@ jobs:
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
 
-      - name: Upload signatures as artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: signatures-${{ matrix.platform }}-${{ matrix.rust_target || 'x64' }}
-          path: |
-            src-tauri/target/*/release/bundle/macos/*.sig
-            src-tauri/target/release/bundle/macos/*.sig
-            src-tauri/target/release/bundle/nsis/*.sig
-            src-tauri/target/release/bundle/msi/*.sig
-          if-no-files-found: error
-
   updater:
     needs: release
     runs-on: ubuntu-latest
@@ -91,15 +80,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download all signatures
-        uses: actions/download-artifact@v7
-        with:
-          path: signatures
-          pattern: signatures-*
-          merge-multiple: true
-
-      - name: Copy signatures to root for script
-        run: find signatures -type f -name "*.sig" -exec cp {} . \;
+      - name: Download signatures from release assets
+        run: gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" --pattern "*.sig" --dir .
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate latest.json
         run: npm run generate-latest
