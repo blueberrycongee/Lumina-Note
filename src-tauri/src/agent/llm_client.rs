@@ -39,7 +39,7 @@ struct ChatRequest {
     tools: Option<Vec<ToolDefinition>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ChatMessage {
     role: String,
     content: String,
@@ -53,14 +53,14 @@ struct ChatMessage {
     reasoning_content: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ChatToolCall {
     id: String,
     r#type: String,
     function: ChatToolCallFunction,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ChatToolCallFunction {
     name: String,
     arguments: String,
@@ -409,6 +409,88 @@ impl LlmClient {
             .collect()
     }
 
+    fn normalize_tool_call_id_for_claude(id: &str) -> String {
+        id.chars()
+            .map(|ch| {
+                if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+                    ch
+                } else {
+                    '_'
+                }
+            })
+            .collect()
+    }
+
+    fn normalize_tool_call_id_for_mistral(id: &str) -> String {
+        let mut normalized: String = id.chars().filter(|ch| ch.is_ascii_alphanumeric()).collect();
+        if normalized.len() > 9 {
+            normalized.truncate(9);
+        }
+        while normalized.len() < 9 {
+            normalized.push('0');
+        }
+        normalized
+    }
+
+    fn normalize_chat_messages(&self, messages: Vec<ChatMessage>, model: &str) -> Vec<ChatMessage> {
+        let provider = self.config.provider.to_ascii_lowercase();
+        let model = model.to_ascii_lowercase();
+        let is_claude = provider == "anthropic" || model.contains("claude");
+        let is_mistral =
+            provider.contains("mistral") || model.contains("mistral") || model.contains("devstral");
+
+        let normalized = messages
+            .into_iter()
+            .map(|mut msg| {
+                if is_claude || is_mistral {
+                    if let Some(id) = msg.tool_call_id.as_ref() {
+                        let converted = if is_mistral {
+                            Self::normalize_tool_call_id_for_mistral(id)
+                        } else {
+                            Self::normalize_tool_call_id_for_claude(id)
+                        };
+                        msg.tool_call_id = Some(converted);
+                    }
+                    if let Some(calls) = msg.tool_calls.as_mut() {
+                        for call in calls {
+                            call.id = if is_mistral {
+                                Self::normalize_tool_call_id_for_mistral(&call.id)
+                            } else {
+                                Self::normalize_tool_call_id_for_claude(&call.id)
+                            };
+                        }
+                    }
+                }
+                msg
+            })
+            .collect::<Vec<_>>();
+
+        if is_mistral {
+            let mut fixed = Vec::with_capacity(normalized.len() + 2);
+            for idx in 0..normalized.len() {
+                let current = normalized[idx].clone();
+                fixed.push(current.clone());
+                if current.role == "tool" {
+                    if let Some(next) = normalized.get(idx + 1) {
+                        if next.role == "user" {
+                            fixed.push(ChatMessage {
+                                role: "assistant".to_string(),
+                                content: "Done.".to_string(),
+                                name: None,
+                                tool_call_id: None,
+                                tool_calls: None,
+                                reasoning_content: None,
+                            });
+                        }
+                    }
+                }
+            }
+            return fixed;
+        }
+
+        normalized
+    }
+
     /// 非流式调用（带重试机制）
     pub async fn call(
         &self,
@@ -418,8 +500,8 @@ impl LlmClient {
         let url = self.get_api_url();
         let headers = self.build_headers();
 
-        let chat_messages = self.convert_messages(messages);
         let resolved_model = self.resolved_model();
+        let chat_messages = self.normalize_chat_messages(self.convert_messages(messages), &resolved_model);
         let temperature = self.resolved_temperature();
 
         let mut body = json!({
@@ -721,8 +803,8 @@ impl LlmClient {
         let url = self.get_api_url();
         let headers = self.build_headers();
 
-        let chat_messages = self.convert_messages(messages);
         let resolved_model = self.resolved_model();
+        let chat_messages = self.normalize_chat_messages(self.convert_messages(messages), &resolved_model);
         let temperature = self.resolved_temperature();
 
         let mut body = json!({
@@ -1232,8 +1314,8 @@ impl LlmClient {
         let url = self.get_api_url();
         let headers = self.build_headers();
 
-        let chat_messages = self.convert_messages(messages);
         let resolved_model = self.resolved_model();
+        let chat_messages = self.normalize_chat_messages(self.convert_messages(messages), &resolved_model);
         let temperature = self.resolved_temperature();
 
         let mut body = json!({
