@@ -23,7 +23,6 @@ import {
   Sparkles,
   X,
   Zap,
-  Paperclip,
   Square,
   Plus,
   History,
@@ -31,7 +30,6 @@ import {
   MessageSquare,
   Mic,
   MicOff,
-  Folder,
   AlertCircle,
   Check,
   Settings,
@@ -159,8 +157,6 @@ export function MainAIChatShell() {
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [showFilePicker, setShowFilePicker] = useState(false);
-  const [filePickerQuery, setFilePickerQuery] = useState("");
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([]);
@@ -387,12 +383,11 @@ export function MainAIChatShell() {
     return chatMode === "chat" && chatSessionId === id;
   }, [chatMode, rustSessionId, chatSessionId, researchSelectedId]);
 
-  const { vaultPath, currentFile, currentContent, fileTree, openFile, refreshFileTree } = useFileStore(
+  const { vaultPath, currentFile, currentContent, openFile, refreshFileTree } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
       currentFile: state.currentFile,
       currentContent: state.currentContent,
-      fileTree: state.fileTree,
       openFile: state.openFile,
       refreshFileTree: state.refreshFileTree,
     })),
@@ -428,35 +423,6 @@ export function MainAIChatShell() {
   const { isRecording, interimText, toggleRecording } = useSpeechToText((text: string) => {
     setInput((prev) => (prev ? prev + " " + text : text));
   });
-
-  // 扁平化文件树
-  const flattenFileTree = useCallback((entries: any[], result: ReferencedFile[] = []): ReferencedFile[] => {
-    for (const entry of entries) {
-      result.push({
-        path: entry.path,
-        name: entry.name,
-        isFolder: entry.is_dir,
-      });
-      if (entry.is_dir && entry.children) {
-        flattenFileTree(entry.children, result);
-      }
-    }
-    return result;
-  }, []);
-
-  // 获取所有文件
-  const allFiles = useMemo(() => flattenFileTree(fileTree), [fileTree, flattenFileTree]);
-
-  // 文件选择器过滤
-  const pickerFilteredFiles = useMemo(() => {
-    if (!filePickerQuery) {
-      return allFiles.filter(f => !f.isFolder).slice(0, 20);
-    }
-    const query = filePickerQuery.toLowerCase();
-    return allFiles
-      .filter(f => !f.isFolder && f.name.toLowerCase().includes(query))
-      .slice(0, 20);
-  }, [allFiles, filePickerQuery]);
 
   // 判断是否有对话历史（用于控制动画状态）
   // Chat 模式下，流式进行中也算已开始（确保流式消息能正确显示）
@@ -692,13 +658,10 @@ export function MainAIChatShell() {
     }
   }, [chatMode, checkChatFirstLoad]);
 
-  // 点击外部关闭文件选择器
+  // 点击外部关闭临时菜单
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-file-picker]')) {
-        setShowFilePicker(false);
-      }
       if (!target.closest('[data-skill-menu]') && !target.closest('textarea')) {
         setShowSkillMenu(false);
       }
@@ -1914,64 +1877,6 @@ export function MainAIChatShell() {
                 {/* 底部工具栏 */}
                 <div className="ai-toolbar-row px-4 pb-3 pt-1 flex items-center justify-between">
                   <div className="ai-toolbar-left flex items-center gap-2 min-w-0 overflow-hidden">
-                    {/* 附件按钮 - 工作区文件选择器 */}
-                    <div className="relative" data-file-picker>
-                      <button
-                        onClick={() => setShowFilePicker(!showFilePicker)}
-                        className="flex items-center gap-1.5 p-1.5 px-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                        title={t.ai.addWorkspaceFile}
-                      >
-                        <Paperclip size={16} />
-                      </button>
-
-                      {/* 文件选择下拉菜单 */}
-                      {showFilePicker && (
-                        <div className="absolute bottom-full left-0 mb-1 w-72 bg-background border border-border rounded-lg shadow-lg z-50">
-                          <div className="p-2 border-b border-border">
-                            <input
-                              type="text"
-                              value={filePickerQuery}
-                              onChange={(e) => setFilePickerQuery(e.target.value)}
-                              placeholder={t.ai.searchFile}
-                              className="w-full px-2 py-1.5 text-sm bg-muted/50 border border-border rounded outline-none focus:ring-1 focus:ring-primary/50"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-60 overflow-y-auto">
-                            {pickerFilteredFiles.length === 0 ? (
-                              <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                                {t.ai.fileNotFound}
-                              </div>
-                            ) : (
-                              pickerFilteredFiles.map((file) => (
-                                <button
-                                  key={file.path}
-                                  onClick={() => {
-                                    if (!referencedFiles.some(f => f.path === file.path)) {
-                                      setReferencedFiles([...referencedFiles, file]);
-                                    }
-                                    setShowFilePicker(false);
-                                    setFilePickerQuery("");
-                                  }}
-                                  className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors"
-                                >
-                                  {file.isFolder ? (
-                                    <Folder size={14} className="text-yellow-500 shrink-0" />
-                                  ) : (
-                                    <FileText size={14} className="text-slate-500 shrink-0" />
-                                  )}
-                                  <span className="truncate">{file.name}</span>
-                                </button>
-                              ))
-                            )}
-                          </div>
-                          <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border">
-                            {t.ai.filesCount.replace('{count}', String(allFiles.filter(f => !f.isFolder).length))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
                     {/* Chat/Agent/Research/Codex 切换滑块 */}
                     {renderModeToggle()}
 
