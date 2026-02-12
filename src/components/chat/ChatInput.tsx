@@ -11,15 +11,14 @@ import { Send, FileText, Folder, X, Loader2, Paperclip, Quote, Image as ImageIco
 import { cn } from "@/lib/utils";
 import { useCommandStore, SlashCommand } from "@/stores/useCommandStore";
 import { CommandManagerModal } from "./CommandManagerModal";
+import {
+  filterMentionFiles,
+  flattenFileTreeToReferences,
+  parseMentionQueryAtCursor,
+} from "./fileMentionUtils";
+import type { ReferencedFile } from "@/hooks/useChatSend";
 import type { AttachedImage } from "@/types/chat";
 import type { QuoteReference } from "@/types/chat";
-
-// 引用的文件
-export interface ReferencedFile {
-  path: string;
-  name: string;
-  isFolder: boolean;
-}
 
 export interface ChatInputRef {
   send: () => void;
@@ -186,23 +185,8 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     setAttachedImages(prev => prev.filter(img => img.id !== id));
   }, []);
 
-  // 扁平化文件树
-  const flattenFileTree = useCallback((entries: any[], result: ReferencedFile[] = []): ReferencedFile[] => {
-    for (const entry of entries) {
-      result.push({
-        path: entry.path,
-        name: entry.name,
-        isFolder: entry.is_dir,
-      });
-      if (entry.is_dir && entry.children) {
-        flattenFileTree(entry.children, result);
-      }
-    }
-    return result;
-  }, []);
-
   // 获取所有文件和文件夹
-  const allFiles = React.useMemo(() => flattenFileTree(fileTree), [fileTree, flattenFileTree]);
+  const allFiles = React.useMemo(() => flattenFileTreeToReferences(fileTree), [fileTree]);
 
   // 文件选择器过滤的文件
   const pickerFilteredFiles = React.useMemo(() => {
@@ -216,16 +200,10 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   }, [allFiles, filePickerQuery]);
 
   // 过滤匹配的文件（@ 提及用）
-  const filteredFiles = React.useMemo(() => {
-    const filesOnly = allFiles.filter(f => !f.isFolder);
-    if (!mentionQuery) {
-      return filesOnly;
-    }
-    const query = mentionQuery.trim().toLowerCase();
-    return filesOnly.filter(f =>
-      f.name.toLowerCase().includes(query) || f.path.toLowerCase().includes(query)
-    );
-  }, [allFiles, mentionQuery]);
+  const filteredFiles = React.useMemo(
+    () => filterMentionFiles(allFiles, mentionQuery),
+    [allFiles, mentionQuery],
+  );
 
   // 过滤匹配的命令
   const filteredCommands = React.useMemo(() => {
@@ -242,11 +220,11 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     // 检测 @ 符号
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = newValue.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@([^\s@]*)$/);
+    const mention = parseMentionQueryAtCursor(newValue, cursorPos);
 
-    if (atMatch) {
+    if (mention !== null) {
       setShowMention(true);
-      setMentionQuery(atMatch[1]);
+      setMentionQuery(mention);
       setMentionIndex(0);
       setShowCommand(false);
     } else {

@@ -43,6 +43,11 @@ import { PlanCard } from "../chat/PlanCard";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
 import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "../chat/messageContentUtils";
+import {
+  filterMentionFiles,
+  flattenFileTreeToReferences,
+  parseMentionQueryAtCursor,
+} from "../chat/fileMentionUtils";
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
@@ -781,33 +786,12 @@ export function MainAIChatShell() {
       .slice(0, 8);
   }, [skills, skillQuery]);
 
-  // 扁平化文件树（用于 @ 引用文件）
-  const flattenFileTree = useCallback((entries: any[], result: ReferencedFile[] = []): ReferencedFile[] => {
-    for (const entry of entries) {
-      result.push({
-        path: entry.path,
-        name: entry.name,
-        isFolder: entry.is_dir,
-      });
-      if (entry.is_dir && entry.children) {
-        flattenFileTree(entry.children, result);
-      }
-    }
-    return result;
-  }, []);
+  const allFiles = useMemo(() => flattenFileTreeToReferences(fileTree), [fileTree]);
 
-  const allFiles = useMemo(() => flattenFileTree(fileTree), [fileTree, flattenFileTree]);
-
-  const filteredMentionFiles = useMemo(() => {
-    const filesOnly = allFiles.filter((f) => !f.isFolder);
-    if (!mentionQuery) {
-      return filesOnly;
-    }
-    const query = mentionQuery.trim().toLowerCase();
-    return filesOnly.filter((f) =>
-      f.name.toLowerCase().includes(query) || f.path.toLowerCase().includes(query)
-    );
-  }, [allFiles, mentionQuery]);
+  const filteredMentionFiles = useMemo(
+    () => filterMentionFiles(allFiles, mentionQuery),
+    [allFiles, mentionQuery],
+  );
 
   const [showMessages, setShowMessages] = useState(hasStarted);
   useEffect(() => {
@@ -828,12 +812,10 @@ export function MainAIChatShell() {
   const handleInputChange = useCallback((value: string, cursorPos?: number) => {
     setInput(value);
     const effectiveCursor = cursorPos ?? value.length;
-    const textBeforeCursor = value.slice(0, effectiveCursor);
-
-    const atMatch = textBeforeCursor.match(/@([^\s@]*)$/);
-    if (atMatch) {
+    const mention = parseMentionQueryAtCursor(value, effectiveCursor);
+    if (mention !== null) {
       setShowMention(true);
-      setMentionQuery(atMatch[1] ?? "");
+      setMentionQuery(mention);
       setMentionIndex(0);
       setShowSkillMenu(false);
       setSkillQuery("");
@@ -849,6 +831,7 @@ export function MainAIChatShell() {
       setShowSkillMenu(false);
       return;
     }
+    const textBeforeCursor = value.slice(0, effectiveCursor);
     const match = textBeforeCursor.match(/(?:^|\s)\/([^\s]*)$/);
     if (match) {
       setSkillQuery(match[1] ?? "");
