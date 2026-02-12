@@ -217,14 +217,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
   // 过滤匹配的文件（@ 提及用）
   const filteredFiles = React.useMemo(() => {
+    const filesOnly = allFiles.filter(f => !f.isFolder);
     if (!mentionQuery) {
-      // 显示快捷选项 + 最近文件
-      return allFiles.slice(0, 10);
+      return filesOnly;
     }
-    const query = mentionQuery.toLowerCase();
-    return allFiles
-      .filter(f => f.name.toLowerCase().includes(query))
-      .slice(0, 10);
+    const query = mentionQuery.trim().toLowerCase();
+    return filesOnly.filter(f =>
+      f.name.toLowerCase().includes(query) || f.path.toLowerCase().includes(query)
+    );
   }, [allFiles, mentionQuery]);
 
   // 过滤匹配的命令
