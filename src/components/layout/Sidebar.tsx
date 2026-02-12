@@ -546,7 +546,8 @@ export function Sidebar() {
           : creating.type === "diagram"
             ? t.sidebar.newDiagram
             : t.sidebar.newNote;
-      alert(`${t.file.createFailed}: ${targetLabel}`);
+      const detail = error instanceof Error ? error.message : String(error ?? "");
+      alert(detail ? `${t.file.createFailed}: ${targetLabel}\n${detail}` : `${t.file.createFailed}: ${targetLabel}`);
     }
 
     setCreating(null);

@@ -284,6 +284,14 @@ export const useFileStore = create<FileState>()(
       // Set vault path and load file tree
       setVaultPath: async (path: string) => {
         useWorkspaceStore.getState().registerWorkspace(path);
+        const workspacePaths = Array.from(
+          new Set([path, ...useWorkspaceStore.getState().workspaces.map((workspace) => workspace.path)])
+        );
+        try {
+          await invoke("fs_set_allowed_roots", { roots: workspacePaths });
+        } catch (error) {
+          console.warn("Failed to sync runtime fs roots:", error);
+        }
         set({ vaultPath: path, isLoadingTree: true });
         try {
           try {

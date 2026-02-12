@@ -1,9 +1,14 @@
+use once_cell::sync::Lazy;
+use std::collections::HashSet;
 use serde::Serialize;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 
 use crate::error::AppError;
+
+static RUNTIME_ALLOWED_ROOTS: Lazy<RwLock<Vec<PathBuf>>> = Lazy::new(|| RwLock::new(Vec::new()));
 
 #[derive(Debug, Serialize, Clone)]
 pub struct FileEntry {
@@ -36,12 +41,29 @@ fn canonicalize_existing_ancestor(path: &Path) -> Result<PathBuf, AppError> {
     ))
 }
 
-fn allowed_roots() -> Vec<PathBuf> {
+fn normalize_roots(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    let mut seen = HashSet::new();
+    let mut normalized = Vec::new();
+
+    for path in paths {
+        if !path.exists() {
+            continue;
+        }
+        let Ok(canonical) = fs::canonicalize(path) else {
+            continue;
+        };
+        let key = canonical.to_string_lossy().to_string();
+        if seen.insert(key) {
+            normalized.push(canonical);
+        }
+    }
+
+    normalized
+}
+
+fn default_allowed_roots() -> Vec<PathBuf> {
     if let Some(value) = env::var_os("LUMINA_ALLOWED_FS_ROOTS") {
-        return env::split_paths(&value)
-            .filter(|path| path.exists())
-            .filter_map(|path| fs::canonicalize(path).ok())
-            .collect();
+        return normalize_roots(env::split_paths(&value).collect());
     }
 
     let mut roots = Vec::new();
@@ -61,11 +83,33 @@ fn allowed_roots() -> Vec<PathBuf> {
         roots.push(cwd);
     }
 
-    roots
-        .into_iter()
-        .filter(|path| path.exists())
-        .filter_map(|path| fs::canonicalize(path).ok())
-        .collect()
+    normalize_roots(roots)
+}
+
+fn runtime_allowed_roots() -> Vec<PathBuf> {
+    match RUNTIME_ALLOWED_ROOTS.read() {
+        Ok(guard) => guard.clone(),
+        Err(_) => Vec::new(),
+    }
+}
+
+fn allowed_roots() -> Vec<PathBuf> {
+    if env::var_os("LUMINA_ALLOWED_FS_ROOTS").is_some() {
+        return default_allowed_roots();
+    }
+
+    let mut roots = runtime_allowed_roots();
+    roots.extend(default_allowed_roots());
+    normalize_roots(roots)
+}
+
+pub fn set_runtime_allowed_roots(roots: Vec<String>) -> Result<(), AppError> {
+    let normalized = normalize_roots(roots.into_iter().map(PathBuf::from).collect());
+    let mut guard = RUNTIME_ALLOWED_ROOTS
+        .write()
+        .map_err(|_| AppError::InvalidPath("Failed to update allowed roots".to_string()))?;
+    *guard = normalized;
+    Ok(())
 }
 
 pub fn ensure_allowed_path(path: &Path, must_exist: bool) -> Result<(), AppError> {

@@ -65,7 +65,8 @@ export function CreateDatabaseDialog({ isOpen, onClose }: CreateDatabaseDialogPr
       onClose();
     } catch (error) {
       console.error('Failed to create database:', error);
-      alert(t.database.createDialog.failed);
+      const detail = error instanceof Error ? error.message : String(error ?? "");
+      alert(detail ? `${t.database.createDialog.failed}\n${detail}` : t.database.createDialog.failed);
     } finally {
       setIsCreating(false);
     }

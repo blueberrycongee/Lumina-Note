@@ -388,6 +388,12 @@ pub async fn list_directory(path: String) -> Result<Vec<FileEntry>, AppError> {
     fs::list_dir_recursive(&path)
 }
 
+/// Update runtime allowed filesystem roots (workspace-scoped).
+#[tauri::command]
+pub async fn fs_set_allowed_roots(roots: Vec<String>) -> Result<(), AppError> {
+    fs::set_runtime_allowed_roots(roots)
+}
+
 /// List directory tree as formatted string (for Agent context)
 #[tauri::command]
 pub async fn list_directory_tree(

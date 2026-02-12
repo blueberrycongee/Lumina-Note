@@ -41,6 +41,7 @@ fn main() {
             commands::write_binary_file,
             commands::read_binary_file_base64,
             commands::list_directory,
+            commands::fs_set_allowed_roots,
             commands::list_directory_tree,
             commands::create_file,
             commands::create_dir,
