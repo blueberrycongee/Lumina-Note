@@ -42,7 +42,11 @@ pub fn start_watcher(app: AppHandle, watch_path: String) -> Result<(), String> {
         while let Ok(event) = rx.recv() {
             let is_relevant = |p: &std::path::Path| {
                 let path_str = p.to_string_lossy();
-                path_str.ends_with(".md") || path_str.ends_with(".db.json")
+                path_str.ends_with(".md")
+                    || path_str.ends_with(".db.json")
+                    || path_str.ends_with(".excalidraw.json")
+                    || path_str.ends_with(".diagram.json")
+                    || path_str.ends_with(".drawio.json")
             };
 
             let first_relevant = event.paths.iter().find(|p| is_relevant(p));
