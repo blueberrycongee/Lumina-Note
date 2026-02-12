@@ -874,7 +874,12 @@ function App() {
                   </div>
                 }
               >
-                <DiagramView key={activeTab.path} filePath={activeTab.path} className="flex-1" />
+                <DiagramView
+                  key={activeTab.path}
+                  filePath={activeTab.path}
+                  externalContent={activeTab.content}
+                  className="flex-1"
+                />
               </Suspense>
             </div>
           ) : activeTab?.type === "typesetting-doc" && activeTab.path ? (

@@ -1,6 +1,6 @@
 import "@excalidraw/excalidraw/index.css";
-import { Excalidraw, restore, serializeAsJSON } from "@excalidraw/excalidraw";
-import type { ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
+import { CaptureUpdateAction, Excalidraw, restore, serializeAsJSON } from "@excalidraw/excalidraw";
+import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageSquareQuote, RotateCcw } from "lucide-react";
@@ -12,6 +12,7 @@ import { useUIStore } from "@/stores/useUIStore";
 
 interface DiagramViewProps {
   filePath: string;
+  externalContent?: string;
   className?: string;
 }
 
@@ -106,7 +107,29 @@ const createInitialScene = (): ExcalidrawInitialDataState => {
   };
 };
 
-export function DiagramView({ filePath, className }: DiagramViewProps) {
+function normalizeSceneFromRaw(raw: string): {
+  normalizedState: ExcalidrawInitialDataState;
+  serialized: string;
+  selectedIds: string[];
+} {
+  const parsed = raw.trim().length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : null;
+  const restored = restore(parsed as any, null, null);
+  const normalizedState: ExcalidrawInitialDataState = {
+    elements: restored.elements,
+    appState: restored.appState,
+    files: restored.files,
+  };
+  const selectedIds = getSelectedElementIds(normalizedState.appState);
+  const serialized = serializeAsJSON(
+    normalizedState.elements as OrderedExcalidrawElement[],
+    normalizedState.appState || {},
+    normalizedState.files || {},
+    "local",
+  );
+  return { normalizedState, serialized, selectedIds };
+}
+
+export function DiagramView({ filePath, externalContent, className }: DiagramViewProps) {
   const { t } = useLocaleStore();
   const isDarkMode = useUIStore((state) => state.isDarkMode);
   const [loading, setLoading] = useState(true);
@@ -119,6 +142,33 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
   const pendingSerializedRef = useRef<string | null>(null);
   const latestElementsRef = useRef<readonly OrderedExcalidrawElement[]>([]);
   const selectedElementIdsRef = useRef<string[]>([]);
+  const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
+
+  const applySceneSnapshot = useCallback(
+    (snapshot: ExcalidrawInitialDataState, serialized: string, selectedIds: string[]) => {
+      lastSavedSerializedRef.current = serialized;
+      latestElementsRef.current = snapshot.elements as OrderedExcalidrawElement[];
+      selectedElementIdsRef.current = selectedIds;
+      setSelectedElementCount(selectedIds.length);
+
+      const api = excalidrawApiRef.current;
+      if (api) {
+        const files = Object.values(snapshot.files || {});
+        if (files.length > 0) {
+          api.addFiles(files as any);
+        }
+        api.updateScene({
+          elements: snapshot.elements,
+          appState: (snapshot.appState || {}) as any,
+          captureUpdate: CaptureUpdateAction.NEVER,
+        });
+        return;
+      }
+
+      setInitialData(snapshot);
+    },
+    [],
+  );
 
   const saveNow = useCallback(
     async (serialized: string) => {
@@ -160,26 +210,9 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
         setLoading(true);
         setError(null);
         const raw = await readFile(filePath);
-        const parsed = raw.trim().length > 0 ? (JSON.parse(raw) as Record<string, unknown>) : null;
-        const restored = restore(parsed as any, null, null);
-        const normalizedState: ExcalidrawInitialDataState = {
-          elements: restored.elements,
-          appState: restored.appState,
-          files: restored.files,
-        };
-        const selectedIds = getSelectedElementIds(normalizedState.appState);
-        const serialized = serializeAsJSON(
-          normalizedState.elements as OrderedExcalidrawElement[],
-          normalizedState.appState || {},
-          normalizedState.files || {},
-          "local",
-        );
+        const { normalizedState, serialized, selectedIds } = normalizeSceneFromRaw(raw);
         if (cancelled) return;
-        setInitialData(normalizedState);
-        lastSavedSerializedRef.current = serialized;
-        latestElementsRef.current = normalizedState.elements as OrderedExcalidrawElement[];
-        selectedElementIdsRef.current = selectedIds;
-        setSelectedElementCount(selectedIds.length);
+        applySceneSnapshot(normalizedState, serialized, selectedIds);
         setLoading(false);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -206,7 +239,30 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
         window.clearTimeout(saveTimerRef.current);
       }
     };
-  }, [filePath, saveNow, t]);
+  }, [applySceneSnapshot, filePath, saveNow, t]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (typeof externalContent !== "string") return;
+
+    const pending = pendingSerializedRef.current;
+    if (pending && pending !== lastSavedSerializedRef.current) {
+      return;
+    }
+
+    try {
+      const { normalizedState, serialized, selectedIds } = normalizeSceneFromRaw(externalContent);
+      if (serialized === lastSavedSerializedRef.current) {
+        return;
+      }
+      applySceneSnapshot(normalizedState, serialized, selectedIds);
+      setLastSavedAt(Date.now());
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(t.diagramView.loadFailed.replace("{message}", message));
+    }
+  }, [applySceneSnapshot, externalContent, loading, t]);
 
   const handleSendReferenceToChat = useCallback(() => {
     const allElements = latestElementsRef.current;
@@ -304,6 +360,9 @@ export function DiagramView({ filePath, className }: DiagramViewProps) {
       ) : null}
       <div className="min-h-0 flex-1">
         <Excalidraw
+          excalidrawAPI={(api) => {
+            excalidrawApiRef.current = api;
+          }}
           initialData={initialData}
           theme={isDarkMode ? "dark" : "light"}
           onChange={(elements, appState, files) => {
