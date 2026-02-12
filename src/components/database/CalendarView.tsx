@@ -5,6 +5,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import type { DatabaseRow } from "@/types/database";
 import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { DatabaseIconButton, DatabasePanel } from "./primitives";
+import { DatabaseScaledContent } from "./ViewScaleControl";
 import {
   addMonths,
   buildMonthGrid,
@@ -13,6 +14,7 @@ import {
   splitRowsByCalendarDate,
   toDateKey,
 } from "./calendarUtils";
+import { normalizeDatabaseViewScale } from "./viewScale";
 
 interface CalendarViewProps {
   dbId: string;
@@ -107,6 +109,7 @@ export function CalendarView({ dbId }: CalendarViewProps) {
   const rowMap = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
   const todayKey = toDateKey(new Date());
   const emptyDateStrategy = activeView.calendarEmptyDateStrategy ?? "show";
+  const viewScale = normalizeDatabaseViewScale(activeView.scale);
 
   const handleOpenNote = useCallback(
     async (row: DatabaseRow) => {
@@ -244,81 +247,83 @@ export function CalendarView({ dbId }: CalendarViewProps) {
         </DatabasePanel>
       )}
 
-      <div className="mt-3 grid grid-cols-7 gap-2" role="grid" aria-label={monthLabel}>
-        {weekdayLabels.map((label) => (
-          <div key={label} className="px-2 text-xs text-muted-foreground">
-            {label}
-          </div>
-        ))}
-        {monthGrid.map((day) => {
-          const dayRows = dateGroups.grouped[day.key] || [];
-          return (
-            <DatabasePanel
-              key={day.key}
-              className={`min-h-[120px] p-2 ${
-                day.key === todayKey ? "ring-1 ring-primary/55 bg-primary/[0.06]" : ""
-              } ${dragOverDateKey === day.key ? "ring-2 ring-primary/55 bg-primary/[0.1]" : ""} ${
-                !day.inCurrentMonth ? "opacity-60" : ""
-              } transition-[opacity,background-color,box-shadow,transform] duration-180 ease-out motion-reduce:transition-none`}
-              onDragOver={(event) => handleDayDragOver(event, day.key)}
-              onDragLeave={() => setDragOverDateKey(null)}
-              onDrop={(event) => void handleDayDrop(event, day.key)}
-              role="gridcell"
-              aria-label={day.key}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">{day.date.getDate()}</span>
-                {dayRows.length > 0 && <span className="db-count-badge">{dayRows.length}</span>}
-              </div>
-              <div className="mt-1.5 space-y-1">
-                {dayRows.slice(0, 3).map((row) => (
-                  <CalendarNoteCard
-                    key={row.id}
-                    row={row}
-                    status={rowStatus[row.id]}
-                    isDragging={draggedRowId === row.id}
-                    openNoteLabel={t.database.calendar.openNote}
-                    onOpenNote={() => void handleOpenNote(row)}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                  />
-                ))}
-                {dayRows.length > 3 && (
-                  <p className="text-[11px] text-muted-foreground">+{dayRows.length - 3} {t.database.calendar.more}</p>
-                )}
-              </div>
-            </DatabasePanel>
-          );
-        })}
-      </div>
+      <DatabaseScaledContent scale={viewScale} className="mt-3">
+        <div className="grid grid-cols-7 gap-2" role="grid" aria-label={monthLabel}>
+          {weekdayLabels.map((label) => (
+            <div key={label} className="px-2 text-xs text-muted-foreground">
+              {label}
+            </div>
+          ))}
+          {monthGrid.map((day) => {
+            const dayRows = dateGroups.grouped[day.key] || [];
+            return (
+              <DatabasePanel
+                key={day.key}
+                className={`min-h-[120px] p-2 ${
+                  day.key === todayKey ? "ring-1 ring-primary/55 bg-primary/[0.06]" : ""
+                } ${dragOverDateKey === day.key ? "ring-2 ring-primary/55 bg-primary/[0.1]" : ""} ${
+                  !day.inCurrentMonth ? "opacity-60" : ""
+                } transition-[opacity,background-color,box-shadow,transform] duration-180 ease-out motion-reduce:transition-none`}
+                onDragOver={(event) => handleDayDragOver(event, day.key)}
+                onDragLeave={() => setDragOverDateKey(null)}
+                onDrop={(event) => void handleDayDrop(event, day.key)}
+                role="gridcell"
+                aria-label={day.key}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{day.date.getDate()}</span>
+                  {dayRows.length > 0 && <span className="db-count-badge">{dayRows.length}</span>}
+                </div>
+                <div className="mt-1.5 space-y-1">
+                  {dayRows.slice(0, 3).map((row) => (
+                    <CalendarNoteCard
+                      key={row.id}
+                      row={row}
+                      status={rowStatus[row.id]}
+                      isDragging={draggedRowId === row.id}
+                      openNoteLabel={t.database.calendar.openNote}
+                      onOpenNote={() => void handleOpenNote(row)}
+                      onDragStart={handleDragStart}
+                      onDragEnd={handleDragEnd}
+                    />
+                  ))}
+                  {dayRows.length > 3 && (
+                    <p className="text-[11px] text-muted-foreground">+{dayRows.length - 3} {t.database.calendar.more}</p>
+                  )}
+                </div>
+              </DatabasePanel>
+            );
+          })}
+        </div>
 
-      {emptyDateStrategy === "show" && dateGroups.undated.length > 0 && (
-        <DatabasePanel className="mt-3 p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">{t.database.calendar.noDateBucket}</p>
-            <span className="db-count-badge">{dateGroups.undated.length}</span>
-          </div>
-          <div className="mt-2 grid gap-1">
-            {dateGroups.undated.slice(0, 8).map((row) => (
-              <CalendarNoteCard
-                key={row.id}
-                row={row}
-                status={rowStatus[row.id]}
-                isDragging={draggedRowId === row.id}
-                openNoteLabel={t.database.calendar.openNote}
-                onOpenNote={() => void handleOpenNote(row)}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-              />
-            ))}
-            {dateGroups.undated.length > 8 && (
-              <p className="text-xs text-muted-foreground">
-                +{dateGroups.undated.length - 8} {t.database.calendar.more}
-              </p>
-            )}
-          </div>
-        </DatabasePanel>
-      )}
+        {emptyDateStrategy === "show" && dateGroups.undated.length > 0 && (
+          <DatabasePanel className="mt-3 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">{t.database.calendar.noDateBucket}</p>
+              <span className="db-count-badge">{dateGroups.undated.length}</span>
+            </div>
+            <div className="mt-2 grid gap-1">
+              {dateGroups.undated.slice(0, 8).map((row) => (
+                <CalendarNoteCard
+                  key={row.id}
+                  row={row}
+                  status={rowStatus[row.id]}
+                  isDragging={draggedRowId === row.id}
+                  openNoteLabel={t.database.calendar.openNote}
+                  onOpenNote={() => void handleOpenNote(row)}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                />
+              ))}
+              {dateGroups.undated.length > 8 && (
+                <p className="text-xs text-muted-foreground">
+                  +{dateGroups.undated.length - 8} {t.database.calendar.more}
+                </p>
+              )}
+            </div>
+          </DatabasePanel>
+        )}
+      </DatabaseScaledContent>
     </div>
   );
 }

@@ -25,6 +25,8 @@ import {
 } from "./primitives";
 import { resolveCalendarDateColumnId } from "./calendarUtils";
 import { resolveKanbanGroupColumnId } from "./kanbanUtils";
+import { DatabaseViewScaleControl } from "./ViewScaleControl";
+import { DATABASE_VIEW_SCALE_DEFAULT, normalizeDatabaseViewScale } from "./viewScale";
 
 interface DatabaseToolbarProps {
   dbId: string;
@@ -126,6 +128,8 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
   const filterGroup: FilterGroup = activeView?.filters || { type: "and", rules: [] };
   const filterRules = filterGroup.rules.filter((rule): rule is FilterRule => !("type" in rule));
   const hasFilters = filterRules.length > 0;
+  const supportsViewScale = activeView?.type === "calendar" || activeView?.type === "kanban";
+  const viewScale = normalizeDatabaseViewScale(activeView?.scale);
 
   const viewIcons: Record<ViewType, React.ReactNode> = {
     table: <Table className="w-4 h-4" />,
@@ -196,6 +200,14 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
     if (!activeView || activeView.type !== "kanban") return;
     updateView(dbId, activeView.id, {
       groupBy: columnId || undefined,
+    });
+  };
+
+  const handleViewScaleChange = (nextScale: number) => {
+    if (!activeView || !supportsViewScale) return;
+    const normalized = normalizeDatabaseViewScale(nextScale);
+    updateView(dbId, activeView.id, {
+      scale: normalized === DATABASE_VIEW_SCALE_DEFAULT ? undefined : normalized,
     });
   };
 
@@ -611,6 +623,16 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
             <option value="hide">{t.database.calendar.emptyDateHide}</option>
           </select>
         </div>
+      )}
+
+      {supportsViewScale && (
+        <DatabaseViewScaleControl
+          scale={viewScale}
+          onScaleChange={handleViewScaleChange}
+          zoomOutLabel={t.common.zoomOut}
+          zoomInLabel={t.common.zoomIn}
+          resetZoomLabel={t.common.resetZoom}
+        />
       )}
 
       <div className="db-panel flex items-center gap-1.5 px-2 py-0.5">

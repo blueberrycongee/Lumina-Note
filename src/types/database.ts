@@ -102,6 +102,7 @@ export interface DatabaseView {
   id: string;
   name: string;
   type: ViewType;
+  scale?: number; // 视图缩放比例（可选，默认 1）
   
   // 列显示/隐藏
   visibleColumns?: string[]; // 如果为空则显示所有

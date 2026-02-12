@@ -4,9 +4,11 @@ import { useFileStore } from "@/stores/useFileStore";
 import type { DatabaseRow } from "@/types/database";
 import { SELECT_COLORS } from "@/types/database";
 import { DatabaseIconButton, DatabasePanel, DatabaseTextInput } from "./primitives";
+import { DatabaseScaledContent } from "./ViewScaleControl";
 import { Plus, MoreHorizontal, GripVertical, Pencil } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { resolveKanbanGroupColumnId } from "./kanbanUtils";
+import { normalizeDatabaseViewScale } from "./viewScale";
 
 interface KanbanViewProps {
   dbId: string;
@@ -33,6 +35,7 @@ export function KanbanView({ dbId }: KanbanViewProps) {
   
   const activeView = db.views.find(v => v.id === db.activeViewId);
   const groupByColumnId = activeView ? resolveKanbanGroupColumnId(db.columns, activeView.groupBy) : null;
+  const viewScale = normalizeDatabaseViewScale(activeView?.scale);
   
   useEffect(() => {
     if (!activeView || activeView.type !== "kanban") return;
@@ -112,37 +115,83 @@ export function KanbanView({ dbId }: KanbanViewProps) {
   
   return (
     <div className="h-full overflow-x-auto p-4 bg-background">
-      <div className="flex gap-4 h-full min-w-max">
-        {/* 各分组列 */}
-        {options.map((option) => {
-          const colors = SELECT_COLORS[option.color];
-          const groupRows = groupedRows[option.id] || [];
+      <DatabaseScaledContent scale={viewScale} className="h-full">
+        <div className="flex gap-4 h-full min-w-max">
+          {/* 各分组列 */}
+          {options.map((option) => {
+            const colors = SELECT_COLORS[option.color];
+            const groupRows = groupedRows[option.id] || [];
+            
+            return (
+              <DatabasePanel
+                key={option.id}
+                className={`flex flex-col w-72 ${
+                  dragOverGroup === option.id ? 'border-primary/45 bg-accent' : ''
+                }`}
+                onDragOver={(e) => handleDragOver(e, option.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, option.id)}
+              >
+                {/* 分组头部 */}
+                <div className="flex items-center gap-2 p-3">
+                  <span className={`px-2 py-0.5 rounded text-sm font-medium ${colors.bg} ${colors.text}`}>
+                    {option.name}
+                  </span>
+                  <span className="text-sm text-muted-foreground">{groupRows.length}</span>
+                  <div className="flex-1" />
+                  <DatabaseIconButton aria-label={t.common.settings} title={t.common.settings}>
+                    <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                  </DatabaseIconButton>
+                </div>
+                
+                {/* 卡片列表 */}
+                <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
+                  {groupRows.map((row) => (
+                    <KanbanCard
+                      key={row.id}
+                      row={row}
+                      titleColumnId={titleColumn?.id}
+                      isDragging={draggedCard === row.id}
+                      onDragStart={(e) => handleDragStart(e, row.id)}
+                      onOpenNote={() => void openFile(row.notePath)}
+                      onRenameTitle={
+                        titleColumn
+                          ? (nextTitle: string) => updateCell(dbId, row.id, titleColumn.id, nextTitle)
+                          : undefined
+                      }
+                    />
+                  ))}
+                  
+                  {/* 新建卡片 */}
+                  <button
+                    onClick={() => handleAddCardToGroup(option.id)}
+                    className="db-toggle-btn w-full h-9 justify-center border-dashed"
+                  >
+                    <Plus className="w-4 h-4" /> {t.database.newCard}
+                  </button>
+                </div>
+              </DatabasePanel>
+            );
+          })}
           
-          return (
+          {/* 未分组 */}
+          {ungroupedRows.length > 0 && (
             <DatabasePanel
-              key={option.id}
               className={`flex flex-col w-72 ${
-                dragOverGroup === option.id ? 'border-primary/45 bg-accent' : ''
+                dragOverGroup === 'ungrouped' ? 'border-primary/45 bg-accent' : ''
               }`}
-              onDragOver={(e) => handleDragOver(e, option.id)}
+              onDragOver={(e) => handleDragOver(e, 'ungrouped')}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, option.id)}
             >
-              {/* 分组头部 */}
               <div className="flex items-center gap-2 p-3">
-                <span className={`px-2 py-0.5 rounded text-sm font-medium ${colors.bg} ${colors.text}`}>
-                  {option.name}
+                <span className="px-2 py-0.5 rounded text-sm font-medium bg-muted text-muted-foreground">
+                  {t.database.ungrouped}
                 </span>
-                <span className="text-sm text-muted-foreground">{groupRows.length}</span>
-                <div className="flex-1" />
-                <DatabaseIconButton aria-label={t.common.settings} title={t.common.settings}>
-                  <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
-                </DatabaseIconButton>
+                <span className="text-sm text-muted-foreground">{ungroupedRows.length}</span>
               </div>
               
-              {/* 卡片列表 */}
               <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
-                {groupRows.map((row) => (
+                {ungroupedRows.map((row) => (
                   <KanbanCard
                     key={row.id}
                     row={row}
@@ -157,55 +206,11 @@ export function KanbanView({ dbId }: KanbanViewProps) {
                     }
                   />
                 ))}
-                
-                {/* 新建卡片 */}
-                <button
-                  onClick={() => handleAddCardToGroup(option.id)}
-                  className="db-toggle-btn w-full h-9 justify-center border-dashed"
-                >
-                  <Plus className="w-4 h-4" /> {t.database.newCard}
-                </button>
               </div>
             </DatabasePanel>
-          );
-        })}
-        
-        {/* 未分组 */}
-        {ungroupedRows.length > 0 && (
-          <DatabasePanel
-            className={`flex flex-col w-72 ${
-              dragOverGroup === 'ungrouped' ? 'border-primary/45 bg-accent' : ''
-            }`}
-            onDragOver={(e) => handleDragOver(e, 'ungrouped')}
-            onDragLeave={handleDragLeave}
-          >
-            <div className="flex items-center gap-2 p-3">
-              <span className="px-2 py-0.5 rounded text-sm font-medium bg-muted text-muted-foreground">
-                {t.database.ungrouped}
-              </span>
-              <span className="text-sm text-muted-foreground">{ungroupedRows.length}</span>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-2">
-              {ungroupedRows.map((row) => (
-                <KanbanCard
-                  key={row.id}
-                  row={row}
-                  titleColumnId={titleColumn?.id}
-                  isDragging={draggedCard === row.id}
-                  onDragStart={(e) => handleDragStart(e, row.id)}
-                  onOpenNote={() => void openFile(row.notePath)}
-                  onRenameTitle={
-                    titleColumn
-                      ? (nextTitle: string) => updateCell(dbId, row.id, titleColumn.id, nextTitle)
-                      : undefined
-                  }
-                />
-              ))}
-            </div>
-          </DatabasePanel>
-        )}
-      </div>
+          )}
+        </div>
+      </DatabaseScaledContent>
     </div>
   );
 }
