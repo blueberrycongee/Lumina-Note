@@ -62,6 +62,7 @@ third_party/
 # AI assistants
 .claude/
 .kiro/
+.codex/
 
 # Local Codex/skills scratch
 .tmp_codex_ext/
