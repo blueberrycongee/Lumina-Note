@@ -21,6 +21,7 @@ import { useSplitStore } from "./useSplitStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { applyFilters } from "./databaseFilter";
 import { applyFormulaColumns } from "./databaseFormula";
+import { normalizeDatabaseDefinition } from "@/features/database/selectOptions";
 
 // ==================== 工具函数 ====================
 
@@ -258,7 +259,7 @@ export const useDatabaseStore = create<DatabaseState>()(
           }
           
           const content = await readFile(path);
-          const dbDef = JSON.parse(content) as Database;
+          const dbDef = normalizeDatabaseDefinition(JSON.parse(content) as Database);
           
           // 从笔记加载行数据
           const rows = await get().loadRowsFromNotes(dbId);
@@ -319,7 +320,7 @@ export const useDatabaseStore = create<DatabaseState>()(
         let columns: DatabaseColumn[] = [];
         try {
           const dbContent = await readFile(dbPath);
-          const dbDef = JSON.parse(dbContent) as Database;
+          const dbDef = normalizeDatabaseDefinition(JSON.parse(dbContent) as Database);
           columns = dbDef.columns;
         } catch {
           // 数据库定义不存在，使用空列

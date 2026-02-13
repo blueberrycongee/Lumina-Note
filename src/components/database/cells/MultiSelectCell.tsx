@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useDatabaseStore } from "@/stores/useDatabaseStore";
 import type { DatabaseColumn, SelectColor } from "@/types/database";
-import { SELECT_COLORS } from "@/types/database";
 import { ChevronDown, Plus, X, Check } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import type { CellCommitAction } from "./types";
+import { getSelectColorClasses, normalizeSelectOptions } from "@/features/database/selectOptions";
 
 interface MultiSelectCellProps {
   value: string[] | null;
@@ -22,7 +22,7 @@ export function MultiSelectCell({ value, onChange, isEditing, onBlur, column, db
   const [newOptionName, setNewOptionName] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const options = column.options || [];
+  const options = useMemo(() => normalizeSelectOptions(column.options), [column.options]);
   const selectedIds = value || [];
   const selectedOptions = options.filter(opt => selectedIds.includes(opt.id));
   
@@ -75,22 +75,25 @@ export function MultiSelectCell({ value, onChange, isEditing, onBlur, column, db
         onClick={() => setShowDropdown(!showDropdown)}
       >
         {selectedOptions.length > 0 ? (
-          selectedOptions.map((option) => (
-            <span
-              key={option.id}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm ${SELECT_COLORS[option.color].bg} ${SELECT_COLORS[option.color].text}`}
-            >
-              {option.name}
-              <button
-                onClick={(e) => handleRemove(e, option.id)}
-                className="db-icon-btn h-4 w-4 border-0 bg-transparent"
-                aria-label={t.common.delete}
-                title={t.common.delete}
+          selectedOptions.map((option) => {
+            const optionColors = getSelectColorClasses(option.color);
+            return (
+              <span
+                key={option.id}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm ${optionColors.bg} ${optionColors.text}`}
               >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))
+                {option.name}
+                <button
+                  onClick={(e) => handleRemove(e, option.id)}
+                  className="db-icon-btn h-4 w-4 border-0 bg-transparent"
+                  aria-label={t.common.delete}
+                  title={t.common.delete}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            );
+          })
         ) : (
           <span className="text-sm text-muted-foreground">{t.database.selectPlaceholder}</span>
         )}
@@ -101,6 +104,7 @@ export function MultiSelectCell({ value, onChange, isEditing, onBlur, column, db
         <div className="db-menu absolute left-0 top-full mt-1 w-56 py-1 z-50 max-h-64 overflow-y-auto">
           {options.map((option) => {
             const isSelected = selectedIds.includes(option.id);
+            const optionColors = getSelectColorClasses(option.color);
             return (
               <button
                 key={option.id}
@@ -112,7 +116,7 @@ export function MultiSelectCell({ value, onChange, isEditing, onBlur, column, db
                 }`}>
                   {isSelected && <Check className="w-3 h-3" />}
                 </span>
-                <span className={`px-2 py-0.5 rounded ${SELECT_COLORS[option.color].bg} ${SELECT_COLORS[option.color].text}`}>
+                <span className={`px-2 py-0.5 rounded ${optionColors.bg} ${optionColors.text}`}>
                   {option.name}
                 </span>
               </button>

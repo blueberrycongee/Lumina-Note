@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useDatabaseStore } from "@/stores/useDatabaseStore";
 import { useFileStore } from "@/stores/useFileStore";
 import type { DatabaseRow } from "@/types/database";
-import { SELECT_COLORS } from "@/types/database";
 import { DatabaseIconButton, DatabasePanel, DatabaseTextInput } from "./primitives";
 import { DatabaseScaledContent } from "./ViewScaleControl";
 import { Plus, MoreHorizontal, GripVertical, Pencil } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { resolveKanbanGroupColumnId } from "./kanbanUtils";
 import { normalizeDatabaseViewScale } from "./viewScale";
+import { getSelectColorClasses, normalizeSelectOptions } from "@/features/database/selectOptions";
 
 interface KanbanViewProps {
   dbId: string;
@@ -58,7 +58,7 @@ export function KanbanView({ dbId }: KanbanViewProps) {
     );
   }
   
-  const options = groupColumn.options || [];
+  const options = normalizeSelectOptions(groupColumn.options);
   
   // 按分组整理数据
   const groupedRows: Record<string, DatabaseRow[]> = {};
@@ -119,7 +119,7 @@ export function KanbanView({ dbId }: KanbanViewProps) {
         <div className="flex gap-4 h-full min-w-max">
           {/* 各分组列 */}
           {options.map((option) => {
-            const colors = SELECT_COLORS[option.color];
+            const colors = getSelectColorClasses(option.color);
             const groupRows = groupedRows[option.id] || [];
             
             return (

@@ -164,4 +164,42 @@ describe("KanbanView interactions", () => {
       expect(updateCellMock).toHaveBeenCalledWith("db-1", "row-1", "title", "Renamed task");
     });
   });
+
+  it("renders legacy string options without crashing", () => {
+    const rows = [
+      {
+        id: "row-1",
+        notePath: "/vault/meeting.md",
+        noteTitle: "Meeting",
+        cells: { type: "会议", title: "Kickoff" },
+        createdAt: "2026-02-01T00:00:00.000Z",
+        updatedAt: "2026-02-01T00:00:00.000Z",
+      },
+    ];
+
+    storeState.databases = {
+      "db-legacy": {
+        id: "db-legacy",
+        name: "Legacy",
+        columns: [
+          { id: "title", name: "Title", type: "text" },
+          {
+            id: "type",
+            name: "类型",
+            type: "select",
+            options: ["会议", "商务洽谈"] as any,
+          },
+        ],
+        rows,
+        views: [{ id: "view-kanban", name: "Kanban", type: "kanban", groupBy: "type" }],
+        activeViewId: "view-kanban",
+      },
+    };
+    getFilteredSortedRowsMock.mockReturnValue(rows);
+
+    render(<KanbanView dbId="db-legacy" />);
+
+    expect(screen.getByText("会议")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open: Kickoff" })).toBeInTheDocument();
+  });
 });

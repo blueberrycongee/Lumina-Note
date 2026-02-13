@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useDatabaseStore } from "@/stores/useDatabaseStore";
 import type { DatabaseColumn, SelectColor } from "@/types/database";
-import { SELECT_COLORS } from "@/types/database";
 import { ChevronDown, Plus, X } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import type { CellCommitAction } from "./types";
+import { getSelectColorClasses, normalizeSelectOptions } from "@/features/database/selectOptions";
 
 interface SelectCellProps {
   value: string | null;
@@ -22,8 +22,9 @@ export function SelectCell({ value, onChange, isEditing, onBlur, column, dbId }:
   const [newOptionName, setNewOptionName] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const options = column.options || [];
+  const options = useMemo(() => normalizeSelectOptions(column.options), [column.options]);
   const selectedOption = options.find(opt => opt.id === value);
+  const selectedOptionColors = selectedOption ? getSelectColorClasses(selectedOption.color) : null;
   
   useEffect(() => {
     if (isEditing) {
@@ -76,7 +77,9 @@ export function SelectCell({ value, onChange, isEditing, onBlur, column, dbId }:
       >
         {selectedOption ? (
           <>
-            <span className={`px-2 py-0.5 rounded text-sm ${SELECT_COLORS[selectedOption.color].bg} ${SELECT_COLORS[selectedOption.color].text}`}>
+            <span
+              className={`px-2 py-0.5 rounded text-sm ${selectedOptionColors?.bg} ${selectedOptionColors?.text}`}
+            >
               {selectedOption.name}
             </span>
             <button
@@ -96,19 +99,22 @@ export function SelectCell({ value, onChange, isEditing, onBlur, column, dbId }:
       
       {showDropdown && (
         <div className="db-menu absolute left-0 top-full mt-1 w-48 py-1 z-50">
-          {options.map((option) => (
-            <button
-              key={option.id}
-              onClick={() => handleSelect(option.id)}
-              className={`db-menu-item ${
-                value === option.id ? 'bg-accent' : ''
-              }`}
-            >
-              <span className={`px-2 py-0.5 rounded ${SELECT_COLORS[option.color].bg} ${SELECT_COLORS[option.color].text}`}>
-                {option.name}
-              </span>
-            </button>
-          ))}
+          {options.map((option) => {
+            const optionColors = getSelectColorClasses(option.color);
+            return (
+              <button
+                key={option.id}
+                onClick={() => handleSelect(option.id)}
+                className={`db-menu-item ${
+                  value === option.id ? 'bg-accent' : ''
+                }`}
+              >
+                <span className={`px-2 py-0.5 rounded ${optionColors.bg} ${optionColors.text}`}>
+                  {option.name}
+                </span>
+              </button>
+            );
+          })}
           
           {options.length === 0 && (
             <div className="px-3 py-2 text-sm text-muted-foreground">
