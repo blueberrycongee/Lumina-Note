@@ -680,6 +680,24 @@ const DEFAULT_AGENT_INSTRUCTIONS: &str = r#"Project instructions (edit this file
 - Prefer minimal, correct changes.
 - Ask before making broad refactors.
 
+Database operation rules:
+- Lumina databases are Dataview-style.
+- Database definitions live at `Databases/<dbId>.db.json` (schema, columns, views, noteFolder).
+- Rows are markdown notes. A note belongs to a database only when frontmatter `db` exactly equals `<dbId>`.
+- Stable row identity is frontmatter `noteId` (do not rewrite it unless fixing missing/duplicate IDs).
+- When creating a row note, include at least:
+  - `db: "<dbId>"`
+  - `noteId: "<stable id>"`
+  - `title: "<row title>"`
+  - `createdAt: "<ISO datetime>"`
+  - `updatedAt: "<ISO datetime>"`
+- Row values are persisted in frontmatter keys using column names (not internal column ids).
+- Preferred row note directory:
+  - Use `noteFolder` from `<dbId>.db.json` when present.
+  - Otherwise use `Databases/<dbId>/`.
+- For updates, always read the current note first and only patch necessary frontmatter fields.
+- Keep YAML valid and preserve unknown fields. Avoid deleting `db`/`noteId` unless user explicitly asks.
+
 Flashcard generation rules:
 - Trigger: when user asks to create flashcards / memory cards / Anki-style cards.
 - Always write flashcards to `Flashcards/*.md` (one card per file unless user asks otherwise).
