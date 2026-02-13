@@ -227,6 +227,7 @@ export function MainAIChatShell() {
     rejectTool: reject,
     queuedTasks: rustQueuedTasks,
     activeTaskPreview: rustActiveTaskPreview,
+    debugPromptStack,
     llmRequestStartTime,
     llmRetryState,
     retryTimeout,
@@ -2220,6 +2221,40 @@ export function MainAIChatShell() {
                 </div>
               </div>
               <div className="flex-1 overflow-auto p-4 font-mono text-xs space-y-4">
+                {debugPromptStack && (
+                  <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4 space-y-3">
+                    <div className="font-bold text-muted-foreground flex items-center gap-2">
+                      <span>🧠 Prompt Stack</span>
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-600">
+                        {debugPromptStack.provider}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(debugPromptStack.receivedAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+
+                    {[
+                      { label: "Base System", content: debugPromptStack.baseSystem },
+                      { label: "System Prompt", content: debugPromptStack.systemPrompt },
+                      { label: "Built-in Agent", content: debugPromptStack.builtInAgent },
+                      { label: "Workspace Agent", content: debugPromptStack.workspaceAgent },
+                      { label: "Skills Index", content: debugPromptStack.skillsIndex || "(none)" },
+                    ].map((section) => (
+                      <div key={section.label} className="rounded border border-border/70 bg-background/70">
+                        <div className="px-2 py-1 border-b border-border/70 flex items-center justify-between">
+                          <span className="font-semibold text-[11px]">{section.label}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {section.content.length} chars
+                          </span>
+                        </div>
+                        <pre className="whitespace-pre-wrap break-all text-foreground/90 p-2 max-h-[220px] overflow-auto">
+                          {section.content}
+                        </pre>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* 意图识别调试信息 */}
                 <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4">
                   {(() => {

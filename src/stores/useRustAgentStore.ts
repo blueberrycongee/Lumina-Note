@@ -159,6 +159,16 @@ export interface AgentQueuedTask {
   position: number;
 }
 
+export interface DebugPromptStack {
+  provider: string;
+  baseSystem: string;
+  systemPrompt: string;
+  builtInAgent: string;
+  workspaceAgent: string;
+  skillsIndex: string | null;
+  receivedAt: number;
+}
+
 export interface LlmRetryState {
   requestId: string;
   attempt: number;
@@ -538,6 +548,7 @@ interface RustAgentState {
   pendingTool: PendingToolApproval | null;
   queuedTasks: AgentQueuedTask[];
   activeTaskPreview: string | null;
+  debugPromptStack: DebugPromptStack | null;
   
   // LLM 请求超时检测（新增）
   llmRequestStartTime: number | null;
@@ -697,6 +708,7 @@ export const useRustAgentStore = create<RustAgentState>()(
       pendingTool: null,
       queuedTasks: [],
       activeTaskPreview: null,
+      debugPromptStack: null,
       
       // LLM 请求超时检测初始状态（新增）
       llmRequestStartTime: null,
@@ -845,6 +857,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           lastTokenUsage: null,
           queuedTasks: [],
           activeTaskPreview: null,
+          debugPromptStack: null,
           llmRequestStartTime: null,
           llmRequestId: null,
           llmRetryState: null,
@@ -1587,6 +1600,29 @@ export const useRustAgentStore = create<RustAgentState>()(
               status: nextStatus,
               queuedTasks,
               activeTaskPreview,
+            });
+            break;
+          }
+
+          case "prompt_stack": {
+            const data = event.data as {
+              provider?: string;
+              base_system?: string;
+              system_prompt?: string;
+              built_in_agent?: string;
+              workspace_agent?: string;
+              skills_index?: string | null;
+            };
+            set({
+              debugPromptStack: {
+                provider: typeof data?.provider === "string" ? data.provider : "unknown",
+                baseSystem: typeof data?.base_system === "string" ? data.base_system : "",
+                systemPrompt: typeof data?.system_prompt === "string" ? data.system_prompt : "",
+                builtInAgent: typeof data?.built_in_agent === "string" ? data.built_in_agent : "",
+                workspaceAgent: typeof data?.workspace_agent === "string" ? data.workspace_agent : "",
+                skillsIndex: typeof data?.skills_index === "string" ? data.skills_index : null,
+                receivedAt: Date.now(),
+              },
             });
             break;
           }
