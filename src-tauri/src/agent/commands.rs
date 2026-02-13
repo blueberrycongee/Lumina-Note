@@ -56,6 +56,15 @@ struct QueuedTaskRequest {
     enqueued_at: u64,
 }
 
+struct PromptStackSnapshot {
+    provider: String,
+    base_system: String,
+    system_prompt: String,
+    built_in_agent: String,
+    workspace_agent: String,
+    skills_index: Option<String>,
+}
+
 /// Agent 状态管理
 pub struct AgentState {
     current_state: Arc<Mutex<Option<GraphState>>>,
@@ -176,7 +185,18 @@ async fn execute_task_inner(
         dbg::log_skills(&context.skills);
     }
 
-    let messages = build_initial_messages(&app, &task, &context, &config.provider);
+    let (messages, prompt_stack) = build_initial_messages(&app, &task, &context, &config.provider);
+    emit_agent_event(
+        &app,
+        AgentEvent::PromptStack {
+            provider: prompt_stack.provider.clone(),
+            base_system: prompt_stack.base_system.clone(),
+            system_prompt: prompt_stack.system_prompt.clone(),
+            built_in_agent: prompt_stack.built_in_agent.clone(),
+            workspace_agent: prompt_stack.workspace_agent.clone(),
+            skills_index: prompt_stack.skills_index.clone(),
+        },
+    );
     let initial_state = GraphState {
         messages,
         user_task: task.clone(),
@@ -616,30 +636,40 @@ fn build_initial_messages(
     task: &str,
     context: &TaskContext,
     provider: &str,
-) -> Vec<Message> {
+) -> (Vec<Message>, PromptStackSnapshot) {
+    let base_system = base_system_prompt(provider).to_string();
+    let system_prompt = build_system_prompt(context, provider);
+    let built_in_agent = load_builtin_agent_instructions(app);
+    let workspace_agent = load_workspace_agent_instructions(&context.workspace_path)
+        .unwrap_or_else(|| WORKSPACE_AGENT_TEMPLATE.to_string());
+    let skills_index = build_skills_index_content(&context.skills);
+
     let mut messages = Vec::new();
     messages.push(Message {
         role: MessageRole::System,
-        content: build_system_prompt(context, provider),
+        content: system_prompt.clone(),
         name: None,
         tool_call_id: None,
     });
     messages.push(Message {
         role: MessageRole::System,
-        content: load_builtin_agent_instructions(app),
+        content: built_in_agent.clone(),
         name: None,
         tool_call_id: None,
     });
-    if let Some(content) = load_workspace_agent_instructions(&context.workspace_path) {
+    messages.push(Message {
+        role: MessageRole::System,
+        content: workspace_agent.clone(),
+        name: None,
+        tool_call_id: None,
+    });
+    if let Some(skills_content) = skills_index.clone() {
         messages.push(Message {
             role: MessageRole::System,
-            content,
+            content: skills_content,
             name: None,
             tool_call_id: None,
         });
-    }
-    if !context.skills.is_empty() {
-        messages.extend(build_skill_messages(&context.skills));
     }
     messages.extend(context.history.clone());
     messages.push(Message {
@@ -648,12 +678,22 @@ fn build_initial_messages(
         name: None,
         tool_call_id: None,
     });
-    messages
+    (
+        messages,
+        PromptStackSnapshot {
+            provider: provider.to_string(),
+            base_system,
+            system_prompt,
+            built_in_agent,
+            workspace_agent,
+            skills_index,
+        },
+    )
 }
 
-fn build_skill_messages(skills: &[SkillContext]) -> Vec<Message> {
+fn build_skills_index_content(skills: &[SkillContext]) -> Option<String> {
     if skills.is_empty() {
-        return Vec::new();
+        return None;
     }
 
     let mut content = String::from(
@@ -675,12 +715,7 @@ Skills:\n",
         }
     }
 
-    vec![Message {
-        role: MessageRole::System,
-        content,
-        name: None,
-        tool_call_id: None,
-    }]
+    Some(content)
 }
 
 const PROMPT_DEFAULT: &str =

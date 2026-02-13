@@ -350,6 +350,16 @@ pub enum AgentEvent {
         active_task: Option<String>,
         queued: Vec<QueuedTaskSummary>,
     },
+    /// 提示词注入栈（调试可观测）
+    PromptStack {
+        provider: String,
+        base_system: String,
+        system_prompt: String,
+        built_in_agent: String,
+        workspace_agent: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        skills_index: Option<String>,
+    },
 }
 
 /// 队列任务摘要（用于前端展示）
