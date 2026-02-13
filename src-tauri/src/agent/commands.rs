@@ -176,7 +176,7 @@ async fn execute_task_inner(
         dbg::log_skills(&context.skills);
     }
 
-    let messages = build_initial_messages(&task, &context, &config.provider);
+    let messages = build_initial_messages(&app, &task, &context, &config.provider);
     let initial_state = GraphState {
         messages,
         user_task: task.clone(),
@@ -611,7 +611,12 @@ fn build_permission_session(auto_approve: bool) -> Arc<LocalPermissionSession> {
     }
 }
 
-fn build_initial_messages(task: &str, context: &TaskContext, provider: &str) -> Vec<Message> {
+fn build_initial_messages(
+    app: &AppHandle,
+    task: &str,
+    context: &TaskContext,
+    provider: &str,
+) -> Vec<Message> {
     let mut messages = Vec::new();
     messages.push(Message {
         role: MessageRole::System,
@@ -619,7 +624,13 @@ fn build_initial_messages(task: &str, context: &TaskContext, provider: &str) -> 
         name: None,
         tool_call_id: None,
     });
-    if let Some(content) = load_agent_instructions(&context.workspace_path) {
+    messages.push(Message {
+        role: MessageRole::System,
+        content: load_builtin_agent_instructions(app),
+        name: None,
+        tool_call_id: None,
+    });
+    if let Some(content) = load_workspace_agent_instructions(&context.workspace_path) {
         messages.push(Message {
             role: MessageRole::System,
             content,
@@ -641,27 +652,35 @@ fn build_initial_messages(task: &str, context: &TaskContext, provider: &str) -> 
 }
 
 fn build_skill_messages(skills: &[SkillContext]) -> Vec<Message> {
-    skills
-        .iter()
-        .map(|skill| {
-            let title = skill.title.as_deref().unwrap_or(&skill.name);
-            let mut content = format!("Skill: {} ({})\n", title, skill.name);
-            if let Some(desc) = skill.description.as_deref() {
-                content.push_str(&format!("Description: {}\n", desc));
-            }
-            if let Some(source) = skill.source.as_deref() {
-                content.push_str(&format!("Source: {}\n", source));
-            }
-            content.push_str("Instructions:\n");
-            content.push_str(&skill.prompt);
-            Message {
-                role: MessageRole::System,
-                content,
-                name: None,
-                tool_call_id: None,
-            }
-        })
-        .collect()
+    if skills.is_empty() {
+        return Vec::new();
+    }
+
+    let mut content = String::from(
+        "Selected skills index (metadata only):\n\
+- Only name/title/description/source are provided here.\n\
+- Do not assume full skill instructions from this index.\n\
+- If a skill is needed, read the referenced skill file before applying detailed rules.\n\n\
+Skills:\n",
+    );
+
+    for skill in skills {
+        let title = skill.title.as_deref().unwrap_or(&skill.name);
+        content.push_str(&format!("- {} ({})\n", title, skill.name));
+        if let Some(desc) = skill.description.as_deref() {
+            content.push_str(&format!("  description: {}\n", desc));
+        }
+        if let Some(source) = skill.source.as_deref() {
+            content.push_str(&format!("  source: {}\n", source));
+        }
+    }
+
+    vec![Message {
+        role: MessageRole::System,
+        content,
+        name: None,
+        tool_call_id: None,
+    }]
 }
 
 const PROMPT_DEFAULT: &str =
@@ -675,7 +694,46 @@ const PROMPT_GEMINI: &str =
 const PROMPT_OLLAMA: &str =
     "You are Lumina, a note assistant. Keep responses brief and avoid unnecessary tool calls. Use tools to read or edit files when needed and avoid guessing. Stop tool use once complete, and ask for clarification instead of looping on the same tool input.";
 const LEGACY_DEFAULT_AGENT_INSTRUCTIONS: &str = "Project instructions (edit this file as needed):\n- Follow existing note/project conventions.\n- Prefer minimal, correct changes.\n- Ask before making broad refactors.";
-const DEFAULT_AGENT_INSTRUCTIONS: &str = r#"Project instructions (edit this file as needed):
+const PREVIOUS_DEFAULT_AGENT_INSTRUCTIONS_V1: &str = r#"Project instructions (edit this file as needed):
+- Follow existing note/project conventions.
+- Prefer minimal, correct changes.
+- Ask before making broad refactors.
+
+Flashcard generation rules:
+- Trigger: when user asks to create flashcards / memory cards / Anki-style cards.
+- Always write flashcards to `Flashcards/*.md` (one card per file unless user asks otherwise).
+- Read source notes first if user gives source content or note paths.
+
+Supported flashcard types:
+- `basic`: fields `front`, `back`
+- `basic-reversed`: fields `front`, `back`
+- `cloze`: field `text` with cloze syntax such as `{{c1::answer}}`
+- `mcq`: fields `question`, `options` (array), `answer` (0-based index), optional `explanation`
+- `list`: fields `question`, `items` (array), `ordered` (boolean)
+
+Required frontmatter format:
+---
+db: "flashcards"
+type: "<basic|basic-reversed|cloze|mcq|list>"
+deck: "Default"
+ease: 2.5
+interval: 0
+repetitions: 0
+due: "YYYY-MM-DD"
+created: "YYYY-MM-DD"
+---
+
+Optional frontmatter:
+- `source`
+- `tags` (array)
+
+Formatting constraints:
+- Keep valid YAML frontmatter.
+- Use YAML arrays for list-like fields.
+- Keep body readable after frontmatter (question/answer or card content).
+- After writing cards, read the created files once to verify required fields exist.
+"#;
+const PREVIOUS_DEFAULT_AGENT_INSTRUCTIONS_V2: &str = r#"Project instructions (edit this file as needed):
 - Follow existing note/project conventions.
 - Prefer minimal, correct changes.
 - Ask before making broad refactors.
@@ -732,6 +790,13 @@ Formatting constraints:
 - Keep body readable after frontmatter (question/answer or card content).
 - After writing cards, read the created files once to verify required fields exist.
 "#;
+const WORKSPACE_AGENT_TEMPLATE: &str = r#"Workspace instructions (editable):
+- Add project-specific conventions here.
+- Keep this file short and concrete.
+- Prefer constraints that are specific to this workspace.
+- Do not duplicate global system rules.
+"#;
+const BUILTIN_AGENT_INSTRUCTIONS: &str = include_str!("../../resources/agent/AGENT.md");
 
 fn base_system_prompt(provider: &str) -> &'static str {
     match provider {
@@ -757,20 +822,38 @@ fn build_system_prompt(context: &TaskContext, provider: &str) -> String {
     prompt
 }
 
-fn load_agent_instructions(workspace_path: &str) -> Option<String> {
+fn normalized_template(input: &str) -> String {
+    input.replace("\r\n", "\n").trim().to_string()
+}
+
+fn should_upgrade_workspace_template(content: &str) -> bool {
+    let normalized = normalized_template(content);
+    normalized.is_empty()
+        || normalized == normalized_template(LEGACY_DEFAULT_AGENT_INSTRUCTIONS)
+        || normalized == normalized_template(PREVIOUS_DEFAULT_AGENT_INSTRUCTIONS_V1)
+        || normalized == normalized_template(PREVIOUS_DEFAULT_AGENT_INSTRUCTIONS_V2)
+}
+
+fn load_builtin_agent_instructions(_app: &AppHandle) -> String {
+    normalized_template(BUILTIN_AGENT_INSTRUCTIONS)
+}
+
+fn load_workspace_agent_instructions(workspace_path: &str) -> Option<String> {
+    if workspace_path.trim().is_empty() {
+        return Some(WORKSPACE_AGENT_TEMPLATE.to_string());
+    }
+
     let dir = Path::new(workspace_path).join(".lumina");
     let file_path = dir.join("AGENT.md");
     if file_path.exists() {
         return match fs::read_to_string(&file_path) {
             Ok(content) => {
-                let trimmed = content.trim();
-                // Upgrade legacy or empty default file to the current richer template.
-                if trimmed.is_empty() || trimmed == LEGACY_DEFAULT_AGENT_INSTRUCTIONS {
-                    if let Err(err) = fs::write(&file_path, DEFAULT_AGENT_INSTRUCTIONS) {
+                if should_upgrade_workspace_template(&content) {
+                    if let Err(err) = fs::write(&file_path, WORKSPACE_AGENT_TEMPLATE) {
                         eprintln!("[Agent] Failed to upgrade AGENT.md: {}", err);
                         return Some(content);
                     }
-                    return Some(DEFAULT_AGENT_INSTRUCTIONS.to_string());
+                    return Some(WORKSPACE_AGENT_TEMPLATE.to_string());
                 }
                 Some(content)
             }
@@ -782,12 +865,12 @@ fn load_agent_instructions(workspace_path: &str) -> Option<String> {
     }
     if let Err(err) = fs::create_dir_all(&dir) {
         eprintln!("[Agent] Failed to create .lumina dir: {}", err);
-        return Some(DEFAULT_AGENT_INSTRUCTIONS.to_string());
+        return Some(WORKSPACE_AGENT_TEMPLATE.to_string());
     }
-    if let Err(err) = fs::write(&file_path, DEFAULT_AGENT_INSTRUCTIONS) {
+    if let Err(err) = fs::write(&file_path, WORKSPACE_AGENT_TEMPLATE) {
         eprintln!("[Agent] Failed to write AGENT.md: {}", err);
     }
-    Some(DEFAULT_AGENT_INSTRUCTIONS.to_string())
+    Some(WORKSPACE_AGENT_TEMPLATE.to_string())
 }
 
 async fn handle_forge_result(
