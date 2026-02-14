@@ -4,6 +4,7 @@ import { Link2, Copy, Power } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { reportOperationError } from "@/lib/reportError";
 
 interface MobileGatewayStatus {
   running: boolean;
@@ -37,7 +38,12 @@ export function MobileGatewaySection() {
       setStatus(data);
       setError(null);
     } catch (err) {
-      console.error("Failed to load mobile gateway status:", err);
+      reportOperationError({
+        source: "MobileGatewaySection.loadStatus",
+        action: "Load mobile gateway status",
+        error: err,
+        level: "warning",
+      });
       setError(String(err));
     }
   };
@@ -49,7 +55,13 @@ export function MobileGatewaySection() {
   useEffect(() => {
     if (!status?.running || !vaultPath) return;
     syncMobileWorkspace({ path: vaultPath, force: true }).catch((err) => {
-      console.warn("Failed to sync mobile workspace after start:", err);
+      reportOperationError({
+        source: "MobileGatewaySection",
+        action: "Sync workspace after mobile gateway start",
+        error: err,
+        level: "warning",
+        context: { vaultPath },
+      });
     });
   }, [status?.running, vaultPath, syncMobileWorkspace]);
 
@@ -63,7 +75,11 @@ export function MobileGatewaySection() {
         await syncMobileWorkspace({ path: vaultPath, force: true });
       }
     } catch (err) {
-      console.error("Failed to start mobile gateway:", err);
+      reportOperationError({
+        source: "MobileGatewaySection.handleStart",
+        action: "Start mobile gateway",
+        error: err,
+      });
       setError(String(err));
     } finally {
       setLoading(false);
@@ -76,7 +92,11 @@ export function MobileGatewaySection() {
       await invoke("mobile_stop_server");
       await loadStatus();
     } catch (err) {
-      console.error("Failed to stop mobile gateway:", err);
+      reportOperationError({
+        source: "MobileGatewaySection.handleStop",
+        action: "Stop mobile gateway",
+        error: err,
+      });
       setError(String(err));
     } finally {
       setLoading(false);
@@ -90,7 +110,12 @@ export function MobileGatewaySection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
-      console.error("Failed to copy pairing payload:", err);
+      reportOperationError({
+        source: "MobileGatewaySection.handleCopy",
+        action: "Copy mobile gateway pairing payload",
+        error: err,
+        level: "warning",
+      });
     }
   };
 
@@ -102,7 +127,11 @@ export function MobileGatewaySection() {
     try {
       await syncMobileWorkspace({ path: vaultPath, force: true });
     } catch (err) {
-      console.error("Failed to sync workspace:", err);
+      reportOperationError({
+        source: "MobileGatewaySection.handleSyncWorkspace",
+        action: "Sync mobile workspace",
+        error: err,
+      });
       setError(String(err));
     }
   };

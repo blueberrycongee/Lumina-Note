@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Cloud, Copy, Power } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 interface CloudRelayStatus {
   running: boolean;
@@ -36,7 +37,12 @@ export function CloudRelaySection() {
       setStatus(data);
       setError(null);
     } catch (err) {
-      console.error("Failed to load cloud relay status:", err);
+      reportOperationError({
+        source: "CloudRelaySection.loadStatus",
+        action: "Load cloud relay status",
+        error: err,
+        level: "warning",
+      });
       setError(String(err));
     }
   };
@@ -46,7 +52,12 @@ export function CloudRelaySection() {
     invoke<CloudRelayConfig>("cloud_relay_get_config")
       .then((config) => setFormData(config))
       .catch((err) => {
-        console.warn("Failed to load cloud relay config:", err);
+        reportOperationError({
+          source: "CloudRelaySection",
+          action: "Load cloud relay config",
+          error: err,
+          level: "warning",
+        });
       });
   }, []);
 
@@ -58,7 +69,11 @@ export function CloudRelaySection() {
       setStatus(data);
       setError(null);
     } catch (err) {
-      console.error("Failed to start cloud relay:", err);
+      reportOperationError({
+        source: "CloudRelaySection.handleStart",
+        action: "Start cloud relay",
+        error: err,
+      });
       setError(String(err));
     } finally {
       setLoading(false);
@@ -71,7 +86,11 @@ export function CloudRelaySection() {
       await invoke("cloud_relay_stop");
       await loadStatus();
     } catch (err) {
-      console.error("Failed to stop cloud relay:", err);
+      reportOperationError({
+        source: "CloudRelaySection.handleStop",
+        action: "Stop cloud relay",
+        error: err,
+      });
       setError(String(err));
     } finally {
       setLoading(false);
@@ -85,7 +104,12 @@ export function CloudRelaySection() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
-      console.error("Failed to copy pairing payload:", err);
+      reportOperationError({
+        source: "CloudRelaySection.handleCopy",
+        action: "Copy cloud relay pairing payload",
+        error: err,
+        level: "warning",
+      });
     }
   };
 

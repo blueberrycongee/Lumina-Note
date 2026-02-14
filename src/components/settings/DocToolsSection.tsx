@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Download, RefreshCw, PackageCheck, PackageX } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDocToolsStatus, installDocTools, type DocToolsStatus } from "@/lib/tauri";
+import { reportOperationError } from "@/lib/reportError";
 
 export function DocToolsSection() {
   const { t } = useLocaleStore();
@@ -17,7 +18,12 @@ export function DocToolsSection() {
       setStatus(data);
       setError(null);
     } catch (err) {
-      console.error("Failed to load doc tools status:", err);
+      reportOperationError({
+        source: "DocToolsSection.loadStatus",
+        action: "Load doc tools status",
+        error: err,
+        level: "warning",
+      });
       setError(String(err));
     } finally {
       setLoading(false);
@@ -35,7 +41,11 @@ export function DocToolsSection() {
       setStatus(data);
       setError(null);
     } catch (err) {
-      console.error("Failed to install doc tools:", err);
+      reportOperationError({
+        source: "DocToolsSection.handleInstall",
+        action: "Install doc tools",
+        error: err,
+      });
       setError(String(err));
     } finally {
       setInstalling(false);
