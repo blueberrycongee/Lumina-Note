@@ -187,6 +187,9 @@ export function DiagramView({
   const isMountedRef = useRef(true);
 
   useEffect(() => {
+    // React StrictMode (dev) mounts, unmounts, and mounts again.
+    // Reset mount flag on every mount so async loaders can settle loading state.
+    isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
     };
