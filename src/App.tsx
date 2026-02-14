@@ -51,6 +51,8 @@ import { PluginPanelDock } from "@/components/plugins/PluginPanelDock";
 import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
 import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHost";
 import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
+import { ErrorNotifications } from "@/components/layout/ErrorNotifications";
+import { reportUnhandledError } from "@/lib/reportError";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -471,6 +473,26 @@ function App() {
       window.removeEventListener("unhandledrejection", onUnhandled);
     };
   }, [diagnosticsActive]);
+
+  // Always surface unhandled runtime errors to users so they can report actionable issues.
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => {
+      reportUnhandledError("window.error", event.error ?? event.message, {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      });
+    };
+    const onUnhandled = (event: PromiseRejectionEvent) => {
+      reportUnhandledError("window.unhandledrejection", event.reason);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
+  }, []);
 
   // Build note index when file tree changes
   useEffect(() => {
@@ -1037,6 +1059,7 @@ function App() {
       <PluginStatusBar />
       <PluginShellSlotHost slotId="app-bottom" />
       <PluginContextMenuHost />
+      <ErrorNotifications />
       <MobileWorkspaceToast />
       <PluginPanelDock />
     </div>
