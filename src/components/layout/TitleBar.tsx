@@ -4,57 +4,111 @@
  * Mac 上使用原生透明标题栏，只显示拖拽区域
  */
 
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow, type Window } from "@tauri-apps/api/window";
 import { Minus, Square, X, Copy } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
+const isMacByNavigator = (): boolean =>
+  typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
+
 export function TitleBar() {
   const { t } = useLocaleStore();
+  const tauriRuntime = isTauri();
   const [isMaximized, setIsMaximized] = useState(false);
-  const [isMac, setIsMac] = useState(false);
+  const [isMac, setIsMac] = useState(() => (tauriRuntime ? false : isMacByNavigator()));
+
+  const getWindowSafe = useCallback((): Window | null => {
+    if (!tauriRuntime) return null;
+    try {
+      return getCurrentWindow();
+    } catch (e) {
+      console.warn("Failed to access current window:", e);
+      return null;
+    }
+  }, [tauriRuntime]);
 
   useEffect(() => {
-    // 检测平台
-    const checkPlatform = async () => {
+    let disposed = false;
+    let unlistenFn: (() => void) | null = null;
+
+    const checkPlatform = () => {
+      if (!tauriRuntime) {
+        setIsMac(isMacByNavigator());
+        return;
+      }
       try {
         const os = platform();
-        setIsMac(os === "macos");
+        if (!disposed) {
+          setIsMac(os === "macos");
+        }
       } catch (e) {
         console.warn("Failed to detect platform:", e);
+        if (!disposed) {
+          setIsMac(isMacByNavigator());
+        }
       }
     };
-    checkPlatform();
 
-    // 监听窗口最大化状态
-    const checkMaximized = async () => {
+    const checkMaximized = async (appWindow: Window | null) => {
+      if (!appWindow) return;
       try {
-        const maximized = await getCurrentWindow().isMaximized();
-        setIsMaximized(maximized);
+        const maximized = await appWindow.isMaximized();
+        if (!disposed) {
+          setIsMaximized(maximized);
+        }
       } catch (e) {
         console.warn("Failed to check maximized state:", e);
       }
     };
-    checkMaximized();
 
-    // 监听窗口状态变化
-    let unlistenFn: (() => void) | null = null;
-    getCurrentWindow().onResized(() => {
-      checkMaximized();
-    }).then((fn) => {
-      unlistenFn = fn;
-    });
+    const setup = async () => {
+      checkPlatform();
+      const appWindow = getWindowSafe();
+      await checkMaximized(appWindow);
+
+      if (!appWindow) {
+        return;
+      }
+      try {
+        unlistenFn = await appWindow.onResized(() => {
+          void checkMaximized(appWindow);
+        });
+      } catch (e) {
+        console.warn("Failed to listen window resize:", e);
+      }
+    };
+    void setup();
 
     return () => {
+      disposed = true;
       unlistenFn?.();
     };
-  }, []);
+  }, [getWindowSafe, tauriRuntime]);
+
+  const withWindow = useCallback(
+    async (action: (appWindow: Window) => Promise<void>, errorMessage: string) => {
+      const appWindow = getWindowSafe();
+      if (!appWindow) return;
+      try {
+        await action(appWindow);
+      } catch (e) {
+        console.error(errorMessage, e);
+      }
+    },
+    [getWindowSafe],
+  );
 
   const handleDragStart = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if (e.detail >= 2) return;
-    getCurrentWindow().startDragging();
+    const appWindow = getWindowSafe();
+    if (!appWindow) return;
+    appWindow.startDragging().catch((err) => {
+      console.warn("Failed to start dragging:", err);
+    });
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -65,27 +119,15 @@ export function TitleBar() {
   };
 
   const handleMinimize = async () => {
-    try {
-      await getCurrentWindow().minimize();
-    } catch (e) {
-      console.error("Failed to minimize:", e);
-    }
+    await withWindow((appWindow) => appWindow.minimize(), "Failed to minimize:");
   };
 
   const handleMaximize = async () => {
-    try {
-      await getCurrentWindow().toggleMaximize();
-    } catch (e) {
-      console.error("Failed to toggle maximize:", e);
-    }
+    await withWindow((appWindow) => appWindow.toggleMaximize(), "Failed to toggle maximize:");
   };
 
   const handleClose = async () => {
-    try {
-      await getCurrentWindow().close();
-    } catch (e) {
-      console.error("Failed to close:", e);
-    }
+    await withWindow((appWindow) => appWindow.close(), "Failed to close:");
   };
 
   // Mac 上使用原生标题栏，只需要一个透明的拖拽区域
