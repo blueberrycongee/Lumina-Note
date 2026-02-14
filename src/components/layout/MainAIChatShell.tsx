@@ -98,6 +98,13 @@ const InlineDiagramView = lazy(async () => {
   return { default: mod.DiagramView };
 });
 
+const DIAGRAM_FILE_SUFFIXES = [".diagram.json", ".excalidraw.json", ".drawio.json"] as const;
+
+function isDiagramFileAttachment(path?: string, name?: string): boolean {
+  const candidate = (path || name || "").toLowerCase();
+  return DIAGRAM_FILE_SUFFIXES.some((suffix) => candidate.endsWith(suffix));
+}
+
 type ChatAssistantPart =
   | { type: "text"; content: string }
   | { type: "thinking"; content: string };
@@ -1634,6 +1641,15 @@ export function MainAIChatShell() {
                             (() => {
                               const { text: userText, attachments } = getUserMessageDisplay(msg.content, msg.attachments);
                               const images = getImagesFromContent(msg.content);
+                              const attachedDiagramFiles = attachments
+                                .filter((attachment): attachment is Extract<typeof attachments[number], { type: "file" }> => {
+                                  if (attachment.type !== "file") return false;
+                                  return isDiagramFileAttachment(attachment.path, attachment.name) && Boolean(attachment.path);
+                                })
+                                .map((attachment, attachmentIdx) => ({
+                                  attachment,
+                                  key: `${attachment.path ?? attachment.name}::${attachmentIdx}`,
+                                }));
                               const diagramAttachments = attachments
                                 .map((attachment, attachmentIdx) => {
                                   if (attachment.type !== "quote") return null;
@@ -1713,6 +1729,36 @@ export function MainAIChatShell() {
                                             </>
                                           )}
                                         </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {attachedDiagramFiles.length > 0 && (
+                                    <div className="mb-2 space-y-2">
+                                      {attachedDiagramFiles.map(({ attachment, key }) => (
+                                        <div
+                                          key={key}
+                                          className="overflow-hidden rounded-ui-lg border border-border/60 bg-background/70"
+                                        >
+                                          <div className="border-b border-border/60 px-3 py-1.5 text-xs text-muted-foreground">
+                                            {t.diagramView.inlineEditorTitle}
+                                          </div>
+                                          <div className="h-[360px] min-h-[260px]">
+                                            <Suspense
+                                              fallback={
+                                                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                                                  {t.diagramView.loadingEditor}
+                                                </div>
+                                              }
+                                            >
+                                              <InlineDiagramView
+                                                filePath={attachment.path || ""}
+                                                className="h-full"
+                                                saveMode="manual"
+                                                showSendToChatButton={false}
+                                              />
+                                            </Suspense>
+                                          </div>
+                                        </div>
                                       ))}
                                     </div>
                                   )}
