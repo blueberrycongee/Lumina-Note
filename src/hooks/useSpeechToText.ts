@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 type SpeechToTextOptions = {
   /** 静音自动停止时间（毫秒），默认 6000 */
@@ -108,7 +109,12 @@ export function useSpeechToText(
       } else if (reason === "network") {
         alert(t.speech.networkRequired);
       }
-      console.error("Speech recognition error:", reason || event);
+      reportOperationError({
+        source: "useSpeechToText.recognition.onerror",
+        action: "Handle speech recognition error",
+        error: reason || event,
+        level: "warning",
+      });
       clearSilenceTimer();
       setIsRecording(false);
       setInterimText("");
@@ -129,11 +135,16 @@ export function useSpeechToText(
       stream.getTracks().forEach((track) => track.stop());
       return true;
     } catch (err) {
-      console.error("Microphone permission denied", err);
+      reportOperationError({
+        source: "useSpeechToText.ensureMicPermission",
+        action: "Request microphone permission",
+        error: err,
+        level: "warning",
+      });
       alert(t.speech.permissionDenied);
       return false;
     }
-  }, []);
+  }, [t.speech.permissionDenied]);
 
   const toggleRecording = useCallback(async () => {
     const recognition = recognitionRef.current;
@@ -162,7 +173,11 @@ export function useSpeechToText(
         // 开始录音时启动静音计时器，如果一直没说话也会自动停止
         resetSilenceTimer();
       } catch (e) {
-        console.error("Failed to start speech recognition", e);
+        reportOperationError({
+          source: "useSpeechToText.toggleRecording",
+          action: "Start speech recognition",
+          error: e,
+        });
         setIsRecording(false);
       }
     }

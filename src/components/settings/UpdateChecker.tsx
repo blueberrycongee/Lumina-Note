@@ -3,6 +3,7 @@ import { check, Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { Loader2, RefreshCw, Download, RotateCcw, CheckCircle2, AlertCircle } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 type DownloadEvent = {
     event: string;
@@ -39,7 +40,12 @@ export function UpdateChecker() {
                 setStatus("up-to-date");
             }
         } catch (err) {
-            console.error("Failed to check for updates:", err);
+            reportOperationError({
+                source: "UpdateChecker.checkForUpdates",
+                action: "Check for updates",
+                error: err,
+                level: "warning",
+            });
             setError(err instanceof Error ? err.message : String(err));
             setStatus("error");
         } finally {
@@ -83,7 +89,11 @@ export function UpdateChecker() {
 
             setStatus("ready");
         } catch (err) {
-            console.error("Failed to install update:", err);
+            reportOperationError({
+                source: "UpdateChecker.installUpdate",
+                action: "Download and install update",
+                error: err,
+            });
             setError(err instanceof Error ? err.message : String(err));
             setStatus("error");
         }
@@ -93,7 +103,11 @@ export function UpdateChecker() {
         try {
             await relaunch();
         } catch (err) {
-            console.error("Failed to relaunch:", err);
+            reportOperationError({
+                source: "UpdateChecker.handleRelaunch",
+                action: "Relaunch app after update",
+                error: err,
+            });
             setError(err instanceof Error ? err.message : String(err));
         }
     };

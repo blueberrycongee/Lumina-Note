@@ -9,6 +9,7 @@ import { persist } from "zustand/middleware";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 // ============ 类型定义 ============
 
@@ -258,7 +259,12 @@ export const useDeepResearchStore = create<DeepResearchState>()(
       await invoke("deep_research_start", { config, request });
       console.log("[DeepResearch] Research started successfully");
     } catch (error) {
-      console.error("[DeepResearch] Failed to start research:", error);
+      reportOperationError({
+        source: "DeepResearchStore.startResearch",
+        action: "Start deep research",
+        error,
+        context: { topic, workspacePath },
+      });
       set((state) => ({
         currentSession: state.currentSession
           ? {
@@ -276,7 +282,12 @@ export const useDeepResearchStore = create<DeepResearchState>()(
     try {
       await invoke("deep_research_abort");
     } catch (error) {
-      console.error("Failed to abort research:", error);
+      reportOperationError({
+        source: "DeepResearchStore.abortResearch",
+        action: "Abort deep research",
+        error,
+        level: "warning",
+      });
     }
     set({ isRunning: false, isWaitingForClarification: false });
   },
@@ -284,7 +295,12 @@ export const useDeepResearchStore = create<DeepResearchState>()(
   submitClarification: async (clarification: string) => {
     const { currentSession } = get();
     if (!currentSession || !currentSession.clarification) {
-      console.error("[DeepResearch] No clarification pending");
+      reportOperationError({
+        source: "DeepResearchStore.submitClarification",
+        action: "Submit clarification",
+        error: "No clarification is currently pending",
+        level: "warning",
+      });
       return;
     }
 
@@ -303,7 +319,12 @@ export const useDeepResearchStore = create<DeepResearchState>()(
         },
       });
     } catch (error) {
-      console.error("[DeepResearch] Failed to submit clarification:", error);
+      reportOperationError({
+        source: "DeepResearchStore.submitClarification",
+        action: "Submit deep research clarification",
+        error,
+        context: { sessionId: currentSession.id },
+      });
       set({
         isWaitingForClarification: false,
         currentSession: {

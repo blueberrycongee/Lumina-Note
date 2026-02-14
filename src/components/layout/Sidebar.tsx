@@ -35,6 +35,7 @@ import { useVoiceNote } from "@/hooks/useVoiceNote";
 import { useUIStore } from "@/stores/useUIStore";
 import { useSplitStore } from "@/stores/useSplitStore";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 
 interface ContextMenuState {
@@ -164,10 +165,15 @@ export function Sidebar() {
       await refreshFileTree();
       openFile(filePath);
     } catch (error) {
-      console.error("Failed to create quick note:", error);
-      alert(t.file.createQuickNoteFailed);
+      reportOperationError({
+        source: "Sidebar.handleQuickNote",
+        action: "Create quick note",
+        error,
+        userMessage: t.file.createQuickNoteFailed,
+        context: { filePath },
+      });
     }
-  }, [vaultPath, refreshFileTree, openFile]);
+  }, [locale, openFile, refreshFileTree, t.file.createQuickNoteFailed, t.file.quickNotePrefix, vaultPath]);
   
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -213,8 +219,8 @@ export function Sidebar() {
         } else {
           await moveFileToFolder(sourcePath, vaultPath);
         }
-      } catch (error: any) {
-        alert(error?.message || t.file.moveFailed);
+      } catch {
+        // move actions already report and surface failures in useFileStore
       }
     };
     
@@ -262,16 +268,24 @@ export function Sidebar() {
         useFileStore.getState().setVaultPath(selected);
       }
     } catch (error) {
-      console.error("Open folder failed:", error);
+      reportOperationError({
+        source: "Sidebar.handleOpenFolder",
+        action: "Open workspace folder picker",
+        error,
+      });
     }
-  }, []);
+  }, [t.file.selectWorkingDir]);
 
   // Handle new window
   const handleNewWindow = useCallback(async () => {
     try {
       await openNewWindow();
     } catch (error) {
-      console.error("Open new window failed:", error);
+      reportOperationError({
+        source: "Sidebar.handleNewWindow",
+        action: "Open new window",
+        error,
+      });
     }
   }, []);
 
@@ -300,7 +314,12 @@ export function Sidebar() {
       }
       refreshFileTree();
     } catch (error) {
-      console.error("Delete failed:", error);
+      reportOperationError({
+        source: "Sidebar.handleDelete",
+        action: entry.is_dir ? "Delete folder" : "Delete file",
+        error,
+        context: { path: entry.path },
+      });
     }
   }, [currentFile, closeFile, refreshFileTree]);
 
@@ -353,18 +372,29 @@ export function Sidebar() {
         }
       }
     } catch (error) {
-      console.error("Rename failed:", error);
-      alert(t.file.renameFailed);
+      reportOperationError({
+        source: "Sidebar.handleRename",
+        action: isDir ? "Rename folder" : "Rename file",
+        error,
+        userMessage: t.file.renameFailed,
+        context: { from: renamingPath, to: newPath },
+      });
     }
     setRenamingPath(null);
-  }, [renamingPath, renameValue, refreshFileTree, currentFile, openFile]);
+  }, [renamingPath, renameValue, refreshFileTree, t.file.renameFailed]);
 
   // Handle copy path
   const handleCopyPath = useCallback(async (path: string) => {
     try {
       await navigator.clipboard.writeText(path);
     } catch (error) {
-      console.error("Copy failed:", error);
+      reportOperationError({
+        source: "Sidebar.handleCopyPath",
+        action: "Copy file path",
+        error,
+        level: "warning",
+        context: { path },
+      });
     }
   }, []);
 
@@ -373,16 +403,27 @@ export function Sidebar() {
     try {
       await invoke("show_in_explorer", { path });
     } catch (error) {
-      console.error("Show in explorer failed:", error);
+      reportOperationError({
+        source: "Sidebar.handleShowInExplorer",
+        action: "Show in file explorer",
+        error,
+        level: "warning",
+        context: { path },
+      });
       // 降级：复制路径
       try {
         await navigator.clipboard.writeText(path);
-        alert(`${t.file.openFailed}: ${path}`);
-      } catch {
-        alert(`${t.common.error}: ${error}`);
+      } catch (copyError) {
+        reportOperationError({
+          source: "Sidebar.handleShowInExplorer",
+          action: "Copy file path fallback",
+          error: copyError,
+          level: "warning",
+          context: { path },
+        });
       }
     }
-  }, []);
+  }, [t.file.openFailed]);
 
   // 解析用于创建新文件/文件夹的基础路径（VS Code 风格）：
   // 1) 显式传入的 parentPath（来自右键菜单）
@@ -518,11 +559,23 @@ export function Sidebar() {
     // 检查是否已存在
     try {
       if (await exists(fullPath)) {
-        alert(`${creating.type === "folder" ? t.file.folderExists : t.file.fileExists}: ${trimmed}`);
+        reportOperationError({
+          source: "Sidebar.handleCreateSubmit",
+          action: creating.type === "folder" ? "Create folder" : creating.type === "diagram" ? "Create diagram" : "Create note",
+          error: `${creating.type === "folder" ? t.file.folderExists : t.file.fileExists}: ${trimmed}`,
+          level: "warning",
+          context: { path: fullPath },
+        });
         return;
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      reportOperationError({
+        source: "Sidebar.handleCreateSubmit",
+        action: "Check existing path before create",
+        error,
+        level: "warning",
+        context: { path: fullPath },
+      });
     }
 
     try {
@@ -539,15 +592,19 @@ export function Sidebar() {
         await refreshFileTree();
       }
     } catch (error) {
-      console.error("Create failed:", error);
       const targetLabel =
         creating.type === "folder"
           ? t.sidebar.newFolder
           : creating.type === "diagram"
             ? t.sidebar.newDiagram
             : t.sidebar.newNote;
-      const detail = error instanceof Error ? error.message : String(error ?? "");
-      alert(detail ? `${t.file.createFailed}: ${targetLabel}\n${detail}` : `${t.file.createFailed}: ${targetLabel}`);
+      reportOperationError({
+        source: "Sidebar.handleCreateSubmit",
+        action: `Create ${targetLabel}`,
+        error,
+        userMessage: `${t.file.createFailed}: ${targetLabel}`,
+        context: { path: fullPath },
+      });
     }
 
     setCreating(null);
@@ -1148,7 +1205,6 @@ function FileTreeItem({
   onCreateCancel,
   vaultPath,
 }: FileTreeItemProps) {
-  const { t } = useLocaleStore();
   const [isDragOver, setIsDragOver] = useState(false);
   const { moveFileToFolder, moveFolderToFolder } = useFileStore(
     useShallow((state) => ({
@@ -1227,9 +1283,8 @@ function FileTreeItem({
         } else {
           await moveFileToFolder(sourcePath, entry.path);
         }
-      } catch (error: any) {
-        // 显示错误提示
-        alert(error?.message || t.file.moveFailed);
+      } catch {
+        // move actions already report and surface failures in useFileStore
       }
     };
     

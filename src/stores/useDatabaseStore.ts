@@ -22,6 +22,7 @@ import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { applyFilters } from "./databaseFilter";
 import { applyFormulaColumns } from "./databaseFormula";
 import { normalizeDatabaseDefinition } from "@/features/database/selectOptions";
+import { reportOperationError } from "@/lib/reportError";
 
 // ==================== 工具函数 ====================
 
@@ -256,7 +257,13 @@ export const useDatabaseStore = create<DatabaseState>()(
         try {
           const fileExists = await exists(path);
           if (!fileExists) {
-            console.warn(`Database file not found: ${path}`);
+            reportOperationError({
+              source: "DatabaseStore.loadDatabase",
+              action: "Load database definition file",
+              error: "Database file not found",
+              level: "warning",
+              context: { dbId, path },
+            });
             return null;
           }
           
@@ -277,7 +284,12 @@ export const useDatabaseStore = create<DatabaseState>()(
           
           return dbWithRows;
         } catch (error) {
-          console.error(`Failed to load database ${dbId}:`, error);
+          reportOperationError({
+            source: "DatabaseStore.loadDatabase",
+            action: "Load database",
+            error,
+            context: { dbId, path },
+          });
           return null;
         }
       },
@@ -382,7 +394,13 @@ export const useDatabaseStore = create<DatabaseState>()(
               }
             }
           } catch (error) {
-            console.warn("[Database] Failed to scan Flashcards directories:", error);
+            reportOperationError({
+              source: "DatabaseStore.loadRowsFromNotes",
+              action: "Scan flashcards directories",
+              error,
+              level: "warning",
+              context: { dbId },
+            });
           }
         }
 
@@ -404,7 +422,13 @@ export const useDatabaseStore = create<DatabaseState>()(
                   await saveFile(filePath, contentWithNoteId);
                   content = contentWithNoteId;
                 } catch (error) {
-                  console.warn(`[Database] Failed to persist noteId for ${filePath}:`, error);
+                  reportOperationError({
+                    source: "DatabaseStore.loadRowsFromNotes",
+                    action: "Persist generated noteId",
+                    error,
+                    level: "warning",
+                    context: { dbId, filePath },
+                  });
                 }
               }
 
@@ -451,7 +475,13 @@ export const useDatabaseStore = create<DatabaseState>()(
               }
             }
           } catch (error) {
-            console.warn(`Failed to read note ${filePath}:`, error);
+            reportOperationError({
+              source: "DatabaseStore.loadRowsFromNotes",
+              action: "Read note for database row",
+              error,
+              level: "warning",
+              context: { dbId, filePath },
+            });
           }
         }
         
@@ -758,12 +788,23 @@ ${yamlLines.join('\n')}
 
           // 刷新文件树
           void useFileStore.getState().refreshFileTree().catch((error) => {
-            console.warn("[Database] Failed to refresh file tree after addRow:", error);
+            reportOperationError({
+              source: "DatabaseStore.addRow",
+              action: "Refresh file tree after adding row",
+              error,
+              level: "warning",
+              context: { dbId },
+            });
           });
 
           return notePath;
         } catch (error) {
-          console.error(`[Database] Failed to add row in "${dbId}":`, error);
+          reportOperationError({
+            source: "DatabaseStore.addRow",
+            action: "Add database row",
+            error,
+            context: { dbId },
+          });
           throw normalizeError(error);
         }
       },
@@ -832,7 +873,12 @@ ${yamlLines.join('\n')}
           });
           return true;
         } catch (error) {
-          console.error(`Failed to update cell in ${row.notePath}:`, error);
+          reportOperationError({
+            source: "DatabaseStore.updateCell",
+            action: "Update database cell",
+            error,
+            context: { dbId, rowId, columnId, notePath: row.notePath },
+          });
           return false;
         }
       },
@@ -866,7 +912,12 @@ ${yamlLines.join('\n')}
             };
           });
         } catch (error) {
-          console.error(`Failed to remove row ${rowId}:`, error);
+          reportOperationError({
+            source: "DatabaseStore.deleteRow",
+            action: "Delete database row",
+            error,
+            context: { dbId, rowId, notePath: row.notePath },
+          });
           throw normalizeError(error);
         }
       },
@@ -931,12 +982,23 @@ ${yamlLines.join('\n')}
           });
           
           void useFileStore.getState().refreshFileTree().catch((error) => {
-            console.warn("[Database] Failed to refresh file tree after duplicateRow:", error);
+            reportOperationError({
+              source: "DatabaseStore.duplicateRow",
+              action: "Refresh file tree after duplicating row",
+              error,
+              level: "warning",
+              context: { dbId, rowId },
+            });
           });
           
           return notePath;
         } catch (error) {
-          console.error(`Failed to duplicate row:`, error);
+          reportOperationError({
+            source: "DatabaseStore.duplicateRow",
+            action: "Duplicate database row",
+            error,
+            context: { dbId, rowId },
+          });
           throw error;
         }
       },

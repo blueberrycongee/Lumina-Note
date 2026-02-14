@@ -4,6 +4,7 @@ import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { FileEntry, readFile } from "@/lib/tauri";
 import { cn, getFileName } from "@/lib/utils";
+import { reportOperationError } from "@/lib/reportError";
 import { Search, X, FileText, Loader2, Replace, ChevronDown, ChevronRight } from "lucide-react";
 
 interface SearchResult {
@@ -83,6 +84,7 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
     setIsSearching(true);
     const searchResults: SearchResult[] = [];
+    const failedFiles: string[] = [];
 
     try {
       // Build search pattern
@@ -94,8 +96,14 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
           const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           pattern = new RegExp(escaped, caseSensitive ? "g" : "gi");
         }
-      } catch {
-        // Invalid regex
+      } catch (error) {
+        reportOperationError({
+          source: "GlobalSearch.performSearch",
+          action: "Compile search pattern",
+          error,
+          level: "warning",
+          context: { query, useRegex, caseSensitive },
+        });
         setIsSearching(false);
         return;
       }
@@ -131,12 +139,24 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
             // Auto-expand files with matches
             setExpandedFiles(prev => new Set([...prev, file.path]));
           }
-        } catch (error) {
-          console.error(`Error reading ${file.path}:`, error);
+        } catch {
+          failedFiles.push(file.path);
         }
       }
 
       setResults(searchResults);
+      if (failedFiles.length > 0) {
+        reportOperationError({
+          source: "GlobalSearch.performSearch",
+          action: "Read files for search",
+          error: `${failedFiles.length} files could not be read`,
+          level: "warning",
+          context: {
+            failedCount: failedFiles.length,
+            samplePaths: failedFiles.slice(0, 5),
+          },
+        });
+      }
     } finally {
       setIsSearching(false);
     }

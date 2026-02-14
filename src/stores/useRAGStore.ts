@@ -8,6 +8,7 @@ import { RAGManager, RAGConfig, DEFAULT_RAG_CONFIG, IndexStatus, SearchResult } 
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
 import { useFileStore } from "./useFileStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 interface RAGState {
   // 配置
@@ -116,7 +117,12 @@ export const useRAGStore = create<RAGState>()(
           const t = getCurrentTranslations();
           const errorMsg = error instanceof Error ? error.message : t.rag.errors.initFailed;
           set({ lastError: errorMsg, isInitialized: false });
-          console.error("[RAG] Initialize error:", error);
+          reportOperationError({
+            source: "RAGStore.initialize",
+            action: "Initialize RAG system",
+            error,
+            context: { workspacePath },
+          });
         }
       },
 
@@ -164,7 +170,11 @@ export const useRAGStore = create<RAGState>()(
           const t = getCurrentTranslations();
           const errorMsg = error instanceof Error ? error.message : t.rag.errors.indexFailed;
           set({ lastError: errorMsg, isIndexing: false });
-          console.error("[RAG] Rebuild error:", error);
+          reportOperationError({
+            source: "RAGStore.rebuildIndex",
+            action: "Rebuild RAG index",
+            error,
+          });
         }
       },
 
@@ -215,22 +225,31 @@ export const useRAGStore = create<RAGState>()(
       // 恢复数据后解密 API Keys（复用 useAIStore 模式）
       onRehydrateStorage: () => async (state) => {
         if (state?.config) {
-          const decryptedConfig = { ...state.config };
-          
-          // 解密 Embedding API Key
-          if (state.config.embeddingApiKey) {
-            decryptedConfig.embeddingApiKey = await decryptApiKey(state.config.embeddingApiKey);
+          try {
+            const decryptedConfig = { ...state.config };
+
+            // 解密 Embedding API Key
+            if (state.config.embeddingApiKey) {
+              decryptedConfig.embeddingApiKey = await decryptApiKey(state.config.embeddingApiKey);
+            }
+
+            // 解密 Reranker API Key
+            if (state.config.rerankerApiKey) {
+              decryptedConfig.rerankerApiKey = await decryptApiKey(state.config.rerankerApiKey);
+            }
+
+            // 延迟执行，确保 store 创建完成后再调用 setState
+            setTimeout(() => {
+              useRAGStore.setState({ config: decryptedConfig });
+            }, 0);
+          } catch (error) {
+            reportOperationError({
+              source: "RAGStore.rehydrate",
+              action: "Decrypt saved RAG API keys",
+              error,
+              level: "warning",
+            });
           }
-          
-          // 解密 Reranker API Key
-          if (state.config.rerankerApiKey) {
-            decryptedConfig.rerankerApiKey = await decryptApiKey(state.config.rerankerApiKey);
-          }
-          
-          // 延迟执行，确保 store 创建完成后再调用 setState
-          setTimeout(() => {
-            useRAGStore.setState({ config: decryptedConfig });
-          }, 0);
         }
       },
     }

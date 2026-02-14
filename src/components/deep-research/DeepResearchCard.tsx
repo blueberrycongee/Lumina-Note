@@ -47,6 +47,7 @@ import { RainbowText } from "@/components/ui/rainbow-text";
 import { FavIcon } from "@/components/ui/fav-icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 // ============ 子组件 ============
 
@@ -637,7 +638,13 @@ ${reportContent}`;
       setShowSaveDialog(false);
       console.log('[DeepResearch] Report saved to:', filePath);
     } catch (error) {
-      console.error('[DeepResearch] Failed to save report:', error);
+      reportOperationError({
+        source: "DeepResearchCard.handleSave",
+        action: "Save deep research report",
+        error,
+        userMessage: "Failed to save deep research report",
+        context: { topic, saveFileName },
+      });
     } finally {
       setIsSaving(false);
     }

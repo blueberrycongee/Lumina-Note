@@ -40,6 +40,7 @@ import { useFileStore } from '@/stores/useFileStore';
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { saveFile } from '@/lib/tauri';
 import { invoke } from '@tauri-apps/api/core';
+import { reportOperationError } from '@/lib/reportError';
 
 interface VideoNoteViewProps {
   onClose?: () => void;
@@ -118,11 +119,20 @@ export function VideoNoteView({
           await invoke('setup_danmaku_autofill', { prefix: danmakuPrefix });
           console.log('[VideoNote] Danmaku autofill enabled');
         } catch (e) {
-          console.error('[VideoNote] Failed to enable autofill:', e);
+          reportOperationError({
+            source: "VideoNoteView.createWebview",
+            action: "Enable danmaku autofill",
+            error: e,
+            level: "warning",
+          });
         }
       }, 3000);
     } catch (error) {
-      console.error('[VideoNote] Failed to create WebView:', error);
+      reportOperationError({
+        source: "VideoNoteView.createWebview",
+        action: "Create embedded video webview",
+        error,
+      });
       // 失败时可以 fallback 到 iframe
     }
   }, [noteFile, danmakuPrefix]);
@@ -142,7 +152,12 @@ export function VideoNoteView({
         height: rect.height
       });
     } catch (error) {
-      console.error('[VideoNote] Failed to update WebView bounds:', error);
+      reportOperationError({
+        source: "VideoNoteView.updateWebviewBounds",
+        action: "Update embedded video webview bounds",
+        error,
+        level: "warning",
+      });
     }
   }, [webviewCreated]);
 
@@ -174,7 +189,14 @@ export function VideoNoteView({
   // 组件卸载时关闭 WebView
   useEffect(() => {
     return () => {
-      invoke('close_embedded_webview').catch(() => {});
+      void invoke('close_embedded_webview').catch((error) => {
+        reportOperationError({
+          source: "VideoNoteView.unmount",
+          action: "Close embedded video webview",
+          error,
+          level: "warning",
+        });
+      });
     };
   }, []);
 
@@ -185,10 +207,24 @@ export function VideoNoteView({
     if (isActive) {
       // 激活时恢复位置
       updateWebviewBounds();
-      invoke('set_webview_visible', { visible: true }).catch(() => {});
+      void invoke('set_webview_visible', { visible: true }).catch((error) => {
+        reportOperationError({
+          source: "VideoNoteView.visibility",
+          action: "Show embedded video webview",
+          error,
+          level: "warning",
+        });
+      });
     } else {
       // 非激活时隐藏
-      invoke('set_webview_visible', { visible: false }).catch(() => {});
+      void invoke('set_webview_visible', { visible: false }).catch((error) => {
+        reportOperationError({
+          source: "VideoNoteView.visibility",
+          action: "Hide embedded video webview",
+          error,
+          level: "warning",
+        });
+      });
     }
   }, [isActive, webviewCreated, updateWebviewBounds]);
 
@@ -203,7 +239,12 @@ export function VideoNoteView({
         await saveFile(notePath, mdContent);
         console.log(`[VideoNote] Auto saved: ${notePath}`);
       } catch (error) {
-        console.error('[VideoNote] Auto save failed:', error);
+        reportOperationError({
+          source: "VideoNoteView.autoSave",
+          action: "Auto save video note",
+          error,
+          level: "warning",
+        });
       }
     };
     
@@ -221,7 +262,14 @@ export function VideoNoteView({
       // 1. 获取视频 CID
       const cid = await getVideoCid(noteFile.video.bvid);
       if (!cid) {
-        alert(t.videoNote.getVideoInfoFailed);
+        reportOperationError({
+          source: "VideoNoteView.handleSyncDanmaku",
+          action: "Get video info for danmaku sync",
+          error: t.videoNote.getVideoInfoFailed,
+          level: "warning",
+          userMessage: t.videoNote.getVideoInfoFailed,
+          context: { bvid: noteFile.video.bvid },
+        });
         return;
       }
       
@@ -277,12 +325,17 @@ export function VideoNoteView({
       alert(t.videoNote.syncComplete.replace('{count}', String(addedCount)));
       
     } catch (error) {
-      console.error('[Danmaku] Sync failed:', error);
-      alert(t.videoNote.syncFailed + ': ' + error);
+      reportOperationError({
+        source: "VideoNoteView.handleSyncDanmaku",
+        action: "Sync danmaku notes",
+        error,
+        userMessage: t.videoNote.syncFailed,
+        context: { bvid: noteFile.video.bvid, prefix: danmakuPrefix },
+      });
     } finally {
       setIsSyncingDanmaku(false);
     }
-  }, [noteFile, danmakuPrefix]);
+  }, [danmakuPrefix, noteFile, t.videoNote.getVideoInfoFailed, t.videoNote.syncFailed]);
 
   // 加载视频 - 检查已有笔记或创建新笔记
   const handleLoadVideo = useCallback(async () => {
@@ -317,9 +370,15 @@ export function VideoNoteView({
       setNoteFile(newNoteFile);
       setIsVideoLoaded(true);
     } catch (error) {
-      alert(t.videoNote.loadFailed + ': ' + error);
+      reportOperationError({
+        source: "VideoNoteView.handleLoadVideo",
+        action: "Load video note",
+        error,
+        userMessage: t.videoNote.loadFailed,
+        context: { videoUrl, bvid },
+      });
     }
-  }, [videoUrl, vaultPath]);
+  }, [t.videoNote.invalidUrl, t.videoNote.loadFailed, vaultPath, videoUrl]);
 
   // 如果有初始 URL，自动设置
   useEffect(() => {
@@ -449,7 +508,13 @@ export function VideoNoteView({
       await invoke('seek_video_time', { seconds });
       console.log(`[VideoNote] 跳转到 ${formatTimestamp(seconds)}`);
     } catch (error) {
-      console.error('[VideoNote] Seek failed:', error);
+      reportOperationError({
+        source: "VideoNoteView.handleSeekTo",
+        action: "Seek video playback",
+        error,
+        level: "warning",
+        context: { seconds },
+      });
     }
   }, []);
 
@@ -465,9 +530,15 @@ export function VideoNoteView({
       await saveFile(filePath, markdown);
       alert(`${t.videoNote.exportSuccess}: ${fileName}`);
     } catch (error) {
-      alert(t.videoNote.exportFailed + ': ' + error);
+      reportOperationError({
+        source: "VideoNoteView.handleExport",
+        action: "Export video note markdown",
+        error,
+        userMessage: t.videoNote.exportFailed,
+        context: { filePath },
+      });
     }
-  }, [noteFile, vaultPath]);
+  }, [noteFile, t.videoNote.exportFailed, t.videoNote.exportSuccess, vaultPath]);
 
   // 未加载视频时的输入界面
   if (!isVideoLoaded) {

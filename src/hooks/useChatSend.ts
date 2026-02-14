@@ -6,6 +6,7 @@
 import { useCallback } from "react";
 import { readFile } from "@/lib/tauri";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 import type { MessageAttachment } from "@/services/llm";
 import type { QuoteRange, QuoteReference } from "@/types/chat";
 
@@ -111,7 +112,13 @@ export async function processMessageWithFiles(
         const fileHeader = t.ai.fileContextLabel.replace("{name}", file.name);
         fileContextEntries.push(`--- ${fileHeader} ---\n${content}`);
       } catch (e) {
-        console.error(`Failed to read file ${file.path}:`, e);
+        reportOperationError({
+          source: "useChatSend.processMessageWithFiles",
+          action: "Read referenced file for chat",
+          error: e,
+          level: "warning",
+          context: { path: file.path, name: file.name },
+        });
       }
     }
   }

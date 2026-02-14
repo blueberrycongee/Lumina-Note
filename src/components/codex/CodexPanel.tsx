@@ -6,6 +6,7 @@ import { Loader2, Download, RefreshCw, ExternalLink, Code2 } from "lucide-react"
 import { CodexEmbeddedWebview } from "@/components/codex/CodexEmbeddedWebview";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { reportOperationError } from "@/lib/reportError";
 
 type HostInfo = {
   origin: string;
@@ -60,6 +61,17 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   const [error, setError] = useState<string | null>(null);
   const token = useMemo(() => crypto.randomUUID(), []);
 
+  const reportCodexPanelError = (action: string, rawError: unknown, context?: Record<string, unknown>) => {
+    const message = rawError instanceof Error ? rawError.message : String(rawError);
+    setError(message);
+    reportOperationError({
+      source: "CodexPanel",
+      action,
+      error: rawError,
+      context,
+    });
+  };
+
   const viewType = "chatgpt.sidebarView";
   const themeParam = isDarkMode ? "dark" : "light";
   const viewUrl = host
@@ -78,7 +90,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
       const s = await invoke<ExtensionStatus>("codex_extension_install_latest");
       setStatus(s);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      reportCodexPanelError("Install latest Codex extension", e);
     } finally {
       setBusy(false);
     }
@@ -100,7 +112,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
       });
       setStatus(s);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      reportCodexPanelError("Install Codex extension from VSIX", e, { vsixPath: selected });
     } finally {
       setBusy(false);
     }
@@ -119,7 +131,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   };
 
   useEffect(() => {
-    refresh().catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    refresh().catch((e) => reportCodexPanelError("Load Codex extension status", e));
   }, []);
 
   useEffect(() => {
@@ -129,7 +141,9 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   }, [visible]);
 
   useEffect(() => {
-    startHostIfReady(status).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    startHostIfReady(status).catch((e) =>
+      reportCodexPanelError("Start Codex host", e, { visible, workspacePath }),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, workspacePath, status?.installed, status?.extensionPath]);
 
@@ -138,7 +152,9 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
     if (!status || status.installed) return;
     if (autoInstallAttempted) return;
     setAutoInstallAttempted(true);
-    installLatest().catch(() => {});
+    installLatest().catch((error) => {
+      reportCodexPanelError("Auto-install Codex extension", error, { workspacePath });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, workspacePath, status?.installed, busy, autoInstallAttempted]);
 
@@ -167,7 +183,17 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
       });
     };
 
-    const id = window.setTimeout(() => run().catch(() => {}), 250);
+    const id = window.setTimeout(() => {
+      run().catch((error) => {
+        reportOperationError({
+          source: "CodexPanel",
+          action: "Sync current document to Codex host",
+          error,
+          level: "warning",
+          context: { hostOrigin: host.origin, currentFile },
+        });
+      });
+    }, 250);
     return () => {
       controller.abort();
       window.clearTimeout(id);
@@ -214,7 +240,11 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
             </button>
           )}
           <button
-            onClick={() => refresh().catch(() => {})}
+            onClick={() => {
+              refresh().catch((error) => {
+                reportCodexPanelError("Refresh Codex extension status", error);
+              });
+            }}
             disabled={busy}
             className="h-8 px-2 rounded-md border border-border bg-muted/40 hover:bg-muted/70 text-xs flex items-center gap-1 disabled:opacity-50"
             title="Refresh"

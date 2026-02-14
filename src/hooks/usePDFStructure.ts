@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import type { PDFStructure, PDFElement, ParseStatus, ParseBackend } from "@/types/pdf";
 import { parsePDF } from "@/services/pdf";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 /**
  * PDF 结构解析 Hook
@@ -62,7 +63,11 @@ export function usePDFStructure() {
         setParseStatus('error');
       }
     } catch (err) {
-      console.error('Failed to parse PDF structure:', err);
+      reportOperationError({
+        source: "usePDFStructure.parseStructure",
+        action: "Parse PDF structure",
+        error: err,
+      });
       const t = getCurrentTranslations();
       setParseError(err instanceof Error ? err.message : t.pdfViewer.parseFailed);
       setParseStatus('error');

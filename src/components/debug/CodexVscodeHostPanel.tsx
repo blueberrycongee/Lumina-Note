@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useEffect, useMemo, useState } from "react";
 import { CodexEmbeddedWebview } from "./CodexEmbeddedWebview";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 type HostInfo = {
   origin: string;
@@ -37,6 +38,16 @@ export function CodexVscodeHostPanel({ onClose }: Props) {
   const [health, setHealth] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const token = useMemo(() => crypto.randomUUID(), []);
+
+  const reportHostPanelError = (action: string, rawError: unknown) => {
+    const message = rawError instanceof Error ? rawError.message : String(rawError);
+    setError(message);
+    reportOperationError({
+      source: "CodexVscodeHostPanel",
+      action,
+      error: rawError,
+    });
+  };
 
   const viewUrl = host
     ? `${host.origin}/view/${encodeURIComponent(viewType)}?token=${encodeURIComponent(token)}`
@@ -101,7 +112,14 @@ export function CodexVscodeHostPanel({ onClose }: Props) {
 
   useEffect(() => {
     return () => {
-      invoke("codex_vscode_host_stop").catch(() => {});
+      void invoke("codex_vscode_host_stop").catch((error) => {
+        reportOperationError({
+          source: "CodexVscodeHostPanel",
+          action: "Stop Codex VSCode host on unmount",
+          error,
+          level: "warning",
+        });
+      });
     };
   }, []);
 
@@ -198,7 +216,9 @@ export function CodexVscodeHostPanel({ onClose }: Props) {
                 {!host ? (
                   <button
                     className="h-10 px-4 rounded-lg bg-slate-100 text-slate-950 hover:bg-white transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => start().catch((e) => setError(e instanceof Error ? e.message : String(e)))}
+                    onClick={() =>
+                      start().catch((e) => reportHostPanelError("Start Codex VSCode host", e))
+                    }
                     disabled={!extensionPath.trim()}
                   >
                     Start
@@ -206,7 +226,9 @@ export function CodexVscodeHostPanel({ onClose }: Props) {
                 ) : (
                   <button
                     className="h-10 px-4 rounded-lg bg-rose-500/15 text-rose-200 border border-rose-400/20 hover:bg-rose-500/20 transition-colors text-sm font-medium"
-                    onClick={() => stop().catch((e) => setError(e instanceof Error ? e.message : String(e)))}
+                    onClick={() =>
+                      stop().catch((e) => reportHostPanelError("Stop Codex VSCode host", e))
+                    }
                   >
                     Stop
                   </button>

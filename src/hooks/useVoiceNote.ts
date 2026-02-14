@@ -4,6 +4,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { callLLM, type Message } from "@/services/llm";
+import { reportOperationError } from "@/lib/reportError";
 
 const isMacSpeechBlockedInDev = () => {
   if (!import.meta.env.DEV) return false;
@@ -36,7 +37,7 @@ export function useVoiceNote() {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
-  }, [t.speech.permissionDenied]);
+  }, []);
 
   // 重置静音计时器（30秒无声音自动停止，比普通输入长）
   const resetSilenceTimer = useCallback(() => {
@@ -97,7 +98,12 @@ export function useVoiceNote() {
         try {
           recognition.start();
         } catch (e) {
-          console.error("Failed to restart recognition", e);
+          reportOperationError({
+            source: "useVoiceNote.recognition.onend",
+            action: "Restart speech recognition",
+            error: e,
+            level: "warning",
+          });
           setIsRecording(false);
           setStatus("idle");
         }
@@ -181,7 +187,12 @@ export function useVoiceNote() {
       const response = await callLLM(messages, { temperature: 0.3 });
       return response.content || "";
     } catch (error) {
-      console.error("Failed to generate summary:", error);
+      reportOperationError({
+        source: "useVoiceNote.generateSummary",
+        action: "Generate voice note summary",
+        error,
+        level: "warning",
+      });
       return "";
     }
   }, [config, t]);
@@ -194,11 +205,16 @@ export function useVoiceNote() {
       stream.getTracks().forEach((track) => track.stop());
       return true;
     } catch (err) {
-      console.error("Microphone permission denied", err);
+      reportOperationError({
+        source: "useVoiceNote.ensureMicPermission",
+        action: "Request microphone permission",
+        error: err,
+        level: "warning",
+      });
       alert(t.speech.permissionDenied);
       return false;
     }
-  }, []);
+  }, [t.speech.permissionDenied]);
 
   const startRecording = useCallback(async () => {
     const recognition = recognitionRef.current;
@@ -233,7 +249,11 @@ export function useVoiceNote() {
       setIsRecording(true);
       resetSilenceTimer();
     } catch (e) {
-      console.error("Failed to start speech recognition", e);
+      reportOperationError({
+        source: "useVoiceNote.startRecording",
+        action: "Start speech recognition",
+        error: e,
+      });
       setIsRecording(false);
       setStatus("idle");
     }
@@ -302,8 +322,12 @@ export function useVoiceNote() {
       
       return filePath;
     } catch (error) {
-      console.error("Failed to save voice note:", error);
-      alert(t.file.voiceNoteSaveFailed);
+      reportOperationError({
+        source: "useVoiceNote.stopRecording",
+        action: "Save voice note",
+        error,
+        userMessage: t.file.voiceNoteSaveFailed,
+      });
       setStatus("idle");
       setTranscriptChunks([]);
       return null;

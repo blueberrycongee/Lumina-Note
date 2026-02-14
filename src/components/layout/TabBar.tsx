@@ -3,6 +3,7 @@ import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { X, FileText, Network, Video, Database, Globe, Brain, Pin, User, Puzzle, Shapes } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 
 interface TabItemProps {
@@ -141,17 +142,40 @@ export function TabBar() {
       const tab = tabs[index];
       // 如果关闭的是视频标签页，同时关闭 WebView
       if (tab?.type === "video-note") {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-          invoke('close_embedded_webview').catch(() => {});
+        void import('@tauri-apps/api/core').then(({ invoke }) => {
+          void invoke('close_embedded_webview').catch((error) => {
+            reportOperationError({
+              source: "TabBar.handleClose",
+              action: "Close embedded video webview",
+              error,
+              level: "warning",
+              context: { tabId: tab.id },
+            });
+          });
         });
       }
       // 如果关闭的是网页标签页，同时关闭浏览器 WebView
       if (tab?.type === "webpage") {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-          invoke('close_browser_webview', { tabId: tab.id }).catch(() => {});
+        void import('@tauri-apps/api/core').then(({ invoke }) => {
+          void invoke('close_browser_webview', { tabId: tab.id }).catch((error) => {
+            reportOperationError({
+              source: "TabBar.handleClose",
+              action: "Close browser webview for tab",
+              error,
+              level: "warning",
+              context: { tabId: tab.id },
+            });
+          });
         });
       }
-      closeTab(index);
+      void closeTab(index).catch((error) => {
+        reportOperationError({
+          source: "TabBar.handleClose",
+          action: "Close tab",
+          error,
+          context: { index, tabId: tab?.id },
+        });
+      });
     },
     [closeTab, tabs]
   );

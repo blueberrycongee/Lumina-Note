@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
+import { reportOperationError } from '@/lib/reportError';
 
 // 标签页状态
 export type TabState = 'active' | 'background' | 'frozen' | 'discarded';
@@ -177,7 +178,13 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       
       console.log('[BrowserStore] 冻结标签页:', tabId);
     } catch (err) {
-      console.error('[BrowserStore] 冻结失败:', err);
+      reportOperationError({
+        source: "BrowserStore.freezeTab",
+        action: "Freeze browser tab",
+        error: err,
+        level: "warning",
+        context: { tabId },
+      });
     }
   },
   
@@ -203,7 +210,13 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       
       console.log('[BrowserStore] 解冻标签页:', tabId);
     } catch (err) {
-      console.error('[BrowserStore] 解冻失败:', err);
+      reportOperationError({
+        source: "BrowserStore.unfreezeTab",
+        action: "Unfreeze browser tab",
+        error: err,
+        level: "warning",
+        context: { tabId },
+      });
     }
   },
   
@@ -230,7 +243,13 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
       
       console.log('[BrowserStore] 丢弃标签页:', tabId, '保留 URL:', instance.url);
     } catch (err) {
-      console.error('[BrowserStore] 丢弃失败:', err);
+      reportOperationError({
+        source: "BrowserStore.discardTab",
+        action: "Discard browser tab webview",
+        error: err,
+        level: "warning",
+        context: { tabId, url: instance.url },
+      });
     }
   },
   
@@ -310,7 +329,14 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
     if (lifecycleTimer) return;
     
     lifecycleTimer = setInterval(() => {
-      get().checkAndManageTabs();
+      void get().checkAndManageTabs().catch((error) => {
+        reportOperationError({
+          source: "BrowserStore.startLifecycleManager",
+          action: "Run browser tab lifecycle check",
+          error,
+          level: "warning",
+        });
+      });
     }, CONFIG.CHECK_INTERVAL);
     
     console.log('[BrowserStore] 生命周期管理器已启动');
@@ -337,7 +363,13 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
         try {
           await invoke('set_browser_webview_visible', { tabId, visible: false });
         } catch (err) {
-          console.error('[BrowserStore] 隐藏 WebView 失败:', tabId, err);
+          reportOperationError({
+            source: "BrowserStore.hideAllWebViews",
+            action: "Hide browser webview",
+            error: err,
+            level: "warning",
+            context: { tabId },
+          });
         }
       }
     }
@@ -359,8 +391,13 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
         try {
           await invoke('set_browser_webview_visible', { tabId: activeTabId, visible: true });
         } catch (err) {
-          // WebView 可能不存在，忽略错误
-          console.log('[BrowserStore] 显示 WebView 失败（可能不存在）:', activeTabId);
+          reportOperationError({
+            source: "BrowserStore.showAllWebViews",
+            action: "Restore active browser webview visibility",
+            error: err,
+            level: "warning",
+            context: { tabId: activeTabId },
+          });
         }
       }
     }

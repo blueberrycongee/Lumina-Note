@@ -24,6 +24,7 @@ import { useFileStore } from '@/stores/useFileStore';
 import { useBrowserStore } from '@/stores/useBrowserStore';
 import { useUIStore } from '@/stores/useUIStore';
 import { cn } from '@/lib/utils';
+import { reportOperationError } from '@/lib/reportError';
 
 interface BrowserViewProps {
   tabId: string;
@@ -85,7 +86,13 @@ export function BrowserView({
         await invoke('set_browser_webview_visible', { tabId, visible: isActive });
         console.log('[Browser] WebView visibility updated:', tabId, isActive);
       } catch (err) {
-        console.error('[Browser] Failed to update WebView visibility:', err);
+        reportOperationError({
+          source: "BrowserView.updateVisibility",
+          action: "Update browser webview visibility",
+          error: err,
+          level: "warning",
+          context: { tabId, isActive },
+        });
       }
     };
     
@@ -96,8 +103,14 @@ export function BrowserView({
   useEffect(() => {
     return () => {
       // 组件卸载时隐藏当前 WebView
-      invoke('set_browser_webview_visible', { tabId, visible: false }).catch(err => {
-        console.error('[Browser] Failed to hide WebView on unmount:', err);
+      void invoke('set_browser_webview_visible', { tabId, visible: false }).catch((err) => {
+        reportOperationError({
+          source: "BrowserView.unmount",
+          action: "Hide browser webview on unmount",
+          error: err,
+          level: "warning",
+          context: { tabId },
+        });
       });
     };
   }, [tabId]);
@@ -116,7 +129,13 @@ export function BrowserView({
           await invoke('set_browser_webview_visible', { tabId: prevTabId, visible: false });
           console.log('[Browser] Hiding old WebView:', prevTabId);
         } catch (err) {
-          console.error('[Browser] Failed to hide old WebView:', err);
+          reportOperationError({
+            source: "BrowserView.handleTabSwitch",
+            action: "Hide previous browser webview",
+            error: err,
+            level: "warning",
+            context: { previousTabId: prevTabId },
+          });
         }
         
         // 重置组件状态，准备显示新标签页
@@ -146,7 +165,13 @@ export function BrowserView({
             console.log('[Browser] Showing existing WebView:', tabId);
           }
         } catch (err) {
-          console.error('[Browser] Failed to check WebView:', err);
+          reportOperationError({
+            source: "BrowserView.handleTabSwitch",
+            action: "Check browser webview availability",
+            error: err,
+            level: "warning",
+            context: { tabId },
+          });
           setWebviewCreated(false);
         }
       }
@@ -237,7 +262,12 @@ export function BrowserView({
         // URL 解析失败
       }
     } catch (err) {
-      console.error('[Browser] WebView creation failed:', err);
+      reportOperationError({
+        source: "BrowserView.createWebview",
+        action: "Create browser webview",
+        error: err,
+        context: { tabId, url },
+      });
       setError(String(err));
     } finally {
       setIsLoading(false);
@@ -260,7 +290,13 @@ export function BrowserView({
         height: rect.height,
       });
     } catch (err) {
-      console.error('[Browser] Failed to update WebView position:', err);
+      reportOperationError({
+        source: "BrowserView.updateWebviewBounds",
+        action: "Update browser webview bounds",
+        error: err,
+        level: "warning",
+        context: { tabId, width: rect.width, height: rect.height },
+      });
     }
   }, [tabId, webviewCreated]);
 
@@ -304,7 +340,12 @@ export function BrowserView({
         // URL 解析失败
       }
     } catch (err) {
-      console.error('[Browser] Navigation failed:', err);
+      reportOperationError({
+        source: "BrowserView.handleNavigate",
+        action: "Navigate browser webview",
+        error: err,
+        context: { tabId, url },
+      });
       setError(String(err));
     } finally {
       setIsLoading(false);
@@ -317,7 +358,13 @@ export function BrowserView({
     try {
       await invoke('browser_webview_go_back', { tabId });
     } catch (err) {
-      console.error('[Browser] Back failed:', err);
+      reportOperationError({
+        source: "BrowserView.handleBack",
+        action: "Navigate back in browser webview",
+        error: err,
+        level: "warning",
+        context: { tabId },
+      });
     }
   }, [tabId, webviewCreated]);
   
@@ -327,7 +374,13 @@ export function BrowserView({
     try {
       await invoke('browser_webview_go_forward', { tabId });
     } catch (err) {
-      console.error('[Browser] Forward failed:', err);
+      reportOperationError({
+        source: "BrowserView.handleForward",
+        action: "Navigate forward in browser webview",
+        error: err,
+        level: "warning",
+        context: { tabId },
+      });
     }
   }, [tabId, webviewCreated]);
   
@@ -337,7 +390,13 @@ export function BrowserView({
       setIsLoading(true);
       await invoke('browser_webview_reload', { tabId });
     } catch (err) {
-      console.error('[Browser] Refresh failed:', err);
+      reportOperationError({
+        source: "BrowserView.handleRefresh",
+        action: "Refresh browser webview",
+        error: err,
+        level: "warning",
+        context: { tabId },
+      });
     } finally {
       setTimeout(() => setIsLoading(false), 500);
     }
@@ -352,18 +411,36 @@ export function BrowserView({
   useEffect(() => {
     if (initialUrl && !webviewCreated && isActive) {
       // 检查是否已经有 WebView 存在
-      invoke<boolean>('browser_webview_exists', { tabId }).then(exists => {
-        if (exists) {
-          // WebView 已存在，只需要显示
-          setWebviewCreated(true);
-          setCurrentUrl(initialUrl);
-          invoke('set_browser_webview_visible', { tabId, visible: true });
-          updateWebviewBounds();
-        } else {
-          // 创建新 WebView
-          createWebview(initialUrl);
-        }
-      });
+      void invoke<boolean>('browser_webview_exists', { tabId })
+        .then((exists) => {
+          if (exists) {
+            // WebView 已存在，只需要显示
+            setWebviewCreated(true);
+            setCurrentUrl(initialUrl);
+            void invoke('set_browser_webview_visible', { tabId, visible: true }).catch((err) => {
+              reportOperationError({
+                source: "BrowserView.initialMount",
+                action: "Show existing browser webview",
+                error: err,
+                level: "warning",
+                context: { tabId },
+              });
+            });
+            void updateWebviewBounds();
+          } else {
+            // 创建新 WebView
+            void createWebview(initialUrl);
+          }
+        })
+        .catch((error) => {
+          reportOperationError({
+            source: "BrowserView.initialMount",
+            action: "Check browser webview existence",
+            error,
+            level: "warning",
+            context: { tabId },
+          });
+        });
     }
   }, [tabId, initialUrl, webviewCreated, isActive, createWebview, updateWebviewBounds]);
   

@@ -8,6 +8,7 @@ import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { parseFrontmatter } from "@/services/markdown/frontmatter";
+import { reportOperationError } from "@/lib/reportError";
 
 // 历史记录条目
 interface HistoryEntry {
@@ -84,7 +85,13 @@ async function refreshDatabaseRowsForPath(path: string): Promise<void> {
     const { useDatabaseStore } = await import("./useDatabaseStore");
     await useDatabaseStore.getState().refreshRows(String(dbId));
   } catch (error) {
-    console.warn("[FileStore] Failed to refresh database rows for path:", path, error);
+    reportOperationError({
+      source: "FileStore.refreshDatabaseRowsForPath",
+      action: "Refresh linked database rows",
+      error,
+      level: "warning",
+      context: { path },
+    });
   }
 }
 
@@ -96,7 +103,12 @@ async function refreshAllLoadedDatabases(): Promise<void> {
       await useDatabaseStore.getState().refreshRows(dbId);
     }
   } catch (error) {
-    console.warn("[FileStore] Failed to refresh loaded databases:", error);
+    reportOperationError({
+      source: "FileStore.refreshAllLoadedDatabases",
+      action: "Refresh loaded databases",
+      error,
+      level: "warning",
+    });
   }
 }
 
@@ -291,30 +303,59 @@ export const useFileStore = create<FileState>()(
         try {
           await invoke("fs_set_allowed_roots", { roots: workspacePaths });
         } catch (error) {
-          console.warn("Failed to sync runtime fs roots:", error);
+          reportOperationError({
+            source: "FileStore.setVaultPath",
+            action: "Sync workspace access roots",
+            error,
+            level: "warning",
+            context: { path },
+          });
         }
         set({ vaultPath: path, isLoadingTree: true });
         try {
           try {
             await createDir(`${path}/.lumina`);
           } catch (error) {
-            console.warn("Failed to ensure workspace skills dir:", error);
+            reportOperationError({
+              source: "FileStore.setVaultPath",
+              action: "Create .lumina directory",
+              error,
+              level: "warning",
+              context: { path },
+            });
           }
           try {
             await createDir(`${path}/.lumina/skills`);
           } catch (error) {
-            console.warn("Failed to ensure workspace skills dir:", error);
+            reportOperationError({
+              source: "FileStore.setVaultPath",
+              action: "Create workspace skills directory",
+              error,
+              level: "warning",
+              context: { path },
+            });
           }
           try {
             await createDir(`${path}/.lumina/plugins`);
           } catch (error) {
-            console.warn("Failed to ensure workspace plugins dir:", error);
+            reportOperationError({
+              source: "FileStore.setVaultPath",
+              action: "Create workspace plugins directory",
+              error,
+              level: "warning",
+              context: { path },
+            });
           }
           const tree = await listDirectory(path);
           set({ fileTree: tree, isLoadingTree: false });
           await get().syncMobileWorkspace({ path, force: true });
         } catch (error) {
-          console.error("Failed to load vault:", error);
+          reportOperationError({
+            source: "FileStore.setVaultPath",
+            action: "Open workspace",
+            error,
+            context: { path },
+          });
           set({ isLoadingTree: false });
         }
       },
@@ -331,7 +372,12 @@ export const useFileStore = create<FileState>()(
           useFavoriteStore.getState().pruneMissing(tree);
           void get().syncMobileWorkspace();
         } catch (error) {
-          console.error("Failed to refresh file tree:", error);
+          reportOperationError({
+            source: "FileStore.refreshFileTree",
+            action: "Refresh file tree",
+            error,
+            context: { vaultPath },
+          });
           set({ isLoadingTree: false });
         }
       },
@@ -379,7 +425,12 @@ export const useFileStore = create<FileState>()(
                 });
               }
             } catch (error) {
-              console.error("Failed to reload file:", error);
+              reportOperationError({
+                source: "FileStore.openFile",
+                action: "Reload file",
+                error,
+                context: { path },
+              });
               // 即使重载失败也切换到该标签页
               get().switchTab(existingTabIndex);
             }
@@ -466,7 +517,12 @@ export const useFileStore = create<FileState>()(
           });
           useFavoriteStore.getState().markOpened(path);
         } catch (error) {
-          console.error("Failed to open file:", error);
+          reportOperationError({
+            source: "FileStore.openFile",
+            action: "Open file",
+            error,
+            context: { path },
+          });
           set({ isLoadingFile: false });
         }
       },
@@ -547,7 +603,13 @@ export const useFileStore = create<FileState>()(
             await invoke('close_browser_webview', { tabId: tabToClose.id });
             console.log('[FileStore] 关闭 WebView:', tabToClose.id);
           } catch (err) {
-            console.error('[FileStore] 关闭 WebView 失败:', err);
+            reportOperationError({
+              source: "FileStore.closeTab",
+              action: "Close browser webview",
+              error: err,
+              level: "warning",
+              context: { tabId: tabToClose.id },
+            });
           }
         }
 
@@ -1255,7 +1317,12 @@ export const useFileStore = create<FileState>()(
             isDirty: false,
           });
         } catch (error) {
-          console.error('openVideoNoteFromContent failed:', error);
+          reportOperationError({
+            source: "FileStore.openVideoNoteFromContent",
+            action: "Open video note from content",
+            error,
+            level: "warning",
+          });
           // fallback
           get().openVideoNoteTab('', title);
         }
@@ -1773,7 +1840,12 @@ export const useFileStore = create<FileState>()(
               counter++;
               finalName = `${baseName} ${counter}`;
               if (counter > 100) {
-                console.error("Too many untitled files");
+                reportOperationError({
+                  source: "FileStore.createNewFile",
+                  action: "Generate untitled file name",
+                  error: "Too many untitled files",
+                  context: { vaultPath },
+                });
                 return;
               }
             }
@@ -1791,7 +1863,12 @@ export const useFileStore = create<FileState>()(
           await refreshFileTree();
           await openFile(newPath);
         } catch (error) {
-          console.error("Create file failed:", error);
+          reportOperationError({
+            source: "FileStore.createNewFile",
+            action: "Create file",
+            error,
+            context: { newPath },
+          });
         }
       },
 
@@ -1929,7 +2006,12 @@ export const useFileStore = create<FileState>()(
             get().markTypesettingTabDirty(activeTab.path, false);
             set({ isSaving: false });
           } catch (error) {
-            console.error("Failed to save docx:", error);
+            reportOperationError({
+              source: "FileStore.save",
+              action: "Save DOCX document",
+              error,
+              context: { path: activeTab.path },
+            });
             set({ isSaving: false });
           }
           return;
@@ -1942,7 +2024,12 @@ export const useFileStore = create<FileState>()(
           await saveFile(currentFile, currentContent);
           set({ isDirty: false, isSaving: false, lastSavedContent: currentContent });
         } catch (error) {
-          console.error("Failed to save file:", error);
+          reportOperationError({
+            source: "FileStore.save",
+            action: "Save file",
+            error,
+            context: { path: currentFile },
+          });
           set({ isSaving: false });
         }
       },
@@ -2046,7 +2133,13 @@ export const useFileStore = create<FileState>()(
           await invoke("mobile_set_workspace", { workspacePath: path });
           lastMobileWorkspaceSync = { path, at: now };
         } catch (error) {
-          console.warn("Failed to sync mobile workspace:", error);
+          reportOperationError({
+            source: "FileStore.syncMobileWorkspace",
+            action: "Sync mobile workspace",
+            error,
+            level: "warning",
+            context: { path },
+          });
           get().setMobileWorkspaceSync({
             status: "error",
             path,
@@ -2096,7 +2189,13 @@ export const useFileStore = create<FileState>()(
             set({ tabs: updatedTabs });
           }
         } catch (error) {
-          console.error(`Failed to reload file ${path}:`, error);
+          reportOperationError({
+            source: "FileStore.reloadFileIfOpen",
+            action: "Reload open file",
+            error,
+            level: "warning",
+            context: { path },
+          });
         }
       },
 
@@ -2143,7 +2242,12 @@ export const useFileStore = create<FileState>()(
           await refreshFileTree();
           await refreshDatabaseRowsForPath(newPath);
         } catch (error) {
-          console.error("Failed to move file:", error);
+          reportOperationError({
+            source: "FileStore.moveFileToFolder",
+            action: "Move file",
+            error,
+            context: { sourcePath, targetFolder },
+          });
           throw error;
         }
       },
@@ -2206,7 +2310,12 @@ export const useFileStore = create<FileState>()(
           await refreshFileTree();
           await refreshAllLoadedDatabases();
         } catch (error) {
-          console.error("Failed to move folder:", error);
+          reportOperationError({
+            source: "FileStore.moveFolderToFolder",
+            action: "Move folder",
+            error,
+            context: { sourcePath, targetFolder },
+          });
           throw error;
         }
       },
@@ -2222,12 +2331,24 @@ export const useFileStore = create<FileState>()(
         try {
           await state.refreshFileTree();
         } catch (error) {
-          console.warn("Failed to refresh file tree after rehydrate:", error);
+          reportOperationError({
+            source: "FileStore.rehydrate",
+            action: "Refresh file tree after restore",
+            error,
+            level: "warning",
+            context: { vaultPath: state.vaultPath },
+          });
         }
         try {
           await state.syncMobileWorkspace({ path: state.vaultPath, force: true });
         } catch (error) {
-          console.warn("Failed to sync mobile workspace after rehydrate:", error);
+          reportOperationError({
+            source: "FileStore.rehydrate",
+            action: "Sync mobile workspace after restore",
+            error,
+            level: "warning",
+            context: { vaultPath: state.vaultPath },
+          });
         }
       },
     }

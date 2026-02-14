@@ -24,6 +24,7 @@ import {
 } from "@/stores/useDeepResearchStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 // ============ 对话框组件 ============
 
@@ -88,7 +89,11 @@ function DeepResearchDialog({ isOpen, onClose, onShowHistory }: DeepResearchDial
       });
       onClose();
     } catch (error) {
-      console.error("Failed to start research:", error);
+      reportOperationError({
+        source: "DeepResearchTrigger.handleSubmit",
+        action: "Start deep research from dialog",
+        error,
+      });
     } finally {
       setIsSubmitting(false);
     }

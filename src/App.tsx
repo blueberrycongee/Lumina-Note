@@ -51,6 +51,8 @@ import { PluginPanelDock } from "@/components/plugins/PluginPanelDock";
 import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
 import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHost";
 import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
+import { ErrorNotifications } from "@/components/layout/ErrorNotifications";
+import { reportOperationError, reportUnhandledError } from "@/lib/reportError";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -111,8 +113,13 @@ function DiffViewWrapper() {
         diffResolver(true);
       }
     } catch (error) {
-      console.error("Failed to apply edit:", error);
-      alert(`❌ ${t.ai.applyEditFailed}: ${error}`);
+      reportOperationError({
+        source: "App.DiffViewWrapper.handleAccept",
+        action: "Apply AI edit diff",
+        error,
+        userMessage: t.ai.applyEditFailed,
+        context: { filePath: pendingDiff.filePath },
+      });
     }
   }, [pendingDiff, clearPendingEdits, openFile, diffResolver, t]);
 
@@ -359,7 +366,13 @@ function App() {
           }, 500);
         });
       } catch (error) {
-        console.warn("[FileWatcher] Failed to start:", error);
+        reportOperationError({
+          source: "App.setupWatcher",
+          action: "Start filesystem watcher",
+          error,
+          level: "warning",
+          context: { vaultPath },
+        });
       }
     };
 
@@ -388,7 +401,12 @@ function App() {
           useFileStore.getState().openWebpageTab(payload.url);
         });
       } catch (error) {
-        console.warn("[Browser] Failed to setup new-tab listener:", error);
+        reportOperationError({
+          source: "App.setupBrowserNewTabListener",
+          action: "Register browser new-tab listener",
+          error,
+          level: "warning",
+        });
       }
     };
 
@@ -472,6 +490,26 @@ function App() {
     };
   }, [diagnosticsActive]);
 
+  // Always surface unhandled runtime errors to users so they can report actionable issues.
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => {
+      reportUnhandledError("window.error", event.error ?? event.message, {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+      });
+    };
+    const onUnhandled = (event: PromiseRejectionEvent) => {
+      reportUnhandledError("window.unhandledrejection", event.reason);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onUnhandled);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onUnhandled);
+    };
+  }, []);
+
   // Build note index when file tree changes
   useEffect(() => {
     if (fileTree.length > 0) {
@@ -483,7 +521,13 @@ function App() {
   useEffect(() => {
     if (vaultPath && ragConfig.enabled && ragConfig.embeddingApiKey) {
       initializeRAG(vaultPath).catch((error) => {
-        console.warn("[RAG] Failed to initialize:", error);
+        reportOperationError({
+          source: "App.initializeRAG",
+          action: "Initialize RAG index",
+          error,
+          level: "warning",
+          context: { vaultPath },
+        });
       });
     }
   }, [vaultPath, ragConfig.enabled, ragConfig.embeddingApiKey, initializeRAG]);
@@ -1037,6 +1081,7 @@ function App() {
       <PluginStatusBar />
       <PluginShellSlotHost slotId="app-bottom" />
       <PluginContextMenuHost />
+      <ErrorNotifications />
       <MobileWorkspaceToast />
       <PluginPanelDock />
     </div>

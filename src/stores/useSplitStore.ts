@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { readFile, saveFile } from "@/lib/tauri";
 import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { reportOperationError } from "@/lib/reportError";
 
 // 分栏文件类型
 export type SplitFileType = 'markdown' | 'pdf';
@@ -61,7 +62,12 @@ export const useSplitStore = create<SplitState>((set, get) => ({
       });
       useFavoriteStore.getState().markOpened(path);
     } catch (error) {
-      console.error("Failed to open secondary file:", error);
+      reportOperationError({
+        source: "SplitStore.openSecondaryFile",
+        action: "Open secondary file",
+        error,
+        context: { path },
+      });
       set({ isLoadingSecondary: false });
     }
   },
@@ -98,7 +104,12 @@ export const useSplitStore = create<SplitState>((set, get) => ({
         useDatabaseStore.getState().refreshRows(frontmatter.db as string);
       }
     } catch (error) {
-      console.error("Failed to save secondary file:", error);
+      reportOperationError({
+        source: "SplitStore.saveSecondary",
+        action: "Save secondary file",
+        error,
+        context: { path: secondaryFile },
+      });
     }
   },
 
@@ -131,7 +142,13 @@ export const useSplitStore = create<SplitState>((set, get) => ({
         secondaryIsDirty: false,
       });
     } catch (error) {
-      console.error(`Failed to reload secondary file ${path}:`, error);
+      reportOperationError({
+        source: "SplitStore.reloadSecondaryIfOpen",
+        action: "Reload secondary file",
+        error,
+        level: "warning",
+        context: { path },
+      });
     }
   },
 }));

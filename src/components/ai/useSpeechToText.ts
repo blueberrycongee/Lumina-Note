@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { reportOperationError } from "@/lib/reportError";
 
 /**
  * 简单的语音转文字 Hook，基于 Web Speech API。
@@ -61,7 +62,11 @@ export function useSpeechToText(appendText: (text: string) => void) {
         recognition.start();
         setIsRecording(true);
       } catch (e) {
-        console.error("Failed to start speech recognition", e);
+        reportOperationError({
+          source: "components.ai.useSpeechToText.toggleRecording",
+          action: "Start speech recognition",
+          error: e,
+        });
         setIsRecording(false);
       }
     }

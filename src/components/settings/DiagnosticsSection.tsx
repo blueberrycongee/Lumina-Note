@@ -3,6 +3,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { invoke } from "@tauri-apps/api/core";
 import { useUIStore } from "@/stores/useUIStore";
 import { getDebugLogPath } from "@/lib/debugLogger";
+import { reportOperationError } from "@/lib/reportError";
 
 export function DiagnosticsSection() {
   const diagnosticsEnabled = useUIStore((s) => s.diagnosticsEnabled);
@@ -14,7 +15,16 @@ export function DiagnosticsSection() {
 
   useEffect(() => {
     if (!diagnosticsEnabled) return;
-    getDebugLogPath().then(setLogPath).catch(() => {});
+    getDebugLogPath()
+      .then(setLogPath)
+      .catch((error) => {
+        reportOperationError({
+          source: "DiagnosticsSection",
+          action: "Read diagnostics log path",
+          error,
+          level: "warning",
+        });
+      });
   }, [diagnosticsEnabled]);
 
   const exportDiagnostics = async () => {
@@ -27,10 +37,12 @@ export function DiagnosticsSection() {
       });
       if (!destination || typeof destination !== "string") return;
       await invoke("export_diagnostics", { destination });
-      alert("Diagnostics exported.");
     } catch (err) {
-      console.error("Failed to export diagnostics:", err);
-      alert(`Export failed: ${err}`);
+      reportOperationError({
+        source: "DiagnosticsSection",
+        action: "Export diagnostics",
+        error: err,
+      });
     } finally {
       setBusy(false);
     }

@@ -25,6 +25,7 @@ import {
 } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
+import { reportOperationError } from "@/lib/reportError";
 import type { AttachedImage, QuoteReference } from "@/types/chat";
 // 流式状态现在完全由 Zustand 管理，不再需要额外的 streamingStore
 
@@ -289,7 +290,13 @@ export const useAIStore = create<AIState>()(
             ],
           }));
         } catch (error) {
-          console.error("Failed to read file:", error);
+          reportOperationError({
+            source: "AIStore.addFileReference",
+            action: "Read referenced file",
+            error,
+            level: "warning",
+            context: { path, name },
+          });
         }
       },
       removeFileReference: (path) => {
@@ -512,6 +519,16 @@ export const useAIStore = create<AIState>()(
             message: error instanceof Error ? error.message : String(error),
             stack: error instanceof Error ? error.stack : undefined,
             config: {
+              provider: config.provider,
+              model: config.model,
+              hasApiKey: !!config.apiKey,
+            },
+          });
+          reportOperationError({
+            source: "AIStore.sendMessage",
+            action: "Send chat message",
+            error,
+            context: {
               provider: config.provider,
               model: config.model,
               hasApiKey: !!config.apiKey,
@@ -768,6 +785,16 @@ export const useAIStore = create<AIState>()(
             }
           }
         } catch (error) {
+          reportOperationError({
+            source: "AIStore.sendMessageStream",
+            action: "Stream chat message",
+            error,
+            context: {
+              provider: runtimeConfig.provider,
+              model: runtimeConfig.model,
+              hasApiKey: !!runtimeConfig.apiKey,
+            },
+          });
           set({
             error: error instanceof Error ? error.message : t.ai.sendFailed,
             isStreaming: false,
@@ -881,7 +908,12 @@ export const useAIStore = create<AIState>()(
               });
             });
           } catch (error) {
-            console.error('Failed to decrypt API key:', error);
+            reportOperationError({
+              source: "AIStore.rehydrate",
+              action: "Decrypt saved API key",
+              error,
+              level: "warning",
+            });
           }
         }
       },

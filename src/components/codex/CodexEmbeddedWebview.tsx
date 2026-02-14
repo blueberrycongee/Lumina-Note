@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createBoundsSnapshot, shouldUpdateBounds, type BoundsSnapshot } from "./bounds";
 import { useBrowserStore } from "@/stores/useBrowserStore";
+import { reportOperationError } from "@/lib/reportError";
 
 type Props = {
   url: string | null;
@@ -27,6 +28,19 @@ export function CodexEmbeddedWebview({
   const [created, setCreated] = useState(false);
   const shouldShow = visible && !globalHidden;
 
+  const reportCodexError = useCallback(
+    (action: string, error: unknown, context?: Record<string, unknown>) => {
+      reportOperationError({
+        source: "CodexEmbeddedWebview",
+        action,
+        error,
+        level: "warning",
+        context,
+      });
+    },
+    [],
+  );
+
   const setNativeVisible = useCallback(
     async (next: boolean) => {
       // Even when `created` is false, the native webview may already exist (e.g. previous mount).
@@ -43,7 +57,9 @@ export function CodexEmbeddedWebview({
     if (rect.width <= 0 || rect.height <= 0) {
       // When the container is collapsed/hidden (e.g. right panel closed), ensure the native
       // webview is also hidden so it doesn't "float" above unrelated UI.
-      setNativeVisible(false).catch(() => {});
+      void setNativeVisible(false).catch((error) => {
+        reportCodexError("Hide codex webview for zero-sized container", error);
+      });
       return false;
     }
     const nextRaw = {
@@ -67,7 +83,9 @@ export function CodexEmbeddedWebview({
 
   const syncLayout = useCallback(async () => {
     if (!shouldShow) {
-      setNativeVisible(false).catch(() => {});
+      void setNativeVisible(false).catch((error) => {
+        reportCodexError("Hide codex webview when panel hidden", error);
+      });
       boundsRetryRef.current.count = 0;
       if (boundsRetryRef.current.timer) {
         window.clearTimeout(boundsRetryRef.current.timer);
@@ -91,10 +109,12 @@ export function CodexEmbeddedWebview({
         window.clearTimeout(boundsRetryRef.current.timer);
       }
       boundsRetryRef.current.timer = window.setTimeout(() => {
-        syncLayout().catch(() => {});
+        void syncLayout().catch((error) => {
+          reportCodexError("Retry codex layout sync", error);
+        });
       }, 50);
     }
-  }, [setNativeVisible, shouldShow]);
+  }, [reportCodexError, setNativeVisible, shouldShow]);
 
   useEffect(() => {
     let canceled = false;
@@ -117,7 +137,9 @@ export function CodexEmbeddedWebview({
           retryCount += 1;
           if (retryTimer) window.clearTimeout(retryTimer);
           retryTimer = window.setTimeout(() => {
-            run().catch(() => {});
+            void run().catch((error) => {
+              reportCodexError("Retry codex webview boot", error);
+            });
           }, 50);
         }
         return;
@@ -148,7 +170,9 @@ export function CodexEmbeddedWebview({
       }
     };
 
-    run().catch(() => {});
+    void run().catch((error) => {
+      reportCodexError("Initialize codex webview", error);
+    });
     return () => {
       canceled = true;
       if (retryTimer) {
@@ -160,17 +184,23 @@ export function CodexEmbeddedWebview({
 
   useEffect(() => {
     if (!shouldShow) {
-      setNativeVisible(false).catch(() => {});
+      void setNativeVisible(false).catch((error) => {
+        reportCodexError("Hide codex webview for inactive state", error);
+      });
       return;
     }
 
     lastBoundsRef.current = null;
-    syncLayout().catch(() => {});
+    void syncLayout().catch((error) => {
+      reportCodexError("Sync codex layout on visibility change", error);
+    });
 
     let attempts = 0;
     const interval = window.setInterval(() => {
       attempts += 1;
-      syncLayout().catch(() => {});
+      void syncLayout().catch((error) => {
+        reportCodexError("Periodic codex layout sync", error);
+      });
       if (attempts >= 8) {
         window.clearInterval(interval);
       }
@@ -180,7 +210,11 @@ export function CodexEmbeddedWebview({
 
   useEffect(() => {
     if (!created) return;
-    const handle = () => syncLayout().catch(() => {});
+    const handle = () => {
+      void syncLayout().catch((error) => {
+        reportCodexError("Sync codex layout on resize/scroll", error);
+      });
+    };
     const observer = new ResizeObserver(handle);
     if (containerRef.current) observer.observe(containerRef.current);
     window.addEventListener("scroll", handle, true);
@@ -204,16 +238,20 @@ export function CodexEmbeddedWebview({
   useEffect(() => {
     if (!closeOnUnmount) return;
     return () => {
-      invoke("close_codex_webview").catch(() => {});
+      void invoke("close_codex_webview").catch((error) => {
+        reportCodexError("Close codex webview on unmount", error);
+      });
     };
-  }, [closeOnUnmount]);
+  }, [closeOnUnmount, reportCodexError]);
 
   useEffect(() => {
     if (closeOnUnmount) return;
     return () => {
-      setNativeVisible(false).catch(() => {});
+      void setNativeVisible(false).catch((error) => {
+        reportCodexError("Hide codex webview on unmount", error);
+      });
     };
-  }, [closeOnUnmount]);
+  }, [closeOnUnmount, reportCodexError, setNativeVisible]);
 
   return (
     <div
