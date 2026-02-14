@@ -11,13 +11,14 @@ import { useState, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore, getCurrentTranslations } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
-import type { MessageAttachment, MessageContent } from "@/services/llm";
+import type { ImageContent, MessageAttachment, MessageContent } from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
 import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { saveFile } from "@/lib/tauri";
-import { getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
+import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
+import { UserMessageBubbleContent } from "./UserMessageBubbleContent";
 import {
   ChevronRight,
   ChevronDown,
@@ -30,8 +31,6 @@ import {
   Copy,
   AlertTriangle,
   RefreshCw,
-  FileText,
-  Quote,
 } from "lucide-react";
 
 // ============ 类型定义 ============
@@ -581,6 +580,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       userIdx: number;
       userContent: string;
       userAttachments: MessageAttachment[];
+      userImages: ImageContent[];
       parts: TimelinePart[];
       roundKey: string;
       hasAIContent: boolean;
@@ -598,9 +598,10 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     userMessageIndices.forEach((userIdx, roundIndex) => {
       const userMsg = messages[userIdx];
       const normalizedUserMessage = getUserMessageDisplay(userMsg.content, userMsg.attachments);
+      const userImages = getImagesFromContent(userMsg.content);
       const displayContent = cleanUserMessage(normalizedUserMessage.text);
 
-      if (!displayContent && normalizedUserMessage.attachments.length === 0) return;
+      if (!displayContent && normalizedUserMessage.attachments.length === 0 && userImages.length === 0) return;
 
       const nextUserIdx = userMessageIndices[roundIndex + 1] ?? messages.length;
       const parts: TimelinePart[] = [];
@@ -664,6 +665,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         userIdx,
         userContent: displayContent,
         userAttachments: normalizedUserMessage.attachments,
+        userImages,
         parts,
         roundKey,
         hasAIContent,
@@ -680,32 +682,11 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           {/* 用户消息 */}
           <div className="flex justify-end mb-4">
             <div className="max-w-[80%] bg-muted text-foreground rounded-2xl rounded-tr-sm px-4 py-2.5">
-              {round.userAttachments.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-1.5">
-                  {round.userAttachments.map((attachment, attachmentIdx) => (
-                    <span
-                      key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? attachment.path ?? attachment.name : attachment.sourcePath ?? attachment.source}`}
-                      className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-xs"
-                    >
-                      {attachment.type === "file" ? (
-                        <>
-                          <FileText size={10} />
-                          <span className="max-w-[220px] truncate">{attachment.name}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Quote size={10} />
-                          <span className="max-w-[260px] truncate">
-                            {attachment.source}
-                            {attachment.locator ? ` (${attachment.locator})` : ""}
-                          </span>
-                        </>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              )}
-              {round.userContent && <span className="text-sm whitespace-pre-wrap">{round.userContent}</span>}
+              <UserMessageBubbleContent
+                text={round.userContent}
+                attachments={round.userAttachments}
+                images={round.userImages}
+              />
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect, lazy, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, useLayoutEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
@@ -42,6 +42,7 @@ import { AgentMessageRenderer, ThinkingCollapsible } from "../chat/AgentMessageR
 import { PlanCard } from "../chat/PlanCard";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
+import { UserMessageBubbleContent } from "../chat/UserMessageBubbleContent";
 import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "../chat/messageContentUtils";
 import {
   filterMentionFiles,
@@ -91,18 +92,6 @@ function getQuickActions(t: ReturnType<typeof useLocaleStore.getState>['t']) {
     { icon: Zap, label: t.ai.writeArticle, desc: t.ai.writeArticleDesc, mode: "agent" as const, prompt: t.ai.quickPrompts.writeArticle },
     { icon: Bot, label: t.ai.studyNotes, desc: t.ai.studyNotesDesc, mode: "agent" as const, prompt: t.ai.quickPrompts.studyNotes },
   ];
-}
-
-const InlineDiagramView = lazy(async () => {
-  const mod = await import("../diagram/DiagramView");
-  return { default: mod.DiagramView };
-});
-
-const DIAGRAM_FILE_SUFFIXES = [".diagram.json", ".excalidraw.json", ".drawio.json"] as const;
-
-function isDiagramFileAttachment(path?: string, name?: string): boolean {
-  const candidate = (path || name || "").toLowerCase();
-  return DIAGRAM_FILE_SUFFIXES.some((suffix) => candidate.endsWith(suffix));
 }
 
 type ChatAssistantPart =
@@ -188,7 +177,6 @@ export function MainAIChatShell() {
   const [isExportSelectionMode, setIsExportSelectionMode] = useState(false);
   const [selectedExportIds, setSelectedExportIds] = useState<string[]>([]);
   const [isExportingConversation, setIsExportingConversation] = useState(false);
-  const [openDiagramEditors, setOpenDiagramEditors] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
@@ -208,18 +196,6 @@ export function MainAIChatShell() {
       setSkillQuery("");
     }
   }, [chatMode]);
-
-  const buildDiagramAttachmentKey = useCallback((sourcePath: string, locator: string | undefined, index: number) => {
-    return `${sourcePath}::${locator ?? ""}::${index}`;
-  }, []);
-
-  const toggleDiagramEditor = useCallback((key: string) => {
-    setOpenDiagramEditors((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  }, []);
-
 
   // 随机选择一个 emoji（组件挂载时确定）
   const [welcomeEmoji] = useState(() =>
@@ -1641,173 +1617,12 @@ export function MainAIChatShell() {
                             (() => {
                               const { text: userText, attachments } = getUserMessageDisplay(msg.content, msg.attachments);
                               const images = getImagesFromContent(msg.content);
-                              const attachedDiagramFiles = attachments
-                                .filter((attachment): attachment is Extract<typeof attachments[number], { type: "file" }> => {
-                                  if (attachment.type !== "file") return false;
-                                  return isDiagramFileAttachment(attachment.path, attachment.name) && Boolean(attachment.path);
-                                })
-                                .map((attachment, attachmentIdx) => ({
-                                  attachment,
-                                  key: `${attachment.path ?? attachment.name}::${attachmentIdx}`,
-                                }));
-                              const diagramAttachments = attachments
-                                .map((attachment, attachmentIdx) => {
-                                  if (attachment.type !== "quote") return null;
-                                  if (attachment.range?.kind !== "diagram") return null;
-                                  if (!attachment.sourcePath) return null;
-                                  return {
-                                    attachment,
-                                    key: buildDiagramAttachmentKey(
-                                      attachment.sourcePath,
-                                      attachment.locator,
-                                      attachmentIdx,
-                                    ),
-                                  };
-                                })
-                                .filter((item): item is { attachment: Extract<typeof attachments[number], { type: "quote" }>; key: string } => Boolean(item));
                               return (
-                                <>
-                                  {attachments.length > 0 && (
-                                    <div className="mb-2 flex flex-wrap gap-1.5">
-                                      {attachments.map((attachment, attachmentIdx) => (
-                                        <span
-                                          key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? attachment.path ?? attachment.name : attachment.sourcePath ?? attachment.source}`}
-                                          className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 text-xs"
-                                        >
-                                          {attachment.type === "file" ? (
-                                            <>
-                                              <FileText size={10} />
-                                              <span className="max-w-[220px] truncate">{attachment.name}</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Quote size={10} />
-                                              <span className="max-w-[240px] truncate">
-                                                {attachment.source}
-                                                {attachment.locator ? ` (${attachment.locator})` : ""}
-                                              </span>
-                                              {attachment.range?.kind === "diagram" && attachment.sourcePath ? (
-                                                <button
-                                                  type="button"
-                                                  onClick={(event) => {
-                                                    event.preventDefault();
-                                                    event.stopPropagation();
-                                                    const key = buildDiagramAttachmentKey(
-                                                      attachment.sourcePath!,
-                                                      attachment.locator,
-                                                      attachmentIdx,
-                                                    );
-                                                    toggleDiagramEditor(key);
-                                                  }}
-                                                  className="ml-0.5 inline-flex items-center rounded-full border border-border/50 p-0.5 hover:bg-muted"
-                                                  title={
-                                                    openDiagramEditors[
-                                                      buildDiagramAttachmentKey(
-                                                        attachment.sourcePath!,
-                                                        attachment.locator,
-                                                        attachmentIdx,
-                                                      )
-                                                    ]
-                                                      ? t.diagramView.closeInteractive
-                                                      : t.diagramView.openInteractive
-                                                  }
-                                                  aria-label={
-                                                    openDiagramEditors[
-                                                      buildDiagramAttachmentKey(
-                                                        attachment.sourcePath!,
-                                                        attachment.locator,
-                                                        attachmentIdx,
-                                                      )
-                                                    ]
-                                                      ? t.diagramView.closeInteractive
-                                                      : t.diagramView.openInteractive
-                                                  }
-                                                >
-                                                  <Code2 size={10} />
-                                                </button>
-                                              ) : null}
-                                            </>
-                                          )}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                  {attachedDiagramFiles.length > 0 && (
-                                    <div className="mb-2 space-y-2">
-                                      {attachedDiagramFiles.map(({ attachment, key }) => (
-                                        <div
-                                          key={key}
-                                          className="overflow-hidden rounded-ui-lg border border-border/60 bg-background/70"
-                                        >
-                                          <div className="border-b border-border/60 px-3 py-1.5 text-xs text-muted-foreground">
-                                            {t.diagramView.inlineEditorTitle}
-                                          </div>
-                                          <div className="h-[360px] min-h-[260px]">
-                                            <Suspense
-                                              fallback={
-                                                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                                                  {t.diagramView.loadingEditor}
-                                                </div>
-                                              }
-                                            >
-                                              <InlineDiagramView
-                                                filePath={attachment.path || ""}
-                                                className="h-full"
-                                                saveMode="manual"
-                                                showSendToChatButton={false}
-                                              />
-                                            </Suspense>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                  {diagramAttachments.length > 0 && (
-                                    <div className="mb-2 space-y-2">
-                                      {diagramAttachments
-                                        .filter(({ key }) => openDiagramEditors[key])
-                                        .map(({ attachment, key }) => (
-                                          <div
-                                            key={key}
-                                            className="overflow-hidden rounded-ui-lg border border-border/60 bg-background/70"
-                                          >
-                                            <div className="border-b border-border/60 px-3 py-1.5 text-xs text-muted-foreground">
-                                              {t.diagramView.inlineEditorTitle}
-                                            </div>
-                                            <div className="h-[360px] min-h-[260px]">
-                                              <Suspense
-                                                fallback={
-                                                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                                                    {t.diagramView.loadingEditor}
-                                                  </div>
-                                                }
-                                              >
-                                                <InlineDiagramView
-                                                  filePath={attachment.sourcePath || ""}
-                                                  className="h-full"
-                                                  saveMode="manual"
-                                                  showSendToChatButton={false}
-                                                />
-                                              </Suspense>
-                                            </div>
-                                          </div>
-                                        ))}
-                                    </div>
-                                  )}
-                                  {userText && <span className="text-sm whitespace-pre-wrap">{userText}</span>}
-                                  {images.length > 0 && (
-                                    <div className={`flex flex-wrap gap-2 ${userText || attachments.length > 0 ? "mt-2" : ""}`}>
-                                      {images.map((img, imageIdx) => (
-                                        <img
-                                          key={`${img.source.data.slice(0, 16)}-${imageIdx}`}
-                                          src={`data:${img.source.mediaType};base64,${img.source.data}`}
-                                          alt="attached"
-                                          className="max-w-[220px] max-h-[220px] rounded-lg"
-                                        />
-                                      ))}
-                                    </div>
-                                  )}
-                                </>
+                                <UserMessageBubbleContent
+                                  text={userText}
+                                  attachments={attachments}
+                                  images={images}
+                                />
                               );
                             })()
                           ) : (
