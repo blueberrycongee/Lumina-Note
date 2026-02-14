@@ -23,6 +23,7 @@ import {
   DatabaseMenuSurface,
   DatabaseTextInput,
 } from "./primitives";
+import { formatDatabaseActionError } from "./actionErrors";
 import { resolveCalendarDateColumnId } from "./calendarUtils";
 import { resolveKanbanGroupColumnId } from "./kanbanUtils";
 import { DatabaseViewScaleControl } from "./ViewScaleControl";
@@ -334,6 +335,14 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
         placeholder={t.database.filterPanel.valuePlaceholder}
       />
     );
+  };
+
+  const handleAddRow = async () => {
+    try {
+      await addRow(dbId);
+    } catch (error) {
+      alert(formatDatabaseActionError(t, t.database.newRow, error));
+    }
   };
 
   return (
@@ -650,7 +659,11 @@ export function DatabaseToolbar({ dbId }: DatabaseToolbarProps) {
       <div className="flex-1" />
 
       {/* 新建行 */}
-      <DatabaseActionButton onClick={() => addRow(dbId)}>
+      <DatabaseActionButton
+        onClick={() => {
+          void handleAddRow();
+        }}
+      >
         <Plus className="w-4 h-4" />
         {t.database.newRow}
       </DatabaseActionButton>

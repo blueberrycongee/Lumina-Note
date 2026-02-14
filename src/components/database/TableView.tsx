@@ -7,6 +7,7 @@ import { ColumnHeader } from "./ColumnHeader";
 import type { CellCommitAction } from "./cells/types";
 import { resolveCellMove } from "./tableKeyboard";
 import { DatabaseIconButton, DatabaseMenuSurface } from "./primitives";
+import { formatDatabaseActionError } from "./actionErrors";
 import { Plus, MoreHorizontal, Trash2, Copy, FileText, Loader2, Check, AlertCircle } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
@@ -46,6 +47,36 @@ export function TableView({ dbId }: TableViewProps) {
   const handleAddColumn = useCallback(() => {
     addColumn(dbId, { name: t.database.newColumn, type: 'text' });
   }, [dbId, addColumn, t.database.newColumn]);
+
+  const showActionError = useCallback((actionLabel: string, error: unknown) => {
+    alert(formatDatabaseActionError(t, actionLabel, error));
+  }, [t]);
+
+  const handleAddRow = useCallback(async () => {
+    try {
+      await addRow(dbId);
+    } catch (error) {
+      showActionError(t.database.newRow, error);
+    }
+  }, [addRow, dbId, showActionError, t.database.newRow]);
+
+  const handleDuplicateRow = useCallback(async (rowId: string) => {
+    try {
+      await duplicateRow(dbId, rowId);
+      setRowMenuOpen(null);
+    } catch (error) {
+      showActionError(t.database.copyRow, error);
+    }
+  }, [dbId, duplicateRow, showActionError, t.database.copyRow]);
+
+  const handleDeleteRow = useCallback(async (rowId: string) => {
+    try {
+      await deleteRow(dbId, rowId);
+      setRowMenuOpen(null);
+    } catch (error) {
+      showActionError(t.database.deleteRow, error);
+    }
+  }, [dbId, deleteRow, showActionError, t.database.deleteRow]);
   
   const handleCellClick = useCallback((rowId: string, columnId: string) => {
     setEditingCell({ rowId, columnId });
@@ -244,8 +275,7 @@ export function TableView({ dbId }: TableViewProps) {
                         <DatabaseMenuSurface className="absolute left-0 top-full mt-1 py-1 min-w-[140px] z-50">
                           <button
                             onClick={() => {
-                              duplicateRow(dbId, row.id);
-                              setRowMenuOpen(null);
+                              void handleDuplicateRow(row.id);
                             }}
                             className="db-menu-item"
                           >
@@ -253,8 +283,7 @@ export function TableView({ dbId }: TableViewProps) {
                           </button>
                           <button
                             onClick={() => {
-                              deleteRow(dbId, row.id);
-                              setRowMenuOpen(null);
+                              void handleDeleteRow(row.id);
                             }}
                             className="db-menu-item db-menu-item-danger"
                           >
@@ -354,7 +383,9 @@ export function TableView({ dbId }: TableViewProps) {
           <tr>
             <td colSpan={columns.length + 2} className="p-0">
               <button
-                onClick={() => addRow(dbId)}
+                onClick={() => {
+                  void handleAddRow();
+                }}
                 className="db-toggle-btn w-full h-9 justify-start rounded-none border-0 px-4"
               >
                 <Plus className="w-4 h-4" />

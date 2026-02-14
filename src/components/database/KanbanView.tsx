@@ -9,6 +9,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { resolveKanbanGroupColumnId } from "./kanbanUtils";
 import { normalizeDatabaseViewScale } from "./viewScale";
 import { getSelectColorClasses, normalizeSelectOptions } from "@/features/database/selectOptions";
+import { formatDatabaseActionError } from "./actionErrors";
 
 interface KanbanViewProps {
   dbId: string;
@@ -104,9 +105,12 @@ export function KanbanView({ dbId }: KanbanViewProps) {
     setDragOverGroup(null);
   };
   
-  const handleAddCardToGroup = (groupId: string) => {
-    if (groupByColumnId) {
-      addRow(dbId, { [groupByColumnId]: groupId });
+  const handleAddCardToGroup = async (groupId: string) => {
+    if (!groupByColumnId) return;
+    try {
+      await addRow(dbId, { [groupByColumnId]: groupId });
+    } catch (error) {
+      alert(formatDatabaseActionError(t, t.database.newCard, error));
     }
   };
   
@@ -164,7 +168,9 @@ export function KanbanView({ dbId }: KanbanViewProps) {
                   
                   {/* 新建卡片 */}
                   <button
-                    onClick={() => handleAddCardToGroup(option.id)}
+                    onClick={() => {
+                      void handleAddCardToGroup(option.id);
+                    }}
                     className="db-toggle-btn w-full h-9 justify-center border-dashed"
                   >
                     <Plus className="w-4 h-4" /> {t.database.newCard}
