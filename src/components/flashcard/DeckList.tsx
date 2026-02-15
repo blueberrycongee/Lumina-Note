@@ -23,7 +23,7 @@ import { Flashcard } from '../../types/flashcard';
 import { useShallow } from 'zustand/react/shallow';
 
 interface DeckListProps {
-  onStartReview: (deckId: string) => void;
+  onStartReview: (deckId: string, allowAhead?: boolean) => void;
   onCreateCard: (deckId: string) => void;
 }
 
@@ -47,6 +47,7 @@ export const DeckList: React.FC<DeckListProps> = ({
   const [isDeleting, setIsDeleting] = React.useState(false);
   
   const decks = getDecks();
+  const allCardsCount = decks.reduce((sum, deck) => sum + getCardsByDeck(deck.id).length, 0);
   const allDueCount = getDueCards().length;
 
   const toggleExpanded = (deckId: string) => {
@@ -111,9 +112,9 @@ export const DeckList: React.FC<DeckListProps> = ({
       </div>
 
       {/* 全部复习按钮 */}
-      {allDueCount > 0 && (
+      {(allDueCount > 0 || allCardsCount > 0) && (
         <button
-          onClick={() => onStartReview('all')}
+          onClick={() => onStartReview('all', allDueCount === 0)}
           className={cn(
             "w-full p-4 rounded-xl",
             "bg-gradient-to-r from-primary/10 to-primary/5",
@@ -128,9 +129,13 @@ export const DeckList: React.FC<DeckListProps> = ({
                 <Brain className="w-5 h-5 text-primary" />
               </div>
               <div className="text-left">
-                <div className="font-medium">{t.flashcard.startReview}</div>
+                <div className="font-medium">
+                  {allDueCount > 0 ? t.flashcard.startReview : t.flashcard.reviewAheadAll}
+                </div>
                 <div className="text-sm text-muted-foreground">
-                  {t.flashcard.cardsToReview.replace('{count}', String(allDueCount))}
+                  {allDueCount > 0
+                    ? t.flashcard.cardsToReview.replace('{count}', String(allDueCount))
+                    : t.flashcard.cardsCanReviewAhead.replace('{count}', String(allCardsCount))}
                 </div>
               </div>
             </div>
@@ -154,7 +159,7 @@ export const DeckList: React.FC<DeckListProps> = ({
               deck={deck}
               stats={getDeckStats(deck.id)}
               cards={getCardsByDeck(deck.id)}
-              onStartReview={() => onStartReview(deck.id)}
+              onStartReview={(allowAhead) => onStartReview(deck.id, allowAhead)}
               onCreateCard={() => onCreateCard(deck.id)}
               onDeleteDeck={() => requestDeleteDeck(deck.id)}
               onDeleteCard={(notePath) => requestDeleteCard(deck.id, notePath)}
@@ -204,7 +209,7 @@ interface DeckCardProps {
   deck: { id: string; name: string; description?: string };
   stats: { total: number; new: number; due: number; learning: number };
   cards: Flashcard[];
-  onStartReview: () => void;
+  onStartReview: (allowAhead?: boolean) => void;
   onCreateCard: () => void;
   onDeleteDeck: () => void;
   onDeleteCard: (notePath: string) => void;
@@ -226,6 +231,7 @@ const DeckCard: React.FC<DeckCardProps> = ({
   t,
 }) => {
   const hasDue = stats.due > 0 || stats.new > 0;
+  const canStartReview = stats.total > 0;
 
   return (
     <div
@@ -276,11 +282,11 @@ const DeckCard: React.FC<DeckCardProps> = ({
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
-          {hasDue && (
+          {canStartReview && (
             <button
-              onClick={onStartReview}
+              onClick={() => onStartReview(!hasDue)}
               className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg"
-              title={t.flashcard.startReview}
+              title={hasDue ? t.flashcard.startReview : t.flashcard.reviewAhead}
             >
               <Play className="w-4 h-4" />
             </button>

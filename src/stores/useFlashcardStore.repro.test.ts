@@ -4,6 +4,7 @@ import * as pathApi from "@tauri-apps/api/path";
 import * as tauriLib from "@/lib/tauri";
 import { useFileStore } from "@/stores/useFileStore";
 import { useFlashcardStore } from "./useFlashcardStore";
+import type { Flashcard } from "@/types/flashcard";
 
 function resetStores() {
   useFileStore.setState({
@@ -117,5 +118,35 @@ The capital of France is {{c1::Paris}}.`;
     const writtenContent = saveFileSpy.mock.calls[0][1];
     expect(writtenContent).toContain("{{c1::Paris}}");
     expect(writtenContent).toContain("The Seine runs through it.");
+  });
+
+  it("allows ahead review when deck has no due cards", () => {
+    const futureCard: Flashcard = {
+      id: "Flashcards/future.md",
+      notePath: "Flashcards/future.md",
+      type: "basic",
+      deck: "Default",
+      front: "Future Q",
+      back: "Future A",
+      ease: 2.5,
+      interval: 7,
+      repetitions: 2,
+      due: "2099-01-01",
+      created: "2026-02-15",
+    };
+
+    useFlashcardStore.setState({
+      cards: new Map([[futureCard.notePath, futureCard]]),
+      currentSession: null,
+      error: null,
+    });
+
+    const dueOnly = useFlashcardStore.getState().startReview("Default");
+    expect(dueOnly).toBe(false);
+
+    const ahead = useFlashcardStore.getState().startReview("Default", { allowAhead: true });
+    expect(ahead).toBe(true);
+    expect(useFlashcardStore.getState().currentSession?.cards.length).toBe(1);
+    expect(useFlashcardStore.getState().currentSession?.cards[0]?.notePath).toBe("Flashcards/future.md");
   });
 });

@@ -60,8 +60,8 @@ export const FlashcardView: React.FC<FlashcardViewProps> = ({ deckId }) => {
   }, [fileTree, refreshCards]);
 
   // 开始复习
-  const handleStartReview = useCallback((id: string) => {
-    const started = startReview(id);
+  const handleStartReview = useCallback((id: string, allowAhead = false) => {
+    const started = startReview(id, { allowAhead });
     setReviewingDeckId(started ? id : null);
   }, [startReview]);
 

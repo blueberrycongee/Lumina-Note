@@ -82,7 +82,7 @@ interface FlashcardState {
   deleteCard: (notePath: string) => Promise<void>;
   
   // 复习
-  startReview: (deckId?: string) => boolean;
+  startReview: (deckId?: string, options?: { allowAhead?: boolean }) => boolean;
   submitReview: (rating: ReviewRating) => Promise<void>;
   skipCard: () => void;
   endReview: () => void;
@@ -346,21 +346,33 @@ export const useFlashcardStore = create<FlashcardState>((set, get) => ({
   /**
    * 开始复习会话
    */
-  startReview: (deckId) => {
-    const dueCards = get().getDueCards(deckId);
-    
-    if (dueCards.length === 0) {
+  startReview: (deckId, options) => {
+    const allowAhead = options?.allowAhead ?? false;
+    const deckCards = Array.from(get().cards.values()).filter((card) => {
+      if (deckId && deckId !== 'all' && card.deck !== deckId) {
+        return false;
+      }
+      return true;
+    });
+
+    const reviewCards = allowAhead
+      ? [...deckCards].sort((a, b) => a.due.localeCompare(b.due))
+      : deckCards.filter((card) => isDue(card.due));
+
+    if (reviewCards.length === 0) {
       set({ error: getCurrentTranslations().flashcard.noCardsToReview });
       return false;
     }
     
     // 随机打乱顺序
-    const shuffled = [...dueCards].sort(() => Math.random() - 0.5);
+    const queue = allowAhead
+      ? reviewCards
+      : [...reviewCards].sort(() => Math.random() - 0.5);
     
     set({
       currentSession: {
         deckId: deckId || 'all',
-        cards: shuffled,
+        cards: queue,
         currentIndex: 0,
         startTime: new Date().toISOString(),
         reviewed: 0,
