@@ -4,7 +4,7 @@
  * 支持卡片翻转、评分、进度显示
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -18,6 +18,7 @@ import { useLocaleStore } from '../../stores/useLocaleStore';
 import { ReviewRating, Flashcard } from '../../types/flashcard';
 import { daysBetween, formatInterval, previewNextReview } from '@/services/flashcard/sm2';
 import { renderClozeFront, renderClozeBack } from '@/services/flashcard/flashcard';
+import { parseMarkdown } from '@/services/markdown/markdown';
 import { cn } from '../../lib/utils';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -342,16 +343,18 @@ const CardFront: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
 }) => {
   if (card.type === 'basic' || card.type === 'basic-reversed') {
     return (
-      <div className="text-xl text-center">
-        {card.front}
+      <div className="w-full text-xl text-center">
+        <MarkdownText className="flashcard-markdown">{card.front ?? ''}</MarkdownText>
       </div>
     );
   }
   
   if (card.type === 'cloze' && card.text) {
     return (
-      <div className="text-xl text-center whitespace-pre-wrap">
-        {renderClozeFront(card.text, clozeIndex)}
+      <div className="w-full text-xl text-center">
+        <MarkdownText className="flashcard-markdown">
+          {renderClozeFront(card.text, clozeIndex)}
+        </MarkdownText>
       </div>
     );
   }
@@ -359,14 +362,17 @@ const CardFront: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
   if (card.type === 'mcq') {
     return (
       <div className="w-full">
-        <div className="text-xl text-center mb-6">{card.question}</div>
+        <div className="text-xl text-center mb-6">
+          <MarkdownText className="flashcard-markdown">{card.question ?? ''}</MarkdownText>
+        </div>
         <div className="space-y-2">
           {card.options?.map((opt, i) => (
             <div
               key={i}
               className="p-3 border rounded-lg hover:bg-muted cursor-pointer"
             >
-              {String.fromCharCode(65 + i)}. {opt}
+              <span>{String.fromCharCode(65 + i)}. </span>
+              <MarkdownText className="inline-block align-middle flashcard-markdown">{opt}</MarkdownText>
             </div>
           ))}
         </div>
@@ -376,8 +382,8 @@ const CardFront: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
   
   if (card.type === 'list') {
     return (
-      <div className="text-xl text-center">
-        {card.question}
+      <div className="w-full text-xl text-center">
+        <MarkdownText className="flashcard-markdown">{card.question ?? ''}</MarkdownText>
         <div className="text-sm text-muted-foreground mt-2">
           {card.ordered ? t.flashcard.recallInOrder : t.flashcard.listAllItems}
         </div>
@@ -396,16 +402,18 @@ const CardBack: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
 }) => {
   if (card.type === 'basic' || card.type === 'basic-reversed') {
     return (
-      <div className="text-xl text-center whitespace-pre-wrap">
-        {card.back}
+      <div className="w-full text-xl text-center">
+        <MarkdownText className="flashcard-markdown">{card.back ?? ''}</MarkdownText>
       </div>
     );
   }
   
   if (card.type === 'cloze' && card.text) {
     return (
-      <div className="text-xl text-center whitespace-pre-wrap">
-        {renderClozeBack(card.text, clozeIndex)}
+      <div className="w-full text-xl text-center">
+        <MarkdownText className="flashcard-markdown">
+          {renderClozeBack(card.text, clozeIndex)}
+        </MarkdownText>
       </div>
     );
   }
@@ -413,7 +421,9 @@ const CardBack: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
   if (card.type === 'mcq') {
     return (
       <div className="w-full">
-        <div className="text-xl text-center mb-6">{card.question}</div>
+        <div className="text-xl text-center mb-6">
+          <MarkdownText className="flashcard-markdown">{card.question ?? ''}</MarkdownText>
+        </div>
         <div className="space-y-2">
           {card.options?.map((opt, i) => (
             <div
@@ -425,14 +435,15 @@ const CardBack: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
                   : ""
               )}
             >
-              {String.fromCharCode(65 + i)}. {opt}
+              <span>{String.fromCharCode(65 + i)}. </span>
+              <MarkdownText className="inline-block align-middle flashcard-markdown">{opt}</MarkdownText>
               {i === card.answer && <Check className="inline ml-2 w-4 h-4 text-green-600" />}
             </div>
           ))}
         </div>
         {card.explanation && (
           <div className="mt-4 p-3 bg-muted rounded-lg text-sm">
-            {card.explanation}
+            <MarkdownText className="flashcard-markdown">{card.explanation}</MarkdownText>
           </div>
         )}
       </div>
@@ -442,10 +453,14 @@ const CardBack: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
   if (card.type === 'list') {
     return (
       <div className="w-full">
-        <div className="text-xl text-center mb-4">{card.question}</div>
+        <div className="text-xl text-center mb-4">
+          <MarkdownText className="flashcard-markdown">{card.question ?? ''}</MarkdownText>
+        </div>
         <ol className="list-decimal list-inside space-y-1">
           {card.items?.map((item, i) => (
-            <li key={i}>{item}</li>
+            <li key={i}>
+              <MarkdownText className="inline-block align-middle flashcard-markdown">{item}</MarkdownText>
+            </li>
           ))}
         </ol>
       </div>
@@ -453,6 +468,16 @@ const CardBack: React.FC<{ card: Flashcard; clozeIndex: number; t: any }> = ({
   }
   
   return null;
+};
+
+const MarkdownText: React.FC<{ children: string; className?: string }> = ({ children, className }) => {
+  const html = useMemo(() => parseMarkdown(children), [children]);
+  return (
+    <div
+      className={cn("text-inherit [&_p]:my-0", className)}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 };
 
 /** 评分按钮 */

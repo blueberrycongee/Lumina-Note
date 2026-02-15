@@ -149,4 +149,44 @@ describe("FlashcardReview regression", () => {
     expect(screen.getByText(/已复习 1 张卡片/)).toBeInTheDocument();
     expect(screen.getByText(/正确率 100%/)).toBeInTheDocument();
   });
+
+  it("renders KaTeX content for math formulas in flashcards", async () => {
+    const card: Flashcard = {
+      id: "Flashcards/math.md",
+      notePath: "Flashcards/math.md",
+      type: "basic",
+      deck: "Default",
+      front: "求导：$x^2$",
+      back: "答案：$2x$",
+      ease: 2.5,
+      interval: 0,
+      repetitions: 0,
+      due: "2026-01-30",
+      created: "2026-01-30",
+    };
+
+    useFlashcardStore.setState({
+      cards: new Map([[card.notePath, card]]),
+      currentSession: {
+        deckId: "Default",
+        cards: [card],
+        currentIndex: 0,
+        startTime: new Date().toISOString(),
+        reviewed: 0,
+        correct: 0,
+        incorrect: 0,
+      },
+      error: null,
+    });
+
+    const { container } = render(<FlashcardReview />);
+    await screen.findByText(/求导/);
+    expect(container.querySelector(".katex")).toBeTruthy();
+
+    const flipTarget = container.querySelector(".perspective-1000");
+    expect(flipTarget).toBeTruthy();
+    fireEvent.click(flipTarget as Element);
+    await screen.findByText(/答案/);
+    expect(container.querySelectorAll(".katex").length).toBeGreaterThan(0);
+  });
 });
