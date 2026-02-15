@@ -48,7 +48,9 @@ if (scenario === "negative-interval") {
 
 const root = createRoot(document.getElementById("root")!);
 root.render(
-  <div style={{ width: "100vw", height: "100vh" }}>
-    <FlashcardReview deckId="Default" />
-  </div>,
+  React.createElement(
+    "div",
+    { style: { width: "100vw", height: "100vh" } },
+    React.createElement(FlashcardReview, { deckId: "Default" }),
+  ),
 );

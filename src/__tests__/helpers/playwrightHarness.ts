@@ -16,6 +16,10 @@ export async function startE2EViteServer(): Promise<{ server: ViteDevServer; bas
       },
     },
     clearScreen: false,
+    optimizeDeps: {
+      // Restrict scan to dedicated e2e entry to avoid crawling third_party HTML fixtures.
+      entries: ["e2e/flashcard-review-repro.html"],
+    },
     server: {
       host: "127.0.0.1",
       port: 0,
@@ -38,8 +42,41 @@ export async function startE2EViteServer(): Promise<{ server: ViteDevServer; bas
 
 export function findChromiumExecutablePath(): string | null {
   const candidates: string[] = [];
+  const envPath = process.env.CHROMIUM_PATH;
+  if (envPath) {
+    candidates.push(envPath);
+  }
 
   if (process.platform === "darwin") {
+    const homeDir = process.env.HOME;
+    if (homeDir) {
+      candidates.push(
+        path.join(
+          homeDir,
+          "Library",
+          "Caches",
+          "ms-playwright",
+          "chromium-1200",
+          "chrome-mac-arm64",
+          "Google Chrome for Testing.app",
+          "Contents",
+          "MacOS",
+          "Google Chrome for Testing",
+        ),
+        path.join(
+          homeDir,
+          "Library",
+          "Caches",
+          "ms-playwright",
+          "chromium-1208",
+          "chrome-mac-arm64",
+          "Google Chrome for Testing.app",
+          "Contents",
+          "MacOS",
+          "Google Chrome for Testing",
+        ),
+      );
+    }
     candidates.push(
       "/Applications/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
       "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
