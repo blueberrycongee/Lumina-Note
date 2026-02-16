@@ -514,16 +514,6 @@ export const useAIStore = create<AIState>()(
             }
           }
         } catch (error) {
-          console.error('[AI Debug] Error in sendMessage:', error);
-          console.error('[AI Debug] Error details:', {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            config: {
-              provider: config.provider,
-              model: config.model,
-              hasApiKey: !!config.apiKey,
-            },
-          });
           reportOperationError({
             source: "AIStore.sendMessage",
             action: "Send chat message",
