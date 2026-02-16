@@ -1310,7 +1310,12 @@ mark {
 }
 
 .dark .codemirror-wrapper .cm-content {
-  caret-color: hsl(var(--primary));
+  caret-color: hsl(var(--foreground));
+}
+
+.dark .codemirror-wrapper .cm-cursor,
+.dark .codemirror-wrapper .cm-dropCursor {
+  border-left-color: hsl(var(--foreground)) !important;
 }
 
 .dark .codemirror-wrapper .cm-code {

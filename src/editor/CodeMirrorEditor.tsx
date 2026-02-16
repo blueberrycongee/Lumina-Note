@@ -78,7 +78,8 @@ export interface CodeMirrorEditorRef {
 
 const editorTheme = EditorView.theme({
   "&": { backgroundColor: "transparent", fontSize: "16px", height: "100%" },
-  ".cm-content": { fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", padding: "16px 0", caretColor: "hsl(var(--primary))" },
+  ".cm-content": { fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", padding: "16px 0", caretColor: "hsl(var(--foreground))" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
   ".cm-line": { padding: "0 16px", paddingLeft: "16px", lineHeight: "1.75", position: "relative" },
 
   // 选区颜色（更淡的蓝色）
