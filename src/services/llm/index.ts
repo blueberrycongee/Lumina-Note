@@ -71,8 +71,6 @@ export async function callLLM(
   options?: LLMOptions,
   configOverride?: Partial<LLMConfig>
 ): Promise<LLMResponse> {
-  console.log('[AI Debug] callLLM() called with', messages.length, 'messages');
-
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 1000;
   let lastError: Error | null = null;
@@ -87,15 +85,11 @@ export async function callLLM(
             ...options,
             temperature: options?.temperature ?? config.temperature,
           };
-      console.log('[AI Debug] Provider created, calling provider.call()');
       const response = await provider.call(messages, finalOptions);
-      console.log('[AI Debug] Provider.call() returned successfully');
       return response;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      console.error('[AI Debug] Error in callLLM():', lastError);
 
-      // 检查是否是可重试的网络错误
       const isRetryable =
         lastError.message.includes("Failed to fetch") ||
         lastError.message.includes("HTTP2") ||
@@ -134,12 +128,9 @@ export async function* callLLMStream(
         temperature: options?.temperature ?? config.temperature,
       };
 
-  console.log('[AI Debug] callLLMStream - provider.stream exists:', !!provider.stream);
-
   // 检查 Provider 是否支持流式
   if (!provider.stream) {
     // 降级：不支持流式的 Provider 一次性返回
-    console.log('[AI Debug] callLLMStream - falling back to non-streaming');
     const response = await provider.call(messages, finalOptions);
     yield { type: "text", text: response.content };
     if (response.usage) {
@@ -154,6 +145,5 @@ export async function* callLLMStream(
   }
 
   // 使用 Provider 的流式方法
-  console.log('[AI Debug] callLLMStream - using provider.stream()');
   yield* provider.stream(messages, finalOptions);
 }
