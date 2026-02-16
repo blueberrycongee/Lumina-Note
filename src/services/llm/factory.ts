@@ -28,16 +28,8 @@ export function createProvider(configOverride?: Partial<LLMConfig>): LLMProvider
     ...configOverride,
   };
 
-  console.log('[AI Debug] createProvider() called', {
-    provider: config.provider,
-    model: config.model,
-    hasApiKey: !!config.apiKey,
-    isOverride: !!configOverride,
-  });
-
   // Ollama 不需要 API Key
   if (!config.apiKey && config.provider !== "ollama") {
-    console.error('[AI Debug] No API key found for', config.provider);
     throw new Error(t.ai.apiKeyRequiredWithProvider.replace("{provider}", config.provider));
   }
 
