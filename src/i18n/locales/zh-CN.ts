@@ -1355,19 +1355,6 @@ export default {
         waiting_approval: '等待审批',
       },
     },
-    agentStats: {
-      title: 'Agent 统计',
-      currentTask: '当前任务',
-      toolCalls: '工具调用',
-      failureCount: '({count} 失败)',
-      successRate: '成功率',
-      cumulativeStats: '累计统计',
-      taskCompletion: '任务完成度',
-      toolSuccessRate: '工具成功率',
-      completed: '完成',
-      failed: '失败',
-      tokens: 'Token',
-    },
   },
 
   // 选中工具栏

@@ -1355,19 +1355,6 @@ export default {
         waiting_approval: '承認待ち',
       },
     },
-    agentStats: {
-      title: 'Agent 統計',
-      currentTask: '現在のタスク',
-      toolCalls: 'ツール呼び出し',
-      failureCount: '({count} 件失敗)',
-      successRate: '成功率',
-      cumulativeStats: '累計統計',
-      taskCompletion: 'タスク完了率',
-      toolSuccessRate: 'ツール成功率',
-      completed: '完了',
-      failed: '失敗',
-      tokens: 'トークン',
-    },
   },
 
   // 選択ツールバー

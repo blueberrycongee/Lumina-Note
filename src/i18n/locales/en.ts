@@ -1354,19 +1354,6 @@ export default {
         waiting_approval: 'Waiting for approval',
       },
     },
-    agentStats: {
-      title: 'Agent Stats',
-      currentTask: 'Current task',
-      toolCalls: 'Tool calls',
-      failureCount: '({count} failed)',
-      successRate: 'Success rate',
-      cumulativeStats: 'Overall stats',
-      taskCompletion: 'Task completion',
-      toolSuccessRate: 'Tool success rate',
-      completed: 'Completed',
-      failed: 'Failed',
-      tokens: 'Tokens',
-    },
   },
 
   // Selection Toolbar

@@ -1355,19 +1355,6 @@ export default {
         waiting_approval: '等待審批',
       },
     },
-    agentStats: {
-      title: 'Agent 統計',
-      currentTask: '目前任務',
-      toolCalls: '工具呼叫',
-      failureCount: '({count} 失敗)',
-      successRate: '成功率',
-      cumulativeStats: '累計統計',
-      taskCompletion: '任務完成度',
-      toolSuccessRate: '工具成功率',
-      completed: '完成',
-      failed: '失敗',
-      tokens: 'Token',
-    },
   },
 
   // 選中工具列
