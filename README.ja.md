@@ -26,7 +26,7 @@
 
 ---
 
-## Lumina Note の特長
+<h2 align="center">Lumina Note の特長</h2>
 
 - **ローカルファースト**: Vault はローカル管理。モデルに送る範囲を自分で決められます。
 - **知識中心の設計**: エディタ、WikiLinks、グラフが一体で機能します。
@@ -34,7 +34,7 @@
 
 ---
 
-## ダウンロード
+<h2 align="center">ダウンロード</h2>
 
 <div align="center">
 
@@ -50,7 +50,7 @@
 
 ---
 
-## スクリーンショット
+<h2 align="center">スクリーンショット</h2>
 
 <p align="center">
   <img src="docs/screenshots/ai-agent.png" alt="AI Agent" width="800" />
@@ -66,25 +66,25 @@
 
 ---
 
-## 機能
+<h2 align="center">機能</h2>
 
-### AI ワークスペース
+<h3 align="center">AI ワークスペース</h3>
 - モード: `Chat` / `Agent` / `Deep Research` / `Codex`（サイドバー埋め込み VS Code 拡張）
 - 対応プロバイダ: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - Vault 全体を対象にしたローカル意味検索（RAG）
 
-### エディタとナレッジグラフ
+<h3 align="center">エディタとナレッジグラフ</h3>
 - Markdown ソース / ライブプレビュー / 閲覧モード
 - `[[WikiLinks]]` による双方向リンク
 - LaTeX、Mermaid、コードハイライト
 - ノート間の関係を可視化するグラフビュー
 
-### 読書・収集
+<h3 align="center">読書・収集</h3>
 - PDF リーダー（ハイライト、下線、注釈）
 - 注釈を Markdown として保存
 - 選択した内容を AI コンテキストへ送信
 
-### その他
+<h3 align="center">その他</h3>
 - Bilibili 動画ノート（弾幕タイムスタンプ同期）
 - 音声入力（リアルタイム文字起こし）
 - データベースビュー（テーブル / カンバン）
@@ -92,7 +92,7 @@
 - フラッシュカード復習
 - 15 テーマ
 
-### プラグインエコシステム（開発者プレビュー）
+<h3 align="center">プラグインエコシステム（開発者プレビュー）</h3>
 - workspace / user / built-in ディレクトリからプラグインを読み込み
 - ランタイム権限モデル
 - Slash Command 拡張 API
@@ -100,7 +100,7 @@
 
 ---
 
-## クイックスタート
+<h2 align="center">クイックスタート</h2>
 
 1. Releases からアプリをインストール
 2. 初回起動でローカルフォルダを Vault に指定
@@ -109,20 +109,20 @@
 
 ---
 
-## ガイド
+<h2 align="center">ガイド</h2>
 
-### まず読むガイド
+<h3 align="center">まず読むガイド</h3>
 - 日本語: `docs/user-flow.ja.md`
 - English: `docs/user-flow.md`
 - 简体中文: `docs/user-flow.zh-CN.md`
 
-### セルフホスト中継（クロスネットワークのモバイルアクセス）
+<h3 align="center">セルフホスト中継（クロスネットワークのモバイルアクセス）</h3>
 - English: `docs/self-host.md`
 - 简体中文: `docs/self-host.zh-CN.md`
 
 ---
 
-## ソースからビルド
+<h2 align="center">ソースからビルド</h2>
 
 必要環境:
 - Node.js 20+（推奨 20.11.1）
@@ -137,7 +137,7 @@ npm run tauri dev
 
 ---
 
-## 技術スタック
+<h2 align="center">技術スタック</h2>
 
 - フレームワーク: Tauri v2 (Rust + WebView)
 - フロントエンド: React 18, TypeScript, Tailwind CSS
@@ -147,14 +147,14 @@ npm run tauri dev
 
 ---
 
-## オープンソースコンポーネント
+<h2 align="center">オープンソースコンポーネント</h2>
 
 - エディタコア: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
 - Rust オーケストレーションランタイム: [forge](https://github.com/blueberrycongee/forge)
 
 ---
 
-## コントリビューター
+<h2 align="center">コントリビューター</h2>
 
 <a href="https://github.com/blueberrycongee/Lumina-Note/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=blueberrycongee/Lumina-Note" />
@@ -162,12 +162,12 @@ npm run tauri dev
 
 ---
 
-## ライセンス
+<h2 align="center">ライセンス</h2>
 
 [Apache License 2.0](LICENSE)
 
 ---
 
-## Star History
+<h2 align="center">Star History</h2>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=blueberrycongee/Lumina-Note&type=Date)](https://star-history.com/#blueberrycongee/Lumina-Note&Date)

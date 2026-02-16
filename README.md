@@ -26,7 +26,7 @@ Your notes stay on your device. Lumina Note helps you write, connect, and evolve
 
 ---
 
-## Why Lumina Note
+<h2 align="center">Why Lumina Note</h2>
 
 - **Local-first by design**: your vault is local, and you decide what to send to model providers.
 - **Knowledge-centered workflow**: Markdown editor, WikiLinks, and graph view work together naturally.
@@ -34,7 +34,7 @@ Your notes stay on your device. Lumina Note helps you write, connect, and evolve
 
 ---
 
-## Download
+<h2 align="center">Download</h2>
 
 <div align="center">
 
@@ -50,7 +50,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 ---
 
-## Screenshots
+<h2 align="center">Screenshots</h2>
 
 <p align="center">
   <img src="docs/screenshots/ai-agent.png" alt="AI Agent" width="800" />
@@ -66,25 +66,25 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 ---
 
-## Features
+<h2 align="center">Features</h2>
 
-### AI workspace
+<h3 align="center">AI workspace</h3>
 - Modes: `Chat` / `Agent` / `Deep Research` / `Codex` (embedded VS Code extension in sidebar)
 - Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - Local semantic retrieval (RAG) from your vault
 
-### Editor and knowledge graph
+<h3 align="center">Editor and knowledge graph</h3>
 - Markdown source / live preview / reading modes
 - Bidirectional links with `[[WikiLinks]]`
 - LaTeX, Mermaid, code highlighting
 - Graph visualization for relationships across notes
 
-### Reading and capture
+<h3 align="center">Reading and capture</h3>
 - Built-in PDF reader with highlight, underline, and annotations
 - Save annotation results as Markdown
 - Send selected content directly to AI context
 
-### Extra capabilities
+<h3 align="center">Extra capabilities</h3>
 - Bilibili video notes (danmaku timestamp sync)
 - Real-time voice input
 - Database views (table / kanban)
@@ -92,7 +92,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - Flashcard review
 - 15 themes
 
-### Plugin ecosystem (Developer Preview)
+<h3 align="center">Plugin ecosystem (Developer Preview)</h3>
 - Load plugins from workspace / user / built-in directories
 - Runtime permission model for plugin capabilities
 - Slash command extension API
@@ -100,7 +100,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 ---
 
-## Quick Start
+<h2 align="center">Quick Start</h2>
 
 1. Install Lumina Note from Releases.
 2. Choose a local folder as your vault on first launch.
@@ -109,20 +109,20 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 ---
 
-## Guides
+<h2 align="center">Guides</h2>
 
-### Recommended user guides
+<h3 align="center">Recommended user guides</h3>
 - English: `docs/user-flow.md`
 - 简体中文: `docs/user-flow.zh-CN.md`
 - 日本語: `docs/user-flow.ja.md`
 
-### Self-hosted relay (cross-network mobile access)
+<h3 align="center">Self-hosted relay (cross-network mobile access)</h3>
 - English: `docs/self-host.md`
 - 简体中文: `docs/self-host.zh-CN.md`
 
 ---
 
-## Build from Source
+<h2 align="center">Build from Source</h2>
 
 Requirements:
 - Node.js 20+ (recommended 20.11.1)
@@ -137,7 +137,7 @@ npm run tauri dev
 
 ---
 
-## Tech Stack
+<h2 align="center">Tech Stack</h2>
 
 - Framework: Tauri v2 (Rust + WebView)
 - Frontend: React 18, TypeScript, Tailwind CSS
@@ -147,14 +147,14 @@ npm run tauri dev
 
 ---
 
-## Open Source Components
+<h2 align="center">Open Source Components</h2>
 
 - Editor core: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
 - Rust orchestration runtime: [forge](https://github.com/blueberrycongee/forge)
 
 ---
 
-## Contributors
+<h2 align="center">Contributors</h2>
 
 <a href="https://github.com/blueberrycongee/Lumina-Note/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=blueberrycongee/Lumina-Note" />
@@ -162,12 +162,12 @@ npm run tauri dev
 
 ---
 
-## License
+<h2 align="center">License</h2>
 
 [Apache License 2.0](LICENSE)
 
 ---
 
-## Star History
+<h2 align="center">Star History</h2>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=blueberrycongee/Lumina-Note&type=Date)](https://star-history.com/#blueberrycongee/Lumina-Note&Date)

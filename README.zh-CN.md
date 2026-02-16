@@ -26,7 +26,7 @@
 
 ---
 
-## 为什么选择 Lumina Note
+<h2 align="center">为什么选择 Lumina Note</h2>
 
 - **本地优先**：笔记库在本地，是否把内容发送给模型由你决定。
 - **知识工作流完整**：编辑器、双链、图谱是连在一起的，不是拼凑功能。
@@ -34,7 +34,7 @@
 
 ---
 
-## 下载
+<h2 align="center">下载</h2>
 
 <div align="center">
 
@@ -50,7 +50,7 @@
 
 ---
 
-## 界面预览
+<h2 align="center">界面预览</h2>
 
 <p align="center">
   <img src="docs/screenshots/ai-agent.png" alt="AI Agent" width="800" />
@@ -66,25 +66,25 @@
 
 ---
 
-## 功能概览
+<h2 align="center">功能概览</h2>
 
-### AI 工作区
+<h3 align="center">AI 工作区</h3>
 - 模式：`Chat` / `Agent` / `Deep Research` / `Codex`（侧边栏内嵌 VS Code 扩展）
 - 支持多模型提供商：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - 基于本地笔记库的语义检索（RAG）
 
-### 编辑器与知识图谱
+<h3 align="center">编辑器与知识图谱</h3>
 - Markdown 源码 / 实时预览 / 阅读模式
 - `[[WikiLinks]]` 双向链接
 - LaTeX、Mermaid、代码高亮
 - 图谱可视化笔记关系
 
-### 阅读与采集
+<h3 align="center">阅读与采集</h3>
 - 内置 PDF 阅读器：高亮、下划线、批注
 - 批注可保存为 Markdown
 - 选中内容可直接发送到 AI 上下文
 
-### 扩展能力
+<h3 align="center">扩展能力</h3>
 - B 站视频笔记（弹幕时间戳同步）
 - 语音输入（实时转文字）
 - 数据库视图（表格 / 看板）
@@ -92,7 +92,7 @@
 - 闪卡复习
 - 15 套主题
 
-### 插件生态（开发者预览）
+<h3 align="center">插件生态（开发者预览）</h3>
 - 从工作区 / 用户目录 / 内置目录加载插件
 - 插件能力运行时权限模型
 - Slash Command 扩展 API
@@ -100,7 +100,7 @@
 
 ---
 
-## 快速开始
+<h2 align="center">快速开始</h2>
 
 1. 从 Releases 安装应用。
 2. 首次启动选择本地文件夹作为笔记库。
@@ -109,20 +109,20 @@
 
 ---
 
-## 使用指南
+<h2 align="center">使用指南</h2>
 
-### 推荐先读
+<h3 align="center">推荐先读</h3>
 - 中文：`docs/user-flow.zh-CN.md`
 - English: `docs/user-flow.md`
 - 日本語: `docs/user-flow.ja.md`
 
-### 自部署中继（跨网络手机访问）
+<h3 align="center">自部署中继（跨网络手机访问）</h3>
 - 中文：`docs/self-host.zh-CN.md`
 - English: `docs/self-host.md`
 
 ---
 
-## 从源码构建
+<h2 align="center">从源码构建</h2>
 
 环境要求：
 - Node.js 20+（推荐 20.11.1）
@@ -137,7 +137,7 @@ npm run tauri dev
 
 ---
 
-## 技术栈
+<h2 align="center">技术栈</h2>
 
 - 框架：Tauri v2（Rust + WebView）
 - 前端：React 18、TypeScript、Tailwind CSS
@@ -147,14 +147,14 @@ npm run tauri dev
 
 ---
 
-## 开源组件
+<h2 align="center">开源组件</h2>
 
 - 编辑器核心：[codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
 - Rust 编排运行时：[forge](https://github.com/blueberrycongee/forge)
 
 ---
 
-## 贡献者
+<h2 align="center">贡献者</h2>
 
 <a href="https://github.com/blueberrycongee/Lumina-Note/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=blueberrycongee/Lumina-Note" />
@@ -162,12 +162,12 @@ npm run tauri dev
 
 ---
 
-## 许可证
+<h2 align="center">许可证</h2>
 
 [Apache License 2.0](LICENSE)
 
 ---
 
-## Star History
+<h2 align="center">Star History</h2>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=blueberrycongee/Lumina-Note&type=Date)](https://star-history.com/#blueberrycongee/Lumina-Note&Date)
