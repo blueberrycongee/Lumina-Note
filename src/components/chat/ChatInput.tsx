@@ -16,6 +16,7 @@ import {
   flattenFileTreeToReferences,
   parseMentionQueryAtCursor,
 } from "./fileMentionUtils";
+import { isIMEComposing } from "@/lib/imeUtils";
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import type { AttachedImage } from "@/types/chat";
 import type { QuoteReference } from "@/types/chat";
@@ -249,6 +250,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
   // 处理键盘事件
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME 输入法组合期间，忽略所有快捷键（如 Enter 确认候选词）
+    if (isIMEComposing(e)) return;
+
     if (showMention) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
