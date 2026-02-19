@@ -115,11 +115,10 @@ fn plugin_roots(app: &AppHandle, workspace_path: Option<&str>) -> Vec<(String, P
         let direct = resource_dir.join("plugins");
         if direct.exists() {
             push_root("builtin", direct);
-        } else {
-            let nested = resource_dir.join("resources").join("plugins");
-            if nested.exists() {
-                push_root("builtin", nested);
-            }
+        }
+        let nested = resource_dir.join("resources").join("plugins");
+        if nested.exists() {
+            push_root("builtin", nested);
         }
     }
 
