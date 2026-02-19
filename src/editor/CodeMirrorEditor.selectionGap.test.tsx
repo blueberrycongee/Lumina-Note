@@ -139,4 +139,35 @@ describe("CodeMirror live selection gap bridge", () => {
     expect(widget).not.toBeNull();
     expect(widget?.className.includes("my-2")).toBe(false);
   });
+
+  it("keeps list and quote marks visible when another line is active", () => {
+    const content = "Paragraph\n- item\n> quote\n# heading";
+    const { container, view } = setupEditor(content);
+
+    act(() => {
+      view.dispatch({ selection: { anchor: 0, head: 0 } });
+    });
+
+    const visibleBlockTexts = Array.from(
+      container.querySelectorAll(".cm-formatting-block.cm-formatting-block-visible")
+    ).map((el) => el.textContent ?? "");
+
+    expect(visibleBlockTexts.some((text) => text.includes("-"))).toBe(true);
+    expect(visibleBlockTexts.some((text) => text.includes(">"))).toBe(true);
+  });
+
+  it("keeps heading mark collapsed when heading line is not active", () => {
+    const content = "Paragraph\n# Heading";
+    const { container, view } = setupEditor(content);
+
+    act(() => {
+      view.dispatch({ selection: { anchor: 0, head: 0 } });
+    });
+
+    const headingMark = Array.from(container.querySelectorAll(".cm-formatting-block"))
+      .find((el) => (el.textContent ?? "").includes("#"));
+
+    expect(headingMark).toBeDefined();
+    expect(headingMark?.classList.contains("cm-formatting-block-visible")).toBe(false);
+  });
 });

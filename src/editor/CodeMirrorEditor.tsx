@@ -29,7 +29,7 @@ import { common, createLowlight } from "lowlight";
 import mermaid from "mermaid";
 import { PLUGIN_EDITOR_SELECTION_EVENT, pluginEditorRuntime } from "@/services/plugins/editorRuntime";
 import {
-  livePreviewPlugin,
+  checkUpdateAction,
   collapseOnSelectionFacet,
   tableField,
   tableEditorPlugin,
@@ -493,7 +493,84 @@ class ImageWidget extends WidgetType {
 // shouldShowSource 从 codemirror-live-markdown 导入
 
 // ============ 6. StateFields & Plugins ============
-// livePreviewPlugin 从 codemirror-live-markdown 导入
+const LIVE_BLOCK_MARK_TYPES = new Set(["HeaderMark", "ListMark", "QuoteMark"]);
+const LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES = new Set(["ListMark", "QuoteMark"]);
+const LIVE_INLINE_MARK_TYPES = new Set(["EmphasisMark", "StrikethroughMark", "CodeMark"]);
+const SKIP_LIVE_PREVIEW_PARENT_TYPES = new Set(["FencedCode", "CodeBlock"]);
+
+function isInsideSkippedLivePreviewParent(node: any): boolean {
+  let parent = node.node.parent;
+  while (parent) {
+    if (SKIP_LIVE_PREVIEW_PARENT_TYPES.has(parent.name)) {
+      return true;
+    }
+    parent = parent.parent;
+  }
+  return false;
+}
+
+function buildLivePreviewDecorations(view: EditorView): DecorationSet {
+  const decorations: any[] = [];
+  const { state } = view;
+  const activeLines = new Set<number>();
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(range.from).number;
+    const endLine = state.doc.lineAt(range.to).number;
+    for (let line = startLine; line <= endLine; line++) {
+      activeLines.add(line);
+    }
+  }
+  const isDrag = state.field(mouseSelectingField, false);
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (!LIVE_BLOCK_MARK_TYPES.has(node.name) && !LIVE_INLINE_MARK_TYPES.has(node.name)) return;
+      if (isInsideSkippedLivePreviewParent(node)) return;
+
+      if (node.name === "CodeMark") {
+        const parent = node.node.parent;
+        if (parent && parent.name === "InlineCode") {
+          const text = state.doc.sliceString(parent.from, parent.to);
+          if (text.startsWith("`$") && text.endsWith("$`")) {
+            return;
+          }
+        }
+      }
+
+      if (LIVE_BLOCK_MARK_TYPES.has(node.name)) {
+        const lineNum = state.doc.lineAt(node.from).number;
+        const isActiveLine = activeLines.has(lineNum) && !isDrag;
+        const shouldShow = LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES.has(node.name) || isActiveLine;
+        const cls = shouldShow
+          ? "cm-formatting-block cm-formatting-block-visible"
+          : "cm-formatting-block";
+        decorations.push(Decoration.mark({ class: cls }).range(node.from, node.to));
+        return;
+      }
+
+      if (node.from >= node.to) return;
+      const isTouched = shouldShowSource(state, node.from, node.to);
+      const cls = isTouched && !isDrag
+        ? "cm-formatting-inline cm-formatting-inline-visible"
+        : "cm-formatting-inline";
+      decorations.push(Decoration.mark({ class: cls }).range(node.from, node.to));
+    }
+  });
+
+  return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
+}
+
+const livePreviewPlugin = ViewPlugin.fromClass(class {
+  decorations: DecorationSet;
+  constructor(view: EditorView) {
+    this.decorations = buildLivePreviewDecorations(view);
+  }
+  update(update: ViewUpdate) {
+    if (checkUpdateAction(update) === "rebuild") {
+      this.decorations = buildLivePreviewDecorations(update.view);
+    }
+  }
+}, { decorations: (v) => v.decorations });
 
 // 缓存公式位置，避免每次选择变化都重新解析
 let mathPositionsCache: { from: number, to: number }[] = [];
