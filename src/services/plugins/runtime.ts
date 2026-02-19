@@ -1206,11 +1206,7 @@ return exported(api, plugin);
         openVideoNote: (url?: string, title?: string) => {
           requirePermission("workspace:tab");
           const store = useFileStore.getState();
-          const videoTabIndex = store.tabs.findIndex((tab) => tab.type === "video-note");
-          if (videoTabIndex >= 0) {
-            store.switchTab(videoTabIndex);
-            return;
-          }
+          // Delegate singleton/update behavior to the store implementation.
           store.openVideoNoteTab(url || "", title || useLocaleStore.getState().t.videoNote.title);
         },
         openBrowserTab: (url?: string, title?: string) => {
