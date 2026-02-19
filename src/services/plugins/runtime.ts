@@ -10,6 +10,7 @@ import {
 } from "@/lib/tauri";
 import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { pluginThemeRuntime, type ThemeMode } from "@/services/plugins/themeRuntime";
@@ -70,7 +71,7 @@ const HOST_APP_VERSION =
   typeof __LUMINA_APP_VERSION__ === "string" && __LUMINA_APP_VERSION__.trim().length > 0
     ? __LUMINA_APP_VERSION__
     : "0.0.0";
-const DEFAULT_PLUGIN_RIBBON_BLOCKLIST = new Set<string>([
+const DEFAULT_PLUGIN_RIBBON_HIDDEN_BY_DEFAULT = new Set<string>([
   "hello-lumina",
   "pixel-noir",
   "ui-overhaul-lab",
@@ -108,8 +109,11 @@ interface LuminaPluginApi {
       id: string;
       title: string;
       icon?: string;
+      iconName?: string;
       section?: "top" | "bottom";
       order?: number;
+      defaultEnabled?: boolean;
+      activeWhenTabTypes?: string[];
       run: () => void;
     }) => () => void;
     registerStatusBarItem: (input: {
@@ -183,6 +187,8 @@ interface LuminaPluginApi {
       render: (payload: Record<string, unknown>) => string;
     }) => () => void;
     openRegisteredTab: (type: string, payload?: Record<string, unknown>) => void;
+    openVideoNote: (url?: string, title?: string) => void;
+    openBrowserTab: (url?: string, title?: string) => void;
     mountView: (input: { viewType: string; title: string; html: string }) => void;
     registerShellSlot: (input: { slotId: string; html: string; order?: number }) => () => void;
     registerLayoutPreset: (input: {
@@ -732,26 +738,32 @@ return exported(api, plugin);
       id: string;
       title: string;
       icon?: string;
+      iconName?: string;
       section?: "top" | "bottom";
       order?: number;
+      defaultEnabled?: boolean;
+      activeWhenTabTypes?: string[];
       run: () => void;
     }) => {
       requirePermission("ui:decorate");
       const itemId = input.id.trim();
       if (!itemId) throw new Error("Ribbon item id cannot be empty");
-      if (DEFAULT_PLUGIN_RIBBON_BLOCKLIST.has(info.id)) {
-        console.info(
-          `[PluginRuntime:${info.id}] skip ribbon item registration for default plugin item ${itemId}`,
-        );
-        return () => {};
-      }
+      const defaultEnabled =
+        typeof input.defaultEnabled === "boolean"
+          ? input.defaultEnabled
+          : !DEFAULT_PLUGIN_RIBBON_HIDDEN_BY_DEFAULT.has(info.id);
       usePluginUiStore.getState().registerRibbonItem({
         pluginId: info.id,
         itemId,
         title: input.title || itemId,
         icon: input.icon,
+        iconName: input.iconName,
         section: input.section || "top",
         order: input.order ?? 1000,
+        defaultEnabled,
+        activeWhenTabTypes: Array.isArray(input.activeWhenTabTypes)
+          ? input.activeWhenTabTypes.filter((entry) => typeof entry === "string" && entry.trim().length > 0)
+          : undefined,
         run: input.run,
       });
       const cleanup = withOnce(() => usePluginUiStore.getState().unregisterRibbonItem(info.id, itemId));
@@ -1191,6 +1203,30 @@ return exported(api, plugin);
         registerPanel,
         registerTabType,
         openRegisteredTab,
+        openVideoNote: (url?: string, title?: string) => {
+          requirePermission("workspace:tab");
+          const store = useFileStore.getState();
+          const videoTabIndex = store.tabs.findIndex((tab) => tab.type === "video-note");
+          if (videoTabIndex >= 0) {
+            store.switchTab(videoTabIndex);
+            return;
+          }
+          store.openVideoNoteTab(url || "", title || useLocaleStore.getState().t.videoNote.title);
+        },
+        openBrowserTab: (url?: string, title?: string) => {
+          requirePermission("workspace:tab");
+          const store = useFileStore.getState();
+          if (!url) {
+            const emptyWebpageTabIndex = store.tabs.findIndex(
+              (tab) => tab.type === "webpage" && !tab.webpageUrl,
+            );
+            if (emptyWebpageTabIndex >= 0) {
+              store.switchTab(emptyWebpageTabIndex);
+              return;
+            }
+          }
+          store.openWebpageTab(url || "", title || useLocaleStore.getState().t.views.newTab);
+        },
         mountView,
         registerShellSlot,
         registerLayoutPreset,

@@ -50,6 +50,7 @@ describe("usePluginStore", () => {
     usePluginStore.setState({
       plugins: [],
       enabledById: {},
+      ribbonItemEnabledByKey: {},
       runtimeStatus: {},
       loading: false,
       error: null,
@@ -91,5 +92,24 @@ describe("usePluginStore", () => {
         }),
       }),
     );
+  });
+
+  it("uses per-ribbon-item defaults when user has no override", () => {
+    const store = usePluginStore.getState();
+    expect(store.isRibbonItemEnabled("browser-launcher", "open-browser-tab", true)).toBe(true);
+    expect(store.isRibbonItemEnabled("hello-lumina", "hello-ribbon", false)).toBe(false);
+  });
+
+  it("persists explicit per-ribbon-item toggle in memory state", () => {
+    const store = usePluginStore.getState();
+    store.setRibbonItemEnabled("video-note-launcher", "open-video-note", false);
+    expect(
+      usePluginStore.getState().isRibbonItemEnabled("video-note-launcher", "open-video-note", true),
+    ).toBe(false);
+
+    store.setRibbonItemEnabled("video-note-launcher", "open-video-note", true);
+    expect(
+      usePluginStore.getState().isRibbonItemEnabled("video-note-launcher", "open-video-note", false),
+    ).toBe(true);
   });
 });

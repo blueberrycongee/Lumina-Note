@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { usePluginStore } from "@/stores/usePluginStore";
+import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { showInExplorer } from "@/lib/tauri";
@@ -19,12 +20,15 @@ export function PluginSection() {
     loadPlugins,
     reloadPlugins,
     setPluginEnabled,
+    setRibbonItemEnabled,
+    isRibbonItemEnabled,
     ensureWorkspacePluginDir,
     scaffoldThemePlugin,
     appearanceSafeMode,
     setAppearanceSafeMode,
     isolatePluginStyles,
   } = usePluginStore();
+  const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const grouped = useMemo(() => {
@@ -165,6 +169,9 @@ export function PluginSection() {
               {items.map((plugin) => {
                 const enabled = isEnabled(plugin.id, plugin.enabled_by_default);
                 const status = runtimeStatus[plugin.id];
+                const pluginRibbonItems = ribbonItems
+                  .filter((item) => item.pluginId === plugin.id)
+                  .sort((a, b) => a.order - b.order);
                 return (
                   <div
                     key={`${plugin.source}:${plugin.id}`}
@@ -217,6 +224,42 @@ export function PluginSection() {
                         </span>
                       )}
                     </div>
+
+                    {pluginRibbonItems.length > 0 && (
+                      <div className="space-y-1 rounded-md border border-border/70 bg-muted/20 p-2">
+                        {pluginRibbonItems.map((item) => {
+                          const itemEnabled = isRibbonItemEnabled(
+                            plugin.id,
+                            item.itemId,
+                            item.defaultEnabled ?? true,
+                          );
+                          return (
+                            <div
+                              key={`${item.pluginId}:${item.itemId}`}
+                              className="flex items-center justify-between gap-2 text-xs"
+                            >
+                              <div className="min-w-0">
+                                <div className="truncate text-foreground">{item.title}</div>
+                                <div className="truncate text-muted-foreground">{item.itemId}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRibbonItemEnabled(plugin.id, item.itemId, !itemEnabled)
+                                }
+                                className={`h-7 px-2 rounded-md text-[11px] font-medium border transition-colors ${
+                                  itemEnabled
+                                    ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
+                                    : "bg-background/60 border-border hover:bg-muted"
+                                }`}
+                              >
+                                {itemEnabled ? t.plugins.statusEnabled : t.plugins.statusDisabled}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {status?.error && !status?.incompatible && (
                       <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-md p-2">

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { usePluginStore } from "@/stores/usePluginStore";
 import {
   FileText,
   Network,
@@ -23,7 +24,7 @@ import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { cn } from "@/lib/utils";
 import { exists } from "@/lib/tauri";
 import { SettingsModal } from "./SettingsModal";
-import { usePluginUiStore } from "@/stores/usePluginUiStore";
+import { type PluginRibbonItem, usePluginUiStore } from "@/stores/usePluginUiStore";
 import { InstalledPluginsModal } from "@/components/plugins/InstalledPluginsModal";
 
 export function Ribbon() {
@@ -34,18 +35,17 @@ export function Ribbon() {
   const closePlugins = useCallback(() => setShowPlugins(false), []);
   const { t } = useLocaleStore();
   const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
+  const isRibbonItemEnabled = usePluginStore((state) => state.isRibbonItemEnabled);
   const {
     tabs,
     activeTabIndex,
     openGraphTab,
     switchTab,
-    openVideoNoteTab,
     recentFiles,
     openFile,
     fileTree,
     openAIMainTab,
     currentFile,
-    openWebpageTab,
     openFlashcardTab,
     openCardFlowTab,
   } = useFileStore();
@@ -127,6 +127,36 @@ export function Ribbon() {
     }
   }, []);
 
+  const isPluginRibbonItemActive = useCallback(
+    (item: PluginRibbonItem) => {
+      if (!activeTab?.type) return false;
+      return Array.isArray(item.activeWhenTabTypes) && item.activeWhenTabTypes.includes(activeTab.type);
+    },
+    [activeTab?.type],
+  );
+
+  const renderPluginRibbonIcon = (item: PluginRibbonItem) => {
+    if (item.iconName === "video") return <Video size={18} />;
+    if (item.iconName === "browser") return <Globe size={18} />;
+    return <span>{item.icon || "◎"}</span>;
+  };
+
+  const topPluginRibbonItems = ribbonItems
+    .filter(
+      (item) =>
+        item.section === "top" &&
+        isRibbonItemEnabled(item.pluginId, item.itemId, item.defaultEnabled ?? true),
+    )
+    .sort((a, b) => a.order - b.order);
+
+  const bottomPluginRibbonItems = ribbonItems
+    .filter(
+      (item) =>
+        item.section === "bottom" &&
+        isRibbonItemEnabled(item.pluginId, item.itemId, item.defaultEnabled ?? true),
+    )
+    .sort((a, b) => a.order - b.order);
+
   return (
     <div className="w-11 h-full bg-background/55 backdrop-blur-md border-r border-border/60 shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] flex flex-col items-center py-2 gap-0.5">
       {/* Top icons */}
@@ -199,27 +229,6 @@ export function Ribbon() {
           <Network size={18} />
         </button>
 
-        {/* Video Note */}
-        <button
-          onClick={() => {
-            const videoTabIndex = tabs.findIndex(t => t.type === "video-note");
-            if (videoTabIndex >= 0) {
-              switchTab(videoTabIndex);
-            } else {
-              openVideoNoteTab("", t.videoNote.title);
-            }
-          }}
-          className={cn(
-            "w-8 h-8 ui-icon-btn",
-            activeSection === "video"
-              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
-              : ""
-          )}
-          title={t.ribbon.videoNote}
-        >
-          <Video size={18} />
-        </button>
-
         {/* Database */}
         <button
           onClick={() => window.dispatchEvent(new CustomEvent("open-create-database"))}
@@ -248,28 +257,6 @@ export function Ribbon() {
           <Brain size={18} />
         </button>
 
-        {/* Browser */}
-        <button
-          onClick={() => {
-            // 查找已有的空网页标签页或创建新的
-            const webpageTabIndex = tabs.findIndex(t => t.type === "webpage" && !t.webpageUrl);
-            if (webpageTabIndex >= 0) {
-              switchTab(webpageTabIndex);
-            } else {
-              openWebpageTab("", t.views.newTab);
-            }
-          }}
-          className={cn(
-            "w-8 h-8 ui-icon-btn",
-            activeSection === "browser"
-              ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
-              : ""
-          )}
-          title={t.ribbon.browser}
-        >
-          <Globe size={18} />
-        </button>
-
         {/* Plugins */}
         <button
           onClick={() => setShowPlugins(true)}
@@ -279,17 +266,19 @@ export function Ribbon() {
           <Puzzle size={18} />
         </button>
 
-        {ribbonItems
-          .filter((item) => item.section === "top")
-          .sort((a, b) => a.order - b.order)
-          .map((item) => (
+        {topPluginRibbonItems.map((item) => (
             <button
               key={`${item.pluginId}:${item.itemId}`}
               onClick={() => item.run()}
-              className="w-8 h-8 ui-icon-btn text-xs"
+              className={cn(
+                "w-8 h-8 ui-icon-btn text-xs",
+                isPluginRibbonItemActive(item)
+                  ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                  : ""
+              )}
               title={item.title}
             >
-              <span>{item.icon || "◎"}</span>
+              {renderPluginRibbonIcon(item)}
             </button>
           ))}
       </div>
@@ -311,17 +300,19 @@ export function Ribbon() {
           <Star size={18} />
         </button>
 
-        {ribbonItems
-          .filter((item) => item.section === "bottom")
-          .sort((a, b) => a.order - b.order)
-          .map((item) => (
+        {bottomPluginRibbonItems.map((item) => (
             <button
               key={`${item.pluginId}:${item.itemId}`}
               onClick={() => item.run()}
-              className="w-8 h-8 ui-icon-btn text-xs"
+              className={cn(
+                "w-8 h-8 ui-icon-btn text-xs",
+                isPluginRibbonItemActive(item)
+                  ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                  : ""
+              )}
               title={item.title}
             >
-              <span>{item.icon || "◎"}</span>
+              {renderPluginRibbonIcon(item)}
             </button>
           ))}
 

@@ -12,8 +12,11 @@ export interface PluginRibbonItem {
   itemId: string;
   title: string;
   icon?: string;
+  iconName?: string;
   section: "top" | "bottom";
   order: number;
+  defaultEnabled?: boolean;
+  activeWhenTabTypes?: string[];
   run: () => void;
 }
 

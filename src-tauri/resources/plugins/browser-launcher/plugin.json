@@ -1,0 +1,9 @@
+{
+  "id": "browser-launcher",
+  "name": "Browser Launcher",
+  "version": "0.1.0",
+  "description": "Add a ribbon button to open or focus Browser tab.",
+  "entry": "index.js",
+  "permissions": ["ui:decorate", "workspace:tab"],
+  "enabled_by_default": false
+}

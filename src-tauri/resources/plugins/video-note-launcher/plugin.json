@@ -1,0 +1,9 @@
+{
+  "id": "video-note-launcher",
+  "name": "Video Note Launcher",
+  "version": "0.1.0",
+  "description": "Add a ribbon button to open or focus Video Note.",
+  "entry": "index.js",
+  "permissions": ["ui:decorate", "workspace:tab"],
+  "enabled_by_default": false
+}

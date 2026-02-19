@@ -14,6 +14,7 @@ import { pluginStyleRuntime } from "@/services/plugins/styleRuntime";
 interface PluginStoreState {
   plugins: PluginInfo[];
   enabledById: Record<string, boolean>;
+  ribbonItemEnabledByKey: Record<string, boolean>;
   runtimeStatus: Record<string, PluginRuntimeStatus>;
   loading: boolean;
   error: string | null;
@@ -22,6 +23,8 @@ interface PluginStoreState {
   loadPlugins: (workspacePath?: string) => Promise<void>;
   reloadPlugins: (workspacePath?: string) => Promise<void>;
   setPluginEnabled: (pluginId: string, enabled: boolean, workspacePath?: string) => Promise<void>;
+  setRibbonItemEnabled: (pluginId: string, itemId: string, enabled: boolean) => void;
+  isRibbonItemEnabled: (pluginId: string, itemId: string, defaultEnabled?: boolean) => boolean;
   ensureWorkspacePluginDir: () => Promise<string>;
   scaffoldExamplePlugin: () => Promise<string>;
   scaffoldThemePlugin: () => Promise<string>;
@@ -94,6 +97,7 @@ export const usePluginStore = create<PluginStoreState>()(
     (set, get) => ({
       plugins: [],
       enabledById: {},
+      ribbonItemEnabledByKey: {},
       runtimeStatus: {},
       loading: false,
       error: null,
@@ -151,6 +155,25 @@ export const usePluginStore = create<PluginStoreState>()(
         set({ runtimeStatus });
       },
 
+      setRibbonItemEnabled: (pluginId: string, itemId: string, enabled: boolean) => {
+        const key = `${pluginId}:${itemId}`;
+        set((state) => ({
+          ribbonItemEnabledByKey: {
+            ...state.ribbonItemEnabledByKey,
+            [key]: enabled,
+          },
+        }));
+      },
+
+      isRibbonItemEnabled: (pluginId: string, itemId: string, defaultEnabled: boolean = true) => {
+        const key = `${pluginId}:${itemId}`;
+        const state = get();
+        if (Object.prototype.hasOwnProperty.call(state.ribbonItemEnabledByKey, key)) {
+          return Boolean(state.ribbonItemEnabledByKey[key]);
+        }
+        return defaultEnabled;
+      },
+
       ensureWorkspacePluginDir: async () => {
         const dir = await getWorkspacePluginDir();
         set({ workspacePluginDir: dir });
@@ -187,6 +210,7 @@ export const usePluginStore = create<PluginStoreState>()(
       name: "lumina-plugins",
       partialize: (state) => ({
         enabledById: state.enabledById,
+        ribbonItemEnabledByKey: state.ribbonItemEnabledByKey,
         appearanceSafeMode: state.appearanceSafeMode,
       }),
     }
