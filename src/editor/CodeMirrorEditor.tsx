@@ -32,7 +32,6 @@ import {
   checkUpdateAction,
   collapseOnSelectionFacet,
   tableField,
-  tableEditorPlugin,
   mouseSelectingField,
   setMouseSelecting,
   shouldShowSource
@@ -211,6 +210,8 @@ const editorTheme = EditorView.theme({
   ".cm-table-editor th, .cm-table-editor td": { border: "1px solid hsl(var(--border))", padding: "8px 12px" },
   ".cm-table-editor th": { backgroundColor: "hsl(var(--muted))", fontWeight: "600" },
   ".cm-table-cell": { outline: "none", minWidth: "40px" },
+  ".cm-table-cell-preview": { cursor: "text", whiteSpace: "normal" },
+  ".cm-table-cell-preview .cm-code": { display: "inline-block" },
   ".cm-table-toolbar": { display: "flex", justifyContent: "flex-end", marginBottom: "6px" },
   ".cm-table-source-toggle": { display: "flex", justifyContent: "flex-end", marginBottom: "6px" },
   ".cm-table-toggle": {
@@ -1014,6 +1015,513 @@ function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
   return Decoration.set(decorations, true);
 }
 
+type TableAlignment = "left" | "right" | "center" | null;
+type TableData = {
+  headers: string[];
+  alignments: TableAlignment[];
+  rows: string[][];
+};
+
+function parseTableRow(line: string): string[] {
+  const placeholder = "\0PIPE\0";
+  const escaped = line.replace(/\\\|/g, placeholder);
+  const cells = escaped.split("|");
+  if (cells.length > 0 && cells[0].trim() === "") cells.shift();
+  if (cells.length > 0 && cells[cells.length - 1].trim() === "") cells.pop();
+  const placeholderRe = new RegExp(placeholder, "g");
+  return cells.map((cell) => cell.replace(placeholderRe, "|").trim());
+}
+
+function parseTableAlignment(cell: string): TableAlignment {
+  const trimmed = cell.trim();
+  const left = trimmed.startsWith(":");
+  const right = trimmed.endsWith(":");
+  if (left && right) return "center";
+  if (left) return "left";
+  if (right) return "right";
+  return null;
+}
+
+function isTableSeparatorRow(cells: string[]): boolean {
+  if (cells.length === 0) return false;
+  return cells.every((cell) => /^:?-+:?$/.test(cell.trim()));
+}
+
+function parseMarkdownTableSource(source: string): TableData | null {
+  const lines = source.split("\n").filter((line) => line.trim() !== "");
+  if (lines.length < 2) return null;
+  const headers = parseTableRow(lines[0]);
+  if (headers.length === 0) return null;
+  const separator = parseTableRow(lines[1]);
+  if (!isTableSeparatorRow(separator)) return null;
+  if (headers.length !== separator.length) return null;
+
+  const alignments = separator.map(parseTableAlignment);
+  const rows: string[][] = [];
+  for (let i = 2; i < lines.length; i++) {
+    const rowCells = parseTableRow(lines[i]);
+    rows.push(headers.map((_, idx) => rowCells[idx] ?? ""));
+  }
+  return { headers, alignments, rows };
+}
+
+function escapeTableCell(value: string): string {
+  return value.replace(/\|/g, "\\|").replace(/\r?\n/g, " ").trim();
+}
+
+function tableAlignmentCell(alignment: TableAlignment): string {
+  if (alignment === "left") return ":---";
+  if (alignment === "right") return "---:";
+  if (alignment === "center") return ":---:";
+  return "---";
+}
+
+function serializeMarkdownTableSource(data: TableData): string {
+  const headerLine = `| ${data.headers.map(escapeTableCell).join(" | ")} |`;
+  const separatorLine = `| ${data.alignments.map(tableAlignmentCell).join(" | ")} |`;
+  const rows = data.rows.map((row) => `| ${row.map(escapeTableCell).join(" | ")} |`);
+  return [headerLine, separatorLine, ...rows].join("\n");
+}
+
+function cloneTableData(data: TableData): TableData {
+  return {
+    headers: [...data.headers],
+    alignments: [...data.alignments],
+    rows: data.rows.map((row) => [...row]),
+  };
+}
+
+type InlineTokenKind =
+  | "code"
+  | "link"
+  | "strong_asterisk"
+  | "strong_underscore"
+  | "strike"
+  | "em_asterisk"
+  | "em_underscore";
+
+type InlineTokenMatch = {
+  index: number;
+  length: number;
+  kind: InlineTokenKind;
+  groups: string[];
+};
+
+const INLINE_MARKDOWN_PATTERNS: Array<{ kind: InlineTokenKind; re: RegExp }> = [
+  { kind: "code", re: /`([^`\n]+)`/ },
+  { kind: "link", re: /\[([^\]\n]+)\]\(([^)\n]+)\)/ },
+  { kind: "strong_asterisk", re: /\*\*([^\n*]+)\*\*/ },
+  { kind: "strong_underscore", re: /__([^\n_]+)__/ },
+  { kind: "strike", re: /~~([^\n~]+)~~/ },
+  { kind: "em_asterisk", re: /\*([^\n*]+)\*/ },
+  { kind: "em_underscore", re: /_([^\n_]+)_/ },
+];
+
+function findNextInlineToken(input: string): InlineTokenMatch | null {
+  let next: InlineTokenMatch | null = null;
+  for (const pattern of INLINE_MARKDOWN_PATTERNS) {
+    const match = pattern.re.exec(input);
+    if (!match || typeof match.index !== "number") continue;
+    const candidate: InlineTokenMatch = {
+      index: match.index,
+      length: match[0].length,
+      kind: pattern.kind,
+      groups: match.slice(1),
+    };
+    if (!next || candidate.index < next.index) {
+      next = candidate;
+    }
+  }
+  return next;
+}
+
+function appendInlineMarkdownPreview(parent: Node, input: string): void {
+  let cursor = 0;
+  while (cursor < input.length) {
+    const rest = input.slice(cursor);
+    const token = findNextInlineToken(rest);
+    if (!token) {
+      parent.appendChild(document.createTextNode(rest));
+      return;
+    }
+    if (token.index > 0) {
+      parent.appendChild(document.createTextNode(rest.slice(0, token.index)));
+    }
+
+    const [group1 = "", group2 = ""] = token.groups;
+    if (token.kind === "code") {
+      const code = document.createElement("code");
+      code.className = "cm-code";
+      code.textContent = group1;
+      parent.appendChild(code);
+    } else if (token.kind === "link") {
+      const link = document.createElement("a");
+      link.className = "cm-link";
+      link.rel = "noopener noreferrer";
+      link.target = "_blank";
+      const href = group2.trim();
+      link.href = /^\s*javascript:/i.test(href) ? "#" : href;
+      appendInlineMarkdownPreview(link, group1);
+      parent.appendChild(link);
+    } else {
+      const span = document.createElement("span");
+      span.className =
+        token.kind === "strike"
+          ? "cm-strikethrough"
+          : token.kind.startsWith("strong")
+            ? "cm-strong"
+            : "cm-emphasis";
+      appendInlineMarkdownPreview(span, group1);
+      parent.appendChild(span);
+    }
+    cursor += token.index + token.length;
+  }
+}
+
+function createInlineMarkdownPreviewFragment(input: string): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  if (!input) return fragment;
+  appendInlineMarkdownPreview(fragment, input);
+  return fragment;
+}
+
+function focusCellCaretEnd(cell: HTMLElement): void {
+  const selection = cell.ownerDocument.getSelection();
+  if (!selection) return;
+  const range = cell.ownerDocument.createRange();
+  range.selectNodeContents(cell);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+function createTableEditorCell(
+  tag: "th" | "td",
+  value: string,
+  alignment: TableAlignment,
+  onCommit: (nextValue: string) => void,
+): HTMLTableCellElement {
+  const cell = document.createElement(tag);
+  cell.className = "cm-table-cell";
+  if (alignment) {
+    cell.style.textAlign = alignment;
+  }
+
+  let rawValue = value;
+  let editing = false;
+
+  const renderPreview = () => {
+    editing = false;
+    cell.contentEditable = "false";
+    cell.classList.add("cm-table-cell-preview");
+    cell.replaceChildren();
+    const fragment = createInlineMarkdownPreviewFragment(rawValue);
+    cell.appendChild(fragment);
+  };
+
+  const enterEditMode = () => {
+    if (editing) return;
+    editing = true;
+    cell.classList.remove("cm-table-cell-preview");
+    cell.contentEditable = "true";
+    cell.textContent = rawValue;
+    setTimeout(() => {
+      cell.focus();
+      focusCellCaretEnd(cell);
+    }, 0);
+  };
+
+  const commitEdit = () => {
+    if (!editing) return;
+    const nextValue = cell.textContent ?? "";
+    const changed = nextValue !== rawValue;
+    rawValue = nextValue;
+    if (changed) {
+      onCommit(nextValue);
+    }
+    renderPreview();
+  };
+
+  const cancelEdit = () => {
+    renderPreview();
+  };
+
+  cell.addEventListener("mousedown", (event) => {
+    event.stopPropagation();
+  });
+  cell.addEventListener("click", (event) => {
+    if (editing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    enterEditMode();
+  });
+  cell.addEventListener("blur", (event) => {
+    event.stopPropagation();
+    commitEdit();
+  });
+  cell.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitEdit();
+      cell.blur();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelEdit();
+      cell.blur();
+    }
+  });
+
+  renderPreview();
+  return cell;
+}
+
+class LiveTableEditorWidget extends WidgetType {
+  constructor(
+    readonly data: TableData,
+    readonly from: number,
+    readonly to: number,
+  ) {
+    super();
+  }
+
+  eq(other: LiveTableEditorWidget): boolean {
+    if (this.data.headers.length !== other.data.headers.length) return false;
+    if (this.data.rows.length !== other.data.rows.length) return false;
+
+    for (let i = 0; i < this.data.headers.length; i++) {
+      if (this.data.headers[i] !== other.data.headers[i]) return false;
+      if (this.data.alignments[i] !== other.data.alignments[i]) return false;
+    }
+
+    for (let i = 0; i < this.data.rows.length; i++) {
+      for (let j = 0; j < this.data.headers.length; j++) {
+        if (this.data.rows[i][j] !== other.data.rows[i][j]) return false;
+      }
+    }
+    return true;
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "cm-table-editor";
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "cm-table-toolbar";
+    const toggleButton = document.createElement("button");
+    toggleButton.type = "button";
+    toggleButton.className = "cm-table-toggle";
+    toggleButton.textContent = "MD";
+    toggleButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      view.dispatch({
+        selection: { anchor: this.from },
+        effects: setLiveTableSourceMode.of({
+          from: this.from,
+          to: this.to,
+          showSource: true,
+        }),
+      });
+    });
+    toolbar.appendChild(toggleButton);
+    container.appendChild(toolbar);
+
+    const commitHeader = (colIndex: number, nextValue: string) => {
+      const updated = cloneTableData(this.data);
+      updated.headers[colIndex] = nextValue;
+      view.dispatch({
+        changes: {
+          from: this.from,
+          to: this.to,
+          insert: serializeMarkdownTableSource(updated),
+        },
+      });
+    };
+
+    const commitCell = (rowIndex: number, colIndex: number, nextValue: string) => {
+      const updated = cloneTableData(this.data);
+      updated.rows[rowIndex][colIndex] = nextValue;
+      view.dispatch({
+        changes: {
+          from: this.from,
+          to: this.to,
+          insert: serializeMarkdownTableSource(updated),
+        },
+      });
+    };
+
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    this.data.headers.forEach((header, idx) => {
+      headerRow.appendChild(
+        createTableEditorCell("th", header, this.data.alignments[idx], (nextValue) =>
+          commitHeader(idx, nextValue),
+        ),
+      );
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    this.data.rows.forEach((row, rowIndex) => {
+      const tr = document.createElement("tr");
+      row.forEach((cellValue, colIndex) => {
+        tr.appendChild(
+          createTableEditorCell("td", cellValue, this.data.alignments[colIndex], (nextValue) =>
+            commitCell(rowIndex, colIndex, nextValue),
+          ),
+        );
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    return container;
+  }
+
+  ignoreEvent(): boolean {
+    return true;
+  }
+}
+
+class TableSourceToggleWidget extends WidgetType {
+  constructor(readonly from: number, readonly to: number) {
+    super();
+  }
+
+  toDOM(view: EditorView): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "cm-table-source-toggle";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "cm-table-toggle";
+    button.textContent = "Table";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      view.dispatch({
+        effects: setLiveTableSourceMode.of({
+          from: this.from,
+          to: this.to,
+          showSource: false,
+        }),
+      });
+    });
+    container.appendChild(button);
+    return container;
+  }
+
+  ignoreEvent(): boolean {
+    return true;
+  }
+}
+
+type TableSourceRange = { from: number; to: number };
+const setLiveTableSourceMode = StateEffect.define<{
+  from: number;
+  to: number;
+  showSource: boolean;
+}>();
+
+function tableRangesOverlap(a: TableSourceRange, b: TableSourceRange): boolean {
+  return a.from <= b.to && a.to >= b.from;
+}
+
+function addTableSourceRange(ranges: TableSourceRange[], next: TableSourceRange): TableSourceRange[] {
+  if (ranges.some((range) => tableRangesOverlap(range, next))) {
+    return ranges;
+  }
+  return [...ranges, next];
+}
+
+function removeTableSourceRange(ranges: TableSourceRange[], target: TableSourceRange): TableSourceRange[] {
+  return ranges.filter((range) => !tableRangesOverlap(range, target));
+}
+
+function isTableShownAsSource(ranges: TableSourceRange[], from: number, to: number): boolean {
+  return ranges.some((range) => range.from <= to && range.to >= from);
+}
+
+const liveTableSourceModeField = StateField.define<TableSourceRange[]>({
+  create: () => [],
+  update(ranges, tr) {
+    let next = ranges.map((range) => ({
+      from: tr.changes.mapPos(range.from, 1),
+      to: tr.changes.mapPos(range.to, -1),
+    }));
+    for (const effect of tr.effects) {
+      if (!effect.is(setLiveTableSourceMode)) continue;
+      const mapped = {
+        from: tr.changes.mapPos(effect.value.from, 1),
+        to: tr.changes.mapPos(effect.value.to, -1),
+      };
+      next = effect.value.showSource
+        ? addTableSourceRange(next, mapped)
+        : removeTableSourceRange(next, mapped);
+    }
+    return next;
+  },
+});
+
+function buildLiveTableEditorDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  const sourceRanges = state.field(liveTableSourceModeField);
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name !== "Table") return;
+      const source = state.doc.sliceString(node.from, node.to);
+      const tableData = parseMarkdownTableSource(source);
+      if (!tableData) return;
+
+      if (!isTableShownAsSource(sourceRanges, node.from, node.to)) {
+        decorations.push(
+          Decoration.replace({
+            widget: new LiveTableEditorWidget(tableData, node.from, node.to),
+            block: true,
+          }).range(node.from, node.to),
+        );
+        return;
+      }
+
+      decorations.push(
+        Decoration.widget({
+          widget: new TableSourceToggleWidget(node.from, node.to),
+          block: true,
+        }).range(node.from),
+      );
+
+      for (let pos = node.from; pos <= node.to;) {
+        const line = state.doc.lineAt(pos);
+        decorations.push(Decoration.line({ class: "cm-table-source" }).range(line.from));
+        pos = line.to + 1;
+      }
+    },
+  });
+
+  return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
+}
+
+const liveTableEditorField = StateField.define<DecorationSet>({
+  create: buildLiveTableEditorDecorations,
+  update(deco, tr) {
+    if (tr.docChanged || tr.reconfigured || tr.effects.some((effect) => effect.is(setLiveTableSourceMode))) {
+      return buildLiveTableEditorDecorations(tr.state);
+    }
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function liveTableEditorPlugin() {
+  return [liveTableSourceModeField, liveTableEditorField];
+}
+
 // Table Keymap
 const tableKeymap = [
   {
@@ -1297,7 +1805,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         case 'reading':
           return [collapseOnSelectionFacet.of(false), readingModePlugin, tableField, ...widgets];
         case 'live':
-          return [collapseOnSelectionFacet.of(true), livePreviewPlugin, tableEditorPlugin(), ...widgets];
+          return [collapseOnSelectionFacet.of(true), livePreviewPlugin, liveTableEditorPlugin(), ...widgets];
         case 'source':
         default:
           return [calloutStateField];

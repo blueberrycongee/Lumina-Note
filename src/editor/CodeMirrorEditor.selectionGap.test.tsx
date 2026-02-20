@@ -170,4 +170,20 @@ describe("CodeMirror live selection gap bridge", () => {
     expect(headingMark).toBeDefined();
     expect(headingMark?.classList.contains("cm-formatting-block-visible")).toBe(false);
   });
+
+  it("renders inline markdown styles inside live table cells", () => {
+    const content = [
+      "| col |",
+      "| --- |",
+      "| **bold** *it* ~~del~~ `code` [link](https://example.com) |",
+    ].join("\n");
+    const { container } = setupEditor(content);
+    const cell = container.querySelector(".cm-table-editor tbody td");
+    expect(cell).not.toBeNull();
+    expect(cell?.querySelector(".cm-strong")?.textContent).toBe("bold");
+    expect(cell?.querySelector(".cm-emphasis")?.textContent).toBe("it");
+    expect(cell?.querySelector(".cm-strikethrough")?.textContent).toBe("del");
+    expect(cell?.querySelector(".cm-code")?.textContent).toBe("code");
+    expect(cell?.querySelector("a.cm-link")?.textContent).toBe("link");
+  });
 });
