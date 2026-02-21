@@ -313,7 +313,7 @@ export function Editor() {
       <TabBar />
 
       {/* Top Navigation Bar */}
-      <div className="h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
+      <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <button
             onClick={toggleLeftSidebar}
@@ -382,12 +382,12 @@ export function Editor() {
                     title={modeLabels[mode]}
                   >
                     {modeIcons[mode]}
-                    <span className="hidden sm:inline">{modeLabels[mode]}</span>
+                    <span className="ui-compact-hide">{modeLabels[mode]}</span>
                   </button>
                 ))}
               </div>
 
-              <span className="text-xs text-muted-foreground">
+              <span className="ui-compact-hide text-xs text-muted-foreground">
                 {isSaving ? t.editor.saving : isDirty ? t.editor.edited : t.common.saved}
               </span>
               <button
