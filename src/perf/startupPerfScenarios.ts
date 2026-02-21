@@ -63,7 +63,7 @@ function countPatternMatches(content: string, pattern: RegExp): number {
   return matches;
 }
 
-function buildSyntheticMarkdown(targetKb: number): string {
+export function buildSyntheticMarkdown(targetKb: number): string {
   const seedBlocks = [
     "# Performance Note\n\n",
     "Normal text paragraph for editor baseline.\n\n",

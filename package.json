@@ -21,7 +21,9 @@
     "test:repro:flashcard:e2e": "FLASHCARD_E2E=1 vitest --run src/__tests__/flashcardReview.chromium.e2e.test.ts",
     "test:agent-eval": "npx ts-node --esm tests/agent-eval/runner.ts",
     "test:agent-eval:basic": "npx ts-node --esm tests/agent-eval/runner.ts --category=basic",
-    "test:agent-eval:complex": "npx ts-node --esm tests/agent-eval/runner.ts --category=complex"
+    "test:agent-eval:complex": "npx ts-node --esm tests/agent-eval/runner.ts --category=complex",
+    "bench": "vitest bench",
+    "bench:run": "vitest bench --run"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.0",
