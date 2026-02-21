@@ -807,16 +807,43 @@ export const useAIStore = create<AIState>()(
 
       // 停止流式
       stopStreaming: () => {
-        const { _abortController } = get();
+        const { _abortController, streamingContent, streamingReasoning } = get();
         if (_abortController) {
           _abortController.abort();
         }
-        set({
-          isStreaming: false,
-          streamingReasoning: "",
-          streamingReasoningStatus: "idle",
-          _abortController: null,
-        });
+
+        // 保留已接收的部分内容作为助手消息，避免用户丢失已生成的回复
+        if (streamingContent.trim().length > 0) {
+          const partialContent = streamingReasoning.trim().length > 0
+            ? `<thinking>\n${streamingReasoning.trim()}\n</thinking>\n\n${streamingContent}`
+            : streamingContent;
+
+          set((state) => {
+            const assistantMessage: Message = { role: "assistant", content: partialContent };
+            const newMessages = [...state.messages, assistantMessage];
+            return {
+              messages: newMessages,
+              isStreaming: false,
+              streamingContent: "",
+              streamingReasoning: "",
+              streamingReasoningStatus: "idle",
+              _abortController: null,
+              sessions: state.sessions.map((s) =>
+                s.id === state.currentSessionId
+                  ? { ...s, messages: newMessages, updatedAt: Date.now() }
+                  : s
+              ),
+            };
+          });
+        } else {
+          set({
+            isStreaming: false,
+            streamingContent: "",
+            streamingReasoning: "",
+            streamingReasoningStatus: "idle",
+            _abortController: null,
+          });
+        }
       },
 
       // Clear chat
