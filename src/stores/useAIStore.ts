@@ -688,6 +688,9 @@ export const useAIStore = create<AIState>()(
           
           // 流式接收内容
           for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true, signal: abortController.signal })) {
+            // 每次迭代检查 abort 信号，确保用户点击停止后立即退出循环
+            if (abortController.signal.aborted) break;
+
             if (chunk.type === "text") {
               finalContent += chunk.text;
               // chat 流式阶段只渲染最终回答文本，避免 reasoning 与正文来回覆盖造成“像两次回复”。
