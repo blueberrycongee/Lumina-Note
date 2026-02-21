@@ -377,10 +377,9 @@ fn urlencoding_decode(s: &str) -> String {
             let lo = chars.next().copied();
             if let (Some(h), Some(l)) = (hi, lo) {
                 let hex_str = [h, l];
-                if let Ok(decoded) = u8::from_str_radix(
-                    std::str::from_utf8(&hex_str).unwrap_or(""),
-                    16,
-                ) {
+                if let Ok(decoded) =
+                    u8::from_str_radix(std::str::from_utf8(&hex_str).unwrap_or(""), 16)
+                {
                     bytes.push(decoded);
                 } else {
                     bytes.push(b'%');
