@@ -1,8 +1,8 @@
 import { LLMProvider, LLMConfig } from "./types";
 import { getLLMConfig } from "./config";
 import { normalizeThinkingMode, resolveThinkingModel } from "./thinking";
-import { 
-  AnthropicProvider, 
+import {
+  AnthropicProvider,
   OpenAIProvider,
   GeminiProvider,
   MoonshotProvider,
@@ -11,6 +11,7 @@ import {
   GroqProvider,
   OpenRouterProvider,
   OllamaProvider,
+  CustomProvider,
 } from "./providers";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
@@ -28,8 +29,8 @@ export function createProvider(configOverride?: Partial<LLMConfig>): LLMProvider
     ...configOverride,
   };
 
-  // Ollama 不需要 API Key
-  if (!config.apiKey && config.provider !== "ollama") {
+  // Ollama / Custom 不强制要求 API Key
+  if (!config.apiKey && config.provider !== "ollama" && config.provider !== "custom") {
     throw new Error(t.ai.apiKeyRequiredWithProvider.replace("{provider}", config.provider));
   }
 
@@ -66,6 +67,8 @@ export function createProvider(configOverride?: Partial<LLMConfig>): LLMProvider
       return new OpenRouterProvider(finalConfig);
     case "ollama":
       return new OllamaProvider(finalConfig);
+    case "custom":
+      return new CustomProvider(finalConfig);
     default:
       throw new Error(t.ai.unsupportedProvider.replace("{provider}", finalConfig.provider));
   }

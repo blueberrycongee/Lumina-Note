@@ -15,6 +15,7 @@ describe('PROVIDER_REGISTRY', () => {
     'groq',
     'openrouter',
     'ollama',
+    'custom',
   ];
 
   it('should have all expected providers', () => {

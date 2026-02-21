@@ -17,3 +17,4 @@ export { ZAIProvider } from "./zai";
 export { GroqProvider } from "./groq";
 export { OpenRouterProvider } from "./openrouter";
 export { OllamaProvider } from "./ollama";
+export { CustomProvider } from "./custom";
