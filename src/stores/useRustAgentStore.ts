@@ -724,7 +724,7 @@ export const useRustAgentStore = create<RustAgentState>()(
         const aiConfig = getAIConfig();
         const streamingThinkingEnabled = shouldStreamThinkingForAgent(aiConfig);
 
-        if (!aiConfig.apiKey && aiConfig.provider !== "ollama") {
+        if (!aiConfig.apiKey && aiConfig.provider !== "ollama" && aiConfig.provider !== "custom") {
           const t = getCurrentTranslations();
           set({
             status: "error",

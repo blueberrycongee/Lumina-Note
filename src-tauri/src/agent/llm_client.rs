@@ -191,7 +191,7 @@ impl LlmClient {
     pub fn supports_fc(&self) -> bool {
         match self.config.provider.as_str() {
             "openai" | "anthropic" | "deepseek" | "moonshot" | "zai" | "gemini" | "groq"
-            | "openrouter" => true,
+            | "openrouter" | "custom" => true,
             "ollama" => false, // 本地模型 FC 支持不稳定，使用 XML 模式
             _ => false,        // 未知 provider 默认不支持
         }

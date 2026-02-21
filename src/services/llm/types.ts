@@ -51,16 +51,17 @@ export interface Message {
 
 // ============ Provider 类型 ============
 
-export type LLMProviderType = 
-  | "anthropic" 
-  | "openai" 
+export type LLMProviderType =
+  | "anthropic"
+  | "openai"
   | "gemini"
-  | "moonshot" 
+  | "moonshot"
   | "deepseek"
   | "zai"
   | "groq"
   | "openrouter"
-  | "ollama";
+  | "ollama"
+  | "custom";
 
 // ============ Provider 元数据 ============
 
@@ -306,6 +307,15 @@ export const PROVIDER_REGISTRY: Record<LLMProviderType, ProviderMeta> = {
       { id: "gemma3", name: "Gemma 3", contextWindow: 32768 },
       { id: "mistral", name: "Mistral 7B", contextWindow: 32768 },
       { id: "gemma2:9b", name: "Gemma 2 9B", contextWindow: 8192 },
+      { id: "custom", name: "Custom Model", contextWindow: 128000 },
+    ],
+  },
+  custom: {
+    name: "custom",
+    label: "Custom",
+    description: "OpenAI Compatible",
+    supportsFunctionCalling: true,
+    models: [
       { id: "custom", name: "Custom Model", contextWindow: 128000 },
     ],
   },

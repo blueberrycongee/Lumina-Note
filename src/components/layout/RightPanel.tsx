@@ -722,18 +722,20 @@ export function RightPanel() {
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground block mb-1">
-                    API Key {config.provider === "ollama" && <span className="text-muted-foreground">({t.settingsPanel.apiKeyOptional})</span>}
+                    API Key {(config.provider === "ollama" || config.provider === "custom") && <span className="text-muted-foreground">({t.settingsPanel.apiKeyOptional})</span>}
                   </label>
                   <input
                     type="password"
                     value={config.apiKey}
                     onChange={(e) => setConfig({ apiKey: e.target.value })}
                     placeholder={
-                      config.provider === "ollama" 
-                        ? t.settingsPanel.localModelNoKey 
-                        : config.provider === "anthropic" 
-                          ? "sk-ant-..." 
-                          : "sk-..."
+                      config.provider === "ollama"
+                        ? t.settingsPanel.localModelNoKey
+                        : config.provider === "anthropic"
+                          ? "sk-ant-..."
+                          : config.provider === "custom"
+                            ? t.settingsPanel.apiKeyOptional
+                            : "sk-..."
                     }
                     className="ui-input h-9 text-xs"
                   />

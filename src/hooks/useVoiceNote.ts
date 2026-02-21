@@ -168,7 +168,7 @@ export function useVoiceNote() {
 
   // 调用 AI 生成总结
   const generateSummary = useCallback(async (transcript: string): Promise<string> => {
-    if (!config.apiKey && config.provider !== "ollama") {
+    if (!config.apiKey && config.provider !== "ollama" && config.provider !== "custom") {
       return "";
     }
 

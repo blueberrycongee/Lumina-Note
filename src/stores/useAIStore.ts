@@ -363,7 +363,7 @@ export const useAIStore = create<AIState>()(
         // 使用内存中的配置（已解密），而不是 store 中可能未同步的配置
         const config = getAIConfig();
 
-        if (!config.apiKey && config.provider !== "ollama") {
+        if (!config.apiKey && config.provider !== "ollama" && config.provider !== "custom") {
           set({ error: t.ai.apiKeyRequired });
           return;
         }
@@ -621,7 +621,7 @@ export const useAIStore = create<AIState>()(
           streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
         });
 
-        if (!runtimeConfig.apiKey && runtimeConfig.provider !== "ollama") {
+        if (!runtimeConfig.apiKey && runtimeConfig.provider !== "ollama" && runtimeConfig.provider !== "custom") {
           set({ error: t.ai.apiKeyRequired, isStreaming: false, streamingReasoningStatus: "idle" });
           return;
         }

@@ -98,8 +98,8 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
 
   // 测试 API 连接
   const testConnection = useCallback(async () => {
-    // 检查 API Key（Ollama 除外）
-    if (config.provider !== "ollama" && !config.apiKey) {
+    // 检查 API Key（Ollama / Custom 除外）
+    if (config.provider !== "ollama" && config.provider !== "custom" && !config.apiKey) {
       setTestResult({ status: "error", message: errorMessages.no_key });
       return;
     }
@@ -209,7 +209,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
 
             <div>
               <label className="text-xs text-muted-foreground block mb-1">
-                {t.aiSettings.apiKey} {config.provider === "ollama" && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
+                {t.aiSettings.apiKey} {(config.provider === "ollama" || config.provider === "custom") && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
               </label>
               <div className="flex gap-2">
                 <input
@@ -221,7 +221,9 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       ? t.aiSettings.localModelNoKey
                       : config.provider === "anthropic"
                         ? "sk-ant-..."
-                        : "sk-..."
+                        : config.provider === "custom"
+                          ? t.aiSettings.apiKeyOptional
+                          : "sk-..."
                   }
                   className="flex-1 text-xs p-2 rounded border border-border bg-background"
                 />
@@ -274,6 +276,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               )}
             </div>
 
+            {config.provider !== "custom" && (
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <label className="text-xs text-muted-foreground">{t.aiSettings.model}</label>
@@ -309,8 +312,9 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 ))}
               </select>
             </div>
+            )}
 
-            {config.model === "custom" && (
+            {(config.model === "custom" || config.provider === "custom") && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.customModelId}</label>
                 <input
@@ -323,16 +327,16 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               </div>
             )}
 
-            {config.model === "custom" && (
+            {(config.model === "custom" || config.provider === "custom") && (
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">
-                  {t.aiSettings.baseUrl} <span className="text-muted-foreground">({t.aiSettings.baseUrlOptional})</span>
+                  {t.aiSettings.baseUrl} {config.provider !== "custom" && <span className="text-muted-foreground">({t.aiSettings.baseUrlOptional})</span>}
                 </label>
                 <input
                   type="text"
                   value={config.baseUrl || ""}
                   onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
-                  placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl}
+                  placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl || "https://api.example.com/v1"}
                   className="w-full text-xs p-2 rounded border border-border bg-background"
                 />
               </div>
