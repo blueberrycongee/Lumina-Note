@@ -48,6 +48,11 @@ final class MobileGatewayStore: ObservableObject {
     @Published var agentProfiles: [AgentProfileOption] = []
     @Published var selectedWorkspaceId: String?
     @Published var selectedProfileId: String?
+    @Published var fileTree: [MobileFileEntry] = []
+    @Published var viewingFileContent: String?
+    @Published var viewingFilePath: String?
+    @Published var isLoadingFiles: Bool = false
+    @Published var isLoadingContent: Bool = false
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var lastSessionId: String?
@@ -174,6 +179,29 @@ final class MobileGatewayStore: ObservableObject {
         }
     }
 
+    func requestFileTree(path: String? = nil) {
+        isLoadingFiles = true
+        var data: [String: Any] = [:]
+        if let path {
+            data["path"] = path
+        }
+        let payload: [String: Any] = [
+            "type": "list_files",
+            "data": data
+        ]
+        sendJSON(payload)
+    }
+
+    func requestFileContent(path: String) {
+        isLoadingContent = true
+        viewingFilePath = path
+        let payload: [String: Any] = [
+            "type": "read_file",
+            "data": ["path": path]
+        ]
+        sendJSON(payload)
+    }
+
     private func sendPair(token: String) {
         let payload: [String: Any] = [
             "type": "pair",
@@ -293,6 +321,28 @@ final class MobileGatewayStore: ObservableObject {
             if let data = json["data"] as? [String: Any] {
                 applyOptions(data)
             }
+        }
+
+        if type == "file_tree" {
+            if let data = json["data"] as? [String: Any],
+               let entriesRaw = data["entries"] {
+                let decoder = JSONDecoder()
+                if let jsonData = try? JSONSerialization.data(withJSONObject: entriesRaw),
+                   let entries = try? decoder.decode([MobileFileEntry].self, from: jsonData) {
+                    fileTree = entries
+                }
+            }
+            isLoadingFiles = false
+            return
+        }
+
+        if type == "file_content" {
+            if let data = json["data"] as? [String: Any] {
+                viewingFileContent = data["content"] as? String
+                viewingFilePath = data["path"] as? String
+            }
+            isLoadingContent = false
+            return
         }
     }
 
@@ -458,4 +508,13 @@ struct AgentProfileOption: Codable, Identifiable {
     let name: String
     let provider: String
     let model: String
+}
+
+struct MobileFileEntry: Identifiable, Codable {
+    let name: String
+    let relative_path: String
+    let is_dir: Bool
+    let children: [MobileFileEntry]?
+
+    var id: String { relative_path }
 }

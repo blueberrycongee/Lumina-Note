@@ -43,6 +43,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.AlertDialog
@@ -158,6 +159,13 @@ private data class AgentProfileOption(
     val model: String
 )
 
+private data class MobileFileEntry(
+    val name: String,
+    val relativePath: String,
+    val isDir: Boolean,
+    val children: List<MobileFileEntry>?
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -181,14 +189,20 @@ fun LuminaMobileApp() {
         return
     }
 
-    if (store.activeSessionId == null) {
-        ChatListScreen(store = store)
-    } else {
-        val index = store.sessions.indexOfFirst { it.id == store.activeSessionId }
-        if (index == -1) {
-            store.activeSessionId = null
-        } else {
-            ChatDetailScreen(store = store, sessionIndex = index)
+    when (store.activeScreen) {
+        "file_browser" -> FileBrowserScreen(store = store)
+        "file_content" -> FileContentScreen(store = store)
+        else -> {
+            if (store.activeSessionId == null) {
+                ChatListScreen(store = store)
+            } else {
+                val index = store.sessions.indexOfFirst { it.id == store.activeSessionId }
+                if (index == -1) {
+                    store.activeSessionId = null
+                } else {
+                    ChatDetailScreen(store = store, sessionIndex = index)
+                }
+            }
         }
     }
 }
@@ -208,6 +222,12 @@ private class MobileGatewayStore(private val context: Context) {
     var agentProfiles by mutableStateOf(listOf<AgentProfileOption>())
     var selectedWorkspaceId by mutableStateOf<String?>(null)
     var selectedProfileId by mutableStateOf<String?>(null)
+    var fileTree by mutableStateOf(listOf<MobileFileEntry>())
+    var viewingFileContent by mutableStateOf<String?>(null)
+    var viewingFilePath by mutableStateOf<String?>(null)
+    var isLoadingFiles by mutableStateOf(false)
+    var isLoadingContent by mutableStateOf(false)
+    var activeScreen by mutableStateOf("chat_list")
 
     private var lastSessionId: String? = null
     private var pendingSessionCreateTitle: String? = null
@@ -335,6 +355,27 @@ private class MobileGatewayStore(private val context: Context) {
         }
     }
 
+    fun requestFileTree(path: String? = null) {
+        isLoadingFiles = true
+        val data = JSONObject()
+        if (path != null) {
+            data.put("path", path)
+        }
+        val payload = JSONObject()
+            .put("type", "list_files")
+            .put("data", data)
+        webSocket?.send(payload.toString())
+    }
+
+    fun requestFileContent(path: String) {
+        isLoadingContent = true
+        viewingFilePath = path
+        val payload = JSONObject()
+            .put("type", "read_file")
+            .put("data", JSONObject().put("path", path))
+        webSocket?.send(payload.toString())
+    }
+
     private fun sendPair(token: String) {
         val payload = JSONObject()
             .put("type", "pair")
@@ -394,6 +435,16 @@ private class MobileGatewayStore(private val context: Context) {
             } else if (type == "options") {
                 val data = json.optJSONObject("data") ?: return
                 applyOptions(data)
+            } else if (type == "file_tree") {
+                val data = json.optJSONObject("data") ?: return
+                val entriesJson = data.optJSONArray("entries") ?: JSONArray()
+                fileTree = parseFileEntries(entriesJson)
+                isLoadingFiles = false
+            } else if (type == "file_content") {
+                val data = json.optJSONObject("data") ?: return
+                viewingFileContent = data.optString("content")
+                viewingFilePath = data.optString("path")
+                isLoadingContent = false
             }
         } catch (_: Exception) {
         }
@@ -558,6 +609,27 @@ private class MobileGatewayStore(private val context: Context) {
         agentProfiles = nextProfiles
         selectedWorkspaceId = data.optString("selected_workspace_id").ifBlank { selectedWorkspaceId }
         selectedProfileId = data.optString("selected_profile_id").ifBlank { selectedProfileId }
+    }
+
+    private fun parseFileEntries(array: JSONArray): List<MobileFileEntry> {
+        val result = mutableListOf<MobileFileEntry>()
+        for (i in 0 until array.length()) {
+            val item = array.optJSONObject(i) ?: continue
+            val children = if (item.has("children") && !item.isNull("children")) {
+                parseFileEntries(item.getJSONArray("children"))
+            } else {
+                null
+            }
+            result.add(
+                MobileFileEntry(
+                    name = item.optString("name"),
+                    relativePath = item.optString("relative_path"),
+                    isDir = item.optBoolean("is_dir"),
+                    children = children
+                )
+            )
+        }
+        return result
     }
 
     fun selectWorkspace(id: String) {
@@ -814,6 +886,18 @@ private fun ChatListScreen(store: MobileGatewayStore) {
                     TextButton(onClick = {}) { Text("Edit", color = Color(0xFF007AFF)) }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        store.activeScreen = "file_browser"
+                        if (store.fileTree.isEmpty()) {
+                            store.requestFileTree()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.FolderOpen,
+                            contentDescription = "Files",
+                            tint = Color(0xFF007AFF)
+                        )
+                    }
                     Box {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More")
@@ -1116,6 +1200,160 @@ private fun MarkdownMessageText(
             markwon.setMarkdown(view, text)
         }
     )
+}
+
+@Composable
+private fun FileBrowserScreen(store: MobileGatewayStore) {
+    var folderStack by remember { mutableStateOf(listOf<MobileFileEntry>()) }
+    val currentEntries = if (folderStack.isEmpty()) {
+        store.fileTree
+    } else {
+        folderStack.last().children ?: emptyList()
+    }
+    val title = if (folderStack.isEmpty()) "Files" else folderStack.last().name
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(title, fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        if (folderStack.isNotEmpty()) {
+                            folderStack = folderStack.dropLast(1)
+                        } else {
+                            store.activeScreen = "chat_list"
+                        }
+                    }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (store.isLoadingFiles && store.fileTree.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Loading...", color = Color(0xFF8E8E93))
+            }
+        } else if (currentEntries.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(if (folderStack.isEmpty()) "No files" else "Empty folder", color = Color(0xFF8E8E93))
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(Color(0xFFF2F2F7))
+            ) {
+                items(currentEntries) { entry ->
+                    FileEntryRow(entry = entry, onClick = {
+                        if (entry.isDir) {
+                            folderStack = folderStack + entry
+                        } else {
+                            store.requestFileContent(entry.relativePath)
+                            store.activeScreen = "file_content"
+                        }
+                    })
+                    Divider(color = Color(0xFFE5E5EA))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileEntryRow(entry: MobileFileEntry, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val iconText = if (entry.isDir) "\uD83D\uDCC1" else fileIconEmoji(entry.name)
+        Text(
+            text = iconText,
+            fontSize = 20.sp,
+            modifier = Modifier.width(32.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = entry.name,
+            fontSize = 15.sp,
+            color = Color(0xFF1C1C1E),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun fileIconEmoji(name: String): String {
+    return when {
+        name.endsWith(".md") || name.endsWith(".txt") -> "\uD83D\uDCC4"
+        name.endsWith(".pdf") -> "\uD83D\uDCC3"
+        name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") -> "\uD83D\uDDBC"
+        else -> "\uD83D\uDCC4"
+    }
+}
+
+@Composable
+private fun FileContentScreen(store: MobileGatewayStore) {
+    val fileName = store.viewingFilePath?.substringAfterLast("/") ?: "File"
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(fileName, fontWeight = FontWeight.SemiBold) },
+                navigationIcon = {
+                    IconButton(onClick = {
+                        store.activeScreen = "file_browser"
+                        store.viewingFileContent = null
+                        store.viewingFilePath = null
+                    }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (store.isLoadingContent) {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Loading...", color = Color(0xFF8E8E93))
+            }
+        } else if (store.viewingFileContent != null) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(16.dp)
+            ) {
+                item {
+                    MarkdownMessageText(
+                        text = store.viewingFileContent ?: "",
+                        color = Color.Black,
+                        linkColor = Color(0xFF007AFF),
+                        fontSize = 14.sp
+                    )
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Failed to load file", color = Color(0xFF8E8E93))
+            }
+        }
+    }
 }
 
 private fun isCameraGranted(context: Context): Boolean {

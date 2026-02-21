@@ -1,12 +1,13 @@
 use crate::agent::commands::agent_start_task;
 use crate::agent::types::{AgentConfig, AgentEvent, TaskContext};
 use crate::agent::AgentState;
+use crate::fs;
 use futures_util::{SinkExt, StreamExt};
 use if_addrs::{get_if_addrs, IfAddr};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::fs;
+use std::fs as std_fs;
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -76,6 +77,15 @@ pub enum MobileServerMessage {
     Error {
         message: String,
     },
+    FileTree {
+        entries: Vec<MobileFileEntry>,
+        base_path: String,
+    },
+    FileContent {
+        path: String,
+        content: String,
+        size: u64,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -103,6 +113,12 @@ pub enum MobileClientMessage {
     SelectAgentProfile {
         profile_id: String,
     },
+    ListFiles {
+        path: Option<String>,
+    },
+    ReadFile {
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
@@ -125,6 +141,15 @@ pub struct MobileAgentProfileOption {
     pub name: String,
     pub provider: String,
     pub model: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MobileFileEntry {
+    pub name: String,
+    pub relative_path: String,
+    pub is_dir: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub children: Option<Vec<MobileFileEntry>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -449,6 +474,41 @@ fn emit_mobile_workspace_updated(app: &AppHandle, workspace_path: &str, source: 
     let _ = app.emit("mobile-workspace-updated", payload);
 }
 
+fn validate_within_workspace(workspace: &str, relative_path: &str) -> Result<PathBuf, String> {
+    let workspace_path = std::path::Path::new(workspace);
+    let target = workspace_path.join(relative_path);
+    let canonical_workspace = std_fs::canonicalize(workspace_path)
+        .map_err(|e| format!("Failed to resolve workspace: {}", e))?;
+    let canonical_target = std_fs::canonicalize(&target)
+        .map_err(|e| format!("Failed to resolve path: {}", e))?;
+    if !canonical_target.starts_with(&canonical_workspace) {
+        return Err("Path is outside workspace".to_string());
+    }
+    Ok(canonical_target)
+}
+
+fn convert_entries(
+    workspace: &std::path::Path,
+    entries: Vec<fs::FileEntry>,
+) -> Vec<MobileFileEntry> {
+    entries
+        .into_iter()
+        .map(|entry| {
+            let entry_path = std::path::Path::new(&entry.path);
+            let relative_path = entry_path
+                .strip_prefix(workspace)
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|_| entry.path.clone());
+            MobileFileEntry {
+                name: entry.name,
+                relative_path,
+                is_dir: entry.is_dir,
+                children: entry.children.map(|c| convert_entries(workspace, c)),
+            }
+        })
+        .collect()
+}
+
 pub async fn handle_mobile_message(
     app: &AppHandle,
     state: &MobileGatewayState,
@@ -650,6 +710,110 @@ pub async fn handle_mobile_message(
                 "timestamp": current_timestamp(),
             });
             let _ = app.emit("mobile-select-agent-profile", payload);
+        }
+        MobileClientMessage::ListFiles { path } => {
+            if !*paired {
+                send(MobileServerMessage::Error {
+                    message: "Not paired".to_string(),
+                });
+                return;
+            }
+            let workspace_path = match state.get_workspace().await {
+                Some(p) => p,
+                None => {
+                    send(MobileServerMessage::Error {
+                        message: "Workspace path not set".to_string(),
+                    });
+                    return;
+                }
+            };
+            let target_path = match &path {
+                Some(relative) => {
+                    match validate_within_workspace(&workspace_path, relative) {
+                        Ok(p) => p.to_string_lossy().to_string(),
+                        Err(e) => {
+                            send(MobileServerMessage::Error { message: e });
+                            return;
+                        }
+                    }
+                }
+                None => workspace_path.clone(),
+            };
+            match fs::list_dir_recursive(&target_path) {
+                Ok(entries) => {
+                    let workspace = std::path::Path::new(&workspace_path);
+                    let mobile_entries = convert_entries(workspace, entries);
+                    let base_path = path.unwrap_or_default();
+                    send(MobileServerMessage::FileTree {
+                        entries: mobile_entries,
+                        base_path,
+                    });
+                }
+                Err(e) => {
+                    send(MobileServerMessage::Error {
+                        message: format!("Failed to list files: {}", e),
+                    });
+                }
+            }
+        }
+        MobileClientMessage::ReadFile { path } => {
+            if !*paired {
+                send(MobileServerMessage::Error {
+                    message: "Not paired".to_string(),
+                });
+                return;
+            }
+            let workspace_path = match state.get_workspace().await {
+                Some(p) => p,
+                None => {
+                    send(MobileServerMessage::Error {
+                        message: "Workspace path not set".to_string(),
+                    });
+                    return;
+                }
+            };
+            let absolute_path = match validate_within_workspace(&workspace_path, &path) {
+                Ok(p) => p,
+                Err(e) => {
+                    send(MobileServerMessage::Error { message: e });
+                    return;
+                }
+            };
+            let file_meta = match std_fs::metadata(&absolute_path) {
+                Ok(m) => m,
+                Err(e) => {
+                    send(MobileServerMessage::Error {
+                        message: format!("Failed to read file metadata: {}", e),
+                    });
+                    return;
+                }
+            };
+            const MAX_FILE_SIZE: u64 = 2 * 1024 * 1024;
+            if file_meta.len() > MAX_FILE_SIZE {
+                send(MobileServerMessage::Error {
+                    message: format!(
+                        "File too large ({} bytes, max {} bytes)",
+                        file_meta.len(),
+                        MAX_FILE_SIZE
+                    ),
+                });
+                return;
+            }
+            let abs_str = absolute_path.to_string_lossy().to_string();
+            match fs::read_file_content(&abs_str) {
+                Ok(content) => {
+                    send(MobileServerMessage::FileContent {
+                        path,
+                        content,
+                        size: file_meta.len(),
+                    });
+                }
+                Err(e) => {
+                    send(MobileServerMessage::Error {
+                        message: format!("Failed to read file: {}", e),
+                    });
+                }
+            }
         }
     }
 }
@@ -1132,7 +1296,7 @@ fn settings_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 fn load_settings(app: &AppHandle) -> Option<MobileSettings> {
     let path = settings_path(app).ok()?;
-    let content = fs::read_to_string(path).ok()?;
+    let content = std_fs::read_to_string(path).ok()?;
     serde_json::from_str(&content).ok()
 }
 
@@ -1145,11 +1309,11 @@ async fn persist_settings(app: &AppHandle, state: &MobileGatewayState) -> Result
     };
     let path = settings_path(app)?;
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
+        std_fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create mobile settings dir: {}", e))?;
     }
     let payload = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("Failed to serialize mobile settings: {}", e))?;
-    fs::write(path, payload).map_err(|e| format!("Failed to write mobile settings: {}", e))?;
+    std_fs::write(path, payload).map_err(|e| format!("Failed to write mobile settings: {}", e))?;
     Ok(())
 }

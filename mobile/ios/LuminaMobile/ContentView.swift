@@ -213,10 +213,15 @@ struct SessionListView: View {
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { store.requestSessionCreate() }) {
-                        Image(systemName: "square.and.pencil")
+                    HStack(spacing: 12) {
+                        NavigationLink(destination: FileBrowserView(store: store)) {
+                            Image(systemName: "folder")
+                        }
+                        Button(action: { store.requestSessionCreate() }) {
+                            Image(systemName: "square.and.pencil")
+                        }
+                        .foregroundStyle(.blue)
                     }
-                    .foregroundStyle(.blue)
                 }
             }
             .confirmationDialog("重新配对？", isPresented: $showRePairConfirm, titleVisibility: .visible) {
@@ -394,6 +399,145 @@ struct MarkdownMessageText: View {
             Text(text)
                 .font(.system(size: 15))
                 .foregroundStyle(isOutgoing ? .white : .primary)
+        }
+    }
+}
+
+struct FileBrowserView: View {
+    @ObservedObject var store: MobileGatewayStore
+    @State private var viewingFilePath: String?
+
+    var body: some View {
+        Group {
+            if store.isLoadingFiles && store.fileTree.isEmpty {
+                ProgressView("Loading...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if store.fileTree.isEmpty {
+                Text("No files")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(store.fileTree) { entry in
+                    if entry.is_dir {
+                        NavigationLink(destination: SubFolderView(store: store, folder: entry, viewingFilePath: $viewingFilePath)) {
+                            FileRow(entry: entry)
+                        }
+                    } else {
+                        Button {
+                            viewingFilePath = entry.relative_path
+                            store.requestFileContent(path: entry.relative_path)
+                        } label: {
+                            FileRow(entry: entry)
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+        .navigationTitle("Files")
+        .onAppear {
+            if store.fileTree.isEmpty {
+                store.requestFileTree()
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { viewingFilePath != nil },
+            set: { if !$0 { viewingFilePath = nil; store.viewingFileContent = nil } }
+        )) {
+            if let path = viewingFilePath {
+                FileContentView(store: store, path: path)
+            }
+        }
+    }
+}
+
+struct SubFolderView: View {
+    @ObservedObject var store: MobileGatewayStore
+    let folder: MobileFileEntry
+    @Binding var viewingFilePath: String?
+
+    var body: some View {
+        let children = folder.children ?? []
+        Group {
+            if children.isEmpty {
+                Text("Empty folder")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                List(children) { entry in
+                    if entry.is_dir {
+                        NavigationLink(destination: SubFolderView(store: store, folder: entry, viewingFilePath: $viewingFilePath)) {
+                            FileRow(entry: entry)
+                        }
+                    } else {
+                        Button {
+                            viewingFilePath = entry.relative_path
+                            store.requestFileContent(path: entry.relative_path)
+                        } label: {
+                            FileRow(entry: entry)
+                        }
+                    }
+                }
+                .listStyle(.plain)
+            }
+        }
+        .navigationTitle(folder.name)
+    }
+}
+
+struct FileRow: View {
+    let entry: MobileFileEntry
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: entry.is_dir ? "folder.fill" : fileIcon(for: entry.name))
+                .foregroundStyle(entry.is_dir ? .blue : .secondary)
+                .frame(width: 24)
+            Text(entry.name)
+                .font(.system(size: 15))
+                .foregroundStyle(.primary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func fileIcon(for name: String) -> String {
+        if name.hasSuffix(".md") || name.hasSuffix(".txt") { return "doc.text" }
+        if name.hasSuffix(".pdf") { return "doc.fill" }
+        if name.hasSuffix(".png") || name.hasSuffix(".jpg") || name.hasSuffix(".jpeg") { return "photo" }
+        return "doc"
+    }
+}
+
+struct FileContentView: View {
+    @ObservedObject var store: MobileGatewayStore
+    let path: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if store.isLoadingContent {
+                    ProgressView("Loading...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let content = store.viewingFileContent {
+                    ScrollView {
+                        MarkdownMessageText(text: content, isOutgoing: false)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } else {
+                    Text("Failed to load file")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .navigationTitle((path as NSString).lastPathComponent)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }
