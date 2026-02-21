@@ -475,12 +475,14 @@ export const useFileStore = create<FileState>()(
             redoStack: [],
           };
 
-          const newTabs = [...tabs, newTab];
+          // Re-read tabs from store — the array captured before the awaits may be stale
+          const currentTabs = get().tabs;
+          const newTabs = [...currentTabs, newTab];
           const newTabIndex = newTabs.length - 1;
 
           // 更新导航历史
-          let newHistory = navigationHistory;
-          let newNavIndex = navigationIndex;
+          let newHistory = get().navigationHistory;
+          let newNavIndex = get().navigationIndex;
 
           if (addToHistory) {
             newHistory = navigationHistory.slice(0, navigationIndex + 1);

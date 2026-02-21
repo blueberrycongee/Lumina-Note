@@ -123,6 +123,7 @@ impl SyncEngine {
             || name == "target"
             || name.ends_with(".tmp")
             || name.ends_with(".swp")
+            || name.ends_with(".conflict")
     }
 
     /// 扫描远程文件
