@@ -7,7 +7,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useShallow } from "zustand/react/shallow";
 import { parseLuminaLink } from "@/services/pdf/annotations";
 import { writeBinaryFile, readBinaryFileBase64 } from "@/lib/tauri";
-import { EditorState, StateField, StateEffect, Compartment, Prec, ChangeSet } from "@codemirror/state";
+import { EditorState, StateField, StateEffect, Compartment, Prec, ChangeSet, Text } from "@codemirror/state";
 import { slashCommandExtensions, placeholderExtension } from "./extensions/slashCommand";
 import { SlashMenu } from "./components/SlashMenu";
 import {
@@ -572,6 +572,18 @@ const livePreviewPlugin = ViewPlugin.fromClass(class {
   }
 }, { decorations: (v) => v.decorations });
 
+// 共享 doc.toString() 缓存：Text 是不可变持久化结构，同一引用 = 同一内容
+let _cachedDoc: Text | null = null;
+let _cachedDocString: string = "";
+
+function docString(state: EditorState): string {
+  if (state.doc !== _cachedDoc) {
+    _cachedDoc = state.doc;
+    _cachedDocString = state.doc.toString();
+  }
+  return _cachedDocString;
+}
+
 // 缓存公式位置，避免每次选择变化都重新解析
 let mathPositionsCache: { from: number, to: number }[] = [];
 
@@ -620,7 +632,7 @@ const mathStateField = StateField.define<DecorationSet>({
 
 function buildMathDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
-  const doc = state.doc.toString();
+  const doc = docString(state);
   const processed: { from: number, to: number }[] = [];
 
   // 更新公式位置缓存
@@ -760,7 +772,7 @@ const highlightStateField = StateField.define<DecorationSet>({
 
 function buildHighlightDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
-  const doc = state.doc.toString();
+  const doc = docString(state);
   const highlightRegex = /==([^=\n]+)==/g;
   let match;
   const isDrag = state.field(mouseSelectingField, false);
@@ -1059,7 +1071,7 @@ function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
   const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
   let match;
-  while ((match = regex.exec(state.doc.toString())) !== null) {
+  while ((match = regex.exec(docString(state))) !== null) {
     decorations.push(Decoration.mark({ class: "cm-wikilink", attributes: { "data-wikilink": match[1].trim() } }).range(match.index, match.index + match[0].length));
   }
   return Decoration.set(decorations);
@@ -1166,7 +1178,7 @@ function createImageStateField(vaultPath: string) {
 
 function buildImageDecorations(state: EditorState, vaultPath: string): DecorationSet {
   const decorations: any[] = [];
-  const doc = state.doc.toString();
+  const doc = docString(state);
   const showInfoSet = state.field(imageInfoField, false) || new Set<string>();
   imagePositionsCache = [];
 
@@ -1580,6 +1592,8 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         ownerDoc.removeEventListener('selectionchange', handleSelectionChange);
         unbindPluginExtensions();
         view.destroy();
+        _cachedDoc = null;
+        _cachedDocString = "";
         viewRef.current = null;
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
