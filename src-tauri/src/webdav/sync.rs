@@ -408,18 +408,18 @@ impl SyncEngine {
             self.client.upload(&item.path, &content).await?;
         }
 
-        // 重新获取远程信息
-        let remote_mtime = item
-            .remote
-            .as_ref()
-            .map(|r| r.modified)
-            .unwrap_or(local.modified);
+        // 上传后使用当前时间戳作为 remote_mtime，因为上传会更新远程文件的修改时间。
+        // 使用旧的 remote mtime 会导致下次同步时误判远程文件被修改，产生不必要的下载或冲突。
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
 
         Ok(Some(FileRecord {
             path: item.path.clone(),
             local_mtime: local.modified,
-            remote_mtime,
-            etag: item.remote.as_ref().and_then(|r| r.etag.clone()),
+            remote_mtime: now,
+            etag: None, // 上传后 etag 已变化，旧值不可用
         }))
     }
 
