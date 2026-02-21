@@ -314,17 +314,17 @@ export function Editor() {
 
       {/* Top Navigation Bar */}
       <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
           <button
             onClick={toggleLeftSidebar}
-            className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground"
+            className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground shrink-0"
             title={t.sidebar.toggleSidebar}
           >
             <Sidebar size={16} />
           </button>
 
           {/* Navigation buttons */}
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={goBack}
               disabled={!canGoBack()}
@@ -353,17 +353,17 @@ export function Editor() {
             </button>
           </div>
 
-          <span className="text-muted-foreground/50">/</span>
-          <span className="text-foreground font-medium">
+          <span className="text-muted-foreground/50 shrink-0">/</span>
+          <span className="text-foreground font-medium truncate">
             {activeTab?.type === "ai-chat"
               ? currentSessionTitle
               : (currentFile ? getFileName(currentFile) : t.common.untitled)}
           </span>
           {isDirty && activeTab?.type !== "ai-chat" && (
-            <span className="w-2 h-2 rounded-full bg-orange-400" title={t.common.unsavedChanges} />
+            <span className="w-2 h-2 rounded-full bg-orange-400 shrink-0" title={t.common.unsavedChanges} />
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* 只在非 AI 聊天页显示编辑器工具栏 */}
           {activeTab?.type !== "ai-chat" && (
             <>
