@@ -36,26 +36,24 @@ export function CalendarView({ dbId }: CalendarViewProps) {
   const [rowStatus, setRowStatus] = useState<Record<string, RowInteractionStatus>>({});
   const statusTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  if (!db) return null;
-
-  const activeView = db.views.find((view) => view.id === db.activeViewId);
-  if (!activeView) return null;
-
-  const dateColumns = db.columns.filter((column) => column.type === "date");
-  const activeDateColumnId = resolveCalendarDateColumnId(db.columns, activeView.dateColumn);
+  const activeView = db?.views.find((view) => view.id === db.activeViewId);
+  const dateColumns = db ? db.columns.filter((column) => column.type === "date") : [];
+  const activeDateColumnId = db && activeView ? resolveCalendarDateColumnId(db.columns, activeView.dateColumn) : undefined;
 
   useEffect(() => {
-    if (activeView.type !== "calendar") return;
+    if (!activeView || activeView.type !== "calendar") return;
     if (!activeDateColumnId) return;
     if (activeView.dateColumn === activeDateColumnId) return;
     updateView(dbId, activeView.id, { dateColumn: activeDateColumnId });
-  }, [activeDateColumnId, activeView.dateColumn, activeView.id, activeView.type, dbId, updateView]);
+  }, [activeDateColumnId, activeView, dbId, updateView]);
 
   useEffect(() => {
     return () => {
       Object.values(statusTimersRef.current).forEach((timer) => clearTimeout(timer));
     };
   }, []);
+
+  if (!db || !activeView) return null;
 
   const setRowInteractionStatus = useCallback(
     (rowId: string, status: RowInteractionStatus | "idle", timeoutMs?: number) => {

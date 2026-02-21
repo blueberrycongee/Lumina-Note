@@ -28,22 +28,22 @@ export function KanbanView({ dbId }: KanbanViewProps) {
   
   const db = databases[dbId];
   const rows = useMemo(() => getFilteredSortedRows(dbId), [dbId, getFilteredSortedRows, db?.rows, db?.views]);
-  
+
   const [draggedCard, setDraggedCard] = useState<string | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
-  
-  if (!db) return null;
-  
-  const activeView = db.views.find(v => v.id === db.activeViewId);
-  const groupByColumnId = activeView ? resolveKanbanGroupColumnId(db.columns, activeView.groupBy) : null;
+
+  const activeView = db?.views.find(v => v.id === db.activeViewId);
+  const groupByColumnId = activeView ? resolveKanbanGroupColumnId(db!.columns, activeView.groupBy) : null;
   const viewScale = normalizeDatabaseViewScale(activeView?.scale);
-  
+
   useEffect(() => {
     if (!activeView || activeView.type !== "kanban") return;
     if (!groupByColumnId) return;
     if (activeView.groupBy === groupByColumnId) return;
     updateView(dbId, activeView.id, { groupBy: groupByColumnId });
   }, [activeView, dbId, groupByColumnId, updateView]);
+
+  if (!db) return null;
   
   // 找到分组列
   const groupColumn = db.columns.find(c => c.id === groupByColumnId);
