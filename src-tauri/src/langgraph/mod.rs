@@ -81,6 +81,7 @@ pub mod evaluator;
 pub mod metrics;
 
 /// Prelude - commonly used types
+#[allow(unused_imports)]
 pub mod prelude {
     // Core types
     pub use crate::langgraph::constants::END;
