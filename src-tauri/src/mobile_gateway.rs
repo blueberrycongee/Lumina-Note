@@ -479,8 +479,8 @@ fn validate_within_workspace(workspace: &str, relative_path: &str) -> Result<Pat
     let target = workspace_path.join(relative_path);
     let canonical_workspace = std_fs::canonicalize(workspace_path)
         .map_err(|e| format!("Failed to resolve workspace: {}", e))?;
-    let canonical_target = std_fs::canonicalize(&target)
-        .map_err(|e| format!("Failed to resolve path: {}", e))?;
+    let canonical_target =
+        std_fs::canonicalize(&target).map_err(|e| format!("Failed to resolve path: {}", e))?;
     if !canonical_target.starts_with(&canonical_workspace) {
         return Err("Path is outside workspace".to_string());
     }
@@ -728,15 +728,13 @@ pub async fn handle_mobile_message(
                 }
             };
             let target_path = match &path {
-                Some(relative) => {
-                    match validate_within_workspace(&workspace_path, relative) {
-                        Ok(p) => p.to_string_lossy().to_string(),
-                        Err(e) => {
-                            send(MobileServerMessage::Error { message: e });
-                            return;
-                        }
+                Some(relative) => match validate_within_workspace(&workspace_path, relative) {
+                    Ok(p) => p.to_string_lossy().to_string(),
+                    Err(e) => {
+                        send(MobileServerMessage::Error { message: e });
+                        return;
                     }
-                }
+                },
                 None => workspace_path.clone(),
             };
             match fs::list_dir_recursive(&target_path) {
