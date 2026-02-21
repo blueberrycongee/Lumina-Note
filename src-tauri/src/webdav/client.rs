@@ -368,26 +368,39 @@ impl WebDAVClient {
 
 /// 简单的 URL 解码
 fn urlencoding_decode(s: &str) -> String {
-    let mut result = String::new();
-    let mut chars = s.chars().peekable();
+    let mut bytes: Vec<u8> = Vec::with_capacity(s.len());
+    let mut chars = s.as_bytes().iter();
 
-    while let Some(c) = chars.next() {
-        if c == '%' {
-            let hex: String = chars.by_ref().take(2).collect();
-            if let Ok(byte) = u8::from_str_radix(&hex, 16) {
-                result.push(byte as char);
+    while let Some(&b) = chars.next() {
+        if b == b'%' {
+            let hi = chars.next().copied();
+            let lo = chars.next().copied();
+            if let (Some(h), Some(l)) = (hi, lo) {
+                let hex_str = [h, l];
+                if let Ok(decoded) = u8::from_str_radix(
+                    std::str::from_utf8(&hex_str).unwrap_or(""),
+                    16,
+                ) {
+                    bytes.push(decoded);
+                } else {
+                    bytes.push(b'%');
+                    bytes.push(h);
+                    bytes.push(l);
+                }
             } else {
-                result.push('%');
-                result.push_str(&hex);
+                bytes.push(b'%');
+                if let Some(h) = hi {
+                    bytes.push(h);
+                }
             }
-        } else if c == '+' {
-            result.push(' ');
+        } else if b == b'+' {
+            bytes.push(b' ');
         } else {
-            result.push(c);
+            bytes.push(b);
         }
     }
 
-    result
+    String::from_utf8(bytes).unwrap_or_else(|_| s.to_string())
 }
 
 /// 解析 HTTP 日期格式
