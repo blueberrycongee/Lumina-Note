@@ -22,7 +22,6 @@ function setupEditor(content: string) {
 
 /* Keep document sizes modest — jsdom full-pipeline is slower */
 const docSizes = [10, 50, 200] as const;
-type DocSize = (typeof docSizes)[number];
 const docs: Record<string, string> = {};
 for (const kb of docSizes) {
   docs[`${kb}KB`] = buildSyntheticMarkdown(kb);
