@@ -131,6 +131,7 @@ interface AIState {
   streamingContent: string;
   streamingReasoning: string;
   streamingReasoningStatus: StreamingReasoningStatus;
+  _abortController: AbortController | null;
   
   // Token usage
   tokenUsage: TokenUsage;
@@ -273,6 +274,7 @@ export const useAIStore = create<AIState>()(
       streamingContent: "",
       streamingReasoning: "",
       streamingReasoningStatus: "idle",
+      _abortController: null,
       
       // Token usage
       tokenUsage: { prompt: 0, completion: 0, total: 0 },
@@ -614,11 +616,13 @@ export const useAIStore = create<AIState>()(
         });
 
         // 重置流式内容并开始流式状态
+        const abortController = new AbortController();
         set({
           isStreaming: true,
           streamingContent: "",
           streamingReasoning: "",
           streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
+          _abortController: abortController,
         });
 
         if (!runtimeConfig.apiKey && runtimeConfig.provider !== "ollama" && runtimeConfig.provider !== "custom") {
@@ -683,7 +687,7 @@ export const useAIStore = create<AIState>()(
           let reasoningContent = "";
           
           // 流式接收内容
-          for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true })) {
+          for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true, signal: abortController.signal })) {
             if (chunk.type === "text") {
               finalContent += chunk.text;
               // chat 流式阶段只渲染最终回答文本，避免 reasoning 与正文来回覆盖造成“像两次回复”。
@@ -736,6 +740,7 @@ export const useAIStore = create<AIState>()(
               streamingContent: "",
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
+              _abortController: null,
               sessions: state.sessions.map((s) =>
                 s.id === state.currentSessionId
                   ? {
@@ -775,6 +780,11 @@ export const useAIStore = create<AIState>()(
             }
           }
         } catch (error) {
+          // AbortError is expected when user stops streaming — don't treat as failure
+          if (error instanceof DOMException && error.name === "AbortError") {
+            set({ _abortController: null });
+            return;
+          }
           reportOperationError({
             source: "AIStore.sendMessageStream",
             action: "Stream chat message",
@@ -790,16 +800,22 @@ export const useAIStore = create<AIState>()(
             isStreaming: false,
             streamingReasoning: "",
             streamingReasoningStatus: "idle",
+            _abortController: null,
           });
         }
       },
 
       // 停止流式
       stopStreaming: () => {
+        const { _abortController } = get();
+        if (_abortController) {
+          _abortController.abort();
+        }
         set({
           isStreaming: false,
           streamingReasoning: "",
           streamingReasoningStatus: "idle",
+          _abortController: null,
         });
       },
 
