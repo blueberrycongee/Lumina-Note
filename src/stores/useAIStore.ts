@@ -721,8 +721,14 @@ export const useAIStore = create<AIState>()(
               throw new Error(chunk.error);
             }
           }
-          
-          // chat 流式阶段仍只渲染最终正文，避免 reasoning 与正文来回覆盖造成“像两次回复”。
+
+          // 如果已被 abort（用户点击了停止），stopStreaming 已经保存了部分内容，
+          // 这里不再重复追加消息，直接返回。
+          if (abortController.signal.aborted) {
+            return;
+          }
+
+          // chat 流式阶段仍只渲染最终正文，避免 reasoning 与正文来回覆盖造成”像两次回复”。
           // 流结束后再把 reasoning 作为 <thinking> 折叠块写入消息，供 UI 按需展开查看。
           const assistantContent = reasoningContent.trim().length > 0
             ? `<thinking>\n${reasoningContent.trim()}\n</thinking>\n\n${finalContent}`
