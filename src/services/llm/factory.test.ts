@@ -153,12 +153,47 @@ describe('createProvider', () => {
     });
   });
 
+  describe('Custom provider', () => {
+    it('should create custom provider without API key', () => {
+      setLLMConfig({
+        provider: 'custom',
+        model: 'custom',
+        customModelId: 'my-model',
+        baseUrl: 'https://my-api.example.com/v1',
+      });
+      const provider = createProvider();
+      expect(provider).toBeTruthy();
+    });
+
+    it('should use user-provided baseUrl for custom provider', () => {
+      setLLMConfig({
+        provider: 'custom',
+        model: 'custom',
+        customModelId: 'my-model',
+        baseUrl: 'https://my-api.example.com/v1',
+      });
+      const provider = createProvider() as any;
+      const url = provider.getUrl();
+      expect(url).toBe('https://my-api.example.com/v1/chat/completions');
+    });
+
+    it('should throw when custom provider has no baseUrl', () => {
+      setLLMConfig({
+        provider: 'custom',
+        model: 'custom',
+        customModelId: 'my-model',
+        // baseUrl intentionally omitted
+      });
+      expect(() => createProvider()).toThrow('Custom provider requires a Base URL');
+    });
+  });
+
   describe('Unsupported provider', () => {
     it('should throw for unsupported provider', () => {
-      setLLMConfig({ 
+      setLLMConfig({
         provider: 'unknown-provider' as any,
         model: 'some-model',
-        apiKey: 'test-key' 
+        apiKey: 'test-key'
       });
       expect(() => createProvider()).toThrow('不支持的 AI 提供商');
     });

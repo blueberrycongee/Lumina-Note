@@ -8,8 +8,11 @@ import { OpenAICompatibleProvider } from "./openaiCompatible";
 
 export class CustomProvider extends OpenAICompatibleProvider {
   constructor(config: LLMConfig) {
+    if (!config.baseUrl) {
+      throw new Error("Custom provider requires a Base URL. Please configure it in AI settings.");
+    }
     super(config, {
-      defaultBaseUrl: config.baseUrl || "https://api.openai.com/v1",
+      defaultBaseUrl: config.baseUrl,
     });
   }
 }
