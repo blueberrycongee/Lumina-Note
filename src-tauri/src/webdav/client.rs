@@ -440,7 +440,10 @@ mod tests {
     fn test_url_decode_ascii() {
         assert_eq!(urlencoding_decode("hello%20world"), "hello world");
         assert_eq!(urlencoding_decode("test+file"), "test file");
-        assert_eq!(urlencoding_decode("no%20encoding%20needed"), "no encoding needed");
+        assert_eq!(
+            urlencoding_decode("no%20encoding%20needed"),
+            "no encoding needed"
+        );
         assert_eq!(urlencoding_decode("100%25done"), "100%done");
     }
 
@@ -468,10 +471,7 @@ mod tests {
     #[test]
     fn test_url_decode_japanese() {
         // "テスト" = E3 83 86 E3 82 B9 E3 83 88
-        assert_eq!(
-            urlencoding_decode("%E3%83%86%E3%82%B9%E3%83%88"),
-            "テスト"
-        );
+        assert_eq!(urlencoding_decode("%E3%83%86%E3%82%B9%E3%83%88"), "テスト");
     }
 
     #[test]
