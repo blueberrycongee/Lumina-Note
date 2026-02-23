@@ -437,10 +437,47 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_url_decode() {
+    fn test_url_decode_ascii() {
         assert_eq!(urlencoding_decode("hello%20world"), "hello world");
         assert_eq!(urlencoding_decode("test+file"), "test file");
-        // TODO: UTF-8 多字节解码需要修复
-        // assert_eq!(urlencoding_decode("%E4%B8%AD%E6%96%87"), "中文");
+        assert_eq!(urlencoding_decode("no%20encoding%20needed"), "no encoding needed");
+        assert_eq!(urlencoding_decode("100%25done"), "100%done");
+    }
+
+    #[test]
+    fn test_url_decode_chinese() {
+        // "中文" = E4 B8 AD E6 96 87
+        assert_eq!(urlencoding_decode("%E4%B8%AD%E6%96%87"), "中文");
+    }
+
+    #[test]
+    fn test_url_decode_mixed_chinese_ascii() {
+        // "笔记/日记/2024年.md"
+        assert_eq!(
+            urlencoding_decode("%E7%AC%94%E8%AE%B0/%E6%97%A5%E8%AE%B0/2024%E5%B9%B4.md"),
+            "笔记/日记/2024年.md"
+        );
+    }
+
+    #[test]
+    fn test_url_decode_emoji() {
+        // "📝" = F0 9F 93 9D (4-byte UTF-8)
+        assert_eq!(urlencoding_decode("%F0%9F%93%9D"), "📝");
+    }
+
+    #[test]
+    fn test_url_decode_japanese() {
+        // "テスト" = E3 83 86 E3 82 B9 E3 83 88
+        assert_eq!(
+            urlencoding_decode("%E3%83%86%E3%82%B9%E3%83%88"),
+            "テスト"
+        );
+    }
+
+    #[test]
+    fn test_url_decode_passthrough() {
+        // 无编码的普通字符串应原样返回
+        assert_eq!(urlencoding_decode("plain.md"), "plain.md");
+        assert_eq!(urlencoding_decode(""), "");
     }
 }
