@@ -24,9 +24,84 @@ import {
   type MessageContent,
 } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+
+/**
+ * 格式化错误消息，提取用户友好的内容并翻译
+ */
+function formatUserFriendlyError(error: unknown): string {
+  const t = getCurrentTranslations();
+  const errorStr = error instanceof Error ? error.message : String(error);
+
+  // 1. 尝试解析 JSON 格式的错误 (OpenAI/Ollama 风格)
+  try {
+    // 处理形如 "HTTP 404 error: { ... }" 的字符串
+    const jsonMatch = errorStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const data = JSON.parse(jsonMatch[0]);
+      const message = data.error?.message || data.message;
+      if (message) {
+        return translateErrorMessage(message);
+      }
+    }
+  } catch (e) {
+    // 解析失败则回退到正则匹配
+  }
+
+  // 2. 常见英文错误翻译
+  return translateErrorMessage(errorStr);
+}
+
+/**
+ * 翻译常见的技术错误信息
+ */
+function translateErrorMessage(message: string): string {
+  const t = getCurrentTranslations();
+  const lower = message.toLowerCase();
+
+  // 模型不存在
+  if (lower.includes("model") && (lower.includes("not found") || lower.includes("does not exist"))) {
+    const modelMatch = message.match(/model ['"]?([^'"]+)['"]?/i);
+    const modelName = modelMatch ? modelMatch[1] : "";
+    return `未找到模型 "${modelName}"。请检查模型名称是否正确，或者是否已在本地下载。`;
+  }
+
+  // API Key 错误
+  if (lower.includes("api key") || lower.includes("invalid_request_error")) {
+    if (lower.includes("not provide") || lower.includes("missing")) {
+      return t.ai.apiKeyRequired;
+    }
+    if (lower.includes("incorrect") || lower.includes("invalid")) {
+      return "API Key 无效，请检查设置。";
+    }
+  }
+
+  // 认证错误
+  if (lower.includes("unauthorized") || lower.includes("401")) {
+    return "认证失败，请检查 API Key 或权限设置。";
+  }
+
+  // 频率限制
+  if (lower.includes("rate limit") || lower.includes("too many requests") || lower.includes("429")) {
+    return "请求过于频繁，请稍后再试。";
+  }
+
+  // 余额不足
+  if (lower.includes("insufficient_quota") || lower.includes("credit") || lower.includes("balance")) {
+    return "账号余额不足或配额已耗尽。";
+  }
+
+  // 连接错误
+  if (lower.includes("fetch") || lower.includes("network") || lower.includes("connection")) {
+    return "网络连接失败，请检查你的网络设置或代理。";
+  }
+
+  return message;
+}
+
 import { encryptApiKey, decryptApiKey } from "@/lib/crypto";
 import { reportOperationError } from "@/lib/reportError";
 import type { AttachedImage, QuoteReference } from "@/types/chat";
+
 // 流式状态现在完全由 Zustand 管理，不再需要额外的 streamingStore
 
 // Pending diff for preview
@@ -365,7 +440,7 @@ export const useAIStore = create<AIState>()(
         // 使用内存中的配置（已解密），而不是 store 中可能未同步的配置
         const config = getAIConfig();
 
-        if (!config.apiKey && config.provider !== "ollama" && config.provider !== "custom") {
+        if (!config.apiKey?.trim() && config.provider !== "ollama" && config.provider !== "custom") {
           set({ error: t.ai.apiKeyRequired });
           return;
         }
@@ -527,7 +602,7 @@ export const useAIStore = create<AIState>()(
             },
           });
           set({
-            error: error instanceof Error ? error.message : t.ai.sendFailed,
+            error: formatUserFriendlyError(error),
             isLoading: false,
           });
         }
@@ -625,7 +700,7 @@ export const useAIStore = create<AIState>()(
           _abortController: abortController,
         });
 
-        if (!runtimeConfig.apiKey && runtimeConfig.provider !== "ollama" && runtimeConfig.provider !== "custom") {
+        if (!runtimeConfig.apiKey?.trim() && runtimeConfig.provider !== "ollama" && runtimeConfig.provider !== "custom") {
           set({ error: t.ai.apiKeyRequired, isStreaming: false, streamingReasoningStatus: "idle" });
           return;
         }
@@ -805,7 +880,7 @@ export const useAIStore = create<AIState>()(
             },
           });
           set({
-            error: error instanceof Error ? error.message : t.ai.sendFailed,
+            error: formatUserFriendlyError(error),
             isStreaming: false,
             streamingReasoning: "",
             streamingReasoningStatus: "idle",
