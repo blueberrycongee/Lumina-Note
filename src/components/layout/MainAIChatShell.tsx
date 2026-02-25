@@ -277,6 +277,7 @@ export function MainAIChatShell() {
     deleteSession: deleteChatSession,
     isLoading: chatLoading,
     isStreaming: chatStreaming,
+    error: chatError,
     sendMessageStream,
     stopStreaming,
     checkFirstLoad: checkChatFirstLoad,
@@ -297,6 +298,7 @@ export function MainAIChatShell() {
     deleteSession: state.deleteSession,
     isLoading: state.isLoading,
     isStreaming: state.isStreaming,
+    error: state.error,
     sendMessageStream: state.sendMessageStream,
     stopStreaming: state.stopStreaming,
     checkFirstLoad: state.checkFirstLoad,
@@ -445,8 +447,8 @@ export function MainAIChatShell() {
     : chatMode === "research"
       ? _researchSession !== null
       : chatMode === "agent"
-        ? agentMessages.length > 0
-        : chatMessages.length > 0 || chatStreaming;
+        ? agentMessages.length > 0 || agentStatus === "error"
+        : chatMessages.length > 0 || chatStreaming || !!chatError;
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof performance === "undefined") {
@@ -1770,6 +1772,13 @@ export function MainAIChatShell() {
                 {chatMode === "agent" && agentStatus === "error" && (
                   <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded mb-4">
                     {_rustError || t.ai.errorRetry}
+                  </div>
+                )}
+
+                {/* Chat 错误提示 */}
+                {chatMode === "chat" && chatError && (
+                  <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded mb-4">
+                    {chatError}
                   </div>
                 )}
 

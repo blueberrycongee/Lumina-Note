@@ -26,6 +26,66 @@ import type { MessageAttachment } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { SelectedSkill } from "@/types/skills";
 
+/**
+ * 格式化错误消息，提取用户友好的内容并翻译 (同 useAIStore)
+ */
+function formatUserFriendlyError(error: unknown): string {
+  const errorStr = error instanceof Error ? error.message : String(error);
+
+  try {
+    const jsonMatch = errorStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const data = JSON.parse(jsonMatch[0]);
+      const message = data.error?.message || data.message;
+      if (message) {
+        return translateErrorMessage(message);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return translateErrorMessage(errorStr);
+}
+
+function translateErrorMessage(message: string): string {
+  const t = getCurrentTranslations();
+  const lower = message.toLowerCase();
+
+  if (lower.includes("model") && (lower.includes("not found") || lower.includes("does not exist"))) {
+    const modelMatch = message.match(/model ['"]?([^'"]+)['"]?/i);
+    const modelName = modelMatch ? modelMatch[1] : "";
+    return `未找到模型 "${modelName}"。请检查模型名称是否正确，或者是否已在本地下载。`;
+  }
+
+  if (lower.includes("api key") || lower.includes("invalid_request_error")) {
+    if (lower.includes("not provide") || lower.includes("missing")) {
+      return t.ai.apiKeyRequired;
+    }
+    if (lower.includes("incorrect") || lower.includes("invalid")) {
+      return "API Key 无效，请检查设置。";
+    }
+  }
+
+  if (lower.includes("unauthorized") || lower.includes("401")) {
+    return "认证失败，请检查 API Key 或权限设置。";
+  }
+
+  if (lower.includes("rate limit") || lower.includes("too many requests") || lower.includes("429")) {
+    return "请求过于频繁，请稍后再试。";
+  }
+
+  if (lower.includes("insufficient_quota") || lower.includes("credit") || lower.includes("balance")) {
+    return "账号余额不足或配额已耗尽。";
+  }
+
+  if (lower.includes("fetch") || lower.includes("network") || lower.includes("connection")) {
+    return "网络连接失败，请检查你的网络设置或代理。";
+  }
+
+  return message;
+}
+
 // ============ 类型定义 ============
 
 export type AgentStatus = 
@@ -723,23 +783,6 @@ export const useRustAgentStore = create<RustAgentState>()(
       startTask: async (task: string, context: TaskContext) => {
         const aiConfig = getAIConfig();
         const streamingThinkingEnabled = shouldStreamThinkingForAgent(aiConfig);
-
-        if (!aiConfig.apiKey && aiConfig.provider !== "ollama" && aiConfig.provider !== "custom") {
-          const t = getCurrentTranslations();
-          set({
-            status: "error",
-            error: t.ai.apiKeyRequired,
-          });
-          return;
-        }
-        
-        // 调试：打印配置
-        console.log("[RustAgent] 当前配置:", {
-          provider: aiConfig.provider,
-          model: aiConfig.model,
-          hasApiKey: !!aiConfig.apiKey,
-          baseUrl: aiConfig.baseUrl,
-        });
         
         // 获取当前历史消息（发送前的消息）
         const currentMessages = get().messages;
@@ -747,6 +790,8 @@ export const useRustAgentStore = create<RustAgentState>()(
         const stats = get().taskStats;
         const currentStatus = get().status;
         const isBusy = currentStatus === "running" || currentStatus === "waiting_approval";
+        
+        // 先显示用户消息
         set({
           ...(isBusy
             ? { error: null }
@@ -770,6 +815,26 @@ export const useRustAgentStore = create<RustAgentState>()(
                 : {}),
             },
           ],
+        });
+
+        if (!aiConfig.apiKey?.trim() && aiConfig.provider !== "ollama" && aiConfig.provider !== "custom") {
+          const t = getCurrentTranslations();
+          set({
+            status: "error",
+            error: t.ai.apiKeyRequired,
+          });
+          return;
+        }
+        
+        // 调试：打印配置
+        console.log("[RustAgent] 当前配置:", {
+          provider: aiConfig.provider,
+          model: aiConfig.model,
+          hasApiKey: !!aiConfig.apiKey,
+          baseUrl: aiConfig.baseUrl,
+        });
+        
+        set({
           taskStats: {
             ...stats,
             ...(isBusy
@@ -784,7 +849,7 @@ export const useRustAgentStore = create<RustAgentState>()(
         });
         
         // 将历史消息转换为后端格式并传入
-        const historyForBackend = currentMessages
+        const historyForBackend = get().messages // 使用最新的 messages
           .filter(m => m.role === "user" || m.role === "assistant")
           .map(m => ({
             role: m.role,
@@ -820,7 +885,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           console.error("[RustAgent] agent_start_task failed:", e);
           set({
             status: "error",
-            error: e instanceof Error ? e.message : String(e),
+            error: formatUserFriendlyError(e),
           });
         }
       },
@@ -1396,7 +1461,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             const stats = state.taskStats;
             set({
               status: "error",
-              error,
+              error: formatUserFriendlyError(error),
               streamingContent: "",
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
@@ -1833,7 +1898,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             const stats = state.taskStats;
             console.error("[RustAgent] error event:", message);
             set({
-              error: message,
+              error: formatUserFriendlyError(message),
               streamingContent: "",
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
