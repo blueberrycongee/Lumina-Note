@@ -242,6 +242,10 @@ const editorTheme = EditorView.theme({
   ".cm-image-widget": { display: "block", margin: "8px 0" },
   ".cm-image-info": { background: "hsl(var(--muted))", padding: "4px 8px", borderRadius: "4px", fontSize: "12px", color: "hsl(var(--muted-foreground))", marginBottom: "4px", fontFamily: "monospace" },
   ".markdown-image": { maxWidth: "100%", borderRadius: "6px", cursor: "pointer" },
+
+  // Horizontal Rule styles
+  ".cm-hr": { border: "none", borderTop: "1px solid hsl(var(--border))", margin: "1rem 0", display: "block" },
+  ".cm-hr-source": { color: "hsl(var(--muted-foreground))", opacity: 0.6 },
 });
 
 // ============ 4. Widgets ============
@@ -420,6 +424,18 @@ class VoicePreviewWidget extends WidgetType {
   constructor(readonly text: string) { super(); }
   eq(other: VoicePreviewWidget) { return other.text === this.text; }
   toDOM() { const s = document.createElement("span"); s.className = "cm-voice-preview"; s.textContent = this.text; return s; }
+  ignoreEvent() { return true; }
+}
+
+class HorizontalRuleWidget extends WidgetType {
+  constructor() { super(); }
+  eq(_other: HorizontalRuleWidget) { return true; }
+  toDOM() {
+    const hr = document.createElement("hr");
+    hr.className = "cm-hr";
+    hr.style.cssText = "border:none;border-top:1px solid hsl(var(--border));margin:1rem 0;";
+    return hr;
+  }
   ignoreEvent() { return true; }
 }
 
@@ -1211,6 +1227,62 @@ function buildImageDecorations(state: EditorState, vaultPath: string): Decoratio
   return Decoration.set(decorations.sort((a, b) => a.from - b.from), true);
 }
 
+// ============ 8. Horizontal Rule StateField ============
+
+let horizontalRulePositionsCache: { from: number; to: number }[] = [];
+
+const horizontalRuleStateField = StateField.define<DecorationSet>({
+  create: buildHorizontalRuleDecorations,
+  update(deco, tr) {
+    if (tr.docChanged || tr.reconfigured) return buildHorizontalRuleDecorations(tr.state);
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    if (wasDragging && !isDragging) return buildHorizontalRuleDecorations(tr.state);
+    if (isDragging) return deco;
+    if (tr.selection) {
+      const oldSel = tr.startState.selection.main;
+      const newSel = tr.state.selection.main;
+      const touches = (sel: { from: number, to: number }) =>
+        horizontalRulePositionsCache.some(h =>
+          (sel.from >= h.from && sel.from <= h.to) ||
+          (sel.to >= h.from && sel.to <= h.to) ||
+          (sel.from <= h.from && sel.to >= h.to)
+        );
+      if (touches(oldSel) !== touches(newSel) || (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))) {
+        return buildHorizontalRuleDecorations(tr.state);
+      }
+    }
+    return deco;
+  },
+  provide: f => EditorView.decorations.from(f),
+});
+
+function buildHorizontalRuleDecorations(state: EditorState): DecorationSet {
+  const decorations: any[] = [];
+  horizontalRulePositionsCache = [];
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name === "HorizontalRule") {
+        horizontalRulePositionsCache.push({ from: node.from, to: node.to });
+
+        if (shouldShowSource(state, node.from, node.to)) {
+          // 编辑模式：显示源码
+          decorations.push(Decoration.mark({ class: "cm-hr-source" }).range(node.from, node.to));
+        } else {
+          // 预览模式：替换为水平线
+          decorations.push(Decoration.replace({
+            widget: new HorizontalRuleWidget(),
+            block: true
+          }).range(node.from, node.to));
+        }
+      }
+    }
+  });
+
+  return Decoration.set(decorations);
+}
+
 const readingModePlugin = ViewPlugin.fromClass(class {
   decorations: DecorationSet;
   constructor(view: EditorView) { this.decorations = this.build(view.state); }
@@ -1303,7 +1375,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
 
     const getModeExtensions = useCallback((mode: ViewMode) => {
       const imageField = vaultPath ? createImageStateField(vaultPath) : null;
-      const widgets = [mathStateField, codeBlockStateField, calloutStateField, highlightStateField];
+      const widgets = [mathStateField, codeBlockStateField, calloutStateField, highlightStateField, horizontalRuleStateField];
       if (imageField) widgets.push(imageField);
       switch (mode) {
         case 'reading':

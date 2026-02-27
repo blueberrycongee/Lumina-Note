@@ -74,3 +74,4 @@ tmp.txt
 .plan-loop/
 scripts/plan-loop*.ps1
 .tmp_node/
+.superset/

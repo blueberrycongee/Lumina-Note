@@ -54,6 +54,28 @@ describe('parseMarkdown', () => {
       const result = parseMarkdown('use `const` keyword');
       expect(result).toContain('<code>const</code>');
     });
+
+    it('should parse horizontal rules with ---', () => {
+      const result = parseMarkdown('---');
+      expect(result).toContain('<hr>');
+    });
+
+    it('should parse horizontal rules with ***', () => {
+      const result = parseMarkdown('***');
+      expect(result).toContain('<hr>');
+    });
+
+    it('should parse horizontal rules with ___', () => {
+      const result = parseMarkdown('___');
+      expect(result).toContain('<hr>');
+    });
+
+    it('should parse horizontal rules in context', () => {
+      const result = parseMarkdown('Text before\n\n---\n\nText after');
+      expect(result).toContain('<hr>');
+      expect(result).toContain('Text before');
+      expect(result).toContain('Text after');
+    });
   });
 
   describe('Obsidian wiki links', () => {
