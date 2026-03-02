@@ -1925,7 +1925,7 @@ export function MainAIChatShell() {
                     onChange={(e) => handleInputChange(e.target.value, e.target.selectionStart)}
                     onKeyDown={handleKeyDown}
                     placeholder={chatMode === "research" ? researchPlaceholder : chatMode === "agent" ? t.ai.agentInputPlaceholder : t.ai.chatInputPlaceholder}
-                    className="w-full resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[40px] max-h-[200px] bg-transparent text-base leading-relaxed"
+                    className="w-full resize-none outline-none text-foreground placeholder:text-muted-foreground placeholder:whitespace-nowrap placeholder:overflow-hidden placeholder:text-ellipsis min-h-[40px] max-h-[200px] bg-transparent text-base leading-relaxed"
                     rows={1}
                     autoFocus
                   />
