@@ -2,7 +2,28 @@
 
 This document describes the recommended release workflow for Lumina Note.
 
-## 1) Prepare the version
+## 1) Update CHANGELOG.md (Required)
+
+**CI will fail if this step is skipped.**
+
+Add a new version section to `CHANGELOG.md`:
+
+```markdown
+## [0.4.15] - 2025-03-02
+
+### 新功能
+- 功能描述
+
+### 修复
+- Bug 修复描述
+
+### 改进
+- 改进描述
+```
+
+Tip: Run `git log --oneline` to review recent changes.
+
+## 2) Prepare the version
 
 Use the release helper to keep versions and Cargo.lock in sync:
 
@@ -21,7 +42,7 @@ What it does:
 - Syncs Tauri config/version via `scripts/sync_version.mjs`.
 - Regenerates `src-tauri/Cargo.lock`.
 
-## 2) Sanity checks (recommended)
+## 3) Sanity checks (recommended)
 
 ```sh
 npm run build
@@ -32,15 +53,15 @@ Notes:
 - The updater bundle requires signing. Set `TAURI_SIGNING_PRIVATE_KEY` (and
   `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if needed) when building for release.
 
-## 3) Commit the bump
+## 4) Commit the bump
 
 ```sh
-git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+git add CHANGELOG.md package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
 
 git commit -m "chore(release): bump version to 0.4.14"
 ```
 
-## 4) Tag and push
+## 5) Tag and push
 
 ```sh
 git tag -a v0.4.14 -m "v0.4.14"
@@ -51,7 +72,7 @@ git push origin v0.4.14
 
 Pushing the tag triggers the release workflow in CI.
 
-## 5) Artifacts naming (local builds)
+## 6) Artifacts naming (local builds)
 
 If you need locally named artifacts with version + timestamp, rename the
 outputs after `npm run tauri build`. Typical output locations:
