@@ -305,8 +305,14 @@ body.resizing iframe[data-codex-iframe="true"] {
     display: inline;
   }
 
-  @container (max-width: 320px) {
+  @container (max-width: 560px) {
     .ui-compact-hide {
+      display: none !important;
+    }
+  }
+
+  @container (max-width: 180px) {
+    .ui-sidebar-hide {
       display: none !important;
     }
   }

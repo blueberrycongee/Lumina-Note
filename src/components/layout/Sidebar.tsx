@@ -775,7 +775,7 @@ export function Sidebar() {
           title={t.file.quickNote}
         >
           <Calendar size={14} />
-          <span className="ui-compact-text ui-compact-hide">{t.file.quickNote}</span>
+          <span className="ui-compact-text ui-sidebar-hide">{t.file.quickNote}</span>
         </button>
         
         {/* 语音笔记按钮 */}
@@ -829,7 +829,7 @@ export function Sidebar() {
             title={t.file.voiceRecordHint}
           >
             <Mic size={14} />
-            <span className="ui-compact-text ui-compact-hide">{t.file.voiceNote}</span>
+            <span className="ui-compact-text ui-sidebar-hide">{t.file.voiceNote}</span>
           </button>
         )}
       </div>
