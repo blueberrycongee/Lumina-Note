@@ -1,9 +1,52 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { getChangelogForVersion } from './parse_changelog.js';
 
 // Script to generate latest.json for Tauri v2 updater.
 // Supports macOS (aarch64, x86_64) and Windows (x64).
+
+// Inline changelog parsing to avoid ESM import issues
+interface ChangelogEntry {
+    version: string;
+    date: string | null;
+    content: string;
+}
+
+function parseChangelog(changelogPath: string): ChangelogEntry[] {
+    if (!fs.existsSync(changelogPath)) {
+        return [];
+    }
+
+    const content = fs.readFileSync(changelogPath, 'utf-8');
+    const entries: ChangelogEntry[] = [];
+
+    const versionRegex = /^## \[([^\]]+)\](?:\s*-\s*(\d{4}-\d{2}-\d{2}|\d{4}-XX-XX))?/gm;
+    const matches = [...content.matchAll(versionRegex)];
+
+    for (let i = 0; i < matches.length; i++) {
+        const match = matches[i];
+        const version = match[1];
+        const date = match[2] || null;
+        const startIndex = match.index! + match[0].length;
+        const endIndex = matches[i + 1]?.index ?? content.length;
+
+        let entryContent = content.slice(startIndex, endIndex).trim();
+
+        if (version.toLowerCase() === 'unreleased') {
+            continue;
+        }
+
+        entries.push({ version, date, content: entryContent });
+    }
+
+    return entries;
+}
+
+function getChangelogForVersion(version: string): ChangelogEntry | null {
+    const filePath = path.resolve(process.cwd(), 'CHANGELOG.md');
+    const entries = parseChangelog(filePath);
+    const normalizedVersion = version.replace(/^v/, '');
+    return entries.find(e => e.version === normalizedVersion) || null;
+}
 
 interface PlatformInfo {
     signature: string;
