@@ -305,7 +305,7 @@ body.resizing iframe[data-codex-iframe="true"] {
     display: inline;
   }
 
-  @container (max-width: 560px) {
+  @container (max-width: 320px) {
     .ui-compact-hide {
       display: none !important;
     }
