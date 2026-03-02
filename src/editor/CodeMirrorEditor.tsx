@@ -57,6 +57,7 @@ const viewModeCompartment = new Compartment();
 const readOnlyCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const pluginExtensionsCompartment = new Compartment();
+const fontSizeCompartment = new Compartment();
 
 // ============ 2. 全局状态 ============
 // mouseSelectingField 和 setMouseSelecting 从 codemirror-live-markdown 导入
@@ -76,8 +77,8 @@ export interface CodeMirrorEditorRef {
 
 // ============ 3. 样式定义 (动画与布局核心) ============
 
-const editorTheme = EditorView.theme({
-  "&": { backgroundColor: "transparent", fontSize: "16px", height: "100%" },
+const createEditorTheme = (fontSize: number) => EditorView.theme({
+  "&": { backgroundColor: "transparent", fontSize: `${fontSize}px`, height: "100%" },
   ".cm-content": { fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", padding: "16px 0", caretColor: "hsl(var(--foreground))" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
   ".cm-line": { padding: "0 16px", paddingLeft: "16px", lineHeight: "1.75", position: "relative" },
@@ -1371,7 +1372,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       }))
     );
     const { openSecondaryPdf } = useSplitStore();
-    const { setSplitView } = useUIStore();
+    const { setSplitView, editorFontSize } = useUIStore();
 
     const getModeExtensions = useCallback((mode: ViewMode) => {
       const imageField = vaultPath ? createImageStateField(vaultPath) : null;
@@ -1417,7 +1418,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           markdown({ base: markdownLanguage, extensions: [Table] }),
           EditorView.lineWrapping,
           drawSelection(),
-          editorTheme,
+          fontSizeCompartment.of(createEditorTheme(editorFontSize)),
           mouseSelectingField,
           selectionStatePlugin,
           selectionBridgeField,
@@ -1681,6 +1682,14 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         ]
       });
     }, [effectiveMode, isReadOnly, getModeExtensions]);
+
+    useEffect(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: fontSizeCompartment.reconfigure(createEditorTheme(editorFontSize))
+      });
+    }, [editorFontSize]);
 
     useEffect(() => {
       const view = viewRef.current;
