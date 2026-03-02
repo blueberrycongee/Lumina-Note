@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.23] - 2026-03-03
+
+### 改进
+- 统一侧边栏「今日速记」与「语音笔记」按钮样式
+
 ## [0.5.22] - 2026-03-02
 
 ### 修复
