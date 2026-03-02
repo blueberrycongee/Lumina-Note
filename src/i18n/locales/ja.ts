@@ -1030,10 +1030,13 @@ export default {
     actionCheck: '更新を確認',
     actionInstall: 'ダウンロードしてインストール',
     actionRelaunch: '再起動して適用',
+    actionSkip: 'このバージョンをスキップ',
     versionLabel: 'バージョン {version}',
     noChangelog: 'リリースノートはありません',
     preparing: '準備中...',
     readyHint: '更新がダウンロードされました。再起動して適用してください。',
+    skippedVersions: 'スキップしたバージョン',
+    clearSkipped: 'クリックしてスキップを解除',
   },
 
   // タイトルバー

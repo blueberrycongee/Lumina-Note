@@ -1136,10 +1136,13 @@ export default {
     actionCheck: '检查更新',
     actionInstall: '下载并安装',
     actionRelaunch: '重启应用',
+    actionSkip: '跳过此版本',
     versionLabel: '版本 {version}',
     noChangelog: '暂无更新日志',
     preparing: '准备中...',
     readyHint: '更新已下载并安装，请重启应用以完成更新。',
+    skippedVersions: '已跳过的版本',
+    clearSkipped: '点击取消跳过该版本',
   },
 
   // 视频笔记

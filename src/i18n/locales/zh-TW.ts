@@ -1030,10 +1030,13 @@ export default {
     actionCheck: '檢查更新',
     actionInstall: '下載並安裝',
     actionRelaunch: '重新啟動',
+    actionSkip: '跳過此版本',
     versionLabel: '版本 {version}',
     noChangelog: '尚無更新日誌',
     preparing: '準備中...',
     readyHint: '更新已下載並安裝，請重新啟動以完成更新。',
+    skippedVersions: '已跳過的版本',
+    clearSkipped: '點擊取消跳過該版本',
   },
 
   // 標題列

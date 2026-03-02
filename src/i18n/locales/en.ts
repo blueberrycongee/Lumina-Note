@@ -1135,10 +1135,13 @@ export default {
     actionCheck: 'Check updates',
     actionInstall: 'Download and install',
     actionRelaunch: 'Restart to apply',
+    actionSkip: 'Skip this version',
     versionLabel: 'Version {version}',
     noChangelog: 'No release notes',
     preparing: 'Preparing...',
     readyHint: 'Update downloaded and installed. Please restart the app to apply.',
+    skippedVersions: 'Skipped versions',
+    clearSkipped: 'Click to stop skipping this version',
   },
 
   // Video Note
