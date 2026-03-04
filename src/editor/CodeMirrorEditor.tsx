@@ -1227,7 +1227,11 @@ function shouldDisableDrawSelectionForTauriWebKit() {
 }
 
 const CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY = 'cmSelectionVisualDebug';
+const CM_SELECTION_TRACE_STORAGE_KEY = 'cmSelectionVisualTrace';
 const CM_SELECTION_ANOMALY_THROTTLE_MS = 180;
+const CM_SELECTION_TRACE_DEFAULT_FRAME_INTERVAL_MS = 34;
+const CM_SELECTION_TRACE_MAX_EVENTS = 2000;
+const CM_SELECTION_TRACE_MAX_FRAMES = 3600;
 const DRAG_SELECTION_THRESHOLD_PX = 4;
 
 function selectionVisualDebugEnabled() {
@@ -1239,6 +1243,412 @@ function selectionVisualDebugEnabled() {
   } catch {
     return false;
   }
+}
+
+function selectionVisualTraceEnabled() {
+  if (typeof window === 'undefined') return false;
+  const w = window as any;
+  if (w.__cmSelectionTraceEnabled === true) return true;
+  try {
+    return window.localStorage.getItem(CM_SELECTION_TRACE_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+type SelectionOverlayMetrics = {
+  selectionLayerPresent: boolean;
+  selectionBackgroundCount: number;
+  selectionBridgeCount: number;
+  selectionGapCount: number;
+  fullLikeCount: number;
+  oversizedCount: number;
+  maxWidthRatio: number;
+  maxHeightRatio: number;
+};
+
+type SelectionTraceFrame = {
+  seq: number;
+  at: string;
+  t: number;
+  source: string;
+  selection: {
+    from: number;
+    to: number;
+    selectedLength: number;
+    docLength: number;
+    ranges: number;
+  };
+  state: {
+    mouseSelectingField: boolean;
+    dragClass: boolean;
+    hasSelectionClass: boolean;
+    disableCustomDrawSelection: boolean;
+  };
+  viewport: {
+    from: number;
+    to: number;
+  };
+  scroll: {
+    top: number;
+    left: number;
+  };
+  overlay: SelectionOverlayMetrics;
+};
+
+type SelectionTraceEvent = {
+  seq: number;
+  at: string;
+  t: number;
+  type: string;
+  payload: Record<string, unknown>;
+};
+
+type SelectionTraceControl = {
+  enabled: () => boolean;
+  event: (type: string, payload?: Record<string, unknown>) => void;
+  snapshot: (source: string) => void;
+  anomaly: (source: string, details: ReturnType<typeof inspectSelectionVisualAnomaly>) => void;
+  destroy: (reason: string) => void;
+};
+
+function pushLimited<T>(items: T[], item: T, max: number) {
+  items.push(item);
+  if (items.length <= max) return;
+  items.splice(0, items.length - max);
+}
+
+function collectSelectionOverlayMetrics(view: EditorView): SelectionOverlayMetrics {
+  const scroller = view.scrollDOM;
+  const scrollerRect = scroller?.getBoundingClientRect() ?? null;
+  const selectionBackgrounds = Array.from(view.dom.querySelectorAll('.cm-selectionBackground'));
+  const selectionBridges = Array.from(view.dom.querySelectorAll('.cm-selection-bridge'));
+  const selectionGaps = Array.from(view.dom.querySelectorAll('.cm-selection-gap'));
+  const overlays = [...selectionBackgrounds, ...selectionBridges, ...selectionGaps];
+
+  let fullLikeCount = 0;
+  let oversizedCount = 0;
+  let maxWidthRatio = 0;
+  let maxHeightRatio = 0;
+
+  if (scrollerRect && scrollerRect.width > 0 && scrollerRect.height > 0) {
+    for (const node of overlays) {
+      const rect = (node as HTMLElement).getBoundingClientRect();
+      const widthRatio = rect.width / scrollerRect.width;
+      const heightRatio = rect.height / scrollerRect.height;
+      maxWidthRatio = Math.max(maxWidthRatio, widthRatio);
+      maxHeightRatio = Math.max(maxHeightRatio, heightRatio);
+      if (widthRatio >= 0.95 && heightRatio >= 0.8) fullLikeCount += 1;
+      if (widthRatio >= 1.2 || heightRatio >= 1.2) oversizedCount += 1;
+    }
+  }
+
+  return {
+    selectionLayerPresent: Boolean(view.dom.querySelector('.cm-selectionLayer')),
+    selectionBackgroundCount: selectionBackgrounds.length,
+    selectionBridgeCount: selectionBridges.length,
+    selectionGapCount: selectionGaps.length,
+    fullLikeCount,
+    oversizedCount,
+    maxWidthRatio,
+    maxHeightRatio,
+  };
+}
+
+function buildSelectionTraceSummary(frames: SelectionTraceFrame[], events: SelectionTraceEvent[]) {
+  const anomalyFrames = frames.filter(
+    (frame) =>
+      frame.selection.selectedLength > 0 &&
+      frame.selection.selectedLength < frame.selection.docLength &&
+      (frame.overlay.fullLikeCount > 0 || frame.overlay.oversizedCount > 0),
+  ).length;
+  return {
+    eventCount: events.length,
+    frameCount: frames.length,
+    anomalyFrameCount: anomalyFrames,
+    maxWidthRatio: frames.reduce((max, frame) => Math.max(max, frame.overlay.maxWidthRatio), 0),
+    maxHeightRatio: frames.reduce((max, frame) => Math.max(max, frame.overlay.maxHeightRatio), 0),
+  };
+}
+
+function createSelectionTraceControl(
+  view: EditorView,
+  options: { disableCustomDrawSelection: boolean },
+): SelectionTraceControl {
+  const ownerDoc = view.dom.ownerDocument;
+  const runtimeWindow = ownerDoc.defaultView || (typeof window !== 'undefined' ? window : null);
+  const sessionId = `cm-selection-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+  const data = {
+    sessionId,
+    startedAt: new Date().toISOString(),
+    meta: {
+      userAgent: runtimeWindow?.navigator.userAgent ?? '',
+      platform: runtimeWindow?.navigator.platform ?? '',
+      language: runtimeWindow?.navigator.language ?? '',
+      devicePixelRatio: runtimeWindow?.devicePixelRatio ?? null,
+      drawSelectionDisabled: options.disableCustomDrawSelection,
+      visualDebugEnabled: selectionVisualDebugEnabled(),
+      traceStorageKey: CM_SELECTION_TRACE_STORAGE_KEY,
+    },
+    events: [] as SelectionTraceEvent[],
+    frames: [] as SelectionTraceFrame[],
+  };
+
+  let eventSeq = 0;
+  let frameSeq = 0;
+  let frameLoop = 0;
+  let lastFrameTs = 0;
+  let startPerf = runtimeWindow?.performance.now() ?? Date.now();
+  let frameIntervalMs = CM_SELECTION_TRACE_DEFAULT_FRAME_INTERVAL_MS;
+  let isEnabled = selectionVisualDebugEnabled() || selectionVisualTraceEnabled();
+
+  const nowStamp = () => {
+    const perfNow = runtimeWindow?.performance.now() ?? Date.now();
+    return {
+      at: new Date().toISOString(),
+      t: Number((perfNow - startPerf).toFixed(3)),
+    };
+  };
+
+  const addEvent = (type: string, payload: Record<string, unknown> = {}) => {
+    if (!isEnabled) return;
+    eventSeq += 1;
+    const stamp = nowStamp();
+    pushLimited(
+      data.events,
+      {
+        seq: eventSeq,
+        at: stamp.at,
+        t: stamp.t,
+        type,
+        payload,
+      },
+      CM_SELECTION_TRACE_MAX_EVENTS,
+    );
+  };
+
+  const captureFrame = (source: string) => {
+    if (!isEnabled) return;
+    frameSeq += 1;
+    const stamp = nowStamp();
+    const main = view.state.selection.main;
+    pushLimited(
+      data.frames,
+      {
+        seq: frameSeq,
+        at: stamp.at,
+        t: stamp.t,
+        source,
+        selection: {
+          from: main.from,
+          to: main.to,
+          selectedLength: main.to - main.from,
+          docLength: view.state.doc.length,
+          ranges: view.state.selection.ranges.length,
+        },
+        state: {
+          mouseSelectingField: view.state.field(mouseSelectingField, false),
+          dragClass: view.dom.classList.contains('cm-drag-selecting'),
+          hasSelectionClass: view.dom.classList.contains('cm-has-selection'),
+          disableCustomDrawSelection: options.disableCustomDrawSelection,
+        },
+        viewport: {
+          from: view.viewport.from,
+          to: view.viewport.to,
+        },
+        scroll: {
+          top: view.scrollDOM?.scrollTop ?? 0,
+          left: view.scrollDOM?.scrollLeft ?? 0,
+        },
+        overlay: collectSelectionOverlayMetrics(view),
+      },
+      CM_SELECTION_TRACE_MAX_FRAMES,
+    );
+  };
+
+  const stopFrameLoop = (reason: string) => {
+    if (!runtimeWindow || !frameLoop) return;
+    runtimeWindow.cancelAnimationFrame(frameLoop);
+    frameLoop = 0;
+    addEvent('trace-loop-stop', { reason });
+  };
+
+  const runFrameLoop = (ts: number) => {
+    if (!isEnabled || !runtimeWindow) return;
+    if (lastFrameTs === 0 || ts - lastFrameTs >= frameIntervalMs) {
+      lastFrameTs = ts;
+      captureFrame('raf');
+    }
+    frameLoop = runtimeWindow.requestAnimationFrame(runFrameLoop);
+  };
+
+  const startFrameLoop = (reason: string) => {
+    if (!runtimeWindow || !isEnabled || frameLoop) return;
+    addEvent('trace-loop-start', { reason, frameIntervalMs });
+    frameLoop = runtimeWindow.requestAnimationFrame(runFrameLoop);
+  };
+
+  const reset = () => {
+    data.startedAt = new Date().toISOString();
+    data.events.length = 0;
+    data.frames.length = 0;
+    eventSeq = 0;
+    frameSeq = 0;
+    lastFrameTs = 0;
+    startPerf = runtimeWindow?.performance.now() ?? Date.now();
+  };
+
+  if (runtimeWindow) {
+    const w = runtimeWindow as any;
+    w.__cmSelectionTrace = {
+      sessionId,
+      storageKey: CM_SELECTION_TRACE_STORAGE_KEY,
+      enable: (persist = true) => {
+        if (persist) {
+          try {
+            runtimeWindow.localStorage.setItem(CM_SELECTION_TRACE_STORAGE_KEY, '1');
+          } catch {}
+        }
+        if (!isEnabled) {
+          isEnabled = true;
+          reset();
+          addEvent('trace-enabled', { source: 'window-api' });
+          captureFrame('trace-enabled');
+          startFrameLoop('window-api-enable');
+        }
+        return {
+          sessionId,
+          summary: buildSelectionTraceSummary(data.frames, data.events),
+        };
+      },
+      disable: (persist = true) => {
+        if (persist) {
+          try {
+            runtimeWindow.localStorage.removeItem(CM_SELECTION_TRACE_STORAGE_KEY);
+          } catch {}
+        }
+        if (isEnabled) {
+          addEvent('trace-disabled', { source: 'window-api' });
+          captureFrame('trace-disabled');
+          isEnabled = false;
+          stopFrameLoop('window-api-disable');
+        }
+        return {
+          sessionId,
+          summary: buildSelectionTraceSummary(data.frames, data.events),
+        };
+      },
+      clear: () => {
+        reset();
+        addEvent('trace-cleared', { source: 'window-api' });
+        captureFrame('trace-cleared');
+        return {
+          sessionId,
+          summary: buildSelectionTraceSummary(data.frames, data.events),
+        };
+      },
+      snapshot: (label: string = 'manual-snapshot') => {
+        addEvent('manual-snapshot', { label });
+        captureFrame(label);
+        return {
+          sessionId,
+          summary: buildSelectionTraceSummary(data.frames, data.events),
+        };
+      },
+      mark: (type: string, payload: Record<string, unknown> = {}) => {
+        addEvent(type, payload);
+        captureFrame(`event:${type}`);
+      },
+      setFrameIntervalMs: (next: number) => {
+        if (typeof next === 'number' && Number.isFinite(next)) {
+          frameIntervalMs = Math.min(120, Math.max(8, Math.floor(next)));
+          addEvent('trace-frame-interval-updated', { frameIntervalMs });
+        }
+        return frameIntervalMs;
+      },
+      getData: () => ({
+        ...data,
+        isEnabled,
+        frameIntervalMs,
+        summary: buildSelectionTraceSummary(data.frames, data.events),
+      }),
+      download: (fileName?: string) => {
+        const payload = JSON.stringify(
+          {
+            ...data,
+            isEnabled,
+            frameIntervalMs,
+            summary: buildSelectionTraceSummary(data.frames, data.events),
+          },
+          null,
+          2,
+        );
+        if (!runtimeWindow.URL?.createObjectURL) {
+          return { ok: false, reason: 'createObjectURL-unavailable', bytes: payload.length };
+        }
+        const safeName =
+          fileName ||
+          `cm-selection-trace-${new Date().toISOString().replace(/[:.]/g, '-')}-${sessionId}.json`;
+        const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+        const href = runtimeWindow.URL.createObjectURL(blob);
+        const link = ownerDoc.createElement('a');
+        link.href = href;
+        link.download = safeName;
+        ownerDoc.body.appendChild(link);
+        link.click();
+        ownerDoc.body.removeChild(link);
+        runtimeWindow.setTimeout(() => runtimeWindow.URL.revokeObjectURL(href), 0);
+        return { ok: true, fileName: safeName, bytes: payload.length };
+      },
+    };
+    w.__cmSelectionTraceSessionId = sessionId;
+  }
+
+  if (isEnabled) {
+    addEvent('trace-initialized', {
+      source: 'editor-create',
+      frameIntervalMs,
+      drawSelectionDisabled: options.disableCustomDrawSelection,
+    });
+    captureFrame('trace-init');
+    startFrameLoop('editor-create');
+  }
+
+  return {
+    enabled: () => isEnabled,
+    event: (type, payload = {}) => {
+      addEvent(type, payload);
+    },
+    snapshot: (source) => {
+      captureFrame(source);
+    },
+    anomaly: (source, details) => {
+      addEvent('selection-anomaly', {
+        source,
+        fullLikeCount: details.fullLikeCount,
+        oversizedCount: details.oversizedCount,
+        selectionBackgroundCount: details.selectionBackgroundCount,
+        selectionBridgeCount: details.selectionBridgeCount,
+        selectionGapCount: details.selectionGapCount,
+        selection: details.selection,
+      });
+      captureFrame(`anomaly:${source}`);
+    },
+    destroy: (reason) => {
+      if (isEnabled) {
+        addEvent('trace-destroy', { reason });
+        captureFrame(`destroy:${reason}`);
+      }
+      stopFrameLoop(reason);
+      if (runtimeWindow) {
+        const w = runtimeWindow as any;
+        if (w.__cmSelectionTrace?.sessionId === sessionId) {
+          delete w.__cmSelectionTrace;
+          delete w.__cmSelectionTraceSessionId;
+        }
+      }
+    },
+  };
 }
 
 type RectSnapshot = {
@@ -2158,6 +2568,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       const view = new EditorView({ state, parent: containerRef.current });
       viewRef.current = view;
       const ownerDoc = view.dom.ownerDocument;
+      const selectionTrace = createSelectionTraceControl(view, {
+        disableCustomDrawSelection,
+      });
       const unbindPluginExtensions = pluginEditorRuntime.bindReconfigure((extensions) => {
         view.dispatch({
           effects: pluginExtensionsCompartment.reconfigure(extensions),
@@ -2171,13 +2584,25 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
 
       const reportSelectionVisualAnomaly = (source: string) => {
         const v = viewRef.current;
-        if (!v || !selectionVisualDebugEnabled()) return;
+        if (!v || (!selectionVisualDebugEnabled() && !selectionTrace.enabled())) return;
         const details = inspectSelectionVisualAnomaly(v);
+        selectionTrace.event('selection-anomaly-check', {
+          source,
+          isAnomaly: details.isAnomaly,
+          fullLikeCount: details.fullLikeCount,
+          oversizedCount: details.oversizedCount,
+          selectionBackgroundCount: details.selectionBackgroundCount,
+          selectionBridgeCount: details.selectionBridgeCount,
+          selectionGapCount: details.selectionGapCount,
+          selection: details.selection,
+        });
+        selectionTrace.snapshot(`anomaly-check:${source}`);
         if (!details.isAnomaly) return;
         const now = Date.now();
         if (now - lastSelectionAnomalyAt < CM_SELECTION_ANOMALY_THROTTLE_MS) return;
         lastSelectionAnomalyAt = now;
         selectionAnomalySeq += 1;
+        selectionTrace.anomaly(source, details);
         console.warn(`[cm-selection-anomaly] ${source}`, {
           seq: selectionAnomalySeq,
           at: new Date(now).toISOString(),
@@ -2191,6 +2616,8 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           cancelAnimationFrame(selectionProbeFrame);
           selectionProbeFrame = 0;
         }
+        selectionTrace.event('selection-probe-stop', {});
+        selectionTrace.snapshot('selection-probe-stop');
       };
 
       const runSelectionProbe = () => {
@@ -2202,14 +2629,20 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       const startSelectionProbe = () => {
         if (!selectionVisualDebugEnabled() || selectionProbeActive) return;
         selectionProbeActive = true;
+        selectionTrace.event('selection-probe-start', {});
+        selectionTrace.snapshot('selection-probe-start');
         runSelectionProbe();
       };
 
       if (selectionVisualDebugEnabled()) {
+        selectionTrace.event('selection-visual-debug-enabled', {
+          storageKey: CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY,
+        });
         console.log('[cm-selection-anomaly] visual probe enabled', {
           storageKey: CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY,
         });
         if (disableCustomDrawSelection) {
+          selectionTrace.event('draw-selection-disabled-for-tauri-webkit', {});
           console.warn('[cm-selection-anomaly] drawSelection-disabled-for-tauri-webkit');
         }
       }
@@ -2220,6 +2653,13 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       let mouseDownY = 0;
 
       const clearDragSelectionState = () => {
+        selectionTrace.event('drag-clear-requested', {
+          mouseDownActive,
+          dragSelectionActive,
+          dragClass: view.dom.classList.contains('cm-drag-selecting'),
+          mouseSelectingField: view.state.field(mouseSelectingField, false),
+        });
+        selectionTrace.snapshot('drag-clear-requested');
         mouseDownActive = false;
         if (!dragSelectionActive) {
           stopSelectionProbe();
@@ -2228,8 +2668,18 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         dragSelectionActive = false;
         requestAnimationFrame(() => {
           view.dispatch({ effects: setMouseSelecting.of(false) });
+          selectionTrace.event('drag-end-dispatch', {
+            dragClass: view.dom.classList.contains('cm-drag-selecting'),
+            mouseSelectingField: view.state.field(mouseSelectingField, false),
+          });
+          selectionTrace.snapshot('drag-end-dispatch');
           reportSelectionVisualAnomaly('mouseup');
           requestAnimationFrame(() => {
+            selectionTrace.event('drag-end-next-frame', {
+              dragClass: view.dom.classList.contains('cm-drag-selecting'),
+              mouseSelectingField: view.state.field(mouseSelectingField, false),
+            });
+            selectionTrace.snapshot('drag-end-next-frame');
             reportSelectionVisualAnomaly('mouseup-next-frame');
             stopSelectionProbe();
           });
@@ -2241,6 +2691,13 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         mouseDownActive = true;
         mouseDownX = event.clientX;
         mouseDownY = event.clientY;
+        selectionTrace.event('mouse-down', {
+          x: event.clientX,
+          y: event.clientY,
+          button: event.button,
+          buttons: event.buttons,
+        });
+        selectionTrace.snapshot('mouse-down');
         reportSelectionVisualAnomaly('mousedown');
       };
       const handleMouseMove = (event: MouseEvent) => {
@@ -2250,16 +2707,41 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         if (dx < DRAG_SELECTION_THRESHOLD_PX && dy < DRAG_SELECTION_THRESHOLD_PX) return;
         dragSelectionActive = true;
         view.dispatch({ effects: setMouseSelecting.of(true) });
+        selectionTrace.event('drag-start-dispatch', {
+          dx,
+          dy,
+          threshold: DRAG_SELECTION_THRESHOLD_PX,
+          dragClass: view.dom.classList.contains('cm-drag-selecting'),
+          mouseSelectingField: view.state.field(mouseSelectingField, false),
+        });
+        selectionTrace.snapshot('drag-start-dispatch');
+        requestAnimationFrame(() => {
+          selectionTrace.event('drag-start-next-frame', {
+            dragClass: view.dom.classList.contains('cm-drag-selecting'),
+            mouseSelectingField: view.state.field(mouseSelectingField, false),
+          });
+          selectionTrace.snapshot('drag-start-next-frame');
+        });
         startSelectionProbe();
         reportSelectionVisualAnomaly('drag-start');
       };
       const handleMouseUp = () => {
+        selectionTrace.event('mouse-up', {
+          dragClass: view.dom.classList.contains('cm-drag-selecting'),
+          mouseSelectingField: view.state.field(mouseSelectingField, false),
+        });
+        selectionTrace.snapshot('mouse-up');
         clearDragSelectionState();
       };
       const handleOwnerDocVisibilityChange = () => {
-        if (ownerDoc.hidden) clearDragSelectionState();
+        if (!ownerDoc.hidden) return;
+        selectionTrace.event('owner-doc-hidden', {});
+        selectionTrace.snapshot('owner-doc-hidden');
+        clearDragSelectionState();
       };
       const handleWindowBlur = () => {
+        selectionTrace.event('window-blur', {});
+        selectionTrace.snapshot('window-blur');
         clearDragSelectionState();
       };
       view.contentDOM.addEventListener('mousedown', handleMouseDown);
@@ -2280,6 +2762,11 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           return;
         }
         selectAllIntentAt = Date.now();
+        selectionTrace.event('select-all-beforeinput', {
+          inputType: event.inputType,
+          target: event.target?.constructor?.name || 'unknown',
+        });
+        selectionTrace.snapshot('select-all-beforeinput');
         logSelectAll(v, 'doc-beforeinput', {
           inputType: event.inputType,
           target: event.target?.constructor?.name,
@@ -2306,6 +2793,12 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           return;
         }
         selectAllIntentAt = Date.now();
+        selectionTrace.event('select-all-keydown', {
+          key: event.key,
+          code: event.code,
+          target: event.target?.constructor?.name || 'unknown',
+        });
+        selectionTrace.snapshot('select-all-keydown');
         logSelectAll(v, 'doc-keydown', {
           key: event.key,
           code: event.code,
@@ -2324,9 +2817,19 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         if (!isViewActive(v, v.dom.ownerDocument.activeElement)) return;
         const selection = ownerDoc.getSelection();
         if (v.state.field(mouseSelectingField, false)) {
+          selectionTrace.event('selectionchange-while-dragging', {
+            rangeCount: selection?.rangeCount ?? 0,
+            collapsed: selection?.isCollapsed ?? true,
+          });
+          selectionTrace.snapshot('selectionchange-while-dragging');
           reportSelectionVisualAnomaly('selectionchange-while-dragging');
           return;
         }
+        selectionTrace.event('selectionchange', {
+          rangeCount: selection?.rangeCount ?? 0,
+          collapsed: selection?.isCollapsed ?? true,
+        });
+        selectionTrace.snapshot('selectionchange');
         reportSelectionVisualAnomaly('selectionchange');
         const inspect = inspectSelectAllUpgrade(v, selection);
         const hasRecentIntent =
@@ -2518,6 +3021,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       view.contentDOM.addEventListener('paste', handlePaste);
       return () => {
         stopSelectionProbe();
+        selectionTrace.destroy('editor-cleanup');
         view.contentDOM.removeEventListener('mousedown', handleMouseDown);
         view.contentDOM.removeEventListener('mousedown', handleClick);
         view.contentDOM.removeEventListener('paste', handlePaste);
