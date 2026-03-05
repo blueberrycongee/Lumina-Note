@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = ["protocol-asset", "unstable", "test"] }
+tauri = { version = "2.10.3", features = ["protocol-asset", "unstable", "test"] }
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-fs = "2.4.5"
 tauri-plugin-shell = "2.3.5"
@@ -22,7 +22,7 @@ tauri-plugin-process = "2.3.1"
 tauri-plugin-updater = "2.10.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.40", features = ["full"] }
+tokio = { version = "1.50", features = ["full"] }
 notify = "6.1"
 walkdir = "2.5"
 thiserror = "2.0"
