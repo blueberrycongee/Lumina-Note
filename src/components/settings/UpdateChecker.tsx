@@ -4,6 +4,7 @@ import { Loader2, RefreshCw, Download, RotateCcw, CheckCircle2, AlertCircle, Ski
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUpdateStore, checkForUpdate, getUpdateHandle } from "@/stores/useUpdateStore";
 import { reportOperationError } from "@/lib/reportError";
+import { retryWithExponentialBackoff } from "@/lib/retry";
 
 type DownloadEvent = {
     event: string;
@@ -12,6 +13,11 @@ type DownloadEvent = {
         chunkLength?: number;
     };
 };
+
+const UPDATE_DOWNLOAD_TIMEOUT_MS = 120_000;
+const UPDATE_DOWNLOAD_MAX_ATTEMPTS = 3;
+const UPDATE_DOWNLOAD_BASE_DELAY_MS = 1_500;
+const UPDATE_DOWNLOAD_MAX_DELAY_MS = 12_000;
 
 export function UpdateChecker() {
     const { t } = useLocaleStore();
@@ -79,29 +85,56 @@ export function UpdateChecker() {
             contentLengthRef.current = 0;
             downloadedRef.current = 0;
 
-            await updateHandle.downloadAndInstall((event: DownloadEvent) => {
-                switch (event.event) {
-                    case 'Started':
-                        const len = (event.data as any).contentLength;
-                        if (len) contentLengthRef.current = len;
-                        break;
-                    case 'Progress':
-                        const chunk = (event.data as any).chunkLength;
-                        downloadedRef.current += chunk;
+            await retryWithExponentialBackoff(
+                () =>
+                    updateHandle.downloadAndInstall(
+                        (event: DownloadEvent) => {
+                            switch (event.event) {
+                                case "Started":
+                                    const len = (event.data as any).contentLength;
+                                    if (len) contentLengthRef.current = len;
+                                    break;
+                                case "Progress":
+                                    const chunk = (event.data as any).chunkLength;
+                                    downloadedRef.current += chunk;
 
-                        if (contentLengthRef.current > 0) {
-                            const pct = (downloadedRef.current / contentLengthRef.current) * 100;
-                            setProgress(pct);
-                            setDownloadedSize(`${(downloadedRef.current / 1024 / 1024).toFixed(1)} MB / ${(contentLengthRef.current / 1024 / 1024).toFixed(1)} MB`);
-                        } else {
-                            setDownloadedSize(`${(downloadedRef.current / 1024 / 1024).toFixed(1)} MB`);
-                        }
-                        break;
-                    case 'Finished':
-                        setStatus("installing");
-                        break;
+                                    if (contentLengthRef.current > 0) {
+                                        const pct = (downloadedRef.current / contentLengthRef.current) * 100;
+                                        setProgress(pct);
+                                        setDownloadedSize(
+                                            `${(downloadedRef.current / 1024 / 1024).toFixed(1)} MB / ${(contentLengthRef.current / 1024 / 1024).toFixed(1)} MB`
+                                        );
+                                    } else {
+                                        setDownloadedSize(`${(downloadedRef.current / 1024 / 1024).toFixed(1)} MB`);
+                                    }
+                                    break;
+                                case "Finished":
+                                    setStatus("installing");
+                                    break;
+                            }
+                        },
+                        { timeout: UPDATE_DOWNLOAD_TIMEOUT_MS }
+                    ),
+                {
+                    maxAttempts: UPDATE_DOWNLOAD_MAX_ATTEMPTS,
+                    baseDelayMs: UPDATE_DOWNLOAD_BASE_DELAY_MS,
+                    maxDelayMs: UPDATE_DOWNLOAD_MAX_DELAY_MS,
+                    onRetry: ({ attempt, maxAttempts, nextDelayMs, error }) => {
+                        console.warn("[Update] download failed, retrying", {
+                            attempt,
+                            maxAttempts,
+                            nextDelayMs,
+                            timeoutMs: UPDATE_DOWNLOAD_TIMEOUT_MS,
+                            error,
+                        });
+                        setStatus("downloading");
+                        setProgress(0);
+                        setDownloadedSize("");
+                        contentLengthRef.current = 0;
+                        downloadedRef.current = 0;
+                    },
                 }
-            });
+            );
 
             setStatus("ready");
         } catch (err) {

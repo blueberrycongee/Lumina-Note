@@ -7,6 +7,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { reportOperationError } from "@/lib/reportError";
+import { retryWithExponentialBackoff } from "@/lib/retry";
+
+export const UPDATE_CHECK_TIMEOUT_MS = 15_000;
+const UPDATE_CHECK_MAX_ATTEMPTS = 3;
+const UPDATE_CHECK_BASE_DELAY_MS = 1_000;
+const UPDATE_CHECK_MAX_DELAY_MS = 8_000;
 
 export interface UpdateInfo {
   version: string;
@@ -136,7 +142,23 @@ export async function checkForUpdate(force = false): Promise<boolean> {
   store.setIsChecking(true);
 
   try {
-    const updateResult = await check();
+    const updateResult = await retryWithExponentialBackoff(
+      () => check({ timeout: UPDATE_CHECK_TIMEOUT_MS }),
+      {
+        maxAttempts: UPDATE_CHECK_MAX_ATTEMPTS,
+        baseDelayMs: UPDATE_CHECK_BASE_DELAY_MS,
+        maxDelayMs: UPDATE_CHECK_MAX_DELAY_MS,
+        onRetry: ({ attempt, maxAttempts, nextDelayMs, error }) => {
+          console.warn("[Update] check failed, retrying", {
+            attempt,
+            maxAttempts,
+            nextDelayMs,
+            timeoutMs: UPDATE_CHECK_TIMEOUT_MS,
+            error,
+          });
+        },
+      }
+    );
     store.setLastCheckTime(Date.now());
 
     if (updateResult?.available) {
