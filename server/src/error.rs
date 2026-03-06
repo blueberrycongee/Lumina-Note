@@ -66,6 +66,9 @@ mod tests {
         let body = to_bytes(response.into_body()).await.unwrap();
         let payload = String::from_utf8(body.to_vec()).unwrap();
 
-        assert_eq!(payload, r#"{"code":"unauthorized","message":"unauthorized"}"#);
+        assert_eq!(
+            payload,
+            r#"{"code":"unauthorized","message":"unauthorized"}"#
+        );
     }
 }
