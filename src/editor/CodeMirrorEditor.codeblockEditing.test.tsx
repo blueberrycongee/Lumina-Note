@@ -19,6 +19,10 @@ function setupEditor(content: string) {
   return { container, view, onChange };
 }
 
+function getStableCodeBlockShell(container: HTMLElement) {
+  return container.querySelector('.cm-lumina-codeblock-shell');
+}
+
 describe("CodeMirror live code block editing", () => {
   afterEach(() => {
     cleanup();
@@ -67,5 +71,19 @@ describe("CodeMirror live code block editing", () => {
     });
 
     expect(view.state.doc.toString()).toContain("const xy = 1;");
+  });
+
+  it('keeps the same outer shell when caret enters code content', () => {
+    const content = "Before\n\n```js\nconst token = 1;\n```\nAfter";
+    const { container, view } = setupEditor(content);
+    const codeStart = content.indexOf('const token = 1;');
+
+    expect(getStableCodeBlockShell(container)).not.toBeNull();
+
+    act(() => {
+      view.dispatch({ selection: { anchor: codeStart + 3 } });
+    });
+
+    expect(getStableCodeBlockShell(container)).not.toBeNull();
   });
 });

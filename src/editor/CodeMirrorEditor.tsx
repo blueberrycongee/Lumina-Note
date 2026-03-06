@@ -87,7 +87,18 @@ export interface CodeMirrorEditorRef {
 
 const createEditorTheme = (fontSize: number) =>
   EditorView.theme({
-    '&': { backgroundColor: 'transparent', fontSize: `${fontSize}px`, height: '100%' },
+    '&': {
+      backgroundColor: 'transparent',
+      fontSize: `${fontSize}px`,
+      height: '100%',
+      '--lumina-codeblock-bg': 'hsl(var(--muted) / 0.58)',
+      '--lumina-codeblock-bg-hover': 'hsl(var(--muted) / 0.74)',
+      '--lumina-codeblock-bg-source': 'hsl(var(--muted) / 0.7)',
+      '--lumina-codeblock-border': 'hsl(var(--border) / 0.65)',
+      '--lumina-codeblock-border-soft': 'hsl(var(--border) / 0.35)',
+      '--lumina-codeblock-shadow':
+        '0 0 0 1px hsl(var(--border) / 0.08), 0 10px 24px -18px hsl(var(--foreground) / 0.28)',
+    },
     '.cm-codeblock-widget pre': { fontSize: `${Math.max(10, fontSize - 2)}px` },
     '.cm-content': {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
@@ -279,13 +290,28 @@ const createEditorTheme = (fontSize: number) =>
       display: 'block',
       position: 'relative',
       overflow: 'hidden',
-      backgroundColor: 'hsl(var(--muted))',
-      borderRadius: '6px',
+      backgroundColor: 'var(--lumina-codeblock-bg)',
+      border: '1px solid var(--lumina-codeblock-border)',
+      borderRadius: '14px',
+      boxShadow: 'var(--lumina-codeblock-shadow)',
+      backdropFilter: 'blur(6px)',
+    },
+    '.cm-lumina-codeblock-shell': {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      minHeight: '36px',
+      padding: '7px 12px 7px 14px',
+      backgroundColor: 'var(--lumina-codeblock-bg)',
+      border: '1px solid var(--lumina-codeblock-border)',
+      borderBottom: '1px solid var(--lumina-codeblock-border-soft)',
+      boxShadow: 'var(--lumina-codeblock-shadow)',
+      backdropFilter: 'blur(6px)',
     },
     '.cm-codeblock-actions': {
       position: 'absolute',
-      top: '8px',
-      right: '8px',
+      top: '10px',
+      right: '10px',
       display: 'flex',
       gap: '6px',
       zIndex: '1',
@@ -295,65 +321,78 @@ const createEditorTheme = (fontSize: number) =>
     },
     '.cm-codeblock-line': {
       display: 'block',
-      padding: '0 16px',
-      lineHeight: '1.7',
-      minHeight: '26px',
+      padding: '0 14px',
+      lineHeight: '1.75',
+      minHeight: '28px',
     },
     '.cm-codeblock-fence': {
       color: 'hsl(var(--muted-foreground) / 0.6)',
     },
     '.cm-codeblock-source-toggle': {
-      display: 'flex',
       justifyContent: 'flex-end',
-      marginBottom: '6px',
+      borderRadius: '14px 14px 0 0',
     },
     '.cm-codeblock-toggle, .cm-codeblock-copy': {
-      border: '1px solid hsl(var(--border))',
-      backgroundColor: 'hsl(var(--background))',
-      color: 'hsl(var(--foreground))',
-      borderRadius: '6px',
-      padding: '4px 8px',
+      border: '1px solid hsl(var(--border) / 0.5)',
+      backgroundColor: 'hsl(var(--background) / 0.72)',
+      color: 'hsl(var(--foreground) / 0.84)',
+      borderRadius: '9px',
+      padding: '5px 9px',
       fontSize: '12px',
       lineHeight: '1',
       cursor: 'pointer',
+      transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+    },
+    '.cm-codeblock-toggle:hover, .cm-codeblock-copy:hover': {
+      backgroundColor: 'hsl(var(--background) / 0.92)',
+      borderColor: 'hsl(var(--border) / 0.8)',
+      color: 'hsl(var(--foreground) / 0.96)',
     },
     '.cm-codeblock-copy-success': {
       color: 'hsl(142 76% 36%)',
     },
     '.cm-codeblock-source': {
-      backgroundColor: 'rgba(139, 92, 246, 0.1)',
+      backgroundColor: 'var(--lumina-codeblock-bg-source)',
+      color: 'hsl(var(--foreground) / 0.96)',
+      fontFamily: "'JetBrains Mono', monospace",
+      paddingLeft: '14px !important',
+      paddingRight: '14px !important',
+      boxShadow:
+        'inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)',
     },
 
     // === Inline code block styles ===
     '.cm-codeblock-header': {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '6px',
-      padding: '6px 16px',
-      backgroundColor: 'hsl(var(--muted))',
-      borderRadius: '6px 6px 0 0',
-      borderBottom: '1px solid hsl(var(--border) / 0.3)',
       fontSize: '12px',
-      minHeight: '28px',
+      borderRadius: '14px 14px 0 0',
     },
     '.cm-codeblock-lang': {
-      color: 'hsl(var(--muted-foreground))',
+      color: 'hsl(var(--muted-foreground) / 0.9)',
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: '11px',
-      backgroundColor: 'hsl(var(--background) / 0.5)',
-      padding: '2px 6px',
-      borderRadius: '3px',
+      letterSpacing: '0.02em',
+      backgroundColor: 'hsl(var(--background) / 0.56)',
+      border: '1px solid hsl(var(--border) / 0.45)',
+      padding: '3px 7px',
+      borderRadius: '999px',
     },
     '.cm-codeblock-content': {
-      backgroundColor: 'hsl(var(--muted)) !important',
+      backgroundColor: 'var(--lumina-codeblock-bg) !important',
       fontFamily: "'JetBrains Mono', monospace !important",
-      padding: '0 16px !important',
+      color: 'hsl(var(--foreground) / 0.96)',
+      padding: '0 14px !important',
       lineHeight: '1.7 !important',
+      boxShadow:
+        'inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)',
     },
     '.cm-codeblock-footer': {
-      backgroundColor: 'hsl(var(--muted))',
-      borderRadius: '0 0 6px 6px',
-      height: '6px',
+      backgroundColor: 'var(--lumina-codeblock-bg)',
+      borderLeft: '1px solid var(--lumina-codeblock-border)',
+      borderRight: '1px solid var(--lumina-codeblock-border)',
+      borderBottom: '1px solid var(--lumina-codeblock-border)',
+      borderRadius: '0 0 14px 14px',
+      boxShadow: 'var(--lumina-codeblock-shadow)',
+      height: '10px',
     },
     // hljs token colors
     '.hljs-keyword': { color: 'hsl(var(--md-keyword, 280 70% 55%))' },
@@ -846,6 +885,32 @@ const livePreviewPlugin = ViewPlugin.fromClass(
     }
   },
   { decorations: (v) => v.decorations },
+);
+
+const codeBlockShellPlugin = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      this.sync(view);
+    }
+
+    update(update: ViewUpdate) {
+      if (
+        update.docChanged ||
+        update.selectionSet ||
+        update.viewportChanged ||
+        update.transactions.some((tr) => tr.reconfigured)
+      ) {
+        this.sync(update.view);
+      }
+    }
+
+    sync(view: EditorView) {
+      const shellNodes = view.dom.querySelectorAll(
+        '.cm-codeblock-widget, .cm-codeblock-header, .cm-codeblock-source-toggle',
+      );
+      shellNodes.forEach((node) => node.classList.add('cm-lumina-codeblock-shell'));
+    }
+  },
 );
 
 // 共享 doc.toString() 缓存：Text 是不可变持久化结构，同一引用 = 同一内容
@@ -2565,8 +2630,8 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
               collapseOnSelectionFacet.of(true),
               livePreviewPlugin,
               tableEditorPlugin(),
-              // codemirror-live-markdown currently supports only "auto" | "toggle".
-              codeBlockField({ interaction: 'auto', copyButton: true }),
+              codeBlockShellPlugin,
+              codeBlockField({ interaction: 'inline', copyButton: true }),
               ...widgets,
             ];
           case 'source':

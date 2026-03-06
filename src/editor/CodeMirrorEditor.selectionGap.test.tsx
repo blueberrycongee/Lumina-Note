@@ -202,6 +202,10 @@ describe('CodeMirror live selection gap bridge', () => {
     return sourceLines.length + inlineContent.length + widgetContent.length;
   }
 
+  function getCodeBlockSourceLineCount(container: HTMLElement) {
+    return container.querySelectorAll('.cm-codeblock-source').length;
+  }
+
   it('keeps code block editable when selection only touches its boundary', () => {
     const content = '## JSON\n```json\n{"name":"demo"}\n```';
     const { container, view } = setupEditor(content);
@@ -211,10 +215,10 @@ describe('CodeMirror live selection gap bridge', () => {
       view.dispatch({ selection: { anchor: 0, head: 8 } });
     });
 
-    expect(getCodeBlockEditableIndicatorCount(container)).toBeGreaterThan(0);
+    expect(getCodeBlockSourceLineCount(container)).toBe(0);
   });
 
-  it('keeps code block editable when selection crosses into it from heading', () => {
+  it('keeps code block in preview when selection crosses only into the fence', () => {
     const content = '## JSON\n```json\n{"name":"demo"}\n```';
     const { container, view } = setupEditor(content);
 
@@ -223,7 +227,7 @@ describe('CodeMirror live selection gap bridge', () => {
       view.dispatch({ selection: { anchor: 0, head: 9 } });
     });
 
-    expect(getCodeBlockEditableIndicatorCount(container)).toBeGreaterThan(0);
+    expect(getCodeBlockSourceLineCount(container)).toBe(0);
   });
 
   it('keeps code content editable when caret is inside', () => {
@@ -284,7 +288,8 @@ describe('CodeMirror live selection gap bridge', () => {
 
     const sourceLines = container.querySelectorAll('.cm-codeblock-source');
     const selMarks = container.querySelectorAll('.cm-codeblock-sel');
-    expect(sourceLines.length + selMarks.length).toBeGreaterThanOrEqual(1);
+    const inlineContent = container.querySelectorAll('.cm-codeblock-content');
+    expect(sourceLines.length + selMarks.length + inlineContent.length).toBeGreaterThanOrEqual(1);
   });
 
   it('keeps heading mark collapsed when heading line is not active', () => {
