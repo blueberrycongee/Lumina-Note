@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-03-07
+
+### 修复
+- live 模式下代码块现在保持高亮外观且可直接编辑，不再依赖模式切换才能进入可编辑状态
+- live 模式代码块恢复复制按钮，并优化相邻代码块之间单空行的光标可见性
+
 ## [1.0.1] - 2026-03-06
 
 ### 修复
