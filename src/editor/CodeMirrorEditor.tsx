@@ -300,7 +300,7 @@ const createEditorTheme = (fontSize: number) =>
     },
     '.cm-lumina-codeblock-open': {
       paddingLeft: '14px !important',
-      paddingRight: '14px !important',
+      paddingRight: '78px !important',
       paddingTop: '8px !important',
       paddingBottom: '2px !important',
       backgroundColor: 'var(--lumina-codeblock-bg)',
@@ -344,6 +344,12 @@ const createEditorTheme = (fontSize: number) =>
       display: 'flex',
       gap: '6px',
       zIndex: '1',
+    },
+    '.cm-lumina-codeblock-copy-anchor': {
+      position: 'absolute',
+      top: '8px',
+      right: '10px',
+      zIndex: '2',
     },
     '.cm-codeblock-widget code': {
       fontFamily: "'JetBrains Mono', monospace",
@@ -639,6 +645,104 @@ class MathWidget extends WidgetType {
     // 渲染态公式：让 CodeMirror 忽略事件，由我们自己的 mousedown handler 处理
     // 预览面板：让事件穿透 (pointer-events: none)
     return !this.isPreviewPanel;
+  }
+}
+
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  const clipboard = navigator.clipboard;
+  if (clipboard?.writeText) {
+    try {
+      await clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fall through to execCommand fallback.
+    }
+  }
+
+  if (typeof document.execCommand !== 'function') {
+    return false;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', 'true');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+
+  const selection = document.getSelection();
+  const previousRanges: globalThis.Range[] = [];
+  if (selection) {
+    for (let i = 0; i < selection.rangeCount; i += 1) {
+      previousRanges.push(selection.getRangeAt(i));
+    }
+  }
+
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch {
+    copied = false;
+  }
+
+  document.body.removeChild(textarea);
+  if (selection) {
+    selection.removeAllRanges();
+    previousRanges.forEach((range) => selection.addRange(range));
+  }
+
+  return copied;
+}
+
+class LiveCodeBlockCopyButtonWidget extends WidgetType {
+  constructor(readonly code: string) {
+    super();
+  }
+
+  eq(other: LiveCodeBlockCopyButtonWidget) {
+    return other.code === this.code;
+  }
+
+  toDOM() {
+    const anchor = document.createElement('span');
+    anchor.className = 'cm-lumina-codeblock-copy-anchor';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cm-codeblock-copy';
+    button.textContent = 'Copy';
+    button.setAttribute('aria-label', 'Copy code');
+    button.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const copied = await copyTextToClipboard(this.code);
+      if (copied) {
+        button.textContent = 'Copied!';
+        button.classList.add('cm-codeblock-copy-success');
+        setTimeout(() => {
+          button.textContent = 'Copy';
+          button.classList.remove('cm-codeblock-copy-success');
+        }, 2000);
+      } else {
+        button.textContent = 'Failed';
+        setTimeout(() => {
+          button.textContent = 'Copy';
+        }, 2000);
+      }
+    });
+
+    anchor.appendChild(button);
+    return anchor;
+  }
+
+  ignoreEvent() {
+    return true;
   }
 }
 
@@ -993,11 +1097,18 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
         return;
       }
       const codeText = node.node.getChild('CodeText');
+      const code = codeText ? state.doc.sliceString(codeText.from, codeText.to) : '';
 
       const openLine = state.doc.lineAt(node.from);
       const closeLine = state.doc.lineAt(Math.max(node.from, node.to - 1));
 
       decorations.push(Decoration.line({ class: 'cm-lumina-codeblock-open' }).range(openLine.from));
+      decorations.push(
+        Decoration.widget({
+          widget: new LiveCodeBlockCopyButtonWidget(code),
+          side: 1,
+        }).range(openLine.to),
+      );
       for (let lineNumber = openLine.number + 1; lineNumber < closeLine.number; lineNumber += 1) {
         const line = state.doc.line(lineNumber);
         decorations.push(
@@ -1030,12 +1141,7 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
         );
       }
       if (codeText) {
-        addLiveCodeBlockSyntaxHighlight(
-          decorations,
-          state.doc.sliceString(codeText.from, codeText.to),
-          language,
-          codeText.from,
-        );
+        addLiveCodeBlockSyntaxHighlight(decorations, code, language, codeText.from);
       }
     },
   });

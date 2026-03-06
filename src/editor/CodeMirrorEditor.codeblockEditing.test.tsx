@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 
@@ -43,6 +43,28 @@ describe("CodeMirror live code block editing", () => {
     expect(widgetUi).toBeNull();
     expect(sourceLines.length).toBe(0);
     expect(container.querySelector(".hljs-keyword, .hljs-number")).not.toBeNull();
+    expect(container.querySelector(".cm-codeblock-copy")).not.toBeNull();
+  });
+
+  it("copies code content from the live-mode copy button", async () => {
+    const content = "Before\n\n```js\nconst token = 1;\n```\nAfter";
+    const { container } = setupEditor(content);
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+
+    const button = container.querySelector(".cm-codeblock-copy");
+    expect(button).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.click(button as HTMLElement);
+      await Promise.resolve();
+    });
+
+    expect(writeText).toHaveBeenCalledWith("const token = 1;");
+    expect((button as HTMLButtonElement).textContent).toBe("Copied!");
   });
 
   it("allows native cursor placement inside code content", () => {
