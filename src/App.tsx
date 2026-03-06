@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useCallback, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
@@ -347,7 +348,6 @@ function App() {
 
     const setupWatcher = async () => {
       try {
-        const { listen } = await import("@tauri-apps/api/event");
         const { handleFsChangeEvent } = await import("@/lib/fsChange");
         const { reloadFileIfOpen } = useFileStore.getState();
         const { reloadSecondaryIfOpen } = (await import("@/stores/useSplitStore")).useSplitStore.getState();
@@ -400,7 +400,6 @@ function App() {
 
     const setup = async () => {
       try {
-        const { listen } = await import("@tauri-apps/api/event");
         unlisten = await listen<BrowserNewTabEventPayload>("browser:new-tab", (event) => {
           const payload = event.payload;
           if (!payload || !payload.url) return;
