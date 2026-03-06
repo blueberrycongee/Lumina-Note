@@ -70,6 +70,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
 
   const currentWorkspaceId = session?.currentWorkspaceId ?? '';
+  const workspaces = session?.workspaces ?? [];
   const hasSession = Boolean(session);
   const combinedError = error || connectionError;
   const canManageSync = hasSession && Boolean(vaultPath) && Boolean(config.server_url);
@@ -322,12 +323,12 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
               aria-label="Cloud workspace"
               value={currentWorkspaceId}
               onChange={(event) => selectWorkspace(event.target.value)}
-              disabled={!hasSession || session.workspaces.length === 0}
+              disabled={!hasSession || workspaces.length === 0}
               className={`${inputClass} disabled:opacity-60`}
             >
               {!hasSession && <option value="">Sign in first</option>}
-              {hasSession && session.workspaces.length === 0 && <option value="">No workspace yet</option>}
-              {session?.workspaces.map((workspace) => (
+              {hasSession && workspaces.length === 0 && <option value="">No workspace yet</option>}
+              {workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
                 </option>
