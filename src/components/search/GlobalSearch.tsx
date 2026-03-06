@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useBrowserStore } from "@/stores/useBrowserStore";
@@ -102,7 +103,6 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
 
     const setupListener = async () => {
       try {
-        const { listen } = await import("@tauri-apps/api/event");
         const handleInvalidate = (path: unknown) => {
           if (typeof path !== "string" || !path) return;
           fileLinesCacheRef.current.delete(getCacheKey(path));
