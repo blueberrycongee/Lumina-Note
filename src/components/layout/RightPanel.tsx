@@ -6,6 +6,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { getDragData } from "@/lib/dragState";
 import { getFileName } from "@/lib/utils";
 import {
   PROVIDER_REGISTRY,
@@ -475,7 +476,7 @@ export function RightPanel() {
   // 文件拖拽进入面板时的视觉反馈
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      const dragData = (window as any).__lumina_drag_data;
+      const dragData = getDragData();
       if (!dragData?.isDragging || !panelRef.current) {
         if (isDraggingFileOver) setIsDraggingFileOver(false);
         return;

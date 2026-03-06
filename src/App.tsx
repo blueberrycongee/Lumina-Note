@@ -31,6 +31,7 @@ import { TypesettingExportHarness } from "@/components/typesetting/TypesettingEx
 import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { getDragData, clearDragData } from "@/lib/dragState";
 import { saveFile } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
@@ -544,7 +545,7 @@ function App() {
     let dragIndicator: HTMLDivElement | null = null;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const dragData = (window as any).__lumina_drag_data;
+      const dragData = getDragData();
       if (!dragData) return;
 
       // 检测是否开始拖拽（移动超过 5px）
@@ -582,7 +583,7 @@ function App() {
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      const dragData = (window as any).__lumina_drag_data;
+      const dragData = getDragData();
       if (!dragData) return;
 
       // 清理拖拽指示器
@@ -607,7 +608,7 @@ function App() {
             });
             window.dispatchEvent(folderDropEvent);
             // 清理全局数据
-            (window as any).__lumina_drag_data = null;
+            clearDragData();
             return;
           }
         }
@@ -629,7 +630,7 @@ function App() {
       }
 
       // 清理全局数据
-      (window as any).__lumina_drag_data = null;
+      clearDragData();
     };
 
     document.addEventListener('mousemove', handleMouseMove);

@@ -19,6 +19,7 @@ import {
 import { AgentPanel } from "../chat/AgentPanel";
 import { ConversationList } from "../chat/ConversationList";
 import { ChatPanel } from "../chat/ChatPanel";
+import { getDragData } from "@/lib/dragState";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 
 interface AIFloatingPanelProps {
@@ -103,7 +104,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
   // 文件拖拽进入面板时的视觉反馈
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      const dragData = (window as any).__lumina_drag_data;
+      const dragData = getDragData();
       if (!dragData?.isDragging || !panelRef.current) {
         if (isDraggingFileOver) setIsDraggingFileOver(false);
         return;

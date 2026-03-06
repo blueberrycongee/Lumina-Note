@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { getDragData, setDragData } from "@/lib/dragState";
 import { FileEntry, deleteFile, renameFile, createFile, createDir, exists, openNewWindow, saveFile, readFile } from "@/lib/tauri";
 import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { invoke } from "@tauri-apps/api/core";
@@ -945,7 +946,7 @@ export function Sidebar() {
       <div 
         data-folder-path={vaultPath}
         onMouseEnter={() => {
-          const dragData = (window as any).__lumina_drag_data;
+          const dragData = getDragData();
           if (dragData?.isDragging) {
             setIsRootDragOver(true);
           }
@@ -1239,7 +1240,7 @@ function FileTreeItem({
     if (e.button !== 0) return; // 只处理左键
     
     // 存储拖拽数据到全局
-    (window as any).__lumina_drag_data = {
+    setDragData({
       wikiLink: '', // 文件夹不支持 wiki 链接
       filePath: entry.path,
       fileName: entry.name,
@@ -1247,12 +1248,12 @@ function FileTreeItem({
       startX: e.clientX,
       startY: e.clientY,
       isDragging: false,
-    };
+    });
   };
 
   // 拖拽进入文件夹
   const handleMouseEnter = useCallback(() => {
-    const dragData = (window as any).__lumina_drag_data;
+    const dragData = getDragData();
     if (dragData?.isDragging && entry.is_dir) {
       // 不能拖到自己身上
       if (dragData.filePath === entry.path) return;
@@ -1449,7 +1450,7 @@ function FileTreeItem({
     const wikiLink = `[[${linkName}]]`;
     
     // 存储拖拽数据到全局
-    (window as any).__lumina_drag_data = {
+    setDragData({
       wikiLink,
       filePath: entry.path,
       fileName: entry.name,
@@ -1457,7 +1458,7 @@ function FileTreeItem({
       startX: e.clientX,
       startY: e.clientY,
       isDragging: false,
-    };
+    });
   };
 
   return (
