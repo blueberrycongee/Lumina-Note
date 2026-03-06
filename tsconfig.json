@@ -17,9 +17,11 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@lumina/shared": ["packages/shared/src/index.ts"],
+      "@lumina/shared/*": ["packages/shared/src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "packages/shared/src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
