@@ -15,8 +15,15 @@ pub struct LoginRequest {
 #[derive(Debug, Serialize)]
 pub struct AuthResponse {
     pub token: String,
+    pub user: UserSummary,
     pub user_id: String,
     pub workspaces: Vec<WorkspaceSummary>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserSummary {
+    pub id: String,
+    pub email: String,
 }
 
 #[derive(Debug, Serialize)]

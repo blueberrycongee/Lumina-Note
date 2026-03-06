@@ -8,7 +8,7 @@ use crate::db;
 use crate::error::AppError;
 use crate::models::{
     AuthResponse, CreateWorkspaceRequest, LoginRequest, RegisterRequest, TokenResponse,
-    WorkspaceSummary,
+    UserSummary, WorkspaceSummary,
 };
 use crate::state::AppState;
 
@@ -40,6 +40,10 @@ pub async fn register(
 
     Ok(Json(AuthResponse {
         token,
+        user: UserSummary {
+            id: user_id.clone(),
+            email: email.clone(),
+        },
         user_id,
         workspaces,
     }))
@@ -67,6 +71,10 @@ pub async fn login(
     let workspaces = build_workspaces(&state, &user_id).await?;
     Ok(Json(AuthResponse {
         token,
+        user: UserSummary {
+            id: user_id.clone(),
+            email: email.clone(),
+        },
         user_id,
         workspaces,
     }))
@@ -133,4 +141,117 @@ fn extract_bearer(headers: &HeaderMap) -> Option<String> {
     value
         .strip_prefix("Bearer ")
         .map(|token| token.trim().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use crate::db;
+    use crate::state::{RelayHub, ServerMetrics};
+    use axum::http::{header::AUTHORIZATION, HeaderValue};
+    use sqlx::sqlite::SqlitePoolOptions;
+    use std::sync::Arc;
+    async fn test_state() -> AppState {
+        let data_dir = std::env::temp_dir().join(format!("lumina-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&data_dir).unwrap();
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        db::init_db(&pool).await.unwrap();
+
+        AppState {
+            pool,
+            config: Config {
+                bind: "127.0.0.1:0".to_string(),
+                db_url: "sqlite::memory:".to_string(),
+                data_dir: data_dir.display().to_string(),
+                jwt_secret: "test-secret".to_string(),
+            },
+            relay: RelayHub::new(),
+            metrics: Arc::new(ServerMetrics::new()),
+        }
+    }
+
+    fn auth_headers(token: &str) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+        );
+        headers
+    }
+
+    #[tokio::test]
+    async fn register_returns_user_and_default_workspace() {
+        let state = test_state().await;
+
+        let response = register(
+            State(state),
+            Json(RegisterRequest {
+                email: "dev@example.com".to_string(),
+                password: "change-me".to_string(),
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+
+        assert_eq!(response.user.email, "dev@example.com");
+        assert!(!response.token.is_empty());
+        assert_eq!(response.workspaces.len(), 1);
+        assert_eq!(response.workspaces[0].name, "My Workspace");
+    }
+
+    #[tokio::test]
+    async fn login_and_create_workspace_share_same_contract() {
+        let state = test_state().await;
+
+        let registered = register(
+            State(state.clone()),
+            Json(RegisterRequest {
+                email: "dev@example.com".to_string(),
+                password: "change-me".to_string(),
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+
+        let login_response = login(
+            State(state.clone()),
+            Json(LoginRequest {
+                email: "dev@example.com".to_string(),
+                password: "change-me".to_string(),
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+
+        assert_eq!(login_response.user.id, registered.user.id);
+        assert_eq!(login_response.user.email, "dev@example.com");
+
+        let created = create_workspace(
+            State(state.clone()),
+            auth_headers(&login_response.token),
+            Json(CreateWorkspaceRequest {
+                name: "Research".to_string(),
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+
+        assert_eq!(created.name, "Research");
+
+        let listed = list_workspaces(State(state), auth_headers(&login_response.token))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(listed.len(), 2);
+    }
 }
