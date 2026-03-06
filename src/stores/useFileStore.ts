@@ -243,6 +243,14 @@ const getDiagramDisplayName = (path: string) => {
 const MOBILE_WORKSPACE_SYNC_INTERVAL = 10_000;
 let lastMobileWorkspaceSync: { path: string | null; at: number } = { path: null, at: 0 };
 
+async function syncWorkspaceAccessRoots(path: string): Promise<void> {
+  useWorkspaceStore.getState().registerWorkspace(path);
+  const workspacePaths = Array.from(
+    new Set([path, ...useWorkspaceStore.getState().workspaces.map((workspace) => workspace.path)])
+  );
+  await invoke("fs_set_allowed_roots", { roots: workspacePaths });
+}
+
 // 限制 undoStack 大小的辅助函数
 function trimUndoStack(stack: HistoryEntry[]): HistoryEntry[] {
   if (stack.length <= MAX_UNDO_HISTORY) return stack;
@@ -296,12 +304,8 @@ export const useFileStore = create<FileState>()(
 
       // Set vault path and load file tree
       setVaultPath: async (path: string) => {
-        useWorkspaceStore.getState().registerWorkspace(path);
-        const workspacePaths = Array.from(
-          new Set([path, ...useWorkspaceStore.getState().workspaces.map((workspace) => workspace.path)])
-        );
         try {
-          await invoke("fs_set_allowed_roots", { roots: workspacePaths });
+          await syncWorkspaceAccessRoots(path);
         } catch (error) {
           reportOperationError({
             source: "FileStore.setVaultPath",
@@ -2330,6 +2334,17 @@ export const useFileStore = create<FileState>()(
       }),
       onRehydrateStorage: () => async (state) => {
         if (!state?.vaultPath) return;
+        try {
+          await syncWorkspaceAccessRoots(state.vaultPath);
+        } catch (error) {
+          reportOperationError({
+            source: "FileStore.rehydrate",
+            action: "Sync workspace access roots after restore",
+            error,
+            level: "warning",
+            context: { vaultPath: state.vaultPath },
+          });
+        }
         try {
           await state.refreshFileTree();
         } catch (error) {
