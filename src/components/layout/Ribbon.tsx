@@ -4,6 +4,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { usePluginStore } from "@/stores/usePluginStore";
 import {
+  AlertCircle,
   FileText,
   Network,
   Puzzle,
@@ -18,20 +19,29 @@ import {
   Brain,
   LayoutGrid,
   Star,
+  Download,
+  Loader2,
+  RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 
 import { cn } from "@/lib/utils";
 import { exists } from "@/lib/tauri";
 import { SettingsModal } from "./SettingsModal";
+import { UpdateModal } from "./UpdateModal";
 import { type PluginRibbonItem, usePluginUiStore } from "@/stores/usePluginUiStore";
 import { InstalledPluginsModal } from "@/components/plugins/InstalledPluginsModal";
+import { useUpdateStore } from "@/stores/useUpdateStore";
+import { getRibbonUpdateState } from "./ribbonUpdateState";
 
 export function Ribbon() {
   const REPO_URL = "https://github.com/blueberrycongee/Lumina-Note";
   const [showSettings, setShowSettings] = useState(false);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showPlugins, setShowPlugins] = useState(false);
   const closeSettings = useCallback(() => setShowSettings(false), []);
+  const closeUpdateModal = useCallback(() => setShowUpdateModal(false), []);
   const closePlugins = useCallback(() => setShowPlugins(false), []);
   const { t } = useLocaleStore();
   const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
@@ -50,6 +60,12 @@ export function Ribbon() {
     openCardFlowTab,
   } = useFileStore();
   const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
+  const { availableUpdate, hasUnreadUpdate, installTelemetry, isChecking } = useUpdateStore((state) => ({
+    availableUpdate: state.availableUpdate,
+    hasUnreadUpdate: state.hasUnreadUpdate,
+    installTelemetry: state.installTelemetry,
+    isChecking: state.isChecking,
+  }));
 
   // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -127,6 +143,13 @@ export function Ribbon() {
     }
   }, []);
 
+  const handleOpenSettings = useCallback(() => setShowSettings(true), []);
+  const handleOpenUpdateModal = useCallback(() => setShowUpdateModal(true), []);
+  const handleOpenUpdateFromSettings = useCallback(() => {
+    setShowSettings(false);
+    setShowUpdateModal(true);
+  }, []);
+
   const isPluginRibbonItemActive = useCallback(
     (item: PluginRibbonItem) => {
       if (!activeTab?.type) return false;
@@ -156,6 +179,49 @@ export function Ribbon() {
         isRibbonItemEnabled(item.pluginId, item.itemId, item.defaultEnabled ?? true),
     )
     .sort((a, b) => a.order - b.order);
+
+  const updateRibbonState = getRibbonUpdateState({
+    availableUpdate,
+    hasUnreadUpdate,
+    installPhase: installTelemetry.phase,
+    isChecking,
+  });
+  const updateTitleDetail =
+    updateRibbonState === "ready"
+      ? t.updateChecker.descReady
+      : updateRibbonState === "in-progress"
+        ? installTelemetry.phase === "verifying"
+          ? t.updateChecker.descVerifying
+          : installTelemetry.phase === "installing"
+            ? t.updateChecker.descInstalling
+            : t.updateChecker.descDownloading
+        : updateRibbonState === "available"
+          ? availableUpdate
+            ? t.updateChecker.descAvailable.replace("{version}", availableUpdate.version)
+            : t.updateChecker.descIdle
+          : updateRibbonState === "error"
+            ? t.updateChecker.descError
+            : updateRibbonState === "checking"
+              ? t.ribbon.softwareUpdateChecking
+              : t.updateChecker.descIdle;
+  const updateTitle = `${t.updateChecker.title} · ${updateTitleDetail}`;
+  const updateButtonClassName = cn(
+    "relative w-8 h-8 ui-icon-btn",
+    updateRibbonState === "available" && "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15",
+    updateRibbonState === "in-progress" && "text-primary border border-primary/30 bg-primary/10 hover:bg-primary/15",
+    updateRibbonState === "ready" && "text-green-600 border border-green-500/35 bg-green-500/10 hover:bg-green-500/15 hover:text-green-700",
+    updateRibbonState === "error" && "text-amber-600 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15",
+  );
+  const showUpdateDot = updateRibbonState === "available" || updateRibbonState === "ready";
+  const updateDotClassName = updateRibbonState === "ready" ? "bg-green-600" : "bg-primary";
+
+  const renderUpdateIcon = () => {
+    if (updateRibbonState === "available") return <Download size={18} />;
+    if (updateRibbonState === "in-progress") return <Loader2 size={18} className="animate-spin" />;
+    if (updateRibbonState === "ready") return <RotateCcw size={18} />;
+    if (updateRibbonState === "error") return <AlertCircle size={18} />;
+    return <RefreshCw size={18} className={updateRibbonState === "checking" ? "animate-spin" : ""} />;
+  };
 
   return (
     <div className="w-11 h-full bg-background/55 backdrop-blur-md border-r border-border/60 shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] flex flex-col items-center py-2 gap-0.5">
@@ -288,6 +354,21 @@ export function Ribbon() {
 
       {/* Bottom icons */}
       <div className="flex flex-col items-center gap-0.5">
+        <button
+          onClick={handleOpenUpdateModal}
+          className={updateButtonClassName}
+          title={updateTitle}
+          aria-label={updateTitle}
+        >
+          {renderUpdateIcon()}
+          {showUpdateDot && (
+            <span
+              aria-hidden="true"
+              className={cn("absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full", updateDotClassName)}
+            />
+          )}
+        </button>
+
         {/* Star on GitHub */}
         <button
           onClick={() => {
@@ -327,7 +408,7 @@ export function Ribbon() {
 
         {/* Settings */}
         <button
-          onClick={() => setShowSettings(true)}
+          onClick={handleOpenSettings}
           className="w-8 h-8 ui-icon-btn"
           title={t.ribbon.settings}
         >
@@ -339,7 +420,9 @@ export function Ribbon() {
       <SettingsModal 
         isOpen={showSettings} 
         onClose={closeSettings} 
+        onOpenUpdateModal={handleOpenUpdateFromSettings}
       />
+      <UpdateModal isOpen={showUpdateModal} onClose={closeUpdateModal} />
       <InstalledPluginsModal isOpen={showPlugins} onClose={closePlugins} />
     </div>
   );
