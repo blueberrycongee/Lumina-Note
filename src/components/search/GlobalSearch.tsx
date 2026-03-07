@@ -312,118 +312,122 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/45 backdrop-blur-[2px] z-50" onClick={onClose} />
 
       {/* Search Panel */}
-      <div className="fixed top-0 right-0 w-96 h-full bg-background border-l border-border z-50 flex flex-col shadow-xl">
-        {/* Header */}
-        <div className="p-3 border-b border-border flex items-center justify-between">
-          <span className="font-medium text-sm flex items-center gap-2">
-            <Search size={16} />
-            {t.globalSearch.title}
-          </span>
-          <button onClick={onClose} className="p-1 hover:bg-accent rounded transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Search inputs */}
-        <div className="p-3 border-b border-border space-y-2">
-          {/* Search input */}
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={t.globalSearch.searchPlaceholder}
-              className="w-full pl-8 pr-3 py-2 bg-muted/50 border border-border rounded-md text-sm outline-none focus:ring-1 focus:ring-primary"
-            />
+      <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-4 sm:px-6 sm:py-8">
+        <div className="w-full max-w-4xl h-[min(84vh,48rem)] bg-background/95 backdrop-blur-xl border border-border/70 rounded-2xl z-50 flex flex-col overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-border/80 flex items-center justify-between sm:px-5">
+            <span className="font-medium text-sm flex items-center gap-2 sm:text-base">
+              <Search size={16} />
+              {t.globalSearch.title}
+            </span>
+            <button
+              onClick={onClose}
+              className="p-1.5 hover:bg-accent rounded-md transition-colors"
+            >
+              <X size={16} />
+            </button>
           </div>
 
-          {/* Replace input (optional) */}
-          {showReplace && (
+          {/* Search inputs */}
+          <div className="px-4 py-3 border-b border-border/80 space-y-3 sm:px-5">
+            {/* Search input */}
             <div className="relative">
-              <Replace size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
+                ref={inputRef}
                 type="text"
-                value={replaceQuery}
-                onChange={(e) => setReplaceQuery(e.target.value)}
-                placeholder={t.globalSearch.replacePlaceholder}
-                className="w-full pl-8 pr-3 py-2 bg-muted/50 border border-border rounded-md text-sm outline-none focus:ring-1 focus:ring-primary"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={t.globalSearch.searchPlaceholder}
+                className="w-full pl-8 pr-3 py-2.5 bg-muted/50 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
-          )}
 
-          {/* Options */}
-          <div className="flex items-center gap-3 text-xs">
-            <button
-              onClick={() => setShowReplace(!showReplace)}
-              className={cn(
-                "px-2 py-1 rounded transition-colors",
-                showReplace ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
-              )}
-            >
-              {t.globalSearch.replace}
-            </button>
-            <button
-              onClick={() => setCaseSensitive(!caseSensitive)}
-              className={cn(
-                "px-2 py-1 rounded transition-colors font-mono",
-                caseSensitive ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
-              )}
-              title={t.globalSearch.caseSensitive}
-            >
-              Aa
-            </button>
-            <button
-              onClick={() => setUseRegex(!useRegex)}
-              className={cn(
-                "px-2 py-1 rounded transition-colors font-mono",
-                useRegex ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
-              )}
-              title={t.globalSearch.useRegex}
-            >
-              .*
-            </button>
+            {/* Replace input (optional) */}
+            {showReplace && (
+              <div className="relative">
+                <Replace size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={replaceQuery}
+                  onChange={(e) => setReplaceQuery(e.target.value)}
+                  placeholder={t.globalSearch.replacePlaceholder}
+                  className="w-full pl-8 pr-3 py-2.5 bg-muted/50 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            )}
+
+            {/* Options */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                onClick={() => setShowReplace(!showReplace)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-colors",
+                  showReplace ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                )}
+              >
+                {t.globalSearch.replace}
+              </button>
+              <button
+                onClick={() => setCaseSensitive(!caseSensitive)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-colors font-mono",
+                  caseSensitive ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                )}
+                title={t.globalSearch.caseSensitive}
+              >
+                Aa
+              </button>
+              <button
+                onClick={() => setUseRegex(!useRegex)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md transition-colors font-mono",
+                  useRegex ? "bg-primary/20 text-primary" : "hover:bg-muted text-muted-foreground"
+                )}
+                title={t.globalSearch.useRegex}
+              >
+                .*
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Results */}
-        <div className="flex-1 overflow-y-auto">
-          {isSearching ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground">
-              <Loader2 size={20} className="animate-spin mr-2" />
-              {t.globalSearch.searching}
-            </div>
-          ) : query && results.length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
-              {t.globalSearch.noMatches}
-            </div>
-          ) : (
-            <div className="py-2">
-              {results.map((result) => (
-                <div key={result.path} className="border-b border-border last:border-b-0">
-                  {/* File header */}
-                  <button
-                    onClick={() => toggleFile(result.path)}
-                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors"
-                  >
-                    {expandedFiles.has(result.path) ? (
-                      <ChevronDown size={14} className="text-muted-foreground shrink-0" />
-                    ) : (
-                      <ChevronRight size={14} className="text-muted-foreground shrink-0" />
-                    )}
-                    <FileText size={14} className="text-muted-foreground shrink-0" />
-                    <span className="text-sm font-medium truncate flex-1 text-left">
-                      {result.name}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {result.matches.length}
-                    </span>
-                  </button>
+          {/* Results */}
+          <div className="flex-1 overflow-y-auto">
+            {isSearching ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <Loader2 size={20} className="animate-spin mr-2" />
+                {t.globalSearch.searching}
+              </div>
+            ) : query && results.length === 0 ? (
+              <div className="flex items-center justify-center py-8 text-muted-foreground text-sm">
+                {t.globalSearch.noMatches}
+              </div>
+            ) : (
+              <div className="py-2">
+                {results.map((result) => (
+                  <div key={result.path} className="border-b border-border last:border-b-0">
+                    {/* File header */}
+                    <button
+                      onClick={() => toggleFile(result.path)}
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors"
+                    >
+                      {expandedFiles.has(result.path) ? (
+                        <ChevronDown size={14} className="text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronRight size={14} className="text-muted-foreground shrink-0" />
+                      )}
+                      <FileText size={14} className="text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium truncate flex-1 text-left">
+                        {result.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {result.matches.length}
+                      </span>
+                    </button>
 
                   {/* Matches */}
                   {expandedFiles.has(result.path) && (
@@ -465,13 +469,14 @@ export function GlobalSearch({ isOpen, onClose }: GlobalSearchProps) {
         </div>
 
         {/* Footer */}
-        <div className="p-2 border-t border-border text-xs text-muted-foreground">
+        <div className="px-4 py-2.5 border-t border-border/80 text-xs text-muted-foreground sm:px-5">
           {results.length > 0 ? (
             <span>{t.globalSearch.summary.replace("{files}", String(results.length)).replace("{matches}", String(totalMatches))}</span>
           ) : (
             <span>{t.globalSearch.shortcutHint}</span>
           )}
         </div>
+      </div>
       </div>
     </>
   );
