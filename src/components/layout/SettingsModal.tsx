@@ -17,7 +17,6 @@ import { loadUserThemes, getUserThemes, deleteUserTheme } from "@/config/themePl
 import { X, Check, Plus, Trash2, Palette } from "lucide-react";
 import { ThemeEditor } from "../ai/ThemeEditor";
 import { WebDAVSettings } from "../settings/WebDAVSettings";
-import { UpdateChecker } from "../settings/UpdateChecker";
 import { DocToolsSection } from "../settings/DocToolsSection";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
@@ -30,9 +29,10 @@ import { DiagnosticsSection } from "../settings/DiagnosticsSection";
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenUpdateModal: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsModalProps) {
   const { t } = useLocaleStore();
   const { themeId, setThemeId, editorMode, setEditorMode, editorFontSize, setEditorFontSize } = useUIStore();
   const { config } = useAIStore();
@@ -352,8 +352,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </section>
 
           {/* 软件更新 */}
-          <section className="space-y-4">
-            <UpdateChecker />
+          <section className="space-y-4" data-testid="settings-section-update">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              {t.updateChecker.title}
+            </h3>
+
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/60 p-4">
+              <div className="space-y-1">
+                <p className="font-medium">
+                  {t.updateChecker.versionLabel.replace("{version}", appVersion || "...")}
+                </p>
+                <p className="text-sm text-muted-foreground">{t.settingsModal.softwareUpdateDescription}</p>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenUpdateModal}
+                data-testid="settings-open-update-modal"
+                className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                {t.settingsModal.softwareUpdateOpen}
+              </button>
+            </div>
           </section>
 
           <DiagnosticsSection />

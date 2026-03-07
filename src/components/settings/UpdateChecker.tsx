@@ -59,7 +59,7 @@ export function UpdateChecker() {
                 : `${(installTelemetry.downloadedBytes / 1024 / 1024).toFixed(1)} MB`
             : "";
 
-    // 打开设置时标记更新为已读
+    // 打开更新窗口时标记更新为已读
     useEffect(() => {
         if (hasUnreadUpdate) {
             markUpdateAsRead();
