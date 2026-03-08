@@ -1035,6 +1035,7 @@ export default {
     descReady: '更新已準備就緒',
     descCancelled: '更新已取消',
     descError: '更新失敗',
+    descUnsupported: '目前環境不支援更新',
     actionCheck: '檢查更新',
     actionInstall: '下載並安裝',
     actionRelaunch: '重新啟動',

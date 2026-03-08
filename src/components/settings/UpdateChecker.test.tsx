@@ -7,6 +7,10 @@ vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn(),
 }));
 
+vi.mock("@/lib/tauri", () => ({
+  isTauriAvailable: () => false,
+}));
+
 type Deferred<T> = {
   promise: Promise<T>;
   resolve: (value: T | PromiseLike<T>) => void;
@@ -29,6 +33,7 @@ describe("UpdateChecker", () => {
       lastCheckTime: 0,
       skippedVersions: [],
       checkCooldownHours: 24,
+      currentVersion: "1.0.0",
       availableUpdate: {
         version: "9.9.9",
         body: "test notes",
@@ -37,6 +42,26 @@ describe("UpdateChecker", () => {
       updateHandle: null,
       hasUnreadUpdate: false,
       isChecking: false,
+      installTelemetry: {
+        sessionId: 0,
+        taskId: null,
+        version: null,
+        phase: "idle",
+        attempt: 0,
+        progress: 0,
+        downloadedBytes: 0,
+        contentLength: 0,
+        startedAt: null,
+        updatedAt: null,
+        finishedAt: null,
+        error: null,
+        errorCode: null,
+        resumable: false,
+        retryDelayMs: null,
+        lastHttpStatus: null,
+        canResumeAfterRestart: false,
+        capability: "unknown",
+      },
     });
   });
 
@@ -79,15 +104,17 @@ describe("UpdateChecker", () => {
     const telemetry = (useUpdateStore.getState() as any).installTelemetry;
     expect(telemetry.phase).toBe("ready");
     expect(telemetry.progress).toBe(100);
+    expect(telemetry.version).toBe("9.9.9");
   });
 
-  it("does not surface stale ready telemetry when there is no current update", () => {
+  it("surfaces persisted ready telemetry when the installed version still needs relaunch", () => {
     useUpdateStore.setState({
       availableUpdate: null,
       hasUnreadUpdate: false,
       installTelemetry: {
         sessionId: 3,
         taskId: "task-stale",
+        version: "9.9.9",
         phase: "ready",
         attempt: 1,
         progress: 100,
@@ -108,8 +135,23 @@ describe("UpdateChecker", () => {
 
     render(<UpdateChecker />);
 
-    expect(screen.getByRole("button", { name: "检查更新" })).toBeInTheDocument();
-    expect(screen.queryByText("重启应用")).not.toBeInTheDocument();
-    expect(screen.queryByText("Update telemetry")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重启应用" })).toBeInTheDocument();
+    expect(screen.getByText("Update telemetry")).toBeInTheDocument();
+  });
+
+  it("shows unsupported instead of up-to-date outside Tauri", async () => {
+    useUpdateStore.setState({
+      availableUpdate: null,
+      hasUnreadUpdate: false,
+    });
+
+    render(<UpdateChecker />);
+
+    fireEvent.click(screen.getByRole("button", { name: "检查更新" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("当前环境不支持更新")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("已是最新版本")).not.toBeInTheDocument();
   });
 });

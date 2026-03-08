@@ -1035,6 +1035,7 @@ export default {
     descReady: '更新の準備ができました',
     descCancelled: '更新はキャンセルされました',
     descError: '更新に失敗しました',
+    descUnsupported: '現在の環境では更新は利用できません',
     actionCheck: '更新を確認',
     actionInstall: 'ダウンロードしてインストール',
     actionRelaunch: '再起動して適用',

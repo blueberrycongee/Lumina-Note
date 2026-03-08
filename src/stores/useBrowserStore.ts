@@ -41,6 +41,7 @@ interface BrowserState {
   activeTabId: string | null;
   // 全局隐藏状态（用于模态框打开时）
   globalHidden: boolean;
+  hiddenRequestCount: number;
   
   // Actions
   registerWebView: (tabId: string, url: string, title?: string) => void;
@@ -71,11 +72,26 @@ interface BrowserState {
 
 // 生命周期管理定时器
 let lifecycleTimer: ReturnType<typeof setInterval> | null = null;
+let visibilitySyncChain: Promise<void> = Promise.resolve();
+let pendingShowTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingShowResolve: (() => void) | null = null;
+
+const clearPendingShowTimer = () => {
+  if (pendingShowTimer) {
+    clearTimeout(pendingShowTimer);
+    pendingShowTimer = null;
+  }
+  if (pendingShowResolve) {
+    pendingShowResolve();
+    pendingShowResolve = null;
+  }
+};
 
 export const useBrowserStore = create<BrowserState>((set, get) => ({
   instances: new Map(),
   activeTabId: null,
   globalHidden: false,
+  hiddenRequestCount: 0,
   
   // 注册新的 WebView
   registerWebView: (tabId: string, url: string, title?: string) => {
@@ -353,13 +369,19 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
   
   // 隐藏所有 WebView（用于模态框打开时）
   hideAllWebViews: async () => {
-    const { instances, globalHidden } = get();
-    if (globalHidden) return; // 已经隐藏了
-    
-    set({ globalHidden: true });
-    
-    for (const [tabId, instance] of instances) {
-      if (instance.webviewExists) {
+    clearPendingShowTimer();
+    set((state) => ({
+      hiddenRequestCount: state.hiddenRequestCount + 1,
+    }));
+
+    visibilitySyncChain = visibilitySyncChain.then(async () => {
+      const { instances, globalHidden, hiddenRequestCount } = get();
+      if (hiddenRequestCount === 0 || globalHidden) return;
+
+      set({ globalHidden: true });
+
+      for (const [tabId, instance] of instances) {
+        if (!instance.webviewExists) continue;
         try {
           await invoke('set_browser_webview_visible', { tabId, visible: false });
         } catch (err) {
@@ -372,35 +394,52 @@ export const useBrowserStore = create<BrowserState>((set, get) => ({
           });
         }
       }
-    }
-    console.log('[BrowserStore] 已隐藏所有 WebView');
+      console.log('[BrowserStore] 已隐藏所有 WebView');
+    });
+
+    await visibilitySyncChain;
   },
   
   // 显示所有 WebView（用于模态框关闭时）
   showAllWebViews: async () => {
-    const { instances, activeTabId, globalHidden } = get();
-    if (!globalHidden) return; // 没有被隐藏
-    
-    set({ globalHidden: false });
-    
-    // 只显示当前激活的 WebView
-    if (activeTabId) {
-      // 优先从 instances 检查，但即使不在 instances 中也尝试显示
-      const instance = instances.get(activeTabId);
-      if (!instance || instance.webviewExists) {
-        try {
-          await invoke('set_browser_webview_visible', { tabId: activeTabId, visible: true });
-        } catch (err) {
-          reportOperationError({
-            source: "BrowserStore.showAllWebViews",
-            action: "Restore active browser webview visibility",
-            error: err,
-            level: "warning",
-            context: { tabId: activeTabId },
-          });
-        }
-      }
-    }
-    console.log('[BrowserStore] 已恢复 WebView 显示');
+    const nextCount = Math.max(0, get().hiddenRequestCount - 1);
+    set({ hiddenRequestCount: nextCount });
+    if (nextCount > 0) return;
+
+    clearPendingShowTimer();
+
+    const pendingVisible = new Promise<void>((resolve) => {
+      pendingShowResolve = resolve;
+      pendingShowTimer = setTimeout(() => {
+        pendingShowTimer = null;
+        pendingShowResolve = null;
+        visibilitySyncChain = visibilitySyncChain.then(async () => {
+          const { instances, activeTabId, globalHidden, hiddenRequestCount } = get();
+          if (hiddenRequestCount > 0 || !globalHidden) return;
+
+          set({ globalHidden: false });
+
+          if (activeTabId) {
+            const instance = instances.get(activeTabId);
+            if (!instance || instance.webviewExists) {
+              try {
+                await invoke('set_browser_webview_visible', { tabId: activeTabId, visible: true });
+              } catch (err) {
+                reportOperationError({
+                  source: "BrowserStore.showAllWebViews",
+                  action: "Restore active browser webview visibility",
+                  error: err,
+                  level: "warning",
+                  context: { tabId: activeTabId },
+                });
+              }
+            }
+          }
+          console.log('[BrowserStore] 已恢复 WebView 显示');
+        }).finally(resolve);
+      }, 0);
+    });
+
+    await pendingVisible;
   },
 }));

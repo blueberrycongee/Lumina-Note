@@ -5,6 +5,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
     useUpdateStore,
     checkForUpdate,
+    hasActionableTerminalInstallPhase,
     getUpdateHandle,
     initResumableUpdateListeners,
     isResumableUpdaterEnabled,
@@ -33,6 +34,7 @@ export function UpdateChecker() {
         hasUnreadUpdate,
         isChecking,
         skippedVersions,
+        currentVersion,
         skipVersion,
         clearSkippedVersion,
         markUpdateAsRead,
@@ -46,20 +48,18 @@ export function UpdateChecker() {
         recordInstallError,
     } = useUpdateStore();
 
-    const [checkStatus, setCheckStatus] = useState<"idle" | "up-to-date" | "error">("idle");
+    const [checkStatus, setCheckStatus] = useState<"idle" | "up-to-date" | "error" | "unsupported">("idle");
     const [checkError, setCheckError] = useState<string | null>(null);
 
     const hasUpdate = availableUpdate !== null;
-    const hasActionableUpdate = hasUpdate || hasUnreadUpdate;
     const hasActiveInstallPhase =
         installTelemetry.phase === "downloading" ||
         installTelemetry.phase === "verifying" ||
         installTelemetry.phase === "installing";
-    const hasActionableTerminalPhase =
-        (installTelemetry.phase === "ready" ||
-            installTelemetry.phase === "error" ||
-            installTelemetry.phase === "cancelled") &&
-        hasActionableUpdate;
+    const hasActionableTerminalPhase = hasActionableTerminalInstallPhase(
+        installTelemetry,
+        currentVersion,
+    );
     const effectiveInstallPhase =
         hasActiveInstallPhase || hasActionableTerminalPhase ? installTelemetry.phase : "idle";
     const status = effectiveInstallPhase !== "idle" ? effectiveInstallPhase : checkStatus;
@@ -91,9 +91,11 @@ export function UpdateChecker() {
         setCheckStatus("idle");
 
         try {
-            const hasUpdate = await checkForUpdate(true); // force check
-            if (!hasUpdate) {
+            const result = await checkForUpdate(true); // force check
+            if (result === "none") {
                 setCheckStatus("up-to-date");
+            } else if (result === "unsupported") {
+                setCheckStatus("unsupported");
             }
         } catch (err) {
             reportOperationError({
@@ -111,7 +113,7 @@ export function UpdateChecker() {
         const updateHandle = getUpdateHandle();
         if (!updateHandle) return;
 
-        const sessionId = beginInstallTelemetry();
+        const sessionId = beginInstallTelemetry(availableUpdate?.version);
 
         try {
             console.info("[Update] Install flow started", { sessionId });
@@ -199,9 +201,19 @@ export function UpdateChecker() {
     };
 
     const handleRelaunch = async () => {
+        const previousTelemetry = installTelemetry;
         try {
+            useUpdateStore.setState({
+                installTelemetry: {
+                    ...installTelemetry,
+                    phase: "idle",
+                    error: null,
+                    errorCode: null,
+                },
+            });
             await relaunch();
         } catch (err) {
+            useUpdateStore.setState({ installTelemetry: previousTelemetry });
             reportOperationError({
                 source: "UpdateChecker.handleRelaunch",
                 action: "Relaunch app after update",
@@ -226,11 +238,13 @@ export function UpdateChecker() {
                         {status === "ready" && t.updateChecker.descReady}
                         {status === "cancelled" && t.updateChecker.descCancelled}
                         {status === "error" && t.updateChecker.descError}
+                        {status === "unsupported" && t.updateChecker.descUnsupported}
                     </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {(status === "idle" || status === "up-to-date") && !hasUpdate && (
+                    {(status === "idle" || status === "up-to-date" || status === "error" || status === "cancelled") &&
+                        !hasUpdate && (
                         <button
                             onClick={handleCheckForUpdates}
                             disabled={isChecking}
@@ -245,7 +259,7 @@ export function UpdateChecker() {
                         </button>
                     )}
 
-                    {status === "idle" && hasUpdate && (
+                    {(status === "idle" || status === "error" || status === "cancelled") && hasUpdate && (
                         <>
                             <button
                                 onClick={handleSkipVersion}

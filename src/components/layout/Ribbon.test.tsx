@@ -9,7 +9,9 @@ const updateStoreState = {
   hasUnreadUpdate: false,
   installTelemetry: {
     phase: "idle",
+    version: null,
   },
+  currentVersion: "1.0.0",
   isChecking: false,
 };
 
@@ -66,6 +68,8 @@ vi.mock("@/stores/useLocaleStore", () => ({
         descAvailable: "New version found v{version}",
         descIdle: "Check for updates",
         descError: "Update failed",
+        descCancelled: "Update cancelled",
+        descUnsupported: "Updates are not supported in the current environment",
       },
     },
   }),
@@ -87,6 +91,7 @@ vi.mock("@/stores/usePluginUiStore", () => ({
 
 vi.mock("@/stores/useUpdateStore", () => ({
   useUpdateStore: (selector: (state: typeof updateStoreState) => unknown) => selector(updateStoreState),
+  hasActionableTerminalInstallPhase: () => false,
 }));
 
 vi.mock("@tauri-apps/plugin-shell", () => ({
@@ -95,6 +100,7 @@ vi.mock("@tauri-apps/plugin-shell", () => ({
 
 vi.mock("@/lib/tauri", () => ({
   exists: vi.fn(),
+  isTauriAvailable: () => true,
 }));
 
 vi.mock("@/components/plugins/InstalledPluginsModal", () => ({

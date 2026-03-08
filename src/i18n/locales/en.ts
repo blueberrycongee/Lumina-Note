@@ -1140,6 +1140,7 @@ export default {
     descReady: 'Update is ready',
     descCancelled: 'Update cancelled',
     descError: 'Update failed',
+    descUnsupported: 'Updates are not supported in the current environment',
     actionCheck: 'Check updates',
     actionInstall: 'Download and install',
     actionRelaunch: 'Restart to apply',

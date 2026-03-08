@@ -1,4 +1,4 @@
-import type { UpdateInstallPhase } from "@/stores/useUpdateStore";
+import { hasActionableTerminalInstallPhase, type UpdateInstallPhase } from "@/stores/useUpdateStore";
 
 export type RibbonUpdateState =
   | "idle"
@@ -6,12 +6,15 @@ export type RibbonUpdateState =
   | "available"
   | "in-progress"
   | "ready"
-  | "error";
+  | "error"
+  | "cancelled";
 
 interface UpdateRibbonSnapshot {
   availableUpdate: { version: string } | null;
   hasUnreadUpdate: boolean;
   installPhase: UpdateInstallPhase;
+  installVersion: string | null;
+  currentVersion: string | null;
   isChecking: boolean;
 }
 
@@ -19,13 +22,17 @@ export function getRibbonUpdateState({
   availableUpdate,
   hasUnreadUpdate,
   installPhase,
+  installVersion,
+  currentVersion,
   isChecking,
 }: UpdateRibbonSnapshot): RibbonUpdateState {
   const hasAvailableUpdate = availableUpdate !== null || hasUnreadUpdate;
+  const hasActionableTerminalPhase = hasActionableTerminalInstallPhase(
+    { phase: installPhase, version: installVersion },
+    currentVersion,
+  );
 
-  // `installTelemetry` is persisted so terminal phases can survive app restarts.
-  // Only surface ready/error badges when there is still a known update to act on.
-  if (installPhase === "ready") return hasAvailableUpdate ? "ready" : "idle";
+  if (installPhase === "ready") return hasActionableTerminalPhase ? "ready" : "idle";
   if (
     installPhase === "downloading" ||
     installPhase === "verifying" ||
@@ -33,9 +40,10 @@ export function getRibbonUpdateState({
   ) {
     return "in-progress";
   }
-  if (installPhase === "error") return hasAvailableUpdate ? "error" : "idle";
-  // A cancelled install is recoverable; show the remaining update instead of an error badge.
-  if (installPhase === "cancelled") return hasAvailableUpdate ? "available" : "idle";
+  if (installPhase === "error") return hasActionableTerminalPhase ? "error" : hasAvailableUpdate ? "available" : "idle";
+  if (installPhase === "cancelled") {
+    return hasActionableTerminalPhase ? "cancelled" : hasAvailableUpdate ? "available" : "idle";
+  }
   if (isChecking) return "checking";
   if (hasAvailableUpdate) return "available";
   return "idle";

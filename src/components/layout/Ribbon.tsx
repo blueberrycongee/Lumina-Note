@@ -28,7 +28,7 @@ import {
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 
 import { cn } from "@/lib/utils";
-import { exists } from "@/lib/tauri";
+import { exists, isTauriAvailable } from "@/lib/tauri";
 import { SettingsModal } from "./SettingsModal";
 import { UpdateModal } from "./UpdateModal";
 import { type PluginRibbonItem, usePluginUiStore } from "@/stores/usePluginUiStore";
@@ -61,11 +61,12 @@ export function Ribbon() {
     openCardFlowTab,
   } = useFileStore();
   const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
-  const { availableUpdate, hasUnreadUpdate, installTelemetry, isChecking } = useUpdateStore(
+  const { availableUpdate, hasUnreadUpdate, installTelemetry, currentVersion, isChecking } = useUpdateStore(
     useShallow((state) => ({
       availableUpdate: state.availableUpdate,
       hasUnreadUpdate: state.hasUnreadUpdate,
       installTelemetry: state.installTelemetry,
+      currentVersion: state.currentVersion,
       isChecking: state.isChecking,
     })),
   );
@@ -187,8 +188,11 @@ export function Ribbon() {
     availableUpdate,
     hasUnreadUpdate,
     installPhase: installTelemetry.phase,
+    installVersion: installTelemetry.version,
+    currentVersion,
     isChecking,
   });
+  const updatesSupported = isTauriAvailable();
   const updateTitleDetail =
     updateRibbonState === "ready"
       ? t.updateChecker.descReady
@@ -202,17 +206,22 @@ export function Ribbon() {
           ? availableUpdate
             ? t.updateChecker.descAvailable.replace("{version}", availableUpdate.version)
             : t.updateChecker.descIdle
+          : updateRibbonState === "cancelled"
+            ? t.updateChecker.descCancelled
           : updateRibbonState === "error"
             ? t.updateChecker.descError
             : updateRibbonState === "checking"
               ? t.ribbon.softwareUpdateChecking
-              : t.updateChecker.descIdle;
+              : updatesSupported
+                ? t.updateChecker.descIdle
+                : t.updateChecker.descUnsupported;
   const updateTitle = `${t.updateChecker.title} · ${updateTitleDetail}`;
   const updateButtonClassName = cn(
     "relative w-8 h-8 ui-icon-btn",
     updateRibbonState === "available" && "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15",
     updateRibbonState === "in-progress" && "text-primary border border-primary/30 bg-primary/10 hover:bg-primary/15",
     updateRibbonState === "ready" && "text-green-600 border border-green-500/35 bg-green-500/10 hover:bg-green-500/15 hover:text-green-700",
+    updateRibbonState === "cancelled" && "text-amber-600 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15",
     updateRibbonState === "error" && "text-amber-600 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/15",
   );
   const showUpdateDot = updateRibbonState === "available" || updateRibbonState === "ready";
@@ -222,6 +231,7 @@ export function Ribbon() {
     if (updateRibbonState === "available") return <Download size={18} />;
     if (updateRibbonState === "in-progress") return <Loader2 size={18} className="animate-spin" />;
     if (updateRibbonState === "ready") return <RotateCcw size={18} />;
+    if (updateRibbonState === "cancelled") return <AlertCircle size={18} />;
     if (updateRibbonState === "error") return <AlertCircle size={18} />;
     return <RefreshCw size={18} className={updateRibbonState === "checking" ? "animate-spin" : ""} />;
   };

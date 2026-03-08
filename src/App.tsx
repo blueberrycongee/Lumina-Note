@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useCallback, useState, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
+import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -55,7 +56,8 @@ import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHos
 import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
 import { ErrorNotifications } from "@/components/layout/ErrorNotifications";
 import { reportOperationError, reportUnhandledError } from "@/lib/reportError";
-import { initAutoUpdateCheck, initResumableUpdateListeners } from "@/stores/useUpdateStore";
+import { initAutoUpdateCheck, initResumableUpdateListeners, useUpdateStore } from "@/stores/useUpdateStore";
+import { isTauriAvailable } from "@/lib/tauri";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -244,6 +246,7 @@ function App() {
   const t = useLocaleStore((state) => state.t);
   const loadPlugins = usePluginStore((state) => state.loadPlugins);
   const setAppearanceSafeMode = usePluginStore((state) => state.setAppearanceSafeMode);
+  const setCurrentUpdateVersion = useUpdateStore((state) => state.setCurrentVersion);
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -272,6 +275,17 @@ function App() {
     initAutoUpdateCheck(5000);
     void initResumableUpdateListeners();
   }, []);
+
+  useEffect(() => {
+    if (!isTauriAvailable()) {
+      setCurrentUpdateVersion(null);
+      return;
+    }
+
+    getVersion()
+      .then((version) => setCurrentUpdateVersion(version))
+      .catch(() => setCurrentUpdateVersion(null));
+  }, [setCurrentUpdateVersion]);
 
   // 启动时自动加载保存的工作空间
   useEffect(() => {

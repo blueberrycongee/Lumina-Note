@@ -1141,6 +1141,7 @@ export default {
     descReady: '更新已准备就绪',
     descCancelled: '更新已取消',
     descError: '更新失败',
+    descUnsupported: '当前环境不支持更新',
     actionCheck: '检查更新',
     actionInstall: '下载并安装',
     actionRelaunch: '重启应用',
