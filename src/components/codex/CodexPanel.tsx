@@ -38,6 +38,27 @@ type HostRuntimeIssue = {
   count: number;
 };
 
+type CodexViewReadyFailureReason = "host_ready_timeout" | "view_register_timeout" | "activate_error";
+
+type CodexViewReadyResult =
+  | { ok: true }
+  | { ok: false; reason: CodexViewReadyFailureReason; detail?: string };
+
+type StructuredCodexErrorCode =
+  | "codex_host_ready_timeout"
+  | "codex_view_register_timeout"
+  | "codex_activate_error";
+
+type StructuredCodexError = Error & {
+  code: StructuredCodexErrorCode;
+  detail?: string;
+};
+
+type CodexViewReadyWaitOptions = {
+  timeoutMs?: number;
+  pollIntervalMs?: number;
+};
+
 type Props = {
   visible: boolean;
   workspacePath: string | null;
@@ -93,7 +114,35 @@ function formatCodexRuntimeIssue(issue: HostRuntimeIssue): string {
   return issue.message;
 }
 
-function formatCodexUserError(action: string, rawError: unknown): string {
+function makeStructuredCodexError(
+  code: StructuredCodexErrorCode,
+  message: string,
+  detail?: string,
+): StructuredCodexError {
+  const error = new Error(message) as StructuredCodexError;
+  error.code = code;
+  error.detail = detail;
+  return error;
+}
+
+function isStructuredCodexError(error: unknown): error is StructuredCodexError {
+  return error instanceof Error && typeof (error as { code?: unknown }).code === "string";
+}
+
+export function formatCodexUserError(action: string, rawError: unknown): string {
+  if (isStructuredCodexError(rawError)) {
+    if (
+      rawError.code === "codex_host_ready_timeout" ||
+      rawError.code === "codex_view_register_timeout"
+    ) {
+      return "Codex took too long to start. Retry once, and if it still hangs, copy the error details and report the issue.";
+    }
+
+    if (rawError.code === "codex_activate_error") {
+      return "Lumina Note couldn't finish starting Codex. Retry once, and if it keeps failing, copy the error details and report the issue.";
+    }
+  }
+
   const message = normalizeErrorMessage(rawError);
   const normalized = message.toLowerCase();
 
@@ -131,24 +180,31 @@ function formatCodexUserError(action: string, rawError: unknown): string {
   return message;
 }
 
-async function waitForCodexViewReady(
+export async function waitForCodexViewReady(
   origin: string,
   viewType: string,
   signal: AbortSignal,
-): Promise<void> {
-  const deadline = Date.now() + 15_000;
+  options: CodexViewReadyWaitOptions = {},
+): Promise<CodexViewReadyResult> {
+  const timeoutMs = options.timeoutMs ?? 15_000;
+  const pollIntervalMs = options.pollIntervalMs ?? 150;
+  const deadline = Date.now() + timeoutMs;
   let lastError: string | null = null;
+  let sawHealthyHost = false;
 
   while (!signal.aborted && Date.now() < deadline) {
     try {
       const health = await readHostHealth(origin, signal);
       if (health.activateError) {
-        throw new Error(String(health.activateError));
+        return { ok: false, reason: "activate_error", detail: String(health.activateError) };
       }
 
       const viewTypes = Array.isArray(health.viewTypes) ? health.viewTypes : [];
-      if (health.ok !== false && viewTypes.includes(viewType)) {
-        return;
+      if (health.ok !== false) {
+        sawHealthyHost = true;
+        if (viewTypes.includes(viewType)) {
+          return { ok: true };
+        }
       }
     } catch (error) {
       if (isAbortError(error)) throw error;
@@ -156,7 +212,7 @@ async function waitForCodexViewReady(
     }
 
     await new Promise<void>((resolve, reject) => {
-      const timer = window.setTimeout(resolve, 150);
+      const timer = window.setTimeout(resolve, pollIntervalMs);
       signal.addEventListener(
         "abort",
         () => {
@@ -172,10 +228,35 @@ async function waitForCodexViewReady(
     throw new DOMException("Aborted", "AbortError");
   }
 
-  throw new Error(
-    lastError
-      ? `Codex host did not become ready: ${lastError}`
-      : `Codex host did not register ${viewType} within 15 seconds`,
+  if (sawHealthyHost) {
+    return { ok: false, reason: "view_register_timeout" };
+  }
+
+  return { ok: false, reason: "host_ready_timeout", detail: lastError ?? undefined };
+}
+
+export function codexViewReadyResultToError(
+  result: Exclude<CodexViewReadyResult, { ok: true }>,
+): StructuredCodexError {
+  if (result.reason === "activate_error") {
+    return makeStructuredCodexError(
+      "codex_activate_error",
+      result.detail ?? "Codex extension activation failed.",
+      result.detail,
+    );
+  }
+
+  if (result.reason === "view_register_timeout") {
+    return makeStructuredCodexError(
+      "codex_view_register_timeout",
+      "Codex view registration timed out.",
+    );
+  }
+
+  return makeStructuredCodexError(
+    "codex_host_ready_timeout",
+    "Codex host did not become ready in time.",
+    result.detail,
   );
 }
 
@@ -282,7 +363,10 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
         workspacePath,
       });
 
-      await waitForCodexViewReady(info.origin, viewType, controller.signal);
+      const viewReady = await waitForCodexViewReady(info.origin, viewType, controller.signal);
+      if (!viewReady.ok) {
+        throw codexViewReadyResultToError(viewReady);
+      }
       if (canceled) return;
       setHost(info);
     };

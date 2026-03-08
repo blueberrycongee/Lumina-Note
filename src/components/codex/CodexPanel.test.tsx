@@ -1,8 +1,13 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { CodexPanel } from "./CodexPanel";
+import {
+  CodexPanel,
+  codexViewReadyResultToError,
+  formatCodexUserError,
+  waitForCodexViewReady,
+} from "./CodexPanel";
 import { useErrorStore } from "@/stores/useErrorStore";
 
 vi.mock("@/components/codex/CodexEmbeddedWebview", () => ({
@@ -28,11 +33,14 @@ if (!globalThis.fetch) {
 }
 
 describe("CodexPanel", () => {
-  let fetchSpy: ReturnType<typeof vi.spyOn>;
-  let cryptoSpy: ReturnType<typeof vi.spyOn>;
+  let fetchSpy: MockInstance<Parameters<typeof fetch>, ReturnType<typeof fetch>>;
+  let cryptoSpy: MockInstance<
+    Parameters<(typeof globalThis.crypto)["randomUUID"]>,
+    ReturnType<(typeof globalThis.crypto)["randomUUID"]>
+  >;
 
   const mockHostReadyFetch = () => {
-    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+    fetchSpy.mockImplementation((input) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         return Promise.resolve({
@@ -53,6 +61,7 @@ describe("CodexPanel", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     fetchSpy.mockRestore();
     cryptoSpy.mockRestore();
   });
@@ -199,7 +208,7 @@ describe("CodexPanel", () => {
     });
 
     let healthChecks = 0;
-    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+    fetchSpy.mockImplementation((input) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         healthChecks += 1;
@@ -221,6 +230,37 @@ describe("CodexPanel", () => {
     });
 
     expect(healthChecks).toBeGreaterThanOrEqual(2);
+  });
+
+  it("maps an unregistered Codex view timeout to user-facing guidance", async () => {
+    fetchSpy.mockImplementation((input) => {
+      const url = String(input);
+      if (url.endsWith("/health")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ok: true, viewTypes: [] }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ ok: true }) } as Response);
+    });
+
+    const result = await waitForCodexViewReady(
+      "http://127.0.0.1:1234",
+      "chatgpt.sidebarView",
+      new AbortController().signal,
+      { timeoutMs: 20, pollIntervalMs: 1 },
+    );
+
+    expect(result).toEqual({ ok: false, reason: "view_register_timeout" });
+    if (result.ok) {
+      throw new Error("Expected Codex view readiness to time out");
+    }
+
+    const userMessage = formatCodexUserError("Start Codex host", codexViewReadyResultToError(result));
+    expect(userMessage).toBe(
+      "Codex took too long to start. Retry once, and if it still hangs, copy the error details and report the issue.",
+    );
+    expect(userMessage.toLowerCase()).not.toContain("chatgpt.sidebarview");
   });
 
   it("stops the Codex host when the panel is hidden", async () => {
@@ -271,7 +311,7 @@ describe("CodexPanel", () => {
     });
 
     let healthChecks = 0;
-    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+    fetchSpy.mockImplementation((input) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         healthChecks += 1;

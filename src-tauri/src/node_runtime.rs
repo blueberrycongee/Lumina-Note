@@ -1,6 +1,8 @@
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+use futures_util::future::BoxFuture;
 use futures_util::StreamExt;
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
@@ -172,35 +174,127 @@ fn preferred_debug_node_path(
     None
 }
 
+fn prioritized_node_candidates_from_env(
+    resource_dir: Option<&Path>,
+    app_data_dir: Option<&Path>,
+    platform: NodePlatform,
+    lumina_node_path: Option<&str>,
+    node_env: Option<&str>,
+    path_env: Option<&OsStr>,
+) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    let mut seen = HashSet::new();
+
+    let mut push_candidate = |candidate: PathBuf| {
+        if candidate.is_file() && seen.insert(candidate.clone()) {
+            candidates.push(candidate);
+        }
+    };
+
+    if let Some(env_path) = lumina_node_path {
+        push_candidate(PathBuf::from(env_path));
+    }
+
+    if cfg!(debug_assertions) {
+        if let Some(candidate) = preferred_debug_node_path(node_env, path_env, platform) {
+            push_candidate(candidate);
+        }
+    }
+
+    for candidate in candidate_node_paths(resource_dir, app_data_dir, platform) {
+        push_candidate(candidate);
+    }
+
+    candidates
+}
+
+fn prioritized_node_candidates(
+    resource_dir: Option<&Path>,
+    app_data_dir: Option<&Path>,
+    platform: NodePlatform,
+) -> Vec<PathBuf> {
+    let lumina_node_path = std::env::var("LUMINA_NODE_PATH").ok();
+    let node_env = std::env::var("NODE").ok();
+    let path_env = std::env::var_os("PATH");
+    prioritized_node_candidates_from_env(
+        resource_dir,
+        app_data_dir,
+        platform,
+        lumina_node_path.as_deref(),
+        node_env.as_deref(),
+        path_env.as_deref(),
+    )
+}
+
 pub fn resolve_node_path(
     resource_dir: Option<&Path>,
     app_data_dir: Option<&Path>,
     platform: NodePlatform,
 ) -> Option<PathBuf> {
-    if let Ok(env_path) = std::env::var("LUMINA_NODE_PATH") {
-        let candidate = PathBuf::from(env_path);
-        if candidate.is_file() {
-            return Some(candidate);
+    prioritized_node_candidates(resource_dir, app_data_dir, platform)
+        .into_iter()
+        .next()
+}
+
+async fn ensure_node_runtime_with_env_proxy_using<SupportsFn, DownloadFn>(
+    resource_dir: Option<&Path>,
+    app_data_dir: &Path,
+    platform: NodePlatform,
+    lumina_node_path: Option<&str>,
+    node_env: Option<&str>,
+    path_env: Option<&OsStr>,
+    supports_env_proxy: SupportsFn,
+    download_runtime: DownloadFn,
+) -> Result<PathBuf, String>
+where
+    SupportsFn: for<'a> Fn(&'a Path) -> BoxFuture<'a, Result<bool, String>>,
+    DownloadFn: for<'a> Fn(&'a Path) -> BoxFuture<'a, Result<PathBuf, String>>,
+{
+    for candidate in prioritized_node_candidates_from_env(
+        resource_dir,
+        Some(app_data_dir),
+        platform,
+        lumina_node_path,
+        node_env,
+        path_env,
+    ) {
+        match supports_env_proxy(&candidate).await {
+            Ok(true) => return Ok(candidate),
+            Ok(false) | Err(_) => continue,
         }
     }
 
-    if cfg!(debug_assertions) {
-        if let Some(candidate) = preferred_debug_node_path(
-            std::env::var("NODE").ok().as_deref(),
-            std::env::var_os("PATH").as_deref(),
-            platform,
-        ) {
-            return Some(candidate);
-        }
+    let downloaded = download_runtime(app_data_dir).await?;
+    if supports_env_proxy(&downloaded).await? {
+        return Ok(downloaded);
     }
 
-    for candidate in candidate_node_paths(resource_dir, app_data_dir, platform) {
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
+    Err(format!(
+        "Bundled Codex runtime is incompatible. Lumina Note needs Node {} or newer for Codex networking.",
+        minimum_env_proxy_node_version()
+    ))
+}
 
-    None
+pub async fn ensure_node_runtime_with_env_proxy(
+    resource_dir: Option<&Path>,
+    app_data_dir: &Path,
+    platform: NodePlatform,
+) -> Result<PathBuf, String> {
+    let lumina_node_path = std::env::var("LUMINA_NODE_PATH").ok();
+    let node_env = std::env::var("NODE").ok();
+    let path_env = std::env::var_os("PATH");
+
+    ensure_node_runtime_with_env_proxy_using(
+        resource_dir,
+        app_data_dir,
+        platform,
+        lumina_node_path.as_deref(),
+        node_env.as_deref(),
+        path_env.as_deref(),
+        |path| Box::pin(node_binary_supports_env_proxy(path)),
+        |path| Box::pin(download_node_runtime(path)),
+    )
+    .await
 }
 
 pub async fn download_node_runtime(app_data_dir: &Path) -> Result<PathBuf, String> {
@@ -436,5 +530,56 @@ mod tests {
     #[test]
     fn bundled_runtime_version_meets_proxy_minimum() {
         assert!(node_version_supports_env_proxy(node_runtime_version()));
+    }
+
+    #[tokio::test]
+    async fn ensure_runtime_reuses_cached_compatible_node_before_downloading() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let platform = current_platform();
+
+        let path_dir = temp_dir.path().join("path");
+        std::fs::create_dir_all(&path_dir).unwrap();
+        let path_node = path_dir.join(node_binary_name(platform));
+        std::fs::write(&path_node, "").unwrap();
+
+        let cached_node = temp_dir
+            .path()
+            .join("codex")
+            .join("node")
+            .join(node_binary_name(platform));
+        std::fs::create_dir_all(cached_node.parent().unwrap()).unwrap();
+        std::fs::write(&cached_node, "").unwrap();
+
+        let joined_path = std::env::join_paths([path_dir]).unwrap();
+        let download_calls = Arc::new(AtomicUsize::new(0));
+        let download_calls_clone = Arc::clone(&download_calls);
+
+        let resolved = ensure_node_runtime_with_env_proxy_using(
+            None,
+            temp_dir.path(),
+            platform,
+            None,
+            None,
+            Some(joined_path.as_os_str()),
+            |path| {
+                let is_cached_node = path == cached_node.as_path();
+                Box::pin(async move { Ok(is_cached_node) })
+            },
+            move |_| {
+                let download_calls = Arc::clone(&download_calls_clone);
+                Box::pin(async move {
+                    download_calls.fetch_add(1, Ordering::SeqCst);
+                    Err("download should not be called".to_string())
+                })
+            },
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(resolved, cached_node);
+        assert_eq!(download_calls.load(Ordering::SeqCst), 0);
     }
 }

@@ -13,10 +13,7 @@ use tokio::sync::Mutex;
 
 static HOST_SCRIPT: &str = include_str!("../../scripts/codex-vscode-host/host.mjs");
 
-use crate::node_runtime::{
-    current_platform, download_node_runtime, minimum_env_proxy_node_version,
-    node_binary_supports_env_proxy, resolve_node_path,
-};
+use crate::node_runtime::{current_platform, ensure_node_runtime_with_env_proxy};
 
 #[derive(Default)]
 struct CodexVscodeHostInner {
@@ -148,45 +145,15 @@ pub async fn codex_vscode_host_start(
     let script_path = host_script_path(&app)?;
 
     let resource_dir = app.path().resource_dir().ok();
-    let app_data_dir = app.path().app_data_dir().ok();
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| AppError::InvalidPath(format!("Failed to get app_data_dir: {}", e)))?;
     let platform = current_platform();
-    let resolved_path =
-        match resolve_node_path(resource_dir.as_deref(), app_data_dir.as_deref(), platform) {
-            Some(path) => path,
-            None => {
-                let app_data_dir = app.path().app_data_dir().map_err(|e| {
-                    AppError::InvalidPath(format!("Failed to get app_data_dir: {}", e))
-                })?;
-                download_node_runtime(&app_data_dir)
-                    .await
-                    .map_err(AppError::InvalidPath)?
-            }
-        };
-
-    let node_path = if node_binary_supports_env_proxy(&resolved_path)
-        .await
-        .unwrap_or(false)
-    {
-        resolved_path
-    } else {
-        let app_data_dir = app
-            .path()
-            .app_data_dir()
-            .map_err(|e| AppError::InvalidPath(format!("Failed to get app_data_dir: {}", e)))?;
-        let downloaded = download_node_runtime(&app_data_dir)
+    let node_path =
+        ensure_node_runtime_with_env_proxy(resource_dir.as_deref(), &app_data_dir, platform)
             .await
             .map_err(AppError::InvalidPath)?;
-        let supports_proxy = node_binary_supports_env_proxy(&downloaded)
-            .await
-            .map_err(AppError::InvalidPath)?;
-        if !supports_proxy {
-            return Err(AppError::InvalidPath(format!(
-                "Bundled Codex runtime is incompatible. Lumina Note needs Node {} or newer for Codex networking.",
-                minimum_env_proxy_node_version()
-            )));
-        }
-        downloaded
-    };
 
     let mut cmd = Command::new(node_path);
     apply_no_window_flag(&mut cmd);
