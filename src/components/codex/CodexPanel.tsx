@@ -24,6 +24,18 @@ type HostHealth = {
   ok?: boolean;
   activateError?: string | null;
   viewTypes?: string[];
+  latestRuntimeIssue?: HostRuntimeIssue | null;
+};
+
+type HostRuntimeIssue = {
+  id: number;
+  viewType: string;
+  kind: string;
+  message: string;
+  detail?: Record<string, unknown> | null;
+  createdAt: number;
+  lastSeenAt: number;
+  count: number;
 };
 
 type Props = {
@@ -59,6 +71,28 @@ function isAbortError(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+async function readHostHealth(origin: string, signal: AbortSignal): Promise<HostHealth> {
+  const response = await fetch(`${origin}/health`, { signal });
+  return (await response.json()) as HostHealth;
+}
+
+function formatCodexRuntimeIssue(issue: HostRuntimeIssue): string {
+  if (issue.kind === "securitypolicyviolation") {
+    const directive =
+      typeof issue.detail?.effectiveDirective === "string"
+        ? issue.detail.effectiveDirective
+        : typeof issue.detail?.violatedDirective === "string"
+          ? issue.detail.violatedDirective
+          : "content security policy";
+    const blockedUri =
+      typeof issue.detail?.blockedURI === "string" && issue.detail.blockedURI.trim().length > 0
+        ? issue.detail.blockedURI
+        : "a resource";
+    return `Codex blocked ${blockedUri} because of ${directive}.`;
+  }
+  return issue.message;
+}
+
 async function waitForCodexViewReady(
   origin: string,
   viewType: string,
@@ -69,8 +103,7 @@ async function waitForCodexViewReady(
 
   while (!signal.aborted && Date.now() < deadline) {
     try {
-      const response = await fetch(`${origin}/health`, { signal });
-      const health = (await response.json()) as HostHealth;
+      const health = await readHostHealth(origin, signal);
       if (health.activateError) {
         throw new Error(String(health.activateError));
       }
@@ -120,6 +153,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   const [autoInstallAttempted, setAutoInstallAttempted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hostLifecycleRef = useRef(false);
+  const lastRuntimeIssueIdRef = useRef<number | null>(null);
   const token = useMemo(() => crypto.randomUUID(), []);
 
   const reportCodexPanelError = (action: string, rawError: unknown, context?: Record<string, unknown>) => {
@@ -201,6 +235,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
       setError(null);
       setHost(null);
       setHostStarting(true);
+      lastRuntimeIssueIdRef.current = null;
       hostLifecycleRef.current = true;
 
       const info = await invoke<HostInfo>("codex_vscode_host_start", {
@@ -241,6 +276,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
     if (shouldRunHost) return;
     setHost(null);
     setHostStarting(false);
+    lastRuntimeIssueIdRef.current = null;
     if (!hostLifecycleRef.current) return;
     hostLifecycleRef.current = false;
     void invoke("codex_vscode_host_stop").catch((stopError) => {
@@ -278,6 +314,75 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
       });
     };
   }, []);
+
+  useEffect(() => {
+    if (!host || !visible) return;
+
+    let canceled = false;
+    const controller = new AbortController();
+
+    const syncHealth = async () => {
+      const health = await readHostHealth(host.origin, controller.signal);
+      if (canceled) return;
+
+      if (health.activateError) {
+        reportCodexPanelError("Codex host runtime health check", new Error(String(health.activateError)), {
+          hostOrigin: host.origin,
+        });
+        return;
+      }
+
+      const runtimeIssue = health.latestRuntimeIssue;
+      if (!runtimeIssue || lastRuntimeIssueIdRef.current === runtimeIssue.id) return;
+
+      lastRuntimeIssueIdRef.current = runtimeIssue.id;
+      const message = formatCodexRuntimeIssue(runtimeIssue);
+      setError(message);
+      reportOperationError({
+        source: "CodexPanel",
+        action: "Render Codex webview",
+        error: message,
+        userMessage: message,
+        context: {
+          hostOrigin: host.origin,
+          viewType: runtimeIssue.viewType,
+          kind: runtimeIssue.kind,
+          detail: runtimeIssue.detail ?? null,
+          count: runtimeIssue.count,
+        },
+      });
+    };
+
+    syncHealth().catch((healthError) => {
+      if (canceled || isAbortError(healthError)) return;
+      reportOperationError({
+        source: "CodexPanel",
+        action: "Poll Codex host health",
+        error: healthError,
+        level: "warning",
+        context: { hostOrigin: host.origin },
+      });
+    });
+
+    const interval = window.setInterval(() => {
+      void syncHealth().catch((healthError) => {
+        if (canceled || isAbortError(healthError)) return;
+        reportOperationError({
+          source: "CodexPanel",
+          action: "Poll Codex host health",
+          error: healthError,
+          level: "warning",
+          context: { hostOrigin: host.origin },
+        });
+      });
+    }, 2000);
+
+    return () => {
+      canceled = true;
+      controller.abort();
+      window.clearInterval(interval);
+    };
+  }, [host, visible]);
 
   // Push theme + current document into the VS Code shim.
   useEffect(() => {

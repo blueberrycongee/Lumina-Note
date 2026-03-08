@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { CodexPanel } from "./CodexPanel";
+import { useErrorStore } from "@/stores/useErrorStore";
 
 vi.mock("@/components/codex/CodexEmbeddedWebview", () => ({
   CodexEmbeddedWebview: ({ url }: { url?: string | null }) => (
@@ -46,6 +47,7 @@ describe("CodexPanel", () => {
   beforeEach(() => {
     invokeMock.mockReset();
     openMock.mockReset();
+    useErrorStore.setState({ notices: [] });
     fetchSpy = vi.spyOn(globalThis, "fetch");
     cryptoSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(mockUuid);
   });
@@ -250,5 +252,67 @@ describe("CodexPanel", () => {
     await waitFor(() => {
       expect(invokeMock).toHaveBeenCalledWith("codex_vscode_host_stop");
     });
+  });
+
+  it("surfaces runtime issues reported by the Codex host to the user", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "codex_extension_get_status") {
+        return Promise.resolve({
+          installed: true,
+          version: "0.5.60",
+          extensionPath: "C:\\\\ext",
+          latestVersion: "0.5.60",
+        });
+      }
+      if (cmd === "codex_vscode_host_start") {
+        return Promise.resolve({ origin: "http://127.0.0.1:1234", port: 1234 });
+      }
+      return Promise.resolve(null);
+    });
+
+    let healthChecks = 0;
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/health")) {
+        healthChecks += 1;
+        if (healthChecks === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ ok: true, viewTypes: ["chatgpt.sidebarView"], latestRuntimeIssue: null }),
+          } as Response);
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            ok: true,
+            viewTypes: ["chatgpt.sidebarView"],
+            latestRuntimeIssue: {
+              id: 7,
+              viewType: "chatgpt.sidebarView",
+              kind: "securitypolicyviolation",
+              message: "Content Security Policy blocked a Codex webview resource.",
+              detail: {
+                effectiveDirective: "font-src",
+                blockedURI: "data:font/woff2;base64,abc",
+              },
+              createdAt: Date.now(),
+              lastSeenAt: Date.now(),
+              count: 1,
+            },
+          }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ ok: true }) } as Response);
+    });
+
+    render(<CodexPanel visible workspacePath="C:\\\\workspace" renderMode="native" />);
+
+    await waitFor(() => {
+      const notices = useErrorStore.getState().notices;
+      expect(notices.length).toBeGreaterThan(0);
+      expect(notices[0]?.message).toContain("Codex blocked data:font/woff2;base64,abc because of font-src.");
+    });
+
+    expect(screen.getByText("Codex blocked data:font/woff2;base64,abc because of font-src.")).toBeTruthy();
   });
 });

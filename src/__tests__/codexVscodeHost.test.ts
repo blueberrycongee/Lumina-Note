@@ -168,6 +168,49 @@ exports.activate = async function activate() {
     expect(html).toContain(`img-src https:`);
   });
 
+  it("records runtime issues reported by the webview bridge in health", async () => {
+    const extensionPath = path.resolve("scripts/codex-vscode-host/fixtures/hello-ext");
+    const host = startHost(extensionPath);
+    running.push(host);
+
+    const { origin } = await host.ready;
+    const token = "runtime-token";
+    await fetch(`${origin}/view/${encodeURIComponent("hello.view")}?token=${token}`).then((r) => r.text());
+
+    const report = await fetch(`${origin}/vscode/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        viewType: "hello.view",
+        token,
+        message: {
+          type: "__luminaRuntimeIssue",
+          payload: {
+            kind: "securitypolicyviolation",
+            message: "Content Security Policy blocked a Codex webview resource.",
+            detail: {
+              effectiveDirective: "font-src",
+              blockedURI: "data:font/woff2;base64,abc",
+            },
+          },
+        },
+      }),
+    }).then((r) => r.json());
+
+    expect(report.ok).toBe(true);
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.latestRuntimeIssue).toMatchObject({
+      viewType: "hello.view",
+      kind: "securitypolicyviolation",
+      message: "Content Security Policy blocked a Codex webview resource.",
+    });
+    expect(health.latestRuntimeIssue.detail).toMatchObject({
+      effectiveDirective: "font-src",
+      blockedURI: "data:font/woff2;base64,abc",
+    });
+  });
+
   it("reflects active document in health and fires without crashing", async () => {
     const extensionPath = path.resolve("scripts/codex-vscode-host/fixtures/hello-ext");
     const workspacePath = path.resolve("scripts/codex-vscode-host/fixtures/hello-ext");

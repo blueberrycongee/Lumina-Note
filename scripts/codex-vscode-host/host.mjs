@@ -288,6 +288,61 @@ function withErrorBoundary(fn) {
   };
 }
 
+const MAX_RUNTIME_ISSUES = 8;
+const RUNTIME_ISSUE_DEDUPE_WINDOW_MS = 2500;
+
+function buildRuntimeIssueSignature(issue) {
+  return JSON.stringify([
+    issue.viewType ?? "",
+    issue.kind ?? "",
+    issue.message ?? "",
+    issue.detail ?? null,
+  ]);
+}
+
+function recordRuntimeIssue(state, issue) {
+  const now = Date.now();
+  const signature = buildRuntimeIssueSignature(issue);
+  const existing = state.runtimeIssues.find(
+    (item) => item.signature === signature && now - item.lastSeenAt <= RUNTIME_ISSUE_DEDUPE_WINDOW_MS,
+  );
+
+  if (existing) {
+    existing.count += 1;
+    existing.lastSeenAt = now;
+    return existing;
+  }
+
+  const next = {
+    id: state.nextRuntimeIssueId++,
+    viewType: issue.viewType,
+    kind: issue.kind,
+    message: issue.message,
+    detail: issue.detail ?? null,
+    createdAt: now,
+    lastSeenAt: now,
+    count: 1,
+    signature,
+  };
+
+  state.runtimeIssues = [next, ...state.runtimeIssues].slice(0, MAX_RUNTIME_ISSUES);
+  return next;
+}
+
+function toSerializableRuntimeIssue(issue) {
+  if (!issue) return null;
+  return {
+    id: issue.id,
+    viewType: issue.viewType,
+    kind: issue.kind,
+    message: issue.message,
+    detail: issue.detail,
+    createdAt: issue.createdAt,
+    lastSeenAt: issue.lastSeenAt,
+    count: issue.count,
+  };
+}
+
 function injectAcquireVsCodeApi(html, { origin, viewType, token }) {
   const src = `${origin}/vscode/api.js?viewType=${encodeURIComponent(viewType)}&token=${encodeURIComponent(token)}`;
   const apiScript = `<script src="${src}"></script>`;
@@ -295,6 +350,75 @@ function injectAcquireVsCodeApi(html, { origin, viewType, token }) {
   if (html.includes("<head>")) return html.replace("<head>", `<head>${apiScript}`);
   if (html.includes("<head ")) return html.replace(/<head[^>]*>/, (m) => `${m}${apiScript}`);
   return `${apiScript}\n${html}`;
+}
+
+function injectLuminaRuntimeBridge(html) {
+  const script = `<script>
+(() => {
+  const report = async (payload) => {
+    try {
+      if (typeof window.acquireVsCodeApi !== "function") return;
+      const vscode = window.acquireVsCodeApi();
+      if (!vscode?.postMessage) return;
+      await vscode.postMessage({ type: "__luminaRuntimeIssue", payload });
+    } catch {
+      // ignore
+    }
+  };
+
+  window.addEventListener("securitypolicyviolation", (event) => {
+    void report({
+      kind: "securitypolicyviolation",
+      message: "Content Security Policy blocked a Codex webview resource.",
+      detail: {
+        effectiveDirective: event.effectiveDirective || null,
+        violatedDirective: event.violatedDirective || null,
+        blockedURI: event.blockedURI || null,
+        sourceFile: event.sourceFile || null,
+        lineNumber: event.lineNumber || null,
+        columnNumber: event.columnNumber || null,
+      },
+    });
+  });
+
+  window.addEventListener("error", (event) => {
+    const message = event.message || "Uncaught error in Codex webview";
+    void report({
+      kind: "error",
+      message,
+      detail: {
+        sourceFile: event.filename || null,
+        lineNumber: event.lineno || null,
+        columnNumber: event.colno || null,
+      },
+    });
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event.reason;
+    const message =
+      reason instanceof Error
+        ? reason.message
+        : typeof reason === "string"
+          ? reason
+          : "Unhandled promise rejection in Codex webview";
+    void report({
+      kind: "unhandledrejection",
+      message,
+      detail: {
+        reason:
+          reason instanceof Error
+            ? { message: reason.message, stack: reason.stack || null }
+            : reason ?? null,
+      },
+    });
+  });
+})();
+</script>`;
+
+  if (html.includes("<head>")) return html.replace("<head>", `<head>${script}`);
+  if (html.includes("<head ")) return html.replace(/<head[^>]*>/, (m) => `${m}${script}`);
+  return `${script}\n${html}`;
 }
 
 function injectTheme(html, theme) {
@@ -483,6 +607,8 @@ async function main() {
     workspacePath,
     theme: "dark",
     activeDocument: null, // { path, languageId, content, version }
+    runtimeIssues: [],
+    nextRuntimeIssueId: 1,
   };
 
   const server = http.createServer(
@@ -495,6 +621,7 @@ async function main() {
       const u = new URL(req.url ?? "/", "http://127.0.0.1");
 
       if (u.pathname === "/health") {
+        const latestRuntimeIssue = state.runtimeIssues[0] ?? null;
         return json(res, 200, {
           ok: state.activateError == null,
           activateError: state.activateError,
@@ -513,6 +640,7 @@ async function main() {
                 version: state.activeDocument.version ?? 1,
               }
             : null,
+          latestRuntimeIssue: toSerializableRuntimeIssue(latestRuntimeIssue),
         });
       }
 
@@ -601,7 +729,8 @@ async function main() {
         const raw = entry.webview.html;
         const withCsp = injectCspFontDataCompatibility(raw, `http://127.0.0.1:${server.address().port}`);
         const withApi = injectAcquireVsCodeApi(withCsp, { origin: `http://127.0.0.1:${server.address().port}`, viewType, token });
-        const withBase = injectBaseLayout(withApi);
+        const withRuntimeBridge = injectLuminaRuntimeBridge(withApi);
+        const withBase = injectBaseLayout(withRuntimeBridge);
         const html = injectTheme(withBase, theme);
         res.statusCode = 200;
         res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -616,6 +745,15 @@ async function main() {
         const entry = state.views.get(viewType);
         if (!entry) return json(res, 404, { ok: false, error: "unknown viewType" });
         if (entry.token !== token) return json(res, 403, { ok: false, error: "bad token" });
+        if (message?.type === "__luminaRuntimeIssue" && message.payload && typeof message.payload === "object") {
+          recordRuntimeIssue(state, {
+            viewType,
+            kind: String(message.payload.kind ?? "runtime"),
+            message: String(message.payload.message ?? "Codex webview reported a runtime issue"),
+            detail: message.payload.detail ?? null,
+          });
+          return json(res, 200, { ok: true });
+        }
         entry.webview._deliverFromClient(message);
         return json(res, 200, { ok: true });
       }
