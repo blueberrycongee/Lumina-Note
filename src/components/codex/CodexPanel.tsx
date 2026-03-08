@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Download, RefreshCw, ExternalLink, Code2 } from "lucide-react";
 import { CodexEmbeddedWebview } from "@/components/codex/CodexEmbeddedWebview";
 import { useUIStore } from "@/stores/useUIStore";
@@ -18,6 +18,12 @@ type ExtensionStatus = {
   version: string | null;
   extensionPath: string | null;
   latestVersion: string | null;
+};
+
+type HostHealth = {
+  ok?: boolean;
+  activateError?: string | null;
+  viewTypes?: string[];
 };
 
 type Props = {
@@ -49,6 +55,59 @@ function inferLanguageId(filePath: string | null): string {
   return "plaintext";
 }
 
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function waitForCodexViewReady(
+  origin: string,
+  viewType: string,
+  signal: AbortSignal,
+): Promise<void> {
+  const deadline = Date.now() + 15_000;
+  let lastError: string | null = null;
+
+  while (!signal.aborted && Date.now() < deadline) {
+    try {
+      const response = await fetch(`${origin}/health`, { signal });
+      const health = (await response.json()) as HostHealth;
+      if (health.activateError) {
+        throw new Error(String(health.activateError));
+      }
+
+      const viewTypes = Array.isArray(health.viewTypes) ? health.viewTypes : [];
+      if (health.ok !== false && viewTypes.includes(viewType)) {
+        return;
+      }
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const timer = window.setTimeout(resolve, 150);
+      signal.addEventListener(
+        "abort",
+        () => {
+          window.clearTimeout(timer);
+          reject(new DOMException("Aborted", "AbortError"));
+        },
+        { once: true },
+      );
+    });
+  }
+
+  if (signal.aborted) {
+    throw new DOMException("Aborted", "AbortError");
+  }
+
+  throw new Error(
+    lastError
+      ? `Codex host did not become ready: ${lastError}`
+      : `Codex host did not register ${viewType} within 15 seconds`,
+  );
+}
+
 export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Props) {
   const isDarkMode = useUIStore((s) => s.isDarkMode);
   const currentFile = useFileStore((s) => s.currentFile);
@@ -56,9 +115,11 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
 
   const [status, setStatus] = useState<ExtensionStatus | null>(null);
   const [host, setHost] = useState<HostInfo | null>(null);
+  const [hostStarting, setHostStarting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [autoInstallAttempted, setAutoInstallAttempted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hostLifecycleRef = useRef(false);
   const token = useMemo(() => crypto.randomUUID(), []);
 
   const reportCodexPanelError = (action: string, rawError: unknown, context?: Record<string, unknown>) => {
@@ -118,17 +179,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
     }
   };
 
-  const startHostIfReady = async (s: ExtensionStatus | null) => {
-    if (!visible) return;
-    if (!workspacePath) return;
-    if (!s?.installed || !s.extensionPath) return;
-    setError(null);
-    const info = await invoke<HostInfo>("codex_vscode_host_start", {
-      extensionPath: s.extensionPath,
-      workspacePath,
-    });
-    setHost(info);
-  };
+  const shouldRunHost = visible && Boolean(workspacePath) && Boolean(status?.installed && status?.extensionPath);
 
   useEffect(() => {
     refresh().catch((e) => reportCodexPanelError("Load Codex extension status", e));
@@ -141,11 +192,66 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
   }, [visible]);
 
   useEffect(() => {
-    startHostIfReady(status).catch((e) =>
-      reportCodexPanelError("Start Codex host", e, { visible, workspacePath }),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, workspacePath, status?.installed, status?.extensionPath]);
+    if (!shouldRunHost || !status?.extensionPath || !workspacePath) return;
+
+    let canceled = false;
+    const controller = new AbortController();
+
+    const run = async () => {
+      setError(null);
+      setHost(null);
+      setHostStarting(true);
+      hostLifecycleRef.current = true;
+
+      const info = await invoke<HostInfo>("codex_vscode_host_start", {
+        extensionPath: status.extensionPath,
+        workspacePath,
+      });
+
+      await waitForCodexViewReady(info.origin, viewType, controller.signal);
+      if (canceled) return;
+      setHost(info);
+    };
+
+    run().catch((error) => {
+      if (canceled || isAbortError(error)) return;
+      hostLifecycleRef.current = false;
+      void invoke("codex_vscode_host_stop").catch((stopError) => {
+        reportOperationError({
+          source: "CodexPanel",
+          action: "Stop failed Codex host startup",
+          error: stopError,
+          level: "warning",
+        });
+      });
+      reportCodexPanelError("Start Codex host", error, { visible, workspacePath });
+    }).finally(() => {
+      if (!canceled) {
+        setHostStarting(false);
+      }
+    });
+
+    return () => {
+      canceled = true;
+      controller.abort();
+    };
+  }, [shouldRunHost, status?.extensionPath, viewType, visible, workspacePath]);
+
+  useEffect(() => {
+    if (shouldRunHost) return;
+    setHost(null);
+    setHostStarting(false);
+    if (!hostLifecycleRef.current) return;
+    hostLifecycleRef.current = false;
+    void invoke("codex_vscode_host_stop").catch((stopError) => {
+      reportOperationError({
+        source: "CodexPanel",
+        action: "Stop Codex host when panel becomes inactive",
+        error: stopError,
+        level: "warning",
+      });
+    });
+  }, [shouldRunHost]);
 
   useEffect(() => {
     if (!visible || !workspacePath || busy) return;
@@ -157,6 +263,21 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, workspacePath, status?.installed, busy, autoInstallAttempted]);
+
+  useEffect(() => {
+    return () => {
+      if (!hostLifecycleRef.current) return;
+      hostLifecycleRef.current = false;
+      void invoke("codex_vscode_host_stop").catch((stopError) => {
+        reportOperationError({
+          source: "CodexPanel",
+          action: "Stop Codex host on unmount",
+          error: stopError,
+          level: "warning",
+        });
+      });
+    };
+  }, []);
 
   // Push theme + current document into the VS Code shim.
   useEffect(() => {
@@ -300,20 +421,29 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
 
       {!needsInstall && (
         <div className="flex-1 overflow-hidden min-h-0">
-          {renderMode === "iframe" ? (
+          {hostStarting && !viewUrl ? (
+            <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground gap-2">
+              <Loader2 size={16} className="animate-spin" />
+              Starting Codex...
+            </div>
+          ) : renderMode === "iframe" && viewUrl ? (
             <iframe
               title="Codex Webview"
-              src={viewUrl ?? ""}
+              src={viewUrl}
               className="block w-full h-full border-0 bg-background"
               data-codex-iframe="true"
             />
-          ) : (
+          ) : viewUrl ? (
             <CodexEmbeddedWebview
               url={viewUrl}
               visible={visible}
               className="w-full h-full bg-background"
               closeOnUnmount={false}
             />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
+              {workspacePath ? "Codex is unavailable right now." : "Open a vault to use Codex"}
+            </div>
           )}
         </div>
       )}

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { CodexPanel } from "./CodexPanel";
@@ -27,9 +27,32 @@ if (!globalThis.fetch) {
 }
 
 describe("CodexPanel", () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  let cryptoSpy: ReturnType<typeof vi.spyOn>;
+
+  const mockHostReadyFetch = () => {
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/health")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ok: true, viewTypes: ["chatgpt.sidebarView"] }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ ok: true }) } as Response);
+    });
+  };
+
   beforeEach(() => {
     invokeMock.mockReset();
     openMock.mockReset();
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+    cryptoSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(mockUuid);
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+    cryptoSpy.mockRestore();
   });
 
   it("renders an iframe when using iframe mode", async () => {
@@ -48,10 +71,7 @@ describe("CodexPanel", () => {
       return Promise.resolve(null);
     });
 
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue({ ok: true } as Response);
-    const cryptoSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(mockUuid);
+    mockHostReadyFetch();
 
     render(<CodexPanel visible workspacePath="C:\\\\workspace" renderMode="iframe" />);
 
@@ -62,9 +82,6 @@ describe("CodexPanel", () => {
     });
 
     expect(document.querySelector("[data-testid=\"codex-native\"]")).toBeNull();
-
-    fetchSpy.mockRestore();
-    cryptoSpy.mockRestore();
   });
 
   it("renders the native webview when using native mode", async () => {
@@ -83,10 +100,7 @@ describe("CodexPanel", () => {
       return Promise.resolve(null);
     });
 
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue({ ok: true } as Response);
-    const cryptoSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(mockUuid);
+    mockHostReadyFetch();
 
     render(<CodexPanel visible workspacePath="C:\\\\workspace" renderMode="native" />);
 
@@ -95,9 +109,6 @@ describe("CodexPanel", () => {
     });
 
     expect(document.querySelector("iframe")).toBeNull();
-
-    fetchSpy.mockRestore();
-    cryptoSpy.mockRestore();
   });
 
   it("auto-installs when visible and not installed", async () => {
@@ -124,10 +135,7 @@ describe("CodexPanel", () => {
       return Promise.resolve(null);
     });
 
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue({ ok: true } as Response);
-    const cryptoSpy = vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(mockUuid);
+    mockHostReadyFetch();
 
     render(<CodexPanel visible workspacePath="C:\\\\workspace" renderMode="native" />);
 
@@ -135,8 +143,6 @@ describe("CodexPanel", () => {
       expect(invokeMock).toHaveBeenCalledWith("codex_extension_install_latest");
     });
 
-    fetchSpy.mockRestore();
-    cryptoSpy.mockRestore();
   });
 
   it("installs from a VSIX file when selected", async () => {
@@ -171,6 +177,78 @@ describe("CodexPanel", () => {
       expect(invokeMock).toHaveBeenCalledWith("codex_extension_install_vsix", {
         vsixPath: "C:\\\\codex.vsix",
       });
+    });
+  });
+
+  it("waits for the registered Codex view before rendering the webview", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "codex_extension_get_status") {
+        return Promise.resolve({
+          installed: true,
+          version: "0.5.60",
+          extensionPath: "C:\\\\ext",
+          latestVersion: "0.5.60",
+        });
+      }
+      if (cmd === "codex_vscode_host_start") {
+        return Promise.resolve({ origin: "http://127.0.0.1:1234", port: 1234 });
+      }
+      return Promise.resolve(null);
+    });
+
+    let healthChecks = 0;
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/health")) {
+        healthChecks += 1;
+        const ready = healthChecks >= 2;
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ok: true, viewTypes: ready ? ["chatgpt.sidebarView"] : [] }),
+        } as Response);
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ ok: true }) } as Response);
+    });
+
+    render(<CodexPanel visible workspacePath="C:\\\\workspace" renderMode="native" />);
+
+    expect(document.querySelector("[data-testid=\"codex-native\"]")).toBeNull();
+
+    await waitFor(() => {
+      expect(document.querySelector("[data-testid=\"codex-native\"]")).not.toBeNull();
+    });
+
+    expect(healthChecks).toBeGreaterThanOrEqual(2);
+  });
+
+  it("stops the Codex host when the panel is hidden", async () => {
+    invokeMock.mockImplementation((cmd: string) => {
+      if (cmd === "codex_extension_get_status") {
+        return Promise.resolve({
+          installed: true,
+          version: "0.5.60",
+          extensionPath: "C:\\\\ext",
+          latestVersion: "0.5.60",
+        });
+      }
+      if (cmd === "codex_vscode_host_start") {
+        return Promise.resolve({ origin: "http://127.0.0.1:1234", port: 1234 });
+      }
+      return Promise.resolve(null);
+    });
+
+    mockHostReadyFetch();
+
+    const { rerender } = render(<CodexPanel visible workspacePath="C:\\\\workspace" renderMode="native" />);
+
+    await waitFor(() => {
+      expect(document.querySelector("[data-testid=\"codex-native\"]")).not.toBeNull();
+    });
+
+    rerender(<CodexPanel visible={false} workspacePath="C:\\\\workspace" renderMode="native" />);
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("codex_vscode_host_stop");
     });
   });
 });
