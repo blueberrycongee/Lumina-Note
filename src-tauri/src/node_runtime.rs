@@ -22,6 +22,40 @@ pub fn node_runtime_version() -> &'static str {
     include_str!("../../node-runtime-version.txt").trim()
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct NodeSemver {
+    major: u64,
+    minor: u64,
+    patch: u64,
+}
+
+fn parse_node_semver(raw: &str) -> Option<NodeSemver> {
+    let normalized = raw.trim().trim_start_matches('v');
+    let mut parts = normalized.split('.');
+    let major = parts.next()?.parse().ok()?;
+    let minor = parts.next()?.parse().ok()?;
+    let patch = parts.next()?.parse().ok()?;
+    Some(NodeSemver {
+        major,
+        minor,
+        patch,
+    })
+}
+
+pub fn minimum_env_proxy_node_version() -> &'static str {
+    "22.21.0"
+}
+
+pub fn node_version_supports_env_proxy(version: &str) -> bool {
+    let Some(parsed) = parse_node_semver(version) else {
+        return false;
+    };
+    let min_lts = parse_node_semver(minimum_env_proxy_node_version()).expect("valid LTS minimum");
+    let min_current = parse_node_semver("24.0.0").expect("valid current minimum");
+
+    (parsed.major == min_lts.major && parsed >= min_lts) || parsed >= min_current
+}
+
 pub fn platform_tag(platform: NodePlatform) -> &'static str {
     match platform {
         NodePlatform::Windows => "win",
@@ -311,26 +345,51 @@ pub async fn download_node_runtime(app_data_dir: &Path) -> Result<PathBuf, Strin
     Ok(binary_target)
 }
 
+pub async fn node_binary_supports_env_proxy(path: &Path) -> Result<bool, String> {
+    let output = tokio::process::Command::new(path)
+        .arg("--version")
+        .output()
+        .await
+        .map_err(|e| format!("Failed to inspect Node runtime version: {e}"))?;
+
+    if !output.status.success() {
+        return Err(format!(
+            "Failed to inspect Node runtime version: exited with {}",
+            output.status
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let detected = if stdout.trim().is_empty() {
+        stderr.trim()
+    } else {
+        stdout.trim()
+    };
+
+    Ok(node_version_supports_env_proxy(detected))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn builds_archive_name_and_url() {
-        let name = node_archive_name("20.11.1", NodePlatform::Macos, NodeArch::Arm64).unwrap();
-        assert_eq!(name, "node-v20.11.1-darwin-arm64.tar.xz");
+        let name = node_archive_name("22.21.0", NodePlatform::Macos, NodeArch::Arm64).unwrap();
+        assert_eq!(name, "node-v22.21.0-darwin-arm64.tar.xz");
 
-        let url = node_archive_url("20.11.1", NodePlatform::Windows, NodeArch::X64).unwrap();
+        let url = node_archive_url("22.21.0", NodePlatform::Windows, NodeArch::X64).unwrap();
         assert_eq!(
             url,
-            "https://nodejs.org/dist/v20.11.1/node-v20.11.1-win-x64.zip"
+            "https://nodejs.org/dist/v22.21.0/node-v22.21.0-win-x64.zip"
         );
     }
 
     #[test]
     fn builds_extracted_dir() {
-        let dir = node_extracted_dir("20.11.1", NodePlatform::Linux, NodeArch::X64);
-        assert_eq!(dir, "node-v20.11.1-linux-x64");
+        let dir = node_extracted_dir("22.21.0", NodePlatform::Linux, NodeArch::X64);
+        assert_eq!(dir, "node-v22.21.0-linux-x64");
     }
 
     #[test]
@@ -364,5 +423,18 @@ mod tests {
         );
 
         assert_eq!(resolved, Some(env_node));
+    }
+
+    #[test]
+    fn node_version_supports_env_proxy_for_supported_ranges() {
+        assert!(!node_version_supports_env_proxy("20.11.1"));
+        assert!(!node_version_supports_env_proxy("22.20.0"));
+        assert!(node_version_supports_env_proxy("22.21.0"));
+        assert!(node_version_supports_env_proxy("24.0.0"));
+    }
+
+    #[test]
+    fn bundled_runtime_version_meets_proxy_minimum() {
+        assert!(node_version_supports_env_proxy(node_runtime_version()));
     }
 }

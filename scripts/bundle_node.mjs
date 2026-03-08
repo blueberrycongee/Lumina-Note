@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { readBundledNodeVersion, shouldReuseBundledNode } from "./bundle_node_utils.mjs";
 
 const fetchWithRetry = async (url, { retries = 3, timeoutMs = 30000 } = {}) => {
   let lastErr;
@@ -59,11 +60,16 @@ const resourceDir = path.join(root, "src-tauri", "resources", "node");
 const binaryName = platformTag === "win" ? "node.exe" : "node";
 const binaryTarget = path.join(resourceDir, binaryName);
 if (existsSync(binaryTarget)) {
-  const stat = await fs.stat(binaryTarget);
-  if (stat.size > 0) {
-    console.log(`[bundle-node] Using cached Node runtime at ${binaryTarget}`);
+  const cachedVersion = readBundledNodeVersion(binaryTarget);
+  if (shouldReuseBundledNode(cachedVersion, version)) {
+    console.log(`[bundle-node] Using cached Node runtime at ${binaryTarget} (v${cachedVersion})`);
     process.exit(0);
   }
+  console.log(
+    `[bundle-node] Replacing cached Node runtime at ${binaryTarget} (found ${
+      cachedVersion ? `v${cachedVersion}` : "unknown version"
+    }, expected v${version})`,
+  );
 }
 
 await fs.rm(tmpDir, { recursive: true, force: true });
