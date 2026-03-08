@@ -45,6 +45,16 @@ describe("getRibbonUpdateState", () => {
     ).toBe("idle");
   });
 
+  it("treats legacy ready telemetry without a version as idle", () => {
+    expect(
+      getRibbonUpdateState({
+        ...baseSnapshot,
+        installPhase: "ready",
+        installVersion: null,
+      }),
+    ).toBe("idle");
+  });
+
   it.each(["downloading", "verifying", "installing"] as const)(
     "maps %s to in-progress",
     (installPhase) => {
@@ -69,13 +79,14 @@ describe("getRibbonUpdateState", () => {
     ).toBe("cancelled");
   });
 
-  it("preserves a cancelled install when no update metadata remains", () => {
+  it("treats legacy cancelled telemetry without a version as idle", () => {
     expect(
       getRibbonUpdateState({
         ...baseSnapshot,
         installPhase: "cancelled",
+        installVersion: null,
       }),
-    ).toBe("cancelled");
+    ).toBe("idle");
   });
 
   it("shows checking when there is no install phase activity", () => {
@@ -106,5 +117,15 @@ describe("getRibbonUpdateState", () => {
         installVersion: "1.2.3",
       }),
     ).toBe("error");
+  });
+
+  it("treats legacy error telemetry without a version as idle", () => {
+    expect(
+      getRibbonUpdateState({
+        ...baseSnapshot,
+        installPhase: "error",
+        installVersion: null,
+      }),
+    ).toBe("idle");
   });
 });

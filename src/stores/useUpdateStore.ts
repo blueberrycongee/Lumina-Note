@@ -111,6 +111,26 @@ const createInitialInstallTelemetry = (): UpdateInstallTelemetry => ({
   capability: "unknown",
 });
 
+const resetInstallTelemetryWithSession = (sessionId: number): UpdateInstallTelemetry => ({
+  ...createInitialInstallTelemetry(),
+  sessionId,
+});
+
+const normalizeTelemetryVersion = (
+  version: Pick<UpdateInstallTelemetry, "version">["version"],
+): string | null => {
+  if (typeof version !== "string") return null;
+  const trimmed = version.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+interface PersistedUpdateState {
+  lastCheckTime?: number;
+  skippedVersions?: string[];
+  checkCooldownHours?: number;
+  installTelemetry?: Partial<UpdateInstallTelemetry> | null;
+}
+
 interface UpdateState {
   // 持久化数据
   lastCheckTime: number;
@@ -162,10 +182,45 @@ export const hasActionableTerminalInstallPhase = (
   currentVersion: string | null,
 ): boolean => {
   if (!isTerminalInstallPhase(telemetry.phase)) return false;
-  if (telemetry.version && currentVersion && telemetry.version === currentVersion) {
+  const telemetryVersion = normalizeTelemetryVersion(telemetry.version);
+  if (!telemetryVersion) return false;
+  if (currentVersion && telemetryVersion === currentVersion) {
     return false;
   }
   return true;
+};
+
+const migratePersistedUpdateState = (
+  persistedState: unknown,
+  version: number,
+): PersistedUpdateState => {
+  if (!persistedState || typeof persistedState !== "object") {
+    return (persistedState as PersistedUpdateState | undefined) ?? {};
+  }
+
+  const state = persistedState as PersistedUpdateState;
+  if (version >= 1 || !state.installTelemetry) {
+    return state;
+  }
+
+  const persistedTelemetry = state.installTelemetry;
+  const phase = persistedTelemetry.phase;
+  const sessionId = Number.isFinite(persistedTelemetry.sessionId)
+    ? Number(persistedTelemetry.sessionId)
+    : 0;
+
+  if (
+    phase &&
+    isTerminalInstallPhase(phase as UpdateInstallPhase) &&
+    !normalizeTelemetryVersion(persistedTelemetry.version ?? null)
+  ) {
+    return {
+      ...state,
+      installTelemetry: resetInstallTelemetryWithSession(sessionId),
+    };
+  }
+
+  return state;
 };
 
 const mapStageToPhase = (stage: string | undefined): UpdateInstallPhase => {
@@ -269,10 +324,7 @@ export const useUpdateStore = create<UpdateState>()(
             version &&
             state.installTelemetry.version === version &&
             isTerminalInstallPhase(state.installTelemetry.phase)
-              ? {
-                  ...createInitialInstallTelemetry(),
-                  sessionId: state.installTelemetry.sessionId,
-                }
+              ? resetInstallTelemetryWithSession(state.installTelemetry.sessionId)
               : state.installTelemetry,
         })),
 
@@ -428,10 +480,7 @@ export const useUpdateStore = create<UpdateState>()(
               installTelemetry:
                 isTerminalInstallPhase(nextTelemetry.phase) &&
                 !hasActionableTerminalInstallPhase(nextTelemetry, state.currentVersion)
-                  ? {
-                      ...createInitialInstallTelemetry(),
-                      sessionId: state.installTelemetry.sessionId,
-                    }
+                  ? resetInstallTelemetryWithSession(state.installTelemetry.sessionId)
                   : nextTelemetry,
             };
           }
@@ -442,23 +491,19 @@ export const useUpdateStore = create<UpdateState>()(
               state.currentVersion,
             )
               ? state.installTelemetry
-              : {
-                  ...createInitialInstallTelemetry(),
-                  sessionId: state.installTelemetry.sessionId,
-                },
+              : resetInstallTelemetryWithSession(state.installTelemetry.sessionId),
           };
         }),
 
       resetInstallTelemetry: () =>
         set((state) => ({
-          installTelemetry: {
-            ...createInitialInstallTelemetry(),
-            sessionId: state.installTelemetry.sessionId,
-          },
+          installTelemetry: resetInstallTelemetryWithSession(state.installTelemetry.sessionId),
         })),
     }),
     {
       name: "lumina-update",
+      version: 1,
+      migrate: migratePersistedUpdateState,
       partialize: (state) => ({
         lastCheckTime: state.lastCheckTime,
         skippedVersions: state.skippedVersions,

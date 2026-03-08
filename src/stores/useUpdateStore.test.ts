@@ -216,6 +216,36 @@ describe("useUpdateStore.checkForUpdate", () => {
     expect(telemetry.sessionId).toBe(4);
   });
 
+  it("clears legacy terminal telemetry that was persisted without a version", () => {
+    useUpdateStore.setState({
+      installTelemetry: {
+        sessionId: 6,
+        taskId: "legacy-terminal",
+        phase: "ready",
+        attempt: 1,
+        progress: 100,
+        downloadedBytes: 1024,
+        contentLength: 1024,
+        startedAt: 1,
+        updatedAt: 1,
+        finishedAt: 1,
+        error: null,
+        errorCode: null,
+        resumable: true,
+        retryDelayMs: null,
+        lastHttpStatus: 200,
+        canResumeAfterRestart: false,
+        capability: "supported",
+      } as any,
+    });
+
+    useUpdateStore.getState().hydrateResumableStatus(null);
+
+    const telemetry = useUpdateStore.getState().installTelemetry;
+    expect(telemetry.phase).toBe("idle");
+    expect(telemetry.sessionId).toBe(6);
+  });
+
   it("skips resumable listener init when Tauri bridge is unavailable", async () => {
     isTauriAvailableMock.mockReturnValue(false);
 

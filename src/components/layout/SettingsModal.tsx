@@ -46,11 +46,13 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
 
   // 弹窗打开时隐藏 WebView，关闭时恢复
   useEffect(() => {
-    if (isOpen) {
-      hideAllWebViews();
-    } else {
-      showAllWebViews();
-    }
+    if (!isOpen) return;
+
+    void hideAllWebViews();
+
+    return () => {
+      void showAllWebViews();
+    };
   }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   // 加载用户主题

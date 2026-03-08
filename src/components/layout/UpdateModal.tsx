@@ -16,11 +16,13 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
   const { hideAllWebViews, showAllWebViews } = useBrowserStore();
 
   useEffect(() => {
-    if (isOpen) {
-      hideAllWebViews();
-    } else {
-      showAllWebViews();
-    }
+    if (!isOpen) return;
+
+    void hideAllWebViews();
+
+    return () => {
+      void showAllWebViews();
+    };
   }, [hideAllWebViews, isOpen, showAllWebViews]);
 
   if (!isOpen) return null;

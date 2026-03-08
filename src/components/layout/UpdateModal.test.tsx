@@ -50,4 +50,14 @@ describe("UpdateModal", () => {
     expect(screen.queryByTestId("update-modal")).not.toBeInTheDocument();
     expect(showAllWebViewsMock).toHaveBeenCalledTimes(1);
   });
+
+  it("releases hidden webviews if the modal unmounts while still open", () => {
+    const { unmount } = render(<UpdateModal isOpen onClose={() => undefined} />);
+
+    expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    expect(showAllWebViewsMock).toHaveBeenCalledTimes(1);
+  });
 });

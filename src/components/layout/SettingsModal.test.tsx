@@ -175,4 +175,16 @@ describe("SettingsModal", () => {
     expect(onOpenUpdateModal).toHaveBeenCalledTimes(1);
     expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
   });
+
+  it("releases hidden webviews if the modal unmounts while still open", () => {
+    const { unmount } = render(
+      <SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />,
+    );
+
+    expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
+
+    unmount();
+
+    expect(showAllWebViewsMock).toHaveBeenCalledTimes(1);
+  });
 });
