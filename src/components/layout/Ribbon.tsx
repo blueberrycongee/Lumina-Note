@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -60,12 +61,14 @@ export function Ribbon() {
     openCardFlowTab,
   } = useFileStore();
   const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
-  const { availableUpdate, hasUnreadUpdate, installTelemetry, isChecking } = useUpdateStore((state) => ({
-    availableUpdate: state.availableUpdate,
-    hasUnreadUpdate: state.hasUnreadUpdate,
-    installTelemetry: state.installTelemetry,
-    isChecking: state.isChecking,
-  }));
+  const { availableUpdate, hasUnreadUpdate, installTelemetry, isChecking } = useUpdateStore(
+    useShallow((state) => ({
+      availableUpdate: state.availableUpdate,
+      hasUnreadUpdate: state.hasUnreadUpdate,
+      installTelemetry: state.installTelemetry,
+      isChecking: state.isChecking,
+    })),
+  );
 
   // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;

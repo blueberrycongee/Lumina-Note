@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -124,6 +125,16 @@ vi.mock("./UpdateModal", () => ({
 }));
 
 describe("Ribbon", () => {
+  it("renders in StrictMode without triggering a zustand selector loop", () => {
+    render(
+      <StrictMode>
+        <Ribbon />
+      </StrictMode>,
+    );
+
+    expect(screen.getByRole("button", { name: /Software Update/ })).toBeInTheDocument();
+  });
+
   it("opens the dedicated update modal directly from the ribbon button", () => {
     render(<Ribbon />);
 
