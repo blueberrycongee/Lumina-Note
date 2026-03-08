@@ -169,6 +169,46 @@ exports.activate = async function activate() {
     expect(html).toContain(`img-src https:`);
   });
 
+  it("injects the VS Code bridge scripts before a strict meta CSP", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-csp-order-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "csp-order-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.window.registerWebviewViewProvider("csp.order.view", {
+    resolveWebviewView(view) {
+      view.webview.html = \`<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src \${view.webview.cspSource};"></head><body>Order</body></html>\`;
+    },
+  });
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+
+    const { origin } = await host.ready;
+    const html = await fetch(`${origin}/view/${encodeURIComponent("csp.order.view")}?token=t`).then((r) => r.text());
+
+    const headStart = html.indexOf("<head>");
+    const metaIndex = html.indexOf('<meta http-equiv="Content-Security-Policy"');
+    const apiScriptIndex = html.indexOf(`<script src="${origin}/vscode/api.js?viewType=csp.order.view&token=t"></script>`);
+    const runtimeBridgeIndex = html.indexOf("__luminaRuntimeIssue");
+
+    expect(headStart).toBeGreaterThanOrEqual(0);
+    expect(metaIndex).toBeGreaterThan(headStart);
+    expect(apiScriptIndex).toBeGreaterThan(headStart);
+    expect(runtimeBridgeIndex).toBeGreaterThan(headStart);
+    expect(apiScriptIndex).toBeLessThan(metaIndex);
+    expect(runtimeBridgeIndex).toBeLessThan(metaIndex);
+  });
+
   it("records runtime issues reported by the webview bridge in health", async () => {
     const extensionPath = path.resolve("scripts/codex-vscode-host/fixtures/hello-ext");
     const host = startHost(extensionPath);
