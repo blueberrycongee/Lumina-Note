@@ -162,6 +162,7 @@ pub async fn codex_vscode_host_start(
         };
     apply_no_window_flag(&mut cmd);
     cmd.kill_on_drop(true);
+    cmd.env("NODE_USE_ENV_PROXY", "1");
     cmd.arg(script_path)
         .arg("--extensionPath")
         .arg(extension_path)
