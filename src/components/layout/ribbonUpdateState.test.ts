@@ -22,6 +22,15 @@ describe("getRibbonUpdateState", () => {
     ).toBe("ready");
   });
 
+  it("treats persisted ready state without a current update as idle", () => {
+    expect(
+      getRibbonUpdateState({
+        ...baseSnapshot,
+        installPhase: "ready",
+      }),
+    ).toBe("idle");
+  });
+
   it.each(["downloading", "verifying", "installing"] as const)(
     "maps %s to in-progress",
     (installPhase) => {
@@ -73,5 +82,14 @@ describe("getRibbonUpdateState", () => {
         isChecking: true,
       }),
     ).toBe("error");
+  });
+
+  it("treats persisted error state without a current update as idle", () => {
+    expect(
+      getRibbonUpdateState({
+        ...baseSnapshot,
+        installPhase: "error",
+      }),
+    ).toBe("idle");
   });
 });
