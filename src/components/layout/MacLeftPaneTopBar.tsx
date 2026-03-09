@@ -29,7 +29,7 @@ export function MacLeftPaneTopBar() {
         data-testid="mac-left-pane-traffic-lights-safe-area"
       />
 
-      <div className="flex h-full min-w-0 flex-1 -translate-y-[6px] items-center gap-1 pr-2" data-tauri-drag-region data-testid="mac-left-pane-controls">
+      <div className="flex h-full min-w-0 flex-1 items-center gap-1 pr-2" data-tauri-drag-region data-testid="mac-left-pane-controls">
         <button
           type="button"
           onClick={() => dispatchWindowEvent("open-vault")}

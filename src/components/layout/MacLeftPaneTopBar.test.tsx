@@ -82,9 +82,9 @@ describe("MacLeftPaneTopBar", () => {
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("items-center");
   });
 
-  it("applies a subtle upward optical offset so custom controls center against native traffic lights", () => {
+  it("keeps the custom controls vertically centered within the 44px top bar", () => {
     render(<MacLeftPaneTopBar />);
 
-    expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("-translate-y-[6px]");
+    expect(screen.getByTestId("mac-left-pane-controls")).not.toHaveClass("-translate-y-[6px]");
   });
 });
