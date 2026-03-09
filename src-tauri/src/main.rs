@@ -27,6 +27,49 @@ mod webdav;
 use std::env;
 use tauri::Manager;
 
+#[cfg(target_os = "macos")]
+use objc2_app_kit::{NSView, NSWindow, NSWindowButton};
+
+#[cfg(target_os = "macos")]
+const MACOS_TOP_BAR_HEIGHT: f64 = 44.0;
+
+#[cfg(target_os = "macos")]
+fn align_macos_traffic_lights(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+    let ns_window = window.ns_window()?;
+    let ns_window: &NSWindow = unsafe { &*ns_window.cast() };
+
+    unsafe {
+        let Some(close) = ns_window.standardWindowButton(NSWindowButton::CloseButton) else {
+            return Ok(());
+        };
+        let Some(miniaturize) = ns_window.standardWindowButton(NSWindowButton::MiniaturizeButton) else {
+            return Ok(());
+        };
+        let zoom = ns_window.standardWindowButton(NSWindowButton::ZoomButton);
+        let Some(title_bar_container_view) = close.superview().and_then(|view| view.superview()) else {
+            return Ok(());
+        };
+
+        let mut title_bar_rect = NSView::frame(&title_bar_container_view);
+        title_bar_rect.size.height = MACOS_TOP_BAR_HEIGHT;
+        title_bar_rect.origin.y = ns_window.frame().size.height - MACOS_TOP_BAR_HEIGHT;
+        title_bar_container_view.setFrame(title_bar_rect);
+
+        let mut buttons = vec![close, miniaturize];
+        if let Some(zoom) = zoom {
+            buttons.push(zoom);
+        }
+
+        for button in buttons {
+            let mut rect = NSView::frame(&button);
+            rect.origin.y = (MACOS_TOP_BAR_HEIGHT - rect.size.height) / 2.0;
+            button.setFrameOrigin(rect.origin);
+        }
+    }
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -201,6 +244,36 @@ fn main() {
                 }
             }
             let window = app.get_webview_window("main").unwrap();
+
+            #[cfg(target_os = "macos")]
+            {
+                let app_handle = app.handle().clone();
+                if let Some(window_for_alignment) = app_handle.get_webview_window("main") {
+                    let window_for_main_thread = window_for_alignment.clone();
+                    let _ = window_for_alignment.run_on_main_thread(move || {
+                        if let Err(err) = align_macos_traffic_lights(&window_for_main_thread) {
+                            eprintln!("[macOS] Failed to align traffic lights: {}", err);
+                        }
+                    });
+                }
+
+                let app_handle_for_events = app.handle().clone();
+                window.on_window_event(move |event| {
+                    if matches!(
+                        event,
+                        tauri::WindowEvent::Resized(_) | tauri::WindowEvent::ScaleFactorChanged { .. }
+                    ) {
+                        if let Some(window_for_alignment) = app_handle_for_events.get_webview_window("main") {
+                            let window_for_main_thread = window_for_alignment.clone();
+                            let _ = window_for_alignment.run_on_main_thread(move || {
+                                if let Err(err) = align_macos_traffic_lights(&window_for_main_thread) {
+                                    eprintln!("[macOS] Failed to realign traffic lights: {}", err);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
 
             #[cfg(debug_assertions)]
             {
