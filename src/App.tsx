@@ -36,7 +36,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
 import { saveFile, startFileWatcher } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
-import { MacTopChrome } from "@/components/layout/MacTopChrome";
+import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
 import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
 import { AgentEvalPanel } from "@/tests/agent-eval/AgentEvalPanel";
@@ -251,7 +251,7 @@ function App() {
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
-  const macTopChromeTitle = activeTab?.webpageTitle || activeTab?.name || currentFile || "Lumina Note";
+  const showMacWindowInset = useMacTopChromeEnabled();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -856,37 +856,6 @@ function App() {
   return (
     <div className="h-full flex flex-col bg-background ui-app-bg">
       <TitleBar />
-      <MacTopChrome
-        title={macTopChromeTitle}
-        actions={
-          <>
-            <button
-              type="button"
-              onClick={() => setPaletteOpen(true)}
-              className="h-8 w-8 ui-icon-btn bg-background/40 hover:bg-accent/60"
-              title={t.overview.commandPalette}
-            >
-              <Command className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="h-8 w-8 ui-icon-btn bg-background/40 hover:bg-accent/60"
-              title={t.globalSearch.title}
-            >
-              <Search className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleOpenVault()}
-              className="h-8 w-8 ui-icon-btn bg-background/40 hover:bg-accent/60"
-              title={t.welcome.openFolder}
-            >
-              <FolderOpen className="h-4 w-4" />
-            </button>
-          </>
-        }
-      />
       <PluginShellSlotHost slotId="app-top" />
       <div ref={layoutRef} className="flex-1 flex overflow-hidden transition-colors duration-300">
         {/* Left Ribbon (Icon Bar) */}
@@ -916,10 +885,42 @@ function App() {
 
         {/* Main content - switches between Editor, Graph, Split, Diff, VideoNote and AI Chat based on state */}
         <main
-          className={`flex flex-col overflow-hidden min-w-0 transition-[width,opacity] duration-200 ${
+          className={`relative flex flex-col overflow-hidden min-w-0 bg-background transition-[width,opacity] duration-200 ${
             isMainCollapsed ? "flex-none w-0 opacity-0 pointer-events-none" : "flex-1 w-auto opacity-100"
           }`}
         >
+          {showMacWindowInset ? <div className="h-10 shrink-0" data-tauri-drag-region data-testid="mac-main-top-inset" /> : null}
+          {showMacWindowInset ? (
+            <div
+              className="absolute right-3 top-2 z-20 flex items-center gap-1.5"
+              data-tauri-drag-region="false"
+            >
+              <button
+                type="button"
+                onClick={() => setPaletteOpen(true)}
+                className="h-8 w-8 ui-icon-btn bg-background/45 hover:bg-accent/60"
+                title={t.overview.commandPalette}
+              >
+                <Command className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="h-8 w-8 ui-icon-btn bg-background/45 hover:bg-accent/60"
+                title={t.globalSearch.title}
+              >
+                <Search className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleOpenVault()}
+                className="h-8 w-8 ui-icon-btn bg-background/45 hover:bg-accent/60"
+                title={t.welcome.openFolder}
+              >
+                <FolderOpen className="h-4 w-4" />
+              </button>
+            </div>
+          ) : null}
           {pendingDiff && activeTab?.type !== "ai-chat" ? (
             // Show diff view when there's a pending AI edit (non chat context)
             <DiffViewWrapper />

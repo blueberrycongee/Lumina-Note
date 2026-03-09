@@ -35,9 +35,11 @@ import { type PluginRibbonItem, usePluginUiStore } from "@/stores/usePluginUiSto
 import { InstalledPluginsModal } from "@/components/plugins/InstalledPluginsModal";
 import { useUpdateStore } from "@/stores/useUpdateStore";
 import { getRibbonUpdateState } from "./ribbonUpdateState";
+import { useMacTopChromeEnabled } from "./MacTopChrome";
 
 export function Ribbon() {
   const REPO_URL = "https://github.com/blueberrycongee/Lumina-Note";
+  const showMacWindowInset = useMacTopChromeEnabled();
   const [showSettings, setShowSettings] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showPlugins, setShowPlugins] = useState(false);
@@ -237,7 +239,8 @@ export function Ribbon() {
   };
 
   return (
-    <div className="w-11 h-full bg-background/55 backdrop-blur-md border-r border-border/60 shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] flex flex-col items-center py-2 gap-0.5">
+    <div className="w-11 h-full bg-background/55 backdrop-blur-md border-r border-border/60 shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)] flex flex-col items-center pt-2 pb-2 gap-0.5">
+      {showMacWindowInset ? <div className="h-10 shrink-0" data-tauri-drag-region /> : null}
       {/* Top icons */}
       <div className="flex flex-col items-center gap-0.5">
         {/* Search */}

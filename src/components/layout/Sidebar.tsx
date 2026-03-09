@@ -39,6 +39,7 @@ import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
+import { useMacTopChromeEnabled } from "./MacTopChrome";
 
 interface ContextMenuState {
   x: number;
@@ -68,6 +69,7 @@ const EMPTY_DIAGRAM_CONTENT = `${JSON.stringify(
 
 export function Sidebar() {
   const { t, locale } = useLocaleStore();
+  const showMacWindowInset = useMacTopChromeEnabled();
   const {
     vaultPath,
     fileTree,
@@ -704,6 +706,7 @@ export function Sidebar() {
 
   return (
     <aside className={SIDEBAR_SURFACE_CLASSNAME}>
+      {showMacWindowInset ? <div className="h-10 shrink-0" data-tauri-drag-region /> : null}
       {/* Header */}
       <div className="p-3 flex items-center justify-between text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase">
         <span className="ui-compact-text ui-compact-hide-md">{t.sidebar.files}</span>

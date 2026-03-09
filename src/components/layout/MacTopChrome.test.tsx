@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MacTopChrome } from "./MacTopChrome";
 
@@ -39,11 +39,11 @@ describe("MacTopChrome", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders a draggable compact top chrome with actions on macOS tauri", async () => {
+  it("does not render standalone chrome on macOS tauri", async () => {
     tauriMocks.isTauri.mockReturnValue(true);
     tauriMocks.platform.mockReturnValue("macos");
 
-    render(
+    const { container } = render(
       <MacTopChrome
         title="Current Thread"
         subtitle="Should stay hidden"
@@ -51,16 +51,6 @@ describe("MacTopChrome", () => {
       />,
     );
 
-    await waitFor(() => {
-      expect(tauriMocks.platform).toHaveBeenCalled();
-    });
-
-    const chrome = screen.getByTestId("mac-top-chrome");
-    expect(chrome).toHaveAttribute("data-tauri-drag-region", "true");
-    expect(chrome).toHaveClass("h-10");
-    expect(screen.getByTestId("mac-top-chrome-actions")).toHaveAttribute("data-tauri-drag-region", "false");
-    expect(screen.getByText("Current Thread")).toBeInTheDocument();
-    expect(screen.queryByText("Should stay hidden")).not.toBeInTheDocument();
-    expect(screen.getByText("Open")).toBeInTheDocument();
+    expect(container.firstChild).toBeNull();
   });
 });

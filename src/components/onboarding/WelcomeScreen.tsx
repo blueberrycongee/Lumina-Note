@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { FolderOpen, Sparkles } from "lucide-react";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
-import { MacTopChrome, useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
+import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { Button } from "@/components/ui/button";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
@@ -12,21 +12,23 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
   const { t } = useLocaleStore();
-  const showMacTopChrome = useMacTopChromeEnabled();
+  const showMacWindowInset = useMacTopChromeEnabled();
 
   return (
     <div className="h-full flex flex-col bg-background">
       <TitleBar />
-      <MacTopChrome
-        title="Lumina Note"
-        subtitle={t.welcome.subtitle}
-        actions={<LanguageSwitcher compact showLabel={false} stopPropagation />}
-      />
 
-      <div className="relative flex-1 ui-app-bg overflow-hidden">
-        {!showMacTopChrome && <LanguageSwitcher className="absolute top-4 right-4 z-10" />}
+      <div className="relative flex-1 ui-app-bg overflow-hidden flex flex-col">
+        {showMacWindowInset ? <div className="h-10 shrink-0" data-tauri-drag-region /> : null}
 
-        <div className="h-full flex items-center justify-center px-6 py-10">
+        <LanguageSwitcher
+          className={showMacWindowInset ? "absolute top-2 right-4 z-10" : "absolute top-4 right-4 z-10"}
+          compact={showMacWindowInset}
+          showLabel={!showMacWindowInset}
+          stopPropagation={showMacWindowInset}
+        />
+
+        <div className="flex-1 flex items-center justify-center px-6 py-10">
           <motion.div
             initial={{ opacity: 0, y: 10, scale: 0.99 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -74,4 +76,3 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
     </div>
   );
 }
-

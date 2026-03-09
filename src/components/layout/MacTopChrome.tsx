@@ -1,7 +1,6 @@
 import { isTauri } from "@tauri-apps/api/core";
 import { platform } from "@tauri-apps/plugin-os";
 import { useEffect, useState, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
 const isMacByNavigator = (): boolean =>
   typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
@@ -44,32 +43,6 @@ interface MacTopChromeProps {
   className?: string;
 }
 
-export function MacTopChrome({ title, actions, className }: MacTopChromeProps) {
-  const enabled = useMacTopChromeEnabled();
-
-  if (!enabled) return null;
-
-  return (
-    <header
-      className={cn(
-        "h-10 shrink-0 flex items-center gap-2 px-3 bg-background/72 supports-[backdrop-filter]:bg-background/60",
-        "backdrop-blur-xl text-[12px] text-muted-foreground select-none",
-        className,
-      )}
-      data-tauri-drag-region
-      data-testid="mac-top-chrome"
-    >
-      <div className="w-[82px] shrink-0" aria-hidden="true" />
-      <div className="min-w-0 flex-1 flex items-center">
-        <div className="truncate font-medium text-foreground">{title}</div>
-      </div>
-      <div
-        className="flex shrink-0 items-center gap-1"
-        data-tauri-drag-region="false"
-        data-testid="mac-top-chrome-actions"
-      >
-        {actions}
-      </div>
-    </header>
-  );
+export function MacTopChrome(_: MacTopChromeProps) {
+  return null;
 }
