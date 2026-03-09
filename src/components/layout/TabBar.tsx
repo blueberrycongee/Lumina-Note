@@ -1,11 +1,16 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useUIStore } from "@/stores/useUIStore";
 import { X, FileText, Network, Video, Database, Globe, Brain, Pin, User, Puzzle, Shapes, Command, FolderOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 import { useMacTopChromeEnabled } from "./MacTopChrome";
+
+const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 72;
+const MAC_COLLAPSED_RIBBON_WIDTH = 44;
+const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLAPSED_RIBBON_WIDTH;
 
 interface TabItemProps {
   tab: Tab;
@@ -134,6 +139,8 @@ export function TabBar() {
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const isDragging = useRef(false);
   const showMacTopActions = useMacTopChromeEnabled();
+  const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
+  const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
 
   const dispatchWindowEvent = useCallback((eventName: string) => {
     window.dispatchEvent(new CustomEvent(eventName));
@@ -211,6 +218,13 @@ export function TabBar() {
           data-tauri-drag-region={showMacTopActions ? true : undefined}
           data-testid="mac-tabbar-tabstrip"
         >
+          {showMacTrafficLightInset ? (
+            <div
+              className="h-full shrink-0"
+              style={{ width: `${MAC_TABBAR_LEFT_SAFE_INSET}px` }}
+              data-testid="mac-tabbar-traffic-light-spacer"
+            />
+          ) : null}
           {tabs.map((tab, index) => (
             <TabItem
               key={tab.id}

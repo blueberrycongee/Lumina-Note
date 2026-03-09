@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TabBar } from "./TabBar";
 
 const macTopChromeEnabled = vi.hoisted(() => ({ value: false }));
+const leftSidebarOpenState = vi.hoisted(() => ({ value: true }));
 const switchTab = vi.fn();
 const closeTab = vi.fn(async () => {});
 const closeOtherTabs = vi.fn();
@@ -54,6 +55,13 @@ vi.mock("@/stores/useLocaleStore", () => ({
   }),
 }));
 
+vi.mock("@/stores/useUIStore", () => ({
+  useUIStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      leftSidebarOpen: leftSidebarOpenState.value,
+    }),
+}));
+
 vi.mock("@/lib/reportError", () => ({
   reportOperationError: vi.fn(),
 }));
@@ -65,6 +73,7 @@ vi.mock("./MacTopChrome", () => ({
 describe("TabBar", () => {
   beforeEach(() => {
     macTopChromeEnabled.value = false;
+    leftSidebarOpenState.value = true;
   });
 
   it("does not render macOS top actions outside macOS overlay mode", () => {
@@ -100,6 +109,24 @@ describe("TabBar", () => {
     expect(screen.getByTestId("mac-tabbar-tabstrip")).toHaveAttribute("data-tauri-drag-region", "true");
     expect(screen.getByTestId("mac-tabbar-top-actions")).toHaveAttribute("data-tauri-drag-region", "false");
     expect(screen.queryByTestId("mac-tabbar-drag-strip")).not.toBeInTheDocument();
+  });
+
+  it("adds a left traffic-light spacer when the file tree is collapsed on macOS", () => {
+    macTopChromeEnabled.value = true;
+    leftSidebarOpenState.value = false;
+
+    render(<TabBar />);
+
+    expect(screen.getByTestId("mac-tabbar-traffic-light-spacer")).toHaveStyle({ width: "28px" });
+  });
+
+  it("does not add the traffic-light spacer while the file tree is open", () => {
+    macTopChromeEnabled.value = true;
+    leftSidebarOpenState.value = true;
+
+    render(<TabBar />);
+
+    expect(screen.queryByTestId("mac-tabbar-traffic-light-spacer")).not.toBeInTheDocument();
   });
 
   it("matches the macOS left top bar height at 44px", () => {
