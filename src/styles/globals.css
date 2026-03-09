@@ -345,6 +345,41 @@ body.resizing iframe[data-codex-iframe="true"] {
     display: none;
   }
 
+  .sidebar-file-tree-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .sidebar-file-tree-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar-file-tree-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .sidebar-file-tree-scroll::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0);
+    border-radius: 9999px;
+    transition:
+      background-color 180ms cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: inset 0 0 0 1px hsl(var(--background) / 0);
+  }
+
+  .sidebar-file-tree-scroll.is-scroll-active {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.26) transparent;
+  }
+
+  .sidebar-file-tree-scroll.is-scroll-active::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.26);
+    box-shadow: inset 0 0 0 1px hsl(var(--background) / 0.18);
+  }
+
+  .sidebar-file-tree-scroll.is-scroll-active::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.38);
+  }
+
   @keyframes ui-shimmer {
     0% {
       transform: translateX(-120%);

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -193,6 +193,8 @@ export function Sidebar() {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   // 根目录拖拽悬停状态
   const [isRootDragOver, setIsRootDragOver] = useState(false);
+  const [isFileTreeScrollActive, setIsFileTreeScrollActive] = useState(false);
+  const fileTreeScrollFadeTimerRef = useRef<number | null>(null);
 
   // 当前是否激活了 AI 主对话标签
   const isAIMainActive = tabs[activeTabIndex]?.type === "ai-chat";
@@ -702,6 +704,25 @@ export function Sidebar() {
     setSelectedPath(vaultPath);
   }, [vaultPath]);
 
+  const markFileTreeScrollActive = useCallback(() => {
+    setIsFileTreeScrollActive(true);
+    if (fileTreeScrollFadeTimerRef.current !== null) {
+      window.clearTimeout(fileTreeScrollFadeTimerRef.current);
+    }
+    fileTreeScrollFadeTimerRef.current = window.setTimeout(() => {
+      setIsFileTreeScrollActive(false);
+      fileTreeScrollFadeTimerRef.current = null;
+    }, 720);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (fileTreeScrollFadeTimerRef.current !== null) {
+        window.clearTimeout(fileTreeScrollFadeTimerRef.current);
+      }
+    };
+  }, []);
+
   return (
     <aside className={SIDEBAR_SURFACE_CLASSNAME}>
       {/* Header */}
@@ -965,9 +986,11 @@ export function Sidebar() {
       {/* File Tree */}
       <div
         className={cn(
-          "flex-1 overflow-auto py-2",
+          "sidebar-file-tree-scroll flex-1 overflow-auto py-2 pr-1",
+          isFileTreeScrollActive && "is-scroll-active",
           selectedPath === vaultPath && "ring-1 ring-primary/20 ring-inset"
         )}
+        onScroll={markFileTreeScrollActive}
         onClick={handleTreeBackgroundClick}
       >
         {/* 根目录新建输入框 */}
