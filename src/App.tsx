@@ -14,7 +14,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useRAGStore } from "@/stores/useRAGStore";
-import { Command, FolderOpen, PanelRight, Search } from "lucide-react";
+import { PanelRight } from "lucide-react";
 import { CommandPalette, PaletteMode } from "@/components/search/CommandPalette";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
@@ -37,6 +37,7 @@ import { getDragData, clearDragData } from "@/lib/dragState";
 import { saveFile, startFileWatcher } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
+import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
 import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
 import { AgentEvalPanel } from "@/tests/agent-eval/AgentEvalPanel";
@@ -251,7 +252,6 @@ function App() {
 
   // Get active tab
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
-  const showMacWindowInset = useMacTopChromeEnabled();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -472,6 +472,9 @@ function App() {
       diagnosticsEnabled: state.diagnosticsEnabled,
     }))
   );
+  const showMacTopChrome = useMacTopChromeEnabled();
+  const showMacLeftPaneTopBar = showMacTopChrome && leftSidebarOpen;
+  const showMacRibbonTrafficLightSafeArea = showMacTopChrome && !showMacLeftPaneTopBar;
   const diagnosticsActive = diagnosticsEnabled || import.meta.env.DEV;
 
   // Diagnostics logging (runtime toggle)
@@ -753,20 +756,23 @@ function App() {
     }
   }, [setVaultPath]);
 
-  // Listen for open-vault event from command palette
+  // Listen for window-level entry actions dispatched from top-level chrome
   useEffect(() => {
     const onOpenVault = () => handleOpenVault();
     const onOpenSearch = () => setSearchOpen(true);
+    const onOpenCommandPalette = () => setPaletteOpen(true);
     const onOpenCreateDb = () => setCreateDbOpen(true);
     window.addEventListener("open-vault", onOpenVault);
     window.addEventListener("open-global-search", onOpenSearch);
+    window.addEventListener("open-command-palette", onOpenCommandPalette);
     window.addEventListener("open-create-database", onOpenCreateDb);
     return () => {
       window.removeEventListener("open-vault", onOpenVault);
       window.removeEventListener("open-global-search", onOpenSearch);
+      window.removeEventListener("open-command-palette", onOpenCommandPalette);
       window.removeEventListener("open-create-database", onOpenCreateDb);
     };
-  }, [handleOpenVault, setSearchOpen]);
+  }, [handleOpenVault, setPaletteOpen, setSearchOpen]);
 
   // Handle resize - must be before conditional returns
   // VS Code 风格：拖动可以折叠/展开面板
@@ -858,20 +864,26 @@ function App() {
       <TitleBar />
       <PluginShellSlotHost slotId="app-top" />
       <div ref={layoutRef} className="flex-1 flex overflow-hidden transition-colors duration-300">
-        {/* Left Ribbon (Icon Bar) */}
-        <div ref={ribbonRef} className="flex-shrink-0">
-          <Ribbon />
-        </div>
+        <div className="flex min-h-0 flex-shrink-0 flex-col">
+          {showMacLeftPaneTopBar ? <MacLeftPaneTopBar /> : null}
 
-        {/* Left Sidebar (File Tree) */}
-        <div
-          className={`flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${leftSidebarOpen ? "opacity-100" : "w-0 opacity-0"
-            }`}
-          style={{ width: leftSidebarOpen ? leftSidebarWidth : 0 }}
-        >
-          <DevProfiler id="Sidebar">
-            <Sidebar />
-          </DevProfiler>
+          <div className="flex min-h-0 flex-1">
+            {/* Left Ribbon (Icon Bar) */}
+            <div ref={ribbonRef} className="flex-shrink-0">
+              <Ribbon showMacTrafficLightSafeArea={showMacRibbonTrafficLightSafeArea} />
+            </div>
+
+            {/* Left Sidebar (File Tree) */}
+            <div
+              className={`flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${leftSidebarOpen ? "opacity-100" : "w-0 opacity-0"
+                }`}
+              style={{ width: leftSidebarOpen ? leftSidebarWidth : 0 }}
+            >
+              <DevProfiler id="Sidebar">
+                <Sidebar />
+              </DevProfiler>
+            </div>
+          </div>
         </div>
 
         {/* Left Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
@@ -889,38 +901,6 @@ function App() {
             isMainCollapsed ? "flex-none w-0 opacity-0 pointer-events-none" : "flex-1 w-auto opacity-100"
           }`}
         >
-          {showMacWindowInset ? <div className="h-10 shrink-0" data-tauri-drag-region data-testid="mac-main-top-inset" /> : null}
-          {showMacWindowInset ? (
-            <div
-              className="absolute right-3 top-2 z-20 flex items-center gap-1.5"
-              data-tauri-drag-region="false"
-            >
-              <button
-                type="button"
-                onClick={() => setPaletteOpen(true)}
-                className="h-8 w-8 ui-icon-btn bg-background/45 hover:bg-accent/60"
-                title={t.overview.commandPalette}
-              >
-                <Command className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                className="h-8 w-8 ui-icon-btn bg-background/45 hover:bg-accent/60"
-                title={t.globalSearch.title}
-              >
-                <Search className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleOpenVault()}
-                className="h-8 w-8 ui-icon-btn bg-background/45 hover:bg-accent/60"
-                title={t.welcome.openFolder}
-              >
-                <FolderOpen className="h-4 w-4" />
-              </button>
-            </div>
-          ) : null}
           {pendingDiff && activeTab?.type !== "ai-chat" ? (
             // Show diff view when there's a pending AI edit (non chat context)
             <DiffViewWrapper />

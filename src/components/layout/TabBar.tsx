@@ -1,10 +1,11 @@
 import { useCallback, useState, useRef, useEffect } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { X, FileText, Network, Video, Database, Globe, Brain, Pin, User, Puzzle, Shapes } from "lucide-react";
+import { X, FileText, Network, Video, Database, Globe, Brain, Pin, User, Puzzle, Shapes, Command, FolderOpen, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
+import { useMacTopChromeEnabled } from "./MacTopChrome";
 
 interface TabItemProps {
   tab: Tab;
@@ -36,6 +37,7 @@ function TabItem({
   return (
     <div
       data-tab-index={index}
+      data-tauri-drag-region="false"
       className={cn(
         "group relative flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-grab border-r border-border/50",
         "transition-[background-color,color] duration-150 select-none",
@@ -84,6 +86,7 @@ function TabItem({
       )}
       {!tab.isPinned && (
         <button
+          data-tauri-drag-region="false"
           onClick={onClose}
           className={cn(
             "shrink-0 p-0.5 rounded-ui-sm hover:bg-accent/60",
@@ -130,6 +133,11 @@ export function TabBar() {
   const containerRef = useRef<HTMLDivElement>(null);
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const isDragging = useRef(false);
+  const showMacTopActions = useMacTopChromeEnabled();
+
+  const dispatchWindowEvent = useCallback((eventName: string) => {
+    window.dispatchEvent(new CustomEvent(eventName));
+  }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -275,31 +283,68 @@ export function TabBar() {
   return (
     <>
       <div
-        ref={containerRef}
-        className="flex items-stretch bg-background/55 backdrop-blur-md border-b border-border/60 shadow-[0_1px_0_hsl(var(--border)/0.5)] overflow-x-auto scrollbar-hide min-h-[32px]"
+        className="flex min-h-[32px] items-stretch border-b border-border/60 bg-background/55 backdrop-blur-md shadow-[0_1px_0_hsl(var(--border)/0.5)]"
+        data-tauri-drag-region={showMacTopActions ? true : undefined}
       >
-        {tabs.map((tab, index) => (
-          <TabItem
-            key={tab.id}
-            tab={tab}
-            index={index}
-            isActive={index === activeTabIndex}
-            isDragging={index === draggedIndex && isDragging.current}
-            isDropTarget={index === dropTargetIndex}
-            dropPosition={index === dropTargetIndex ? dropPosition : null}
-            displayName={
-              tab.type === "ai-chat"
-                ? t.common.aiChatTab
-                : tab.type === "graph"
-                  ? t.graph.title
-                  : tab.name
-            }
-            onSelect={() => switchTab(index)}
-            onClose={(e) => handleClose(e, index)}
-            onContextMenu={(e) => handleContextMenu(e, index)}
-            onMouseDown={handleTabMouseDown}
-          />
-        ))}
+        <div
+          ref={containerRef}
+          className="flex min-w-0 flex-1 items-stretch overflow-x-auto scrollbar-hide"
+        >
+          {tabs.map((tab, index) => (
+            <TabItem
+              key={tab.id}
+              tab={tab}
+              index={index}
+              isActive={index === activeTabIndex}
+              isDragging={index === draggedIndex && isDragging.current}
+              isDropTarget={index === dropTargetIndex}
+              dropPosition={index === dropTargetIndex ? dropPosition : null}
+              displayName={
+                tab.type === "ai-chat"
+                  ? t.common.aiChatTab
+                  : tab.type === "graph"
+                    ? t.graph.title
+                    : tab.name
+              }
+              onSelect={() => switchTab(index)}
+              onClose={(e) => handleClose(e, index)}
+              onContextMenu={(e) => handleContextMenu(e, index)}
+              onMouseDown={handleTabMouseDown}
+            />
+          ))}
+        </div>
+
+        {showMacTopActions ? (
+          <div className="flex shrink-0 items-center gap-1 border-l border-border/50 px-2" data-tauri-drag-region="false">
+            <button
+              type="button"
+              onClick={() => dispatchWindowEvent("open-command-palette")}
+              className="h-8 w-8 ui-icon-btn"
+              title={t.overview.commandPalette}
+              aria-label={t.overview.commandPalette}
+            >
+              <Command className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatchWindowEvent("open-global-search")}
+              className="h-8 w-8 ui-icon-btn"
+              title={t.globalSearch.title}
+              aria-label={t.globalSearch.title}
+            >
+              <Search className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatchWindowEvent("open-vault")}
+              className="h-8 w-8 ui-icon-btn"
+              title={t.welcome.openFolder}
+              aria-label={t.welcome.openFolder}
+            >
+              <FolderOpen className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* Context Menu */}

@@ -107,6 +107,7 @@ vi.mock("@/components/plugins/InstalledPluginsModal", () => ({
   InstalledPluginsModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Plugins Modal</div> : null),
 }));
 
+
 vi.mock("./SettingsModal", () => ({
   SettingsModal: ({
     isOpen,
@@ -131,7 +132,21 @@ vi.mock("./UpdateModal", () => ({
 }));
 
 describe("Ribbon", () => {
+  it("does not render a macOS traffic-light safe area by default", () => {
+    render(<Ribbon />);
+
+    expect(screen.queryByTestId("mac-ribbon-traffic-lights-safe-area")).not.toBeInTheDocument();
+  });
+
+  it("renders a dedicated macOS traffic-light safe area when requested", () => {
+    render(<Ribbon showMacTrafficLightSafeArea />);
+
+    expect(screen.getByTestId("mac-ribbon-traffic-lights-safe-area")).toHaveAttribute("data-tauri-drag-region", "true");
+    expect(screen.getByRole("button", { name: "Global Search" })).toBeInTheDocument();
+  });
+
   it("renders in StrictMode without triggering a zustand selector loop", () => {
+
     render(
       <StrictMode>
         <Ribbon />

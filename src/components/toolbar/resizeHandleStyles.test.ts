@@ -20,4 +20,11 @@ describe('resize handle styles', () => {
     expect(active).not.toContain('shadow-[0_0_12px');
     expect(active).toContain('bg-border/75');
   });
+
+  it('renders the visible divider from top to bottom without vertical inset gaps', () => {
+    const idle = getResizeHandleIndicatorClassName(false);
+
+    expect(idle).not.toContain('inset-y-3');
+    expect(idle).toContain('inset-y-0');
+  });
 });

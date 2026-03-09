@@ -19,14 +19,20 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
       <TitleBar />
 
       <div className="relative flex-1 ui-app-bg overflow-hidden flex flex-col">
-        {showMacWindowInset ? <div className="h-10 shrink-0" data-tauri-drag-region /> : null}
-
-        <LanguageSwitcher
-          className={showMacWindowInset ? "absolute top-2 right-4 z-10" : "absolute top-4 right-4 z-10"}
-          compact={showMacWindowInset}
-          showLabel={!showMacWindowInset}
-          stopPropagation={showMacWindowInset}
-        />
+        {showMacWindowInset ? (
+          <div
+            className="flex items-center justify-end px-4 py-2"
+            data-tauri-drag-region
+            data-testid="welcome-top-row"
+          >
+            <LanguageSwitcher compact stopPropagation />
+          </div>
+        ) : (
+          <LanguageSwitcher
+            className="absolute top-4 right-4 z-10"
+            showLabel
+          />
+        )}
 
         <div className="flex-1 flex items-center justify-center px-6 py-10">
           <motion.div

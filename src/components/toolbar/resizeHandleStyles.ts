@@ -5,7 +5,7 @@ export const RESIZE_HANDLE_WRAPPER_CLASSNAME =
 
 export function getResizeHandleIndicatorClassName(isActive: boolean) {
   return cn(
-    'absolute inset-y-3 left-1/2 -translate-x-1/2 w-px rounded-full pointer-events-none',
+    'absolute inset-y-0 left-1/2 -translate-x-1/2 w-px rounded-full pointer-events-none',
     'bg-border/45 opacity-35 transition-[opacity,background-color] duration-200 ease-out',
     'group-hover:opacity-60 group-hover:bg-border/70',
     isActive && 'opacity-70 bg-border/75'
