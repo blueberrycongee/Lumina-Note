@@ -86,7 +86,7 @@ export interface PlannedNoteAssetUpdate {
 
 const normalizeFilePath = (path: string): string => path.replace(/\\/g, "/");
 
-const isMarkdownPath = (path: string): boolean => normalizeFilePath(path).toLowerCase().endsWith(".md");
+export const isMarkdownPath = (path: string): boolean => normalizeFilePath(path).toLowerCase().endsWith(".md");
 
 export const isImagePath = (path: string): boolean => {
   const extension = extname(normalizeFilePath(path)).toLowerCase();
@@ -107,6 +107,11 @@ export const flattenFileTree = (entries: FileEntry[]): FileEntry[] => {
   walk(entries);
   return files;
 };
+
+export const listMarkdownNotePaths = (fileTree: FileEntry[]): string[] =>
+  flattenFileTree(fileTree)
+    .map((entry) => normalizeFilePath(entry.path))
+    .filter((path) => isMarkdownPath(path));
 
 const buildImageReferenceMap = (
   noteSources: NoteContentSource[],
