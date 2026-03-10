@@ -1,6 +1,6 @@
 [package]
 name = "lumina-note"
-version = "1.0.8"
+version = "1.0.9"
 description = "A local-first AI-powered note-taking app"
 authors = ["Lumina Note Contributors"]
 edition = "2021"
@@ -13,7 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = ["protocol-asset", "unstable", "test"] }
+tauri = { version = "2.0.0", features = ["macos-private-api", "protocol-asset", "unstable", "test"] }
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-fs = "2.4.5"
 tauri-plugin-shell = "2.3.5"
