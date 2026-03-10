@@ -370,12 +370,26 @@ export function Sidebar() {
     const separator = renamingPath.includes("\\") ? "\\" : "/";
     const parentDir = renamingPath.substring(0, renamingPath.lastIndexOf(separator));
     const isRootRename = renamingPath === vaultPath;
-    const isDir = isRootRename || !renamingPath.toLowerCase().endsWith(".md");
+    const findEntryByPath = (entries: FileEntry[], targetPath: string): FileEntry | null => {
+      for (const entry of entries) {
+        if (entry.path === targetPath) return entry;
+        if (entry.is_dir && entry.children) {
+          const nested = findEntryByPath(entry.children, targetPath);
+          if (nested) return nested;
+        }
+      }
+      return null;
+    };
+    const targetEntry = renamingPath ? findEntryByPath(fileTree, renamingPath) : null;
+    const isDir = isRootRename || Boolean(targetEntry?.is_dir);
+    const isMarkdownFile = renamingPath.toLowerCase().endsWith(".md");
     const newPath = isRootRename
       ? `${parentDir}${separator}${trimmed}`
       : isDir
         ? `${parentDir}${separator}${trimmed}`
-        : `${parentDir}${separator}${trimmed}.md`;
+        : isMarkdownFile
+          ? `${parentDir}${separator}${trimmed}.md`
+          : `${parentDir}${separator}${trimmed}`;
     
     if (newPath === renamingPath) {
       setRenamingPath(null);
@@ -383,6 +397,17 @@ export function Sidebar() {
     }
     
     try {
+      const { isImagePath } = await import("@/services/assets/imageManager");
+      if (!isRootRename && isImagePath(renamingPath)) {
+        const { executeImageRename } = await import("@/services/assets/imageOperations");
+        const preview = await executeImageRename(fileTree, renamingPath, trimmed);
+        const finalPath = preview.changes[0]?.to ?? newPath;
+        useFileStore.getState().updateTabPath(renamingPath, finalPath);
+        setSelectedPath(finalPath);
+        setRenamingPath(null);
+        return;
+      }
+
       await renameFile(renamingPath, newPath);
       if (isRootRename) {
         const normalize = (path: string) => path.replace(/\\/g, "/");
@@ -449,11 +474,13 @@ export function Sidebar() {
         const { updateTabPath } = useFileStore.getState();
         updateTabPath(renamingPath, newPath);
 
-        const content = await readFile(newPath);
-        const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
-        if (hasFrontmatter && frontmatter.db) {
-          const databaseStoreModule = await import("@/stores/useDatabaseStore");
-          await databaseStoreModule.useDatabaseStore.getState().refreshRows(String(frontmatter.db));
+        if (isMarkdownFile) {
+          const content = await readFile(newPath);
+          const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
+          if (hasFrontmatter && frontmatter.db) {
+            const databaseStoreModule = await import("@/stores/useDatabaseStore");
+            await databaseStoreModule.useDatabaseStore.getState().refreshRows(String(frontmatter.db));
+          }
         }
       }
     } catch (error) {
@@ -466,7 +493,7 @@ export function Sidebar() {
       });
     }
     setRenamingPath(null);
-  }, [renamingPath, renameValue, refreshFileTree, t.file.renameFailed, vaultPath]);
+  }, [fileTree, renamingPath, renameValue, refreshFileTree, t.file.renameFailed, vaultPath]);
 
   // Handle copy path
   const handleCopyPath = useCallback(async (path: string) => {

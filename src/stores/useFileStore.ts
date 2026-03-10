@@ -2257,9 +2257,47 @@ export const useFileStore = create<FileState>()(
       // Move file to a target folder
       moveFileToFolder: async (sourcePath: string, targetFolder: string) => {
         const t = getCurrentTranslations();
-        const { tabs, currentFile, refreshFileTree } = get();
+        const { tabs, currentFile, refreshFileTree, fileTree } = get();
         
         try {
+          const { isImagePath } = await import("@/services/assets/imageManager");
+
+          if (isImagePath(sourcePath)) {
+            const { executeImageMove } = await import("@/services/assets/imageOperations");
+            const preview = await executeImageMove(fileTree, [sourcePath], targetFolder);
+            const newPath = preview.changes[0]?.to ?? sourcePath;
+
+            const tabIndex = tabs.findIndex(
+              (tab) => (tab.type === "file" || tab.type === "diagram") && tab.path === sourcePath
+            );
+            if (tabIndex !== -1) {
+              const targetTab = tabs[tabIndex];
+              const newFileName =
+                targetTab?.type === "diagram"
+                  ? getDiagramDisplayName(newPath)
+                  : newPath.split(/[/\\]/).pop() || t.common.untitled;
+              const updatedTabs = tabs.map((tab, index) => {
+                if (index === tabIndex) {
+                  return {
+                    ...tab,
+                    path: newPath,
+                    name: newFileName,
+                    id: newPath,
+                  };
+                }
+                return tab;
+              });
+
+              set({
+                tabs: updatedTabs,
+                currentFile: currentFile === sourcePath ? newPath : currentFile,
+              });
+            }
+
+            useFavoriteStore.getState().updatePath(sourcePath, newPath);
+            return;
+          }
+
           // Import moveFile dynamically to avoid circular dependency
           const { moveFile } = await import("@/lib/tauri");
           const newPath = await moveFile(sourcePath, targetFolder);
