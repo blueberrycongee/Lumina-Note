@@ -1645,6 +1645,62 @@ function getViewportSelectionAnchor(
   }
 }
 
+function shouldSkipFirstLivePointerRestoreGuard(
+  contentDOM: HTMLElement,
+  target: EventTarget | null,
+) {
+  const element = target instanceof Element ? target : null;
+  if (!element) return false;
+  if (element.closest('button, a[href], input, textarea, select')) {
+    return true;
+  }
+  const editableHost = element.closest('[contenteditable="true"]');
+  if (editableHost && editableHost !== contentDOM) {
+    return true;
+  }
+  return false;
+}
+
+export function suppressStaleSelectionRestoreOnFirstLivePointerDown(
+  view: Pick<EditorView, 'state' | 'dispatch' | 'focus' | 'posAtCoords' | 'dom' | 'contentDOM' | 'scrollDOM' | 'lineBlockAtHeight' | 'viewport'>,
+  event: Pick<PointerEvent, 'button' | 'clientX' | 'clientY' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey' | 'preventDefault' | 'target'>,
+) {
+  if (event.button !== 0) return false;
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return false;
+  if (shouldSkipFirstLivePointerRestoreGuard(view.contentDOM, event.target)) return false;
+
+  const ownerDoc = view.dom.ownerDocument;
+  const domSelection = ownerDoc.getSelection();
+  const domRangeCount = domSelection?.rangeCount ?? 0;
+  if (domRangeCount > 0) {
+    domSelection?.removeAllRanges();
+  }
+
+  const nextAnchor = view.posAtCoords({ x: event.clientX, y: event.clientY }) ?? getViewportSelectionAnchor(view);
+  const currentSelection = view.state.selection.main;
+
+  event.preventDefault();
+  view.focus();
+
+  if (currentSelection.from !== nextAnchor || currentSelection.to !== nextAnchor) {
+    view.dispatch({
+      selection: { anchor: nextAnchor },
+      scrollIntoView: false,
+    });
+  }
+
+  return {
+    nextAnchor,
+    domRangeCount,
+    previousSelection: {
+      from: currentSelection.from,
+      to: currentSelection.to,
+      anchor: currentSelection.anchor,
+      head: currentSelection.head,
+    },
+  };
+}
+
 type ManualDragSelectableView = {
   inputState?: {
     mouseSelection?: {
@@ -3005,6 +3061,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
     const isExternalChange = useRef(false);
     const lastInternalContent = useRef<string>(content);
     const previousModeRef = useRef<ViewMode>(effectiveMode);
+    const suppressNextLivePointerRestoreRef = useRef(false);
 
     const { openVideoNoteTab, openPDFTab, fileTree, openFile, vaultPath } = useFileStore(
       useShallow((state) => ({
@@ -3476,6 +3533,20 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       };
       let lastScrollTraceAt = 0;
       let lastPointerMoveTraceAt = 0;
+      const handleFirstLivePointerRestoreGuard = (event: PointerEvent) => {
+        if (!suppressNextLivePointerRestoreRef.current) return;
+        const result = suppressStaleSelectionRestoreOnFirstLivePointerDown(view, event);
+        if (!result) return;
+        suppressNextLivePointerRestoreRef.current = false;
+        selectionTrace.event('first-live-pointerdown-guard', {
+          x: event.clientX,
+          y: event.clientY,
+          nextAnchor: result.nextAnchor,
+          domRangeCount: result.domRangeCount,
+          previousSelection: result.previousSelection,
+        });
+        selectionTrace.snapshot('first-live-pointerdown-guard');
+      };
       const traceScrollableSnapshot = (source: string, element: HTMLElement | null) => {
         if (!element) return;
         selectionTrace.event(source, {
@@ -3548,6 +3619,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       const handleContentClick = (event: MouseEvent) => {
         traceInputEvent('content-click', event);
       };
+      view.contentDOM.addEventListener('pointerdown', handleFirstLivePointerRestoreGuard, true);
       view.contentDOM.addEventListener('mousedown', handleMouseDown);
       view.scrollDOM.addEventListener('scroll', handleEditorScroll, { passive: true });
       view.scrollDOM.addEventListener('wheel', handleEditorWheel, { passive: true });
@@ -3835,6 +3907,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       return () => {
         stopSelectionProbe();
         selectionTrace.destroy('editor-cleanup');
+        view.contentDOM.removeEventListener('pointerdown', handleFirstLivePointerRestoreGuard, true);
         view.contentDOM.removeEventListener('mousedown', handleMouseDown);
         view.contentDOM.removeEventListener('mousedown', handleClick);
         view.contentDOM.removeEventListener('paste', handlePaste);
@@ -3886,7 +3959,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
     useEffect(() => {
       const previousMode = previousModeRef.current;
       previousModeRef.current = effectiveMode;
-      if (previousMode !== 'reading' || effectiveMode !== 'live') return;
+      const shouldSuppressNextPointerRestore = previousMode === 'reading' && effectiveMode === 'live';
+      suppressNextLivePointerRestoreRef.current = shouldSuppressNextPointerRestore;
+      if (!shouldSuppressNextPointerRestore) return;
       (window as any).__luminaEditorTrace?.mark?.('reading-to-live-transition', {
         previousMode,
         mode: effectiveMode,
