@@ -42,7 +42,6 @@ import {
 } from '@/services/plugins/editorRuntime';
 import {
   checkUpdateAction,
-  codeBlockField,
   collapseOnSelectionFacet,
   tableField,
   tableEditorPlugin,
@@ -2963,7 +2962,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
               collapseOnSelectionFacet.of(false),
               readingModePlugin,
               tableField,
-              codeBlockField({ copyButton: true }),
+              editableCodeBlockField,
               ...widgets,
             ];
           case 'live':

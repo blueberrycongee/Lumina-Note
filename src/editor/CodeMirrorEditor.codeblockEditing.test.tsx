@@ -3,10 +3,10 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 
-function setupEditor(content: string) {
+function setupEditor(content: string, viewMode: "live" | "reading" = "live") {
   const onChange = vi.fn();
   const { container, rerender } = render(
-    <CodeMirrorEditor content={content} onChange={onChange} viewMode="live" />
+    <CodeMirrorEditor content={content} onChange={onChange} viewMode={viewMode} />
   );
   const editor = container.querySelector(".cm-editor");
   if (!editor) {
@@ -116,12 +116,23 @@ describe("CodeMirror live code block editing", () => {
     const { container, rerender } = setupEditor(content);
 
     rerender(<CodeMirrorEditor content={content} onChange={vi.fn()} viewMode="reading" />);
-    expect(container.querySelector(".cm-codeblock-widget")).not.toBeNull();
+    expect(container.querySelector(".cm-codeblock-widget")).toBeNull();
+    expect(getStableCodeBlockShell(container)).not.toBeNull();
 
     rerender(<CodeMirrorEditor content={content} onChange={vi.fn()} viewMode="live" />);
     expect(getStableCodeBlockShell(container)).not.toBeNull();
     expect(container.querySelector(".cm-codeblock-widget")).toBeNull();
     expect(container.querySelectorAll(".cm-codeblock-source")).toHaveLength(0);
+  });
+
+  it("keeps code block text-backed in reading mode", () => {
+    const content = "Before\n\n```js\nconst token = 1;\n```\nAfter";
+    const { container } = setupEditor(content, "reading");
+
+    expect(container.querySelector(".cm-codeblock-widget")).toBeNull();
+    expect(getStableCodeBlockShell(container)).not.toBeNull();
+    expect(container.querySelectorAll(".cm-lumina-codeblock-content-line").length).toBeGreaterThan(0);
+    expect(container.querySelector(".cm-codeblock-copy")).not.toBeNull();
   });
 
   it("keeps the blank line between adjacent code blocks as a normal editor line", () => {

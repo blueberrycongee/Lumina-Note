@@ -4,10 +4,10 @@ import { EditorView } from '@codemirror/view';
 import { mouseSelectingField } from 'codemirror-live-markdown';
 import { CodeMirrorEditor } from './CodeMirrorEditor';
 
-function setupEditor(content: string) {
+function setupEditor(content: string, viewMode: 'live' | 'reading' = 'live') {
   const onChange = vi.fn();
   const { container } = render(
-    <CodeMirrorEditor content={content} onChange={onChange} viewMode="live" />,
+    <CodeMirrorEditor content={content} onChange={onChange} viewMode={viewMode} />,
   );
   const editor = container.querySelector('.cm-editor');
   if (!editor) {
@@ -126,6 +126,27 @@ describe('CodeMirror live selection gap bridge', () => {
     });
     expect(view.state.selection.main.from).toBe(0);
     expect(view.state.selection.main.to).toBe(view.state.doc.length);
+  });
+
+  it('selects full document in reading mode when Mod-A crosses a code block', () => {
+    const content = 'Before\n\n```js\nconst token = 1;\n```\nAfter';
+    const { container, view } = setupEditor(content, 'reading');
+    act(() => {
+      view.dispatch({ selection: { anchor: 2, head: 2 } });
+    });
+    const event = new KeyboardEvent('keydown', {
+      key: 'a',
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    act(() => {
+      view.contentDOM.dispatchEvent(event);
+    });
+    expect(view.state.selection.main.from).toBe(0);
+    expect(view.state.selection.main.to).toBe(view.state.doc.length);
+    expect(view.state.sliceDoc(0, view.state.doc.length)).toContain('const token = 1;');
+    expect(container.querySelector('.cm-codeblock-widget')).toBeNull();
   });
 
   it('does not upgrade viewport-covering selection to full document without select-all intent', () => {
