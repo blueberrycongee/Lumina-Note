@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-03-10
+
+### 修复
+- 修复 reading 模式下代码块使用 replace widget 导致正文无法像普通文本一样参与拖拽选中、跨块连续选中与全选的问题
+- reading 模式中的代码块现在保留真实文本选择语义，复制与 Cmd/Ctrl + A 会包含代码块内容
+
+
 ## [1.0.7] - 2026-03-10
 
 ### 新功能
