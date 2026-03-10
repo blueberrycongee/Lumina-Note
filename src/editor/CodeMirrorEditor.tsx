@@ -1993,7 +1993,7 @@ function createSelectionTraceControl(
 
   if (runtimeWindow) {
     const w = runtimeWindow as any;
-    w.__cmSelectionTrace = {
+    const traceApi = {
       sessionId,
       storageKey: CM_SELECTION_TRACE_STORAGE_KEY,
       enable: (persist = true) => {
@@ -2094,7 +2094,10 @@ function createSelectionTraceControl(
         return { ok: true, fileName: safeName, bytes: payload.length };
       },
     };
+    w.__cmSelectionTrace = traceApi;
+    w.__luminaEditorTrace = traceApi;
     w.__cmSelectionTraceSessionId = sessionId;
+    w.__luminaEditorTraceSessionId = sessionId;
   }
 
   if (isEnabled) {
@@ -2138,6 +2141,10 @@ function createSelectionTraceControl(
         if (w.__cmSelectionTrace?.sessionId === sessionId) {
           delete w.__cmSelectionTrace;
           delete w.__cmSelectionTraceSessionId;
+        }
+        if (w.__luminaEditorTrace?.sessionId === sessionId) {
+          delete w.__luminaEditorTrace;
+          delete w.__luminaEditorTraceSessionId;
         }
       }
     },
@@ -2190,6 +2197,21 @@ function describeElement(element: Element | null) {
       zoom: (style as any).zoom || '',
       pointerEvents: style.pointerEvents,
     },
+  };
+}
+
+function summarizeInteractionTarget(target: EventTarget | null) {
+  const element = target instanceof HTMLElement ? target : null;
+  const line = element?.closest('.cm-line') as HTMLElement | null;
+  const widget = element?.closest('[data-widget-type]') as HTMLElement | null;
+  const link = element?.closest('a[href]') as HTMLAnchorElement | null;
+  return {
+    tag: element?.tagName.toLowerCase() || 'unknown',
+    className: element?.className || '',
+    text: (element?.textContent || '').slice(0, 120),
+    lineText: (line?.textContent || '').slice(0, 160),
+    widgetType: widget?.dataset.widgetType || '',
+    href: link?.getAttribute('href') || '',
   };
 }
 
@@ -3001,11 +3023,21 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
     const syncSelectionToViewport = useCallback(() => {
       const view = viewRef.current;
       if (!view) return;
-      const nextAnchor = getViewportSelectionAnchor(view);
       const selection = view.state.selection.main;
+      const nextAnchor = getViewportSelectionAnchor(view);
       if (selection.from === nextAnchor && selection.to === nextAnchor) {
         return;
       }
+      (window as any).__luminaEditorTrace?.mark?.('selection-synced-to-viewport', {
+        previousAnchor: selection.anchor,
+        previousHead: selection.head,
+        previousFrom: selection.from,
+        previousTo: selection.to,
+        nextAnchor,
+        scrollTop: view.scrollDOM.scrollTop,
+        viewportFrom: view.viewport.from,
+        viewportTo: view.viewport.to,
+      });
       view.dispatch({
         selection: { anchor: nextAnchor },
         scrollIntoView: false,
@@ -3400,7 +3432,58 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         selectionTrace.snapshot('window-blur');
         clearDragSelectionState();
       };
+      let lastScrollTraceAt = 0;
+      const traceScrollableSnapshot = (source: string, element: HTMLElement | null) => {
+        if (!element) return;
+        selectionTrace.event(source, {
+          scrollTop: element.scrollTop,
+          scrollLeft: element.scrollLeft,
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+        });
+        selectionTrace.snapshot(source);
+      };
+      const handleEditorScroll = () => {
+        const now = Date.now();
+        if (now - lastScrollTraceAt < 80) return;
+        lastScrollTraceAt = now;
+        traceScrollableSnapshot('editor-scroll', view.scrollDOM);
+      };
+      const handleContentFocusIn = (event: FocusEvent) => {
+        selectionTrace.event('content-focusin', {
+          ...summarizeInteractionTarget(event.target),
+          activeTag: ownerDoc.activeElement?.tagName || 'unknown',
+        });
+        selectionTrace.snapshot('content-focusin');
+      };
+      const handleContentFocusOut = (event: FocusEvent) => {
+        selectionTrace.event('content-focusout', {
+          ...summarizeInteractionTarget(event.target),
+          relatedTag: event.relatedTarget instanceof HTMLElement ? event.relatedTarget.tagName : 'unknown',
+        });
+        selectionTrace.snapshot('content-focusout');
+      };
+      const handleContentClick = (event: MouseEvent) => {
+        selectionTrace.event('content-click', {
+          x: event.clientX,
+          y: event.clientY,
+          detail: event.detail,
+          ctrlKey: event.ctrlKey,
+          metaKey: event.metaKey,
+          ...summarizeInteractionTarget(event.target),
+          currentSelection: {
+            from: view.state.selection.main.from,
+            to: view.state.selection.main.to,
+            head: view.state.selection.main.head,
+          },
+        });
+        selectionTrace.snapshot('content-click');
+      };
       view.contentDOM.addEventListener('mousedown', handleMouseDown);
+      view.scrollDOM.addEventListener('scroll', handleEditorScroll, { passive: true });
+      view.contentDOM.addEventListener('focusin', handleContentFocusIn);
+      view.contentDOM.addEventListener('focusout', handleContentFocusOut);
+      view.contentDOM.addEventListener('click', handleContentClick);
       ownerDoc.addEventListener('mousemove', handleMouseMove);
       ownerDoc.addEventListener('mouseup', handleMouseUp);
       ownerDoc.addEventListener('visibilitychange', handleOwnerDocVisibilityChange);
@@ -3681,6 +3764,10 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         view.contentDOM.removeEventListener('mousedown', handleMouseDown);
         view.contentDOM.removeEventListener('mousedown', handleClick);
         view.contentDOM.removeEventListener('paste', handlePaste);
+        view.contentDOM.removeEventListener('focusin', handleContentFocusIn);
+        view.contentDOM.removeEventListener('focusout', handleContentFocusOut);
+        view.contentDOM.removeEventListener('click', handleContentClick);
+        view.scrollDOM.removeEventListener('scroll', handleEditorScroll);
         ownerDoc.removeEventListener('mousemove', handleMouseMove);
         ownerDoc.removeEventListener('mouseup', handleMouseUp);
         ownerDoc.removeEventListener('visibilitychange', handleOwnerDocVisibilityChange);
@@ -3700,6 +3787,15 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
     useEffect(() => {
       const view = viewRef.current;
       if (!view) return;
+      (window as any).__luminaEditorTrace?.mark?.('view-mode-reconfigure', {
+        mode: effectiveMode,
+        readOnly: isReadOnly,
+        selectionAnchor: view.state.selection.main.anchor,
+        selectionHead: view.state.selection.main.head,
+        viewportFrom: view.viewport.from,
+        viewportTo: view.viewport.to,
+        scrollTop: view.scrollDOM.scrollTop,
+      });
       view.dispatch({
         effects: [
           viewModeCompartment.reconfigure(getModeExtensions(effectiveMode)),
@@ -3712,6 +3808,10 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
       const previousMode = previousModeRef.current;
       previousModeRef.current = effectiveMode;
       if (previousMode !== 'reading' || effectiveMode !== 'live') return;
+      (window as any).__luminaEditorTrace?.mark?.('reading-to-live-transition', {
+        previousMode,
+        mode: effectiveMode,
+      });
       syncSelectionToViewport();
     }, [effectiveMode, syncSelectionToViewport]);
 

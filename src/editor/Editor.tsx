@@ -108,6 +108,7 @@ export function Editor() {
   const prevModeRef = useRef<EditorMode>(editorMode);
   const pendingScrollRef = useRef<number | null>(null);
   const pendingViewportSelectionSyncRef = useRef(false);
+  const lastOuterScrollTraceAtRef = useRef(0);
 
   // 从滚动位置计算行号（用于阅读/源码模式）
   const getLineFromScrollPosition = useCallback((container: HTMLElement): number => {
@@ -120,6 +121,12 @@ export function Editor() {
   }, [currentContent]);
 
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
+
+
+  const markEditorTrace = useCallback((type: string, payload: Record<string, unknown> = {}) => {
+    if (typeof window === 'undefined') return;
+    (window as any).__luminaEditorTrace?.mark?.(type, payload);
+  }, []);
 
   // 局部图谱展开/收起状态
   const [localGraphExpanded, setLocalGraphExpanded] = useState(localGraphExpandedState);
@@ -152,14 +159,26 @@ export function Editor() {
       const line = codeMirrorRef.current.getScrollLine();
       if (line > 0) {
         scrollLineRef.current = line;
+        markEditorTrace('editor-scroll-position-saved', {
+          source: 'codemirror',
+          line,
+          mode: editorMode,
+        });
         return;
       }
     }
     // 否则从外层容器获取
     if (scrollContainerRef.current) {
-      scrollLineRef.current = getLineFromScrollPosition(scrollContainerRef.current);
+      const line = getLineFromScrollPosition(scrollContainerRef.current);
+      scrollLineRef.current = line;
+      markEditorTrace('editor-scroll-position-saved', {
+        source: 'outer-container',
+        line,
+        mode: editorMode,
+        scrollTop: scrollContainerRef.current.scrollTop,
+      });
     }
-  }, [getLineFromScrollPosition]);
+  }, [editorMode, getLineFromScrollPosition, markEditorTrace]);
 
   // 尝试恢复滚动位置（带重试逻辑）
   const tryRestoreScroll = useCallback((targetLine: number, retries: number = 0) => {
@@ -168,10 +187,20 @@ export function Editor() {
 
     if (editorMode === 'live') {
       if (codeMirrorRef.current) {
+        markEditorTrace('editor-scroll-restore-attempt', {
+          mode: editorMode,
+          targetLine,
+          retries,
+          source: 'codemirror',
+        });
         codeMirrorRef.current.scrollToLine(targetLine);
         if (pendingViewportSelectionSyncRef.current) {
           codeMirrorRef.current.syncSelectionToViewport();
           pendingViewportSelectionSyncRef.current = false;
+          markEditorTrace('editor-selection-sync-after-restore', {
+            mode: editorMode,
+            targetLine,
+          });
         }
         pendingScrollRef.current = null;
       } else if (retries < maxRetries) {
@@ -180,19 +209,34 @@ export function Editor() {
       }
     } else {
       if (scrollContainerRef.current) {
+        markEditorTrace('editor-scroll-restore-attempt', {
+          mode: editorMode,
+          targetLine,
+          retries,
+          source: 'outer-container',
+        });
         scrollToLine(scrollContainerRef.current, targetLine);
         pendingScrollRef.current = null;
       } else if (retries < maxRetries) {
         setTimeout(() => tryRestoreScroll(targetLine, retries + 1), delay);
       }
     }
-  }, [editorMode, scrollToLine]);
+  }, [editorMode, markEditorTrace, scrollToLine]);
 
   // 模式切换时恢复滚动位置
   useEffect(() => {
     const previousMode = prevModeRef.current;
     const shouldSyncViewportSelection = previousMode === 'reading' && editorMode === 'live';
     pendingViewportSelectionSyncRef.current = shouldSyncViewportSelection;
+
+    if (previousMode !== editorMode) {
+      markEditorTrace('editor-mode-changed', {
+        previousMode,
+        mode: editorMode,
+        savedLine: scrollLineRef.current,
+        pendingViewportSelectionSync: shouldSyncViewportSelection,
+      });
+    }
 
     if (previousMode !== editorMode && scrollLineRef.current > 1) {
       pendingScrollRef.current = scrollLineRef.current;
@@ -205,28 +249,64 @@ export function Editor() {
         if (!codeMirrorRef.current || !pendingViewportSelectionSyncRef.current) return;
         codeMirrorRef.current.syncSelectionToViewport();
         pendingViewportSelectionSyncRef.current = false;
+        markEditorTrace('editor-selection-sync-without-scroll-restore', {
+          mode: editorMode,
+          savedLine: scrollLineRef.current,
+        });
       });
     }
     prevModeRef.current = editorMode;
-  }, [editorMode, tryRestoreScroll]);
+  }, [editorMode, markEditorTrace, tryRestoreScroll]);
 
   // CodeMirror 初始化后检查是否有待处理的滚动
   useEffect(() => {
     if (editorMode === 'live' && pendingScrollRef.current && codeMirrorRef.current) {
       codeMirrorRef.current.scrollToLine(pendingScrollRef.current);
+      markEditorTrace('editor-pending-scroll-restored', {
+        mode: editorMode,
+        targetLine: pendingScrollRef.current,
+      });
       if (pendingViewportSelectionSyncRef.current) {
         codeMirrorRef.current.syncSelectionToViewport();
         pendingViewportSelectionSyncRef.current = false;
+        markEditorTrace('editor-selection-sync-after-pending-scroll', {
+          mode: editorMode,
+          targetLine: pendingScrollRef.current,
+        });
       }
       pendingScrollRef.current = null;
     }
   });
 
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleOuterScroll = () => {
+      const now = Date.now();
+      if (now - lastOuterScrollTraceAtRef.current < 80) return;
+      lastOuterScrollTraceAtRef.current = now;
+      markEditorTrace('editor-outer-scroll', {
+        mode: editorMode,
+        scrollTop: container.scrollTop,
+        scrollHeight: container.scrollHeight,
+        clientHeight: container.clientHeight,
+        estimatedLine: getLineFromScrollPosition(container),
+      });
+    };
+    container.addEventListener('scroll', handleOuterScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleOuterScroll);
+  }, [editorMode, getLineFromScrollPosition, markEditorTrace]);
+
   // 带保存滚动位置的模式切换
   const handleModeChange = useCallback((mode: EditorMode) => {
+    markEditorTrace('editor-mode-change-requested', {
+      previousMode: editorMode,
+      mode,
+      activeTabType: activeTab?.type || 'unknown',
+    });
     saveScrollPosition();
     setEditorMode(mode);
-  }, [saveScrollPosition, setEditorMode]);
+  }, [activeTab?.type, editorMode, markEditorTrace, saveScrollPosition, setEditorMode]);
 
   // 全局键盘快捷键
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
