@@ -556,7 +556,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     try {
       await saveFile(pendingDiff.filePath, pendingDiff.modified);
       clearPendingEdits();
-      await openFile(pendingDiff.filePath, false, true);
+      await openFile(pendingDiff.filePath, { addToHistory: false, forceReload: true });
 
       if (diffResolver) {
         diffResolver(true);

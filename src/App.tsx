@@ -112,7 +112,7 @@ function DiffViewWrapper() {
       clearPendingEdits();
 
       // Refresh the file in editor (forceReload = true)
-      await openFile(pendingDiff.filePath, false, true);
+      await openFile(pendingDiff.filePath, { addToHistory: false, forceReload: true });
 
       console.log(`✅ 已应用修改到 ${pendingDiff.fileName}`);
 

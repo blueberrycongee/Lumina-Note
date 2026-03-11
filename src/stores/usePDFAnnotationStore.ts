@@ -140,7 +140,7 @@ export const usePDFAnnotationStore = create<PDFAnnotationState>((set, get) => ({
       
       // 检查主编辑器是否打开了批注文件
       if (fileStore.currentFile === annotationPath) {
-        fileStore.openFile(annotationPath, false, true); // forceReload
+        fileStore.openFile(annotationPath, { addToHistory: false, forceReload: true });
       }
       
       // 检查分栏是否打开了批注文件

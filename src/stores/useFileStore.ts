@@ -54,6 +54,7 @@ export interface Tab {
   content: string;
   isDirty: boolean;
   isPinned?: boolean; // 是否固定
+  isPreview?: boolean;
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
   isolatedNode?: IsolatedNodeInfo; // 孤立视图的目标节点
@@ -151,7 +152,7 @@ interface FileState {
   // Actions
   setVaultPath: (path: string) => Promise<void>;
   refreshFileTree: () => Promise<void>;
-  openFile: (path: string, addToHistory?: boolean, forceReload?: boolean) => Promise<void>;
+  openFile: (path: string, options?: { addToHistory?: boolean; forceReload?: boolean; preview?: boolean }) => Promise<void>;
   updateContent: (content: string, source?: "user" | "ai", description?: string) => void;
   save: () => Promise<void>;
   closeFile: () => void;
@@ -163,6 +164,7 @@ interface FileState {
   closeAllTabs: () => Promise<void>;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
   togglePinTab: (index: number) => void;
+  promotePreviewTab: (tabId?: string) => void;
   updateTabPath: (oldPath: string, newPath: string) => void;
 
   // Create new file
@@ -389,7 +391,11 @@ export const useFileStore = create<FileState>()(
       },
 
       // Open a file
-      openFile: async (path: string, addToHistory: boolean = true, forceReload: boolean = false) => {
+      openFile: async (path: string, options?: { addToHistory?: boolean; forceReload?: boolean; preview?: boolean }) => {
+        const addToHistory = options?.addToHistory ?? true;
+        const forceReload = options?.forceReload ?? false;
+        const preview = options?.preview ?? false;
+
         const t = getCurrentTranslations();
         const { tabs, activeTabIndex, navigationHistory, navigationIndex } = get();
 
@@ -397,14 +403,14 @@ export const useFileStore = create<FileState>()(
         const normalize = (p: string) => p.replace(/\\/g, "/");
         const targetPath = normalize(path);
 
-        // 检查是否已经在标签页中打开
+        // 检查是否已经在标签页中打开（作为永久标签）
         const existingTabIndex = tabs.findIndex(tab => normalize(tab.path) === targetPath);
         if (existingTabIndex !== -1) {
+          const existingTab = tabs[existingTabIndex];
           // 已有此标签页
           if (forceReload) {
             // 强制重新加载内容（Agent 编辑后使用）
             try {
-              const existingTab = tabs[existingTabIndex];
               if (existingTab?.type === "typesetting-doc") {
                 await useTypesettingDocStore.getState().openDoc(path);
                 set({
@@ -441,7 +447,7 @@ export const useFileStore = create<FileState>()(
               get().switchTab(existingTabIndex);
             }
           } else {
-            // 直接切换
+            // 直接切换到已有标签页（preview 请求被忽略，因为文件已经打开了）
             get().switchTab(existingTabIndex);
           }
           return;
@@ -477,14 +483,43 @@ export const useFileStore = create<FileState>()(
             name: fileName,
             content,
             isDirty: false,
+            isPreview: preview || undefined,
             undoStack: [],
             redoStack: [],
           };
 
           // Re-read tabs from store — the array captured before the awaits may be stale
           const currentTabs = get().tabs;
-          const newTabs = [...currentTabs, newTab];
-          const newTabIndex = newTabs.length - 1;
+
+          let newTabs: Tab[];
+          let newTabIndex: number;
+
+          if (preview) {
+            // 查找已有的 preview tab
+            const existingPreviewIndex = currentTabs.findIndex(tab => tab.isPreview);
+            if (existingPreviewIndex !== -1) {
+              const existingPreview = currentTabs[existingPreviewIndex];
+              // 防御性检查：如果 preview tab 有未保存更改，先提升它
+              if (existingPreview.isDirty) {
+                get().promotePreviewTab(existingPreview.id);
+                // 重新读取 tabs（promotePreviewTab 已更新 store）
+                const freshTabs = get().tabs;
+                newTabs = [...freshTabs, newTab];
+                newTabIndex = newTabs.length - 1;
+              } else {
+                // 替换现有 preview tab
+                newTabs = [...currentTabs];
+                newTabs[existingPreviewIndex] = newTab;
+                newTabIndex = existingPreviewIndex;
+              }
+            } else {
+              newTabs = [...currentTabs, newTab];
+              newTabIndex = newTabs.length - 1;
+            }
+          } else {
+            newTabs = [...currentTabs, newTab];
+            newTabIndex = newTabs.length - 1;
+          }
 
           // 更新导航历史
           let newHistory = get().navigationHistory;
@@ -842,8 +877,12 @@ export const useFileStore = create<FileState>()(
         const newIsPinned = !tab.isPinned;
         const newTabs = [...tabs];
 
-        // 更新固定状态
-        newTabs[index] = { ...tab, isPinned: newIsPinned };
+        // Pinning a preview tab also promotes it
+        newTabs[index] = {
+          ...tab,
+          isPinned: newIsPinned,
+          isPreview: newIsPinned ? undefined : tab.isPreview,
+        };
 
         // 重新排序：固定的标签移到最前面
         const pinnedTabs = newTabs.filter(t => t.isPinned);
@@ -858,6 +897,20 @@ export const useFileStore = create<FileState>()(
           tabs: sortedTabs,
           activeTabIndex: newActiveIndex >= 0 ? newActiveIndex : 0
         });
+      },
+
+      promotePreviewTab: (tabId?: string) => {
+        const { tabs } = get();
+        const targetIndex = tabId
+          ? tabs.findIndex(t => t.id === tabId)
+          : tabs.findIndex(t => t.isPreview);
+        if (targetIndex === -1) return;
+        const tab = tabs[targetIndex];
+        if (!tab.isPreview) return;
+
+        const newTabs = [...tabs];
+        newTabs[targetIndex] = { ...tab, isPreview: undefined };
+        set({ tabs: newTabs });
       },
 
       // 打开图谱标签页
@@ -1945,11 +1998,17 @@ export const useFileStore = create<FileState>()(
 
       // Update content (marks as dirty)
       updateContent: (content: string, source: "user" | "ai" = "user", description?: string) => {
-        const { currentContent, undoStack } = get();
+        const { currentContent, undoStack, tabs, activeTabIndex } = get();
         const now = Date.now();
 
         // 如果内容没变，不做任何处理
         if (content === currentContent) return;
+
+        // Auto-promote preview tab on first edit
+        const activeTab = tabs[activeTabIndex];
+        if (activeTab?.isPreview) {
+          get().promotePreviewTab(activeTab.id);
+        }
 
         if (source === "ai") {
           const t = getCurrentTranslations();
@@ -2053,6 +2112,11 @@ export const useFileStore = create<FileState>()(
       save: async () => {
         const { currentFile, currentContent, isDirty, tabs, activeTabIndex } = get();
         const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
+
+        // Manual save promotes preview tab
+        if (activeTab?.isPreview) {
+          get().promotePreviewTab(activeTab.id);
+        }
         if (activeTab?.type === "typesetting-doc") {
           if (!activeTab.path) return;
           set({ isSaving: true });
@@ -2124,7 +2188,7 @@ export const useFileStore = create<FileState>()(
           const newIndex = navigationIndex - 1;
           const path = navigationHistory[newIndex];
           set({ navigationIndex: newIndex });
-          get().openFile(path, false); // 不添加到历史
+          get().openFile(path, { addToHistory: false });
         }
       },
 
@@ -2135,7 +2199,7 @@ export const useFileStore = create<FileState>()(
           const newIndex = navigationIndex + 1;
           const path = navigationHistory[newIndex];
           set({ navigationIndex: newIndex });
-          get().openFile(path, false); // 不添加到历史
+          get().openFile(path, { addToHistory: false });
         }
       },
 
