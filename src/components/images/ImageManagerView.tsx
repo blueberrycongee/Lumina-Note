@@ -834,7 +834,7 @@ export function ImageManagerView() {
               detailPanelOpen ? "w-[320px] opacity-100" : "w-0 opacity-0",
             )}
           >
-            <div className="h-full w-[320px]">
+            <div className="h-full w-[320px] overflow-hidden">
               {currentSelection.length > 1 ? (
                 <MultiSelectionPanel images={currentSelection} onMove={() => openMoveDialog(currentSelection.map((image) => image.path))} />
               ) : primaryAsset ? (
