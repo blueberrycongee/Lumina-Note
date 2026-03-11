@@ -363,13 +363,20 @@ export async function exists(path: string): Promise<boolean> {
 }
 
 /**
- * Create a directory
+ * Create a directory.
+ *
+ * The underlying Rust `create_new_dir` rejects already-existing paths.
+ * When `recursive` is true we mirror `mkdir -p` semantics: silently
+ * succeed if the directory already exists.
  */
 export async function createDir(
   path: string,
-  _options?: { recursive?: boolean }
+  options?: { recursive?: boolean }
 ): Promise<void> {
-  // 使用自定义 Rust 命令而非 tauri-plugin-fs，避免 scope 限制
+  if (options?.recursive) {
+    const alreadyExists = await invoke<boolean>("path_exists", { path });
+    if (alreadyExists) return;
+  }
   return invoke("create_dir", { path });
 }
 

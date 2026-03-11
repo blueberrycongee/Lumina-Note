@@ -11,7 +11,7 @@ const readBinaryFileBase64Mock = vi.fn();
 
 vi.mock("@/lib/tauri", () => ({
   readFile: (path: string) => readFileMock(path),
-  createDir: (path: string) => createDirMock(path),
+  createDir: (path: string, options?: { recursive?: boolean }) => createDirMock(path, options),
   saveFile: (path: string, content: string) => saveFileMock(path, content),
   writeBinaryFile: (path: string, data: Uint8Array) => writeBinaryFileMock(path, data),
   readBinaryFileBase64: (path: string) => readBinaryFileBase64Mock(path),
@@ -70,5 +70,9 @@ title: Hello
     const assetName = buildAssetOutputName("/vault/img.png");
     expect(readBinaryFileBase64Mock).toHaveBeenCalledWith("/vault/img.png");
     expect(writeBinaryFileMock).toHaveBeenCalledWith(`/vault/site/assets/${assetName}`, expect.any(Uint8Array));
+
+    for (const call of createDirMock.mock.calls) {
+      expect(call[1]).toEqual({ recursive: true });
+    }
   });
 });
