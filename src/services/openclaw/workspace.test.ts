@@ -14,6 +14,7 @@ import {
   buildOpenClawTodayMemoryPath,
   ensureOpenClawTodayMemoryNote,
   inspectOpenClawWorkspace,
+  inspectOpenClawWorkspaceTree,
 } from "./workspace";
 
 describe("openclaw workspace helpers", () => {
@@ -66,5 +67,68 @@ describe("openclaw workspace helpers", () => {
     expect(notePath).toBe(expectedPath);
     expect(createDirMock).toHaveBeenCalledWith("/tmp/openclaw/memory", { recursive: true });
     expect(saveFileMock).toHaveBeenCalledWith(expectedPath, "# 2026-03-11\n\n");
+  });
+
+  it("derives recent memory and artifact stats from the loaded file tree", () => {
+    const snapshot = inspectOpenClawWorkspaceTree("/tmp/openclaw", [
+      {
+        name: "AGENTS.md",
+        path: "/tmp/openclaw/AGENTS.md",
+        is_dir: false,
+        children: null,
+      },
+      {
+        name: "SOUL.md",
+        path: "/tmp/openclaw/SOUL.md",
+        is_dir: false,
+        children: null,
+      },
+      {
+        name: "USER.md",
+        path: "/tmp/openclaw/USER.md",
+        is_dir: false,
+        children: null,
+      },
+      {
+        name: "memory",
+        path: "/tmp/openclaw/memory",
+        is_dir: true,
+        children: [
+          {
+            name: "2026-03-11.md",
+            path: "/tmp/openclaw/memory/2026-03-11.md",
+            is_dir: false,
+            children: null,
+          },
+          {
+            name: "2026-03-10.md",
+            path: "/tmp/openclaw/memory/2026-03-10.md",
+            is_dir: false,
+            children: null,
+          },
+        ],
+      },
+      {
+        name: "output",
+        path: "/tmp/openclaw/output",
+        is_dir: true,
+        children: [
+          {
+            name: "report.md",
+            path: "/tmp/openclaw/output/report.md",
+            is_dir: false,
+            children: null,
+          },
+        ],
+      },
+    ]);
+
+    expect(snapshot.status).toBe("detected");
+    expect(snapshot.recentMemoryPaths).toEqual([
+      "/tmp/openclaw/memory/2026-03-11.md",
+      "/tmp/openclaw/memory/2026-03-10.md",
+    ]);
+    expect(snapshot.artifactFilePaths).toEqual(["/tmp/openclaw/output/report.md"]);
+    expect(snapshot.artifactFileCount).toBe(1);
   });
 });

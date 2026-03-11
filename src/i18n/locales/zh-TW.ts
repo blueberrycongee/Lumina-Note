@@ -69,6 +69,14 @@ export default {
     refresh: '重新整理',
     toggleSidebar: '切換側邊欄',
     toggleAIPanel: '切換 AI 面板',
+    openClawTitle: 'OpenClaw',
+    openClawDetected: '已識別工作區',
+    openClawAttached: '已附著工作區',
+    openClawTodayMemory: '今日 memory',
+    openClawRecentMemory: '最近 memory',
+    openClawNoRecentMemory: '尚無最近的 daily memory 檔案',
+    openClawMemoryFolder: 'memory 目錄',
+    openClawArtifacts: '{count} 個產物',
   },
 
   favorites: {
@@ -94,6 +102,15 @@ export default {
     quickOpen: '快速開啟',
     globalSearch: '全域搜尋',
     save: '儲存',
+    openClawTitle: 'OpenClaw 工作區',
+    openClawDetected: '已識別 OpenClaw 標記',
+    openClawAttached: '已附著 OpenClaw 工作區',
+    openClawDesc: 'Lumina 正在操作 OpenClaw 的同一批檔案。目前識別到的產物檔案數：{count}。',
+    openClawTodayMemory: '打開今日 memory',
+    openClawRecentMemory: '最近 daily memory',
+    openClawNoRecentMemory: '目前還沒有 recent daily memory 檔案。',
+    openClawArtifactRoots: '產物根目錄',
+    openClawNoArtifacts: '尚未識別到產物目錄。',
   },
   
   // 編輯器

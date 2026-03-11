@@ -7,6 +7,7 @@ import { FileEntry, deleteFile, renameFile, createFile, createDir, exists, openN
 import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { join } from "@/lib/path";
 import { cn, getFileName } from "@/lib/utils";
 import { ContextMenu, MenuItem, menuItems } from "../toolbar/ContextMenu";
 import {
@@ -36,6 +37,7 @@ import { useVoiceNote } from "@/hooks/useVoiceNote";
 import { useUIStore } from "@/stores/useUIStore";
 import { useSplitStore } from "@/stores/useSplitStore";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
@@ -133,6 +135,12 @@ export function Sidebar() {
   const favoriteEntries = useMemo(
     () => getFavorites(favoriteSortMode),
     [getFavorites, favoriteSortMode, favorites, manualOrder]
+  );
+  const { openClawSnapshot, openClawAttachment } = useOpenClawWorkspaceStore(
+    useShallow((state) => ({
+      openClawSnapshot: state.getSnapshot(vaultPath),
+      openClawAttachment: state.getAttachment(vaultPath),
+    })),
   );
   const { 
     isRecording, 
@@ -607,6 +615,22 @@ export function Sidebar() {
     });
   }, []);
 
+  const focusTreePath = useCallback((targetPath: string) => {
+    setLeftSidebarOpen(true);
+    expandToPath(targetPath);
+    setSelectedPath(targetPath);
+  }, [expandToPath, setLeftSidebarOpen]);
+
+  const openClawRecentMemoryEntries = useMemo(
+    () => openClawSnapshot?.recentMemoryPaths.slice(0, 4) ?? [],
+    [openClawSnapshot?.recentMemoryPaths],
+  );
+
+  const openClawArtifactDirectories = useMemo(
+    () => openClawSnapshot?.artifactDirectoryPaths ?? [],
+    [openClawSnapshot?.artifactDirectoryPaths],
+  );
+
   useEffect(() => {
     const handleFocusPath = (event: Event) => {
       const customEvent = event as CustomEvent<{ path?: string }>;
@@ -1004,6 +1028,88 @@ export function Sidebar() {
           </button>
         )}
       </div>
+
+      {vaultPath && openClawSnapshot && (openClawSnapshot.status === "detected" || openClawAttachment) && (
+        <div className="mx-2 mb-2 rounded-lg border border-border bg-background/70 p-2">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate text-xs font-semibold text-foreground">
+                {t.sidebar.openClawTitle}
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {openClawAttachment ? t.sidebar.openClawAttached : t.sidebar.openClawDetected}
+              </div>
+            </div>
+            <div className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+              {t.sidebar.openClawArtifacts.replace("{count}", String(openClawSnapshot.artifactFileCount))}
+            </div>
+          </div>
+
+          <div className="mb-2 grid grid-cols-2 gap-1.5">
+            {[
+              { label: "AGENTS.md", path: join(vaultPath, "AGENTS.md") },
+              { label: "SOUL.md", path: join(vaultPath, "SOUL.md") },
+              { label: "USER.md", path: join(vaultPath, "USER.md") },
+              { label: t.sidebar.openClawTodayMemory, path: openClawSnapshot.todayMemoryPath },
+            ].map((entry) => (
+              <button
+                key={entry.label}
+                type="button"
+                onClick={() => void openFile(entry.path)}
+                className="truncate rounded-md border border-border bg-background/60 px-2 py-1 text-left text-[11px] text-foreground hover:bg-accent"
+              >
+                {entry.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mb-2 space-y-1">
+            <div className="text-[11px] font-medium text-muted-foreground">
+              {t.sidebar.openClawRecentMemory}
+            </div>
+            {openClawRecentMemoryEntries.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground">{t.sidebar.openClawNoRecentMemory}</div>
+            ) : (
+              openClawRecentMemoryEntries.map((path) => (
+                <button
+                  key={path}
+                  type="button"
+                  onClick={() => void openFile(path)}
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-md px-2 py-1 text-[11px] hover:bg-accent",
+                    currentFile === path ? "bg-accent text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  <span className="truncate">{getFileName(path).replace(/\.md$/i, "")}</span>
+                  <FileText className="h-3 w-3 shrink-0" />
+                </button>
+              ))
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            {openClawSnapshot.memoryDirectoryPath && (
+              <button
+                type="button"
+                onClick={() => focusTreePath(openClawSnapshot.memoryDirectoryPath as string)}
+                className="rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                {t.sidebar.openClawMemoryFolder}
+              </button>
+            )}
+            {openClawArtifactDirectories.map((path) => (
+              <button
+                key={path}
+                type="button"
+                onClick={() => focusTreePath(path)}
+                className="rounded-md border border-border bg-background/60 px-2 py-1 text-[10px] text-muted-foreground hover:bg-accent hover:text-foreground"
+              >
+                {getFileName(path)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Favorites */}
       <div className="px-2 mb-2">

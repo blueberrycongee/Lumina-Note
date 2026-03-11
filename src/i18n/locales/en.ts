@@ -69,6 +69,14 @@ export default {
     refresh: 'Refresh',
     toggleSidebar: 'Toggle Sidebar',
     toggleAIPanel: 'Toggle AI Panel',
+    openClawTitle: 'OpenClaw',
+    openClawDetected: 'Workspace detected',
+    openClawAttached: 'Workspace attached',
+    openClawTodayMemory: 'Today memory',
+    openClawRecentMemory: 'Recent memory',
+    openClawNoRecentMemory: 'No recent daily memory files',
+    openClawMemoryFolder: 'memory',
+    openClawArtifacts: '{count} artifacts',
   },
 
   favorites: {
@@ -94,6 +102,15 @@ export default {
     quickOpen: 'Quick open',
     globalSearch: 'Global search',
     save: 'Save',
+    openClawTitle: 'OpenClaw Workspace',
+    openClawDetected: 'OpenClaw markers detected',
+    openClawAttached: 'OpenClaw workspace attached',
+    openClawDesc: 'Lumina is working against the same OpenClaw files. Known artifact files: {count}.',
+    openClawTodayMemory: 'Open today memory',
+    openClawRecentMemory: 'Recent daily memory',
+    openClawNoRecentMemory: 'No recent daily memory files found yet.',
+    openClawArtifactRoots: 'Artifact roots',
+    openClawNoArtifacts: 'No artifact roots detected yet.',
   },
   
   // Editor

@@ -26,6 +26,9 @@ export interface OpenClawWorkspaceSnapshot {
   memoryDirectoryPath: string | null;
   todayMemoryPath: string;
   artifactDirectoryPaths: string[];
+  recentMemoryPaths: string[];
+  artifactFilePaths: string[];
+  artifactFileCount: number;
   editablePriorityFiles: string[];
   indexingScope: "shared-workspace";
   gatewayEnabled: boolean;
@@ -111,6 +114,9 @@ export async function inspectOpenClawWorkspace(
       memoryDirectoryPath,
       todayMemoryPath,
       artifactDirectoryPaths,
+      recentMemoryPaths: [],
+      artifactFilePaths: [],
+      artifactFileCount: 0,
       editablePriorityFiles,
       indexingScope: "shared-workspace",
       gatewayEnabled: false,
@@ -128,6 +134,9 @@ export async function inspectOpenClawWorkspace(
       memoryDirectoryPath: null,
       todayMemoryPath,
       artifactDirectoryPaths: [],
+      recentMemoryPaths: [],
+      artifactFilePaths: [],
+      artifactFileCount: 0,
       editablePriorityFiles: [],
       indexingScope: "shared-workspace",
       gatewayEnabled: false,
@@ -155,6 +164,37 @@ export function inspectOpenClawWorkspaceTree(
   const memoryDirectoryPath = matchedDirectories.includes("memory")
     ? join(workspacePath, "memory")
     : null;
+  const allFilePaths: string[] = [];
+  const collectFilePaths = (entries: FileEntry[]) => {
+    for (const entry of entries) {
+      if (entry.is_dir) {
+        if (Array.isArray(entry.children)) {
+          collectFilePaths(entry.children);
+        }
+        continue;
+      }
+      allFilePaths.push(entry.path);
+    }
+  };
+  collectFilePaths(fileTree);
+
+  const recentMemoryPaths = allFilePaths
+    .filter((path) => path.startsWith(join(workspacePath, "memory")) && path.toLowerCase().endsWith(".md"))
+    .sort((left, right) => right.localeCompare(left))
+    .slice(0, 8);
+  const artifactFilePaths = allFilePaths
+    .filter((path) => {
+      const normalized = path.replace(/\\/g, "/");
+      const workspaceRoot = workspacePath.replace(/\\/g, "/");
+      return (
+        normalized.startsWith(`${workspaceRoot}/output/`) ||
+        normalized.startsWith(`${workspaceRoot}/canvas/`) ||
+        normalized.startsWith(`${workspaceRoot}/tmp/`) ||
+        normalized.startsWith(`${workspaceRoot}/artifacts/`)
+      );
+    })
+    .sort((left, right) => left.localeCompare(right))
+    .slice(0, 12);
 
   return {
     workspacePath,
@@ -169,6 +209,18 @@ export function inspectOpenClawWorkspaceTree(
     artifactDirectoryPaths: matchedDirectories
       .filter((name) => name !== "memory" && name !== "skills")
       .map((name) => join(workspacePath, name)),
+    recentMemoryPaths,
+    artifactFilePaths,
+    artifactFileCount: allFilePaths.filter((path) => {
+      const normalized = path.replace(/\\/g, "/");
+      const workspaceRoot = workspacePath.replace(/\\/g, "/");
+      return (
+        normalized.startsWith(`${workspaceRoot}/output/`) ||
+        normalized.startsWith(`${workspaceRoot}/canvas/`) ||
+        normalized.startsWith(`${workspaceRoot}/tmp/`) ||
+        normalized.startsWith(`${workspaceRoot}/artifacts/`)
+      );
+    }).length,
     editablePriorityFiles: [...matchedRequiredFiles, ...matchedOptionalFiles],
     indexingScope: "shared-workspace",
     gatewayEnabled: false,

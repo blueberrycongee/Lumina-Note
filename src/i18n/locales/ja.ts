@@ -69,6 +69,14 @@ export default {
     refresh: '更新',
     toggleSidebar: 'サイドバーを切替',
     toggleAIPanel: 'AI パネルを切替',
+    openClawTitle: 'OpenClaw',
+    openClawDetected: 'ワークスペースを検出',
+    openClawAttached: 'ワークスペースを接続済み',
+    openClawTodayMemory: '今日の memory',
+    openClawRecentMemory: '最近の memory',
+    openClawNoRecentMemory: '最近の daily memory はまだありません',
+    openClawMemoryFolder: 'memory フォルダ',
+    openClawArtifacts: 'artifacts {count}',
   },
 
   favorites: {
@@ -94,6 +102,15 @@ export default {
     quickOpen: 'クイックオープン',
     globalSearch: 'グローバル検索',
     save: '保存',
+    openClawTitle: 'OpenClaw Workspace',
+    openClawDetected: 'OpenClaw マーカーを検出',
+    openClawAttached: 'OpenClaw ワークスペースを接続済み',
+    openClawDesc: 'Lumina は OpenClaw と同じファイル群を操作しています。認識済み artifact ファイル数: {count}。',
+    openClawTodayMemory: '今日の memory を開く',
+    openClawRecentMemory: '最近の daily memory',
+    openClawNoRecentMemory: '最近の daily memory ファイルはまだありません。',
+    openClawArtifactRoots: 'artifact ルート',
+    openClawNoArtifacts: 'artifact ルートはまだ検出されていません。',
   },
   
   // エディター
