@@ -6,7 +6,7 @@
 
 **Local-first AI note-taking app**
 
-Your notes stay on your device. Lumina Note helps you write, connect, and evolve knowledge with AI, while keeping data ownership in your hands.
+Your notes stay on your device. Lumina Note helps you write, connect, search, and refine knowledge with AI while keeping data ownership in your hands.
 
 [![GitHub Release](https://img.shields.io/github/v/release/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
@@ -20,7 +20,7 @@ Your notes stay on your device. Lumina Note helps you write, connect, and evolve
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
 
-**Language**: English · [简体中文](./README.zh-CN.md) · [日本語](./README.ja.md)
+**Language**: English · [简体中文](./README.zh-CN.md) · [繁體中文](./README.zh-TW.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md) · [Français](./README.fr.md) · [Deutsch](./README.de.md) · [Italiano](./README.it.md) · [Português (Brasil)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
 </div>
 
@@ -28,9 +28,9 @@ Your notes stay on your device. Lumina Note helps you write, connect, and evolve
 
 <h2 align="center">Why Lumina Note</h2>
 
-- **Local-first by design**: your vault is local, and you decide what to send to model providers.
-- **Knowledge-centered workflow**: Markdown editor, WikiLinks, and graph view work together naturally.
-- **AI that can actually act**: Chat, Agent, Deep Research, and Codex mode support real editing and retrieval tasks.
+- **Local-first by design**: your vault is local, and you decide what gets sent to model providers.
+- **Knowledge-centered workflow**: Markdown editing, WikiLinks, graph view, and AI retrieval work as one system.
+- **AI that can actually act**: Chat, Agent, Deep Research, and Codex mode support real editing and research tasks.
 
 ---
 
@@ -69,23 +69,27 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 <h2 align="center">Features</h2>
 
 <h3 align="center">AI workspace</h3>
-- Modes: `Chat` / `Agent` / `Deep Research` / `Codex` (embedded VS Code extension in sidebar)
+
+- Modes: `Chat` / `Agent` / `Deep Research` / `Codex` (embedded VS Code extension in the sidebar)
 - Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - Local semantic retrieval (RAG) from your vault
 
 <h3 align="center">Editor and knowledge graph</h3>
+
 - Markdown source / live preview / reading modes
 - Bidirectional links with `[[WikiLinks]]`
-- LaTeX, Mermaid, code highlighting
+- LaTeX, Mermaid, and code highlighting
 - Graph visualization for relationships across notes
 
 <h3 align="center">Reading and capture</h3>
+
 - Built-in PDF reader with highlight, underline, and annotations
-- Save annotation results as Markdown
-- Send selected content directly to AI context
+- Save annotation output as Markdown
+- Send selected content directly into AI context
 
 <h3 align="center">Extra capabilities</h3>
-- Bilibili video notes (danmaku timestamp sync)
+
+- Bilibili video notes with danmaku timestamp sync
 - Real-time voice input
 - Database views (table / kanban)
 - WebDAV sync
@@ -93,6 +97,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - 15 themes
 
 <h3 align="center">Plugin ecosystem (Developer Preview)</h3>
+
 - Load plugins from workspace / user / built-in directories
 - Runtime permission model for plugin capabilities
 - Slash command extension API
@@ -104,7 +109,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 1. Install Lumina Note from Releases.
 2. Choose a local folder as your vault on first launch.
-3. Configure model provider + API key in the right AI panel.
+3. Configure a model provider and API key in the AI panel.
 4. Create your first note and start linking with `[[WikiLinks]]`.
 
 ---
@@ -112,11 +117,13 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 <h2 align="center">Guides</h2>
 
 <h3 align="center">Recommended user guides</h3>
+
 - English: `docs/user-flow.md`
 - 简体中文: `docs/user-flow.zh-CN.md`
 - 日本語: `docs/user-flow.ja.md`
 
 <h3 align="center">Self-hosted relay (cross-network mobile access)</h3>
+
 - English: `docs/self-host.md`
 - 简体中文: `docs/self-host.zh-CN.md`
 
@@ -125,6 +132,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 <h2 align="center">Build from Source</h2>
 
 Requirements:
+
 - Node.js 20+ (recommended 20.11.1)
 - Rust 1.70+
 
