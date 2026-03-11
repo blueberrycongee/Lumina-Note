@@ -6,7 +6,7 @@
 
 **ローカルファーストの AI ノートアプリ**
 
-ノートはデバイス上に保持しながら、AI で整理・検索・編集・調査を進められる知識ワークスペースです。
+ノートはデバイス上に保持したまま、AI を使って知識の記述、接続、検索、整理を進められるワークスペースです。
 
 [![GitHub Release](https://img.shields.io/github/v/release/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
@@ -20,7 +20,7 @@
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
 
-**Language**: [English](./README.md) · [简体中文](./README.zh-CN.md) · 日本語
+**言語**: [English](./README.md) · [简体中文](./README.zh-CN.md) · [繁體中文](./README.zh-TW.md) · 日本語 · [한국어](./README.ko.md) · [Español](./README.es.md) · [Français](./README.fr.md) · [Deutsch](./README.de.md) · [Italiano](./README.it.md) · [Português (Brasil)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
 </div>
 
@@ -28,9 +28,9 @@
 
 <h2 align="center">Lumina Note の特長</h2>
 
-- **ローカルファースト**: Vault はローカル管理。モデルに送る範囲を自分で決められます。
-- **知識中心の設計**: エディタ、WikiLinks、グラフが一体で機能します。
-- **実行できる AI**: Chat だけでなく Agent / Deep Research / Codex で実作業まで対応。
+- **ローカルファースト設計**: Vault はローカル管理で、モデルに送る内容を自分で選べます。
+- **知識作業をひとつに統合**: Markdown 編集、WikiLinks、グラフ表示、AI 検索が一体で動作します。
+- **実務に使える AI**: `Chat`、`Agent`、`Deep Research`、`Codex` が編集や調査タスクを支援します。
 
 ---
 
@@ -69,32 +69,37 @@
 <h2 align="center">機能</h2>
 
 <h3 align="center">AI ワークスペース</h3>
-- モード: `Chat` / `Agent` / `Deep Research` / `Codex`（サイドバー埋め込み VS Code 拡張）
+
+- モード: `Chat` / `Agent` / `Deep Research` / `Codex`（サイドバーに埋め込まれた VS Code 拡張）
 - 対応プロバイダ: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Vault 全体を対象にしたローカル意味検索（RAG）
+- Vault を対象にしたローカル意味検索（RAG）
 
 <h3 align="center">エディタとナレッジグラフ</h3>
+
 - Markdown ソース / ライブプレビュー / 閲覧モード
 - `[[WikiLinks]]` による双方向リンク
 - LaTeX、Mermaid、コードハイライト
-- ノート間の関係を可視化するグラフビュー
+- ノート間の関係を可視化するグラフ表示
 
-<h3 align="center">読書・収集</h3>
-- PDF リーダー（ハイライト、下線、注釈）
-- 注釈を Markdown として保存
-- 選択した内容を AI コンテキストへ送信
+<h3 align="center">読書と収集</h3>
 
-<h3 align="center">その他</h3>
+- ハイライト、下線、注釈に対応した内蔵 PDF リーダー
+- 注釈結果を Markdown として保存
+- 選択した内容をそのまま AI コンテキストへ送信
+
+<h3 align="center">追加機能</h3>
+
 - Bilibili 動画ノート（弾幕タイムスタンプ同期）
-- 音声入力（リアルタイム文字起こし）
+- リアルタイム音声入力
 - データベースビュー（テーブル / カンバン）
 - WebDAV 同期
 - フラッシュカード復習
-- 15 テーマ
+- 15 種類のテーマ
 
 <h3 align="center">プラグインエコシステム（開発者プレビュー）</h3>
+
 - workspace / user / built-in ディレクトリからプラグインを読み込み
-- ランタイム権限モデル
+- プラグイン機能向けのランタイム権限モデル
 - Slash Command 拡張 API
 - 開発者向けガイド: `docs/plugin-ecosystem.md`
 
@@ -102,21 +107,23 @@
 
 <h2 align="center">クイックスタート</h2>
 
-1. Releases からアプリをインストール
-2. 初回起動でローカルフォルダを Vault に指定
-3. 右側 AI パネルでモデルと API Key を設定
-4. 最初のノートを作成し、`[[WikiLinks]]` で関連付け
+1. Releases から Lumina Note をインストール
+2. 初回起動時にローカルフォルダを Vault として選択
+3. AI パネルでモデルプロバイダと API Key を設定
+4. 最初のノートを作成し、`[[WikiLinks]]` でつなげる
 
 ---
 
 <h2 align="center">ガイド</h2>
 
-<h3 align="center">まず読むガイド</h3>
-- 日本語: `docs/user-flow.ja.md`
+<h3 align="center">おすすめのユーザーガイド</h3>
+
 - English: `docs/user-flow.md`
 - 简体中文: `docs/user-flow.zh-CN.md`
+- 日本語: `docs/user-flow.ja.md`
 
 <h3 align="center">セルフホスト中継（クロスネットワークのモバイルアクセス）</h3>
+
 - English: `docs/self-host.md`
 - 简体中文: `docs/self-host.zh-CN.md`
 
@@ -125,6 +132,7 @@
 <h2 align="center">ソースからビルド</h2>
 
 必要環境:
+
 - Node.js 20+（推奨 20.11.1）
 - Rust 1.70+
 
@@ -139,8 +147,8 @@ npm run tauri dev
 
 <h2 align="center">技術スタック</h2>
 
-- フレームワーク: Tauri v2 (Rust + WebView)
-- フロントエンド: React 18, TypeScript, Tailwind CSS
+- フレームワーク: Tauri v2（Rust + WebView）
+- フロントエンド: React 18、TypeScript、Tailwind CSS
 - エディタ: CodeMirror 6
 - 状態管理: Zustand
 - ベクトルストレージ: SQLite
