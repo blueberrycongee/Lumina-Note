@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createLegacyKeyJSONStorage } from "@/lib/persistStorage";
 import { applyTheme, getThemeById } from "@/config/themePlugin";
 import { pluginThemeRuntime } from "@/services/plugins/themeRuntime";
 
@@ -94,6 +95,28 @@ interface UIState {
   setEditorFontSize: (size: number) => void;
 }
 
+
+const getDefaultFloatingBallPosition = () => ({ x: window.innerWidth - 80, y: window.innerHeight - 120 });
+
+const partializeUIState = (state: UIState) => ({
+  isDarkMode: state.isDarkMode,
+  themeId: state.themeId,
+  leftSidebarOpen: state.leftSidebarOpen,
+  rightSidebarOpen: state.rightSidebarOpen,
+  leftSidebarWidth: state.leftSidebarWidth,
+  rightSidebarWidth: state.rightSidebarWidth,
+  rightPanelTab: state.rightPanelTab,
+  chatMode: state.chatMode,
+  aiPanelMode: state.aiPanelMode,
+  mainView: state.mainView,
+  editorMode: state.editorMode,
+  splitView: state.splitView,
+  splitDirection: state.splitDirection,
+  diagnosticsEnabled: state.diagnosticsEnabled,
+  editorInteractionTraceEnabled: state.editorInteractionTraceEnabled,
+  editorFontSize: state.editorFontSize,
+});
+
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
@@ -155,7 +178,7 @@ export const useUIStore = create<UIState>()(
 
       // AI Panel floating
       aiPanelMode: "docked",
-      floatingBallPosition: { x: window.innerWidth - 80, y: window.innerHeight - 120 },
+      floatingBallPosition: getDefaultFloatingBallPosition(),
       floatingPanelOpen: false,
       isFloatingBallDragging: false,
       setAIPanelMode: (mode) => set({ aiPanelMode: mode }),
@@ -206,12 +229,10 @@ export const useUIStore = create<UIState>()(
       setEditorFontSize: (size) => set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
     }),
     {
-      name: "neurone-ui",
+      name: "lumina-ui",
+      storage: createLegacyKeyJSONStorage(["neurone-ui"]),
       // 不持久化视频笔记状态，避免重启后自动打开
-      partialize: (state) => {
-        const { videoNoteOpen, videoNoteUrl, isSkillManagerOpen, ...rest } = state;
-        return rest;
-      },
+      partialize: partializeUIState,
       onRehydrateStorage: () => (state) => {
         // Apply dark mode class on hydration
         if (state?.isDarkMode) {
@@ -228,6 +249,12 @@ export const useUIStore = create<UIState>()(
         if (state) {
           state.videoNoteOpen = false;
           state.videoNoteUrl = null;
+          state.isSettingsOpen = false;
+          state.isSkillManagerOpen = false;
+          state.floatingPanelOpen = false;
+          state.isFloatingBallDragging = false;
+          state.floatingBallPosition = getDefaultFloatingBallPosition();
+          localStorage.setItem("lumina-ui", JSON.stringify({ state: partializeUIState(state), version: 0 }));
         }
       },
     }

@@ -216,6 +216,21 @@ describe('useRustAgentStore', () => {
     });
   });
 
+  describe('persistence', () => {
+    it('persists state under the lumina-agent key', () => {
+      const store = useRustAgentStore.getState();
+
+      act(() => {
+        store.setAutoApprove(true);
+      });
+
+      expect(localStorage.getItem('rust-agent-storage')).toBeNull();
+      const raw = localStorage.getItem('lumina-agent');
+      expect(raw).not.toBeNull();
+      expect(JSON.parse(raw as string).state.autoApprove).toBe(true);
+    });
+  });
+
   describe('autoApprove', () => {
     it('should set autoApprove value', () => {
       const store = useRustAgentStore.getState();

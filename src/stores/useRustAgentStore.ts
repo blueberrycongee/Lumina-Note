@@ -7,6 +7,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createLegacyKeyJSONStorage } from "@/lib/persistStorage";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { getAIConfig, type AIConfig } from "@/services/ai/ai";
@@ -2067,7 +2068,8 @@ export const useRustAgentStore = create<RustAgentState>()(
       },
     }),
     {
-      name: "rust-agent-storage",
+      name: "lumina-agent",
+      storage: createLegacyKeyJSONStorage(["rust-agent-storage"]),
       partialize: (state) => ({
         autoApprove: state.autoApprove,
         autoCompactEnabled: state.autoCompactEnabled,
