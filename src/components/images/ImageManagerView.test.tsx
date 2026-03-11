@@ -3,6 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { ImageManagerView } from "./ImageManagerView";
 import { useImageManagerStore } from "@/stores/useImageManagerStore";
+import en from "@/i18n/locales/en";
+
+vi.mock("@/stores/useLocaleStore", () => ({
+  useLocaleStore: () => ({ t: en }),
+  getCurrentTranslations: () => en,
+}));
 
 const openFile = vi.hoisted(() => vi.fn());
 const refreshFileTree = vi.hoisted(() => vi.fn(async () => {}));
@@ -110,16 +116,16 @@ describe("ImageManagerView", () => {
     render(<ImageManagerView />);
 
     expect((await screen.findAllByText("hero.png")).length).toBeGreaterThan(0);
-    expect(screen.getByText("Image details")).toBeInTheDocument();
-    expect(screen.getByText("Referenced by notes")).toBeInTheDocument();
+    expect(screen.getByText(en.imageManager.imageDetails)).toBeInTheDocument();
+    expect(screen.getByText(en.imageManager.referencedByNotes)).toBeInTheDocument();
     expect(screen.getByText("alpha")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText("Search by file name, path, or note reference"), {
+    fireEvent.change(screen.getByPlaceholderText(en.imageManager.searchPlaceholder), {
       target: { value: "missing" },
     });
 
     await waitFor(() => {
-      expect(screen.getByText("No matching images")).toBeInTheDocument();
+      expect(screen.getByText(en.imageManager.noMatchTitle)).toBeInTheDocument();
     });
   });
 });

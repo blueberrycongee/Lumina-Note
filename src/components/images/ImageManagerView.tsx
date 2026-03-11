@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { showInExplorer } from "@/lib/tauri";
 import { reportOperationError } from "@/lib/reportError";
+import { useLocaleStore, getCurrentTranslations } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import {
   type ImageAssetRecord,
@@ -65,20 +66,20 @@ type ActionDialogState =
       executing: boolean;
     };
 
-const STATUS_LABELS: Record<ImageManagerStatusFilter, string> = {
-  all: "All images",
-  referenced: "Referenced",
-  orphan: "Orphans",
-  multi: "Multi-used",
-  recent: "Recent",
-  large: "Large",
-};
+const getStatusLabels = (t: ReturnType<typeof getCurrentTranslations>): Record<ImageManagerStatusFilter, string> => ({
+  all: t.imageManager.statusAll,
+  referenced: t.imageManager.statusReferenced,
+  orphan: t.imageManager.statusOrphans,
+  multi: t.imageManager.statusMultiUsed,
+  recent: t.imageManager.statusRecent,
+  large: t.imageManager.statusLarge,
+});
 
-const SORT_OPTIONS: Array<{ value: ImageManagerSortBy; label: string }> = [
-  { value: "modified", label: "Recently changed" },
-  { value: "name", label: "Name" },
-  { value: "size", label: "File size" },
-  { value: "references", label: "Reference count" },
+const getSortOptions = (t: ReturnType<typeof getCurrentTranslations>): Array<{ value: ImageManagerSortBy; label: string }> => [
+  { value: "modified", label: t.imageManager.sortRecentlyChanged },
+  { value: "name", label: t.imageManager.sortName },
+  { value: "size", label: t.imageManager.sortFileSize },
+  { value: "references", label: t.imageManager.sortReferenceCount },
 ];
 
 const statusBadgeStyles = {
@@ -90,7 +91,7 @@ const statusBadgeStyles = {
 } as const;
 
 const formatBytes = (bytes: number | null): string => {
-  if (bytes === null) return "Unknown";
+  if (bytes === null) return getCurrentTranslations().imageManager.unknown;
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB"];
   let value = bytes / 1024;
@@ -103,7 +104,7 @@ const formatBytes = (bytes: number | null): string => {
 };
 
 const formatDate = (timestamp: number | null): string => {
-  if (!timestamp) return "Unknown";
+  if (!timestamp) return getCurrentTranslations().imageManager.unknown;
   return new Date(timestamp).toLocaleString();
 };
 
@@ -156,17 +157,18 @@ const compareValues = (
 };
 
 const groupStatusLabel = (key: string): string => {
+  const t = getCurrentTranslations();
   switch (key) {
     case "orphan":
-      return "Needs cleanup";
+      return t.imageManager.groupNeedsCleanup;
     case "multi":
-      return "Linked from multiple notes";
+      return t.imageManager.groupLinkedFromMultipleNotes;
     case "large":
-      return `Large files (>${formatBytes(LARGE_IMAGE_THRESHOLD_BYTES)})`;
+      return t.imageManager.groupLargeFiles.replace("{threshold}", formatBytes(LARGE_IMAGE_THRESHOLD_BYTES));
     case "recent":
-      return "Recently added";
+      return t.imageManager.groupRecentlyAdded;
     default:
-      return "Referenced";
+      return t.imageManager.groupReferenced;
   }
 };
 
@@ -178,6 +180,9 @@ const resolveVaultFolderInput = (vaultPath: string, value: string): string => {
 };
 
 export function ImageManagerView() {
+  const { t } = useLocaleStore();
+  const STATUS_LABELS = useMemo(() => getStatusLabels(t), [t]);
+  const SORT_OPTIONS = useMemo(() => getSortOptions(t), [t]);
   const { vaultPath, fileTree, openFile, refreshFileTree } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
@@ -359,7 +364,7 @@ export function ImageManagerView() {
       }
       return Array.from(groups.entries()).map(([key, items]) => ({
         key,
-        label: key === "." ? "Vault root" : key,
+        label: key === "." ? getCurrentTranslations().imageManager.vaultRoot : key,
         items,
       }));
     }
@@ -420,7 +425,7 @@ export function ImageManagerView() {
     const payload = Array.isArray(path) ? path.join("\n") : path;
     try {
       await navigator.clipboard.writeText(payload);
-      setSuccessMessage(Array.isArray(path) ? "Copied selected image paths" : "Copied image path");
+      setSuccessMessage(Array.isArray(path) ? t.imageManager.copiedPaths : t.imageManager.copiedPath);
     } catch (error) {
       reportOperationError({
         source: "ImageManagerView.handleCopyPath",
@@ -433,7 +438,7 @@ export function ImageManagerView() {
 
   const handleLocateInTree = useCallback((path: string) => {
     window.dispatchEvent(new CustomEvent("lumina-focus-file-tree-path", { detail: { path } }));
-    setSuccessMessage("Focused image in the file tree");
+    setSuccessMessage(t.imageManager.focusedInTree);
   }, []);
 
   const handleReveal = useCallback(async (path: string) => {
@@ -519,8 +524,10 @@ export function ImageManagerView() {
       clearSelection();
       setSuccessMessage(
         dialog.kind === "rename"
-          ? `Renamed image and updated ${dialog.preview.noteUpdates.length} note(s)`
-          : `Moved ${dialog.preview.changes.length} image(s) and updated ${dialog.preview.noteUpdates.length} note(s)`,
+          ? t.imageManager.renamedSuccess.replace("{count}", String(dialog.preview.noteUpdates.length))
+          : t.imageManager.movedSuccess
+              .replace("{imageCount}", String(dialog.preview.changes.length))
+              .replace("{noteCount}", String(dialog.preview.noteUpdates.length)),
       );
       setDialog(null);
     } catch (error) {
@@ -536,7 +543,7 @@ export function ImageManagerView() {
   const handleRefresh = useCallback(async () => {
     await refreshFileTree();
     setRefreshNonce((value) => value + 1);
-    setSuccessMessage("Image library refreshed");
+    setSuccessMessage(t.imageManager.libraryRefreshed);
   }, [refreshFileTree]);
 
   const currentSelection = selectedImages.length > 0 ? selectedImages : primaryAsset ? [primaryAsset] : [];
@@ -550,37 +557,37 @@ export function ImageManagerView() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                 <Sparkles className="h-3.5 w-3.5" />
-                Resource organization
+                {t.imageManager.badge}
               </div>
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Image Manager</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">{t.imageManager.title}</h1>
                 <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                  Browse every image in the vault, see which notes depend on it, and safely rename or move files without breaking Markdown references.
+                  {t.imageManager.description}
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={handleRefresh} className="ui-icon-btn h-9 w-9" title="Refresh image library">
+              <button onClick={handleRefresh} className="ui-icon-btn h-9 w-9" title={t.imageManager.refreshLibrary}>
                 <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
               </button>
               <button
                 onClick={() => setViewMode("grid")}
                 className={cn("ui-icon-btn h-9 w-9", viewMode === "grid" && "border-primary/30 bg-primary/10 text-primary")}
-                title="Grid view"
+                title={t.imageManager.gridView}
               >
                 <Grid2X2 className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
                 className={cn("ui-icon-btn h-9 w-9", viewMode === "list" && "border-primary/30 bg-primary/10 text-primary")}
-                title="List view"
+                title={t.imageManager.listView}
               >
                 <List className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode("group")}
                 className={cn("ui-icon-btn h-9 w-9", viewMode === "group" && "border-primary/30 bg-primary/10 text-primary")}
-                title="Grouped view"
+                title={t.imageManager.groupedView}
               >
                 <Layers3 className="h-4 w-4" />
               </button>
@@ -588,12 +595,12 @@ export function ImageManagerView() {
           </div>
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-            <SummaryCard icon={Images} label="All images" value={summary.totalImages} detail={formatBytes(summary.totalBytes)} />
-            <SummaryCard icon={ScanSearch} label="Referenced" value={summary.referencedImages} detail="Connected to notes" />
-            <SummaryCard icon={FolderTree} label="Orphans" value={summary.orphanImages} detail="Safe cleanup candidates" accent="amber" />
-            <SummaryCard icon={Layers3} label="Multi-used" value={summary.multiReferencedImages} detail="Shared across notes" accent="sky" />
-            <SummaryCard icon={Sparkles} label="Recent" value={summary.recentImages} detail="Changed in the last 7 days" accent="violet" />
-            <SummaryCard icon={ImageIcon} label="Large" value={summary.largeImages} detail={`>${formatBytes(LARGE_IMAGE_THRESHOLD_BYTES)}`} accent="rose" />
+            <SummaryCard icon={Images} label={t.imageManager.statusAll} value={summary.totalImages} detail={formatBytes(summary.totalBytes)} />
+            <SummaryCard icon={ScanSearch} label={t.imageManager.statusReferenced} value={summary.referencedImages} detail={t.imageManager.connectedToNotes} />
+            <SummaryCard icon={FolderTree} label={t.imageManager.statusOrphans} value={summary.orphanImages} detail={t.imageManager.safeCleanupCandidates} accent="amber" />
+            <SummaryCard icon={Layers3} label={t.imageManager.statusMultiUsed} value={summary.multiReferencedImages} detail={t.imageManager.sharedAcrossNotes} accent="sky" />
+            <SummaryCard icon={Sparkles} label={t.imageManager.statusRecent} value={summary.recentImages} detail={t.imageManager.changedInLast7Days} accent="violet" />
+            <SummaryCard icon={ImageIcon} label={t.imageManager.statusLarge} value={summary.largeImages} detail={`>${formatBytes(LARGE_IMAGE_THRESHOLD_BYTES)}`} accent="rose" />
           </div>
 
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
@@ -602,7 +609,7 @@ export function ImageManagerView() {
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by file name, path, or note reference"
+                placeholder={t.imageManager.searchPlaceholder}
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
@@ -625,10 +632,10 @@ export function ImageManagerView() {
                 onChange={(event) => setFolderFilter(event.target.value)}
                 className="ui-input h-10 min-w-[170px] bg-background text-sm"
               >
-                <option value="all">All folders</option>
+                <option value="all">{t.imageManager.allFolders}</option>
                 {folderOptions.map((folder) => (
                   <option key={folder} value={folder}>
-                    {folder === "." ? "Vault root" : folder}
+                    {folder === "." ? t.imageManager.vaultRoot : folder}
                   </option>
                 ))}
               </select>
@@ -648,7 +655,7 @@ export function ImageManagerView() {
               <button
                 onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
                 className="ui-icon-btn h-10 w-10"
-                title={sortOrder === "asc" ? "Sort descending" : "Sort ascending"}
+                title={sortOrder === "asc" ? t.imageManager.sortDescending : t.imageManager.sortAscending}
               >
                 <ArrowUpDown className="h-4 w-4" />
               </button>
@@ -666,7 +673,7 @@ export function ImageManagerView() {
                     : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground",
                 )}
               >
-                Group by status
+                {t.imageManager.groupByStatus}
               </button>
               <button
                 onClick={() => setGroupMode("folder")}
@@ -677,7 +684,7 @@ export function ImageManagerView() {
                     : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground",
                 )}
               >
-                Group by folder
+                {t.imageManager.groupByFolder}
               </button>
             </div>
           ) : null}
@@ -690,7 +697,7 @@ export function ImageManagerView() {
 
           {orphanOnlyView ? (
             <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
-              This view currently only shows orphaned images. These files are not referenced by any note and are good cleanup candidates.
+              {t.imageManager.orphanOnlyWarning}
             </div>
           ) : null}
         </div>
@@ -704,25 +711,25 @@ export function ImageManagerView() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-sm font-medium">
                     <CheckSquare className="h-4 w-4 text-primary" />
-                    {currentSelection.length} images selected
+                    {t.imageManager.imagesSelected.replace("{count}", String(currentSelection.length))}
                   </span>
                   <button
                     onClick={() => openMoveDialog(currentSelection.map((image) => image.path))}
                     className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm hover:bg-accent"
                   >
-                    Move selected
+                    {t.imageManager.moveSelected}
                   </button>
                   <button
                     onClick={() => handleCopyPath(currentSelection.map((image) => image.path))}
                     className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm hover:bg-accent"
                   >
-                    Copy paths
+                    {t.imageManager.copyPaths}
                   </button>
                   <button
                     onClick={clearSelection}
                     className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm hover:bg-accent"
                   >
-                    Clear selection
+                    {t.imageManager.clearSelection}
                   </button>
                 </div>
               </div>
@@ -732,38 +739,38 @@ export function ImageManagerView() {
               {!vaultPath ? (
                 <EmptyState
                   icon={FolderOpen}
-                  title="Open a vault first"
-                  description="The image manager reads directly from the current workspace and shows every image file that lives inside it."
+                  title={t.imageManager.emptyVaultTitle}
+                  description={t.imageManager.emptyVaultDescription}
                 />
               ) : loading ? (
                 <EmptyState
                   icon={Loader2}
-                  title="Scanning images"
-                  description="Building relationships between image files and the notes that reference them."
+                  title={t.imageManager.scanningTitle}
+                  description={t.imageManager.scanningDescription}
                   spinning
                 />
               ) : images.length === 0 ? (
                 <EmptyState
                   icon={ImageIcon}
-                  title="No images in this vault"
-                  description="Paste or add images to any note, and they will appear here with note references and management actions."
+                  title={t.imageManager.noImagesTitle}
+                  description={t.imageManager.noImagesDescription}
                 />
               ) : filteredImages.length === 0 ? (
                 <EmptyState
                   icon={Search}
-                  title="No matching images"
-                  description="Try a different search, status filter, or folder scope."
+                  title={t.imageManager.noMatchTitle}
+                  description={t.imageManager.noMatchDescription}
                 />
               ) : viewMode === "list" ? (
                 <div className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm">
                   <div className="grid grid-cols-[56px_minmax(0,1.4fr)_minmax(0,1.1fr)_110px_110px_190px_180px] gap-3 border-b border-border/60 px-4 py-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    <span>Preview</span>
-                    <span>File</span>
-                    <span>Location</span>
-                    <span>Refs</span>
-                    <span>Size</span>
-                    <span>Changed</span>
-                    <span>Actions</span>
+                    <span>{t.imageManager.columnPreview}</span>
+                    <span>{t.imageManager.columnFile}</span>
+                    <span>{t.imageManager.columnLocation}</span>
+                    <span>{t.imageManager.columnRefs}</span>
+                    <span>{t.imageManager.columnSize}</span>
+                    <span>{t.imageManager.columnChanged}</span>
+                    <span>{t.imageManager.columnActions}</span>
                   </div>
                   {filteredImages.map((image) => (
                     <ImageListRow
@@ -789,7 +796,7 @@ export function ImageManagerView() {
                       <div className="flex items-center justify-between">
                         <div>
                           <h2 className="text-sm font-semibold">{group.label}</h2>
-                          <p className="text-xs text-muted-foreground">{group.items.length} image(s)</p>
+                          <p className="text-xs text-muted-foreground">{t.imageManager.imageCount.replace("{count}", String(group.items.length))}</p>
                         </div>
                       </div>
                       <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
@@ -852,8 +859,8 @@ export function ImageManagerView() {
             ) : (
               <EmptyState
                 icon={ImageIcon}
-                title="Select an image"
-                description="Use the grid, list, or grouped view to inspect a file and see its note relationships here."
+                title={t.imageManager.selectImageTitle}
+                description={t.imageManager.selectImageDescription}
                 compact
               />
             )}
@@ -937,6 +944,7 @@ function EmptyState({
 }
 
 function StatusBadges({ image }: { image: ImageAssetRecord }) {
+  const { t } = useLocaleStore();
   const statuses = summarizeStatuses(image);
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -949,14 +957,14 @@ function StatusBadges({ image }: { image: ImageAssetRecord }) {
           )}
         >
           {status === "orphan"
-            ? "Orphan"
+            ? t.imageManager.badgeOrphan
             : status === "referenced"
-              ? "Referenced"
+              ? t.imageManager.badgeReferenced
               : status === "multi"
-                ? "Multi"
+                ? t.imageManager.badgeMulti
                 : status === "recent"
-                  ? "Recent"
-                  : "Large"}
+                  ? t.imageManager.badgeRecent
+                  : t.imageManager.badgeLarge}
         </span>
       ))}
     </div>
@@ -978,12 +986,13 @@ function CardActions({
   onRename: (path: string) => void;
   onMove: (path: string) => void;
 }) {
+  const { t } = useLocaleStore();
   const actions = [
-    { label: "Copy path", icon: Copy, onClick: onCopyPath },
-    { label: "Locate in tree", icon: FolderTree, onClick: onLocate },
-    { label: "Reveal in finder", icon: ExternalLink, onClick: onReveal },
-    { label: "Rename", icon: PencilLine, onClick: onRename },
-    { label: "Move", icon: MoveRight, onClick: onMove },
+    { label: t.imageManager.copyPath, icon: Copy, onClick: onCopyPath },
+    { label: t.imageManager.locateInTree, icon: FolderTree, onClick: onLocate },
+    { label: t.imageManager.revealInFinder, icon: ExternalLink, onClick: onReveal },
+    { label: t.imageManager.rename, icon: PencilLine, onClick: onRename },
+    { label: t.imageManager.move, icon: MoveRight, onClick: onMove },
   ];
 
   return (
@@ -1068,14 +1077,14 @@ function ImageGridCard({
               <p className="mt-1 truncate text-xs text-muted-foreground">{image.relativePath}</p>
             </div>
             <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
-              {image.referenceCount} refs
+              {getCurrentTranslations().imageManager.refs.replace("{count}", String(image.referenceCount))}
             </span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-          <span>Size: {formatBytes(image.sizeBytes)}</span>
-          <span>{dimensions ? `${dimensions.width}×${dimensions.height}` : "Detecting size"}</span>
-          <span className="col-span-2 truncate">Folder: {image.folderRelativePath === "." ? "Vault root" : image.folderRelativePath}</span>
+          <span>{getCurrentTranslations().imageManager.sizeLabel.replace("{value}", formatBytes(image.sizeBytes))}</span>
+          <span>{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</span>
+          <span className="col-span-2 truncate">{getCurrentTranslations().imageManager.folderLabel.replace("{value}", image.folderRelativePath === "." ? getCurrentTranslations().imageManager.vaultRoot : image.folderRelativePath)}</span>
         </div>
         <CardActions
           path={image.path}
@@ -1149,7 +1158,7 @@ function ImageListRow({
       </div>
       <div className="min-w-0 text-xs text-muted-foreground">
         <div className="truncate">{image.relativePath}</div>
-        <div className="mt-1 truncate">{dimensions ? `${dimensions.width}×${dimensions.height}` : "Detecting size"}</div>
+        <div className="mt-1 truncate">{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</div>
       </div>
       <div className="text-sm">{image.referenceCount}</div>
       <div className="text-sm">{formatBytes(image.sizeBytes)}</div>
@@ -1163,7 +1172,7 @@ function ImageListRow({
             }}
             className="rounded-md border border-border/60 px-2 py-1 text-xs hover:bg-accent"
           >
-            Open note
+            {getCurrentTranslations().imageManager.openNote}
           </button>
         ) : null}
         <CardActions
@@ -1200,10 +1209,11 @@ function ImageDetailPanel({
   onRename: (path: string) => void;
   onMove: (path: string) => void;
 }) {
+  const { t } = useLocaleStore();
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="border-b border-border/60 px-4 py-4">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Image details</p>
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t.imageManager.imageDetails}</p>
         <h2 className="mt-2 text-lg font-semibold">{image.name}</h2>
         <p className="mt-1 break-all text-xs text-muted-foreground">{image.relativePath}</p>
       </div>
@@ -1218,48 +1228,48 @@ function ImageDetailPanel({
         <div className="mt-4 space-y-4">
           <section className="rounded-2xl border border-border/60 bg-background/70 p-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Signals</h3>
+              <h3 className="text-sm font-semibold">{t.imageManager.signals}</h3>
               <StatusBadges image={image} />
             </div>
             <dl className="mt-3 space-y-2 text-sm">
-              <DetailRow label="Folder" value={image.folderRelativePath === "." ? "Vault root" : image.folderRelativePath} />
-              <DetailRow label="File size" value={formatBytes(image.sizeBytes)} />
-              <DetailRow label="Pixel size" value={dimensions ? `${dimensions.width} × ${dimensions.height}` : "Detecting…"} />
-              <DetailRow label="Changed" value={formatDate(image.modifiedAt)} />
-              <DetailRow label="Created" value={formatDate(image.createdAt)} />
-              <DetailRow label="Reference count" value={String(image.referenceCount)} />
+              <DetailRow label={t.imageManager.folder} value={image.folderRelativePath === "." ? t.imageManager.vaultRoot : image.folderRelativePath} />
+              <DetailRow label={t.imageManager.fileSize} value={formatBytes(image.sizeBytes)} />
+              <DetailRow label={t.imageManager.pixelSize} value={dimensions ? `${dimensions.width} × ${dimensions.height}` : t.imageManager.detecting} />
+              <DetailRow label={t.imageManager.changed} value={formatDate(image.modifiedAt)} />
+              <DetailRow label={t.imageManager.created} value={formatDate(image.createdAt)} />
+              <DetailRow label={t.imageManager.referenceCount} value={String(image.referenceCount)} />
             </dl>
           </section>
 
           <section className="rounded-2xl border border-border/60 bg-background/70 p-4">
-            <h3 className="text-sm font-semibold">Actions</h3>
+            <h3 className="text-sm font-semibold">{t.imageManager.actions}</h3>
             <div className="mt-3 flex flex-wrap gap-2">
               <button onClick={() => onCopyPath(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
-                Copy path
+                {t.imageManager.copyPath}
               </button>
               <button onClick={() => onLocate(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
-                Locate in tree
+                {t.imageManager.locateInTree}
               </button>
               <button onClick={() => onReveal(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
-                Reveal in finder
+                {t.imageManager.revealInFinder}
               </button>
               <button onClick={() => onRename(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
-                Rename safely
+                {t.imageManager.renameSafely}
               </button>
               <button onClick={() => onMove(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
-                Move safely
+                {t.imageManager.moveSafely}
               </button>
             </div>
           </section>
 
           <section className="rounded-2xl border border-border/60 bg-background/70 p-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">Referenced by notes</h3>
-              <span className="text-xs text-muted-foreground">{image.referencedBy.length} note(s)</span>
+              <h3 className="text-sm font-semibold">{t.imageManager.referencedByNotes}</h3>
+              <span className="text-xs text-muted-foreground">{t.imageManager.noteCount.replace("{count}", String(image.referencedBy.length))}</span>
             </div>
             {image.referencedBy.length === 0 ? (
               <div className="mt-3 rounded-xl border border-dashed border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm text-amber-700 dark:text-amber-300">
-                No note currently references this image. It is safe to review, rename, move, or clean up.
+                {t.imageManager.noReferencesWarning}
               </div>
             ) : (
               <div className="mt-3 space-y-2">
@@ -1277,7 +1287,7 @@ function ImageDetailPanel({
                       <p className="mt-1 truncate text-xs text-muted-foreground">{note.noteRelativePath}</p>
                     </div>
                     <span className="ml-3 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
-                      {note.occurrenceCount} refs
+                      {t.imageManager.refs.replace("{count}", String(note.occurrenceCount))}
                     </span>
                   </button>
                 ))}
@@ -1291,18 +1301,22 @@ function ImageDetailPanel({
 }
 
 function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; onMove: () => void }) {
+  const { t } = useLocaleStore();
   const totalSize = images.reduce((sum, image) => sum + (image.sizeBytes ?? 0), 0);
   const orphanCount = images.filter((image) => image.orphan).length;
   return (
     <div className="flex h-full flex-col px-4 py-4">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Batch actions</p>
-      <h2 className="mt-2 text-lg font-semibold">{images.length} images selected</h2>
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t.imageManager.batchActions}</p>
+      <h2 className="mt-2 text-lg font-semibold">{t.imageManager.imagesSelected.replace("{count}", String(images.length))}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        {orphanCount} orphaned, {images.filter((image) => image.multiReferenced).length} multi-referenced, total size {formatBytes(totalSize)}.
+        {t.imageManager.batchSummary
+          .replace("{orphanCount}", String(orphanCount))
+          .replace("{multiCount}", String(images.filter((image) => image.multiReferenced).length))
+          .replace("{totalSize}", formatBytes(totalSize))}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button onClick={onMove} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
-          Move selected safely
+          {t.imageManager.moveSelectedSafely}
         </button>
       </div>
       <div className="mt-5 space-y-2 overflow-auto">
@@ -1341,28 +1355,29 @@ function ActionDialog({
   onPrepare: () => void;
   onExecute: () => void;
 }) {
+  const { t } = useLocaleStore();
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4 backdrop-blur-sm">
       <div className="w-full max-w-2xl rounded-3xl border border-border/60 bg-background shadow-2xl">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
           <div>
             <h2 className="text-lg font-semibold">
-              {dialog.kind === "rename" ? "Rename image safely" : `Move ${dialog.paths.length} image(s) safely`}
+              {dialog.kind === "rename" ? t.imageManager.renameImageSafely : t.imageManager.moveImagesSafely.replace("{count}", String(dialog.paths.length))}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               {dialog.kind === "rename"
-                ? "Lumina will rename the image file and rewrite every affected Markdown reference before it leaves this dialog."
-                : "Lumina will move the image files into the target folder and update every affected Markdown reference in one operation."}
+                ? t.imageManager.renameDescription
+                : t.imageManager.moveDescription}
             </p>
           </div>
-          <button onClick={onClose} className="ui-icon-btn h-9 w-9" title="Close dialog">
+          <button onClick={onClose} className="ui-icon-btn h-9 w-9" title={t.imageManager.closeDialog}>
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="space-y-4 px-5 py-5">
           <div className="space-y-2">
-            <label className="text-sm font-medium">{dialog.kind === "rename" ? "New file name" : "Target folder (vault relative)"}</label>
+            <label className="text-sm font-medium">{dialog.kind === "rename" ? t.imageManager.newFileName : t.imageManager.targetFolder}</label>
             <input
               value={dialog.value}
               onChange={(event) => onChangeValue(event.target.value)}
@@ -1385,15 +1400,15 @@ function ActionDialog({
             <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-medium text-primary">
-                  {dialog.preview.changes.length} image file(s)
+                  {t.imageManager.imageFiles.replace("{count}", String(dialog.preview.changes.length))}
                 </span>
                 <span className="rounded-full border border-border/60 bg-background px-3 py-1 font-medium">
-                  {dialog.preview.noteUpdates.length} note(s) will be rewritten
+                  {t.imageManager.notesWillBeRewritten.replace("{count}", String(dialog.preview.noteUpdates.length))}
                 </span>
               </div>
               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                 <div>
-                  <h3 className="text-sm font-semibold">File changes</h3>
+                  <h3 className="text-sm font-semibold">{t.imageManager.fileChanges}</h3>
                   <div className="mt-2 space-y-2">
                     {dialog.preview.changes.map((change) => (
                       <div key={`${change.from}-${change.to}`} className="rounded-xl border border-border/60 bg-background px-3 py-3 text-xs">
@@ -1404,17 +1419,17 @@ function ActionDialog({
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold">Affected notes</h3>
+                  <h3 className="text-sm font-semibold">{t.imageManager.affectedNotes}</h3>
                   {dialog.preview.noteUpdates.length === 0 ? (
                     <div className="mt-2 rounded-xl border border-dashed border-border/60 px-3 py-3 text-sm text-muted-foreground">
-                      No note references need to change for this action.
+                      {t.imageManager.noNoteReferencesNeedChange}
                     </div>
                   ) : (
                     <div className="mt-2 space-y-2">
                       {dialog.preview.noteUpdates.map((note) => (
                         <div key={note.notePath} className="rounded-xl border border-border/60 bg-background px-3 py-3 text-xs">
                           <div className="truncate font-medium text-foreground">{note.notePath}</div>
-                          <div className="mt-1 text-muted-foreground">{note.changes.reduce((sum, change) => sum + change.occurrenceCount, 0)} reference(s) updated</div>
+                          <div className="mt-1 text-muted-foreground">{t.imageManager.referencesUpdated.replace("{count}", String(note.changes.reduce((sum, change) => sum + change.occurrenceCount, 0)))}</div>
                         </div>
                       ))}
                     </div>
@@ -1427,7 +1442,7 @@ function ActionDialog({
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 px-5 py-4">
           <button onClick={onClose} className="rounded-lg border border-border/60 bg-background px-4 py-2 text-sm hover:bg-accent">
-            Cancel
+            {t.common.cancel}
           </button>
           {!dialog.preview ? (
             <button
@@ -1435,7 +1450,7 @@ function ActionDialog({
               disabled={dialog.preparing || !dialog.value.trim()}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {dialog.preparing ? "Preparing…" : "Review affected notes"}
+              {dialog.preparing ? t.imageManager.preparing : t.imageManager.reviewAffectedNotes}
             </button>
           ) : (
             <button
@@ -1443,7 +1458,7 @@ function ActionDialog({
               disabled={dialog.executing}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {dialog.executing ? "Applying changes…" : dialog.kind === "rename" ? "Confirm rename" : "Confirm move"}
+              {dialog.executing ? t.imageManager.applyingChanges : dialog.kind === "rename" ? t.imageManager.confirmRename : t.imageManager.confirmMove}
             </button>
           )}
         </div>
