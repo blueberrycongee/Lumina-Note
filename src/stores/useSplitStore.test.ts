@@ -245,6 +245,9 @@ describe('useSplitStore', () => {
       await store.openSecondaryFile('/invalid/path.md');
       
       const state = useSplitStore.getState();
+      expect(state.secondaryFile).toBeNull();
+      expect(state.secondaryContent).toBe('');
+      expect(state.secondaryIsDirty).toBe(false);
       expect(state.isLoadingSecondary).toBe(false);
     });
   });

@@ -108,4 +108,37 @@ describe('parsePDF cache', () => {
     expect(second.fromCache).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it('returns an error result when fetch rejects', async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new Error('Network error');
+    });
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    const result = await parsePDF({
+      pdfPath: '/path/to/file.pdf',
+      config: { backend: 'pp-structure' },
+      useCache: false,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Network error');
+  });
+
+  it('returns an error result when the parser responds with a non-ok status', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      statusText: 'Bad Request',
+    }));
+    vi.stubGlobal('fetch', fetchMock as unknown as typeof fetch);
+
+    const result = await parsePDF({
+      pdfPath: '/path/to/file.pdf',
+      config: { backend: 'pp-structure' },
+      useCache: false,
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Bad Request');
+  });
 });

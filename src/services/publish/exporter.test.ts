@@ -75,4 +75,34 @@ title: Hello
       expect(call[1]).toEqual({ recursive: true });
     }
   });
+
+  it("propagates asset copy failures after writing planned files", async () => {
+    readFileMock.mockResolvedValue(`---
+visibility: public
+title: Hello
+---
+
+![Alt](./img.png)
+`);
+    readBinaryFileBase64Mock.mockRejectedValue(new Error('asset read failed'));
+
+    await expect(
+      publishSite({
+        vaultPath: '/vault',
+        fileTree: makeFileTree(['/vault/Hello.md']),
+        profile: {
+          id: 'profile-1',
+          displayName: 'Ada',
+          bio: 'Bio',
+          avatarUrl: '',
+          links: [],
+          pinnedNotePaths: [],
+        },
+        options: { outputDir: '/vault/site' },
+      }),
+    ).rejects.toThrow('asset read failed');
+
+    expect(saveFileMock).toHaveBeenCalledWith('/vault/site/index.html', expect.any(String));
+    expect(writeBinaryFileMock).not.toHaveBeenCalled();
+  });
 });

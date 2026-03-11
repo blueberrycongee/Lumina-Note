@@ -138,4 +138,31 @@ describe("useTypesettingDocStore", () => {
     expect(doc?.blocks[0]).toEqual(blocks[0]);
     expect(doc?.isDirty).toBe(false);
   });
+
+  it('propagates export failures without clearing the dirty flag', async () => {
+    const path = 'C:/vault/report.docx';
+    const targetPath = 'C:/exports/report.docx';
+    useTypesettingDocStore.setState({
+      docs: {
+        [path]: buildDoc(path, {
+          blocks: [{ type: 'paragraph', runs: [{ text: 'Draft' }] } as DocxBlock],
+          isDirty: true,
+        }),
+      },
+    });
+
+    vi.mocked(writeBinaryFile).mockRejectedValueOnce(new Error('write failed'));
+
+    await expect(useTypesettingDocStore.getState().exportDocx(path, targetPath)).rejects.toThrow('write failed');
+    expect(useTypesettingDocStore.getState().docs[path]?.isDirty).toBe(true);
+  });
+
+  it('rejects invalid docx bytes without mutating docs state', async () => {
+    const path = 'C:/vault/broken.docx';
+
+    await expect(
+      useTypesettingDocStore.getState().openDocFromBytes(path, new Uint8Array([1, 2, 3])),
+    ).rejects.toThrow();
+    expect(useTypesettingDocStore.getState().docs[path]).toBeUndefined();
+  });
 });

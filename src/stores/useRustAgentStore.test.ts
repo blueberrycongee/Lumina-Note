@@ -428,6 +428,14 @@ describe('useRustAgentStore', () => {
       const finalMessages = useRustAgentStore.getState().messages;
       const hasLateMessage = finalMessages.some((msg) => msg.content === 'late-message');
       expect(hasLateMessage).toBe(true);
+      expect(callLLMMock).toHaveBeenCalledWith(
+        [
+          { role: 'system', content: 'Summarize the conversation.' },
+          expect.objectContaining({ role: 'user', content: expect.stringContaining('[USER] m1') }),
+        ],
+        { maxTokens: 1200, temperature: 0.2 },
+        { provider: 'openai', model: 'gpt-4', apiKey: 'test-key', baseUrl: undefined, customModelId: undefined },
+      );
     });
 
     it('should not overwrite messages after session switch during compaction', async () => {

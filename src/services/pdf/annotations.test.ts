@@ -224,3 +224,32 @@ describe('stringifyAnnotationsMarkdown + parseAnnotationsMarkdown', () => {
     expect(markdown).toContain('## 第 3 页');
   });
 });
+
+describe('missing annotation ids', () => {
+  it('leaves annotations unchanged when updating a missing id', () => {
+    let file = createEmptyAnnotationFile('/test.pdf');
+    file = addAnnotation(file, {
+      type: 'highlight', color: 'yellow', pageIndex: 1,
+      selectedText: 'Keep me', position: { pageIndex: 1, rects: [] },
+    });
+
+    const updated = updateAnnotation(file, 'missing-id', { note: 'ignored' });
+
+    expect(updated.annotations).toHaveLength(1);
+    expect(updated.annotations[0].note).toBeUndefined();
+    expect(updated.annotations[0].selectedText).toBe('Keep me');
+  });
+
+  it('leaves annotations unchanged when deleting a missing id', () => {
+    let file = createEmptyAnnotationFile('/test.pdf');
+    file = addAnnotation(file, {
+      type: 'highlight', color: 'yellow', pageIndex: 1,
+      selectedText: 'Keep me', position: { pageIndex: 1, rects: [] },
+    });
+
+    const updated = deleteAnnotation(file, 'missing-id');
+
+    expect(updated.annotations).toHaveLength(1);
+    expect(updated.annotations[0].selectedText).toBe('Keep me');
+  });
+});

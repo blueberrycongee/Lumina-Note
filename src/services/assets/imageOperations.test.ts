@@ -173,4 +173,27 @@ describe("imageOperations", () => {
     );
     expect(preview.changes).toEqual([{ from: "/vault/assets/hero.png", to: "/vault/assets/cover.png" }]);
   });
+
+  it('stops before renaming files when creating the target directory fails', async () => {
+    const renameFileFn = vi.fn(async () => {});
+    const saveFileFn = vi.fn(async () => {});
+    const createDirFn = vi.fn(async () => {
+      throw new Error('mkdir failed');
+    });
+
+    await expect(
+      executeImageAssetChanges({
+        changes: [{ from: '/vault/assets/hero.png', to: '/vault/media/hero.png' }],
+        noteUpdates: [],
+        renameFileFn,
+        saveFileFn,
+        createDirFn,
+        refreshFileTree: vi.fn(async () => {}),
+        reloadFileIfOpen: vi.fn(async () => {}),
+      }),
+    ).rejects.toThrow('mkdir failed');
+
+    expect(renameFileFn).not.toHaveBeenCalled();
+    expect(saveFileFn).not.toHaveBeenCalled();
+  });
 });
