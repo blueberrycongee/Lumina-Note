@@ -1,6 +1,7 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { useShallow } from "zustand/react/shallow";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import {
@@ -13,6 +14,7 @@ import {
 } from "@/services/openclaw/workspace";
 import { join } from "@/lib/path";
 import { exists } from "@/lib/tauri";
+import { reportOperationError } from "@/lib/reportError";
 
 function formatCheckedAt(timestamp: number): string {
   return new Date(timestamp).toLocaleString();
@@ -44,20 +46,24 @@ export function OpenClawWorkspaceSection() {
     updateGateway,
     clearConflictState,
     isRefreshing,
-  } = useOpenClawWorkspaceStore((state) => ({
-    integrationEnabled: state.integrationEnabled,
-    getSnapshot: state.getSnapshot,
-    getAttachment: state.getAttachment,
-    getMountedWorkspacePath: state.getMountedWorkspacePath,
-    getConflictState: state.getConflictState,
-    setIntegrationEnabled: state.setIntegrationEnabled,
-    refreshWorkspace: state.refreshWorkspace,
-    attachWorkspace: state.attachWorkspace,
-    detachWorkspace: state.detachWorkspace,
-    updateGateway: state.updateGateway,
-    clearConflictState: state.clearConflictState,
-    isRefreshing: state.isRefreshing,
-  }));
+    lastError,
+  } = useOpenClawWorkspaceStore(
+    useShallow((state) => ({
+      integrationEnabled: state.integrationEnabled,
+      getSnapshot: state.getSnapshot,
+      getAttachment: state.getAttachment,
+      getMountedWorkspacePath: state.getMountedWorkspacePath,
+      getConflictState: state.getConflictState,
+      setIntegrationEnabled: state.setIntegrationEnabled,
+      refreshWorkspace: state.refreshWorkspace,
+      attachWorkspace: state.attachWorkspace,
+      detachWorkspace: state.detachWorkspace,
+      updateGateway: state.updateGateway,
+      clearConflictState: state.clearConflictState,
+      isRefreshing: state.isRefreshing,
+      lastError: state.lastError,
+    })),
+  );
 
   const snapshot = getSnapshot(vaultPath);
   const attachment = getAttachment(vaultPath);
@@ -65,40 +71,85 @@ export function OpenClawWorkspaceSection() {
   const conflictState = getConflictState(vaultPath);
   const [gatewayEndpointDraft, setGatewayEndpointDraft] = useState("");
   const [mountedPathDraft, setMountedPathDraft] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const visibleError = actionError ?? lastError ?? snapshot?.error ?? null;
 
   useEffect(() => {
-    setGatewayEndpointDraft(attachment?.gateway.endpoint ?? "");
+    const next = attachment?.gateway.endpoint ?? "";
+    setGatewayEndpointDraft((current) => (current === next ? current : next));
   }, [attachment?.gateway.endpoint]);
 
   useEffect(() => {
-    setMountedPathDraft(mountedWorkspacePath ?? "");
+    const next = mountedWorkspacePath ?? "";
+    setMountedPathDraft((current) => (current === next ? current : next));
   }, [mountedWorkspacePath]);
 
   const handleOpenAgents = async () => {
     if (!snapshot) return;
-    await openIfExists(snapshot, join(snapshot.workspacePath, "AGENTS.md"), openFile);
+    try {
+      setActionError(null);
+      await openIfExists(snapshot, join(snapshot.workspacePath, "AGENTS.md"), openFile);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setActionError(message);
+      reportOperationError({
+        source: "OpenClawWorkspaceSection.handleOpenAgents",
+        action: "Open AGENTS.md from mounted OpenClaw workspace",
+        error,
+        level: "warning",
+        context: { vaultPath, workspacePath: snapshot.workspacePath },
+      });
+    }
   };
 
   const handleOpenTodayMemory = async () => {
     if (!snapshot) return;
-    const path = await ensureOpenClawTodayMemoryNote(snapshot.workspacePath);
-    await openFile(path);
-    void refreshWorkspace(vaultPath, { workspacePath: snapshot.workspacePath });
+    try {
+      setActionError(null);
+      const path = await ensureOpenClawTodayMemoryNote(snapshot.workspacePath);
+      await openFile(path);
+      await refreshWorkspace(vaultPath, { workspacePath: snapshot.workspacePath });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setActionError(message);
+      reportOperationError({
+        source: "OpenClawWorkspaceSection.handleOpenTodayMemory",
+        action: "Open or create today's OpenClaw memory note",
+        error,
+        level: "warning",
+        context: { vaultPath, workspacePath: snapshot.workspacePath },
+      });
+    }
   };
 
   const handleAttach = async () => {
     if (!vaultPath) return;
     const targetWorkspacePath = mountedPathDraft.trim() || vaultPath;
-    await attachWorkspace({
-      hostWorkspacePath: vaultPath,
-      workspacePath: targetWorkspacePath,
-    });
-    void refreshWorkspace(vaultPath, { workspacePath: targetWorkspacePath });
+    try {
+      setActionError(null);
+      await attachWorkspace({
+        hostWorkspacePath: vaultPath,
+        workspacePath: targetWorkspacePath,
+      });
+      await refreshWorkspace(vaultPath, { workspacePath: targetWorkspacePath });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setActionError(message);
+      reportOperationError({
+        source: "OpenClawWorkspaceSection.handleAttach",
+        action: "Attach external OpenClaw workspace",
+        error,
+        level: "warning",
+        context: { vaultPath, workspacePath: targetWorkspacePath },
+      });
+    }
   };
 
   const handleDetach = () => {
     if (!vaultPath) return;
     detachWorkspace(vaultPath);
+    setActionError(null);
   };
 
   const handleSaveGateway = () => {
@@ -110,16 +161,51 @@ export function OpenClawWorkspaceSection() {
   };
 
   const handlePickWorkspace = async () => {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: t.settingsModal.openClawPickWorkspace,
-    });
-    if (typeof selected === "string") {
-      setMountedPathDraft(selected);
-      if (vaultPath) {
-        void refreshWorkspace(vaultPath, { workspacePath: selected });
+    try {
+      setActionError(null);
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: t.settingsModal.openClawPickWorkspace,
+      });
+      if (typeof selected === "string") {
+        setMountedPathDraft(selected);
+        if (vaultPath) {
+          await refreshWorkspace(vaultPath, { workspacePath: selected });
+        }
       }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setActionError(message);
+      reportOperationError({
+        source: "OpenClawWorkspaceSection.handlePickWorkspace",
+        action: "Pick external OpenClaw workspace path",
+        error,
+        level: "warning",
+        context: { vaultPath },
+      });
+    }
+  };
+
+  const handleRescan = async () => {
+    try {
+      setActionError(null);
+      await refreshWorkspace(vaultPath, {
+        workspacePath: mountedPathDraft.trim() || mountedWorkspacePath || vaultPath || undefined,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setActionError(message);
+      reportOperationError({
+        source: "OpenClawWorkspaceSection.handleRescan",
+        action: "Refresh OpenClaw workspace detection",
+        error,
+        level: "warning",
+        context: {
+          vaultPath,
+          workspacePath: mountedPathDraft.trim() || mountedWorkspacePath || null,
+        },
+      });
     }
   };
 
@@ -144,11 +230,7 @@ export function OpenClawWorkspaceSection() {
           </label>
           <button
             type="button"
-            onClick={() =>
-              void refreshWorkspace(vaultPath, {
-                workspacePath: mountedPathDraft.trim() || mountedWorkspacePath || vaultPath || undefined,
-              })
-            }
+            onClick={() => void handleRescan()}
             disabled={!vaultPath || isRefreshing || !integrationEnabled}
             className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-background/60 px-3 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
           >
@@ -174,6 +256,13 @@ export function OpenClawWorkspaceSection() {
 
       {integrationEnabled && vaultPath && (
         <div className="space-y-3 rounded-lg border border-border bg-background/70 p-3">
+          {visibleError && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700">
+              <div className="font-medium">{t.settingsModal.openClawRuntimeErrorTitle}</div>
+              <p className="mt-1 break-all">{visibleError}</p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <span className="font-medium">{t.settingsModal.openClawMountedWorkspace}</span>
             <div className="flex items-center gap-2">

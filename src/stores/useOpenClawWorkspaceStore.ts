@@ -13,6 +13,8 @@ import type { OpenClawConflictState, OpenClawWorkspaceAttachment } from "@/types
 export const OPENCLAW_WORKSPACE_RELEASE_ENABLED =
   (import.meta.env.VITE_ENABLE_OPENCLAW_WORKSPACE ?? "1") !== "0";
 
+const EMPTY_FILE_TREE: FileEntry[] = [];
+
 type AttachWorkspaceInput = {
   hostWorkspacePath: string;
   workspacePath: string;
@@ -87,6 +89,20 @@ function normalizeAttachment(
   };
 }
 
+function normalizeAttachmentRecord(
+  attachments:
+    | Record<string, OpenClawWorkspaceAttachment>
+    | undefined,
+): Record<string, OpenClawWorkspaceAttachment> {
+  if (!attachments) return {};
+  return Object.fromEntries(
+    Object.entries(attachments).map(([hostWorkspacePath, attachment]) => [
+      hostWorkspacePath,
+      normalizeAttachment(hostWorkspacePath, attachment) as OpenClawWorkspaceAttachment,
+    ]),
+  );
+}
+
 async function syncWorkspaceAccessRoots(paths: string[]): Promise<void> {
   for (const path of paths) {
     useWorkspaceStore.getState().registerWorkspace(path);
@@ -105,6 +121,13 @@ function resolveTargetWorkspacePath(
 ): string {
   return explicitWorkspacePath ?? state.attachmentsByHostPath[hostWorkspacePath]?.workspacePath ?? hostWorkspacePath;
 }
+
+type PersistedOpenClawWorkspaceState = Partial<OpenClawWorkspaceState> & {
+  snapshotsByPath?: Record<string, OpenClawWorkspaceSnapshot>;
+  attachmentsByPath?: Record<string, OpenClawWorkspaceAttachment>;
+  conflictsByPath?: Record<string, OpenClawConflictState>;
+  activeWorkspacePath?: string | null;
+};
 
 export const useOpenClawWorkspaceStore = create<OpenClawWorkspaceState>()(
   persist(
@@ -182,8 +205,8 @@ export const useOpenClawWorkspaceStore = create<OpenClawWorkspaceState>()(
       },
       getMountedFileTree: (hostWorkspacePath) => {
         const targetHostPath = hostWorkspacePath ?? get().activeHostWorkspacePath;
-        if (!targetHostPath) return [];
-        return get().mountedFileTreesByHostPath[targetHostPath] ?? [];
+        if (!targetHostPath) return EMPTY_FILE_TREE;
+        return get().mountedFileTreesByHostPath[targetHostPath] ?? EMPTY_FILE_TREE;
       },
       getSnapshot: (hostWorkspacePath) => {
         if (!OPENCLAW_WORKSPACE_RELEASE_ENABLED || !get().integrationEnabled) return null;
@@ -207,13 +230,12 @@ export const useOpenClawWorkspaceStore = create<OpenClawWorkspaceState>()(
         if (!OPENCLAW_WORKSPACE_RELEASE_ENABLED || !get().integrationEnabled) return null;
         const targetHostPath = hostWorkspacePath ?? get().activeHostWorkspacePath;
         if (!targetHostPath) return null;
-        return normalizeAttachment(targetHostPath, get().attachmentsByHostPath[targetHostPath]);
+        return get().attachmentsByHostPath[targetHostPath] ?? null;
       },
       getMountedWorkspacePath: (hostWorkspacePath) => {
         const targetHostPath = hostWorkspacePath ?? get().activeHostWorkspacePath;
         if (!targetHostPath) return null;
-        return normalizeAttachment(targetHostPath, get().attachmentsByHostPath[targetHostPath])
-          ?.workspacePath ?? null;
+        return get().attachmentsByHostPath[targetHostPath]?.workspacePath ?? null;
       },
       attachWorkspace: async ({ hostWorkspacePath, workspacePath, gateway }) => {
         if (!OPENCLAW_WORKSPACE_RELEASE_ENABLED || !get().integrationEnabled) {
@@ -410,6 +432,26 @@ export const useOpenClawWorkspaceStore = create<OpenClawWorkspaceState>()(
     }),
     {
       name: "lumina-openclaw-workspaces",
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as PersistedOpenClawWorkspaceState;
+        const snapshotsByHostPath =
+          persisted.snapshotsByHostPath ?? persisted.snapshotsByPath ?? currentState.snapshotsByHostPath;
+        const attachmentsByHostPath = normalizeAttachmentRecord(
+          persisted.attachmentsByHostPath ?? persisted.attachmentsByPath,
+        );
+        const conflictsByHostPath =
+          persisted.conflictsByHostPath ?? persisted.conflictsByPath ?? currentState.conflictsByHostPath;
+        return {
+          ...currentState,
+          ...persisted,
+          snapshotsByHostPath,
+          mountedFileTreesByHostPath: currentState.mountedFileTreesByHostPath,
+          attachmentsByHostPath,
+          conflictsByHostPath,
+          activeHostWorkspacePath:
+            persisted.activeHostWorkspacePath ?? persisted.activeWorkspacePath ?? null,
+        };
+      },
       partialize: (state) => ({
         integrationEnabled: state.integrationEnabled,
         snapshotsByHostPath: state.snapshotsByHostPath,

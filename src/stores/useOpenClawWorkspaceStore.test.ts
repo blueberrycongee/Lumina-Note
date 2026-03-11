@@ -194,6 +194,44 @@ describe("useOpenClawWorkspaceStore", () => {
     });
   });
 
+  it("returns stable references for mounted trees and attachments", async () => {
+    const emptyTreeA = useOpenClawWorkspaceStore.getState().getMountedFileTree(null);
+    const emptyTreeB = useOpenClawWorkspaceStore.getState().getMountedFileTree(null);
+    expect(emptyTreeA).toBe(emptyTreeB);
+
+    inspectMock.mockResolvedValue({
+      workspacePath: mountedWorkspacePath,
+      status: "detected",
+      checkedAt: 1,
+      matchedRequiredFiles: ["AGENTS.md", "SOUL.md", "USER.md"],
+      matchedOptionalFiles: [],
+      matchedDirectories: ["memory"],
+      missingRequiredFiles: [],
+      memoryDirectoryPath: `${mountedWorkspacePath}/memory`,
+      todayMemoryPath: `${mountedWorkspacePath}/memory/2026-03-11.md`,
+      artifactDirectoryPaths: [],
+      planDirectoryPaths: [],
+      recentMemoryPaths: [],
+      planFilePaths: [],
+      artifactFilePaths: [],
+      artifactFileCount: 0,
+      bridgeNotePaths: [],
+      editablePriorityFiles: ["AGENTS.md", "SOUL.md", "USER.md"],
+      indexingScope: "shared-workspace",
+      gatewayEnabled: false,
+      error: null,
+    });
+
+    await useOpenClawWorkspaceStore.getState().attachWorkspace({
+      hostWorkspacePath,
+      workspacePath: mountedWorkspacePath,
+    });
+
+    const attachmentA = useOpenClawWorkspaceStore.getState().getAttachment(hostWorkspacePath);
+    const attachmentB = useOpenClawWorkspaceStore.getState().getAttachment(hostWorkspacePath);
+    expect(attachmentA).toBe(attachmentB);
+  });
+
   it("marks an attached workspace unavailable when the path stops refreshing", async () => {
     inspectMock.mockResolvedValue({
       workspacePath: mountedWorkspacePath,
