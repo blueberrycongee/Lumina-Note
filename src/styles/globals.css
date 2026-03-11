@@ -62,10 +62,10 @@ body.resizing iframe[data-codex-iframe="true"] {
   --db-radius-sm: var(--ui-radius-sm);
   --db-radius-md: var(--ui-radius-md);
   --db-radius-lg: var(--ui-radius-lg);
-  --db-motion-feedback: 120ms;
-  --db-motion-panel: 180ms;
+  --db-motion-feedback: var(--ui-motion-feedback);
+  --db-motion-panel: var(--ui-motion-panel);
   --db-motion-layout: 220ms;
-  --db-motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --db-motion-ease: var(--ui-motion-ease);
 }
 
 .dark {
