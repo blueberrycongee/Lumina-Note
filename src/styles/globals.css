@@ -1189,7 +1189,10 @@ mark {
 
 /* Mode switcher button animation */
 .mode-switcher-btn {
-  transition: transform var(--ui-motion-feedback) var(--ui-motion-ease);
+  transition: transform var(--ui-motion-feedback) var(--ui-motion-ease),
+    background-color var(--ui-motion-feedback) var(--ui-motion-ease),
+    color var(--ui-motion-feedback) var(--ui-motion-ease),
+    box-shadow var(--ui-motion-feedback) var(--ui-motion-ease);
 }
 
 .mode-switcher-btn:hover {
