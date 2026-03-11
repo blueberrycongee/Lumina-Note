@@ -89,8 +89,8 @@ describe('themePlugin', () => {
 
     const imported = importTheme(exported);
     expect(imported?.id).toBe('custom');
-    expect((imported as Record<string, unknown>)._exportedFrom).toBeUndefined();
-    expect((imported as Record<string, unknown>)._exportedAt).toBeUndefined();
+    expect((imported as unknown as Record<string, unknown>)._exportedFrom).toBeUndefined();
+    expect((imported as unknown as Record<string, unknown>)._exportedAt).toBeUndefined();
   });
 
   it('creates a localized independent theme template from a base theme', () => {
