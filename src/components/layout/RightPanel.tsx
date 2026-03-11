@@ -133,7 +133,7 @@ function BacklinksView() {
         {backlinks.map((backlink, idx) => (
           <button
             key={`${backlink.path}-${idx}`}
-            onClick={() => openFile(backlink.path)}
+            onClick={() => openFile(backlink.path, { preview: true })}
             className="w-full text-left px-3 py-2 hover:bg-accent transition-colors group"
           >
             <div className="flex items-center gap-2 mb-1">
@@ -228,7 +228,7 @@ function TagsView() {
                 {tagInfo.files.map((filePath) => (
                   <button
                     key={filePath}
-                    onClick={() => openFile(filePath)}
+                    onClick={() => openFile(filePath, { preview: true })}
                     className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2 text-sm"
                   >
                     <FileText size={12} className="text-muted-foreground" />
