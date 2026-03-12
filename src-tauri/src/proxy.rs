@@ -119,3 +119,59 @@ pub async fn test_proxy_connection(
         .map_err(|e| format!("Connection failed: {}", e))?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_client_no_proxy() {
+        let client = build_client(None);
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn build_client_with_http_proxy() {
+        let client = build_client(Some("http://127.0.0.1:7890"));
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn build_client_with_socks5_proxy() {
+        let client = build_client(Some("socks5://127.0.0.1:1080"));
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn build_client_with_empty_proxy() {
+        let client = build_client(Some(""));
+        assert!(client.is_ok());
+    }
+
+    #[test]
+    fn build_client_with_invalid_proxy() {
+        // reqwest::Proxy::all rejects URLs without a valid scheme
+        let client = build_client(Some("://missing-scheme"));
+        assert!(client.is_err());
+    }
+
+    #[tokio::test]
+    async fn proxy_state_default_config() {
+        let state = ProxyState::new();
+        let config = state.get_config().await;
+        assert!(!config.enabled);
+        assert!(config.proxy_url.is_empty());
+    }
+
+    #[tokio::test]
+    async fn proxy_state_set_config() {
+        let state = ProxyState::new();
+        state
+            .set_config("http://127.0.0.1:7890".into(), true)
+            .await
+            .unwrap();
+        let config = state.get_config().await;
+        assert!(config.enabled);
+        assert_eq!(config.proxy_url, "http://127.0.0.1:7890");
+    }
+}
