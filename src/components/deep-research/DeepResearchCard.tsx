@@ -80,23 +80,23 @@ function PhaseStatus({
   const currentOrder = RESEARCH_PHASES.indexOf(currentPhase);
 
   if (currentPhase === "completed") {
-    return <Check className="w-4 h-4 text-green-500" />;
+    return <Check className="w-4 h-4 text-success" />;
   }
 
   if (currentPhase === "error") {
     return phaseOrder <= currentOrder ? (
-      <AlertCircle className="w-4 h-4 text-red-500" />
+      <AlertCircle className="w-4 h-4 text-destructive" />
     ) : (
       <Clock className="w-4 h-4 text-muted-foreground" />
     );
   }
 
   if (phaseOrder < currentOrder) {
-    return <Check className="w-4 h-4 text-green-500" />;
+    return <Check className="w-4 h-4 text-success" />;
   }
 
   if (phaseOrder === currentOrder) {
-    return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+    return <Loader2 className="w-4 h-4 text-info animate-spin" />;
   }
 
   return <Clock className="w-4 h-4 text-muted-foreground" />;
@@ -351,7 +351,7 @@ function CrawlingPagesList({
                 {result.title}
               </span>
               {!isCurrentlyCrawling && (
-                <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
+                <Check className="w-3 h-3 text-success flex-shrink-0" />
               )}
             </motion.li>
           );
@@ -402,12 +402,12 @@ function ClarificationPanel({
   };
 
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+    <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
       {/* 问题 */}
       <div className="flex items-start gap-2">
-        <MessageCircleQuestion className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+        <MessageCircleQuestion className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
         <div>
-          <div className="font-medium text-sm text-amber-700 dark:text-amber-400">
+          <div className="font-medium text-sm text-warning">
             {t.deepResearch.clarifyTitle}
           </div>
           <div className="text-sm text-foreground mt-1">{question}</div>
@@ -690,13 +690,13 @@ ${reportContent}`;
 
         {/* 状态图标 */}
         {phase === "completed" && (
-          <Check className="w-5 h-5 text-green-500" />
+          <Check className="w-5 h-5 text-success" />
         )}
         {phase === "error" && (
-          <AlertCircle className="w-5 h-5 text-red-500" />
+          <AlertCircle className="w-5 h-5 text-destructive" />
         )}
         {phase === "waiting_for_clarification" && (
-          <MessageCircleQuestion className="w-5 h-5 text-amber-500" />
+          <MessageCircleQuestion className="w-5 h-5 text-warning" />
         )}
         {isRunning && phase !== "waiting_for_clarification" && (
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
@@ -722,7 +722,7 @@ ${reportContent}`;
             <div className="px-4 py-3 space-y-3">
               {/* 错误信息 */}
               {error && (
-                <div className="flex items-start gap-2 p-3 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 text-sm">
+                <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -836,7 +836,7 @@ ${reportContent}`;
 
                 {isRunning && (
                   <button
-                    className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20"
+                    className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20"
                     onClick={abortResearch}
                   >
                     <X className="w-3 h-3" />

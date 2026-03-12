@@ -95,7 +95,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
           <div className="text-xs text-muted-foreground">{t.ai.skillsManagerDesc}</div>
 
           {error && (
-            <div className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-md p-2">
+            <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
               {error}
             </div>
           )}

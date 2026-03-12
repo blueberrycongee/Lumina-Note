@@ -232,9 +232,9 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   disabled={testResult.status === "testing"}
                   className={`px-3 py-2 text-xs rounded border transition-all flex items-center gap-1.5 min-w-[90px] justify-center ${
                     testResult.status === "success"
-                      ? "border-green-500/50 bg-green-500/10 text-green-500"
+                      ? "border-success/50 bg-success/10 text-success"
                       : testResult.status === "error"
-                        ? "border-red-500/50 bg-red-500/10 text-red-500"
+                        ? "border-destructive/50 bg-destructive/10 text-destructive"
                         : "border-border hover:bg-muted"
                   }`}
                 >
@@ -263,13 +263,13 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
               </div>
               {/* 测试结果详情 */}
               {testResult.status === "error" && testResult.message && (
-                <div className="mt-1.5 text-xs text-red-500 bg-red-500/10 rounded px-2 py-1.5 flex items-start gap-1.5">
+                <div className="mt-1.5 text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5 flex items-start gap-1.5">
                   <X size={12} className="shrink-0 mt-0.5" />
                   <span>{testResult.message}</span>
                 </div>
               )}
               {testResult.status === "success" && (
-                <div className="mt-1.5 text-xs text-green-500 bg-green-500/10 rounded px-2 py-1.5 flex items-center gap-1.5">
+                <div className="mt-1.5 text-xs text-success bg-success/10 rounded px-2 py-1.5 flex items-center gap-1.5">
                   <Check size={12} />
                   <span>{t.aiSettings.testSuccessDetail}</span>
                 </div>
@@ -432,7 +432,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       <button
                         type="button"
                         onClick={cancelIndex}
-                        className="px-2 py-1 rounded border border-red-500/60 text-xs text-red-500 hover:bg-red-500/10"
+                        className="px-2 py-1 rounded border border-destructive/60 text-xs text-destructive hover:bg-destructive/10"
                       >
                         {t.aiSettings.cancelIndex}
                       </button>
@@ -596,12 +596,12 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{t.aiSettings.indexStatus}</span>
                     {ragIsIndexing ? (
-                      <span className="text-yellow-500 flex items-center gap-1">
+                      <span className="text-warning flex items-center gap-1">
                         <Loader2 size={10} className="animate-spin" />
                         {t.aiSettings.indexing}
                       </span>
                     ) : indexStatus?.initialized ? (
-                      <span className="text-green-500 flex items-center gap-1"><Check size={12} /> {t.aiSettings.indexReady}</span>
+                      <span className="text-success flex items-center gap-1"><Check size={12} /> {t.aiSettings.indexReady}</span>
                     ) : (
                       <span className="text-muted-foreground">{t.aiSettings.notInitialized}</span>
                     )}
@@ -653,7 +653,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   )}
 
                   {ragError && (
-                    <div className="text-xs text-red-500">
+                    <div className="text-xs text-destructive">
                       {ragError}
                     </div>
                   )}
@@ -673,7 +673,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
           {/* Deep Research 网络搜索设置 */}
           <div className="bg-muted/30 rounded-lg p-3 space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <Zap size={14} className="text-yellow-500" />
+              <Zap size={14} className="text-warning" />
               {t.deepResearch.webSearchTitle}
             </div>
             <p className="text-xs text-muted-foreground">
@@ -699,7 +699,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 className="w-full text-xs p-2 rounded border border-border bg-background"
               />
               {config.tavilyApiKey && (
-                <p className="text-xs text-green-500 mt-1 flex items-center gap-1"><Check size={12} /> {t.deepResearch.webSearchConfigured}</p>
+                <p className="text-xs text-success mt-1 flex items-center gap-1"><Check size={12} /> {t.deepResearch.webSearchConfigured}</p>
               )}
             </div>
           </div>

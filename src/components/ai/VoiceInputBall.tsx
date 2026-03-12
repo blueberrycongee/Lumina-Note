@@ -140,7 +140,7 @@ export function VoiceInputBall() {
       <button
         type="button"
         className={`w-11 h-11 rounded-full shadow-lg flex items-center justify-center transition-all duration-200 border border-border
-          ${isRecording ? "bg-red-500 text-white animate-pulse" : "bg-background text-muted-foreground hover:bg-accent"}
+          ${isRecording ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-background text-muted-foreground hover:bg-accent"}
         `}
         title={isRecording ? t.speech.stopRecordingHint : t.speech.startRecordingHint}
       >
