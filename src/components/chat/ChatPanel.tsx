@@ -58,7 +58,7 @@ function EditCard({
           </button>
           <button
             onClick={onReject}
-            className="p-1 rounded bg-red-500/20 text-red-600 hover:bg-red-500/30 transition-colors"
+            className="p-1 rounded bg-destructive/20 text-destructive hover:bg-destructive/30 transition-colors"
             title={t.ai.ignore}
           >
             <X size={14} />
@@ -71,14 +71,14 @@ function EditCard({
         {diff.map((part, index) => {
           if (part.added) {
             return (
-              <div key={index} className="bg-green-500/10 text-green-600 px-2 py-0.5 whitespace-pre-wrap border-l-2 border-green-500">
+              <div key={index} className="bg-success/10 text-success px-2 py-0.5 whitespace-pre-wrap border-l-2 border-success">
                 {part.value}
               </div>
             );
           }
           if (part.removed) {
             return (
-              <div key={index} className="bg-red-500/10 text-red-600 px-2 py-0.5 whitespace-pre-wrap line-through opacity-70 border-l-2 border-red-500">
+              <div key={index} className="bg-destructive/10 text-destructive px-2 py-0.5 whitespace-pre-wrap line-through opacity-70 border-l-2 border-destructive">
                 {part.value}
               </div>
             );
@@ -331,8 +331,8 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
 
         {/* Pending edits */}
         {pendingEdits.length > 0 && (
-          <div className="space-y-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-            <p className="text-xs font-semibold text-yellow-600 dark:text-yellow-400">
+          <div className="space-y-2 p-2 bg-warning/10 border border-warning/30 rounded-lg">
+            <p className="text-xs font-semibold text-warning">
               📝 {t.ai.pendingEdits.replace('{count}', String(pendingEdits.length))}
             </p>
             {pendingEdits.map((edit, idx) => (
@@ -372,7 +372,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
 
         {/* Error */}
         {error && (
-          <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
+          <div className="text-sm text-destructive p-2 bg-destructive/10 rounded">
             {error}
           </div>
         )}
@@ -429,13 +429,13 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                 onClick={toggleRecording}
                 className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${
                   isRecording
-                    ? "bg-red-500/20 border-red-500 text-red-500"
+                    ? "bg-destructive/20 border-destructive text-destructive"
                     : "bg-background border-border text-muted-foreground hover:bg-accent"
                 }`}
                 title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
               >
                 {isRecording && (
-                  <span className="absolute inset-0 rounded-md animate-ping bg-red-500/30" />
+                  <span className="absolute inset-0 rounded-md animate-ping bg-destructive/30" />
                 )}
                 {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
               </button>
@@ -444,7 +444,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                 disabled={!canSend && !(isLoading || isStreaming)}
                 className={`${
                   (isLoading || isStreaming)
-                    ? "bg-red-500 hover:bg-red-600 text-white" 
+                    ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     : canSend
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-muted text-muted-foreground"

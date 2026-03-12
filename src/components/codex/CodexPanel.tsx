@@ -604,7 +604,7 @@ export function CodexPanel({ visible, workspacePath, renderMode = "native" }: Pr
       </div>
 
       {error && (
-        <div className="px-3 py-2 text-xs text-red-500 border-b border-border bg-red-500/5">
+        <div className="px-3 py-2 text-xs text-destructive border-b border-border bg-destructive/5">
           {error}
         </div>
       )}

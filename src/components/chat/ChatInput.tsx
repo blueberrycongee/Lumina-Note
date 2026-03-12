@@ -520,7 +520,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               />
               <button
                 onClick={() => removeImage(img.id)}
-                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X size={10} />
               </button>
@@ -567,7 +567,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           ) : (
             <div className="relative">
               <ImageIcon size={16} />
-              <AlertCircle size={8} className="absolute -bottom-0.5 -right-0.5 text-yellow-500" />
+              <AlertCircle size={8} className="absolute -bottom-0.5 -right-0.5 text-warning" />
             </div>
           )}
         </button>
@@ -634,7 +634,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           isStreaming ? (
             <button
               onClick={onStop}
-              className="self-end bg-red-500 hover:bg-red-600 text-white rounded-lg p-2 transition-colors"
+              className="self-end bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg p-2 transition-colors"
               title={t.ai.stopGenerate}
             >
               <span className="block w-4 h-4 bg-white rounded-sm" />
@@ -747,7 +747,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                           });
                         }
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-red-500 hover:bg-background rounded-md transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-background rounded-md transition-all"
                       title={t.common.delete}
                     >
                       <Trash2 size={12} />

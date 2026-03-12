@@ -150,7 +150,7 @@ export function AgentPanel() {
                 }}
                 className={`p-1.5 rounded hover:bg-muted ${
                   rustStore.debugEnabled 
-                    ? "text-yellow-500 bg-yellow-500/10" 
+                    ? "text-warning bg-warning/10"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
                 title={rustStore.debugEnabled ? t.ai.debugDisable : t.ai.debugEnable}
@@ -166,7 +166,7 @@ export function AgentPanel() {
                       window.open(`file://${rustStore.debugLogPath}`, "_blank");
                     }
                   }}
-                  className="p-1.5 rounded hover:bg-muted text-yellow-500"
+                  className="p-1.5 rounded hover:bg-muted text-warning"
                   title={t.ai.debugLog.replace('{path}', rustStore.debugLogPath)}
                 >
                   <FileText className="w-4 h-4" />
@@ -219,12 +219,12 @@ export function AgentPanel() {
               </div>
             ))}
             {isWaitingApproval && (
-              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+              <p className="mt-2 text-xs text-warning">
                 {t.ai.agentQueueWaitingApprovalHint}
               </p>
             )}
             {llmRetryState && status === "running" && (
-              <div className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-300">
+              <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs text-warning">
                 <p className="font-medium">
                   {t.ai.agentRetryTitle}
                   {" "}
@@ -232,7 +232,7 @@ export function AgentPanel() {
                     .replace('{attempt}', String(llmRetryState.attempt))
                     .replace('{max}', String(llmRetryState.maxRetries))}
                 </p>
-                <p className="mt-0.5 text-amber-700/90 dark:text-amber-300/90">
+                <p className="mt-0.5 text-warning/90">
                   {t.ai.agentRetryReason}: {llmRetryState.reason}
                 </p>
                 <p className="mt-0.5">
@@ -266,7 +266,7 @@ export function AgentPanel() {
 
         {/* 错误状态 */}
         {status === "error" && (
-          <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded">
+          <div className="text-sm text-destructive p-2 bg-destructive/10 rounded">
             {rustStore.error || t.ai.errorRetry}
           </div>
         )}
@@ -330,13 +330,13 @@ export function AgentPanel() {
                 type="button"
                 onClick={toggleRecording}
                 className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${isRecording
-                    ? "bg-red-500/20 border-red-500 text-red-500"
+                    ? "bg-destructive/20 border-destructive text-destructive"
                     : "bg-background border-border text-muted-foreground hover:bg-accent"
                   }`}
                 title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
               >
                 {isRecording && (
-                  <span className="absolute inset-0 rounded-md animate-ping bg-red-500/30" />
+                  <span className="absolute inset-0 rounded-md animate-ping bg-destructive/30" />
                 )}
                 {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
               </button>
@@ -351,7 +351,7 @@ export function AgentPanel() {
                 }}
                 disabled={isWaitingApproval || (!input.trim() && status !== "running")}
                 className={`${status === "running" && !input.trim()
-                    ? "bg-red-500 hover:bg-red-600 text-white"
+                    ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
                   } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
                 title={status === "running" && !input.trim() ? t.ai.stop : (status === "running" ? t.ai.sendToQueue : t.ai.send)}
@@ -385,8 +385,8 @@ function ToolApproval({
 }) {
   const { t } = useLocaleStore();
   return (
-    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+    <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
+      <div className="flex items-center gap-2 text-warning mb-2">
         <AlertCircle className="w-4 h-4" />
         <span className="font-medium">{t.ai.needApproval}</span>
       </div>
@@ -401,8 +401,8 @@ function ToolApproval({
       <div className="flex gap-2">
         <button
           onClick={onApprove}
-          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 
-                     text-white text-sm rounded"
+          className="flex items-center gap-1 px-3 py-1.5 bg-success hover:bg-success/90
+                     text-success-foreground text-sm rounded"
         >
           <Check className="w-3 h-3" />
           {t.ai.approve}

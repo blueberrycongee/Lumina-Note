@@ -55,7 +55,7 @@ export function PlanCard({ plan, className = "" }: PlanCardProps) {
           {/* 进度条 */}
           <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
             <motion.div
-              className={`h-full ${isAllCompleted ? 'bg-green-500' : 'bg-primary'}`}
+              className={`h-full ${isAllCompleted ? 'bg-success' : 'bg-primary'}`}
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.3 }}
@@ -101,7 +101,7 @@ export function PlanCard({ plan, className = "" }: PlanCardProps) {
                     {/* 状态图标 */}
                     <div className="mt-0.5 flex-shrink-0">
                       {step.status === "completed" ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <CheckCircle2 className="w-4 h-4 text-success" />
                       ) : step.status === "in_progress" ? (
                         <Loader2 className="w-4 h-4 text-primary animate-spin" />
                       ) : (

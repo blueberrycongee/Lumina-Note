@@ -466,9 +466,9 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
         {/* 状态图标 */}
         {isComplete ? (
           tool.success ? (
-            <Check size={12} className="text-green-500/70" />
+            <Check size={12} className="text-success/70" />
           ) : (
-            <X size={12} className="text-red-500/70" />
+            <X size={12} className="text-destructive/70" />
           )
         ) : (
           <Loader2 size={12} className="animate-spin" />
@@ -774,13 +774,13 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-600 dark:text-amber-400 text-sm mt-2"
+          className="flex items-center gap-2 px-3 py-2 bg-warning/10 border border-warning/30 rounded-lg text-warning text-sm mt-2"
         >
           <AlertTriangle size={16} className="shrink-0" />
           <span>{t.agentMessage.timeoutWarning}</span>
           <button
             onClick={onRetryTimeout}
-            className="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 rounded-md transition-colors font-medium"
+            className="ml-auto flex items-center gap-1.5 px-2.5 py-1 bg-warning/20 hover:bg-warning/30 rounded-md transition-colors font-medium"
           >
             <RefreshCw size={14} />
             <span>{t.agentMessage.interruptRetry}</span>
@@ -810,7 +810,7 @@ export function CopyButton({ text }: { text: string }) {
       className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
       title={t.agentMessage.copy}
     >
-      {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+      {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
     </button>
   );
 }

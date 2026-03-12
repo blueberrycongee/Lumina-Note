@@ -1491,7 +1491,7 @@ export function MainAIChatShell() {
                               e.stopPropagation();
                               handleDeleteSession(session.id, session.type);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500 transition-all"
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                             title={t.common.delete}
                           >
                             <Trash2 size={12} />
@@ -1727,8 +1727,8 @@ export function MainAIChatShell() {
                     animate={{ opacity: 1, y: 0 }}
                     className="mb-6 max-w-[80%]"
                   >
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
-                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                    <div className="bg-warning/10 border border-warning/30 rounded-xl p-4">
+                      <div className="flex items-center gap-2 text-warning mb-2">
                         <AlertCircle className="w-4 h-4" />
                         <span className="font-medium text-sm">{t.ai.needApproval}</span>
                       </div>
@@ -1743,7 +1743,7 @@ export function MainAIChatShell() {
                       <div className="flex gap-2">
                         <button
                           onClick={approve}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                          className="flex items-center gap-1 px-3 py-1.5 bg-success hover:bg-success/90 text-success-foreground text-sm rounded-lg transition-colors"
                         >
                           <Check className="w-3 h-3" />
                           {t.ai.approve}
@@ -1770,14 +1770,14 @@ export function MainAIChatShell() {
 
                 {/* Agent 错误提示 */}
                 {chatMode === "agent" && agentStatus === "error" && (
-                  <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded mb-4">
+                  <div className="text-sm text-destructive p-2 bg-destructive/10 rounded mb-4">
                     {_rustError || t.ai.errorRetry}
                   </div>
                 )}
 
                 {/* Chat 错误提示 */}
                 {chatMode === "chat" && chatError && (
-                  <div className="text-sm text-red-500 p-2 bg-red-500/10 rounded mb-4">
+                  <div className="text-sm text-destructive p-2 bg-destructive/10 rounded mb-4">
                     {chatError}
                   </div>
                 )}
@@ -1820,12 +1820,12 @@ export function MainAIChatShell() {
                     </div>
                   )}
                   {isAgentWaitingApproval && (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    <p className="text-xs text-warning mt-2">
                       {t.ai.agentQueueWaitingApprovalHint}
                     </p>
                   )}
                   {llmRetryState && agentStatus === "running" && (
-                    <div className="mt-2 rounded-md border border-amber-400/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-300">
+                    <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs text-warning">
                       <p className="font-medium">
                         {t.ai.agentRetryTitle}
                         {" "}
@@ -1833,7 +1833,7 @@ export function MainAIChatShell() {
                           .replace('{attempt}', String(llmRetryState.attempt))
                           .replace('{max}', String(llmRetryState.maxRetries))}
                       </p>
-                      <p className="mt-0.5 text-amber-700/90 dark:text-amber-300/90">
+                      <p className="mt-0.5 text-warning/90">
                         {t.ai.agentRetryReason}: {llmRetryState.reason}
                       </p>
                       <p className="mt-0.5">
@@ -2057,7 +2057,7 @@ export function MainAIChatShell() {
                         }}
                         className={`ml-1 flex items-center justify-center p-1.5 rounded-md transition-colors ${
                           debugEnabled 
-                            ? "text-yellow-500 bg-yellow-500/10" 
+                            ? "text-warning bg-warning/10"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                         title={debugEnabled ? t.ai.debugEnabled.replace('{path}', debugLogPath || '') : t.ai.debugEnable}
@@ -2080,7 +2080,7 @@ export function MainAIChatShell() {
                     <button
                       onClick={toggleRecording}
                       className={`p-2 rounded-full transition-all duration-200 ${isRecording
-                          ? "bg-red-500/20 text-red-500"
+                          ? "bg-destructive/20 text-destructive"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                         }`}
                       title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
@@ -2110,7 +2110,7 @@ export function MainAIChatShell() {
                           disabled={disabled}
                           title={queueSend ? t.ai.sendToQueue : stopCurrent ? t.ai.stop : t.ai.send}
                           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${stopCurrent
-                              ? "bg-red-500 text-white hover:bg-red-600"
+                              ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               : hasPayload
                                 ? "bg-foreground text-background hover:opacity-80 shadow-md"
                                 : "bg-muted text-muted-foreground cursor-not-allowed"
@@ -2229,7 +2229,7 @@ export function MainAIChatShell() {
                   <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4 space-y-3">
                     <div className="font-bold text-muted-foreground flex items-center gap-2">
                       <span>🧠 Prompt Stack</span>
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-500/20 text-blue-600">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-info/20 text-info">
                         {debugPromptStack.provider}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
@@ -2274,7 +2274,7 @@ export function MainAIChatShell() {
                               🦀 Rust
                             </span>
                             {displayIntent && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-green-500/20 text-green-600">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-success/20 text-success">
                                 ✓ {t.ai.intentRecognized}
                               </span>
                             )}
@@ -2312,16 +2312,16 @@ export function MainAIChatShell() {
                     className={`p-3 rounded-lg border ${msg.role === "system"
                         ? "bg-purple-500/10 border-purple-500/30"
                         : msg.role === "user"
-                          ? "bg-blue-500/10 border-blue-500/30"
-                          : "bg-green-500/10 border-green-500/30"
+                          ? "bg-info/10 border-info/30"
+                          : "bg-success/10 border-success/30"
                       }`}
                   >
                     <div className="flex items-center gap-2 mb-2 font-bold">
                       <span className={`px-2 py-0.5 rounded text-[10px] ${msg.role === "system"
                           ? "bg-purple-500 text-white"
                           : msg.role === "user"
-                            ? "bg-blue-500 text-white"
-                            : "bg-green-500 text-white"
+                            ? "bg-info text-info-foreground"
+                            : "bg-success text-success-foreground"
                         }`}>
                         {msg.role.toUpperCase()}
                       </span>
