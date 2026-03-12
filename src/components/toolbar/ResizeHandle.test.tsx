@@ -34,4 +34,12 @@ describe("ResizeHandle", () => {
     expect(onResize).toHaveBeenCalledTimes(1);
     expect(onResize).toHaveBeenLastCalledWith(30);
   });
+
+  it("keeps an expanded hit area around the thin divider", () => {
+    const { container } = render(<ResizeHandle direction="left" onResize={vi.fn()} />);
+    const hitArea = container.querySelector(".z-30") as HTMLDivElement;
+
+    expect(hitArea.style.left).toBe("-1px");
+    expect(hitArea.style.right).toBe("-7px");
+  });
 });
