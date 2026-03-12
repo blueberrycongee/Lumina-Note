@@ -689,7 +689,7 @@ export function Sidebar() {
         reportOperationError({
           source: "Sidebar.openCronEditor",
           action: "Open cron job editor",
-          error: new Error("OpenClaw plugin command not available. Is the plugin enabled?"),
+          error: new Error(t.sidebar.openClawCronPluginUnavailable),
         });
       }
     } catch (error) {
@@ -1253,7 +1253,7 @@ export function Sidebar() {
                 >
                   <span className="truncate">
                     {job.name}
-                    {!job.enabled && <span className="ml-1 opacity-50">(off)</span>}
+                    {!job.enabled && <span className="ml-1 opacity-50">({t.sidebar.openClawCronJobDisabled})</span>}
                   </span>
                   <Clock className="h-3 w-3 shrink-0" />
                 </button>

@@ -87,6 +87,8 @@ export default {
     openClawNoCronJobs: '尚無 cron 任務',
     openClawManageCronJobs: '管理 cron 任務',
     openClawCreateCronJob: '新建 cron 任務',
+    openClawCronJobDisabled: '已停用',
+    openClawCronPluginUnavailable: 'OpenClaw 外掛命令不可用，請確認外掛已啟用。',
   },
 
   favorites: {

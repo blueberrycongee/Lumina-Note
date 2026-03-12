@@ -87,6 +87,8 @@ export default {
     openClawNoCronJobs: 'No cron jobs configured',
     openClawManageCronJobs: 'Manage cron jobs',
     openClawCreateCronJob: 'Create cron job',
+    openClawCronJobDisabled: 'off',
+    openClawCronPluginUnavailable: 'OpenClaw plugin command not available. Is the plugin enabled?',
   },
 
   favorites: {

@@ -87,6 +87,8 @@ export default {
     openClawNoCronJobs: 'cron ジョブはまだありません',
     openClawManageCronJobs: 'Cron ジョブを管理',
     openClawCreateCronJob: 'Cron ジョブを作成',
+    openClawCronJobDisabled: '無効',
+    openClawCronPluginUnavailable: 'OpenClaw プラグインコマンドが利用できません。プラグインが有効か確認してください。',
   },
 
   favorites: {
