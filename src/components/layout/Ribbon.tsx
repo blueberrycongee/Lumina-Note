@@ -297,7 +297,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "ai"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={t.ribbon.aiChatMain}
@@ -311,7 +311,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "file"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={t.ribbon.fileEditor}
@@ -325,7 +325,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "cardflow"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={t.ribbon.cardView}
@@ -338,7 +338,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "image-manager"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={imageManagerTitle}
@@ -352,7 +352,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "graph"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={t.graph.title}
@@ -366,7 +366,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "database"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={t.ribbon.database}
@@ -380,7 +380,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "flashcard"
-                ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                 : ""
             )}
             title={t.ribbon.flashcardReview}
@@ -404,7 +404,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
                 className={cn(
                   "w-8 h-8 ui-icon-btn text-xs",
                   isPluginRibbonItemActive(item)
-                    ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                    ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                     : ""
                 )}
                 title={item.title}
@@ -453,7 +453,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
                 className={cn(
                   "w-8 h-8 ui-icon-btn text-xs",
                   isPluginRibbonItemActive(item)
-                    ? "bg-primary/12 text-primary border border-primary/25 hover:bg-primary/18"
+                    ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
                     : ""
                 )}
                 title={item.title}

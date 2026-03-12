@@ -1,8 +1,14 @@
 import { StrictMode } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Ribbon } from "./Ribbon";
+
+const fileStoreState = vi.hoisted(() => ({
+  tabs: [] as Array<{ id: string; name: string; type: string }>,
+  activeTabIndex: -1,
+  currentFile: null as string | null,
+}));
 
 const updateStoreState = {
   availableUpdate: null,
@@ -25,15 +31,15 @@ vi.mock("@/stores/useUIStore", () => ({
 
 vi.mock("@/stores/useFileStore", () => ({
   useFileStore: () => ({
-    tabs: [],
-    activeTabIndex: -1,
+    tabs: fileStoreState.tabs,
+    activeTabIndex: fileStoreState.activeTabIndex,
     openGraphTab: () => undefined,
     switchTab: () => undefined,
     recentFiles: [],
     openFile: () => undefined,
     fileTree: [],
     openAIMainTab: () => undefined,
-    currentFile: null,
+    currentFile: fileStoreState.currentFile,
     openFlashcardTab: () => undefined,
     openCardFlowTab: () => undefined,
     openImageManagerTab: () => undefined,
@@ -134,6 +140,12 @@ vi.mock("./UpdateModal", () => ({
 }));
 
 describe("Ribbon", () => {
+  beforeEach(() => {
+    fileStoreState.tabs = [];
+    fileStoreState.activeTabIndex = -1;
+    fileStoreState.currentFile = null;
+  });
+
   it("does not render a macOS traffic-light safe area by default", () => {
     render(<Ribbon />);
 
@@ -201,5 +213,21 @@ describe("Ribbon", () => {
     render(<Ribbon />);
 
     expect(screen.getByRole("button", { name: "Image Manager" })).toBeInTheDocument();
+  });
+
+  it("uses the stronger active-state emphasis for the current section", () => {
+    fileStoreState.tabs = [{ id: "tab-1", name: "Daily Note.md", type: "file" }];
+    fileStoreState.activeTabIndex = 0;
+    fileStoreState.currentFile = "/vault/Daily Note.md";
+
+    render(<Ribbon />);
+
+    expect(screen.getByRole("button", { name: "Files" })).toHaveClass(
+      "bg-primary/15",
+      "text-primary",
+      "border",
+      "border-primary/30",
+      "hover:bg-primary/20",
+    );
   });
 });

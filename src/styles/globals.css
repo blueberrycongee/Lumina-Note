@@ -26,17 +26,18 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 :root {
-  --background: 220 24% 97%;  /* 微暖白：一点点黄调 */
-  --foreground: 222 22% 12%;  /* 暖黑 */
-  --muted: 220 18% 93%;  /* 暖灰 */
-  --muted-foreground: 220 10% 45%;  /* 暖灰文字 */
-  --accent: 220 16% 92%;  /* 暖灰强调 */
+  --background: 210 18% 97%;  /* 中性暖白 */
+  --foreground: 215 20% 11%;  /* 微暖黑 */
+  --muted: 210 14% 93%;  /* 暖灰 */
+  --muted-foreground: 210 8% 42%;  /* 暖灰文字 */
+  --accent: 210 12% 91%;  /* 暖灰强调 */
   --accent-foreground: 222 22% 18%;
   --popover: var(--ui-panel);
   --popover-foreground: var(--foreground);
   --primary: 200 70% 45%;  /* 柔和灰蓝 */
   --primary-foreground: 220 24% 98%;
-  --border: 220 16% 84%;  /* 暖边框 */
+  --border: 210 12% 83%;  /* 暖边框 */
+  --md-heading: 200 50% 28%;
   --font-sans: "Sora", "Manrope", "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
@@ -66,15 +67,16 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 .dark {
-  --background: 222 32% 10%;  /* 暖深灰背景 */
-  --foreground: 210 20% 94%;  /* 暖浅灰文字 */
-  --muted: 222 22% 16%;  /* 暖深灰 */
-  --muted-foreground: 220 12% 58%;
-  --accent: 222 18% 20%;
+  --background: 215 25% 10%;  /* 暖深灰背景 */
+  --foreground: 210 16% 93%;  /* 暖浅灰文字 */
+  --muted: 215 18% 16%;  /* 暖深灰 */
+  --muted-foreground: 210 10% 56%;
+  --accent: 215 14% 19%;
   --accent-foreground: 210 20% 96%;
   --primary: 200 75% 55%;  /* 柔和灰蓝 */
   --primary-foreground: 222 30% 12%;
-  --border: 220 14% 28%;  /* 暖边框 */
+  --border: 210 12% 27%;  /* 暖边框 */
+  --md-heading: 200 40% 78%;
   --destructive: 0 62% 60%;
   --destructive-foreground: 0 0% 100%;
   --success: 142 60% 55%;
@@ -114,13 +116,13 @@ body.resizing iframe[data-codex-iframe="true"] {
 @layer components {
   .ui-app-bg {
     background:
-      radial-gradient(900px 600px at 92% 4%, hsl(var(--foreground) / 0.06), transparent 62%),
+      radial-gradient(900px 600px at 92% 4%, hsl(var(--primary) / 0.05), transparent 62%),
       linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
   }
 
   .dark .ui-app-bg {
     background:
-      radial-gradient(900px 600px at 92% 4%, hsl(var(--foreground) / 0.10), transparent 62%),
+      radial-gradient(900px 600px at 92% 4%, hsl(var(--primary) / 0.07), transparent 62%),
       linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
   }
 

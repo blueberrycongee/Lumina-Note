@@ -253,8 +253,11 @@ export function Sidebar() {
 
       {/* Favorites */}
       <div className="px-2 mb-2">
-        <div className="flex items-center justify-between px-1 mb-1">
-          <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">{t.favorites.title}</span>
+        <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm bg-amber-500/5 px-2 py-1">
+          <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+            <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
+            {t.favorites.title}
+          </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => setFavoriteSortMode("manual")}
@@ -794,14 +797,14 @@ function FileTreeItem({
           style={{ paddingLeft }}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+                )}
+                {isExpanded ? (
+            <FolderOpen className="w-4 h-4 text-amber-500/80 shrink-0 pointer-events-none" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
-          )}
-          {isExpanded ? (
-            <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
-          ) : (
-            <Folder className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+            <Folder className="w-4 h-4 text-amber-500/70 shrink-0 pointer-events-none" />
           )}
           <span className="truncate pointer-events-none">{entry.name}</span>
         </div>
@@ -874,7 +877,7 @@ function FileTreeItem({
   const getFileIcon = () => {
     const name = entry.name.toLowerCase();
     if (name.endsWith(".db.json")) {
-      return <Database className="w-4 h-4 text-slate-500 shrink-0" />;
+      return <Database className="w-4 h-4 text-indigo-500 shrink-0" />;
     }
     if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json")) {
       return <Shapes className="w-4 h-4 text-cyan-500 shrink-0" />;
@@ -885,7 +888,7 @@ function FileTreeItem({
     if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".gif") || name.endsWith(".webp")) {
       return <Image className="w-4 h-4 text-green-500 shrink-0" />;
     }
-    return <File className="w-4 h-4 text-muted-foreground shrink-0" />;
+    return <File className="w-4 h-4 text-primary/50 shrink-0" />;
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {

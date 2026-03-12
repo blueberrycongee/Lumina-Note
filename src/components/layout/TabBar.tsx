@@ -65,7 +65,7 @@ function TabItem({
       ) : tab.type === "video-note" ? (
         <Video size={12} className="shrink-0 text-red-500" />
       ) : tab.type === "database" ? (
-        <Database size={12} className="shrink-0 text-slate-500" />
+        <Database size={12} className="shrink-0 text-indigo-500" />
       ) : tab.type === "pdf" ? (
         <FileText size={12} className="shrink-0 text-red-500" />
       ) : tab.type === "diagram" ? (
@@ -85,7 +85,7 @@ function TabItem({
       ) : tab.type === "image-manager" ? (
         <Images size={12} className="shrink-0 text-emerald-500" />
       ) : (
-        <FileText size={12} className="shrink-0 opacity-60" />
+        <FileText size={12} className="shrink-0 text-primary/50" />
       )}
       <span className={cn("truncate max-w-[120px]", tab.isPreview && "italic")}>{displayName}</span>
       {tab.isPinned && (

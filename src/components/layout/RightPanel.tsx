@@ -93,7 +93,7 @@ function BacklinksView() {
   if (!currentFile) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
-        <Link2 size={32} className="opacity-30 mb-2" />
+        <Link2 size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.openNoteToShowBacklinks}</p>
       </div>
     );
@@ -111,7 +111,7 @@ function BacklinksView() {
   if (backlinks.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
-        <Link2 size={32} className="opacity-30 mb-2" />
+        <Link2 size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.noBacklinks}</p>
         <p className="text-xs opacity-70 mt-1">{t.panel.backlinkHint.replace('{name}', currentFileName)}</p>
       </div>
@@ -186,7 +186,7 @@ function TagsView() {
   if (allTags.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
-        <Tag size={32} className="opacity-30 mb-2" />
+        <Tag size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.noTags}</p>
         <p className="text-xs opacity-70 mt-1">{t.panel.tagHint}</p>
       </div>
@@ -280,7 +280,7 @@ function OutlineView() {
   if (!currentFile) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
-        <List size={32} className="opacity-30 mb-2" />
+        <List size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.openNoteToShowOutline}</p>
       </div>
     );
@@ -289,7 +289,7 @@ function OutlineView() {
   if (headings.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
-        <Hash size={32} className="opacity-30 mb-2" />
+        <Hash size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.noHeadings}</p>
         <p className="text-xs opacity-70 mt-1">{t.panel.headingHint}</p>
       </div>
@@ -544,7 +544,7 @@ export function RightPanel() {
             onMouseDown={handleAIDragStart}
             className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 select-none whitespace-nowrap hover:bg-accent/50 ${
               rightPanelTab === "chat"
-                ? "text-primary border-b-2 border-primary/80 bg-background/60"
+                ? "text-primary border-b-2 border-primary bg-primary/5"
                 : "text-muted-foreground hover:text-foreground"
             } ${isDraggingAI ? "cursor-grabbing" : "cursor-grab"}`}
             title={t.ai.chat}
@@ -563,7 +563,7 @@ export function RightPanel() {
           onClick={() => setRightPanelTab("outline")}
           className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap hover:bg-accent/50 ${
             rightPanelTab === "outline"
-              ? "text-primary border-b-2 border-primary/80 bg-background/60"
+              ? "text-primary border-b-2 border-primary bg-primary/5"
               : "text-muted-foreground hover:text-foreground"
           }`}
           title={t.graph.outline}
@@ -575,7 +575,7 @@ export function RightPanel() {
           onClick={() => setRightPanelTab("backlinks")}
           className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap hover:bg-accent/50 ${
             rightPanelTab === "backlinks"
-              ? "text-primary border-b-2 border-primary/80 bg-background/60"
+              ? "text-primary border-b-2 border-primary bg-primary/5"
               : "text-muted-foreground hover:text-foreground"
           }`}
           title={t.graph.backlinks}
@@ -587,7 +587,7 @@ export function RightPanel() {
           onClick={() => setRightPanelTab("tags")}
           className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap hover:bg-accent/50 ${
             rightPanelTab === "tags"
-              ? "text-primary border-b-2 border-primary/80 bg-background/60"
+              ? "text-primary border-b-2 border-primary bg-primary/5"
               : "text-muted-foreground hover:text-foreground"
           }`}
           title={t.graph.tags}
