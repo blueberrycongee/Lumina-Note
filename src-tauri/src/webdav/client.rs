@@ -28,6 +28,11 @@ impl WebDAVClient {
         Ok(Self { client, config })
     }
 
+    /// 创建使用指定 HTTP 客户端的 WebDAV 客户端
+    pub fn with_client(config: WebDAVConfig, client: Client) -> Self {
+        Self { client, config }
+    }
+
     /// 构建认证头
     fn auth_header(&self) -> HeaderValue {
         let credentials = format!("{}:{}", self.config.username, self.config.password);

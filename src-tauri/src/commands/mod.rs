@@ -684,13 +684,16 @@ pub async fn open_new_window(app: AppHandle) -> Result<(), AppError> {
 
 /// 获取 B站视频 CID
 #[tauri::command]
-pub async fn get_bilibili_cid(bvid: String) -> Result<Option<u64>, AppError> {
+pub async fn get_bilibili_cid(
+    proxy_state: tauri::State<'_, crate::proxy::ProxyState>,
+    bvid: String,
+) -> Result<Option<u64>, AppError> {
     let url = format!(
         "https://api.bilibili.com/x/web-interface/view?bvid={}",
         bvid
     );
 
-    let client = reqwest::Client::new();
+    let client = proxy_state.client().await;
     let resp = client
         .get(&url)
         .header("User-Agent", "Mozilla/5.0")
@@ -714,10 +717,13 @@ pub async fn get_bilibili_cid(bvid: String) -> Result<Option<u64>, AppError> {
 
 /// 获取 B站弹幕列表
 #[tauri::command]
-pub async fn get_bilibili_danmaku(cid: u64) -> Result<Vec<DanmakuItem>, AppError> {
+pub async fn get_bilibili_danmaku(
+    proxy_state: tauri::State<'_, crate::proxy::ProxyState>,
+    cid: u64,
+) -> Result<Vec<DanmakuItem>, AppError> {
     let url = format!("https://api.bilibili.com/x/v1/dm/list.so?oid={}", cid);
 
-    let client = reqwest::Client::new();
+    let client = proxy_state.client().await;
     let resp = client
         .get(&url)
         .header("User-Agent", "Mozilla/5.0")

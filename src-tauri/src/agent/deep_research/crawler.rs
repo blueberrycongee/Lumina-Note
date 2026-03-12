@@ -23,11 +23,8 @@ pub struct JinaClient {
 
 impl JinaClient {
     /// 创建新的 Jina 客户端
-    pub fn new(api_key: Option<String>) -> Self {
-        Self {
-            client: Client::new(),
-            api_key,
-        }
+    pub fn new(api_key: Option<String>, client: Client) -> Self {
+        Self { client, api_key }
     }
 
     /// 爬取网页内容

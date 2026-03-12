@@ -50,12 +50,7 @@ impl TavilyClient {
     const API_URL: &'static str = "https://api.tavily.com/search";
 
     /// 创建新的 Tavily 客户端
-    pub fn new(api_key: String) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
-            .build()
-            .expect("Failed to create HTTP client");
-
+    pub fn new(api_key: String, client: reqwest::Client) -> Self {
         Self { api_key, client }
     }
 
@@ -117,7 +112,7 @@ mod tests {
     #[ignore] // 需要 API key
     async fn test_tavily_search() {
         let api_key = std::env::var("TAVILY_API_KEY").expect("TAVILY_API_KEY not set");
-        let client = TavilyClient::new(api_key);
+        let client = TavilyClient::new(api_key, reqwest::Client::new());
         let results = client.search("Rust programming language", 3).await.unwrap();
         assert!(!results.is_empty());
     }

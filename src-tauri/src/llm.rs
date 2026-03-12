@@ -26,13 +26,15 @@ pub struct LLMResponse {
 
 /// 发送 LLM API 请求（带重试机制）
 #[tauri::command]
-pub async fn llm_fetch(request: LLMRequest) -> Result<LLMResponse, String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(
+pub async fn llm_fetch(
+    proxy_state: tauri::State<'_, crate::proxy::ProxyState>,
+    request: LLMRequest,
+) -> Result<LLMResponse, String> {
+    let client = proxy_state
+        .client_with_timeout(std::time::Duration::from_secs(
             request.timeout_secs.unwrap_or(120),
         ))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+        .await?;
 
     let max_retries = 2;
     let mut last_error = String::new();
@@ -109,15 +111,15 @@ pub struct StreamChunk {
 #[tauri::command]
 pub async fn llm_fetch_stream(
     app: AppHandle,
+    proxy_state: tauri::State<'_, crate::proxy::ProxyState>,
     request_id: String,
     request: LLMRequest,
 ) -> Result<(), String> {
-    let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(
+    let client = proxy_state
+        .client_with_timeout(std::time::Duration::from_secs(
             request.timeout_secs.unwrap_or(300),
         ))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+        .await?;
 
     let mut req_builder = match request.method.to_uppercase().as_str() {
         "POST" => client.post(&request.url),

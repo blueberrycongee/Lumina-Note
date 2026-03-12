@@ -24,7 +24,7 @@ pub struct DeepResearchContext {
 }
 
 impl DeepResearchContext {
-    pub fn new(app: AppHandle, config: DeepResearchConfig) -> Self {
+    pub fn new(app: AppHandle, config: DeepResearchConfig, client: reqwest::Client) -> Self {
         // 复用 AgentConfig 创建 LlmClient
         let agent_config = crate::agent::types::AgentConfig {
             provider: config.provider.clone(),
@@ -34,14 +34,14 @@ impl DeepResearchContext {
             temperature: config.temperature,
             ..Default::default()
         };
-        let llm = Arc::new(LlmClient::new(agent_config));
+        let llm = Arc::new(LlmClient::new(agent_config, client.clone()));
 
         // 创建 Tavily 客户端（如果启用且有 API Key）
         let tavily = if config.enable_web_search {
             config
                 .tavily_api_key
                 .as_ref()
-                .map(|key| Arc::new(TavilyClient::new(key.clone())))
+                .map(|key| Arc::new(TavilyClient::new(key.clone(), client.clone())))
         } else {
             None
         };
@@ -49,7 +49,7 @@ impl DeepResearchContext {
         // 创建 Jina 客户端（如果启用网络搜索）
         // Jina Reader 免费版不需要 API Key，但有速率限制
         let jina = if config.enable_web_search {
-            Some(Arc::new(JinaClient::new(None)))
+            Some(Arc::new(JinaClient::new(None, client)))
         } else {
             None
         };

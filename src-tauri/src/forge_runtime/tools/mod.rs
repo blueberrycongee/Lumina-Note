@@ -17,6 +17,7 @@ use std::sync::Arc;
 pub struct ToolEnvironment {
     pub workspace_root: PathBuf,
     pub permissions: Arc<PermissionSession>,
+    pub http_client: Option<reqwest::Client>,
 }
 
 impl ToolEnvironment {
@@ -24,7 +25,13 @@ impl ToolEnvironment {
         Self {
             workspace_root: workspace_root.into(),
             permissions,
+            http_client: None,
         }
+    }
+
+    pub fn with_http_client(mut self, client: reqwest::Client) -> Self {
+        self.http_client = Some(client);
+        self
     }
 }
 

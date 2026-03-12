@@ -121,6 +121,7 @@ impl Default for UpdateManagerState {
 pub async fn update_start_resumable_install(
     app: AppHandle,
     manager_state: State<'_, UpdateManagerState>,
+    proxy_state: State<'_, crate::proxy::ProxyState>,
     expected_version: Option<String>,
 ) -> Result<String, AppError> {
     let updater = app
@@ -193,6 +194,7 @@ pub async fn update_start_resumable_install(
     let app_handle = app.clone();
     let runtime_state = manager_state.inner.clone();
     let task_id_for_task = task_id.clone();
+    let http_client = proxy_state.client().await;
     tauri::async_runtime::spawn(async move {
         let result = run_update_task(
             app_handle.clone(),
@@ -201,6 +203,7 @@ pub async fn update_start_resumable_install(
             persisted_state,
             update,
             is_resumed,
+            http_client,
         )
         .await;
 
@@ -374,6 +377,7 @@ async fn run_update_task(
     mut persisted: PersistedUpdateState,
     update: Update,
     is_resumed: bool,
+    http_client: reqwest::Client,
 ) -> Result<(), AppError> {
     persisted.status.stage = UpdateStage::Downloading;
     persisted.status.status = UpdateStage::Downloading;
@@ -393,8 +397,14 @@ async fn run_update_task(
     )
     .await?;
 
-    let package_bytes =
-        download_with_retries(&app, runtime_state.clone(), &version_dir, &mut persisted).await?;
+    let package_bytes = download_with_retries(
+        &app,
+        runtime_state.clone(),
+        &version_dir,
+        &mut persisted,
+        &http_client,
+    )
+    .await?;
 
     ensure_task_not_cancelled(runtime_state.clone(), &persisted.status.task_id).await?;
 
@@ -465,6 +475,7 @@ async fn download_with_retries(
     runtime_state: Arc<Mutex<UpdateManagerRuntime>>,
     version_dir: &Path,
     persisted: &mut PersistedUpdateState,
+    http_client: &reqwest::Client,
 ) -> Result<Vec<u8>, AppError> {
     let part_path = version_dir.join(PART_FILE_NAME);
     let mut next_attempt = persisted.status.attempt.max(1);
@@ -494,6 +505,7 @@ async fn download_with_retries(
             persisted,
             &part_path,
             version_dir,
+            http_client,
         )
         .await;
         match result {
@@ -532,11 +544,9 @@ async fn download_once(
     persisted: &mut PersistedUpdateState,
     part_path: &Path,
     version_dir: &Path,
+    http_client: &reqwest::Client,
 ) -> Result<(), AppError> {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(DOWNLOAD_TIMEOUT_MS))
-        .build()
-        .map_err(|err| AppError::UpdateNetwork(format!("build http client failed: {err}")))?;
+    let client = http_client;
 
     let existing_len = tokio::fs::metadata(part_path)
         .await

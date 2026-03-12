@@ -30,6 +30,20 @@ impl SyncEngine {
         })
     }
 
+    /// 创建使用指定 HTTP 客户端的同步引擎
+    pub fn with_client(
+        config: WebDAVConfig,
+        vault_path: String,
+        http_client: reqwest::Client,
+    ) -> Result<Self, AppError> {
+        let client = WebDAVClient::with_client(config, http_client);
+        Ok(Self {
+            client,
+            vault_path,
+            state: None,
+        })
+    }
+
     /// 加载同步状态
     pub fn load_state(&mut self) -> Result<(), AppError> {
         let state_path = self.state_file_path();

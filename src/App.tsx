@@ -62,6 +62,7 @@ import { ErrorNotifications } from "@/components/layout/ErrorNotifications";
 import { reportOperationError, reportUnhandledError } from "@/lib/reportError";
 import { initAutoUpdateCheck, initResumableUpdateListeners, useUpdateStore } from "@/stores/useUpdateStore";
 import { isTauriAvailable } from "@/lib/tauri";
+import { hydrateProxyConfigOnStartup } from "@/lib/proxyStartup";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -291,6 +292,13 @@ function App() {
   useEffect(() => {
     initAutoUpdateCheck(5000);
     void initResumableUpdateListeners();
+  }, []);
+
+  // Hydrate the Rust-side proxy state from persisted UI settings before delayed update checks run.
+  useEffect(() => {
+    void hydrateProxyConfigOnStartup(useUIStore.getState()).catch((err) => {
+      console.warn("[Proxy] Failed to hydrate proxy config on startup:", err);
+    });
   }, []);
 
   useEffect(() => {

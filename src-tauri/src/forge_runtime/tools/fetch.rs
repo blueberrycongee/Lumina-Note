@@ -71,13 +71,17 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
         .timeout
         .unwrap_or(DEFAULT_TIMEOUT_SECS)
         .min(MAX_TIMEOUT_SECS);
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(timeout))
-        .build()
-        .map_err(|err| GraphError::ExecutionError {
-            node: format!("tool:{}", call.tool),
-            message: format!("Failed to create request client: {}", err),
-        })?;
+    let client = if let Some(ref c) = env.http_client {
+        c.clone()
+    } else {
+        reqwest::Client::builder()
+            .timeout(Duration::from_secs(timeout))
+            .build()
+            .map_err(|err| GraphError::ExecutionError {
+                node: format!("tool:{}", call.tool),
+                message: format!("Failed to create request client: {}", err),
+            })?
+    };
 
     let mut metadata = Map::new();
     metadata.insert("url".to_string(), json!(input.url));
@@ -95,13 +99,12 @@ async fn handle(call: ToolCall, ctx: ToolContext, env: ToolEnvironment) -> Graph
         vec![input.url.clone()],
     )?;
 
-    let request = client
-        .get(&input.url)
-        .header("User-Agent", "opencode/1.0")
-        .build()
-        .map_err(|err| GraphError::ExecutionError {
-            node: format!("tool:{}", call.tool),
-            message: format!("Failed to create request: {}", err),
+    let request =
+        build_request(&client, &input.url, Duration::from_secs(timeout)).map_err(|err| {
+            GraphError::ExecutionError {
+                node: format!("tool:{}", call.tool),
+                message: format!("Failed to create request: {}", err),
+            }
         })?;
 
     let mut resp = client
@@ -183,6 +186,18 @@ fn tool_error(message: impl Into<String>) -> ToolOutput {
         .with_attribute("is_error", json!(true))
 }
 
+fn build_request(
+    client: &reqwest::Client,
+    url: &str,
+    timeout: Duration,
+) -> Result<reqwest::Request, reqwest::Error> {
+    client
+        .get(url)
+        .header("User-Agent", "opencode/1.0")
+        .timeout(timeout)
+        .build()
+}
+
 async fn read_body_limited(resp: &mut reqwest::Response) -> Result<Vec<u8>, reqwest::Error> {
     let mut body = Vec::new();
     while let Some(chunk) = resp.chunk().await? {
@@ -208,4 +223,22 @@ fn extract_text_from_html(html: &str) -> Result<String, String> {
 
 fn convert_html_to_markdown(html: &str) -> Result<String, String> {
     Ok(parse_html(html))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_request_applies_per_request_timeout() {
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(120))
+            .build()
+            .unwrap();
+
+        let request =
+            build_request(&client, "https://example.com", Duration::from_secs(5)).unwrap();
+
+        assert_eq!(request.timeout(), Some(&Duration::from_secs(5)));
+    }
 }

@@ -59,7 +59,18 @@ pub fn build_runtime(
     workspace_root: impl Into<PathBuf>,
     permissions: Arc<LocalPermissionSession>,
 ) -> ForgeRuntime {
-    let env = ToolEnvironment::new(workspace_root, permissions.clone());
+    build_runtime_with_client(workspace_root, permissions, None)
+}
+
+pub fn build_runtime_with_client(
+    workspace_root: impl Into<PathBuf>,
+    permissions: Arc<LocalPermissionSession>,
+    http_client: Option<reqwest::Client>,
+) -> ForgeRuntime {
+    let mut env = ToolEnvironment::new(workspace_root, permissions.clone());
+    if let Some(client) = http_client {
+        env = env.with_http_client(client);
+    }
     let registry = Arc::new(build_registry(env));
     ForgeRuntime {
         registry,
@@ -99,10 +110,11 @@ pub async fn run_forge_loop(
     session_id: String,
     message_id: String,
     cancel: CancellationToken,
+    http_client: reqwest::Client,
 ) -> Result<ForgeRunResult, String> {
     let tool_defs = Arc::new(build_tool_definitions(&runtime.registry));
     let available_tools = Arc::new(collect_available_tools(&tool_defs));
-    let llm = Arc::new(LlmClient::new(config.clone()));
+    let llm = Arc::new(LlmClient::new(config.clone(), http_client));
     let pending = Arc::new(Mutex::new(None::<ForgePending>));
     let pending_calls = Arc::new(Mutex::new(pending_tool_calls));
     let sink: Arc<dyn EventSink> = Arc::new(TauriEventSink::new(app.clone()));

@@ -149,12 +149,7 @@ pub struct LlmClient {
 }
 
 impl LlmClient {
-    pub fn new(config: AgentConfig) -> Self {
-        let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(300))
-            .build()
-            .expect("Failed to create HTTP client");
-
+    pub fn new(config: AgentConfig, client: reqwest::Client) -> Self {
         Self { config, client }
     }
 

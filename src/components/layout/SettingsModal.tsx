@@ -26,6 +26,7 @@ import { CloudRelaySection } from "../settings/CloudRelaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { DiagnosticsSection } from "../settings/DiagnosticsSection";
 import { OpenClawWorkspaceSection } from "../settings/OpenClawWorkspaceSection";
+import { ProxySection } from "../settings/ProxySection";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -349,6 +350,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
           <MobileOptionsSection />
           <OpenClawWorkspaceSection />
           <CloudRelaySection />
+          <ProxySection />
 
           {/* WebDAV 同步设置 */}
           <section className="rounded-xl overflow-hidden border border-border bg-background/60">

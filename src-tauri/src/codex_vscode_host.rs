@@ -14,6 +14,7 @@ use tokio::sync::Mutex;
 static HOST_SCRIPT: &str = include_str!("../../scripts/codex-vscode-host/host.mjs");
 
 use crate::node_runtime::{current_platform, ensure_node_runtime_with_env_proxy};
+use crate::proxy::ProxyState;
 
 #[derive(Default)]
 struct CodexVscodeHostInner {
@@ -159,6 +160,14 @@ pub async fn codex_vscode_host_start(
     apply_no_window_flag(&mut cmd);
     cmd.kill_on_drop(true);
     cmd.env("NODE_USE_ENV_PROXY", "1");
+
+    // Inject proxy environment variables so the Node.js subprocess respects proxy config.
+    let proxy_config = app.state::<ProxyState>().get_config().await;
+    if proxy_config.enabled && !proxy_config.proxy_url.is_empty() {
+        cmd.env("HTTP_PROXY", &proxy_config.proxy_url);
+        cmd.env("HTTPS_PROXY", &proxy_config.proxy_url);
+    }
+
     cmd.arg(script_path)
         .arg("--extensionPath")
         .arg(extension_path)

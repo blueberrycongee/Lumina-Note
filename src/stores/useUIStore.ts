@@ -93,6 +93,12 @@ interface UIState {
   // Editor font size
   editorFontSize: number;
   setEditorFontSize: (size: number) => void;
+
+  // Proxy
+  proxyUrl: string;
+  proxyEnabled: boolean;
+  setProxyUrl: (url: string) => void;
+  setProxyEnabled: (enabled: boolean) => void;
 }
 
 
@@ -115,6 +121,8 @@ const partializeUIState = (state: UIState) => ({
   diagnosticsEnabled: state.diagnosticsEnabled,
   editorInteractionTraceEnabled: state.editorInteractionTraceEnabled,
   editorFontSize: state.editorFontSize,
+  proxyUrl: state.proxyUrl,
+  proxyEnabled: state.proxyEnabled,
 });
 
 export const useUIStore = create<UIState>()(
@@ -227,6 +235,12 @@ export const useUIStore = create<UIState>()(
       // Editor font size (10-32px)
       editorFontSize: 16,
       setEditorFontSize: (size) => set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
+
+      // Proxy
+      proxyUrl: "",
+      proxyEnabled: false,
+      setProxyUrl: (url) => set({ proxyUrl: url }),
+      setProxyEnabled: (enabled) => set({ proxyEnabled: enabled }),
     }),
     {
       name: "lumina-ui",

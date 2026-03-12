@@ -11,6 +11,7 @@ mod llm;
 pub mod mcp;
 pub mod mobile_gateway;
 mod node_runtime;
+pub mod proxy;
 mod typesetting;
 mod update_manager;
 mod vector_db;

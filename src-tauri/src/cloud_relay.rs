@@ -7,7 +7,6 @@ use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
@@ -94,6 +93,7 @@ pub async fn cloud_relay_get_config(
 pub async fn cloud_relay_start(
     app: AppHandle,
     state: State<'_, CloudRelayState>,
+    proxy_state: State<'_, crate::proxy::ProxyState>,
 ) -> Result<CloudRelayStatus, String> {
     {
         let mut starting = state.starting.lock().await;
@@ -131,9 +131,10 @@ pub async fn cloud_relay_start(
 
     let mut shutdown_rx = state.shutdown.subscribe();
     let app_clone = app.clone();
+    let http_client = proxy_state.client().await;
 
     tauri::async_runtime::spawn(async move {
-        let result = run_relay(app_clone.clone(), config, &mut shutdown_rx).await;
+        let result = run_relay(app_clone.clone(), config, http_client, &mut shutdown_rx).await;
         let state = app_clone.state::<CloudRelayState>();
         if let Err(err) = result {
             let mut status = state.status.lock().await;
@@ -164,9 +165,10 @@ pub async fn cloud_relay_stop(state: State<'_, CloudRelayState>) -> Result<(), S
 async fn run_relay(
     app: AppHandle,
     config: CloudRelayConfig,
+    http_client: reqwest::Client,
     shutdown_rx: &mut broadcast::Receiver<()>,
 ) -> Result<(), String> {
-    let token = login_for_token(&config).await?;
+    let token = login_for_token(&http_client, &config).await?;
     let relay_url = ensure_client_query(&config.relay_url, "desktop")?;
 
     let mut request = relay_url
@@ -327,15 +329,14 @@ fn ensure_client_query(relay_url: &str, client: &str) -> Result<String, String> 
     Ok(url.to_string())
 }
 
-async fn login_for_token(config: &CloudRelayConfig) -> Result<String, String> {
+async fn login_for_token(
+    http_client: &reqwest::Client,
+    config: &CloudRelayConfig,
+) -> Result<String, String> {
     let api_base = relay_api_base(&config.relay_url)?;
     let url = format!("{}/auth/login", api_base);
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| format!("Failed to build http client: {}", e))?;
 
-    let response = client
+    let response = http_client
         .post(url)
         .json(&json!({
             "email": config.email,

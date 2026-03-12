@@ -85,7 +85,9 @@ fn write_current_version(base: &Path, version: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-async fn marketplace_latest_openai_chatgpt() -> Result<(String, String), AppError> {
+async fn marketplace_latest_openai_chatgpt(
+    client: &reqwest::Client,
+) -> Result<(String, String), AppError> {
     let url = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=7.2-preview.1";
     let body = json!({
       "filters": [
@@ -94,7 +96,6 @@ async fn marketplace_latest_openai_chatgpt() -> Result<(String, String), AppErro
       "flags": 103
     });
 
-    let client = reqwest::Client::new();
     let resp = client.post(url).json(&body).send().await?;
     if !resp.status().is_success() {
         return Err(AppError::Network(format!(
@@ -206,7 +207,10 @@ fn extract_vsix(vsix_path: &Path, out_dir: &Path) -> Result<(), AppError> {
 }
 
 #[tauri::command]
-pub async fn codex_extension_get_status(app: AppHandle) -> Result<CodexExtensionStatus, AppError> {
+pub async fn codex_extension_get_status(
+    app: AppHandle,
+    proxy_state: tauri::State<'_, crate::proxy::ProxyState>,
+) -> Result<CodexExtensionStatus, AppError> {
     let base = codex_openai_chatgpt_dir(&app)?;
     let version = read_current_version(&base);
     let extension_path = version
@@ -218,7 +222,8 @@ pub async fn codex_extension_get_status(app: AppHandle) -> Result<CodexExtension
         .map(|p| Path::new(p).join("package.json").exists())
         .unwrap_or(false);
 
-    let latest_version = match marketplace_latest_openai_chatgpt().await {
+    let http_client = proxy_state.client().await;
+    let latest_version = match marketplace_latest_openai_chatgpt(&http_client).await {
         Ok((v, _)) => Some(v),
         Err(_) => None,
     };
@@ -234,16 +239,17 @@ pub async fn codex_extension_get_status(app: AppHandle) -> Result<CodexExtension
 #[tauri::command]
 pub async fn codex_extension_install_latest(
     app: AppHandle,
+    proxy_state: tauri::State<'_, crate::proxy::ProxyState>,
 ) -> Result<CodexExtensionStatus, AppError> {
     let base = codex_openai_chatgpt_dir(&app)?;
-    let (version, vsix_url) = marketplace_latest_openai_chatgpt().await?;
+    let http_client = proxy_state.client().await;
+    let (version, vsix_url) = marketplace_latest_openai_chatgpt(&http_client).await?;
 
     let downloads = base.join("downloads");
     tokio::fs::create_dir_all(&downloads).await?;
     let vsix_path = downloads.join(format!("openai.chatgpt-{}.vsix", version));
 
-    let client = reqwest::Client::new();
-    let resp = client.get(vsix_url).send().await?;
+    let resp = http_client.get(vsix_url).send().await?;
     if !resp.status().is_success() {
         return Err(AppError::Network(format!(
             "VSIX download failed: {}",
