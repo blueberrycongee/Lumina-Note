@@ -8,7 +8,6 @@ import {
   TypesettingPreviewPageMm,
   TypesettingTextLine,
 } from "@/lib/tauri";
-import { PDFCanvas } from "@/components/pdf/PDFCanvas";
 import { docxBlocksToHtml, docxHtmlToBlocks } from "@/typesetting/docxHtml";
 import {
   docxBlocksToFontSizePx,
@@ -42,6 +41,7 @@ import {
   buildSegmentsFromBlocks,
 } from "./typesettingUtils";
 import { TypesettingToolbar } from "./TypesettingToolbar";
+import { TypesettingPreviewPage } from "./TypesettingPreviewPage";
 import { useTypesettingInit } from "./hooks/useTypesettingInit";
 import { useTypesettingExport } from "./hooks/useTypesettingExport";
 
@@ -776,260 +776,42 @@ export function TypesettingDocumentPane({ path, onExportReady, autoOpen = true }
         editableRef={editableRef}
         layoutSummary={layoutSummary}
       />
-      <div className="flex min-h-full items-center justify-center px-6 py-10">
-        {openOfficePreview ? (
-          <div className="w-full max-w-5xl">
-            {openOfficePdf ? (
-              <PDFCanvas
-                pdfData={openOfficePdf}
-                filePath={doc?.path ?? "OpenOffice Preview"}
-                currentPage={currentPage}
-                scale={zoom}
-                onDocumentLoad={(pages) => setOpenOfficeTotalPages(pages)}
-                onPageChange={setCurrentPage}
-                onScaleChange={setZoom}
-                enableAnnotations={false}
-              />
-            ) : (
-              <div className="text-center space-y-2">
-                <div className="text-lg font-semibold text-foreground">
-                  OpenOffice Preview
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {openOfficeLoading
-                    ? "Rendering OpenOffice output..."
-                    : openOfficeError
-                      ? `Failed to render: ${openOfficeError}`
-                      : "Click Refresh OpenOffice to render."}
-                </p>
-              </div>
-            )}
-          </div>
-        ) : !pagePx ? (
-          <div className="text-center space-y-2">
-            <div className="text-lg font-semibold text-foreground">
-              Typesetting Document
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Loading preview metrics...
-            </p>
-          </div>
-        ) : (
-          <div
-            className="relative"
-            style={{
-              width: pagePxScaled?.page.width ?? pagePx.page.width,
-              height: pagePxScaled?.page.height ?? pagePx.page.height,
-            }}
-          >
-            <div
-              ref={handlePageRef}
-              className="relative rounded-lg border border-border bg-white shadow-sm"
-              style={{
-                width: pagePx.page.width,
-                height: pagePx.page.height,
-                transform: `scale(${zoom})`,
-                transformOrigin: "top left",
-                position: "absolute",
-                left: 0,
-                top: 0,
-              }}
-            >
-              <div
-                className="absolute border border-dashed border-muted-foreground/40"
-                style={{
-                  left: pagePx.body.left,
-                  top: pagePx.body.top,
-                  width: pagePx.body.width,
-                  height: pagePx.body.height,
-                }}
-              >
-                {bodyUsesEngine && bodyLayout ? (
-                  <div
-                    className="relative h-full w-full overflow-hidden px-4 py-2 text-foreground"
-                    style={{
-                      fontSize: bodyLayout.fontSizePx,
-                      lineHeight: `${bodyLayout.lineHeightPx}px`,
-                    }}
-                    data-testid="typesetting-body-engine"
-                    onClick={startEditing}
-                  >
-                    {pagedBodyLines.map((line, index) => (
-                      <div
-                        key={`${index}-${line.x}-${line.y}`}
-                        style={{
-                          position: "absolute",
-                          left: line.x,
-                          top: line.y,
-                          width: line.width,
-                          whiteSpace: "pre",
-                          fontSize: line.fontSizePx ?? bodyLayout.fontSizePx,
-                          lineHeight: `${line.lineHeightPx ?? bodyLayout.lineHeightPx}px`,
-                          textDecoration: line.underline ? "underline" : undefined,
-                        }}
-                      >
-                        {line.text}
-                      </div>
-                    ))}
-                    {pagedBodyImages.map((image) => (
-                      <img
-                        key={`body-${image.embedId}-${image.x}-${image.y}`}
-                        src={image.src}
-                        alt={image.alt}
-                        data-embed-id={image.embedId}
-                        data-testid="typesetting-body-image"
-                        style={{
-                          position: "absolute",
-                          left: image.x,
-                          top: image.y,
-                          width: image.width,
-                          height: image.height,
-                        }}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div
-                    ref={editableRef}
-                    className="h-full w-full overflow-auto p-4 text-sm text-foreground outline-none"
-                    contentEditable
-                    suppressContentEditableWarning
-                    onBeforeInput={handleBeforeInput}
-                    onInput={handleInput}
-                    onScroll={handleEditableScroll}
-                    onFocus={() => setIsEditing(true)}
-                    onBlur={() => {
-                      setIsEditing(false);
-                      handleInput();
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "Tab") {
-                        event.preventDefault();
-                        document.execCommand("insertText", false, "\t");
-                      }
-                    }}
-                    dangerouslySetInnerHTML={{ __html: html }}
-                  />
-                )}
-              </div>
-              <div
-                className="absolute border border-dotted border-muted-foreground/30"
-                style={{
-                  left: pagePx.header.left,
-                  top: pagePx.header.top,
-                  width: pagePx.header.width,
-                  height: pagePx.header.height,
-                }}
-              >
-                {headerUsesEngine && headerLayout ? (
-                  <div
-                    className="relative h-full w-full overflow-hidden px-4 py-1 text-foreground"
-                    style={{
-                      fontSize: headerLayout.fontSizePx,
-                      lineHeight: `${headerLayout.lineHeightPx}px`,
-                    }}
-                    data-testid="typesetting-header"
-                  >
-                    {headerLines.map((line, index) => (
-                      <div
-                        key={`${index}-${line.x}-${line.y}`}
-                        style={{
-                          position: "absolute",
-                          left: line.x,
-                          top: line.y,
-                          width: line.width,
-                          whiteSpace: "pre",
-                        }}
-                      >
-                        {line.text}
-                      </div>
-                    ))}
-                    {headerImages.map((image) => (
-                      <img
-                        key={`header-${image.embedId}-${image.x}-${image.y}`}
-                        src={image.src}
-                        alt={image.alt}
-                        data-embed-id={image.embedId}
-                        data-testid="typesetting-header-image"
-                        style={{
-                          position: "absolute",
-                          left: image.x,
-                          top: image.y,
-                          width: image.width,
-                          height: image.height,
-                        }}
-                      />
-                    ))}
-                  </div>
-                ) : headerHtml ? (
-                  <div
-                    className="h-full w-full overflow-hidden px-4 py-1 text-[10px] leading-tight text-foreground"
-                    data-testid="typesetting-header"
-                    dangerouslySetInnerHTML={{ __html: headerHtml }}
-                  />
-                ) : null}
-              </div>
-              <div
-                className="absolute border border-dotted border-muted-foreground/30"
-                style={{
-                  left: pagePx.footer.left,
-                  top: pagePx.footer.top,
-                  width: pagePx.footer.width,
-                  height: pagePx.footer.height,
-                }}
-              >
-                {footerUsesEngine && footerLayout ? (
-                  <div
-                    className="relative h-full w-full overflow-hidden px-4 py-1 text-foreground"
-                    style={{
-                      fontSize: footerLayout.fontSizePx,
-                      lineHeight: `${footerLayout.lineHeightPx}px`,
-                    }}
-                    data-testid="typesetting-footer"
-                  >
-                    {footerLines.map((line, index) => (
-                      <div
-                        key={`${index}-${line.x}-${line.y}`}
-                        style={{
-                          position: "absolute",
-                          left: line.x,
-                          top: line.y,
-                          width: line.width,
-                          whiteSpace: "pre",
-                        }}
-                      >
-                        {line.text}
-                      </div>
-                    ))}
-                    {footerImages.map((image) => (
-                      <img
-                        key={`footer-${image.embedId}-${image.x}-${image.y}`}
-                        src={image.src}
-                        alt={image.alt}
-                        data-embed-id={image.embedId}
-                        data-testid="typesetting-footer-image"
-                        style={{
-                          position: "absolute",
-                          left: image.x,
-                          top: image.y,
-                          width: image.width,
-                          height: image.height,
-                        }}
-                      />
-                    ))}
-                  </div>
-                ) : footerHtml ? (
-                  <div
-                    className="h-full w-full overflow-hidden px-4 py-1 text-[10px] leading-tight text-foreground"
-                    data-testid="typesetting-footer"
-                    dangerouslySetInnerHTML={{ __html: footerHtml }}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <TypesettingPreviewPage
+        openOfficePreview={openOfficePreview}
+        openOfficePdf={openOfficePdf}
+        openOfficeLoading={openOfficeLoading}
+        openOfficeError={openOfficeError}
+        docPath={doc?.path ?? "OpenOffice Preview"}
+        currentPage={currentPage}
+        zoom={zoom}
+        setCurrentPage={setCurrentPage}
+        setZoom={setZoom}
+        setOpenOfficeTotalPages={setOpenOfficeTotalPages}
+        pagePx={pagePx}
+        pagePxScaled={pagePxScaled}
+        handlePageRef={handlePageRef}
+        bodyUsesEngine={bodyUsesEngine}
+        bodyLayout={bodyLayout}
+        pagedBodyLines={pagedBodyLines}
+        pagedBodyImages={pagedBodyImages}
+        startEditing={startEditing}
+        editableRef={editableRef}
+        html={html}
+        handleBeforeInput={handleBeforeInput}
+        handleInput={handleInput}
+        handleEditableScroll={handleEditableScroll}
+        setIsEditing={setIsEditing}
+        headerUsesEngine={headerUsesEngine}
+        headerLayout={headerLayout}
+        headerLines={headerLines}
+        headerImages={headerImages}
+        headerHtml={headerHtml}
+        footerUsesEngine={footerUsesEngine}
+        footerLayout={footerLayout}
+        footerLines={footerLines}
+        footerImages={footerImages}
+        footerHtml={footerHtml}
+      />
     </div>
   );
 }
