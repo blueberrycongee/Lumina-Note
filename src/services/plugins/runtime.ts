@@ -12,6 +12,14 @@ import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
+import {
+  readOpenClawCronJobs,
+  writeOpenClawCronJobs,
+  createCronJob,
+  updateCronJob,
+  deleteCronJob,
+  type OpenClawCronJob,
+} from "@/services/openclaw/cron";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { pluginThemeRuntime, type ThemeMode } from "@/services/plugins/themeRuntime";
@@ -198,11 +206,19 @@ interface LuminaPluginApi {
     readOpenClawWorkspaceFile: (path: string) => Promise<string>;
     writeOpenClawWorkspaceFile: (path: string, content: string) => Promise<void>;
     detachOpenClawWorkspace: () => void;
+    listOpenClawCronJobs: () => Promise<OpenClawCronJob[]>;
+    createOpenClawCronJob: (input: Omit<OpenClawCronJob, "jobId">) => Promise<OpenClawCronJob[]>;
+    updateOpenClawCronJob: (
+      jobId: string,
+      updates: Partial<OpenClawCronJob>,
+    ) => Promise<OpenClawCronJob[]>;
+    deleteOpenClawCronJob: (jobId: string) => Promise<OpenClawCronJob[]>;
     registerPanel: (input: { id: string; title: string; html: string }) => () => void;
     registerTabType: (input: {
       type: string;
       title: string;
       render: (payload: Record<string, unknown>) => string;
+      actions?: Record<string, (data: Record<string, string>) => void | Promise<void>>;
     }) => () => void;
     openRegisteredTab: (type: string, payload?: Record<string, unknown>) => void;
     openVideoNote: (url?: string, title?: string) => void;
@@ -428,7 +444,15 @@ export const normalizeHotkeyPattern = (pattern: string) => {
 class PluginRuntime {
   private loaded = new Map<string, LoadedPlugin>();
   private listeners = new Map<PluginHostEvent, Map<string, Set<PluginEventHandler>>>();
-  private pluginTabTypes = new Map<string, { pluginId: string; title: string; render: PluginTabRenderer }>();
+  private pluginTabTypes = new Map<
+    string,
+    {
+      pluginId: string;
+      title: string;
+      render: PluginTabRenderer;
+      actions?: Record<string, (data: Record<string, string>) => void | Promise<void>>;
+    }
+  >();
   private pluginCommands = new Map<string, PluginCommandRecord>();
   private pluginLayoutPresets = new Map<
     string,
@@ -553,6 +577,12 @@ class PluginRuntime {
       this.unload(pluginId, loaded);
     }
     this.loaded.clear();
+  }
+
+  getTabActions(
+    scopedType: string,
+  ): Record<string, (data: Record<string, string>) => void | Promise<void>> {
+    return this.pluginTabTypes.get(scopedType)?.actions ?? {};
   }
 
   getRegisteredCommands() {
@@ -946,6 +976,7 @@ return exported(api, plugin);
       type: string;
       title: string;
       render: (payload: Record<string, unknown>) => string;
+      actions?: Record<string, (data: Record<string, string>) => void | Promise<void>>;
     }) => {
       requirePermission("workspace:tab");
       const type = input.type.trim();
@@ -957,6 +988,7 @@ return exported(api, plugin);
         pluginId: info.id,
         title: input.title || type,
         render: input.render,
+        actions: input.actions,
       });
       const cleanup = withOnce(() => {
         this.pluginTabTypes.delete(scopedType);
@@ -1326,6 +1358,44 @@ return exported(api, plugin);
             throw new Error("No workspace is currently open");
           }
           useOpenClawWorkspaceStore.getState().detachWorkspace(workspacePath);
+        },
+        listOpenClawCronJobs: async (): Promise<OpenClawCronJob[]> => {
+          requirePermission("workspace:integrations");
+          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
+          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
+          return readOpenClawCronJobs(ocPath);
+        },
+        createOpenClawCronJob: async (
+          input: Omit<OpenClawCronJob, "jobId">,
+        ): Promise<OpenClawCronJob[]> => {
+          requirePermission("workspace:integrations");
+          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
+          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
+          const jobs = await readOpenClawCronJobs(ocPath);
+          const next = createCronJob(jobs, input);
+          await writeOpenClawCronJobs(ocPath, next);
+          return next;
+        },
+        updateOpenClawCronJob: async (
+          jobId: string,
+          updates: Partial<OpenClawCronJob>,
+        ): Promise<OpenClawCronJob[]> => {
+          requirePermission("workspace:integrations");
+          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
+          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
+          const jobs = await readOpenClawCronJobs(ocPath);
+          const next = updateCronJob(jobs, jobId, updates);
+          await writeOpenClawCronJobs(ocPath, next);
+          return next;
+        },
+        deleteOpenClawCronJob: async (jobId: string): Promise<OpenClawCronJob[]> => {
+          requirePermission("workspace:integrations");
+          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
+          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
+          const jobs = await readOpenClawCronJobs(ocPath);
+          const next = deleteCronJob(jobs, jobId);
+          await writeOpenClawCronJobs(ocPath, next);
+          return next;
         },
         registerPanel,
         registerTabType,

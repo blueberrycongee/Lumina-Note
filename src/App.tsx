@@ -1075,6 +1075,17 @@ function App() {
                 title={activeTab.name}
                 html={activeTab.pluginViewHtml || "<p>Empty plugin view</p>"}
                 scopeId={activeTab.pluginViewType}
+                onAction={(action, data) => {
+                  const scopedType = activeTab.pluginViewType;
+                  if (!scopedType) return;
+                  const actions = pluginRuntime.getTabActions(scopedType);
+                  const handler = actions[action];
+                  if (handler) {
+                    void handler(data);
+                  } else {
+                    console.warn(`[PluginViewPane] No handler for action "${action}" on tab type "${scopedType}"`);
+                  }
+                }}
               />
             </div>
           ) : activeTab?.type === "ai-chat" ? (

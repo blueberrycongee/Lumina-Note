@@ -1,5 +1,6 @@
 module.exports = function setup(api) {
   const OVERVIEW_TAB_TYPE = "openclaw-workspace-overview";
+  const CRON_EDITOR_TAB_TYPE = "openclaw-cron-editor";
   const KEY_FILES = ["AGENTS.md", "SOUL.md", "USER.md", "HEARTBEAT.md", "MEMORY.md"];
   const ARTIFACT_PREFIXES = ["output/", "artifacts/", "tmp/docs/"];
   const PLAN_PREFIXES = ["plans/", "docs/plans/", ".openclaw/plans/", "output/plans/"];
@@ -29,6 +30,166 @@ module.exports = function setup(api) {
     }
     return normalizedPath.replace(/^\/+/, "");
   };
+
+  // ---------------------------------------------------------------------------
+  // Cron helpers
+  // ---------------------------------------------------------------------------
+
+  const humanizeSchedule = (schedule) => {
+    if (!schedule) return "unknown";
+    if (schedule.kind === "cron") {
+      const tz = schedule.tz ? ` (${schedule.tz})` : "";
+      return `cron: ${schedule.expr || "?"}${tz}`;
+    }
+    if (schedule.kind === "every") {
+      const ms = schedule.everyMs || 0;
+      if (ms >= 86400000) return `every ${Math.round(ms / 86400000)}d`;
+      if (ms >= 3600000) return `every ${Math.round(ms / 3600000)}h`;
+      if (ms >= 60000) return `every ${Math.round(ms / 60000)}m`;
+      return `every ${ms}ms`;
+    }
+    if (schedule.kind === "at") {
+      return `at ${schedule.at || "?"}`;
+    }
+    return "unknown";
+  };
+
+  const renderCronSection = (jobs) => {
+    if (!jobs || jobs.length === 0) {
+      return [
+        '<h3 id="cron-jobs">Cron jobs</h3>',
+        "<p>No cron jobs configured.</p>",
+        '<p><button data-plugin-action="create-cron-job" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:inherit;font:inherit;padding:0;">+ Create cron job</button></p>',
+      ].join("");
+    }
+    const rows = jobs
+      .map((job) => {
+        const status = job.enabled ? "enabled" : "disabled";
+        const toggleLabel = job.enabled ? "Disable" : "Enable";
+        return [
+          "<tr>",
+          `<td><code>${escapeHtml(job.name)}</code></td>`,
+          `<td>${escapeHtml(humanizeSchedule(job.schedule))}</td>`,
+          `<td>${status}</td>`,
+          `<td>${escapeHtml(job.sessionTarget || "main")}</td>`,
+          "<td>",
+          `<button data-plugin-action="toggle-cron-job" data-job-id="${escapeHtml(job.jobId)}" data-enabled="${job.enabled}" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:inherit;font:inherit;padding:0;margin-right:8px;">${toggleLabel}</button>`,
+          `<button data-plugin-action="edit-cron-job" data-job-id="${escapeHtml(job.jobId)}" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:inherit;font:inherit;padding:0;margin-right:8px;">Edit</button>`,
+          `<button data-plugin-action="delete-cron-job" data-job-id="${escapeHtml(job.jobId)}" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:inherit;font:inherit;padding:0;">Delete</button>`,
+          "</td>",
+          "</tr>",
+        ].join("");
+      })
+      .join("");
+    return [
+      '<h3 id="cron-jobs">Cron jobs</h3>',
+      `<p><strong>Total:</strong> ${jobs.length}</p>`,
+      '<table><thead><tr><th>Name</th><th>Schedule</th><th>Status</th><th>Target</th><th>Actions</th></tr></thead>',
+      `<tbody>${rows}</tbody></table>`,
+      '<p><button data-plugin-action="create-cron-job" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:inherit;font:inherit;padding:0;">+ Create cron job</button></p>',
+    ].join("");
+  };
+
+  const renderCronForm = (job) => {
+    const isEdit = Boolean(job && job.jobId);
+    const title = isEdit ? `Edit cron job: ${escapeHtml(job.name)}` : "Create cron job";
+    const scheduleKind = (job && job.schedule && job.schedule.kind) || "cron";
+    const payloadKind = (job && job.payload && job.payload.kind) || "agentTurn";
+    return [
+      `<h3>${title}</h3>`,
+      '<div data-plugin-form="cron-editor">',
+      isEdit ? `<input type="hidden" name="jobId" value="${escapeHtml(job.jobId)}" />` : "",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Name</label>',
+      `<input name="name" type="text" value="${escapeHtml((job && job.name) || "")}" class="ui-input" style="width:100%;" />`,
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Description</label>',
+      `<input name="description" type="text" value="${escapeHtml((job && job.description) || "")}" class="ui-input" style="width:100%;" />`,
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Schedule kind</label>',
+      '<select name="scheduleKind" class="ui-input" style="width:100%;">',
+      `<option value="cron"${scheduleKind === "cron" ? " selected" : ""}>Cron expression</option>`,
+      `<option value="every"${scheduleKind === "every" ? " selected" : ""}>Every interval</option>`,
+      `<option value="at"${scheduleKind === "at" ? " selected" : ""}>At specific time</option>`,
+      "</select>",
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Expression / interval / time</label>',
+      `<input name="scheduleExpr" type="text" value="${escapeHtml(
+        (job && job.schedule && (job.schedule.expr || (job.schedule.everyMs != null ? String(job.schedule.everyMs) : "") || job.schedule.at)) || ""
+      )}" class="ui-input" style="width:100%;" placeholder="0 7 * * * / 3600000 / 2026-02-01T16:00:00Z" />`,
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Timezone (optional, for cron)</label>',
+      `<input name="scheduleTz" type="text" value="${escapeHtml((job && job.schedule && job.schedule.tz) || "")}" class="ui-input" style="width:100%;" placeholder="America/Los_Angeles" />`,
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Payload kind</label>',
+      '<select name="payloadKind" class="ui-input" style="width:100%;">',
+      `<option value="agentTurn"${payloadKind === "agentTurn" ? " selected" : ""}>Agent turn</option>`,
+      `<option value="systemEvent"${payloadKind === "systemEvent" ? " selected" : ""}>System event</option>`,
+      "</select>",
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Message / text</label>',
+      `<textarea name="payloadText" class="ui-input" style="width:100%;min-height:60px;" placeholder="Enter the message or event text">${escapeHtml(
+        (job && job.payload && (job.payload.message || job.payload.text)) || ""
+      )}</textarea>`,
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      '<label style="display:block;font-weight:600;margin-bottom:4px;">Session target</label>',
+      '<select name="sessionTarget" class="ui-input" style="width:100%;">',
+      `<option value="main"${(!job || !job.sessionTarget || job.sessionTarget === "main") ? " selected" : ""}>Main</option>`,
+      `<option value="isolated"${(job && job.sessionTarget === "isolated") ? " selected" : ""}>Isolated</option>`,
+      "</select>",
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      `<label><input name="enabled" type="checkbox"${(!job || job.enabled !== false) ? " checked" : ""} /> Enabled</label>`,
+      "</div>",
+      '<div style="margin-bottom:12px;">',
+      `<label><input name="deleteAfterRun" type="checkbox"${(job && job.deleteAfterRun) ? " checked" : ""} /> Delete after run</label>`,
+      "</div>",
+      '<div>',
+      `<button data-plugin-action="save-cron-job" style="cursor:pointer;text-decoration:underline;background:none;border:none;color:inherit;font:inherit;padding:0;">${isEdit ? "Save changes" : "Create job"}</button>`,
+      "</div>",
+      "</div>",
+    ].join("");
+  };
+
+  const buildCronJobFromFormData = (data) => {
+    const scheduleKind = data.scheduleKind || "cron";
+    const schedule = { kind: scheduleKind };
+    if (scheduleKind === "cron") {
+      schedule.expr = data.scheduleExpr || "";
+      if (data.scheduleTz) schedule.tz = data.scheduleTz;
+    } else if (scheduleKind === "every") {
+      schedule.everyMs = parseInt(data.scheduleExpr, 10) || 0;
+    } else if (scheduleKind === "at") {
+      schedule.at = data.scheduleExpr || "";
+    }
+    const payloadKind = data.payloadKind || "agentTurn";
+    const payload = { kind: payloadKind };
+    if (payloadKind === "agentTurn") {
+      payload.message = data.payloadText || "";
+    } else {
+      payload.text = data.payloadText || "";
+    }
+    return {
+      name: data.name || "Untitled job",
+      enabled: data.enabled === "true",
+      schedule,
+      payload,
+      sessionTarget: data.sessionTarget || "main",
+      description: data.description || "",
+      deleteAfterRun: data.deleteAfterRun === "true",
+    };
+  };
+
+  // ---------------------------------------------------------------------------
+  // Workspace inspection
+  // ---------------------------------------------------------------------------
 
   const inspectWorkspace = async ({ force = false } = {}) => {
     const hostWorkspacePath = api.workspace.getPath();
@@ -205,7 +366,11 @@ module.exports = function setup(api) {
     return Boolean(attachment);
   };
 
-  const renderOverview = (snapshot) => {
+  // ---------------------------------------------------------------------------
+  // Overview rendering
+  // ---------------------------------------------------------------------------
+
+  const renderOverview = (snapshot, cronJobs) => {
     const keyFileItems = snapshot.keyFiles
       .map(
         (entry) =>
@@ -267,18 +432,48 @@ module.exports = function setup(api) {
       artifactItems ? `<ul>${artifactItems}</ul>` : "<p>No files found under output/, artifacts/, or tmp/docs/.</p>",
       `<p><strong>Bridge notes:</strong> ${snapshot.bridgeNotes.length}</p>`,
       bridgeItems ? `<ul>${bridgeItems}</ul>` : "<p>No Lumina bridge notes have been staged yet.</p>",
+      renderCronSection(cronJobs),
       "<p>Quick actions are available from the command palette group <code>OpenClaw Workspace</code>.</p>",
     ].join("");
   };
 
+  // ---------------------------------------------------------------------------
+  // Tab openers
+  // ---------------------------------------------------------------------------
+
+  const loadCronJobs = async () => {
+    try {
+      return await api.workspace.listOpenClawCronJobs();
+    } catch {
+      return [];
+    }
+  };
+
   const openOverview = async () => {
     const snapshot = await inspectWorkspace({ force: true });
+    const cronJobs = snapshot.attached ? await loadCronJobs() : [];
     api.workspace.openRegisteredTab(OVERVIEW_TAB_TYPE, {
-      html: renderOverview(snapshot),
+      html: renderOverview(snapshot, cronJobs),
       attached: snapshot.attached,
       workspacePath: snapshot.workspacePath,
     });
   };
+
+  const openCronEditor = async (jobId) => {
+    let job = null;
+    if (jobId) {
+      const jobs = await loadCronJobs();
+      job = jobs.find((j) => j.jobId === jobId) || null;
+    }
+    api.workspace.openRegisteredTab(CRON_EDITOR_TAB_TYPE, {
+      html: renderCronForm(job),
+      jobId: jobId || null,
+    });
+  };
+
+  // ---------------------------------------------------------------------------
+  // UI lifecycle
+  // ---------------------------------------------------------------------------
 
   const cleanupUi = () => {
     disposeUi();
@@ -454,6 +649,22 @@ module.exports = function setup(api) {
               void stageSelection();
             },
           },
+          {
+            id: "create-cron-job",
+            title: "Create cron job",
+            description: "Open the cron job editor to create a new scheduled job.",
+            run: () => {
+              void openCronEditor(null);
+            },
+          },
+          {
+            id: "manage-cron-jobs",
+            title: "Manage cron jobs",
+            description: "Open the workspace overview and scroll to the cron jobs section.",
+            run: () => {
+              void openOverview();
+            },
+          },
         ],
       }),
     );
@@ -465,11 +676,72 @@ module.exports = function setup(api) {
     };
   };
 
-  const unregisterView = api.workspace.registerTabType({
+  // ---------------------------------------------------------------------------
+  // Tab registrations
+  // ---------------------------------------------------------------------------
+
+  const unregisterOverview = api.workspace.registerTabType({
     type: OVERVIEW_TAB_TYPE,
     title: "OpenClaw Workspace",
     render: (payload) =>
       String(payload.html || "<p>OpenClaw workspace overview is unavailable.</p>"),
+    actions: {
+      "toggle-cron-job": async (data) => {
+        const jobId = data.jobId;
+        if (!jobId) return;
+        const wasEnabled = data.enabled === "true";
+        try {
+          await api.workspace.updateOpenClawCronJob(jobId, { enabled: !wasEnabled });
+          api.ui.notify(`Cron job ${wasEnabled ? "disabled" : "enabled"}.`);
+          await openOverview();
+        } catch (err) {
+          api.ui.notify(`Failed to toggle cron job: ${err}`);
+        }
+      },
+      "delete-cron-job": async (data) => {
+        const jobId = data.jobId;
+        if (!jobId) return;
+        try {
+          await api.workspace.deleteOpenClawCronJob(jobId);
+          api.ui.notify("Cron job deleted.");
+          await openOverview();
+        } catch (err) {
+          api.ui.notify(`Failed to delete cron job: ${err}`);
+        }
+      },
+      "edit-cron-job": async (data) => {
+        const jobId = data.jobId;
+        if (!jobId) return;
+        await openCronEditor(jobId);
+      },
+      "create-cron-job": async () => {
+        await openCronEditor(null);
+      },
+    },
+  });
+
+  const unregisterCronEditor = api.workspace.registerTabType({
+    type: CRON_EDITOR_TAB_TYPE,
+    title: "Cron Job Editor",
+    render: (payload) =>
+      String(payload.html || renderCronForm(null)),
+    actions: {
+      "save-cron-job": async (data) => {
+        const jobInput = buildCronJobFromFormData(data);
+        try {
+          if (data.jobId) {
+            await api.workspace.updateOpenClawCronJob(data.jobId, jobInput);
+            api.ui.notify("Cron job updated.");
+          } else {
+            await api.workspace.createOpenClawCronJob(jobInput);
+            api.ui.notify("Cron job created.");
+          }
+          await openOverview();
+        } catch (err) {
+          api.ui.notify(`Failed to save cron job: ${err}`);
+        }
+      },
+    },
   });
 
   const offWorkspaceChanged = api.events.on("workspace:changed", () => {
@@ -482,6 +754,7 @@ module.exports = function setup(api) {
   return () => {
     offWorkspaceChanged();
     cleanupUi();
-    unregisterView();
+    unregisterOverview();
+    unregisterCronEditor();
   };
 };
