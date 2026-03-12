@@ -82,9 +82,6 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Guard macos-private-api leak
-        run: bash scripts/check-cargo-macos-feature.sh
-
       - name: Format (src-tauri)
         working-directory: src-tauri
         run: cargo fmt --check

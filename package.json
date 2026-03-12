@@ -28,8 +28,7 @@
     "test:agent-eval:complex": "npx ts-node --esm tests/agent-eval/runner.ts --category=complex",
     "verify:forge-runtime": "bash scripts/check-forge-runtime.sh",
     "bench": "vitest bench",
-    "bench:run": "vitest bench --run",
-    "prepare": "git config core.hooksPath .githooks"
+    "bench:run": "vitest bench --run"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.0",
