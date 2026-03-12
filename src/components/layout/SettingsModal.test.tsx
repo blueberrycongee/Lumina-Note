@@ -34,6 +34,10 @@ vi.mock("@/stores/useUIStore", () => ({
     setEditorMode: () => undefined,
     editorFontSize: 16,
     setEditorFontSize: () => undefined,
+    proxyUrl: "",
+    proxyEnabled: false,
+    setProxyUrl: () => undefined,
+    setProxyEnabled: () => undefined,
   }),
 }));
 
