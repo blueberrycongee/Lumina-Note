@@ -34,6 +34,16 @@ export interface ThemeColors {
   highlight: string;        // 高亮背景
   tag: string;              // 标签颜色
 
+  // 语义状态色
+  destructive: string;          // 危险/错误
+  destructiveForeground: string;
+  success: string;              // 成功
+  successForeground: string;
+  warning: string;              // 警告
+  warningForeground: string;
+  info: string;                 // 信息
+  infoForeground: string;
+
   // Diff (代码对比) 颜色
   diffAddBg: string;        // 新增代码背景
   diffAddText: string;      // 新增代码文字
@@ -85,6 +95,15 @@ function createThemeColors(
       listMarker: `${primaryHue} ${primarySat - 5}% 50%`,
       highlight: `50 80% 85%`,
       tag: `${primaryHue + 30} ${primarySat}% 45%`,
+      // 语义状态色
+      destructive: `0 72% 51%`,
+      destructiveForeground: `0 0% 100%`,
+      success: `142 71% 45%`,
+      successForeground: `0 0% 100%`,
+      warning: `38 92% 50%`,
+      warningForeground: `0 0% 100%`,
+      info: `217 91% 60%`,
+      infoForeground: `0 0% 100%`,
       // 默认 Diff 颜色：柔和舒适
       diffAddBg: `160 40% 92%`,
       diffAddText: `160 50% 30%`,
@@ -118,6 +137,15 @@ function createThemeColors(
       listMarker: `${primaryHue} ${primarySat - 10}% 60%`,
       highlight: `50 50% 25%`,
       tag: `${primaryHue + 30} ${primarySat - 5}% 60%`,
+      // 语义状态色
+      destructive: `0 62% 60%`,
+      destructiveForeground: `0 0% 100%`,
+      success: `142 60% 55%`,
+      successForeground: `0 0% 100%`,
+      warning: `38 80% 55%`,
+      warningForeground: `0 0% 100%`,
+      info: `217 80% 65%`,
+      infoForeground: `0 0% 100%`,
       // 默认 Diff 颜色：深色模式
       diffAddBg: `160 35% 20%`,
       diffAddText: `160 50% 70%`,
@@ -233,6 +261,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "190 100% 40%",
        highlight: "60 100% 80%",
        tag: "320 80% 45%",
+       // 语义状态色 - 霓虹风格
+       destructive: "340 100% 50%",
+       destructiveForeground: "0 0% 100%",
+       success: "150 100% 40%",
+       successForeground: "0 0% 100%",
+       warning: "50 100% 50%",
+       warningForeground: "280 80% 10%",
+       info: "190 100% 45%",
+       infoForeground: "0 0% 100%",
        // 赛博朋克风 Diff：霓虹感
        diffAddBg: "190 50% 90%",
        diffAddText: "190 100% 30%",
@@ -266,6 +303,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "60 100% 50%",
        highlight: "320 100% 30%",
        tag: "190 100% 40%",
+       // 语义状态色 - 霓虹风格
+       destructive: "340 100% 55%",
+       destructiveForeground: "0 0% 100%",
+       success: "150 100% 50%",
+       successForeground: "265 50% 10%",
+       warning: "50 100% 55%",
+       warningForeground: "265 50% 10%",
+       info: "190 100% 55%",
+       infoForeground: "0 0% 100%",
        // 赛博朋克风 Diff：深色霓虹
        diffAddBg: "190 60% 15%",
        diffAddText: "190 100% 70%",
@@ -306,6 +352,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "135 60% 40%",
        highlight: "60 80% 85%",
        tag: "265 50% 50%",
+       // 语义状态色
+       destructive: "0 72% 51%",
+       destructiveForeground: "0 0% 100%",
+       success: "135 60% 42%",
+       successForeground: "0 0% 100%",
+       warning: "35 80% 50%",
+       warningForeground: "0 0% 100%",
+       info: "191 80% 45%",
+       infoForeground: "0 0% 100%",
        // Dracula 浅色 Diff
        diffAddBg: "135 50% 92%",
        diffAddText: "135 70% 30%",
@@ -340,6 +395,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "191 97% 77%",
        highlight: "60 50% 40%",
        tag: "326 90% 70%",
+       // 语义状态色
+       destructive: "0 70% 60%",
+       destructiveForeground: "60 30% 96%",
+       success: "135 70% 55%",
+       successForeground: "231 15% 18%",
+       warning: "35 90% 60%",
+       warningForeground: "231 15% 18%",
+       info: "191 90% 65%",
+       infoForeground: "231 15% 18%",
        // Dracula 经典 Diff 配色
        diffAddBg: "135 50% 20%",
        diffAddText: "135 94% 75%",
@@ -380,6 +444,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "168 60% 35%",
        highlight: "50 90% 85%",
        tag: "205 60% 50%",
+       // 语义状态色
+       destructive: "1 71% 52%",
+       destructiveForeground: "44 87% 96%",
+       success: "68 60% 38%",
+       successForeground: "44 87% 96%",
+       warning: "45 100% 50%",
+       warningForeground: "192 81% 14%",
+       info: "205 70% 45%",
+       infoForeground: "44 87% 96%",
        // Solarized Diff：橄榄绿和橙红
        diffAddBg: "65 50% 88%",
        diffAddText: "65 80% 30%",
@@ -414,6 +487,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "168 60% 50%",
        highlight: "192 50% 25%",
        tag: "330 60% 55%",
+       // 语义状态色
+       destructive: "1 71% 55%",
+       destructiveForeground: "0 0% 95%",
+       success: "68 60% 48%",
+       successForeground: "192 81% 14%",
+       warning: "45 90% 55%",
+       warningForeground: "192 81% 14%",
+       info: "205 70% 55%",
+       infoForeground: "0 0% 95%",
        // Solarized Dark Diff
        diffAddBg: "65 50% 20%",
        diffAddText: "65 60% 60%",
@@ -454,6 +536,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "35 85% 45%",  // 橙色列表点
        highlight: "50 90% 80%",   // 亮黄色高亮
        tag: "215 60% 50%",
+       // 语义状态色 - 复古风
+       destructive: "0 75% 50%",
+       destructiveForeground: "45 25% 96%",
+       success: "142 70% 40%",
+       successForeground: "45 25% 96%",
+       warning: "35 85% 50%",
+       warningForeground: "20 15% 18%",
+       info: "215 65% 50%",
+       infoForeground: "45 25% 96%",
        // Gruvbox 经典复古红绿
        diffAddBg: "142 50% 85%",
        diffAddText: "142 80% 25%",
@@ -488,6 +579,15 @@ export const OFFICIAL_THEMES: Theme[] = [
        listMarker: "45 90% 65%",  // 黄色列表点
        highlight: "35 80% 35%",
        tag: "270 60% 65%",
+       // 语义状态色 - 复古风
+       destructive: "0 80% 60%",
+       destructiveForeground: "45 25% 96%",
+       success: "142 60% 55%",
+       successForeground: "20 15% 18%",
+       warning: "35 90% 60%",
+       warningForeground: "20 15% 18%",
+       info: "215 75% 65%",
+       infoForeground: "20 15% 18%",
        // Gruvbox Dark Diff
        diffAddBg: "142 40% 20%",
        diffAddText: "142 70% 70%",
@@ -531,6 +631,16 @@ export function applyTheme(theme: Theme, isDark: boolean) {
   root.style.setProperty("--md-list-marker", colors.listMarker);
   root.style.setProperty("--md-highlight", colors.highlight);
   root.style.setProperty("--md-tag", colors.tag);
+
+  // 语义状态色
+  root.style.setProperty("--destructive", colors.destructive);
+  root.style.setProperty("--destructive-foreground", colors.destructiveForeground);
+  root.style.setProperty("--success", colors.success);
+  root.style.setProperty("--success-foreground", colors.successForeground);
+  root.style.setProperty("--warning", colors.warning);
+  root.style.setProperty("--warning-foreground", colors.warningForeground);
+  root.style.setProperty("--info", colors.info);
+  root.style.setProperty("--info-foreground", colors.infoForeground);
 
   // Diff 颜色
   root.style.setProperty("--diff-add-bg", colors.diffAddBg);

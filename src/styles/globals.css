@@ -48,6 +48,16 @@ body.resizing iframe[data-codex-iframe="true"] {
   --ui-radius-md: 14px;
   --ui-radius-lg: 18px;
 
+  /* 语义状态色 (fallback for non-themed contexts) */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 71% 45%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 100%;
+
   /* UI motion tokens (交互反馈统一) */
   --ui-motion-feedback: 120ms;
   --ui-motion-panel: 180ms;
@@ -65,6 +75,14 @@ body.resizing iframe[data-codex-iframe="true"] {
   --primary: 200 75% 55%;  /* 柔和灰蓝 */
   --primary-foreground: 222 30% 12%;
   --border: 220 14% 28%;  /* 暖边框 */
+  --destructive: 0 62% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 60% 55%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 80% 55%;
+  --warning-foreground: 0 0% 100%;
+  --info: 217 80% 65%;
+  --info-foreground: 0 0% 100%;
 }
 
 @layer base {

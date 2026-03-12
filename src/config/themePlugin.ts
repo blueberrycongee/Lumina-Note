@@ -14,6 +14,36 @@ import { invoke } from '@tauri-apps/api/core';
 // 用户主题存储目录（相对于 vault）
 const USER_THEMES_DIR = '.lumina/themes';
 
+/** Fallback defaults for fields added after initial release */
+const STATUS_COLOR_DEFAULTS = {
+  light: {
+    destructive: "0 72% 51%",
+    destructiveForeground: "0 0% 100%",
+    success: "142 71% 45%",
+    successForeground: "0 0% 100%",
+    warning: "38 92% 50%",
+    warningForeground: "0 0% 100%",
+    info: "217 91% 60%",
+    infoForeground: "0 0% 100%",
+  },
+  dark: {
+    destructive: "0 62% 60%",
+    destructiveForeground: "0 0% 100%",
+    success: "142 60% 55%",
+    successForeground: "0 0% 100%",
+    warning: "38 80% 55%",
+    warningForeground: "0 0% 100%",
+    info: "217 80% 65%",
+    infoForeground: "0 0% 100%",
+  },
+} as const;
+
+/** Fill missing status color fields with defaults (backward compat) */
+function backfillThemeColors(colors: ThemeColors, mode: "light" | "dark"): ThemeColors {
+  const defaults = STATUS_COLOR_DEFAULTS[mode];
+  return { ...defaults, ...colors };
+}
+
 // 已加载的用户主题缓存
 let userThemes: Theme[] = [];
 
@@ -90,6 +120,9 @@ export async function loadUserThemes(vaultPath: string): Promise<Theme[]> {
           if (!themeData.id.startsWith('user-')) {
             themeData.id = `user-${themeData.id}`;
           }
+          // Backfill status color fields for older user themes
+          themeData.light = backfillThemeColors(themeData.light, "light");
+          themeData.dark = backfillThemeColors(themeData.dark, "dark");
           loadedThemes.push(themeData);
           console.log(`[ThemePlugin] 加载用户主题: ${themeData.name}`);
         } else {
