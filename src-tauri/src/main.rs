@@ -223,6 +223,10 @@ fn main() {
             cloud_relay::cloud_relay_get_status,
             cloud_relay::cloud_relay_start,
             cloud_relay::cloud_relay_stop,
+            // Proxy commands
+            proxy::set_proxy_config,
+            proxy::get_proxy_config,
+            proxy::test_proxy_connection,
             // Resumable updater commands
             update_manager::update_start_resumable_install,
             update_manager::update_get_resumable_status,
@@ -237,6 +241,7 @@ fn main() {
         .manage(cloud_relay::CloudRelayState::new())
         .manage(update_manager::UpdateManagerState::default())
         .manage(commands::ChildWebviewBoundsState::default())
+        .manage(proxy::ProxyState::new())
         .setup(|app| {
             if let Err(err) = mobile_gateway::hydrate_state(&app.handle()) {
                 eprintln!("[MobileGateway] Failed to hydrate state: {}", err);
