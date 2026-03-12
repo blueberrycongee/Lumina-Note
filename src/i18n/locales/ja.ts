@@ -86,6 +86,7 @@ export default {
     openClawCronJobs: 'Cron ジョブ',
     openClawNoCronJobs: 'cron ジョブはまだありません',
     openClawManageCronJobs: 'Cron ジョブを管理',
+    openClawCreateCronJob: 'Cron ジョブを作成',
   },
 
   favorites: {

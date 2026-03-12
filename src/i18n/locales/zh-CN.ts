@@ -86,6 +86,7 @@ export default {
     openClawCronJobs: 'Cron 任务',
     openClawNoCronJobs: '暂无 cron 任务',
     openClawManageCronJobs: '管理 cron 任务',
+    openClawCreateCronJob: '新建 cron 任务',
   },
 
   favorites: {

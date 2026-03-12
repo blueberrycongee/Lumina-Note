@@ -661,11 +661,6 @@ export function Sidebar() {
     return () => { cancelled = true; };
   }, [openClawAttachment]);
 
-  const openCronOverview = useCallback(() => {
-    pluginRuntime.executeCommand("plugin-command:openclaw-workspace:manage-cron-jobs")
-      || pluginRuntime.executeCommand("plugin-command:openclaw-workspace:open-overview");
-  }, []);
-
   const openCronEditor = useCallback((jobId?: string) => {
     if (jobId) {
       const actions = pluginRuntime.getTabActions("openclaw-workspace:openclaw-workspace-overview");
@@ -1202,18 +1197,23 @@ export function Sidebar() {
               <div className="text-[11px] font-medium text-muted-foreground">
                 {t.sidebar.openClawCronJobs}
               </div>
-              {openClawCronJobs.length > 0 && (
-                <button
-                  type="button"
-                  onClick={openCronOverview}
-                  className="text-[10px] text-muted-foreground hover:text-foreground"
-                >
-                  {t.sidebar.openClawManageCronJobs}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => openCronEditor()}
+                className="text-[11px] text-muted-foreground hover:text-foreground"
+                title={t.sidebar.openClawCreateCronJob}
+              >
+                +
+              </button>
             </div>
             {openClawCronJobs.length === 0 ? (
-              <div className="text-[11px] text-muted-foreground">{t.sidebar.openClawNoCronJobs}</div>
+              <button
+                type="button"
+                onClick={() => openCronEditor()}
+                className="w-full rounded-md px-2 py-1 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground text-left"
+              >
+                {t.sidebar.openClawNoCronJobs}
+              </button>
             ) : (
               openClawCronJobs.slice(0, 5).map((job) => (
                 <button

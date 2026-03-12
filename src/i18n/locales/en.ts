@@ -86,6 +86,7 @@ export default {
     openClawCronJobs: 'Cron jobs',
     openClawNoCronJobs: 'No cron jobs configured',
     openClawManageCronJobs: 'Manage cron jobs',
+    openClawCreateCronJob: 'Create cron job',
   },
 
   favorites: {
