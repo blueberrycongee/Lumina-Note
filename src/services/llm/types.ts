@@ -51,17 +51,18 @@ export interface Message {
 
 // ============ Provider 类型 ============
 
-export type LLMProviderType =
-  | "anthropic"
-  | "openai"
-  | "gemini"
-  | "moonshot"
-  | "deepseek"
-  | "zai"
-  | "groq"
-  | "openrouter"
-  | "ollama"
-  | "custom";
+ export type LLMProviderType =
+   | "anthropic"
+   | "openai"
+   | "gemini"
+   | "moonshot"
+   | "deepseek"
+   | "zai"
+   | "groq"
+   | "openrouter"
+   | "ollama"
+   | "custom"
+   | "novita";
 
 // ============ Provider 元数据 ============
 
@@ -310,13 +311,25 @@ export const PROVIDER_REGISTRY: Record<LLMProviderType, ProviderMeta> = {
       { id: "custom", name: "Custom Model", contextWindow: 128000 },
     ],
   },
-  custom: {
-    name: "custom",
-    label: "Custom",
-    description: "OpenAI Compatible",
-    supportsFunctionCalling: true,
-    models: [
-      { id: "custom", name: "Custom Model", contextWindow: 128000 },
-    ],
-  },
-};
+   custom: {
+     name: "custom",
+     label: "Custom",
+     description: "OpenAI Compatible",
+     supportsFunctionCalling: true,
+     models: [
+       { id: "custom", name: "Custom Model", contextWindow: 128000 },
+     ],
+   },
+   novita: {
+     name: "novita",
+     label: "Novita AI",
+     description: "Novita AI OpenAI-compatible API",
+     defaultBaseUrl: "https://api.novita.ai/openai",
+     supportsFunctionCalling: true,
+     models: [
+       { id: "deepseek/deepseek-v3.2", name: "DeepSeek V3.2", contextWindow: 128000 },
+       { id: "zai-org/glm-5", name: "GLM-5", contextWindow: 128000, supportsVision: true },
+       { id: "minimax/minimax-m2.5", name: "MiniMax M2.5", contextWindow: 128000 },
+     ],
+   },
+ };

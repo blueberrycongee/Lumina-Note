@@ -68,11 +68,11 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 <h2 align="center">Features</h2>
 
-<h3 align="center">AI workspace</h3>
-
-- Modes: `Chat` / `Agent` / `Deep Research` / `Codex` (embedded VS Code extension in the sidebar)
-- Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Local semantic retrieval (RAG) from your vault
+ <h3 align="center">AI workspace</h3>
+ 
+ - Modes: `Chat` / `Agent` / `Deep Research` / `Codex` (embedded VS Code extension in the sidebar)
+ - Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama / Novita
+ - Local semantic retrieval (RAG) from your vault
 
 <h3 align="center">Editor and knowledge graph</h3>
 
