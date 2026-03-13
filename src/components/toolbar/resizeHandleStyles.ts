@@ -8,9 +8,8 @@ export function getResizeHandleIndicatorClassName(isActive: boolean, direction: 
     'absolute inset-y-0 w-[3px] rounded-full pointer-events-none',
     // Align with the sidebar border edge
     direction === 'left' ? '-left-px' : '-right-px',
-    'opacity-0 bg-border/20 shadow-[0_0_5px_hsl(var(--border)/0.25)]',
+    'bg-border/20 shadow-[0_0_5px_hsl(var(--border)/0.25)]',
     'transition-opacity duration-200 ease-out',
-    'group-hover:opacity-100',
-    isActive && 'opacity-100 bg-border/30 shadow-[0_0_7px_hsl(var(--border)/0.35)]',
+    isActive ? 'opacity-100' : 'opacity-0',
   );
 }

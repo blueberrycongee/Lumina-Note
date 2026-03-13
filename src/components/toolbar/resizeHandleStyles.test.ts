@@ -5,17 +5,17 @@ import {
 } from './resizeHandleStyles';
 
 describe('resize handle styles', () => {
-  it('keeps the handle visible at rest without adding decorative glow classes', () => {
+  it('shows indicator only when active', () => {
     expect(RESIZE_HANDLE_WRAPPER_CLASSNAME).toContain('cursor-col-resize');
 
     const idle = getResizeHandleIndicatorClassName(false, 'left');
     const active = getResizeHandleIndicatorClassName(true, 'left');
 
-    expect(idle).not.toContain('bg-gradient');
     expect(idle).toContain('opacity-0');
-    expect(idle).toContain('group-hover:opacity-100');
+    expect(idle).not.toContain('opacity-100');
 
     expect(active).toContain('opacity-100');
+    expect(active).not.toContain('opacity-0');
   });
 
   it('positions indicator at the sidebar-facing edge based on direction', () => {

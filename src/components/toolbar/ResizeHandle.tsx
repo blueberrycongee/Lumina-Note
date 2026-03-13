@@ -12,6 +12,9 @@ interface ResizeHandleProps {
   className?: string;
 }
 
+const PROXIMITY_MASK =
+  "radial-gradient(80px 120px at 50% var(--cursor-y, 50%), black, transparent)";
+
 export function ResizeHandle({
   direction,
   onResize,
@@ -20,6 +23,7 @@ export function ResizeHandle({
 }: ResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const indicatorRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number | null>(null);
   const lastXRef = useRef(0);
   const latestXRef = useRef(0);
@@ -39,7 +43,7 @@ export function ResizeHandle({
       lastXRef.current = e.clientX;
       latestXRef.current = e.clientX;
       setIsDragging(true);
-      
+
       // 拖动时禁用侧边栏的过渡动画
       document.body.classList.add("resizing");
     },
@@ -98,10 +102,32 @@ export function ResizeHandle({
     };
   }, [emitResize, isDragging]);
 
+  // Track cursor Y on the indicator (via ref, no re-render)
+  const updateCursorY = useCallback((e: React.MouseEvent) => {
+    if (indicatorRef.current) {
+      const rect = indicatorRef.current.getBoundingClientRect();
+      indicatorRef.current.style.setProperty(
+        "--cursor-y",
+        `${e.clientY - rect.top}px`
+      );
+    }
+  }, []);
+
   const hitAreaStyle =
     direction === "left"
       ? { left: "-1px", right: "-7px" }
       : { left: "-1px", right: "-7px" };
+
+  // Hover: proximity mask around cursor; Drag: full glow, stronger intensity
+  const indicatorStyle: React.CSSProperties | undefined =
+    isDragging
+      ? {
+          backgroundColor: "hsl(var(--border) / 0.3)",
+          boxShadow: "0 0 7px hsl(var(--border) / 0.35)",
+        }
+      : isHovering
+        ? { maskImage: PROXIMITY_MASK, WebkitMaskImage: PROXIMITY_MASK }
+        : undefined;
 
   return (
     <div
@@ -111,19 +137,20 @@ export function ResizeHandle({
       )}
     >
       <div
+        ref={indicatorRef}
         className={getResizeHandleIndicatorClassName(isDragging || isHovering, direction)}
+        style={indicatorStyle}
       />
-      
+
       {/* Clickable area - 这是实际的点击区域 */}
       <div
         className="absolute inset-y-0 cursor-col-resize z-30"
         style={hitAreaStyle}
         onMouseDown={handleMouseDown}
         onDoubleClick={onDoubleClick}
-        onMouseEnter={() => {
-          setIsHovering(true);
-        }}
+        onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
+        onMouseMove={updateCursorY}
       />
     </div>
   );
