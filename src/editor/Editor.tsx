@@ -421,25 +421,18 @@ export function Editor() {
           {/* 只在非 AI 聊天页显示编辑器工具栏 */}
           {activeTab?.type !== "ai-chat" && (
             <>
-              {/* Mode Switcher */}
-              <div className="flex items-center bg-muted rounded-lg p-0.5 gap-0.5">
-                {(Object.keys(modeLabels) as EditorMode[]).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => handleModeChange(mode)}
-                    className={cn(
-                      "mode-switcher-btn flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium",
-                      editorMode === mode
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/50"
-                    )}
-                    title={modeLabels[mode]}
-                  >
-                    {modeIcons[mode]}
-                    <span className="ui-compact-hide">{modeLabels[mode]}</span>
-                  </button>
-                ))}
-              </div>
+              {/* Mode Switcher — single button cycling live → reading → source */}
+              <button
+                onClick={() => {
+                  const order: EditorMode[] = ["live", "reading", "source"];
+                  const next = order[(order.indexOf(editorMode) + 1) % order.length];
+                  handleModeChange(next);
+                }}
+                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+                title={modeLabels[editorMode]}
+              >
+                {modeIcons[editorMode]}
+              </button>
 
               <span className="ui-compact-hide text-xs text-muted-foreground">
                 {isSaving ? t.editor.saving : isDirty ? t.editor.edited : t.common.saved}
