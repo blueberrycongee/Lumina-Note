@@ -97,6 +97,28 @@ fn default_allowed_roots() -> Vec<PathBuf> {
         roots.push(cwd);
     }
 
+    // Add network drive mount points
+    // macOS: /Volumes for network drives and external volumes
+    if cfg!(target_os = "macos") {
+        let volumes = PathBuf::from("/Volumes");
+        if volumes.exists() {
+            roots.push(volumes);
+        }
+    }
+    // Linux: /mnt and /media for network drives and removable media
+    if cfg!(target_os = "linux") {
+        let mnt = PathBuf::from("/mnt");
+        if mnt.exists() {
+            roots.push(mnt);
+        }
+        let media = PathBuf::from("/media");
+        if media.exists() {
+            roots.push(media);
+        }
+    }
+    // Windows: Network drives are mapped as drive letters (Z:\, Y:\, etc.)
+    // They are already covered by the drive root detection above
+
     normalize_roots(roots)
 }
 
