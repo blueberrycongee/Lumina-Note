@@ -2155,6 +2155,7 @@ version = "1.0.13"
 dependencies = [
  "base64 0.22.1",
  "bincode",
+ "block2",
  "chrono",
  "flate2",
  "forge",

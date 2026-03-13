@@ -213,14 +213,15 @@ fn main() {
 
             #[cfg(target_os = "macos")]
             {
-                traffic_lights::center_in_titlebar(&window);
+                // Performs initial centering and installs a native
+                // NSNotificationCenter observer for resize events.
+                traffic_lights::observe_resize(&window);
 
+                // Theme changes are rare and don't cause flicker, so
+                // the Tauri event handler is sufficient here.
                 let win = window.clone();
                 window.on_window_event(move |event| {
-                    if matches!(
-                        event,
-                        tauri::WindowEvent::Resized(..) | tauri::WindowEvent::ThemeChanged(..)
-                    ) {
+                    if matches!(event, tauri::WindowEvent::ThemeChanged(..)) {
                         traffic_lights::center_in_titlebar(&win);
                     }
                 });
