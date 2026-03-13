@@ -17,7 +17,7 @@ fn macos_uses_creation_time_overlay_titlebar_config() {
     assert!(macos_config.contains("\"hiddenTitle\": true"));
     assert!(macos_config.contains("\"trafficLightPosition\""));
     assert!(macos_config.contains("\"x\": 14"));
-    assert!(macos_config.contains("\"y\": 24"));
+    assert!(macos_config.contains("\"y\": 16"));
     assert!(!main_rs.contains("window.set_decorations(true)"));
     assert!(!main_rs.contains("window.set_title_bar_style(TitleBarStyle::Overlay)"));
 }
