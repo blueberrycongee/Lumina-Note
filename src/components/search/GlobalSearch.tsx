@@ -342,7 +342,7 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/45 backdrop-blur-[2px] z-50" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 bg-black/45 backdrop-blur-[2px] z-50 animate-spotlight-overlay" onClick={onClose} aria-hidden="true" />
 
       {/* Search Panel */}
       <div
@@ -350,7 +350,7 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
         onClick={onClose}
       >
         <div
-          className="w-full max-w-4xl h-[min(84vh,48rem)] bg-background/95 backdrop-blur-xl border border-border/70 rounded-2xl z-50 flex flex-col overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
+          className="w-full max-w-4xl h-[min(84vh,48rem)] bg-background/95 backdrop-blur-xl border border-border/70 rounded-2xl z-50 flex flex-col overflow-hidden shadow-[0_24px_80px_rgba(0,0,0,0.32)] animate-spotlight-in"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

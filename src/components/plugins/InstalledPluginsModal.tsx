@@ -40,9 +40,9 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-spotlight-overlay" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-[860px] max-h-[85vh] rounded-xl shadow-2xl overflow-hidden border border-border/60 bg-background/95">
+      <div className="relative w-[860px] max-h-[85vh] rounded-xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 animate-spotlight-in">
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/50">
           <h2 className="text-lg font-semibold text-foreground/90">{t.plugins.modalTitle}</h2>
           <button

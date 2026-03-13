@@ -158,12 +158,12 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* 背景遮罩 */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-spotlight-overlay"
         onClick={onClose}
       />
 
       {/* 模态内容 */}
-      <div className="relative w-[520px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 flex flex-col">
+      <div className="relative w-[520px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 flex flex-col animate-spotlight-in">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/60">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Settings size={16} />

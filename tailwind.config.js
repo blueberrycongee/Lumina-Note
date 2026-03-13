@@ -61,6 +61,8 @@ export default {
       animation: {
         "fade-in": "fadeIn 0.2s ease-out",
         "slide-in": "slideIn 0.2s ease-out",
+        "spotlight-overlay": "spotlightOverlay 0.18s ease-out",
+        "spotlight-in": "spotlightIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       },
       keyframes: {
         fadeIn: {
@@ -70,6 +72,14 @@ export default {
         slideIn: {
           "0%": { opacity: "0", transform: "translateY(4px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        spotlightOverlay: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        spotlightIn: {
+          "0%": { opacity: "0", transform: "scale(0.97)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
         },
       },
     },

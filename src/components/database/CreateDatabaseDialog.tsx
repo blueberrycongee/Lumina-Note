@@ -102,12 +102,12 @@ export function CreateDatabaseDialog({ isOpen, onClose }: CreateDatabaseDialogPr
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* 背景遮罩 */}
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/50 animate-spotlight-overlay"
         onClick={onClose}
       />
       
       {/* 对话框 */}
-      <div className="db-surface relative w-full max-w-md mx-4 p-6">
+      <div className="db-surface relative w-full max-w-md mx-4 p-6 animate-spotlight-in">
         {/* 标题 */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold">{t.database.createDialog.title}</h2>

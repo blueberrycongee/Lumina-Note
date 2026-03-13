@@ -29,14 +29,14 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
 
   const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-spotlight-overlay" onClick={onClose} />
 
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="update-modal-title"
         data-testid="update-modal"
-        className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-2xl"
+        className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-2xl animate-spotlight-in"
       >
         <div className="flex items-center justify-between border-b border-border/60 bg-muted/50 px-6 py-4">
           <h2 id="update-modal-title" className="text-lg font-semibold text-foreground/90">
