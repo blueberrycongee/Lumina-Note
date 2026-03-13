@@ -66,7 +66,7 @@ export function PDFToolbar({
 
   return (
     <div className={cn(
-      "h-10 flex items-center justify-between px-3 border-b border-border bg-muted/50",
+      "h-10 flex items-center justify-between px-3 border-b border-border/60 bg-muted/50",
       className
     )}>
       {/* 翻页控制 */}
@@ -85,7 +85,7 @@ export function PDFToolbar({
             type="text"
             value={currentPage}
             onChange={handlePageInput}
-            className="w-10 text-center bg-background border border-border rounded px-1 py-0.5 text-sm"
+            className="w-10 text-center bg-background border border-border/60 rounded px-1 py-0.5 text-sm"
           />
           <span className="text-muted-foreground">/</span>
           <span className="text-muted-foreground">{totalPages}</span>
@@ -115,7 +115,7 @@ export function PDFToolbar({
         <select
           value={scale}
           onChange={(e) => onScaleChange(parseFloat(e.target.value))}
-          className="bg-background border border-border rounded px-2 py-1 text-sm min-w-[80px]"
+          className="bg-background border border-border/60 rounded px-2 py-1 text-sm min-w-[80px]"
         >
           {SCALE_PRESETS.map(s => (
             <option key={s} value={s}>{Math.round(s * 100)}%</option>

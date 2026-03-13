@@ -136,7 +136,7 @@ export function CardFlowView() {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* 顶部工具栏 */}
-      <div className="p-4 border-b border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20">
+      <div className="p-4 border-b border-border/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20">
         <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold flex items-center gap-2">
                 {t.cardFlow.title}
@@ -186,7 +186,7 @@ export function CardFlowView() {
             <p>{t.cardFlow.loadingNotes}</p>
           </div>
         ) : filteredCards.length === 0 ? (
-          <div className="h-64 flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-border rounded-2xl">
+          <div className="h-64 flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed border-border/60 rounded-2xl">
             <Filter size={48} className="mb-4 opacity-50" />
             <p>{t.cardFlow.noResults}</p>
           </div>

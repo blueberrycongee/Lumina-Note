@@ -152,7 +152,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
   return (
     <div
       ref={panelRef}
-      className={`fixed z-50 bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-200 ${
+      className={`fixed z-50 bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden transition-all duration-200 ${
         isDraggingFileOver ? "ring-2 ring-primary ring-inset" : ""
       }`}
       style={{
@@ -170,7 +170,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
         {/* 主内容区 */}
         <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-3 border-b border-border flex items-center justify-between bg-muted/30">
+      <div className="p-3 border-b border-border/60 flex items-center justify-between bg-muted/30">
         <div className="flex items-center gap-2">
           {/* Mode Toggle */}
           <div className="flex bg-muted rounded-md p-0.5">
@@ -230,7 +230,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
 
       {/* Settings Panel (Collapsed by default) */}
       {showSettings && (
-        <div className="p-3 border-b border-border bg-muted/30 space-y-2 max-h-48 overflow-y-auto">
+        <div className="p-3 border-b border-border/60 bg-muted/30 space-y-2 max-h-48 overflow-y-auto">
           <div className="space-y-2">
             <div>
               <label className="text-xs text-muted-foreground block mb-1">{t.aiFloatingPanel.provider}</label>
@@ -242,7 +242,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                   const defaultModel = providerMeta?.models[0]?.id || "";
                   setConfig({ provider, model: defaultModel });
                 }}
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               >
                 {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
                   <option key={key} value={key}>
@@ -258,7 +258,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                 value={config.apiKey}
                 onChange={(e) => setConfig({ apiKey: e.target.value })}
                 placeholder="sk-..."
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               />
             </div>
             <div>
@@ -273,7 +273,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                     setConfig({ model: newModel });
                   }
                 }}
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               >
                 {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
                   <option key={model.id} value={model.id}>
@@ -293,7 +293,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                   value={config.customModelId || ""}
                   onChange={(e) => setConfig({ customModelId: e.target.value })}
                   placeholder={t.aiFloatingPanel.customModelPlaceholder}
-                  className="w-full text-xs p-2 rounded border border-border bg-background"
+                  className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                 />
               </div>
             )}
@@ -307,7 +307,7 @@ export function AIFloatingPanel({ ballPosition, onDock }: AIFloatingPanelProps) 
                 value={config.baseUrl || ""}
                 onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
                 placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl}
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               />
             </div>
           </div>

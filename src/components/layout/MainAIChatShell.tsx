@@ -1135,7 +1135,7 @@ export function MainAIChatShell() {
 
                 {isExportSelectionMode ? (
                   <>
-                    <div className="mb-4 rounded-xl border border-border bg-card/70 px-3 py-2 flex flex-wrap items-center gap-2">
+                    <div className="mb-4 rounded-xl border border-border/60 bg-card/70 px-3 py-2 flex flex-wrap items-center gap-2">
                       <span className="text-xs text-muted-foreground">
                         {t.ai.exportSelectedCount.replace("{count}", String(selectedExportIds.length))}
                       </span>
@@ -1191,7 +1191,7 @@ export function MainAIChatShell() {
                         className={`mb-6 flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                       >
                         {!isUser && (
-                          <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-background border border-border/60 flex items-center justify-center shrink-0">
                             <Bot size={16} className="text-muted-foreground" />
                           </div>
                         )}
@@ -1351,7 +1351,7 @@ export function MainAIChatShell() {
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-3xl mx-auto px-4 mb-2"
               >
-                <div className="bg-muted/50 border border-border rounded-xl p-3">
+                <div className="bg-muted/50 border border-border/60 rounded-xl p-3">
                   <div className="flex items-center justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
                       <History className="w-4 h-4 text-muted-foreground" />
@@ -1419,7 +1419,7 @@ export function MainAIChatShell() {
               }
             >
               <motion.div
-                className={`bg-background rounded-[24px] shadow-lg border border-border transition-shadow duration-300 ${hasStarted ? "shadow-md" : "shadow-xl"
+                className={`bg-background rounded-[24px] shadow-lg border border-border/60 transition-shadow duration-300 ${hasStarted ? "shadow-md" : "shadow-xl"
                   }`}
               >
                 {/* 输入文本区域 */}
@@ -1427,9 +1427,9 @@ export function MainAIChatShell() {
                   {chatMode === "agent" && showSkillMenu && (
                     <div
                       data-skill-menu
-                      className="absolute left-4 right-4 bottom-full mb-2 bg-background border border-border rounded-lg shadow-lg z-50 overflow-hidden"
+                      className="absolute left-4 right-4 bottom-full mb-2 bg-background border border-border/60 rounded-lg shadow-lg z-50 overflow-hidden"
                     >
-                      <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border flex items-center justify-between">
+                      <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border/60 flex items-center justify-between">
                         <span>{t.ai.skillsTitle}</span>
                         {skillsLoading && <span className="text-[10px]">{t.ai.skillsLoading}</span>}
                       </div>
@@ -1459,7 +1459,7 @@ export function MainAIChatShell() {
                     <div
                       ref={mentionRef}
                       data-mention-menu
-                      className="absolute left-4 w-72 bottom-full mb-2 bg-background border border-border rounded-lg shadow-lg z-50 overflow-hidden"
+                      className="absolute left-4 w-72 bottom-full mb-2 bg-background border border-border/60 rounded-lg shadow-lg z-50 overflow-hidden"
                     >
                       <div className="max-h-56 overflow-y-auto">
                         {filteredMentionFiles.length === 0 ? (
@@ -1684,7 +1684,7 @@ export function MainAIChatShell() {
                 </div>
 
                 {/* 底部提示/思考模式栏（统一区域） */}
-                <div className="bg-muted/30 border-t border-border px-4 py-2 text-xs text-muted-foreground">
+                <div className="bg-muted/30 border-t border-border/60 px-4 py-2 text-xs text-muted-foreground">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     {supportsThinkingMode && (
                       <div className="flex items-center gap-2 shrink-0">
@@ -1694,7 +1694,7 @@ export function MainAIChatShell() {
                         <select
                           value={displayThinkingMode}
                           onChange={(e) => setConfig({ thinkingMode: e.target.value as ThinkingMode })}
-                          className="h-7 min-w-[108px] text-xs px-2 rounded-md border border-border bg-background"
+                          className="h-7 min-w-[108px] text-xs px-2 rounded-md border border-border/60 bg-background"
                         >
                           <option value="auto">{t.aiSettings.thinkingModeAuto}</option>
                           <option value="thinking">{t.aiSettings.thinkingModeThinking}</option>
@@ -1740,8 +1740,8 @@ export function MainAIChatShell() {
           const fullMessages = rustAgentMessages;  // Rust Agent 消息
 
           return (
-            <div className="fixed inset-4 z-50 bg-background/95 backdrop-blur border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50">
+            <div className="fixed inset-4 z-50 bg-background/95 backdrop-blur border border-border/60 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/50">
                 <h2 className="font-bold text-lg">🐛 {t.ai.agentDebugPanel} (🦀 Rust)</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
@@ -1757,7 +1757,7 @@ export function MainAIChatShell() {
               </div>
               <div className="flex-1 overflow-auto p-4 font-mono text-xs space-y-4">
                 {debugPromptStack && (
-                  <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4 space-y-3">
+                  <div className="p-3 rounded-lg border bg-muted/30 border-border/60 mb-4 space-y-3">
                     <div className="font-bold text-muted-foreground flex items-center gap-2">
                       <span>🧠 Prompt Stack</span>
                       <span className="px-1.5 py-0.5 rounded text-[10px] bg-info/20 text-info">
@@ -1791,7 +1791,7 @@ export function MainAIChatShell() {
                 )}
 
                 {/* 意图识别调试信息 */}
-                <div className="p-3 rounded-lg border bg-muted/30 border-border mb-4">
+                <div className="p-3 rounded-lg border bg-muted/30 border-border/60 mb-4">
                   {(() => {
                     // 使用 store 中的意图状态
                     const displayIntent = rustLastIntent;

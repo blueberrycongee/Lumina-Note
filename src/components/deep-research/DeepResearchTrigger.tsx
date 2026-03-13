@@ -117,10 +117,10 @@ function DeepResearchDialog({ isOpen, onClose, onShowHistory }: DeepResearchDial
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative z-10 w-full max-w-md bg-background border border-border rounded-lg shadow-xl"
+        className="relative z-10 w-full max-w-md bg-background border border-border/60 rounded-lg shadow-xl"
       >
         {/* 头部 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
           <div className="flex items-center gap-2">
             <Microscope className="w-5 h-5 text-primary" />
             <span className="font-medium">{t.deepResearch.title}</span>
@@ -157,7 +157,7 @@ function DeepResearchDialog({ isOpen, onClose, onShowHistory }: DeepResearchDial
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               placeholder={t.deepResearch.topicPlaceholder}
-              className="w-full px-3 py-2 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 rounded-md border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-primary"
               autoFocus
             />
           </div>
@@ -172,7 +172,7 @@ function DeepResearchDialog({ isOpen, onClose, onShowHistory }: DeepResearchDial
               <select
                 value={searchScope || ""}
                 onChange={(e) => setSearchScope(e.target.value || undefined)}
-                className="w-full pl-9 pr-3 py-2 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
+                className="w-full pl-9 pr-3 py-2 rounded-md border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
               >
                 <option value="">{t.deepResearch.searchScopeAll}</option>
                 {folders.map((folder) => (
@@ -201,7 +201,7 @@ function DeepResearchDialog({ isOpen, onClose, onShowHistory }: DeepResearchDial
                     "flex-1 px-3 py-2 text-sm rounded-md border transition-colors",
                     reportStyle === option.value
                       ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:bg-muted"
+                      : "border-border/60 hover:bg-muted"
                   )}
                   onClick={() => setReportStyle(option.value as ReportStyle)}
                 >
@@ -213,7 +213,7 @@ function DeepResearchDialog({ isOpen, onClose, onShowHistory }: DeepResearchDial
         </div>
 
         {/* 底部 */}
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border">
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border/60">
           <button
             className="px-4 py-2 text-sm rounded-md hover:bg-muted"
             onClick={onClose}

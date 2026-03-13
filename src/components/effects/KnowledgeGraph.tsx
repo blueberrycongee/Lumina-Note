@@ -944,7 +944,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     <div className={`flex h-full ${className}`}>
       {/* Settings Panel */}
       <div className={cn(
-        "w-64 border-r border-border bg-background flex-shrink-0 overflow-y-auto transition-all duration-200",
+        "w-64 border-r border-border/60 bg-background flex-shrink-0 overflow-y-auto transition-all duration-200",
         showSettings ? "opacity-100" : "w-0 opacity-0 overflow-hidden"
       )}>
         <div className="p-4 space-y-6">
@@ -1036,7 +1036,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                 type="checkbox"
                 checked={showLabels}
                 onChange={(e) => setShowLabels(e.target.checked)}
-                className="rounded border-border"
+                className="rounded border-border/60"
               />
               <span>{t.knowledgeGraph.showLabels}</span>
             </label>
@@ -1046,7 +1046,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                 type="checkbox"
                 checked={showFolders}
                 onChange={(e) => setShowFolders(e.target.checked)}
-                className="rounded border-border"
+                className="rounded border-border/60"
               />
               <span>{t.knowledgeGraph.showFolders}</span>
             </label>
@@ -1057,7 +1057,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       {/* Main Graph Area */}
       <div className="flex-1 flex flex-col">
         {/* Controls */}
-        <div className="p-2 border-b border-border flex items-center justify-between bg-background">
+        <div className="p-2 border-b border-border/60 flex items-center justify-between bg-background">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -1166,10 +1166,10 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           {/* 右键菜单 */}
           {contextMenu && (
             <div
-              className="fixed z-50 bg-background border border-border rounded-md shadow-lg py-1 min-w-[140px]"
+              className="fixed z-50 bg-background border border-border/60 rounded-md shadow-lg py-1 min-w-[140px]"
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
-              <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border mb-1">
+              <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border/60 mb-1">
                 {contextMenu.node.label}
               </div>
               <button
@@ -1200,7 +1200,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
         {/* Node details */}
         {selectedNode && (
-          <div className="p-3 border-t border-border bg-background space-y-2 max-h-40 overflow-y-auto">
+          <div className="p-3 border-t border-border/60 bg-background space-y-2 max-h-40 overflow-y-auto">
             <div className="flex items-center gap-2">
               <FileText size={14} className="text-primary" />
               <span

@@ -379,7 +379,7 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={t.globalSearch.searchPlaceholder}
-                className="w-full pl-8 pr-3 py-2.5 bg-muted/50 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary"
+                className="w-full pl-8 pr-3 py-2.5 bg-muted/50 border border-border/60 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
 
@@ -392,7 +392,7 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
                   value={replaceQuery}
                   onChange={(e) => setReplaceQuery(e.target.value)}
                   placeholder={t.globalSearch.replacePlaceholder}
-                  className="w-full pl-8 pr-3 py-2.5 bg-muted/50 border border-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full pl-8 pr-3 py-2.5 bg-muted/50 border border-border/60 rounded-lg text-sm outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
             )}
@@ -461,7 +461,7 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
             ) : (
               <div className="py-2">
                 {results.map((result) => (
-                  <div key={result.path} className="border-b border-border last:border-b-0">
+                  <div key={result.path} className="border-b border-border/60 last:border-b-0">
                     {/* File header */}
                     <button
                       onClick={() => {

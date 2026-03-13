@@ -385,9 +385,9 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       
       {/* Palette */}
       <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50">
-        <div className="bg-background border border-border rounded-xl shadow-2xl overflow-hidden">
+        <div className="bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden">
           {/* Input area */}
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
             <Command size={16} className="text-muted-foreground shrink-0" />
             <input
               ref={inputRef}
@@ -495,7 +495,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2 border-t border-border text-xs text-muted-foreground flex items-center gap-4">
+          <div className="px-4 py-2 border-t border-border/60 text-xs text-muted-foreground flex items-center gap-4">
             <span>
               <kbd className="bg-muted px-1 rounded">↑↓</kbd> {t.commandPalette.select}
             </span>

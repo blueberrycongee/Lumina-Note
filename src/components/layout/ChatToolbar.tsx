@@ -46,7 +46,7 @@ export function ChatToolbar({
 
   if (isCodexMode) {
     return (
-      <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border shrink-0 min-w-0">
+      <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border/60 shrink-0 min-w-0">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Code2 size={14} />
           <span className="ui-compact-text ui-compact-hide-md">{t.ai.modeCodex}</span>
@@ -57,7 +57,7 @@ export function ChatToolbar({
   }
 
   return (
-    <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border shrink-0 min-w-0">
+    <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border/60 shrink-0 min-w-0">
       <div className="flex items-center gap-2 min-w-0">
         <button
           onClick={onToggleHistory}

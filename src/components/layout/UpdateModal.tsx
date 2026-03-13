@@ -36,9 +36,9 @@ export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
         aria-modal="true"
         aria-labelledby="update-modal-title"
         data-testid="update-modal"
-        className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-xl border border-border bg-background/95 shadow-2xl"
+        className="relative w-full max-w-2xl max-h-[80vh] overflow-hidden rounded-xl border border-border/60 bg-background/95 shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-border bg-muted/50 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/50 px-6 py-4">
           <h2 id="update-modal-title" className="text-lg font-semibold text-foreground/90">
             {t.updateChecker.title}
           </h2>

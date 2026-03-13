@@ -184,7 +184,7 @@ function NoteList({
   if (notes.length === 0) return null;
 
   return (
-    <div className="mt-3 pt-3 border-t border-border">
+    <div className="mt-3 pt-3 border-t border-border/60">
       <div className="text-xs text-muted-foreground mb-2">
         📚 {t.deepResearch.relatedNotes.replace('{count}', String(notes.length))}
       </div>
@@ -439,7 +439,7 @@ function ClarificationPanel({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={t.deepResearch.clarifyPlaceholder}
-          className="flex-1 px-3 py-2 text-sm border border-border rounded-md 
+          className="flex-1 px-3 py-2 text-sm border border-border/60 rounded-md 
                      bg-background focus:outline-none focus:ring-1 focus:ring-primary"
           onKeyDown={(e) => {
             if (isIMEComposing(e)) return;
@@ -656,7 +656,7 @@ ${reportContent}`;
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        "rounded-lg border border-border bg-card overflow-hidden",
+        "rounded-lg border border-border/60 bg-card overflow-hidden",
         className
       )}
     >
@@ -775,7 +775,7 @@ ${reportContent}`;
                         📝 {t.deepResearch.reportGenerating}
                       </div>
                     )}
-                    <div className="max-h-96 overflow-y-auto rounded-md border border-border p-4 bg-background">
+                    <div className="max-h-96 overflow-y-auto rounded-md border border-border/60 p-4 bg-background">
                       <ReportContent
                         content={reportContent}
                         isStreaming={isStreaming}
@@ -813,7 +813,7 @@ ${reportContent}`;
               )}
 
               {/* 操作按钮 */}
-              <div className="flex items-center gap-2 pt-2 border-t border-border">
+              <div className="flex items-center gap-2 pt-2 border-t border-border/60">
                 {phase === "completed" && (
                   <>
                     <button
@@ -878,7 +878,7 @@ ${reportContent}`;
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-background rounded-lg border border-border shadow-xl p-4 w-80"
+              className="bg-background rounded-lg border border-border/60 shadow-xl p-4 w-80"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="font-medium text-sm mb-3">{t.deepResearch.saveDialogTitle}</h3>
@@ -887,7 +887,7 @@ ${reportContent}`;
                 value={saveFileName}
                 onChange={(e) => setSaveFileName(e.target.value)}
                 placeholder={t.deepResearch.saveFilePlaceholder}
-                className="w-full px-3 py-2 text-sm border border-border rounded-md bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary mb-3"
+                className="w-full px-3 py-2 text-sm border border-border/60 rounded-md bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary mb-3"
                 autoFocus
                 onKeyDown={(e) => {
                   if (isIMEComposing(e)) return;

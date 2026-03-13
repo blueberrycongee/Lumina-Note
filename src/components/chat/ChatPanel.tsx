@@ -42,7 +42,7 @@ function EditCard({
   }, [edit.originalContent, edit.newContent]);
 
   return (
-    <div className="border border-border rounded-lg p-3 bg-muted/30 space-y-2">
+    <div className="border border-border/60 rounded-lg p-3 bg-muted/30 space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-primary flex items-center gap-1">
           <FileText size={12} />
@@ -67,7 +67,7 @@ function EditCard({
       </div>
       <p className="text-xs text-muted-foreground">{edit.description}</p>
       
-      <div className="text-xs font-mono bg-background/50 rounded border border-border overflow-hidden max-h-[200px] overflow-y-auto">
+      <div className="text-xs font-mono bg-background/50 rounded border border-border/60 overflow-hidden max-h-[200px] overflow-y-auto">
         {diff.map((part, index) => {
           if (part.added) {
             return (
@@ -228,7 +228,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Context indicator - shows which file(s) will be sent to AI */}
       {!compact && (
-        <div className="p-2 border-b border-border">
+        <div className="p-2 border-b border-border/60">
           <div className="text-xs text-muted-foreground mb-1">{t.ai.contextLabel}</div>
           <div className="flex flex-wrap gap-1">
             {referencedFiles.length > 0 ? (
@@ -402,8 +402,8 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
       </div>
 
       {/* Input Area */}
-      <div className={compact ? "p-2 border-t border-border" : "p-3 border-t border-border"}>
-        <div className="bg-muted/30 border border-border rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+      <div className={compact ? "p-2 border-t border-border/60" : "p-3 border-t border-border/60"}>
+        <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
           <ChatInput
             ref={chatInputRef}
             value={inputValue}
@@ -430,7 +430,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                 className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${
                   isRecording
                     ? "bg-destructive/20 border-destructive text-destructive"
-                    : "bg-background border-border text-muted-foreground hover:bg-accent"
+                    : "bg-background border-border/60 text-muted-foreground hover:bg-accent"
                 }`}
                 title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
               >

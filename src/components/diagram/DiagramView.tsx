@@ -474,14 +474,14 @@ export function DiagramView({
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between border-b border-border/60 px-3 py-2 text-xs text-muted-foreground">
         <span className="truncate">{filePath}</span>
         <div className="flex items-center gap-2">
           {showSendToChatButton ? (
             <button
               type="button"
               onClick={handleSendReferenceToChat}
-              className="inline-flex items-center gap-1 rounded-ui-sm border border-border px-2 py-1 text-[11px] text-foreground hover:bg-muted"
+              className="inline-flex items-center gap-1 rounded-ui-sm border border-border/60 px-2 py-1 text-[11px] text-foreground hover:bg-muted"
               title={t.diagramView.sendToChatHint}
             >
               <MessageSquareQuote className="h-3 w-3" />
@@ -498,7 +498,7 @@ export function DiagramView({
                 void saveDraftNow();
               }}
               disabled={!hasUnsavedChanges || isSaving}
-              className="inline-flex items-center gap-1 rounded-ui-sm border border-border px-2 py-1 text-[11px] text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-1 rounded-ui-sm border border-border/60 px-2 py-1 text-[11px] text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               title={t.diagramView.saveDraft}
             >
               <Save className="h-3 w-3" />

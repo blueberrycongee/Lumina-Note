@@ -223,7 +223,7 @@ export function TableView({ dbId }: TableViewProps) {
         <thead className="sticky top-0 z-10 bg-background">
           <tr>
             {/* 行操作列 */}
-            <th className="w-10 p-0 border-b border-r border-border" />
+            <th className="w-10 p-0 border-b border-r border-border/60" />
             
             {columns.map((column) => (
               <ColumnHeader
@@ -236,7 +236,7 @@ export function TableView({ dbId }: TableViewProps) {
             ))}
             
             {/* 新增列按钮 */}
-            <th className="w-10 p-0 border-b border-border">
+            <th className="w-10 p-0 border-b border-border/60">
               <DatabaseIconButton
                 onClick={handleAddColumn}
                 className="w-full h-9 rounded-none"
@@ -259,7 +259,7 @@ export function TableView({ dbId }: TableViewProps) {
               onMouseLeave={() => setHoveredRow(null)}
             >
               {/* 行操作 */}
-              <td className="w-10 p-0 border-b border-r border-border relative">
+              <td className="w-10 p-0 border-b border-r border-border/60 relative">
                 <div className="flex items-center justify-center h-9">
                   {hoveredRow === row.id ? (
                     <div className="relative">
@@ -305,7 +305,7 @@ export function TableView({ dbId }: TableViewProps) {
                   ref={(el) => {
                     cellRefs.current[getCellKey(row.id, column.id)] = el;
                   }}
-                  className={`db-focus-ring relative p-0 border-b border-r border-border ${
+                  className={`db-focus-ring relative p-0 border-b border-r border-border/60 ${
                     editingCell?.rowId === row.id && editingCell?.columnId === column.id
                       ? 'ring-2 ring-primary ring-inset bg-primary/[0.06]'
                       : cellStatus[getCellKey(row.id, column.id)] === "saving"
@@ -375,7 +375,7 @@ export function TableView({ dbId }: TableViewProps) {
               ))}
               
               {/* 空列占位 */}
-              <td className="w-10 border-b border-border" />
+              <td className="w-10 border-b border-border/60" />
             </tr>
           ))}
           

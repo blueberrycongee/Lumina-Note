@@ -25,9 +25,9 @@ export function PDFSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full border-r border-border bg-muted/30 w-64">
+    <div className="flex flex-col h-full border-r border-border/60 bg-muted/30 w-64">
       {/* Tab Header */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border/60">
         <button
           onClick={() => setActiveTab("thumbnails")}
           className={`flex-1 px-3 py-2 text-xs font-medium transition-colors ${

@@ -131,7 +131,7 @@ export function AgentPanel() {
   return (
     <div className="flex flex-col h-full bg-background">
       {/* 头部 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-primary" />
           <span className="font-medium text-foreground">Lumina Agent</span>
@@ -201,7 +201,7 @@ export function AgentPanel() {
         )}
 
         {(queuedTasks.length > 0 || activeTaskPreview || (llmRetryState && status === "running")) && (
-          <div className="bg-muted/40 border border-border rounded-lg p-3">
+          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-medium">{t.ai.agentQueueTitle}</span>
               <span className="text-muted-foreground">
@@ -302,10 +302,10 @@ export function AgentPanel() {
       </div>
 
       {/* 输入区域 - 样式对齐 Chat 输入框（自定义 textarea + 统一底部按钮） */}
-      <div className="p-3 border-t border-border">
+      <div className="p-3 border-t border-border/60">
         {/* 模式在后台由意图自动选择，不在 UI 显示 */}
 
-        <div className="bg-muted/30 border border-border rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+        <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
           <ChatInput
             value={input}
             onChange={setInput}
@@ -331,7 +331,7 @@ export function AgentPanel() {
                 onClick={toggleRecording}
                 className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${isRecording
                     ? "bg-destructive/20 border-destructive text-destructive"
-                    : "bg-background border-border text-muted-foreground hover:bg-accent"
+                    : "bg-background border-border/60 text-muted-foreground hover:bg-accent"
                   }`}
                 title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
               >

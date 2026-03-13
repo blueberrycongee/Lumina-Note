@@ -54,8 +54,8 @@ export function CommandManagerModal({
 
     return (
         <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-background border border-border rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+            <div className="w-full max-w-md bg-background border border-border/60 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/30">
                     <h3 className="font-medium">
                         {initialData ? t.ai.slashCommands.editShortcut : t.ai.slashCommands.createShortcut}
                     </h3>
@@ -79,7 +79,7 @@ export function CommandManagerModal({
                                 value={key}
                                 onChange={(e) => setKey(e.target.value)}
                                 placeholder={t.ai.slashCommands.triggerKeyPlaceholder}
-                                className="w-full pl-6 pr-3 py-2 bg-muted/50 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+                                className="w-full pl-6 pr-3 py-2 bg-muted/50 border border-border/60 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
                                 autoFocus
                             />
                         </div>
@@ -97,7 +97,7 @@ export function CommandManagerModal({
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder={t.ai.slashCommands.descriptionPlaceholder}
-                            className="w-full px-3 py-2 bg-muted/50 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
+                            className="w-full px-3 py-2 bg-muted/50 border border-border/60 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50"
                         />
                     </div>
 
@@ -110,7 +110,7 @@ export function CommandManagerModal({
                             onChange={(e) => setPrompt(e.target.value)}
                             placeholder={t.ai.slashCommands.promptPlaceholder}
                             rows={4}
-                            className="w-full px-3 py-2 bg-muted/50 border border-border rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+                            className="w-full px-3 py-2 bg-muted/50 border border-border/60 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
                         />
                         <p className="text-xs text-muted-foreground">
                             {t.ai.slashCommands.promptHint}

@@ -175,9 +175,9 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-background border border-border rounded-lg shadow-xl w-[900px] max-h-[85vh] flex flex-col">
+      <div className="bg-background border border-border/60 rounded-lg shadow-xl w-[900px] max-h-[85vh] flex flex-col">
         {/* 头部 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
           <div className="flex items-center gap-3">
             <Palette className="w-5 h-5 text-primary" />
             <span className="font-medium">{t.themeEditor.title}</span>
@@ -200,7 +200,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
         {/* 主体 */}
         <div className="flex-1 flex overflow-hidden">
           {/* 左侧：基本信息和颜色分组 */}
-          <div className="w-64 border-r border-border p-4 overflow-y-auto">
+          <div className="w-64 border-r border-border/60 p-4 overflow-y-auto">
             {/* 主题信息 */}
             <div className="space-y-3 mb-6">
               <div>
@@ -209,7 +209,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                   type="text"
                   value={theme.name}
                   onChange={e => setTheme(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full mt-1 px-2 py-1.5 text-sm bg-muted border border-border rounded"
+                  className="w-full mt-1 px-2 py-1.5 text-sm bg-muted border border-border/60 rounded"
                 />
               </div>
               <div>
@@ -218,7 +218,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                   type="text"
                   value={theme.description}
                   onChange={e => setTheme(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full mt-1 px-2 py-1.5 text-sm bg-muted border border-border rounded"
+                  className="w-full mt-1 px-2 py-1.5 text-sm bg-muted border border-border/60 rounded"
                 />
               </div>
             </div>
@@ -249,7 +249,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                   const base = OFFICIAL_THEMES.find(t => t.id === e.target.value);
                   if (base) handleReset(base);
                 }}
-                className="w-full px-2 py-1.5 text-sm bg-muted border border-border rounded"
+                className="w-full px-2 py-1.5 text-sm bg-muted border border-border/60 rounded"
               >
                 <option value="">{t.themeEditor.selectBaseTheme}</option>
                 {OFFICIAL_THEMES.map((theme) => (
@@ -273,7 +273,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                     <div className="flex items-center justify-between">
                       <span className="text-sm">{t.themeEditor[key as keyof typeof t.themeEditor] || key}</span>
                       <div
-                        className="w-6 h-6 rounded border border-border"
+                        className="w-6 h-6 rounded border border-border/60"
                         style={{ backgroundColor: hslToCSS(currentColors[colorKey]) }}
                       />
                     </div>
@@ -327,7 +327,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
         </div>
 
         {/* 底部操作栏 */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border/60">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowImport(!showImport)}
@@ -371,12 +371,12 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
 
         {/* 导入面板 */}
         {showImport && (
-          <div className="absolute bottom-16 left-4 w-80 p-3 bg-background border border-border rounded-lg shadow-lg">
+          <div className="absolute bottom-16 left-4 w-80 p-3 bg-background border border-border/60 rounded-lg shadow-lg">
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
               placeholder={t.themeEditor.pasteThemeJson}
-              className="w-full h-32 p-2 text-sm bg-muted border border-border rounded resize-none"
+              className="w-full h-32 p-2 text-sm bg-muted border border-border/60 rounded resize-none"
             />
             <div className="flex justify-end gap-2 mt-2">
               <button

@@ -109,7 +109,7 @@ export function DatabaseSplitView({ dbId }: DatabaseSplitViewProps) {
           ) : secondaryFile ? (
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* File header */}
-              <div className="h-8 flex items-center px-3 gap-2 border-b border-border bg-muted shrink-0">
+              <div className="h-8 flex items-center px-3 gap-2 border-b border-border/60 bg-muted shrink-0">
                 <FileText size={14} className="text-muted-foreground" />
                 <span className="text-sm truncate flex-1">
                   {getFileName(secondaryFile)}

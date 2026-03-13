@@ -69,7 +69,7 @@ export function PluginViewPane({ title, html, scopeId, onAction }: PluginViewPan
       data-lumina-plugin-scope={scopeId}
       onClick={handleClick}
     >
-      <div className="px-4 py-3 border-b border-border">
+      <div className="px-4 py-3 border-b border-border/60">
         <h2 className="text-sm font-medium text-foreground">{title}</h2>
       </div>
       <div className="p-4">

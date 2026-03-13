@@ -225,7 +225,7 @@ export function DiffView({
   if (diffLines.length === 0) {
     return (
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
-        <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-warning/10">
+        <div className="h-12 border-b border-border/60 flex items-center justify-between px-4 bg-warning/10">
           <div className="flex items-center gap-3">
             <FileText size={16} className="text-warning" />
             <span className="font-medium text-sm">{t.ai.diffView.title}</span>
@@ -257,7 +257,7 @@ export function DiffView({
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="h-12 border-b border-border flex items-center justify-between px-4 bg-warning/10">
+      <div className="h-12 border-b border-border/60 flex items-center justify-between px-4 bg-warning/10">
         <div className="flex items-center gap-3">
           <FileText size={16} className="text-warning" />
           <span className="font-medium text-sm">{t.ai.diffView.title}</span>
@@ -311,7 +311,7 @@ export function DiffView({
       
       {/* Description */}
       {description && (
-        <div className="px-4 py-2 border-b border-border bg-muted/30 text-sm text-muted-foreground">
+        <div className="px-4 py-2 border-b border-border/60 bg-muted/30 text-sm text-muted-foreground">
           📝 {description}
         </div>
       )}

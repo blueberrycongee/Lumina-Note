@@ -35,7 +35,7 @@ export function PlanCard({ plan, className = "" }: PlanCardProps) {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-muted/50 rounded-lg border border-border overflow-hidden ${className}`}
+      className={`bg-muted/50 rounded-lg border border-border/60 overflow-hidden ${className}`}
     >
       {/* 头部 */}
       <button
@@ -77,7 +77,7 @@ export function PlanCard({ plan, className = "" }: PlanCardProps) {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="border-t border-border"
+            className="border-t border-border/60"
           >
             {/* 说明（如果有） */}
             {plan.explanation && (

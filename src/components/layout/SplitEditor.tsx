@@ -58,7 +58,7 @@ function EditorPane({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Pane header */}
-      <div className="h-9 flex items-center px-3 justify-between border-b border-border bg-muted/30 shrink-0">
+      <div className="h-9 flex items-center px-3 justify-between border-b border-border/60 bg-muted/30 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <FileText size={14} className="text-muted-foreground shrink-0" />
           <span className="text-sm font-medium truncate">
@@ -232,7 +232,7 @@ export function SplitEditor() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Split toolbar */}
-      <div className="h-8 flex items-center px-2 gap-1 border-b border-border bg-background shrink-0">
+      <div className="h-8 flex items-center px-2 gap-1 border-b border-border/60 bg-background shrink-0">
         <button
           onClick={() => setSplitDirection(isHorizontal ? "vertical" : "horizontal")}
           className={cn(
@@ -313,7 +313,7 @@ export function SplitEditor() {
         <div 
           className={cn(
             "flex flex-col overflow-hidden",
-            isHorizontal ? "border-l border-border" : "border-t border-border",
+            isHorizontal ? "border-l border-border/60" : "border-t border-border/60",
             activePane === 'secondary' && "ring-2 ring-primary/30 ring-inset"
           )}
           style={{

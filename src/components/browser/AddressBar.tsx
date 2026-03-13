@@ -139,7 +139,7 @@ export function AddressBar({
 
   return (
     <div className={cn(
-      "flex items-center gap-1.5 px-2 py-1 bg-muted/50 border-b border-border",
+      "flex items-center gap-1.5 px-2 py-1 bg-muted/50 border-b border-border/60",
       className
     )}>
       {/* 导航按钮 */}
@@ -199,7 +199,7 @@ export function AddressBar({
         "flex-1 flex items-center gap-1.5 px-2 py-1 rounded-md border transition-colors",
         isFocused 
           ? "bg-background border-primary ring-1 ring-primary" 
-          : "bg-background/60 border-border hover:bg-background"
+          : "bg-background/60 border-border/60 hover:bg-background"
       )}>
         {/* 安全指示器 */}
         {url && (

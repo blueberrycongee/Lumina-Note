@@ -189,7 +189,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   if (loading) {
     return (
       <div className={cn("flex flex-col h-full", className)}>
-        <div className="h-9 flex items-center px-3 gap-2 border-b border-border bg-muted/30 shrink-0">
+        <div className="h-9 flex items-center px-3 gap-2 border-b border-border/60 bg-muted/30 shrink-0">
           <FileText size={14} className="text-red-500" />
           <span className="text-sm font-medium truncate">
             {filePath.split(/[\/\\]/).pop() || t.pdfViewer.defaultFileName}
@@ -207,7 +207,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   if (error) {
     return (
       <div className={cn("flex flex-col h-full", className)}>
-        <div className="h-9 flex items-center px-3 gap-2 border-b border-border bg-muted/30 shrink-0">
+        <div className="h-9 flex items-center px-3 gap-2 border-b border-border/60 bg-muted/30 shrink-0">
           <FileText size={14} className="text-red-500" />
           <span className="text-sm font-medium truncate">
             {filePath.split(/[\/\\]/).pop() || t.pdfViewer.defaultFileName}
@@ -226,7 +226,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* 文件名标题 */}
-      <div className="h-9 flex items-center justify-between px-3 gap-2 border-b border-border bg-muted/30 shrink-0">
+      <div className="h-9 flex items-center justify-between px-3 gap-2 border-b border-border/60 bg-muted/30 shrink-0">
         <div className="flex items-center gap-2">
           <FileText size={14} className="text-red-500" />
           <span className="text-sm font-medium truncate">
@@ -270,9 +270,9 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
       <div className="flex-1 flex overflow-hidden relative">
         {/* 左侧边栏：目录 */}
         {showOutline ? (
-          <div className="flex flex-col w-64 border-r border-border bg-muted/30">
+          <div className="flex flex-col w-64 border-r border-border/60 bg-muted/30">
             {/* 头部 */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-border/60">
               <span className="text-sm font-medium">{t.pdfViewer.catalog}</span>
               <button
                 onClick={() => setShowOutline(false)}
@@ -294,7 +294,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
         ) : (
           <button
             onClick={() => setShowOutline(true)}
-            className="absolute left-0 top-2 z-10 flex items-center justify-center w-5 h-6 bg-muted/80 border border-border border-l-0 rounded-r shadow-sm hover:bg-background transition-colors"
+            className="absolute left-0 top-2 z-10 flex items-center justify-center w-5 h-6 bg-muted/80 border border-border/60 border-l-0 rounded-r shadow-sm hover:bg-background transition-colors"
             title={t.pdfViewer.expandCatalog}
           >
             <ChevronRight size={14} className="text-muted-foreground" />

@@ -971,7 +971,7 @@ function App() {
         </div>
 
         {/* Left Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
-        <div className="relative flex-shrink-0 h-full z-20">
+        <div className="relative flex-shrink-0 h-full z-20 before:absolute before:inset-x-0 before:top-0 before:h-11 before:border-b before:border-border/60 before:pointer-events-none">
           <ResizeHandle
             direction="left"
             onResize={handleLeftResize}
@@ -1115,7 +1115,7 @@ function App() {
         </main>
 
         {/* Right Resize Handle + Collapse Button */}
-        <div className="relative flex-shrink-0 h-full z-20">
+        <div className="relative flex-shrink-0 h-full z-20 before:absolute before:inset-x-0 before:top-0 before:h-11 before:border-b before:border-border/60 before:pointer-events-none">
           {rightSidebarOpen && (
             <ResizeHandle
               direction="right"

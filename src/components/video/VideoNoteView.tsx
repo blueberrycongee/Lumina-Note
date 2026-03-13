@@ -535,7 +535,7 @@ export function VideoNoteView({
     return (
       <div className="h-full flex flex-col bg-background">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border/60">
           <div className="flex items-center gap-2">
             <Video className="w-5 h-5 text-primary" />
             <h2 className="font-semibold">{t.videoNote.title}</h2>
@@ -563,7 +563,7 @@ export function VideoNoteView({
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               placeholder={t.videoNote.pasteVideoUrl}
-              className="w-full px-4 py-3 bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-3 bg-muted border border-border/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               onKeyDown={(e) => e.key === 'Enter' && handleLoadVideo()}
             />
             
@@ -588,7 +588,7 @@ export function VideoNoteView({
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-border">
+      <div className="flex items-center justify-between p-3 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0">
           <Video className="w-4 h-4 text-primary shrink-0" />
           <span className="font-medium truncate">{noteFile?.video.title}</span>
@@ -652,10 +652,10 @@ export function VideoNoteView({
           </div>
           
           {/* 时间输入控制栏 */}
-          <div className="p-4 border-t border-border bg-muted/50">
+          <div className="p-4 border-t border-border/60 bg-muted/50">
             <div className="flex items-center gap-3">
               {/* 时间输入区 */}
-              <div className="flex items-center gap-2 bg-background rounded-lg p-2 border border-border">
+              <div className="flex items-center gap-2 bg-background rounded-lg p-2 border border-border/60">
                 {/* 快退按钮 */}
                 <button
                   onClick={() => setCurrentTime(prev => Math.max(0, prev - 30))}
@@ -762,8 +762,8 @@ export function VideoNoteView({
         </div>
 
         {/* 笔记时间线 */}
-        <div className="w-80 border-l border-border flex flex-col bg-muted/20">
-          <div className="p-3 border-b border-border">
+        <div className="w-80 border-l border-border/60 flex flex-col bg-muted/20">
+          <div className="p-3 border-b border-border/60">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-medium text-sm">{t.videoNote.noteTimeline}</h3>
@@ -788,7 +788,7 @@ export function VideoNoteView({
                 type="text"
                 value={danmakuPrefix}
                 onChange={(e) => setDanmakuPrefix(e.target.value)}
-                className="w-16 px-2 py-1 bg-muted border border-border rounded text-center font-mono"
+                className="w-16 px-2 py-1 bg-muted border border-border/60 rounded text-center font-mono"
                 placeholder="NOTE:"
               />
               <button
@@ -813,7 +813,7 @@ export function VideoNoteView({
                   value={newNoteContent}
                   onChange={(e) => setNewNoteContent(e.target.value)}
                   placeholder={t.videoNote.enterNoteContent}
-                  className="w-full h-20 p-2 text-sm bg-muted border border-border rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full h-20 p-2 text-sm bg-muted border border-border/60 rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
                 <div className="flex justify-end gap-2 mt-2">
@@ -844,7 +844,7 @@ export function VideoNoteView({
               .map((note) => (
                 <div
                   key={note.id}
-                  className="p-3 bg-background border border-border rounded-lg hover:border-primary/50 transition-colors"
+                  className="p-3 bg-background border border-border/60 rounded-lg hover:border-primary/50 transition-colors"
                 >
                   {/* 时间戳 */}
                   <button
@@ -861,7 +861,7 @@ export function VideoNoteView({
                       <textarea
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
-                        className="w-full h-20 p-2 text-sm bg-muted border border-border rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                        className="w-full h-20 p-2 text-sm bg-muted border border-border/60 rounded resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                         autoFocus
                       />
                       <div className="flex justify-end gap-1 mt-2">

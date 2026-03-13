@@ -66,8 +66,8 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
-      <div className="relative w-[560px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border bg-background/95 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/60">
+      <div className="relative w-[560px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/60">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Sparkles size={16} />
             <span>{t.ai.skillsManagerTitle}</span>
@@ -120,7 +120,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
                   {items.map((skill) => (
                     <div
                       key={`${skill.source ?? "skill"}:${skill.name}`}
-                      className="border border-border rounded-lg p-3 bg-background/60"
+                      className="border border-border/60 rounded-lg p-3 bg-background/60"
                     >
                       <div className="flex items-center justify-between">
                         <div className="text-sm font-medium text-foreground">{skill.title}</div>

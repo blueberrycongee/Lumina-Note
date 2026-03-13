@@ -516,7 +516,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <img
                 src={img.preview}
                 alt="attached"
-                className="h-16 w-16 object-cover rounded-md border border-border"
+                className="h-16 w-16 object-cover rounded-md border border-border/60"
               />
               <button
                 onClick={() => removeImage(img.id)}
@@ -586,14 +586,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
           {/* 文件选择下拉菜单 */}
           {showFilePicker && (
-            <div className="absolute bottom-full right-0 mb-1 w-72 bg-background border border-border rounded-lg shadow-lg z-50">
-              <div className="p-2 border-b border-border">
+            <div className="absolute bottom-full right-0 mb-1 w-72 bg-background border border-border/60 rounded-lg shadow-lg z-50">
+              <div className="p-2 border-b border-border/60">
                 <input
                   type="text"
                   value={filePickerQuery}
                   onChange={(e) => setFilePickerQuery(e.target.value)}
                   placeholder={t.ai.searchFiles}
-                  className="w-full px-2 py-1.5 text-sm bg-muted/50 border border-border rounded outline-none focus:ring-1 focus:ring-primary/50"
+                  className="w-full px-2 py-1.5 text-sm bg-muted/50 border border-border/60 rounded outline-none focus:ring-1 focus:ring-primary/50"
                   autoFocus
                 />
               </div>
@@ -625,7 +625,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   ))
                 )}
               </div>
-              <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border">
+              <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border/60">
                 {t.ai.totalFiles.replace('{count}', String(allFiles.length))}
               </div>
             </div>
@@ -657,7 +657,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       {showMention && (
         <div
           ref={mentionRef}
-          className="absolute bottom-full left-0 mb-1 w-64 max-h-60 overflow-y-auto bg-background border border-border rounded-lg shadow-lg z-50"
+          className="absolute bottom-full left-0 mb-1 w-64 max-h-60 overflow-y-auto bg-background border border-border/60 rounded-lg shadow-lg z-50"
         >
           {filteredFiles.length === 0 ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">
@@ -690,9 +690,9 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       {showCommand && (
         <div
           ref={commandRef}
-          className="absolute bottom-full left-0 mb-1 w-64 bg-background border border-border rounded-lg shadow-lg z-50 flex flex-col overflow-hidden"
+          className="absolute bottom-full left-0 mb-1 w-64 bg-background border border-border/60 rounded-lg shadow-lg z-50 flex flex-col overflow-hidden"
         >
-          <div className="px-3 py-2 text-xs text-muted-foreground font-medium bg-muted/30 border-b border-border">
+          <div className="px-3 py-2 text-xs text-muted-foreground font-medium bg-muted/30 border-b border-border/60">
             {t.ai.slashCommands.shortcuts}
           </div>
 
@@ -766,7 +766,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               setIsModalOpen(true);
               setShowCommand(false);
             }}
-            className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-t border-border flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-t border-border/60 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus size={14} />
             {t.ai.slashCommands.createShortcut}

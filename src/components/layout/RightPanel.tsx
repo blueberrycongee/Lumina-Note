@@ -832,14 +832,14 @@ export function RightPanel() {
               </div>
 
               {/* Agent Settings */}
-              <div className="space-y-2 pt-3 border-t border-border">
+              <div className="space-y-2 pt-3 border-t border-border/60">
                 <div className="text-xs font-medium text-foreground flex items-center gap-1.5"><Bot size={12} /> {t.settingsPanel.agentSettings}</div>
                 <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
                   <input
                     type="checkbox"
                     checked={autoApprove}
                     onChange={(e) => setAutoApprove(e.target.checked)}
-                    className="w-3 h-3 rounded border-border"
+                    className="w-3 h-3 rounded border-border/60"
                   />
                   {t.settingsPanel.autoApproveTools}
                   <span className="text-muted-foreground">({t.settingsPanel.noManualConfirm})</span>
@@ -847,7 +847,7 @@ export function RightPanel() {
               </div>
 
               {/* RAG Settings */}
-              <div className="space-y-2 pt-3 border-t border-border">
+              <div className="space-y-2 pt-3 border-t border-border/60">
                 <div className="text-xs font-medium text-foreground flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><Search size={12} /> {t.settingsPanel.semanticSearch}</span>
                   <label className="flex items-center gap-1 cursor-pointer">
@@ -881,7 +881,7 @@ export function RightPanel() {
                           type="button"
                           onClick={rebuildIndex}
                           disabled={ragIsIndexing}
-                          className="px-2 py-1 rounded border border-border text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-2 py-1 rounded border border-border/60 text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {t.rag.rebuildIndex}
                         </button>
@@ -972,7 +972,7 @@ export function RightPanel() {
                     </div>
 
                     {/* Reranker Settings */}
-                    <div className="border-t border-border pt-3 mt-2">
+                    <div className="border-t border-border/60 pt-3 mt-2">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-xs font-medium">{t.aiSettings.reranker}</span>
                         <label className="flex items-center gap-1">

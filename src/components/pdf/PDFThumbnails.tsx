@@ -56,7 +56,7 @@ export function PDFThumbnails({
 
   if (collapsed) {
     return (
-      <div className={cn("w-8 flex flex-col items-center py-2 border-r border-border bg-muted/30", className)}>
+      <div className={cn("w-8 flex flex-col items-center py-2 border-r border-border/60 bg-muted/30", className)}>
         <button
           onClick={onToggle}
           className="p-1 hover:bg-accent rounded transition-colors"

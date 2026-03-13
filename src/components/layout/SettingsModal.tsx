@@ -112,9 +112,9 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
       />
 
       {/* 设置面板 - 普通卡片风格 */}
-      <div className="relative w-[600px] max-h-[80vh] rounded-xl shadow-2xl overflow-hidden border border-border bg-background/95">
+      <div className="relative w-[600px] max-h-[80vh] rounded-xl shadow-2xl overflow-hidden border border-border/60 bg-background/95">
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/50">
           <h2 className="text-lg font-semibold text-foreground/90">{t.settingsModal.title}</h2>
           <button
             onClick={onClose}
@@ -134,7 +134,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
               </h3>
               <button
                 onClick={handleNewTheme}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border bg-background/60 hover:bg-muted transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border/60 bg-background/60 hover:bg-muted transition-colors"
               >
                 <Plus size={14} />
                 {t.settingsModal.createTheme}
@@ -150,7 +150,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                   {userThemes.map((theme) => (
                     <div
                       key={theme.id}
-                      className={`relative p-3 rounded-xl transition-colors text-left group border border-border ${
+                      className={`relative p-3 rounded-xl transition-colors text-left group border border-border/60 ${
                         themeId === theme.id
                           ? "ring-2 ring-primary bg-primary/10"
                           : "bg-background/60 hover:bg-muted/50"
@@ -163,11 +163,11 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                         {/* 颜色预览 */}
                         <div className="flex gap-1 mb-2">
                           <div
-                            className="w-4 h-4 rounded-full border border-border"
+                            className="w-4 h-4 rounded-full border border-border/60"
                             style={{ backgroundColor: `hsl(${theme.light.primary})` }}
                           />
                           <div
-                            className="w-4 h-4 rounded-full border border-border"
+                            className="w-4 h-4 rounded-full border border-border/60"
                             style={{ backgroundColor: `hsl(${theme.dark.primary})` }}
                           />
                         </div>
@@ -214,7 +214,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                 <button
                   key={theme.id}
                   onClick={() => setThemeId(theme.id)}
-                  className={`relative p-3 rounded-xl transition-colors text-left border border-border ${
+                  className={`relative p-3 rounded-xl transition-colors text-left border border-border/60 ${
                     themeId === theme.id
                       ? "ring-2 ring-primary bg-primary/10"
                       : "bg-background/60 hover:bg-muted/50"
@@ -223,11 +223,11 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                   {/* 颜色预览 */}
                   <div className="flex gap-1 mb-2">
                     <div
-                      className="w-4 h-4 rounded-full border border-border"
+                      className="w-4 h-4 rounded-full border border-border/60"
                       style={{ backgroundColor: `hsl(${theme.light.primary})` }}
                     />
                     <div
-                      className="w-4 h-4 rounded-full border border-border"
+                      className="w-4 h-4 rounded-full border border-border/60"
                       style={{ backgroundColor: `hsl(${theme.dark.primary})` }}
                     />
                   </div>
@@ -277,7 +277,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
               <select
                 value={editorMode}
                 onChange={(e) => setEditorMode(e.target.value as any)}
-                className="px-3 py-1.5 rounded-lg text-sm bg-background/60 border border-border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="px-3 py-1.5 rounded-lg text-sm bg-background/60 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="live">{t.settingsModal.livePreview}</option>
                 <option value="source">{t.settingsModal.sourceMode}</option>
@@ -311,7 +311,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
 
               {/* Preview */}
               <div
-                className="p-3 rounded-lg border border-border bg-background/60"
+                className="p-3 rounded-lg border border-border/60 bg-background/60"
                 style={{ fontSize: `${editorFontSize}px` }}
               >
                 <p className="leading-relaxed">The quick brown fox</p>
@@ -337,7 +337,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                 <p className="text-sm text-muted-foreground">{t.settingsModal.configInRightPanel}</p>
               </div>
               <span
-                className="text-sm text-foreground/70 px-3 py-1.5 rounded-lg bg-muted/40 border border-border"
+                className="text-sm text-foreground/70 px-3 py-1.5 rounded-lg bg-muted/40 border border-border/60"
               >
                 {config.model || t.settingsModal.notConfigured}
               </span>
@@ -353,7 +353,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
           <ProxySection />
 
           {/* WebDAV 同步设置 */}
-          <section className="rounded-xl overflow-hidden border border-border bg-background/60">
+          <section className="rounded-xl overflow-hidden border border-border/60 bg-background/60">
             <WebDAVSettings compact />
           </section>
 
@@ -363,7 +363,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
               {t.updateChecker.title}
             </h3>
 
-            <div className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background/60 p-4">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/60 p-4">
               <div className="space-y-1">
                 <p className="font-medium">
                   {t.updateChecker.versionLabel.replace("{version}", appVersion || "...")}

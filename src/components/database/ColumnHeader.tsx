@@ -116,7 +116,7 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
   
   return (
     <th
-      className="p-0 border-b border-r border-border relative group"
+      className="p-0 border-b border-r border-border/60 relative group"
       style={{ width: column.width || 180, minWidth: 100 }}
     >
       <div className="flex items-center h-9 px-2 gap-1">

@@ -42,8 +42,8 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative w-[860px] max-h-[85vh] rounded-xl shadow-2xl overflow-hidden border border-border bg-background/95">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted/50">
+      <div className="relative w-[860px] max-h-[85vh] rounded-xl shadow-2xl overflow-hidden border border-border/60 bg-background/95">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/50">
           <h2 className="text-lg font-semibold text-foreground/90">{t.plugins.modalTitle}</h2>
           <button
             onClick={onClose}
@@ -67,7 +67,7 @@ export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModal
               {pluginSettingSections.map((section) => (
                 <div
                   key={`${section.pluginId}:${section.sectionId}`}
-                  className="rounded-lg border border-border bg-background/60 p-3 space-y-2"
+                  className="rounded-lg border border-border/60 bg-background/60 p-3 space-y-2"
                   data-lumina-plugin-scope={`${section.pluginId}:${section.sectionId}`}
                 >
                   <div className="text-xs font-medium text-foreground">

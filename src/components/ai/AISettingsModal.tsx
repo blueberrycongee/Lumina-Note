@@ -163,8 +163,8 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
       />
 
       {/* 模态内容 */}
-      <div className="relative w-[520px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border bg-background/95 flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/60">
+      <div className="relative w-[520px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/60">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Settings size={16} />
             <span>{t.aiSettings.title}</span>
@@ -197,7 +197,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     temperature: getRecommendedTemperature(provider, defaultModel),
                   });
                 }}
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               >
                 {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
                   <option key={key} value={key}>
@@ -225,7 +225,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                           ? t.aiSettings.apiKeyOptional
                           : "sk-..."
                   }
-                  className="flex-1 text-xs p-2 rounded border border-border bg-background"
+                  className="flex-1 text-xs p-2 rounded border border-border/60 bg-background"
                 />
                 <button
                   onClick={testConnection}
@@ -235,7 +235,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       ? "border-success/50 bg-success/10 text-success"
                       : testResult.status === "error"
                         ? "border-destructive/50 bg-destructive/10 text-destructive"
-                        : "border-border hover:bg-muted"
+                        : "border-border/60 hover:bg-muted"
                   }`}
                 >
                   {testResult.status === "testing" ? (
@@ -303,7 +303,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     });
                   }
                 }}
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               >
                 {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
                   <option key={model.id} value={model.id}>
@@ -322,7 +322,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   value={config.customModelId || ""}
                   onChange={(e) => setConfig({ customModelId: e.target.value })}
                   placeholder={t.aiSettings.customModelHint}
-                  className="w-full text-xs p-2 rounded border border-border bg-background"
+                  className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                 />
               </div>
             )}
@@ -337,7 +337,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                   value={config.baseUrl || ""}
                   onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
                   placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl || "https://api.example.com/v1"}
-                  className="w-full text-xs p-2 rounded border border-border bg-background"
+                  className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                 />
               </div>
             )}
@@ -360,14 +360,14 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
           </div>
 
           {/* Agent 设置 */}
-          <div className="space-y-2 pt-3 border-t border-border">
+          <div className="space-y-2 pt-3 border-t border-border/60">
             <div className="text-xs font-medium text-foreground">🤖 {t.aiSettings.agentSettings}</div>
             <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
               <input
                 type="checkbox"
                 checked={autoApprove}
                 onChange={(e) => setAutoApprove(e.target.checked)}
-                className="w-3 h-3 rounded border-border"
+                className="w-3 h-3 rounded border-border/60"
               />
               {t.aiSettings.autoApproveTools}
               <span className="text-muted-foreground">({t.aiSettings.noManualConfirm})</span>
@@ -377,7 +377,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 type="checkbox"
                 checked={autoCompactEnabled}
                 onChange={(e) => setAutoCompactEnabled(e.target.checked)}
-                className="w-3 h-3 rounded border-border mt-0.5"
+                className="w-3 h-3 rounded border-border/60 mt-0.5"
               />
               <div className="flex flex-col gap-0.5">
                 <span>{t.aiSettings.autoCompactContext}</span>
@@ -387,7 +387,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
           </div>
 
           {/* RAG 设置（完整，与 RightPanel 同步） */}
-          <div className="space-y-2 pt-3 border-t border-border">
+          <div className="space-y-2 pt-3 border-t border-border/60">
             <div className="flex items-center justify-between text-xs font-medium text-foreground">
               <span className="flex items-center gap-1">
                 <Tag size={12} />
@@ -424,7 +424,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       type="button"
                       onClick={rebuildIndex}
                       disabled={ragIsIndexing}
-                      className="px-2 py-1 rounded border border-border text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-1 rounded border border-border/60 text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {t.aiSettings.rebuildIndex}
                     </button>
@@ -455,7 +455,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                         embeddingModel: defaultModels[provider],
                       });
                     }}
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   >
                     <option value="openai">OpenAI</option>
                     <option value="ollama">{t.aiSettings.ollamaLocalLabel}</option>
@@ -476,7 +476,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     placeholder={
                       ragConfig.embeddingProvider === "openai" ? "sk-..." : "http://localhost:11434"
                     }
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   />
                 </div>
 
@@ -491,7 +491,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                         ? "https://api.openai.com/v1"
                         : "http://localhost:11434"
                     }
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   />
                 </div>
 
@@ -502,7 +502,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     value={ragConfig.embeddingModel}
                     onChange={(e) => setRAGConfig({ embeddingModel: e.target.value })}
                     placeholder="Qwen/Qwen3-Embedding-8B"
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   />
                 </div>
 
@@ -520,12 +520,12 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       })
                     }
                     placeholder={t.aiSettings.dimensionsHint}
-                    className="w-full text-xs p-2 rounded border border-border bg-background"
+                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   />
                 </div>
 
                 {/* Reranker Settings */}
-                <div className="border-t border-border pt-3 mt-2">
+                <div className="border-t border-border/60 pt-3 mt-2">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-medium">{t.aiSettings.reranker}</span>
                     <label className="flex items-center gap-1">
@@ -548,7 +548,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                           value={ragConfig.rerankerBaseUrl || ""}
                           onChange={(e) => setRAGConfig({ rerankerBaseUrl: e.target.value })}
                           placeholder="https://api.siliconflow.cn/v1"
-                          className="w-full text-xs p-2 rounded border border-border bg-background"
+                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                         />
                       </div>
 
@@ -559,7 +559,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                           value={ragConfig.rerankerApiKey || ""}
                           onChange={(e) => setRAGConfig({ rerankerApiKey: e.target.value })}
                           placeholder="sk-..."
-                          className="w-full text-xs p-2 rounded border border-border bg-background"
+                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                         />
                       </div>
 
@@ -570,7 +570,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                           value={ragConfig.rerankerModel || ""}
                           onChange={(e) => setRAGConfig({ rerankerModel: e.target.value })}
                           placeholder="BAAI/bge-reranker-v2-m3"
-                          className="w-full text-xs p-2 rounded border border-border bg-background"
+                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                         />
                       </div>
 
@@ -584,7 +584,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                           }
                           min={1}
                           max={20}
-                          className="w-full text-xs p-2 rounded border border-border bg-background"
+                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                         />
                       </div>
                     </div>
@@ -696,7 +696,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 value={config.tavilyApiKey || ""}
                 onChange={(e) => setConfig({ tavilyApiKey: e.target.value })}
                 placeholder="tvly-xxxxxxxxxx"
-                className="w-full text-xs p-2 rounded border border-border bg-background"
+                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
               />
               {config.tavilyApiKey && (
                 <p className="text-xs text-success mt-1 flex items-center gap-1"><Check size={12} /> {t.deepResearch.webSearchConfigured}</p>

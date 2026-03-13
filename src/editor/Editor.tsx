@@ -367,7 +367,7 @@ export function Editor() {
       <TabBar />
 
       {/* Top Navigation Bar */}
-      <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
+      <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border/60 shrink-0">
         <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
           <button
             onClick={toggleLeftSidebar}

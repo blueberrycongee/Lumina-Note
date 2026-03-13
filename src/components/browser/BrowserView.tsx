@@ -473,7 +473,7 @@ export function BrowserView({
       />
       
       {/* 工具栏 - 快捷网址 */}
-      <div className="flex items-center gap-1 px-2 py-0.5 border-b border-border bg-muted/30 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 px-2 py-0.5 border-b border-border/60 bg-muted/30 overflow-x-auto scrollbar-none">
         {/* 切换左侧侧边栏按钮 */}
         <button
           onClick={() => useUIStore.getState().toggleLeftSidebar()}
@@ -588,7 +588,7 @@ export function BrowserView({
                   <button
                     key={site.url}
                     onClick={() => handleNavigate(site.url)}
-                    className="p-2 rounded-lg border border-border hover:bg-accent transition-colors"
+                    className="p-2 rounded-lg border border-border/60 hover:bg-accent transition-colors"
                   >
                     <div className={cn(
                       "w-8 h-8 rounded-full mx-auto mb-1 flex items-center justify-center text-lg",

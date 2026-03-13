@@ -46,13 +46,13 @@ export function ConversationList({ className }: ConversationListProps) {
   return (
     <div
       className={cn(
-        "flex flex-col border-r border-border bg-muted/30 transition-all duration-300 ease-in-out",
+        "flex flex-col border-r border-border/60 bg-muted/30 transition-all duration-300 ease-in-out",
         isExpanded ? "w-48" : "w-12",
         className
       )}
     >
       {/* 顶部：折叠按钮 + 新建按钮 */}
-      <div className="p-2 border-b border-border flex flex-col gap-2 items-center">
+      <div className="p-2 border-b border-border/60 flex flex-col gap-2 items-center">
         {/* 折叠/展开按钮 */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
@@ -172,7 +172,7 @@ export function ConversationList({ className }: ConversationListProps) {
 
       {/* 底部：清空历史（展开时显示） */}
       {isExpanded && allSessions.length > 0 && (
-        <div className="p-2 border-t border-border">
+        <div className="p-2 border-t border-border/60">
           <button
             onClick={handleClearHistory}
             className="text-xs text-muted-foreground hover:text-foreground flex items-center justify-center gap-1 w-full py-1 rounded hover:bg-accent transition-colors"

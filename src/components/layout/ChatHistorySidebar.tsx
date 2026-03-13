@@ -45,9 +45,9 @@ export function ChatHistorySidebar({
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: -240, opacity: 0 }}
         transition={{ duration: 0.2 }}
-        className="absolute left-0 top-0 h-full w-60 border-r border-border bg-background shadow-lg z-40 flex flex-col"
+        className="absolute left-0 top-0 h-full w-60 border-r border-border/60 bg-background shadow-lg z-40 flex flex-col"
       >
-        <div className="p-3 border-b border-border flex items-center justify-between">
+        <div className="p-3 border-b border-border/60 flex items-center justify-between">
           <h3 className="text-xs font-medium text-muted-foreground">
             {t.ai.historyChats}
           </h3>

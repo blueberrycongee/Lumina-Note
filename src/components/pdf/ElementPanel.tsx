@@ -26,9 +26,9 @@ export function ElementPanel({
   }
 
   return (
-    <div className={cn("bg-background border-l border-border flex flex-col h-full", className)}>
+    <div className={cn("bg-background border-l border-border/60 flex flex-col h-full", className)}>
       {/* 头部 */}
-      <div className="h-10 flex items-center justify-between px-3 border-b border-border shrink-0">
+      <div className="h-10 flex items-center justify-between px-3 border-b border-border/60 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{t.pdfViewer.elementPanel.selectedElements}</span>
           <span className="text-xs text-muted-foreground">({elements.length})</span>
@@ -47,7 +47,7 @@ export function ElementPanel({
         {elements.map((element) => (
           <div
             key={element.id}
-            className="p-2 rounded border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+            className="p-2 rounded border border-border/60 bg-muted/30 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
@@ -89,7 +89,7 @@ export function ElementPanel({
       </div>
 
       {/* 操作按钮 - 固定在底部 */}
-      <div className="p-4 pb-8 border-t border-border space-y-2 shrink-0 bg-background">
+      <div className="p-4 pb-8 border-t border-border/60 space-y-2 shrink-0 bg-background">
         <button
           onClick={onCopyAsReference}
           className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm bg-accent hover:bg-accent/80 rounded transition-colors"

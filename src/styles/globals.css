@@ -162,23 +162,23 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-surface {
-    @apply rounded-ui-lg border border-border bg-background;
+    @apply rounded-ui-lg border border-border/60 bg-background;
   }
 
   .db-panel {
-    @apply rounded-ui-md border border-border bg-muted;
+    @apply rounded-ui-md border border-border/60 bg-muted;
     transition-property: transform, opacity, border-color, background-color, box-shadow;
     transition-duration: var(--ui-motion-panel);
     transition-timing-function: var(--ui-motion-ease);
   }
 
   .db-menu {
-    @apply rounded-ui-md border border-border bg-popover;
+    @apply rounded-ui-md border border-border/60 bg-popover;
     animation: fadeIn var(--ui-motion-panel) var(--ui-motion-ease);
   }
 
   .db-toolbar {
-    @apply border-b border-border bg-background;
+    @apply border-b border-border/60 bg-background;
   }
 
   .db-action-btn {
@@ -195,7 +195,7 @@ body.resizing iframe[data-codex-iframe="true"] {
 
   .db-toggle-btn {
     @apply inline-flex h-8 items-center gap-1.5 rounded-ui-md border border-transparent px-2.5 text-sm text-muted-foreground;
-    @apply hover:bg-accent hover:text-foreground hover:border-border;
+    @apply hover:bg-accent hover:text-foreground hover:border-border/60;
     @apply focus-visible:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary/35;
     transition-property: transform, background-color, border-color, color, box-shadow;
     transition-duration: var(--ui-motion-feedback);
@@ -207,7 +207,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-toggle-btn[data-active="true"] {
-    @apply border-border bg-background text-foreground;
+    @apply border-border/60 bg-background text-foreground;
   }
 
   .db-count-badge {
@@ -233,7 +233,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-empty-state {
-    @apply rounded-ui-md border border-dashed border-border bg-muted px-4 py-6 text-center text-sm text-muted-foreground;
+    @apply rounded-ui-md border border-dashed border-border/60 bg-muted px-4 py-6 text-center text-sm text-muted-foreground;
   }
 }
 
