@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.13] - 2026-03-13
+
+### 新增
+- macOS traffic lights 动态垂直居中，支持窗口缩放和主题切换时自动重新定位
+
+### 改进
+- 侧边栏顶部菜单重构为直接操作按钮，减少交互层级
+- 统一分隔线边框归属约定（container ownership），消除视觉不一致
+- 移除侧边栏 AI 助手按钮
+- 移除 MacLeftPaneTopBar 右边框和内阴影
+
 ## [1.0.12] - 2026-03-13
 
 ### 修复
