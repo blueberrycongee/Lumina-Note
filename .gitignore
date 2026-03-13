@@ -49,6 +49,9 @@ server/target/
 # Test coverage
 coverage/
 
+# Temporary files
+tmp/
+
 # Typesetting baselines (generated)
 tests/typesetting/openoffice-baselines/
 tests/typesetting/lumina-baselines/
