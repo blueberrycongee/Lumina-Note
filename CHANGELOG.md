@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.14] - 2026-03-13
+
+### 改进
+- 全局统一结构性边框透明度为 border-border/60，消除视觉不一致
+- 编辑器三态切换简化为单按钮循环（实时→阅读→源码）
+- 侧边栏拖拽分隔线改为靠近光标渐显的辉光动效，提升交互提示
+- macOS traffic lights 改用原生 NSNotificationCenter 同步重定位，消除缩放闪烁
+
 ## [1.0.13] - 2026-03-13
 
 ### 新增
