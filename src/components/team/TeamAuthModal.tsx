@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -96,7 +97,7 @@ export function TeamAuthModal({ onClose, onAuthenticated }: TeamAuthModalProps) 
 
   const isSignUp = mode === 'signup';
 
-  return (
+  const modal = (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm animate-spotlight-overlay"
       onClick={handleBackdropClick}
@@ -260,4 +261,6 @@ export function TeamAuthModal({ onClose, onAuthenticated }: TeamAuthModalProps) 
       </motion.div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
