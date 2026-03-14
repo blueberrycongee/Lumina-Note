@@ -2240,7 +2240,7 @@ export default {
     signingUp: '正在建立帳號...',
     authError: '驗證失敗，請檢查您的憑據。',
     serverError: '無法連線伺服器，請檢查位址。',
-    passwordTooShort: '密碼至少需要 6 個字元。',
+    passwordTooShort: '密碼至少需要 8 個字元。',
     emailRequired: '請輸入電子郵件。',
     serverUrlRequired: '請輸入伺服器位址。',
     signInToAccess: '請登入以使用團隊功能',

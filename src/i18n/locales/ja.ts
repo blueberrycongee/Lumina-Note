@@ -2240,7 +2240,7 @@ JSONのみを出力：{"type": "<chat|search|create|edit|organize|flashcard|comp
     signingUp: 'アカウント作成中...',
     authError: '認証に失敗しました。資格情報を確認してください。',
     serverError: 'サーバーに接続できません。URLを確認してください。',
-    passwordTooShort: 'パスワードは6文字以上必要です。',
+    passwordTooShort: 'パスワードは8文字以上必要です。',
     emailRequired: 'メールアドレスを入力してください。',
     serverUrlRequired: 'サーバーURLを入力してください。',
     signInToAccess: 'チーム機能を利用するにはログインしてください',

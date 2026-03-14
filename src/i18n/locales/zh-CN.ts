@@ -2241,7 +2241,7 @@ export default {
     signingUp: '正在创建账号...',
     authError: '认证失败，请检查您的凭据。',
     serverError: '无法连接服务器，请检查地址。',
-    passwordTooShort: '密码至少需要 6 个字符。',
+    passwordTooShort: '密码至少需要 8 个字符。',
     emailRequired: '请输入邮箱。',
     serverUrlRequired: '请输入服务器地址。',
     signInToAccess: '请登录以使用团队功能',

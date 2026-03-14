@@ -2265,7 +2265,7 @@ Requirements:
     signingUp: 'Creating account...',
     authError: 'Authentication failed. Please check your credentials.',
     serverError: 'Cannot connect to server. Please check the URL.',
-    passwordTooShort: 'Password must be at least 6 characters.',
+    passwordTooShort: 'Password must be at least 8 characters.',
     emailRequired: 'Email is required.',
     serverUrlRequired: 'Server URL is required.',
     signInToAccess: 'Sign in to access team features',

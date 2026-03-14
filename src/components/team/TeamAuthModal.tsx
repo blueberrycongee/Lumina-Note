@@ -64,11 +64,11 @@ export function TeamAuthModal({ onClose, onAuthenticated }: TeamAuthModalProps) 
       setLocalError(t.auth.serverUrlRequired);
       return false;
     }
-    if (!email.trim()) {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setLocalError(t.auth.emailRequired);
       return false;
     }
-    if (password.length < 6) {
+    if (password.length < 8) {
       setLocalError(t.auth.passwordTooShort);
       return false;
     }

@@ -15,7 +15,7 @@ const mockT = {
     emailRequired: 'Email is required',
     password: 'Password',
     passwordPlaceholder: 'Enter password',
-    passwordTooShort: 'Password must be at least 6 characters',
+    passwordTooShort: 'Password must be at least 8 characters',
     signIn: 'Sign In',
     signUp: 'Sign Up',
     signingIn: 'Signing in...',
@@ -171,7 +171,7 @@ describe('TeamAuthModal', () => {
 
     fireEvent.submit(screen.getByText('Sign In').closest('form')!);
 
-    expect(screen.getByText('Password must be at least 6 characters')).toBeInTheDocument();
+    expect(screen.getByText('Password must be at least 8 characters')).toBeInTheDocument();
     expect(mockLogin).not.toHaveBeenCalled();
   });
 
