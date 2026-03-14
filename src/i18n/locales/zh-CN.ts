@@ -430,10 +430,14 @@ export default {
     providerError: '{provider} 请求失败：{error}',
     apiErrorWithStatus: 'API 错误 ({status}): {error}',
     quickPrompts: {
-      polishText: '请润色当前笔记的文字，优化表达方式，使语言更加流畅、精准，同时保持原意不变。请直接输出润色后的全文。',
-      summarizeNote: '请阅读当前笔记，提炼核心要点，生成一份结构清晰的摘要，包含关键概念、主要论点和结论。',
-      writeArticle: '请根据当前笔记中的素材和思路，撰写一篇结构完整、逻辑通顺的文章。如果笔记内容不足，请先向我确认主题和写作风格。',
-      studyNotes: '请分析当前笔记中的知识点，整理成系统化的学习笔记，包含概念解释、要点归纳、易混淆点对比和记忆提示。',
+      polishText: '请润色《{noteName}》这篇笔记的文字，优化表达方式，使语言更加流畅、精准，同时保持原意不变。请直接输出润色后的全文。',
+      polishTextGeneric: '请润色我的文字，优化表达方式，使语言更加流畅、精准，同时保持原意不变。我会在下一条消息中提供内容。',
+      summarizeNote: '请阅读《{noteName}》这篇笔记，提炼核心要点，生成一份结构清晰的摘要，包含关键概念、主要论点和结论。',
+      summarizeNoteGeneric: '请帮我总结一篇笔记的核心要点，生成结构清晰的摘要。我会在下一条消息中提供内容。',
+      writeArticle: '请根据《{noteName}》中的素材和思路，撰写一篇结构完整、逻辑通顺的文章。如果素材不足，请先向我确认主题和写作风格。',
+      writeArticleGeneric: '请帮我撰写一篇文章。请先问我想写什么主题、目标读者和写作风格。',
+      studyNotes: '请分析《{noteName}》中的知识点，整理成系统化的学习笔记，包含概念解释、要点归纳、易混淆点对比和记忆提示。',
+      studyNotesGeneric: '请帮我整理学习笔记。我会在下一条消息中提供内容，请分析其中的知识点并系统化整理。',
     },
     diffView: {
       title: 'AI 修改预览',

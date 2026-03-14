@@ -12,12 +12,20 @@ const WELCOME_EMOJIS = [
   "🧐", "🤓", "😎",
 ];
 
-function getQuickActions(t: ReturnType<typeof useLocaleStore.getState>["t"]) {
+function extractNoteName(filePath: string | null): string | null {
+  if (!filePath) return null;
+  const name = filePath.split(/[/\\]/).pop() ?? "";
+  return name.replace(/\.md$/, "") || null;
+}
+
+function getQuickActions(t: ReturnType<typeof useLocaleStore.getState>["t"], noteName: string | null) {
+  const p = t.ai.quickPrompts;
+  const fill = (tpl: string) => tpl.replace("{noteName}", noteName!);
   return [
-    { icon: Sparkles, label: t.ai.polishText, desc: t.ai.polishTextDesc, mode: "chat" as const, prompt: t.ai.quickPrompts.polishText },
-    { icon: FileText, label: t.ai.summarizeNote, desc: t.ai.summarizeNoteDesc, mode: "chat" as const, prompt: t.ai.quickPrompts.summarizeNote },
-    { icon: Zap, label: t.ai.writeArticle, desc: t.ai.writeArticleDesc, mode: "agent" as const, prompt: t.ai.quickPrompts.writeArticle },
-    { icon: Bot, label: t.ai.studyNotes, desc: t.ai.studyNotesDesc, mode: "agent" as const, prompt: t.ai.quickPrompts.studyNotes },
+    { icon: Sparkles, label: t.ai.polishText, desc: t.ai.polishTextDesc, mode: "chat" as const, prompt: noteName ? fill(p.polishText) : p.polishTextGeneric },
+    { icon: FileText, label: t.ai.summarizeNote, desc: t.ai.summarizeNoteDesc, mode: "chat" as const, prompt: noteName ? fill(p.summarizeNote) : p.summarizeNoteGeneric },
+    { icon: Zap, label: t.ai.writeArticle, desc: t.ai.writeArticleDesc, mode: "agent" as const, prompt: noteName ? fill(p.writeArticle) : p.writeArticleGeneric },
+    { icon: Bot, label: t.ai.studyNotes, desc: t.ai.studyNotesDesc, mode: "agent" as const, prompt: noteName ? fill(p.studyNotes) : p.studyNotesGeneric },
   ];
 }
 
@@ -51,6 +59,7 @@ function SuggestionCard({
 interface WelcomeSectionProps {
   hasStarted: boolean;
   onSetInput: (value: string) => void;
+  currentFile?: string | null;
 }
 
 /** Welcome greeting shown before any conversation starts. */
@@ -86,10 +95,11 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
 }
 
 /** Quick-action suggestion cards shown before any conversation starts. */
-export function WelcomeSuggestions({ hasStarted, onSetInput }: WelcomeSectionProps) {
+export function WelcomeSuggestions({ hasStarted, onSetInput, currentFile }: WelcomeSectionProps) {
   const { t } = useLocaleStore();
   const setChatMode = useUIStore((s) => s.setChatMode);
-  const quickActions = useMemo(() => getQuickActions(t), [t]);
+  const noteName = useMemo(() => extractNoteName(currentFile ?? null), [currentFile]);
+  const quickActions = useMemo(() => getQuickActions(t, noteName), [t, noteName]);
 
   const handleQuickAction = (action: (typeof quickActions)[0]) => {
     setChatMode(action.mode);
@@ -128,11 +138,11 @@ export function WelcomeSuggestions({ hasStarted, onSetInput }: WelcomeSectionPro
 }
 
 /** Combined component (for backward compat). */
-export function WelcomeSection({ hasStarted, onSetInput }: WelcomeSectionProps) {
+export function WelcomeSection({ hasStarted, onSetInput, currentFile }: WelcomeSectionProps) {
   return (
     <>
       <WelcomeGreeting hasStarted={hasStarted} />
-      <WelcomeSuggestions hasStarted={hasStarted} onSetInput={onSetInput} />
+      <WelcomeSuggestions hasStarted={hasStarted} onSetInput={onSetInput} currentFile={currentFile} />
     </>
   );
 }

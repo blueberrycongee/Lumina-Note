@@ -1717,7 +1717,7 @@ export function MainAIChatShell() {
           )}
 
           {!isCodexMode && (
-            <WelcomeSuggestions hasStarted={hasStarted} onSetInput={setInput} />
+            <WelcomeSuggestions hasStarted={hasStarted} onSetInput={setInput} currentFile={currentFile} />
           )}
             </>
           )}
