@@ -284,12 +284,13 @@ export function MainAIChatShell() {
     setShowHistory(false);
   }, [chatMode, _sessionNewChat, setSelectedSkills]);
 
-  const { vaultPath, currentFile, currentContent, fileTree, openFile, refreshFileTree } = useFileStore(
+  const { vaultPath, currentFile, currentContent, fileTree, recentFiles, openFile, refreshFileTree } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
       currentFile: state.currentFile,
       currentContent: state.currentContent,
       fileTree: state.fileTree,
+      recentFiles: state.recentFiles,
       openFile: state.openFile,
       refreshFileTree: state.refreshFileTree,
     })),
@@ -1717,7 +1718,7 @@ export function MainAIChatShell() {
           )}
 
           {!isCodexMode && (
-            <WelcomeSuggestions hasStarted={hasStarted} onSetInput={setInput} currentFile={currentFile} />
+            <WelcomeSuggestions hasStarted={hasStarted} onSetInput={setInput} currentFile={currentFile} recentFiles={recentFiles} fileTree={fileTree} />
           )}
             </>
           )}
