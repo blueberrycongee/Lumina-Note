@@ -597,10 +597,21 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     focusBlendRef.current += (focusBlendTarget - focusBlendRef.current) * 0.16;
     const focusBlend = focusBlendRef.current;
 
+    const secondDegreeNeighbors = new Set<string>();
     if (focusNodeId) {
       edgesRef.current.forEach((edge) => {
         if (edge.source === focusNodeId) connectedToFocus.add(edge.target);
         if (edge.target === focusNodeId) connectedToFocus.add(edge.source);
+      });
+      connectedToFocus.forEach((neighborId) => {
+        edgesRef.current.forEach((edge) => {
+          if (edge.source === neighborId && edge.target !== focusNodeId && !connectedToFocus.has(edge.target)) {
+            secondDegreeNeighbors.add(edge.target);
+          }
+          if (edge.target === neighborId && edge.source !== focusNodeId && !connectedToFocus.has(edge.source)) {
+            secondDegreeNeighbors.add(edge.source);
+          }
+        });
       });
     }
 
