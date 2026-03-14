@@ -1,4 +1,5 @@
 mod auth;
+mod collab;
 mod config;
 mod dav;
 mod db;
@@ -53,6 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pool,
         config,
         relay: state::RelayHub::new(),
+        collab: collab::CollabHub::new(),
         metrics: Arc::new(state::ServerMetrics::new()),
     };
 
@@ -100,6 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/notifications/read-all", put(routes::mark_all_read))
         .route("/notifications/unread-count", get(routes::unread_count))
         // Existing routes
+        .route("/collab/:doc_id", get(collab::collab_handler))
         .route("/relay", get(relay::relay_handler))
         .route("/dav/:workspace_id", any(dav::handle_dav_root))
         .route("/dav/:workspace_id/*path", any(dav::handle_dav_path))

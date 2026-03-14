@@ -38,6 +38,7 @@ pub struct AppState {
     pub pool: SqlitePool,
     pub config: Config,
     pub relay: RelayHub,
+    pub collab: crate::collab::CollabHub,
     pub metrics: Arc<ServerMetrics>,
 }
 
