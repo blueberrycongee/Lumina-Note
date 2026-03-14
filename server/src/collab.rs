@@ -115,10 +115,7 @@ async fn handle_collab_socket(socket: WebSocket, room: Arc<CollabRoom>, doc_id: 
     let peer_id = Uuid::new_v4().to_string();
 
     // Register peer
-    room.peers
-        .write()
-        .await
-        .insert(peer_id.clone(), tx.clone());
+    room.peers.write().await.insert(peer_id.clone(), tx.clone());
 
     // Send current document state as initial sync.
     // All yrs work is done synchronously inside encode_state().

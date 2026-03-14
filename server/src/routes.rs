@@ -12,8 +12,7 @@ use crate::models::{
     CreateAnnotationReplyRequest, CreateAnnotationRequest, CreateOrgRequest, CreateProjectRequest,
     CreateTaskRequest, CreateWorkspaceRequest, LoginRequest, MarkNotificationReadRequest,
     NotificationSummary, OrgDetail, OrgMemberInfo, OrgSummary, ProjectSummary, RegisterRequest,
-    TaskSummary, TokenResponse, UpdateOrgRequest, UpdateTaskRequest, UserSummary,
-    WorkspaceSummary,
+    TaskSummary, TokenResponse, UpdateOrgRequest, UpdateTaskRequest, UserSummary, WorkspaceSummary,
 };
 use crate::state::AppState;
 
@@ -295,9 +294,7 @@ pub async fn create_project(
     let _user_id = require_org_role(&state, &headers, &org_id, &["admin", "member"]).await?;
     let name = payload.name.trim();
     if name.is_empty() {
-        return Err(AppError::BadRequest(
-            "project name is required".to_string(),
-        ));
+        return Err(AppError::BadRequest("project name is required".to_string()));
     }
     let description = payload.description.as_deref().unwrap_or("").trim();
     let project_id = db::create_project(&state.pool, &org_id, name, description).await?;
@@ -352,9 +349,7 @@ pub async fn create_task(
     let (user_id, _org_id) = require_project_member(&state, &headers, &project_id).await?;
     let title = payload.title.trim();
     if title.is_empty() {
-        return Err(AppError::BadRequest(
-            "task title is required".to_string(),
-        ));
+        return Err(AppError::BadRequest("task title is required".to_string()));
     }
     let description = payload.description.as_deref().unwrap_or("");
     let status = payload.status.as_deref().unwrap_or("todo");

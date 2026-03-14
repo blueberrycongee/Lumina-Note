@@ -84,18 +84,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         // Organization routes
         .route("/orgs", get(routes::list_orgs).post(routes::create_org))
-        .route("/orgs/:org_id", get(routes::get_org).put(routes::update_org))
+        .route(
+            "/orgs/:org_id",
+            get(routes::get_org).put(routes::update_org),
+        )
         .route("/orgs/:org_id/members", post(routes::add_member))
-        .route("/orgs/:org_id/members/:user_id", delete(routes::remove_member))
+        .route(
+            "/orgs/:org_id/members/:user_id",
+            delete(routes::remove_member),
+        )
         // Project routes
-        .route("/orgs/:org_id/projects", get(routes::list_org_projects).post(routes::create_project))
+        .route(
+            "/orgs/:org_id/projects",
+            get(routes::list_org_projects).post(routes::create_project),
+        )
         // Task routes
-        .route("/projects/:project_id/tasks", get(routes::list_project_tasks).post(routes::create_task))
-        .route("/tasks/:task_id", put(routes::update_task_handler).delete(routes::delete_task_handler))
+        .route(
+            "/projects/:project_id/tasks",
+            get(routes::list_project_tasks).post(routes::create_task),
+        )
+        .route(
+            "/tasks/:task_id",
+            put(routes::update_task_handler).delete(routes::delete_task_handler),
+        )
         // Annotation routes
-        .route("/orgs/:org_id/annotations", get(routes::list_annotations_handler).post(routes::create_annotation_handler))
-        .route("/annotations/:annotation_id/replies", post(routes::create_reply))
-        .route("/annotations/:annotation_id/resolve", put(routes::resolve_annotation_handler))
+        .route(
+            "/orgs/:org_id/annotations",
+            get(routes::list_annotations_handler).post(routes::create_annotation_handler),
+        )
+        .route(
+            "/annotations/:annotation_id/replies",
+            post(routes::create_reply),
+        )
+        .route(
+            "/annotations/:annotation_id/resolve",
+            put(routes::resolve_annotation_handler),
+        )
         // Notification routes
         .route("/notifications", get(routes::list_notifications_handler))
         .route("/notifications/read", put(routes::mark_read))

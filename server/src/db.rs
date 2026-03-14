@@ -823,10 +823,7 @@ pub async fn update_task(
     Ok(())
 }
 
-pub async fn list_tasks(
-    pool: &SqlitePool,
-    project_id: &str,
-) -> Result<Vec<TaskRow>, AppError> {
+pub async fn list_tasks(pool: &SqlitePool, project_id: &str) -> Result<Vec<TaskRow>, AppError> {
     let rows = sqlx::query(
         r#"
         SELECT id, project_id, title, description, status, priority,
@@ -862,10 +859,7 @@ pub async fn list_tasks(
         .collect())
 }
 
-pub async fn get_task(
-    pool: &SqlitePool,
-    task_id: &str,
-) -> Result<Option<TaskRow>, AppError> {
+pub async fn get_task(pool: &SqlitePool, task_id: &str) -> Result<Option<TaskRow>, AppError> {
     let row = sqlx::query(
         r#"
         SELECT id, project_id, title, description, status, priority,
@@ -1180,10 +1174,7 @@ pub async fn mark_notification_read(
     Ok(())
 }
 
-pub async fn mark_all_notifications_read(
-    pool: &SqlitePool,
-    user_id: &str,
-) -> Result<(), AppError> {
+pub async fn mark_all_notifications_read(pool: &SqlitePool, user_id: &str) -> Result<(), AppError> {
     sqlx::query(
         r#"
         UPDATE notifications
@@ -1199,10 +1190,7 @@ pub async fn mark_all_notifications_read(
     Ok(())
 }
 
-pub async fn count_unread_notifications(
-    pool: &SqlitePool,
-    user_id: &str,
-) -> Result<i64, AppError> {
+pub async fn count_unread_notifications(pool: &SqlitePool, user_id: &str) -> Result<i64, AppError> {
     let row = sqlx::query(
         r#"
         SELECT COUNT(*) as cnt
