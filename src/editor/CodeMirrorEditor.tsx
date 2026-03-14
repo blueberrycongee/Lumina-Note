@@ -166,7 +166,7 @@ const createEditorTheme = (fontSize: number) =>
       color: 'hsl(var(--muted-foreground) / 0.6)',
       pointerEvents: 'auto',
     },
-    '&.cm-drag-selecting .cm-math-inline, &.cm-drag-selecting .cm-math-source, &.cm-drag-selecting .cm-selection-bridge, &.cm-drag-selecting .cm-selection-gap': {
+    '&.cm-drag-selecting .cm-math-inline, &.cm-drag-selecting .cm-math-source': {
       transition: 'none !important',
       animation: 'none !important',
     },
@@ -190,16 +190,6 @@ const createEditorTheme = (fontSize: number) =>
       color: 'hsl(var(--muted-foreground) / 0.6)',
     },
 
-    // Selection bridge for visible formatting marks and their gap spaces.
-    '.cm-selection-bridge, .cm-selection-gap': {
-      backgroundColor: 'rgba(191, 219, 254, 0.25)',
-      borderRadius: '2px',
-      boxShadow: '1px 0 0 rgba(191, 219, 254, 0.25), -1px 0 0 rgba(191, 219, 254, 0.25)',
-    },
-    '&.cm-focused .cm-selection-bridge, &.cm-focused .cm-selection-gap': {
-      backgroundColor: 'rgba(191, 219, 254, 0.35)',
-      boxShadow: '1px 0 0 rgba(191, 219, 254, 0.35), -1px 0 0 rgba(191, 219, 254, 0.35)',
-    },
 
     // === Math 编辑体验 ===
     // 行内公式渲染结果 - 带淡入动画
@@ -1466,7 +1456,6 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
   const highlightRegex = /==([^=\n]+)==/g;
   let match;
   const isDrag = state.field(mouseSelectingField, false);
-  const hasSelection = state.selection.ranges.some((range) => range.from !== range.to);
 
   // 更新缓存
   highlightPositionsCache = [];
@@ -1491,7 +1480,7 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
     // == 标记使用与加粗/斜体相同的动画类
     const markCls =
       isTouched && !isDrag
-        ? `cm-formatting-inline cm-formatting-inline-visible${hasSelection ? ' cm-selection-bridge' : ''}`
+        ? 'cm-formatting-inline cm-formatting-inline-visible'
         : 'cm-formatting-inline';
 
     // 开头的 ==
@@ -1553,33 +1542,6 @@ const selectionStatePlugin = ViewPlugin.fromClass(
   { decorations: () => Decoration.none },
 );
 
-const SKIP_SELECTION_PARENT_TYPES = new Set(['FencedCode', 'CodeBlock']);
-
-function isInsideSkippedSelectionParent(node: any): boolean {
-  let parent = node.node.parent;
-  while (parent) {
-    if (SKIP_SELECTION_PARENT_TYPES.has(parent.name)) return true;
-    parent = parent.parent;
-  }
-  return false;
-}
-
-const selectionBridgeField = StateField.define<DecorationSet>({
-  create: buildSelectionBridgeDecorations,
-  update(deco, tr) {
-    if (tr.docChanged || tr.reconfigured) return buildSelectionBridgeDecorations(tr.state);
-    // Rebuild when drag ends so decorations catch up
-    const isDragging = tr.state.field(mouseSelectingField, false);
-    const wasDragging = tr.startState.field(mouseSelectingField, false);
-    if (wasDragging && !isDragging) return buildSelectionBridgeDecorations(tr.state);
-    if (!tr.selection) return deco;
-    if (isDragging) {
-      return buildSelectionBridgeDecorations(tr.state);
-    }
-    return buildSelectionBridgeDecorations(tr.state);
-  },
-  provide: (f) => EditorView.decorations.from(f),
-});
 
 function selectEntireDocument(view: EditorView) {
   const { state } = view;
@@ -2062,9 +2024,7 @@ function collectSelectionOverlayMetrics(view: EditorView): SelectionOverlayMetri
   const scroller = view.scrollDOM;
   const scrollerRect = scroller?.getBoundingClientRect() ?? null;
   const selectionBackgrounds = Array.from(view.dom.querySelectorAll('.cm-selectionBackground'));
-  const selectionBridges = Array.from(view.dom.querySelectorAll('.cm-selection-bridge'));
-  const selectionGaps = Array.from(view.dom.querySelectorAll('.cm-selection-gap'));
-  const overlays = [...selectionBackgrounds, ...selectionBridges, ...selectionGaps];
+  const overlays = [...selectionBackgrounds];
 
   let fullLikeCount = 0;
   let oversizedCount = 0;
@@ -2086,8 +2046,8 @@ function collectSelectionOverlayMetrics(view: EditorView): SelectionOverlayMetri
   return {
     selectionLayerPresent: Boolean(view.dom.querySelector('.cm-selectionLayer')),
     selectionBackgroundCount: selectionBackgrounds.length,
-    selectionBridgeCount: selectionBridges.length,
-    selectionGapCount: selectionGaps.length,
+    selectionBridgeCount: 0,
+    selectionGapCount: 0,
     fullLikeCount,
     oversizedCount,
     maxWidthRatio,
@@ -2588,8 +2548,8 @@ function inspectSelectionVisualAnomaly(view: EditorView) {
     fullLikeCount: fullLikeRects.length,
     oversizedCount: oversizedRects.length,
     selectionBackgroundCount: selectionBackgrounds.length,
-    selectionBridgeCount: selectionBridges.length,
-    selectionGapCount: selectionGaps.length,
+    selectionBridgeCount: 0,
+    selectionGapCount: 0,
     selection: {
       from: main.from,
       to: main.to,
@@ -2738,77 +2698,6 @@ const selectAllDomHandlers = Prec.highest(
     },
   }),
 );
-
-function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
-  const collapseEnabled = state.facet(collapseOnSelectionFacet);
-  const isDragging = state.field(mouseSelectingField, false);
-  const hasSelection = state.selection.ranges.some((range) => range.from !== range.to);
-  if (!hasSelection) return Decoration.none;
-
-  const selectedLines = new Set<number>();
-  let scanFrom = Number.POSITIVE_INFINITY;
-  let scanTo = 0;
-  for (const range of state.selection.ranges) {
-    if (range.from === range.to) continue;
-    scanFrom = Math.min(scanFrom, state.doc.lineAt(range.from).from);
-    scanTo = Math.max(scanTo, state.doc.lineAt(range.to).to);
-    const start = state.doc.lineAt(range.from).number;
-    const end = state.doc.lineAt(range.to).number;
-    for (let line = start; line <= end; line++) {
-      selectedLines.add(line);
-    }
-  }
-  if (!Number.isFinite(scanFrom) || scanTo <= scanFrom) return Decoration.none;
-
-  const decorations: any[] = [];
-  const seen = new Set<string>();
-  const blockTypes = new Set(['HeaderMark', 'ListMark', 'QuoteMark']);
-  const inlineTypes = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark']);
-  // During drag or in reading mode, bridge all inline marks in selection
-  // regardless of shouldShowSource (marks are hidden/frozen)
-  const bridgeAllInline = isDragging || !collapseEnabled;
-
-  syntaxTree(state).iterate({
-    from: scanFrom,
-    to: scanTo,
-    enter: (node) => {
-      if (!blockTypes.has(node.name) && !inlineTypes.has(node.name)) return;
-      if (isInsideSkippedSelectionParent(node)) return;
-
-      if (blockTypes.has(node.name)) {
-        const lineNum = state.doc.lineAt(node.from).number;
-        if (!selectedLines.has(lineNum)) return;
-        const key = `${node.from}:${node.to}:bridge`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          decorations.push(
-            Decoration.mark({ class: 'cm-selection-bridge' }).range(node.from, node.to),
-          );
-        }
-        const nextChar = state.doc.sliceString(node.to, node.to + 1);
-        if (nextChar === ' ') {
-          const gapKey = `${node.to}:${node.to + 1}:gap`;
-          if (!seen.has(gapKey)) {
-            seen.add(gapKey);
-            decorations.push(
-              Decoration.mark({ class: 'cm-selection-gap' }).range(node.to, node.to + 1),
-            );
-          }
-        }
-        return;
-      }
-
-      if (node.from >= node.to) return;
-      if (!bridgeAllInline && !shouldShowSource(state, node.from, node.to)) return;
-      const inlineKey = `${node.from}:${node.to}:bridge`;
-      if (seen.has(inlineKey)) return;
-      seen.add(inlineKey);
-      decorations.push(Decoration.mark({ class: 'cm-selection-bridge' }).range(node.from, node.to));
-    },
-  });
-
-  return Decoration.set(decorations, true);
-}
 
 // Table Keymap
 const tableKeymap = [
@@ -3551,7 +3440,6 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           ),
           mouseSelectingField,
           selectionStatePlugin,
-          selectionBridgeField,
           wikiLinkStateField,
           voicePreviewField,
           markdownStylePlugin,
