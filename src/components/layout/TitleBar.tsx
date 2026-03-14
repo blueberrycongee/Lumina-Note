@@ -10,6 +10,7 @@ import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { NotificationBell } from "../team/NotificationBell";
 
 const isMacByNavigator = (): boolean =>
   typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
@@ -151,7 +152,9 @@ export function TitleBar() {
             Lumina Note
           </span>
         </div>
-        <div className="w-20" />
+        <div className="w-20 flex items-center justify-end pr-2" data-tauri-drag-region="false">
+          <NotificationBell />
+        </div>
       </div>
     );
   }
@@ -175,13 +178,14 @@ export function TitleBar() {
       {/* 中间：拖拽区域 */}
       <div className="flex-1 h-full" />
 
-      {/* 右侧：窗口控制按钮 */}
+      {/* 右侧：通知 + 窗口控制按钮 */}
       <div
         className="flex items-center h-full gap-2 pr-1"
         onMouseDown={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         data-tauri-drag-region="false"
       >
+        <NotificationBell />
         <div className="flex items-center h-full">
           {/* 最小化 */}
           <button
