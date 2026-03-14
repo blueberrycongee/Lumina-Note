@@ -634,11 +634,28 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
       const isHierarchy = edge.type === 'hierarchy';
       const edgeEmphasis = Math.max(emphasis.get(u.id) ?? 0, emphasis.get(v.id) ?? 0);
-      const baseAlpha = isHierarchy ? 0.5 : 0.4;
-      const idleWidth = (isHierarchy ? 1.5 : 1) / zoom;
-      const focusWidth = (isHierarchy ? 2.5 : 2) / zoom;
-      const dimmedAlpha = baseAlpha * (1 - 0.78 * focusBlend);
-      const effectiveAlpha = dimmedAlpha + (0.88 - dimmedAlpha) * edgeEmphasis;
+
+      // Tiered edge styling based on neighbor degree
+      let effectiveAlpha: number;
+      let lineWidth: number;
+      if (edgeEmphasis > 0.5) {
+        // Focus ↔ first-degree: high highlight
+        effectiveAlpha = 0.88;
+        lineWidth = 2 / zoom;
+      } else if (edgeEmphasis > 0.2) {
+        // First-degree ↔ second-degree: medium
+        effectiveAlpha = 0.45;
+        lineWidth = 1.2 / zoom;
+      } else if (hasSelection) {
+        // Background edges: heavily dimmed when focused
+        effectiveAlpha = 0.08;
+        lineWidth = (isHierarchy ? 1.5 : 1) / zoom;
+      } else {
+        // No focus active: normal idle state
+        const baseAlpha = isHierarchy ? 0.5 : 0.4;
+        effectiveAlpha = baseAlpha;
+        lineWidth = (isHierarchy ? 1.5 : 1) / zoom;
+      }
 
       ctx.beginPath();
       ctx.moveTo(u.x, u.y);
@@ -650,7 +667,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           ? (u.color || "hsl(var(--muted-foreground))")
           : "hsl(var(--muted-foreground))";
       ctx.globalAlpha = effectiveAlpha;
-      ctx.lineWidth = idleWidth + (focusWidth - idleWidth) * edgeEmphasis;
+      ctx.lineWidth = lineWidth;
       ctx.stroke();
 
       // 绘制箭头（仅层级边）
