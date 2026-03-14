@@ -1,12 +1,19 @@
 import { useMemo, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
+import { Cloud, Copy, Check, Loader2 } from "lucide-react";
 import type { FileEntry } from "@/lib/tauri";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { usePublishStore } from "@/stores/usePublishStore";
+import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { publishSite } from "@/services/publish/exporter";
 import { getDefaultPublishOutputDir } from "@/services/publish/config";
+import {
+  uploadSiteToCloud,
+  confirmCloudPublish,
+  unpublishFromCloud,
+} from "@/services/publish/cloudUpload";
 
 interface PublishSettingsSectionProps {
   vaultPath: string | null;
@@ -17,9 +24,18 @@ export function PublishSettingsSection({ vaultPath, fileTree }: PublishSettingsS
   const { t } = useLocaleStore();
   const profileConfig = useProfileStore((state) => state.config);
   const { config, setPublishConfig, resetOutputDir } = usePublishStore();
+  const {
+    cloudStatus, uploadProgress, publishedUrl, lastPublishedAt, cloudError,
+    setCloudStatus, setUploadProgress, setPublishedUrl, setLastPublishedAt, setCloudError, resetCloudState,
+  } = usePublishStore();
+  const authStatus = useCloudSyncStore((s) => s.authStatus);
+  const cloudSession = useCloudSyncStore((s) => s.session);
+  const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
+
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const effectiveOutputDir = useMemo(() => {
     if (config.outputDir?.trim()) return config.outputDir.trim();
@@ -79,7 +95,59 @@ export function PublishSettingsSection({ vaultPath, fileTree }: PublishSettingsS
     }
   };
 
+  const handleCloudPublish = async () => {
+    if (!vaultPath || !cloudSession?.token || !cloudBaseUrl) return;
+    setCloudStatus('uploading');
+    setCloudError(null);
+    setUploadProgress(null);
+    try {
+      // 1. Generate static site to temp dir
+      const response = await publishSite({
+        vaultPath, fileTree, profile: profileConfig,
+        options: { basePath: config.basePath || undefined },
+      });
+
+      // 2. Upload to cloud via WebDAV
+      await uploadSiteToCloud({
+        localDir: response.outputDir,
+        baseUrl: cloudBaseUrl,
+        token: cloudSession.token,
+        onProgress: (current, total) => setUploadProgress({ current, total }),
+      });
+
+      // 3. Confirm publish on server
+      const result = await confirmCloudPublish(cloudBaseUrl, cloudSession.token);
+      setPublishedUrl(`${cloudBaseUrl}${result.url}`);
+      setLastPublishedAt(Date.now());
+      setCloudStatus('published');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setCloudError(message);
+      setCloudStatus('error');
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!cloudSession?.token || !cloudBaseUrl) return;
+    if (!confirm(t.settingsModal.cloudUnpublishConfirm)) return;
+    try {
+      await unpublishFromCloud(cloudBaseUrl, cloudSession.token);
+      resetCloudState();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setCloudError(message);
+    }
+  };
+
+  const handleCopyUrl = () => {
+    if (!publishedUrl) return;
+    navigator.clipboard.writeText(publishedUrl);
+    setUrlCopied(true);
+    setTimeout(() => setUrlCopied(false), 2000);
+  };
+
   return (
+    <>
     <section className="space-y-4">
       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
         {t.settingsModal.publish}
@@ -147,5 +215,77 @@ export function PublishSettingsSection({ vaultPath, fileTree }: PublishSettingsS
       {result && <div className="text-xs text-emerald-600">{result}</div>}
       {error && <div className="text-xs text-destructive">{error}</div>}
     </section>
+
+    {/* Divider */}
+    <div className="border-t border-border/40 my-6" />
+
+    {/* Cloud Publish Section */}
+    <section className="space-y-4">
+      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        {t.settingsModal.publishToCloud}
+      </h3>
+      <p className="text-sm text-muted-foreground">{t.settingsModal.publishToCloudDesc}</p>
+
+      {authStatus !== 'authenticated' ? (
+        <p className="text-sm text-muted-foreground">{t.settingsModal.cloudSignInToPublish}</p>
+      ) : cloudStatus === 'uploading' ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 size={16} className="animate-spin" />
+          <span>{t.settingsModal.cloudPublishing}</span>
+          {uploadProgress && (
+            <span>{t.settingsModal.cloudUploadProgress
+              .replace('{current}', String(uploadProgress.current))
+              .replace('{total}', String(uploadProgress.total))}</span>
+          )}
+        </div>
+      ) : cloudStatus === 'published' || publishedUrl ? (
+        <div className="space-y-3">
+          {/* URL row */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{t.settingsModal.cloudPublicUrl}:</span>
+            <a href={publishedUrl!} target="_blank" rel="noopener noreferrer"
+               className="text-sm text-primary hover:underline truncate max-w-[300px]">
+              {publishedUrl}
+            </a>
+            <button onClick={handleCopyUrl}
+              className="p-1 rounded hover:bg-muted transition-colors">
+              {urlCopied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} className="text-muted-foreground" />}
+            </button>
+          </div>
+          {/* Timestamp */}
+          {lastPublishedAt && (
+            <p className="text-xs text-muted-foreground">
+              {t.settingsModal.cloudLastPublished}: {new Date(lastPublishedAt).toLocaleString()}
+            </p>
+          )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <button onClick={handleCloudPublish} disabled={!vaultPath}
+              className="px-3 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
+              {t.settingsModal.cloudUpdatePublish}
+            </button>
+            <button onClick={handleUnpublish}
+              className="px-3 py-1.5 text-sm rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/10">
+              {t.settingsModal.cloudUnpublish}
+            </button>
+          </div>
+        </div>
+      ) : cloudStatus === 'error' ? (
+        <div className="space-y-2">
+          <div className="text-xs text-destructive">{t.settingsModal.cloudPublishFailed}: {cloudError}</div>
+          <button onClick={handleCloudPublish}
+            className="px-3 py-1.5 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">
+            {t.settingsModal.publishToCloud}
+          </button>
+        </div>
+      ) : (
+        <button onClick={handleCloudPublish} disabled={!vaultPath}
+          className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-60 flex items-center gap-2">
+          <Cloud size={16} />
+          {t.settingsModal.publishToCloud}
+        </button>
+      )}
+    </section>
+    </>
   );
 }
