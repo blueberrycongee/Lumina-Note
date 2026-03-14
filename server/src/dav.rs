@@ -108,7 +108,7 @@ async fn handle_dav_request(
     result
 }
 
-fn respond_options() -> Result<Response<Body>, AppError> {
+pub(crate) fn respond_options() -> Result<Response<Body>, AppError> {
     Response::builder()
         .status(StatusCode::NO_CONTENT)
         .header("Allow", "OPTIONS, PROPFIND, GET, HEAD, PUT, MKCOL, DELETE")
@@ -200,7 +200,7 @@ async fn build_prop_entry(
     })
 }
 
-async fn respond_get(absolute: &Path, metrics: &ServerMetrics) -> Result<Response<Body>, AppError> {
+pub(crate) async fn respond_get(absolute: &Path, metrics: &ServerMetrics) -> Result<Response<Body>, AppError> {
     let metadata = tokio::fs::metadata(absolute)
         .await
         .map_err(|_| AppError::NotFound)?;
@@ -269,7 +269,7 @@ async fn respond_head(absolute: &Path) -> Result<Response<Body>, AppError> {
         .map_err(|e| AppError::Internal(format!("build response: {}", e)))
 }
 
-async fn respond_put(
+pub(crate) async fn respond_put(
     absolute: &Path,
     req: Request<Body>,
     metrics: &ServerMetrics,
@@ -317,7 +317,7 @@ async fn respond_put(
         .map_err(|e| AppError::Internal(format!("build response: {}", e)))
 }
 
-async fn respond_mkcol(absolute: &Path) -> Result<Response<Body>, AppError> {
+pub(crate) async fn respond_mkcol(absolute: &Path) -> Result<Response<Body>, AppError> {
     tokio::fs::create_dir_all(absolute)
         .await
         .map_err(|e| AppError::Internal(format!("create dir: {}", e)))?;
@@ -327,7 +327,7 @@ async fn respond_mkcol(absolute: &Path) -> Result<Response<Body>, AppError> {
         .map_err(|e| AppError::Internal(format!("build response: {}", e)))
 }
 
-async fn respond_delete(absolute: &Path) -> Result<Response<Body>, AppError> {
+pub(crate) async fn respond_delete(absolute: &Path) -> Result<Response<Body>, AppError> {
     let metadata = tokio::fs::metadata(absolute)
         .await
         .map_err(|_| AppError::NotFound)?;
@@ -346,7 +346,7 @@ async fn respond_delete(absolute: &Path) -> Result<Response<Body>, AppError> {
         .map_err(|e| AppError::Internal(format!("build response: {}", e)))
 }
 
-async fn authorize_request(state: &AppState, headers: &HeaderMap) -> Result<String, AppError> {
+pub(crate) async fn authorize_request(state: &AppState, headers: &HeaderMap) -> Result<String, AppError> {
     let header = headers
         .get(axum::http::header::AUTHORIZATION)
         .ok_or(AppError::Unauthorized)?;
@@ -385,7 +385,13 @@ fn workspace_root(state: &AppState, workspace_id: &str) -> PathBuf {
         .join(workspace_id)
 }
 
-fn sanitize_path(path: &str) -> Result<PathBuf, AppError> {
+pub(crate) fn site_root(state: &AppState, user_id: &str) -> PathBuf {
+    PathBuf::from(&state.config.data_dir)
+        .join("sites")
+        .join(user_id)
+}
+
+pub(crate) fn sanitize_path(path: &str) -> Result<PathBuf, AppError> {
     let cleaned = Path::new(path);
     for component in cleaned.components() {
         match component {
