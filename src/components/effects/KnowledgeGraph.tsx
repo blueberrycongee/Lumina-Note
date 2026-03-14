@@ -744,11 +744,19 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
       // Label
       if (showLabels && (isHighlighted || zoom > 0.8)) {
+        const isHoveredOrSelected = nodeEmphasis > 0.85;
         const baseLabelAlpha = hasSelection ? 0.12 + 0.3 * (1 - focusBlend) : 0.72;
-        ctx.globalAlpha = Math.min(1, baseLabelAlpha + nodeEmphasis * 0.7);
+        const labelAlpha = isHoveredOrSelected ? 1.0
+          : nodeEmphasis > 0.5 ? 0.85
+          : nodeEmphasis > 0.2 ? 0.45
+          : baseLabelAlpha;
+        ctx.globalAlpha = Math.min(1, labelAlpha);
         ctx.fillStyle = "hsl(var(--foreground))";
-        const fontSize = node.isFolder ? Math.max(11, 13 / zoom) : Math.max(10, 12 / zoom);
-        ctx.font = `${node.isFolder ? 'bold ' : ''}${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+        const fontSize = isHoveredOrSelected
+          ? (node.isFolder ? Math.max(14, 16 / zoom) : Math.max(13, 15 / zoom))
+          : (node.isFolder ? Math.max(11, 13 / zoom) : Math.max(10, 12 / zoom));
+        const fontWeight = isHoveredOrSelected ? 'bold' : (node.isFolder ? 'bold' : 'normal');
+        ctx.font = `${fontWeight} ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
         ctx.textAlign = "center";
         ctx.fillText(node.label, node.x, node.y + radius + 14 / zoom);
       }
