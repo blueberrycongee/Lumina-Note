@@ -1467,11 +1467,11 @@ const selectionStatePlugin = ViewPlugin.fromClass(
       const isDragging = update.state.field(mouseSelectingField, false);
       const wasDragging = update.startState.field(mouseSelectingField, false);
       if (isDragging !== wasDragging) {
-        this.updateClass(update.view);
+        this.updateClass(update.view, isDragging);
         return;
       }
       if (update.selectionSet && !isDragging) {
-        this.updateClass(update.view);
+        this.updateClass(update.view, false);
       }
     }
     destroy() {
@@ -1479,19 +1479,22 @@ const selectionStatePlugin = ViewPlugin.fromClass(
       this.view.dom.classList.remove('cm-drag-selecting');
       this.view.dom.classList.remove('cm-drag-native-selection-suppressed');
     }
-    private updateClass(view: EditorView) {
+    private updateClass(view: EditorView, isDragTransition: boolean) {
       const isDragging = view.state.field(mouseSelectingField, false);
       const hasSelection = view.state.selection.ranges.some((range) => range.from !== range.to);
       const suppressNativeSelection = isDragging && shouldDisableDrawSelectionForTauriWebKit();
       view.dom.classList.toggle('cm-drag-selecting', isDragging);
       view.dom.classList.toggle('cm-has-selection', hasSelection);
       view.dom.classList.toggle('cm-drag-native-selection-suppressed', suppressNativeSelection);
+      // Skip text extraction at drag start — selection is about to change.
+      // Only include text at drag end or for normal selection changes.
+      const includeText = hasSelection && !isDragTransition;
       const main = view.state.selection.main;
       const detail = hasSelection
         ? {
             from: main.from,
             to: main.to,
-            text: view.state.doc.sliceString(main.from, main.to),
+            text: includeText ? view.state.doc.sliceString(main.from, main.to) : '',
             lineFrom: view.state.doc.lineAt(main.from).number,
             lineTo: view.state.doc.lineAt(main.to).number,
           }
