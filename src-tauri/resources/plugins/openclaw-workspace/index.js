@@ -7,7 +7,21 @@ module.exports = function setup(api) {
 
   let cachedSnapshot = null;
   let disposeUi = () => {};
-  let currentLocale = 'en';
+
+  const getCurrentLocale = () => {
+    try {
+      const saved = localStorage.getItem('lumina-locale');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.state?.locale) {
+          return parsed.state.locale;
+        }
+      }
+    } catch (err) {
+      console.error('[OpenClaw] Failed to read locale from localStorage:', err);
+    }
+    return 'en';
+  };
 
   const escapeHtml = (value) =>
     String(value ?? "")
@@ -37,6 +51,7 @@ module.exports = function setup(api) {
   // ---------------------------------------------------------------------------
 
   const t = (key, params = {}) => {
+    const currentLocale = getCurrentLocale();
     const translations = {
       en: {
         openClawCronOverview: 'Cron Jobs Overview',
