@@ -62,7 +62,10 @@ pub fn observe_resize<R: Runtime>(window: &tauri::WebviewWindow<R>) {
         let notifications = [
             "NSWindowDidResizeNotification",
             "NSWindowDidDeminiaturizeNotification",
+            "NSWindowWillExitFullScreenNotification",
             "NSWindowDidExitFullScreenNotification",
+            "NSWindowWillEnterFullScreenNotification",
+            "NSWindowDidEnterFullScreenNotification",
             "NSWindowDidChangeBackingPropertiesNotification",
         ];
 
