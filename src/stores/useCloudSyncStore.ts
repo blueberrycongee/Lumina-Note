@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { AuthSession, WorkspaceSummary } from '@lumina/shared';
 import { DEFAULT_SYNC_INTERVAL_SECS } from '@lumina/shared';
 import { useWebDAVStore } from '@/stores/useWebDAVStore';
+import { getSecureToken, setSecureToken, deleteSecureToken } from '@/lib/secureStore';
 import {
   buildCloudWebDavConfig,
   createCloudWorkspace,
@@ -37,6 +38,7 @@ interface CloudSyncState {
   createWorkspace: (name: string) => Promise<WorkspaceSummary | null>;
   selectWorkspace: (workspaceId: string) => void;
   logout: () => void;
+  rehydrateToken: () => Promise<void>;
 }
 
 function deriveNextSession(input: Omit<AuthSession, 'currentWorkspaceId'> & { currentWorkspaceId?: string | null }): AuthSession {
@@ -83,6 +85,7 @@ async function authenticate(
         ? await registerCloudAccount(credentials)
         : await loginCloudAccount(credentials);
     const session = deriveNextSession(response);
+    await setSecureToken(session.token);
     set({ session, authStatus: 'authenticated', isLoading: false, error: null });
     syncDerivedWebDav({ ...get(), session });
     return session;
@@ -126,11 +129,13 @@ export const useCloudSyncStore = create<CloudSyncState>()(
         try {
           const response = await refreshCloudToken(serverBaseUrl, session.token);
           const nextSession = { ...session, token: response.token };
+          await setSecureToken(response.token);
           set({ session: nextSession, authStatus: 'authenticated', error: null });
           return response.token;
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           set({ error: message, authStatus: 'anonymous', session: null });
+          deleteSecureToken().catch(() => {});
           return null;
         }
       },
@@ -181,6 +186,21 @@ export const useCloudSyncStore = create<CloudSyncState>()(
       logout: () => {
         set({ session: null, authStatus: 'anonymous', password: '', error: null });
         useWebDAVStore.getState().resetConfig();
+        deleteSecureToken().catch(() => {});
+      },
+      rehydrateToken: async () => {
+        const session = get().session;
+        if (!session) return;
+        try {
+          const token = await getSecureToken();
+          if (token) {
+            set({ session: { ...session, token }, authStatus: 'authenticated' });
+          } else {
+            set({ session: null, authStatus: 'anonymous' });
+          }
+        } catch {
+          set({ session: null, authStatus: 'anonymous' });
+        }
       },
     }),
     {
@@ -191,7 +211,9 @@ export const useCloudSyncStore = create<CloudSyncState>()(
         password: '',
         autoSync: state.autoSync,
         syncIntervalSecs: state.syncIntervalSecs,
-        session: state.session,
+        session: state.session
+          ? { ...state.session, token: '' }
+          : null,
         authStatus: state.session ? 'authenticated' : 'anonymous',
         isLoading: false,
         error: null,

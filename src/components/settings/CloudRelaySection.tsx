@@ -212,9 +212,6 @@ export function CloudRelaySection() {
               {t.settingsModal.cloudRelayQrHint}
             </div>
           </div>
-          <div className="text-[10px] text-foreground/70 break-all">
-            {status.pairing_payload}
-          </div>
         </div>
       )}
     </section>

@@ -597,19 +597,31 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     focusBlendRef.current += (focusBlendTarget - focusBlendRef.current) * 0.16;
     const focusBlend = focusBlendRef.current;
 
+    const secondDegreeNeighbors = new Set<string>();
     if (focusNodeId) {
       edgesRef.current.forEach((edge) => {
         if (edge.source === focusNodeId) connectedToFocus.add(edge.target);
         if (edge.target === focusNodeId) connectedToFocus.add(edge.source);
+      });
+      connectedToFocus.forEach((neighborId) => {
+        edgesRef.current.forEach((edge) => {
+          if (edge.source === neighborId && edge.target !== focusNodeId && !connectedToFocus.has(edge.target)) {
+            secondDegreeNeighbors.add(edge.target);
+          }
+          if (edge.target === neighborId && edge.source !== focusNodeId && !connectedToFocus.has(edge.source)) {
+            secondDegreeNeighbors.add(edge.source);
+          }
+        });
       });
     }
 
     for (const node of nodesRef.current) {
       const isHovered = node.id === hoverNode;
       const isSelected = selectedNode?.id === node.id;
-      const isNeighbor = focusNodeId ? connectedToFocus.has(node.id) : false;
+      const isFirstDegree = focusNodeId ? connectedToFocus.has(node.id) : false;
+      const isSecondDegree = focusNodeId ? secondDegreeNeighbors.has(node.id) : false;
       const isCurrent = !node.isFolder && currentFile?.includes(node.label);
-      const target = isHovered || isSelected ? 1 : isNeighbor ? 0.62 : isCurrent && !hasSelection ? 0.2 : 0;
+      const target = isHovered || isSelected ? 1.0 : isFirstDegree ? 0.7 : isSecondDegree ? 0.35 : isCurrent && !hasSelection ? 0.2 : 0;
       const next = (emphasis.get(node.id) ?? 0) + (target - (emphasis.get(node.id) ?? 0)) * 0.18;
       emphasis.set(node.id, next);
     }
@@ -622,11 +634,28 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
       const isHierarchy = edge.type === 'hierarchy';
       const edgeEmphasis = Math.max(emphasis.get(u.id) ?? 0, emphasis.get(v.id) ?? 0);
-      const baseAlpha = isHierarchy ? 0.5 : 0.4;
-      const idleWidth = (isHierarchy ? 1.5 : 1) / zoom;
-      const focusWidth = (isHierarchy ? 2.5 : 2) / zoom;
-      const dimmedAlpha = baseAlpha * (1 - 0.78 * focusBlend);
-      const effectiveAlpha = dimmedAlpha + (0.88 - dimmedAlpha) * edgeEmphasis;
+
+      // Tiered edge styling based on neighbor degree
+      let effectiveAlpha: number;
+      let lineWidth: number;
+      if (edgeEmphasis > 0.5) {
+        // Focus ↔ first-degree: high highlight
+        effectiveAlpha = 0.88;
+        lineWidth = 2 / zoom;
+      } else if (edgeEmphasis > 0.2) {
+        // First-degree ↔ second-degree: medium
+        effectiveAlpha = 0.45;
+        lineWidth = 1.2 / zoom;
+      } else if (hasSelection) {
+        // Background edges: heavily dimmed when focused
+        effectiveAlpha = 0.08;
+        lineWidth = (isHierarchy ? 1.5 : 1) / zoom;
+      } else {
+        // No focus active: normal idle state
+        const baseAlpha = isHierarchy ? 0.5 : 0.4;
+        effectiveAlpha = baseAlpha;
+        lineWidth = (isHierarchy ? 1.5 : 1) / zoom;
+      }
 
       ctx.beginPath();
       ctx.moveTo(u.x, u.y);
@@ -638,7 +667,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           ? (u.color || "hsl(var(--muted-foreground))")
           : "hsl(var(--muted-foreground))";
       ctx.globalAlpha = effectiveAlpha;
-      ctx.lineWidth = idleWidth + (focusWidth - idleWidth) * edgeEmphasis;
+      ctx.lineWidth = lineWidth;
       ctx.stroke();
 
       // 绘制箭头（仅层级边）
@@ -668,11 +697,20 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     nodesRef.current.forEach((node) => {
       const isCurrent = !node.isFolder && currentFile?.includes(node.label);
       const nodeEmphasis = emphasis.get(node.id) ?? 0;
-      const radius = getNodeBaseRadius(node) * (1 + nodeEmphasis * 0.14);
+      // Tiered radius: hover 1.18x, first-degree 1.10x, second-degree 1.0x
+      const radiusScale = nodeEmphasis > 0.85 ? 1.18
+        : nodeEmphasis > 0.5 ? 1.10
+        : 1.0;
+      const radius = getNodeBaseRadius(node) * radiusScale;
       const idleAlpha = hasSelection ? 1 - 0.82 * focusBlend : 1;
       const isHighlighted = nodeEmphasis > 0.16 || isCurrent;
 
-      ctx.globalAlpha = idleAlpha + (1 - idleAlpha) * nodeEmphasis;
+      // Tiered node opacity: hover 1.0, first 0.92, second 0.55, bg dimmed
+      const nodeAlpha = nodeEmphasis > 0.85 ? 1.0
+        : nodeEmphasis > 0.5 ? 0.92
+        : nodeEmphasis > 0.2 ? 0.55
+        : idleAlpha + (1 - idleAlpha) * nodeEmphasis;
+      ctx.globalAlpha = nodeAlpha;
 
       // 确定节点颜色
       let nodeColor = node.color || "hsl(var(--muted-foreground))";
@@ -705,10 +743,16 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
         ctx.fillStyle = nodeColor;
         ctx.fill();
 
-        // 文件夹节点边框
-        ctx.strokeStyle = isHighlighted ? "hsl(var(--foreground))" : nodeColor;
-        ctx.lineWidth = ((1.5 / zoom) + ((2.5 / zoom) - (1.5 / zoom)) * nodeEmphasis);
-        ctx.stroke();
+        // 文件夹节点边框 — tiered: hover 2.5, first-degree 1.8, second-degree none
+        if (nodeEmphasis > 0.5 || isCurrent) {
+          ctx.strokeStyle = "hsl(var(--foreground))";
+          ctx.lineWidth = nodeEmphasis > 0.85 ? 2.5 / zoom : 1.8 / zoom;
+          ctx.stroke();
+        } else if (nodeEmphasis <= 0.2) {
+          ctx.strokeStyle = nodeColor;
+          ctx.lineWidth = 1.5 / zoom;
+          ctx.stroke();
+        }
 
         // 中心小圆
         ctx.beginPath();
@@ -722,23 +766,62 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
         ctx.fillStyle = nodeColor;
         ctx.fill();
 
-        // Node border
-        if (nodeEmphasis > 0.14 || isCurrent) {
+        // Node border — tiered: hover 2.5, first-degree 1.8, second-degree none
+        if (nodeEmphasis > 0.5 || isCurrent) {
           ctx.strokeStyle = "hsl(var(--foreground))";
-          ctx.lineWidth = ((1.2 / zoom) + ((2.2 / zoom) - (1.2 / zoom)) * nodeEmphasis);
+          ctx.lineWidth = nodeEmphasis > 0.85 ? 2.5 / zoom : 1.8 / zoom;
           ctx.stroke();
         }
       }
 
       // Label
       if (showLabels && (isHighlighted || zoom > 0.8)) {
+        const isHoveredOrSelected = nodeEmphasis > 0.85;
         const baseLabelAlpha = hasSelection ? 0.12 + 0.3 * (1 - focusBlend) : 0.72;
-        ctx.globalAlpha = Math.min(1, baseLabelAlpha + nodeEmphasis * 0.7);
+        const labelAlpha = isHoveredOrSelected ? 1.0
+          : nodeEmphasis > 0.5 ? 0.85
+          : nodeEmphasis > 0.2 ? 0.45
+          : baseLabelAlpha;
+        ctx.globalAlpha = Math.min(1, labelAlpha);
         ctx.fillStyle = "hsl(var(--foreground))";
-        const fontSize = node.isFolder ? Math.max(11, 13 / zoom) : Math.max(10, 12 / zoom);
-        ctx.font = `${node.isFolder ? 'bold ' : ''}${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
+        const fontSize = isHoveredOrSelected
+          ? (node.isFolder ? Math.max(14, 16 / zoom) : Math.max(13, 15 / zoom))
+          : (node.isFolder ? Math.max(11, 13 / zoom) : Math.max(10, 12 / zoom));
+        const fontWeight = isHoveredOrSelected ? 'bold' : (node.isFolder ? 'bold' : 'normal');
+        ctx.font = `${fontWeight} ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
         ctx.textAlign = "center";
-        ctx.fillText(node.label, node.x, node.y + radius + 14 / zoom);
+        const labelY = node.y + radius + 14 / zoom;
+
+        // Translucent background for hovered/selected node label
+        if (isHoveredOrSelected) {
+          const metrics = ctx.measureText(node.label);
+          const padX = 4 / zoom;
+          const padY = 2 / zoom;
+          const bgX = node.x - metrics.width / 2 - padX;
+          const bgY = labelY - fontSize + padY;
+          const bgW = metrics.width + padX * 2;
+          const bgH = fontSize + padY * 2;
+          const savedAlpha = ctx.globalAlpha;
+          ctx.globalAlpha = 0.75;
+          ctx.fillStyle = "hsl(var(--background))";
+          const r = 3 / zoom;
+          ctx.beginPath();
+          ctx.moveTo(bgX + r, bgY);
+          ctx.lineTo(bgX + bgW - r, bgY);
+          ctx.quadraticCurveTo(bgX + bgW, bgY, bgX + bgW, bgY + r);
+          ctx.lineTo(bgX + bgW, bgY + bgH - r);
+          ctx.quadraticCurveTo(bgX + bgW, bgY + bgH, bgX + bgW - r, bgY + bgH);
+          ctx.lineTo(bgX + r, bgY + bgH);
+          ctx.quadraticCurveTo(bgX, bgY + bgH, bgX, bgY + bgH - r);
+          ctx.lineTo(bgX, bgY + r);
+          ctx.quadraticCurveTo(bgX, bgY, bgX + r, bgY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = savedAlpha;
+          ctx.fillStyle = "hsl(var(--foreground))";
+        }
+
+        ctx.fillText(node.label, node.x, labelY);
       }
     });
 

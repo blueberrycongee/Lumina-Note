@@ -12,6 +12,7 @@ pub mod mcp;
 pub mod mobile_gateway;
 mod node_runtime;
 pub mod proxy;
+pub mod secure_store;
 mod typesetting;
 mod update_manager;
 mod vector_db;
