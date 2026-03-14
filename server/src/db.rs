@@ -180,6 +180,18 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), AppError> {
     .await
     .map_err(|e| AppError::Internal(format!("create notifications table: {}", e)))?;
 
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS published_sites (
+            user_id     TEXT PRIMARY KEY,
+            site_url    TEXT NOT NULL,
+            published_at INTEGER NOT NULL,
+            updated_at   INTEGER NOT NULL
+        )",
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("create published_sites table: {}", e)))?;
+
     Ok(())
 }
 
@@ -1206,4 +1218,57 @@ pub async fn count_unread_notifications(pool: &SqlitePool, user_id: &str) -> Res
     .map_err(|e| AppError::Internal(format!("count unread notifications: {}", e)))?;
 
     Ok(row.get::<i64, _>("cnt"))
+}
+
+// ---------------------------------------------------------------------------
+// Published Sites CRUD
+// ---------------------------------------------------------------------------
+
+pub async fn upsert_published_site(
+    pool: &SqlitePool,
+    user_id: &str,
+    site_url: &str,
+) -> Result<(), AppError> {
+    let now = chrono::Utc::now().timestamp();
+    sqlx::query(
+        "INSERT INTO published_sites (user_id, site_url, published_at, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET site_url = ?, updated_at = ?",
+    )
+    .bind(user_id)
+    .bind(site_url)
+    .bind(now)
+    .bind(now)
+    .bind(site_url)
+    .bind(now)
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("upsert published site: {}", e)))?;
+    Ok(())
+}
+
+pub async fn get_published_site(
+    pool: &SqlitePool,
+    user_id: &str,
+) -> Result<Option<(String, i64, i64)>, AppError> {
+    let row: Option<(String, i64, i64)> = sqlx::query_as(
+        "SELECT site_url, published_at, updated_at FROM published_sites WHERE user_id = ?",
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("get published site: {}", e)))?;
+    Ok(row)
+}
+
+pub async fn delete_published_site(
+    pool: &SqlitePool,
+    user_id: &str,
+) -> Result<(), AppError> {
+    sqlx::query("DELETE FROM published_sites WHERE user_id = ?")
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .map_err(|e| AppError::Internal(format!("delete published site: {}", e)))?;
+    Ok(())
 }
