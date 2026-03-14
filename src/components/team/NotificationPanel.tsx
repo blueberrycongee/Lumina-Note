@@ -1,23 +1,25 @@
 import { useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 
 interface NotificationPanelProps {
   onClose: () => void;
 }
 
-function formatRelativeTime(timestamp: number): string {
-  const now = Date.now() / 1000;
-  const diff = now - timestamp;
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(timestamp * 1000).toLocaleDateString();
-}
-
 export function NotificationPanel({ onClose: _onClose }: NotificationPanelProps) {
+  const { t } = useLocaleStore();
+
+  function formatRelativeTime(timestamp: number): string {
+    const now = Date.now() / 1000;
+    const diff = now - timestamp;
+    if (diff < 60) return t.team.justNow;
+    if (diff < 3600) return t.team.minutesAgo.replace('{count}', String(Math.floor(diff / 60)));
+    if (diff < 86400) return t.team.hoursAgo.replace('{count}', String(Math.floor(diff / 3600)));
+    if (diff < 604800) return t.team.daysAgo.replace('{count}', String(Math.floor(diff / 86400)));
+    return new Date(timestamp * 1000).toLocaleDateString();
+  }
   const { notifications, loading, fetchNotifications, markRead, markAllRead } =
     useNotificationStore(
       useShallow((s) => ({
@@ -39,14 +41,14 @@ export function NotificationPanel({ onClose: _onClose }: NotificationPanelProps)
     <div className="absolute right-0 top-full mt-1 w-80 max-h-96 bg-popover border border-border rounded-lg shadow-lg z-50 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        <span className="text-sm font-semibold text-foreground">Notifications</span>
+        <span className="text-sm font-semibold text-foreground">{t.team.notifications}</span>
         {hasUnread && (
           <button
             onClick={() => markAllRead()}
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <Check size={12} />
-            Mark all read
+            {t.team.markAllRead}
           </button>
         )}
       </div>
@@ -55,11 +57,11 @@ export function NotificationPanel({ onClose: _onClose }: NotificationPanelProps)
       <div className="flex-1 overflow-y-auto">
         {loading && notifications.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            Loading...
+            {t.common.loading}
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-            No notifications
+            {t.team.noNotifications}
           </div>
         ) : (
           <div>

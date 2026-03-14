@@ -6,6 +6,7 @@ import {
   type DropResult,
 } from '@hello-pangea/dnd';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import type { TaskDetail } from '@/services/team/types';
 
@@ -13,7 +14,6 @@ import type { TaskDetail } from '@/services/team/types';
 
 interface ColumnConfig {
   id: string;
-  label: string;
   headerColor: string;
   dotColor: string;
 }
@@ -21,49 +21,33 @@ interface ColumnConfig {
 const COLUMNS: ColumnConfig[] = [
   {
     id: 'todo',
-    label: 'Todo',
     headerColor: 'text-gray-600 dark:text-gray-400',
     dotColor: 'bg-gray-400',
   },
   {
     id: 'in_progress',
-    label: 'In Progress',
     headerColor: 'text-blue-600 dark:text-blue-400',
     dotColor: 'bg-blue-500',
   },
   {
     id: 'done',
-    label: 'Done',
     headerColor: 'text-green-600 dark:text-green-400',
     dotColor: 'bg-green-500',
   },
   {
     id: 'cancelled',
-    label: 'Cancelled',
     headerColor: 'text-red-600 dark:text-red-400',
     dotColor: 'bg-red-500',
   },
 ];
 
-// ===== Priority badge config =====
+// ===== Priority badge config (className only; labels are set inside components) =====
 
-const PRIORITY_BADGE: Record<string, { label: string; className: string }> = {
-  urgent: {
-    label: 'Urgent',
-    className: 'bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-100',
-  },
-  high: {
-    label: 'High',
-    className: 'bg-orange-200 text-orange-800 dark:bg-orange-700 dark:text-orange-100',
-  },
-  medium: {
-    label: 'Medium',
-    className: 'bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100',
-  },
-  low: {
-    label: 'Low',
-    className: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200',
-  },
+const PRIORITY_BADGE_CLASS: Record<string, string> = {
+  urgent: 'bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-100',
+  high: 'bg-orange-200 text-orange-800 dark:bg-orange-700 dark:text-orange-100',
+  medium: 'bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100',
+  low: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200',
 };
 
 // ===== Helpers =====
@@ -83,7 +67,15 @@ interface TaskCardProps {
 }
 
 function TaskCard({ task, index, isSelected, onSelect }: TaskCardProps) {
-  const badge = PRIORITY_BADGE[task.priority];
+  const { t } = useLocaleStore();
+  const PRIORITY_LABELS: Record<string, string> = {
+    urgent: t.team.priorityUrgent,
+    high: t.team.priorityHigh,
+    medium: t.team.priorityMedium,
+    low: t.team.priorityLow,
+  };
+  const badgeClass = PRIORITY_BADGE_CLASS[task.priority];
+  const badgeLabel = PRIORITY_LABELS[task.priority];
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -118,11 +110,11 @@ function TaskCard({ task, index, isSelected, onSelect }: TaskCardProps) {
 
           {/* Priority badge + Due date */}
           <div className="mb-1 flex items-center gap-2 text-xs">
-            {badge && (
+            {badgeClass && (
               <span
-                className={`inline-block rounded-full px-1.5 py-0.5 font-medium ${badge.className}`}
+                className={`inline-block rounded-full px-1.5 py-0.5 font-medium ${badgeClass}`}
               >
-                {badge.label}
+                {badgeLabel}
               </span>
             )}
             {task.due_date != null && (
@@ -154,12 +146,20 @@ interface KanbanColumnProps {
 }
 
 function KanbanColumn({ config, tasks, selectedTaskId, onSelectTask }: KanbanColumnProps) {
+  const { t } = useLocaleStore();
+  const COLUMN_LABELS: Record<string, string> = {
+    todo: t.team.statusTodo,
+    in_progress: t.team.statusInProgress,
+    done: t.team.statusDone,
+    cancelled: t.team.statusCancelled,
+  };
+
   return (
     <div className="flex w-[280px] shrink-0 flex-col rounded-lg bg-gray-100 dark:bg-zinc-900">
       {/* Column header */}
       <div className="flex items-center gap-2 px-3 py-2.5">
         <span className={`h-2.5 w-2.5 rounded-full ${config.dotColor}`} />
-        <span className={`text-sm font-semibold ${config.headerColor}`}>{config.label}</span>
+        <span className={`text-sm font-semibold ${config.headerColor}`}>{COLUMN_LABELS[config.id] ?? config.id}</span>
         <span className="ml-auto rounded-full bg-gray-200 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-zinc-700 dark:text-gray-300">
           {tasks.length}
         </span>

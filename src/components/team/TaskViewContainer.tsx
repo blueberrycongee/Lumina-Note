@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTaskStore, type TaskViewType } from '@/stores/useTaskStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import type { CreateTaskRequest } from '@/services/team/types';
 import TaskTableView from './TaskTableView';
@@ -11,31 +12,25 @@ import { Table2, Columns3, Calendar, GanttChart, Plus, Filter, Search, X } from 
 
 // ── View tab config ──────────────────────────────────────────────
 
-const VIEW_TABS: { key: TaskViewType; label: string; Icon: typeof Table2 }[] = [
-  { key: 'table', label: 'Table', Icon: Table2 },
-  { key: 'kanban', label: 'Kanban', Icon: Columns3 },
-  { key: 'calendar', label: 'Calendar', Icon: Calendar },
-  { key: 'gantt', label: 'Gantt', Icon: GanttChart },
-];
-
-const STATUS_OPTIONS = [
-  { value: 'todo', label: 'Todo' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'done', label: 'Done' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
-];
-
 // ── Inline create-task form ──────────────────────────────────────
 
 function CreateTaskForm({ onClose }: { onClose: () => void }) {
+  const { t } = useLocaleStore();
   const createTask = useTaskStore((s) => s.createTask);
+
+  const STATUS_OPTIONS = [
+    { value: 'todo', label: t.team.statusTodo },
+    { value: 'in_progress', label: t.team.statusInProgress },
+    { value: 'done', label: t.team.statusDone },
+    { value: 'cancelled', label: t.team.statusCancelled },
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { value: 'low', label: t.team.priorityLow },
+    { value: 'medium', label: t.team.priorityMedium },
+    { value: 'high', label: t.team.priorityHigh },
+    { value: 'urgent', label: t.team.priorityUrgent },
+  ];
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -78,7 +73,7 @@ function CreateTaskForm({ onClose }: { onClose: () => void }) {
     >
       <div className="mb-3 flex items-center justify-between">
         <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-          New Task
+          {t.team.newTask}
         </h4>
         <button
           type="button"
@@ -94,7 +89,7 @@ function CreateTaskForm({ onClose }: { onClose: () => void }) {
         <input
           type="text"
           className={inputClass}
-          placeholder="Task title *"
+          placeholder={t.team.taskTitleRequired}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
@@ -104,7 +99,7 @@ function CreateTaskForm({ onClose }: { onClose: () => void }) {
         {/* Description */}
         <textarea
           className={`${inputClass} min-h-[60px] resize-y`}
-          placeholder="Description"
+          placeholder={t.team.descriptionPlaceholder}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -150,14 +145,14 @@ function CreateTaskForm({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="rounded-md px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
           >
-            Cancel
+            {t.common.cancel}
           </button>
           <button
             type="submit"
             disabled={submitting || !title.trim()}
             className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {submitting ? 'Creating...' : 'Create'}
+            {submitting ? t.team.creating : t.common.create}
           </button>
         </div>
       </div>
@@ -168,6 +163,22 @@ function CreateTaskForm({ onClose }: { onClose: () => void }) {
 // ── Filter panel ─────────────────────────────────────────────────
 
 function FilterPanel() {
+  const { t } = useLocaleStore();
+
+  const STATUS_OPTIONS = [
+    { value: 'todo', label: t.team.statusTodo },
+    { value: 'in_progress', label: t.team.statusInProgress },
+    { value: 'done', label: t.team.statusDone },
+    { value: 'cancelled', label: t.team.statusCancelled },
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { value: 'low', label: t.team.priorityLow },
+    { value: 'medium', label: t.team.priorityMedium },
+    { value: 'high', label: t.team.priorityHigh },
+    { value: 'urgent', label: t.team.priorityUrgent },
+  ];
+
   const { filters, setFilters } = useTaskStore(
     useShallow((s) => ({
       filters: s.filters,
@@ -189,7 +200,7 @@ function FilterPanel() {
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-900">
       <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-        Status
+        {t.team.status}
       </div>
       <div className="mb-3 flex flex-wrap gap-1.5">
         {STATUS_OPTIONS.map((o) => {
@@ -210,7 +221,7 @@ function FilterPanel() {
         })}
       </div>
       <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-        Priority
+        {t.team.priority}
       </div>
       <div className="flex flex-wrap gap-1.5">
         {PRIORITY_OPTIONS.map((o) => {
@@ -237,6 +248,15 @@ function FilterPanel() {
 // ── Main container ───────────────────────────────────────────────
 
 export default function TaskViewContainer() {
+  const { t } = useLocaleStore();
+
+  const VIEW_TABS: { key: TaskViewType; label: string; Icon: typeof Table2 }[] = [
+    { key: 'table', label: t.team.viewTable, Icon: Table2 },
+    { key: 'kanban', label: t.team.viewKanban, Icon: Columns3 },
+    { key: 'calendar', label: t.team.viewCalendar, Icon: Calendar },
+    { key: 'gantt', label: t.team.viewGantt, Icon: GanttChart },
+  ];
+
   const {
     currentView,
     setView,
@@ -310,7 +330,7 @@ export default function TaskViewContainer() {
           <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder={t.team.searchPlaceholder}
             className="rounded-md border border-gray-300 bg-white py-1.5 pl-7 pr-2.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
             value={searchValue}
             onChange={handleSearchChange}
@@ -323,7 +343,7 @@ export default function TaskViewContainer() {
           className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
         >
           <Plus className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">New Task</span>
+          <span className="hidden sm:inline">{t.team.newTask}</span>
         </button>
 
         {/* Filter button */}
@@ -336,7 +356,7 @@ export default function TaskViewContainer() {
           }`}
         >
           <Filter className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Filter</span>
+          <span className="hidden sm:inline">{t.team.filter}</span>
         </button>
       </div>
 

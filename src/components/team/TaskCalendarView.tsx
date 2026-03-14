@@ -1,12 +1,11 @@
 import { useMemo, useState, useCallback } from 'react';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import type { TaskDetail } from '@/services/team/types';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 // ===== Constants =====
-
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 const STATUS_DOT: Record<string, string> = {
   todo: 'bg-gray-400',
@@ -62,10 +61,6 @@ function isSameDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-] as const;
 
 // ===== Task Chip =====
 
@@ -115,6 +110,7 @@ interface DayCellProps {
 }
 
 function DayCell({ date, isCurrentMonth, isToday, tasks, selectedTaskId, onSelectTask }: DayCellProps) {
+  const { t } = useLocaleStore();
   return (
     <div
       className={[
@@ -152,7 +148,7 @@ function DayCell({ date, isCurrentMonth, isToday, tasks, selectedTaskId, onSelec
         ))}
         {tasks.length > 3 && (
           <span className="px-1 text-[10px] font-medium text-gray-500 dark:text-gray-400">
-            +{tasks.length - 3} more
+            {t.team.moreCount.replace('{count}', String(tasks.length - 3))}
           </span>
         )}
       </div>
@@ -163,6 +159,16 @@ function DayCell({ date, isCurrentMonth, isToday, tasks, selectedTaskId, onSelec
 // ===== Main Component =====
 
 export default function TaskCalendarView() {
+  const { t } = useLocaleStore();
+
+  const DAY_LABELS = [t.team.daySun, t.team.dayMon, t.team.dayTue, t.team.dayWed, t.team.dayThu, t.team.dayFri, t.team.daySat];
+
+  const MONTH_NAMES = [
+    t.team.monthJanuary, t.team.monthFebruary, t.team.monthMarch, t.team.monthApril,
+    t.team.monthMay, t.team.monthJune, t.team.monthJuly, t.team.monthAugust,
+    t.team.monthSeptember, t.team.monthOctober, t.team.monthNovember, t.team.monthDecember,
+  ];
+
   const { selectedTaskId, selectTask, getCalendarEvents } = useTaskStore(
     useShallow((s) => ({
       selectedTaskId: s.selectedTaskId,
@@ -219,13 +225,13 @@ export default function TaskCalendarView() {
             onClick={goToToday}
             className="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
           >
-            Today
+            {t.team.today}
           </button>
           <button
             type="button"
             onClick={goToPrevMonth}
             className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
-            aria-label="Previous month"
+            aria-label={t.team.previousMonth}
           >
             <ChevronLeft size={18} />
           </button>
@@ -233,7 +239,7 @@ export default function TaskCalendarView() {
             type="button"
             onClick={goToNextMonth}
             className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-800"
-            aria-label="Next month"
+            aria-label={t.team.nextMonth}
           >
             <ChevronRight size={18} />
           </button>

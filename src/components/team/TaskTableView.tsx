@@ -8,6 +8,7 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import type { TaskDetail } from '@/services/team/types';
 import { ArrowUpDown } from 'lucide-react';
@@ -21,25 +22,11 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-100',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  todo: 'Todo',
-  in_progress: 'In Progress',
-  done: 'Done',
-  cancelled: 'Cancelled',
-};
-
 const PRIORITY_COLORS: Record<string, string> = {
   urgent: 'bg-red-200 text-red-800 dark:bg-red-700 dark:text-red-100',
   high: 'bg-orange-200 text-orange-800 dark:bg-orange-700 dark:text-orange-100',
   medium: 'bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100',
   low: 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-gray-200',
-};
-
-const PRIORITY_LABELS: Record<string, string> = {
-  urgent: 'Urgent',
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
 };
 
 function formatDate(timestamp: number | null): string {
@@ -52,73 +39,88 @@ function formatDate(timestamp: number | null): string {
   });
 }
 
-const columns = [
-  columnHelper.accessor('title', {
-    header: 'Title',
-    size: 999,
-    enableSorting: true,
-    cell: (info) => (
-      <span className="truncate font-medium text-gray-900 dark:text-gray-100">
-        {info.getValue()}
-      </span>
-    ),
-  }),
-  columnHelper.accessor('status', {
-    header: 'Status',
-    size: 100,
-    enableSorting: true,
-    cell: (info) => {
-      const val = info.getValue();
-      return (
-        <span
-          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[val] ?? STATUS_COLORS.todo}`}
-        >
-          {STATUS_LABELS[val] ?? val}
-        </span>
-      );
-    },
-  }),
-  columnHelper.accessor('priority', {
-    header: 'Priority',
-    size: 100,
-    enableSorting: true,
-    cell: (info) => {
-      const val = info.getValue();
-      return (
-        <span
-          className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[val] ?? PRIORITY_COLORS.low}`}
-        >
-          {PRIORITY_LABELS[val] ?? val}
-        </span>
-      );
-    },
-  }),
-  columnHelper.accessor('assignee_id', {
-    header: 'Assignee',
-    size: 120,
-    enableSorting: true,
-    cell: (info) => {
-      const val = info.getValue();
-      return (
-        <span className="text-sm text-gray-600 dark:text-gray-400">
-          {val ?? 'Unassigned'}
-        </span>
-      );
-    },
-  }),
-  columnHelper.accessor('due_date', {
-    header: 'Due Date',
-    size: 120,
-    enableSorting: true,
-    cell: (info) => (
-      <span className="text-sm text-gray-600 dark:text-gray-400">
-        {formatDate(info.getValue())}
-      </span>
-    ),
-  }),
-];
-
 export default function TaskTableView() {
+  const { t } = useLocaleStore();
+
+  const STATUS_LABELS: Record<string, string> = {
+    todo: t.team.statusTodo,
+    in_progress: t.team.statusInProgress,
+    done: t.team.statusDone,
+    cancelled: t.team.statusCancelled,
+  };
+
+  const PRIORITY_LABELS: Record<string, string> = {
+    urgent: t.team.priorityUrgent,
+    high: t.team.priorityHigh,
+    medium: t.team.priorityMedium,
+    low: t.team.priorityLow,
+  };
+
+  const columns = [
+    columnHelper.accessor('title', {
+      header: t.team.title,
+      size: 999,
+      enableSorting: true,
+      cell: (info) => (
+        <span className="truncate font-medium text-gray-900 dark:text-gray-100">
+          {info.getValue()}
+        </span>
+      ),
+    }),
+    columnHelper.accessor('status', {
+      header: t.team.status,
+      size: 100,
+      enableSorting: true,
+      cell: (info) => {
+        const val = info.getValue();
+        return (
+          <span
+            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[val] ?? STATUS_COLORS.todo}`}
+          >
+            {STATUS_LABELS[val] ?? val}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor('priority', {
+      header: t.team.priority,
+      size: 100,
+      enableSorting: true,
+      cell: (info) => {
+        const val = info.getValue();
+        return (
+          <span
+            className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_COLORS[val] ?? PRIORITY_COLORS.low}`}
+          >
+            {PRIORITY_LABELS[val] ?? val}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor('assignee_id', {
+      header: t.team.assignee,
+      size: 120,
+      enableSorting: true,
+      cell: (info) => {
+        const val = info.getValue();
+        return (
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            {val ?? t.team.unassigned}
+          </span>
+        );
+      },
+    }),
+    columnHelper.accessor('due_date', {
+      header: t.team.dueDate,
+      size: 120,
+      enableSorting: true,
+      cell: (info) => (
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          {formatDate(info.getValue())}
+        </span>
+      ),
+    }),
+  ];
   const { selectedTaskId, selectTask, setSortBy, getFilteredTasks } = useTaskStore(
     useShallow((s) => ({
       selectedTaskId: s.selectedTaskId,
@@ -181,7 +183,7 @@ export default function TaskTableView() {
                 colSpan={columns.length}
                 className="px-3 py-8 text-center text-gray-400 dark:text-gray-500"
               >
-                No tasks found
+                {t.team.noTasksFound}
               </td>
             </tr>
           ) : (

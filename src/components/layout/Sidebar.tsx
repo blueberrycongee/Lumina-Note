@@ -252,7 +252,7 @@ export function Sidebar() {
         {currentOrgId && projects.length > 0 && (
           <div className="mt-2">
             <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-              Projects
+              {t.team.projects}
             </div>
             {projects.map((proj) => (
               <button

@@ -2,19 +2,19 @@ import { useMemo, useState, useCallback } from 'react';
 import { Gantt, ViewMode, type Task } from 'gantt-task-react';
 import 'gantt-task-react/dist/index.css';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
-
-// ===== ViewMode button config =====
-
-const VIEW_MODES: { mode: ViewMode; label: string }[] = [
-  { mode: ViewMode.Day, label: 'Day' },
-  { mode: ViewMode.Week, label: 'Week' },
-  { mode: ViewMode.Month, label: 'Month' },
-];
 
 // ===== Main Component =====
 
 export default function TaskGanttView() {
+  const { t } = useLocaleStore();
+
+  const VIEW_MODES: { mode: ViewMode; label: string }[] = [
+    { mode: ViewMode.Day, label: t.team.viewDay },
+    { mode: ViewMode.Week, label: t.team.viewWeek },
+    { mode: ViewMode.Month, label: t.team.viewMonth },
+  ];
   const { selectTask, getGanttItems } = useTaskStore(
     useShallow((s) => ({
       selectTask: s.selectTask,
@@ -67,9 +67,9 @@ export default function TaskGanttView() {
             d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
           />
         </svg>
-        <p className="text-sm font-medium">No tasks with start dates</p>
+        <p className="text-sm font-medium">{t.team.noTasksWithStartDates}</p>
         <p className="mt-1 text-xs">
-          Add a start date to your tasks to see them on the Gantt chart.
+          {t.team.ganttEmptyHint}
         </p>
       </div>
     );

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTaskStore } from '@/stores/useTaskStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import type { UpdateTaskRequest } from '@/services/team/types';
 import { X, Trash2 } from 'lucide-react';
@@ -9,19 +10,6 @@ interface TaskDetailPanelProps {
   onClose: () => void;
 }
 
-const STATUS_OPTIONS = [
-  { value: 'todo', label: 'Todo' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'done', label: 'Done' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const PRIORITY_OPTIONS = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
-];
 
 function timestampToDateStr(ts: number | null): string {
   if (ts == null) return '';
@@ -43,6 +31,22 @@ const inputClass =
   'w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
 
 export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProps) {
+  const { t } = useLocaleStore();
+
+  const STATUS_OPTIONS = [
+    { value: 'todo', label: t.team.statusTodo },
+    { value: 'in_progress', label: t.team.statusInProgress },
+    { value: 'done', label: t.team.statusDone },
+    { value: 'cancelled', label: t.team.statusCancelled },
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { value: 'low', label: t.team.priorityLow },
+    { value: 'medium', label: t.team.priorityMedium },
+    { value: 'high', label: t.team.priorityHigh },
+    { value: 'urgent', label: t.team.priorityUrgent },
+  ];
+
   const { tasks, updateTask, deleteTask } = useTaskStore(
     useShallow((s) => ({
       tasks: s.tasks,
@@ -101,7 +105,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
   if (!task) {
     return (
       <div className="flex h-full items-center justify-center p-4 text-sm text-gray-400">
-        Task not found
+        {t.team.taskNotFound}
       </div>
     );
   }
@@ -111,7 +115,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-          Task Details
+          {t.team.taskDetails}
         </h3>
         <button
           onClick={onClose}
@@ -125,7 +129,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {/* Title */}
         <div>
-          <label className={labelClass}>Title</label>
+          <label className={labelClass}>{t.team.title}</label>
           <input
             type="text"
             className={inputClass}
@@ -141,7 +145,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Description */}
         <div>
-          <label className={labelClass}>Description</label>
+          <label className={labelClass}>{t.team.description}</label>
           <textarea
             className={`${inputClass} min-h-[80px] resize-y`}
             value={description}
@@ -156,7 +160,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Status */}
         <div>
-          <label className={labelClass}>Status</label>
+          <label className={labelClass}>{t.team.status}</label>
           <select
             className={inputClass}
             value={status}
@@ -175,7 +179,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Priority */}
         <div>
-          <label className={labelClass}>Priority</label>
+          <label className={labelClass}>{t.team.priority}</label>
           <select
             className={inputClass}
             value={priority}
@@ -194,11 +198,11 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Assignee */}
         <div>
-          <label className={labelClass}>Assignee ID</label>
+          <label className={labelClass}>{t.team.assigneeId}</label>
           <input
             type="text"
             className={inputClass}
-            placeholder="User ID"
+            placeholder={t.team.userIdPlaceholder}
             value={assigneeId}
             onChange={(e) => setAssigneeId(e.target.value)}
             onBlur={() => {
@@ -212,7 +216,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Start Date */}
         <div>
-          <label className={labelClass}>Start Date</label>
+          <label className={labelClass}>{t.team.startDate}</label>
           <input
             type="date"
             className={inputClass}
@@ -226,7 +230,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Due Date */}
         <div>
-          <label className={labelClass}>Due Date</label>
+          <label className={labelClass}>{t.team.dueDate}</label>
           <input
             type="date"
             className={inputClass}
@@ -240,9 +244,9 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
 
         {/* Metadata */}
         <div className="space-y-1 border-t border-gray-200 pt-3 text-xs text-gray-400 dark:border-gray-700 dark:text-gray-500">
-          <p>Created: {new Date(task.created_at).toLocaleString()}</p>
-          <p>Updated: {new Date(task.updated_at).toLocaleString()}</p>
-          <p className="truncate">ID: {task.id}</p>
+          <p>{t.team.created}: {new Date(task.created_at).toLocaleString()}</p>
+          <p>{t.team.updated}: {new Date(task.updated_at).toLocaleString()}</p>
+          <p className="truncate">{t.team.taskId}: {task.id}</p>
         </div>
       </div>
 
@@ -257,7 +261,7 @@ export default function TaskDetailPanel({ taskId, onClose }: TaskDetailPanelProp
           }`}
         >
           <Trash2 className="h-3.5 w-3.5" />
-          {confirmDelete ? 'Confirm Delete' : 'Delete Task'}
+          {confirmDelete ? t.team.confirmDelete : t.team.deleteTask}
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useOrgStore } from '@/stores/useOrgStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import { X, UserPlus, Trash2, Loader2 } from 'lucide-react';
 import type { OrgRole } from '@/services/team/types';
@@ -17,6 +18,7 @@ interface OrgSettingsPanelProps {
 }
 
 export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
+  const { t } = useLocaleStore();
   const { currentOrg, orgs, currentOrgId, updateOrg, addMember, removeMember } = useOrgStore(
     useShallow((s) => ({
       currentOrg: s.currentOrg,
@@ -97,7 +99,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
     return (
       <div className="rounded-lg border border-zinc-700 bg-zinc-800/80 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-zinc-200">Organization Settings</h2>
+          <h2 className="text-sm font-semibold text-zinc-200">{t.team.orgSettings}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -106,7 +108,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
             <X size={16} />
           </button>
         </div>
-        <p className="mt-3 text-xs text-zinc-500">No organization selected.</p>
+        <p className="mt-3 text-xs text-zinc-500">{t.team.noOrgSelected}</p>
       </div>
     );
   }
@@ -115,7 +117,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
     <div className="rounded-lg border border-zinc-700 bg-zinc-800/80 shadow-lg">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-zinc-700 px-4 py-3">
-        <h2 className="text-sm font-semibold text-zinc-200">Organization Settings</h2>
+        <h2 className="text-sm font-semibold text-zinc-200">{t.team.orgSettings}</h2>
         <button
           type="button"
           onClick={onClose}
@@ -127,7 +129,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
 
       {/* Name section */}
       <div className="border-b border-zinc-700 px-4 py-3">
-        <label className="mb-1.5 block text-xs font-medium text-zinc-400">Name</label>
+        <label className="mb-1.5 block text-xs font-medium text-zinc-400">{t.team.name}</label>
         <div className="flex items-center gap-2">
           <input
             value={orgName}
@@ -145,7 +147,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
               disabled={!orgName.trim() || orgName.trim() === currentOrg.name || savingName}
               className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
             >
-              {savingName ? <Loader2 size={12} className="animate-spin" /> : 'Save'}
+              {savingName ? <Loader2 size={12} className="animate-spin" /> : t.common.save}
             </button>
           )}
         </div>
@@ -154,12 +156,12 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
 
       {/* Members section */}
       <div className="px-4 py-3">
-        <label className="mb-2 block text-xs font-medium text-zinc-400">Members</label>
+        <label className="mb-2 block text-xs font-medium text-zinc-400">{t.team.members}</label>
 
         {/* Member list */}
         <div className="mb-3 max-h-48 overflow-y-auto rounded border border-zinc-700 bg-zinc-900/50">
           {currentOrg.members.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-zinc-500">No members</div>
+            <div className="px-3 py-2 text-xs text-zinc-500">{t.team.noMembers}</div>
           ) : (
             currentOrg.members.map((member) => (
               <div
@@ -172,7 +174,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
                 <span
                   className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${roleBadgeClass[member.role] ?? roleBadgeClass.guest}`}
                 >
-                  {member.role}
+                  {member.role === 'admin' ? t.team.admin : member.role === 'member' ? t.team.member : t.team.guest}
                 </span>
                 {isAdmin && (
                   <button
@@ -180,7 +182,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
                     onClick={() => handleRemove(member.user_id)}
                     disabled={removingUserId === member.user_id}
                     className="shrink-0 rounded p-1 text-zinc-500 transition-colors hover:bg-red-500/20 hover:text-red-400 disabled:opacity-40"
-                    title="Remove member"
+                    title={t.team.removeMember}
                   >
                     {removingUserId === member.user_id ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -200,7 +202,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
           <>
             <label className="mb-1.5 block text-xs font-medium text-zinc-400">
               <UserPlus size={12} className="mr-1 inline-block" />
-              Invite Member
+              {t.team.inviteMember}
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -209,7 +211,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleInvite();
                 }}
-                placeholder="user@email.com"
+                placeholder={t.team.emailPlaceholder}
                 disabled={inviting}
                 className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-2 py-1.5 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-500 disabled:opacity-50"
               />
@@ -221,7 +223,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
               >
                 {roleOptions.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {r === 'admin' ? t.team.admin : r === 'member' ? t.team.member : t.team.guest}
                   </option>
                 ))}
               </select>
@@ -231,7 +233,7 @@ export function OrgSettingsPanel({ onClose }: OrgSettingsPanelProps) {
                 disabled={!inviteEmail.trim() || inviting}
                 className="shrink-0 rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
               >
-                {inviting ? <Loader2 size={12} className="animate-spin" /> : 'Add'}
+                {inviting ? <Loader2 size={12} className="animate-spin" /> : t.common.add}
               </button>
             </div>
             {inviteError && <p className="mt-1 text-xs text-red-400">{inviteError}</p>}

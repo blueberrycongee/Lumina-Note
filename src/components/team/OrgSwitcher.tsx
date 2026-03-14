@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useOrgStore } from '@/stores/useOrgStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import { ChevronDown, Plus, Building2, Check, Loader2 } from 'lucide-react';
 
@@ -10,6 +11,7 @@ const roleBadgeClass: Record<string, string> = {
 };
 
 export function OrgSwitcher() {
+  const { t } = useLocaleStore();
   const { orgs, currentOrgId, switchOrg, createOrg } = useOrgStore(
     useShallow((s) => ({
       orgs: s.orgs,
@@ -102,13 +104,13 @@ export function OrgSwitcher() {
       >
         <Building2 size={16} className="shrink-0 text-zinc-400" />
         <span className="min-w-0 flex-1 truncate text-left">
-          {currentOrg ? currentOrg.name : 'Select organization'}
+          {currentOrg ? currentOrg.name : t.team.selectOrganization}
         </span>
         {currentOrg && (
           <span
             className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${roleBadgeClass[currentOrg.role] ?? roleBadgeClass.guest}`}
           >
-            {currentOrg.role}
+            {currentOrg.role === 'admin' ? t.team.admin : currentOrg.role === 'member' ? t.team.member : t.team.guest}
           </span>
         )}
         <ChevronDown
@@ -123,7 +125,7 @@ export function OrgSwitcher() {
           {/* Org list */}
           <div className="max-h-56 overflow-y-auto py-1">
             {orgs.length === 0 && (
-              <div className="px-3 py-2 text-xs text-zinc-500">No organizations</div>
+              <div className="px-3 py-2 text-xs text-zinc-500">{t.team.noOrganizations}</div>
             )}
             {orgs.map((org) => {
               const isSelected = org.id === currentOrgId;
@@ -142,7 +144,7 @@ export function OrgSwitcher() {
                   <span
                     className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none ${roleBadgeClass[org.role] ?? roleBadgeClass.guest}`}
                   >
-                    {org.role}
+                    {org.role === 'admin' ? t.team.admin : org.role === 'member' ? t.team.member : t.team.guest}
                   </span>
                   {isSelected && <Check size={14} className="shrink-0 text-blue-400" />}
                 </button>
@@ -161,7 +163,7 @@ export function OrgSwitcher() {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Organization name"
+                placeholder={t.team.orgNamePlaceholder}
                 disabled={submitting}
                 className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-2 py-1 text-sm text-zinc-200 placeholder-zinc-500 outline-none focus:border-blue-500 disabled:opacity-50"
               />
@@ -171,7 +173,7 @@ export function OrgSwitcher() {
                 disabled={!newName.trim() || submitting}
                 className="shrink-0 rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-40"
               >
-                {submitting ? <Loader2 size={12} className="animate-spin" /> : 'OK'}
+                {submitting ? <Loader2 size={12} className="animate-spin" /> : t.team.ok}
               </button>
             </div>
           ) : (
@@ -181,7 +183,7 @@ export function OrgSwitcher() {
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-700/40 hover:text-zinc-200"
             >
               <Plus size={14} />
-              <span>Create organization</span>
+              <span>{t.team.createOrganization}</span>
             </button>
           )}
         </div>
