@@ -54,6 +54,7 @@ import {
   shouldShowSource,
 } from 'codemirror-live-markdown';
 import { resolveCalloutType, matchCalloutHeader } from '@/editor/calloutConfig';
+import { parseMarkdown } from '@/services/markdown/markdown';
 
 // Initialize mermaid
 mermaid.initialize({
@@ -2949,11 +2950,10 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
       });
     } else {
       // Inactive: replace entire block with rendered widget
-      const contentHtml = contentResult.lines
+      const contentMd = contentResult.lines
         .map(l => l.text)
-        .filter(t => t.trim() !== '')
-        .map(t => `<p>${t}</p>`)
-        .join('');
+        .join('\n');
+      const contentHtml = contentMd.trim() ? parseMarkdown(contentMd) : '';
 
       decorations.push(
         Decoration.replace({
