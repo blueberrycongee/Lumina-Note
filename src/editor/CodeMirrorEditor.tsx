@@ -53,6 +53,7 @@ import {
   setMouseSelecting,
   shouldShowSource,
 } from 'codemirror-live-markdown';
+import { resolveCalloutType, matchCalloutHeader } from '@/editor/calloutConfig';
 
 // Initialize mermaid
 mermaid.initialize({
@@ -796,22 +797,74 @@ class MermaidWidget extends WidgetType {
   }
 }
 
-class CalloutIconWidget extends WidgetType {
-  constructor(readonly icon: string) {
+class CalloutBlockWidget extends WidgetType {
+  constructor(
+    readonly icon: string,
+    readonly title: string,
+    readonly content: string,
+    readonly color: string,
+    readonly foldable: boolean,
+    readonly defaultFolded: boolean,
+  ) {
     super();
   }
-  eq(other: CalloutIconWidget) {
-    return other.icon === this.icon;
+  eq(other: CalloutBlockWidget) {
+    return (
+      other.icon === this.icon &&
+      other.title === this.title &&
+      other.content === this.content &&
+      other.color === this.color &&
+      other.foldable === this.foldable &&
+      other.defaultFolded === this.defaultFolded
+    );
   }
   toDOM() {
-    const s = document.createElement('span');
-    s.className = 'cm-callout-icon';
-    s.textContent = this.icon;
-    s.style.cssText = 'margin-right:6px;font-size:1.1em';
-    return s;
+    const wrapper = document.createElement('div');
+    wrapper.className = `callout callout-${this.color}${this.defaultFolded ? ' callout-folded' : ''}`;
+
+    const icon = document.createElement('span');
+    icon.className = 'callout-icon';
+    icon.textContent = this.icon;
+
+    const body = document.createElement('div');
+    body.className = 'callout-body';
+
+    const titleRow = document.createElement('div');
+    titleRow.className = 'callout-title';
+
+    const titleText = document.createElement('span');
+    titleText.className = 'callout-title-text';
+    titleText.textContent = this.title;
+    titleRow.appendChild(titleText);
+
+    if (this.foldable) {
+      const fold = document.createElement('span');
+      fold.className = 'callout-fold';
+      fold.textContent = '\u25BC';
+      titleRow.appendChild(fold);
+
+      titleRow.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        wrapper.classList.toggle('callout-folded');
+      });
+    }
+
+    body.appendChild(titleRow);
+
+    if (this.content) {
+      const contentEl = document.createElement('div');
+      contentEl.className = 'callout-content';
+      contentEl.innerHTML = this.content;
+      body.appendChild(contentEl);
+    }
+
+    wrapper.appendChild(icon);
+    wrapper.appendChild(body);
+    return wrapper;
   }
-  ignoreEvent() {
-    return true;
+  ignoreEvent(e: Event) {
+    return e.type === 'mousedown';
   }
 }
 
@@ -2827,104 +2880,134 @@ function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   return Decoration.set(decorations);
 }
 
-const calloutStateField = StateField.define<DecorationSet>({
-  create: buildCalloutDecorations,
-  update(deco, tr) {
-    return tr.docChanged ? buildCalloutDecorations(tr.state) : deco.map(tr.changes);
-  },
-  provide: (f) => EditorView.decorations.from(f),
-});
-const CALLOUT_COLORS: Record<string, string> = {
-  note: 'blue',
-  abstract: 'blue',
-  info: 'blue',
-  tip: 'green',
-  success: 'green',
-  question: 'yellow',
-  warning: 'yellow',
-  danger: 'red',
-  failure: 'red',
-  bug: 'red',
-  example: 'purple',
-  quote: 'gray',
-  summary: 'blue',
-};
-const CALLOUT_ICONS: Record<string, string> = {
-  note: '📝',
-  abstract: '📄',
-  summary: '📄',
-  info: 'ℹ️',
-  tip: '💡',
-  hint: '💡',
-  success: '✅',
-  check: '✅',
-  done: '✅',
-  question: '❓',
-  help: '❓',
-  faq: '❓',
-  warning: '⚠️',
-  caution: '⚠️',
-  attention: '⚠️',
-  danger: '🔴',
-  error: '❌',
-  failure: '❌',
-  fail: '❌',
-  missing: '❌',
-  bug: '🐛',
-  example: '📋',
-  quote: '💬',
-  cite: '💬',
-};
+// ============ Callout StateField ============
+let calloutPositionsCache: { from: number; to: number }[] = [];
+
+function shouldShowCalloutSource(state: EditorState, from: number, to: number): boolean {
+  const shouldCollapse = state.facet(collapseOnSelectionFacet);
+  if (!shouldCollapse) return false;
+  const isDragging = state.field(mouseSelectingField, false);
+  if (isDragging) return false;
+  return state.selection.ranges.some((range) => {
+    if (range.from === range.to) {
+      return range.from >= from && range.from <= to;
+    }
+    return range.from >= from && range.to <= to;
+  });
+}
+
+function parseCalloutContent(doc: Text, startLineNo: number): { lines: { from: number; text: string }[]; endLineNo: number } {
+  const lines: { from: number; text: string }[] = [];
+  let nextLineNo = startLineNo;
+  while (nextLineNo <= doc.lines) {
+    const nextLine = doc.line(nextLineNo);
+    if (/^>\s?/.test(nextLine.text)) {
+      lines.push({ from: nextLine.from, text: nextLine.text.replace(/^>\s?/, '') });
+      nextLineNo++;
+    } else if (nextLine.text.trim() === '') {
+      break;
+    } else {
+      break;
+    }
+  }
+  return { lines, endLineNo: nextLineNo };
+}
+
 function buildCalloutDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
   const doc = state.doc;
+  calloutPositionsCache = [];
   let lineNo = 1;
+
   while (lineNo <= doc.lines) {
     const line = doc.line(lineNo);
-    const match = line.text.match(/^>\s*\[!([^\]]+)\]/);
-    if (!match) {
+    const header = matchCalloutHeader(line.text);
+    if (!header) {
       lineNo++;
       continue;
     }
-    const rawType = match[1].trim();
-    const type = rawType.toLowerCase();
-    const isEmojiType = !/^\w+$/.test(rawType);
-    const color = isEmojiType ? 'blue' : CALLOUT_COLORS[type] || 'gray';
-    const icon = isEmojiType ? rawType : CALLOUT_ICONS[type] || '📝';
-    const calloutLines = [{ from: line.from }];
-    let nextLineNo = lineNo + 1;
-    while (nextLineNo <= doc.lines) {
-      const nextLine = doc.line(nextLineNo);
-      if (/^>\s*/.test(nextLine.text) || nextLine.text.trim() === '') {
-        calloutLines.push({ from: nextLine.from });
-        nextLineNo++;
-      } else break;
+
+    const resolved = resolveCalloutType(header.rawType);
+
+    // Collect all lines in this callout block
+    const contentResult = parseCalloutContent(doc, lineNo + 1);
+    const allLineFroms = [line.from, ...contentResult.lines.map(l => l.from)];
+    const lastLineFrom = allLineFroms[allLineFroms.length - 1];
+    const lastLine = doc.lineAt(lastLineFrom);
+    const blockFrom = line.from;
+    const blockTo = lastLine.to;
+
+    calloutPositionsCache.push({ from: blockFrom, to: blockTo });
+
+    if (shouldShowCalloutSource(state, blockFrom, blockTo)) {
+      // Active: show source with line decorations (editing mode)
+      allLineFroms.forEach((from, idx) => {
+        let cls = `callout-editing callout-${resolved.color}`;
+        if (idx === 0) cls += ' callout-editing-first';
+        if (idx === allLineFroms.length - 1) cls += ' callout-editing-last';
+        decorations.push(Decoration.line({ class: cls }).range(from));
+      });
+    } else {
+      // Inactive: replace entire block with rendered widget
+      const contentHtml = contentResult.lines
+        .map(l => l.text)
+        .filter(t => t.trim() !== '')
+        .map(t => `<p>${t}</p>`)
+        .join('');
+
+      decorations.push(
+        Decoration.replace({
+          widget: new CalloutBlockWidget(
+            resolved.icon,
+            header.title,
+            contentHtml,
+            resolved.color,
+            header.foldable,
+            header.defaultFolded,
+          ),
+          block: true,
+        }).range(blockFrom, blockTo),
+      );
     }
-    calloutLines.forEach((l, idx) => {
-      let cls = `callout callout-${color}`;
-      if (idx === 0) {
-        cls += ' callout-first';
-        const hMatch = doc.line(lineNo).text.match(/^(>\s*)(\[![^\]]+\])(\s*)/);
-        if (hMatch) {
-          const s = line.from + hMatch[1].length;
-          decorations.push(
-            Decoration.replace({ widget: new CalloutIconWidget(icon) }).range(
-              s,
-              s + hMatch[2].length,
-            ),
-          );
-        }
-      }
-      if (idx === calloutLines.length - 1) cls += ' callout-last';
-      decorations.push(Decoration.line({ class: cls }).range(l.from));
-    });
-    lineNo = nextLineNo;
+
+    lineNo = contentResult.endLineNo;
   }
+
   return Decoration.set(
     decorations.sort((a, b) => a.from - b.from),
     true,
   );
 }
+
+const calloutStateField = StateField.define<DecorationSet>({
+  create: buildCalloutDecorations,
+  update(deco, tr) {
+    if (tr.docChanged || tr.reconfigured) return buildCalloutDecorations(tr.state);
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    if (wasDragging && !isDragging) return buildCalloutDecorations(tr.state);
+    if (isDragging) return deco;
+    if (tr.selection) {
+      const oldSel = tr.startState.selection.main;
+      const newSel = tr.state.selection.main;
+      const touches = (sel: { from: number; to: number }) =>
+        calloutPositionsCache.some(
+          (c) =>
+            (sel.from >= c.from && sel.from <= c.to) ||
+            (sel.to >= c.from && sel.to <= c.to) ||
+            (sel.from <= c.from && sel.to >= c.to),
+        );
+      if (
+        touches(oldSel) !== touches(newSel) ||
+        (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+      ) {
+        return buildCalloutDecorations(tr.state);
+      }
+    }
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
 
 // ============ 7. Image StateField ============
 
