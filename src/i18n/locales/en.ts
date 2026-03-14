@@ -430,10 +430,10 @@ export default {
     providerError: '{provider} request failed: {error}',
     apiErrorWithStatus: 'API error ({status}): {error}',
     quickPrompts: {
-      polishText: 'Polish text',
-      summarizeNote: 'Summarize note',
-      writeArticle: 'Write an article',
-      studyNotes: 'Study notes',
+      polishText: 'Please polish the text in my current note. Improve clarity, flow, and word choice while preserving the original meaning. Output the full revised text.',
+      summarizeNote: 'Please read my current note and produce a clear, structured summary highlighting the key concepts, main arguments, and conclusions.',
+      writeArticle: 'Please write a well-structured article based on the material in my current note. If there isn\'t enough context, ask me about the topic and preferred writing style first.',
+      studyNotes: 'Please analyze the knowledge points in my current note and organize them into systematic study notes with concept explanations, key takeaways, comparisons of easily confused points, and memory aids.',
     },
     diffView: {
       title: 'AI edit preview',

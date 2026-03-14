@@ -430,10 +430,10 @@ export default {
     providerError: '{provider} 請求失敗：{error}',
     apiErrorWithStatus: 'API 錯誤 ({status}): {error}',
     quickPrompts: {
-      polishText: '潤色文字',
-      summarizeNote: '總結筆記',
-      writeArticle: '寫篇文章',
-      studyNotes: '學習筆記',
+      polishText: '請潤色當前筆記的文字，優化表達方式，使語言更加流暢、精準，同時保持原意不變。請直接輸出潤色後的全文。',
+      summarizeNote: '請閱讀當前筆記，提煉核心要點，生成一份結構清晰的摘要，包含關鍵概念、主要論點和結論。',
+      writeArticle: '請根據當前筆記中的素材和思路，撰寫一篇結構完整、邏輯通順的文章。如果筆記內容不足，請先向我確認主題和寫作風格。',
+      studyNotes: '請分析當前筆記中的知識點，整理成系統化的學習筆記，包含概念解釋、要點歸納、易混淆點對比和記憶提示。',
     },
     diffView: {
       title: 'AI 修改預覽',

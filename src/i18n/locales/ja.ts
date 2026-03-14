@@ -430,10 +430,10 @@ export default {
     providerError: '{provider} リクエストに失敗しました: {error}',
     apiErrorWithStatus: 'API エラー ({status}): {error}',
     quickPrompts: {
-      polishText: '文章を磨く',
-      summarizeNote: 'ノートを要約',
-      writeArticle: '記事を書く',
-      studyNotes: '学習ノート',
+      polishText: '現在のノートの文章を推敲してください。表現を洗練させ、読みやすく正確にしつつ、元の意味を保ってください。推敲後の全文を出力してください。',
+      summarizeNote: '現在のノートを読み、重要な概念・主な論点・結論を含む、構造的で明確な要約を作成してください。',
+      writeArticle: '現在のノートの素材に基づいて、構成がしっかりした記事を書いてください。内容が不十分な場合は、まずテーマと文体について確認してください。',
+      studyNotes: '現在のノートの知識ポイントを分析し、概念の説明・要点の整理・紛らわしい点の比較・記憶のヒントを含む体系的な学習ノートにまとめてください。',
     },
     diffView: {
       title: 'AI 編集プレビュー',

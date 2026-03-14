@@ -430,10 +430,10 @@ export default {
     providerError: '{provider} 请求失败：{error}',
     apiErrorWithStatus: 'API 错误 ({status}): {error}',
     quickPrompts: {
-      polishText: '润色文字',
-      summarizeNote: '总结笔记',
-      writeArticle: '写篇文章',
-      studyNotes: '学习笔记',
+      polishText: '请润色当前笔记的文字，优化表达方式，使语言更加流畅、精准，同时保持原意不变。请直接输出润色后的全文。',
+      summarizeNote: '请阅读当前笔记，提炼核心要点，生成一份结构清晰的摘要，包含关键概念、主要论点和结论。',
+      writeArticle: '请根据当前笔记中的素材和思路，撰写一篇结构完整、逻辑通顺的文章。如果笔记内容不足，请先向我确认主题和写作风格。',
+      studyNotes: '请分析当前笔记中的知识点，整理成系统化的学习笔记，包含概念解释、要点归纳、易混淆点对比和记忆提示。',
     },
     diffView: {
       title: 'AI 修改预览',
