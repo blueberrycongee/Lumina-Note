@@ -25,6 +25,14 @@ body.resizing iframe[data-codex-iframe="true"] {
   color: inherit;
 }
 
+/* Hide native ::selection inside CodeMirror — drawSelection() handles it */
+.cm-editor .cm-content ::selection {
+  background-color: transparent !important;
+}
+.cm-editor .cm-content ::-moz-selection {
+  background-color: transparent !important;
+}
+
 :root {
   --background: 210 18% 97%; /* 中性暖白 */
   --foreground: 215 20% 11%; /* 微暖黑 */
