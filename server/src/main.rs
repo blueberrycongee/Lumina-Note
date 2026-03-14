@@ -5,6 +5,7 @@ mod dav;
 mod db;
 mod error;
 mod models;
+mod notify_ws;
 mod relay;
 mod routes;
 mod sites;
