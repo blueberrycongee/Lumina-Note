@@ -1,14 +1,25 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback, type RefObject } from 'react';
-import { useFileStore } from '@/stores/useFileStore';
-import { useAIStore } from '@/stores/useAIStore';
-import { useSplitStore } from '@/stores/useSplitStore';
-import { useUIStore } from '@/stores/useUIStore';
-import { useLocaleStore } from '@/stores/useLocaleStore';
-import { useShallow } from 'zustand/react/shallow';
-import { parseLuminaLink } from '@/services/pdf/annotations';
-import { createDir, writeBinaryFile, readBinaryFileBase64 } from '@/lib/tauri';
-import { reportOperationError } from '@/lib/reportError';
-import { buildPastedImageTarget, getImageMimeType, resolveEditorImagePath } from '@/services/assets/editorImages';
+import {
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  useCallback,
+  type RefObject,
+} from "react";
+import { useFileStore } from "@/stores/useFileStore";
+import { useAIStore } from "@/stores/useAIStore";
+import { useSplitStore } from "@/stores/useSplitStore";
+import { useUIStore } from "@/stores/useUIStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useShallow } from "zustand/react/shallow";
+import { parseLuminaLink } from "@/services/pdf/annotations";
+import { createDir, writeBinaryFile, readBinaryFileBase64 } from "@/lib/tauri";
+import { reportOperationError } from "@/lib/reportError";
+import {
+  buildPastedImageTarget,
+  getImageMimeType,
+  resolveEditorImagePath,
+} from "@/services/assets/editorImages";
 import {
   EditorState,
   StateField,
@@ -18,9 +29,12 @@ import {
   ChangeSet,
   Range,
   Text,
-} from '@codemirror/state';
-import { slashCommandExtensions, placeholderExtension } from './extensions/slashCommand';
-import { SlashMenu } from './components/SlashMenu';
+} from "@codemirror/state";
+import {
+  slashCommandExtensions,
+  placeholderExtension,
+} from "./extensions/slashCommand";
+import { SlashMenu } from "./components/SlashMenu";
 import {
   EditorView,
   drawSelection,
@@ -30,20 +44,20 @@ import {
   ViewPlugin,
   ViewUpdate,
   WidgetType,
-} from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
-import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
-import { Table } from '@lezer/markdown';
-import { syntaxTree } from '@codemirror/language';
-import { common as lowlightCommon, createLowlight } from 'lowlight';
-import katex from 'katex';
-import mermaid from 'mermaid';
+} from "@codemirror/view";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
+import { Table } from "@lezer/markdown";
+import { syntaxTree } from "@codemirror/language";
+import { common as lowlightCommon, createLowlight } from "lowlight";
+import katex from "katex";
+import mermaid from "mermaid";
 import {
   PLUGIN_EDITOR_SELECTION_EVENT,
   pluginEditorRuntime,
-} from '@/services/plugins/editorRuntime';
-import { yCollab } from 'y-codemirror.next';
-import type { CollabConnection } from '@/services/team/collabProvider';
+} from "@/services/plugins/editorRuntime";
+import { yCollab } from "y-codemirror.next";
+import type { CollabConnection } from "@/services/team/collabProvider";
 import {
   checkUpdateAction,
   collapseOnSelectionFacet,
@@ -52,19 +66,20 @@ import {
   mouseSelectingField,
   setMouseSelecting,
   shouldShowSource,
-} from 'codemirror-live-markdown';
-import { resolveCalloutType, matchCalloutHeader } from '@/editor/calloutConfig';
-import { parseMarkdown } from '@/services/markdown/markdown';
+} from "codemirror-live-markdown";
+import { resolveCalloutType, matchCalloutHeader } from "@/editor/calloutConfig";
+import { parseMarkdown } from "@/services/markdown/markdown";
 
 // Initialize mermaid
 mermaid.initialize({
   startOnLoad: false,
-  theme: 'default',
-  securityLevel: 'loose',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  theme: "default",
+  securityLevel: "loose",
+  fontFamily:
+    '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
 });
 
-export type ViewMode = 'reading' | 'live' | 'source';
+export type ViewMode = "reading" | "live" | "source";
 
 // ============ 1. 核心架构 ============
 
@@ -99,414 +114,455 @@ export interface CodeMirrorEditorRef {
 
 const createEditorTheme = (fontSize: number) =>
   EditorView.theme({
-    '&': {
-      backgroundColor: 'transparent',
+    "&": {
+      backgroundColor: "transparent",
       fontSize: `${fontSize}px`,
-      height: '100%',
-      '--lumina-codeblock-bg': 'hsl(var(--muted) / 0.58)',
-      '--lumina-codeblock-bg-hover': 'hsl(var(--muted) / 0.74)',
-      '--lumina-codeblock-bg-source': 'hsl(var(--muted) / 0.7)',
-      '--lumina-codeblock-border': 'hsl(var(--border) / 0.65)',
-      '--lumina-codeblock-border-soft': 'hsl(var(--border) / 0.35)',
-      '--lumina-codeblock-shadow':
-        '0 0 0 1px hsl(var(--border) / 0.08), 0 10px 24px -18px hsl(var(--foreground) / 0.28)',
+      height: "100%",
+      "--lumina-codeblock-bg": "hsl(var(--muted) / 0.58)",
+      "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.74)",
+      "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.7)",
+      "--lumina-codeblock-border": "hsl(var(--border) / 0.65)",
+      "--lumina-codeblock-border-soft": "hsl(var(--border) / 0.35)",
+      "--lumina-codeblock-shadow":
+        "0 0 0 1px hsl(var(--border) / 0.08), 0 10px 24px -18px hsl(var(--foreground) / 0.28)",
     },
-    '.cm-codeblock-widget pre': { fontSize: `${Math.max(10, fontSize - 2)}px` },
-    '.cm-content': {
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      padding: '16px 0',
-      caretColor: 'hsl(var(--foreground))',
+    ".cm-codeblock-widget pre": { fontSize: `${Math.max(10, fontSize - 2)}px` },
+    ".cm-content": {
+      fontFamily:
+        "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      padding: "16px 0",
+      caretColor: "hsl(var(--foreground))",
     },
-    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'hsl(var(--foreground))' },
-    '.cm-line': {
-      padding: '0 16px',
-      paddingLeft: '16px',
-      lineHeight: '1.75',
-      position: 'relative',
+    ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
+    ".cm-line": {
+      padding: "0 16px",
+      paddingLeft: "16px",
+      lineHeight: "1.75",
+      position: "relative",
     },
 
     // 选区颜色（更淡的蓝色）
-    '.cm-selectionBackground': { backgroundColor: 'rgba(191, 219, 254, 0.25) !important' },
-    '&.cm-focused .cm-selectionBackground': {
-      backgroundColor: 'rgba(191, 219, 254, 0.35) !important',
+    ".cm-selectionBackground": {
+      backgroundColor: "rgba(191, 219, 254, 0.25) !important",
+    },
+    "&.cm-focused .cm-selectionBackground": {
+      backgroundColor: "rgba(191, 219, 254, 0.35) !important",
     },
 
     // === 动画核心样式 ===
 
     // 1. 悬挂标记 (Headings) - 绝对定位到左侧，不占用正文空间
-    '.cm-formatting-hanging': {
-      position: 'absolute',
-      right: '100%', // 悬挂在内容左侧
-      marginRight: '6px',
-      color: 'hsl(var(--muted-foreground) / 0.4)',
+    ".cm-formatting-hanging": {
+      position: "absolute",
+      right: "100%", // 悬挂在内容左侧
+      marginRight: "6px",
+      color: "hsl(var(--muted-foreground) / 0.4)",
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '14px', // 固定字体大小，不继承标题大小
-      fontWeight: 'bold',
-      userSelect: 'none',
-      pointerEvents: 'none',
+      fontSize: "14px", // 固定字体大小，不继承标题大小
+      fontWeight: "bold",
+      userSelect: "none",
+      pointerEvents: "none",
     },
 
     // 2. 行内标记 (Bold, Italic) - 默认隐藏
     //    Obsidian 方案: font-size: 1px + letter-spacing: -1ch
     //    字符互相重叠，视觉宽度趋近于零，但不改变布局结构
-    '.cm-formatting-inline': {
-      display: 'inline',
-      fontSize: '1px',
-      letterSpacing: '-1ch',
-      fontFamily: 'monospace',
-      color: 'transparent',
-      pointerEvents: 'none',
+    ".cm-formatting-inline": {
+      display: "inline",
+      fontSize: "1px",
+      letterSpacing: "-1ch",
+      fontFamily: "monospace",
+      color: "transparent",
+      pointerEvents: "none",
     },
 
     // 3. 行内标记 - 激活状态 (展开)
-    '.cm-formatting-inline-visible': {
-      fontSize: '0.85em',
-      letterSpacing: 'normal',
+    ".cm-formatting-inline-visible": {
+      fontSize: "0.85em",
+      letterSpacing: "normal",
       fontFamily: "'JetBrains Mono', monospace",
-      color: 'hsl(var(--muted-foreground) / 0.6)',
-      pointerEvents: 'auto',
+      color: "hsl(var(--muted-foreground) / 0.6)",
+      pointerEvents: "auto",
     },
-    '&.cm-drag-selecting .cm-math-inline, &.cm-drag-selecting .cm-math-source': {
-      transition: 'none !important',
-      animation: 'none !important',
-    },
-    '&.cm-drag-native-selection-suppressed, &.cm-drag-native-selection-suppressed *': {
-      userSelect: 'none !important',
-      WebkitUserSelect: 'none !important',
-    },
+    "&.cm-drag-selecting .cm-math-inline, &.cm-drag-selecting .cm-math-source":
+      {
+        transition: "none !important",
+        animation: "none !important",
+      },
+    "&.cm-drag-native-selection-suppressed, &.cm-drag-native-selection-suppressed *":
+      {
+        userSelect: "none !important",
+        WebkitUserSelect: "none !important",
+      },
 
     // 块级标记 (标题/列表/引用) - 默认隐藏
     //    Obsidian 方案: font-size: 0, display: inline — 无 transition
-    '.cm-formatting-block': {
-      display: 'inline',
-      fontSize: '0',
-      color: 'transparent',
+    ".cm-formatting-block": {
+      display: "inline",
+      fontSize: "0",
+      color: "transparent",
       fontFamily: "'JetBrains Mono', monospace",
     },
 
     // 块级标记 - 激活状态 (展开)
-    '.cm-formatting-block-visible': {
-      fontSize: '1em',
-      color: 'hsl(var(--muted-foreground) / 0.6)',
+    ".cm-formatting-block-visible": {
+      fontSize: "1em",
+      color: "hsl(var(--muted-foreground) / 0.6)",
     },
-
 
     // === Math 编辑体验 ===
     // 行内公式渲染结果 - 带淡入动画
-    '.cm-math-inline': {
-      display: 'inline-block',
-      verticalAlign: 'middle',
-      cursor: 'pointer',
-      animation: 'mathFadeIn 0.15s ease-out',
+    ".cm-math-inline": {
+      display: "inline-block",
+      verticalAlign: "middle",
+      cursor: "pointer",
+      animation: "mathFadeIn 0.15s ease-out",
     },
-    '.cm-math-block': {
-      display: 'block',
-      textAlign: 'center',
-      padding: '0.5em 0',
-      overflow: 'hidden',
-      cursor: 'pointer',
+    ".cm-math-block": {
+      display: "block",
+      textAlign: "center",
+      padding: "0.5em 0",
+      overflow: "hidden",
+      cursor: "pointer",
     },
 
     // 编辑模式：源码背景 (淡绿色) - 带淡入动画
-    '.cm-math-source': {
-      backgroundColor: 'rgba(74, 222, 128, 0.15)',
-      color: 'hsl(var(--foreground))',
+    ".cm-math-source": {
+      backgroundColor: "rgba(74, 222, 128, 0.15)",
+      color: "hsl(var(--foreground))",
       fontFamily: "'JetBrains Mono', monospace",
-      borderRadius: '4px',
-      padding: '2px 4px',
-      zIndex: '1',
-      position: 'relative',
-      cursor: 'text',
-      animation: 'mathFadeIn 0.15s ease-out',
+      borderRadius: "4px",
+      padding: "2px 4px",
+      zIndex: "1",
+      position: "relative",
+      cursor: "text",
+      animation: "mathFadeIn 0.15s ease-out",
     },
 
     // 公式淡入动画关键帧
-    '@keyframes mathFadeIn': {
-      from: { opacity: '0', transform: 'scale(0.95)' },
-      to: { opacity: '1', transform: 'scale(1)' },
+    "@keyframes mathFadeIn": {
+      from: { opacity: "0", transform: "scale(0.95)" },
+      to: { opacity: "1", transform: "scale(1)" },
     },
     // 编辑模式：预览面板 (位于源码下方)
-    '.cm-math-preview-panel': {
-      display: 'block',
-      textAlign: 'center',
-      padding: '8px',
-      marginTop: '4px',
-      marginBottom: '8px',
-      border: '1px solid hsl(var(--border) / 0.5)',
-      borderRadius: '6px',
-      backgroundColor: 'hsl(var(--muted) / 0.3)',
-      pointerEvents: 'none', // 关键：让鼠标点击穿透面板，避免无法聚焦其他位置
-      userSelect: 'none',
+    ".cm-math-preview-panel": {
+      display: "block",
+      textAlign: "center",
+      padding: "8px",
+      marginTop: "4px",
+      marginBottom: "8px",
+      border: "1px solid hsl(var(--border) / 0.5)",
+      borderRadius: "6px",
+      backgroundColor: "hsl(var(--muted) / 0.3)",
+      pointerEvents: "none", // 关键：让鼠标点击穿透面板，避免无法聚焦其他位置
+      userSelect: "none",
       opacity: 0.95,
     },
 
     // === Table 样式 ===
-    '.cm-table-widget': { display: 'block', overflowX: 'auto', cursor: 'text' },
-    '.cm-table-widget table': { borderCollapse: 'collapse', width: '100%' },
-    '.cm-table-widget th, .cm-table-widget td': {
-      border: '1px solid hsl(var(--border))',
-      padding: '8px 12px',
+    ".cm-table-widget": { display: "block", overflowX: "auto", cursor: "text" },
+    ".cm-table-widget table": { borderCollapse: "collapse", width: "100%" },
+    ".cm-table-widget th, .cm-table-widget td": {
+      border: "1px solid hsl(var(--border))",
+      padding: "8px 12px",
     },
-    '.cm-table-widget th': { backgroundColor: 'hsl(var(--muted))', fontWeight: '600' },
-    '.cm-table-editor': { display: 'block', overflowX: 'auto', cursor: 'text' },
-    '.cm-table-editor table': { borderCollapse: 'collapse', width: '100%' },
-    '.cm-table-editor th, .cm-table-editor td': {
-      border: '1px solid hsl(var(--border))',
-      padding: '8px 12px',
+    ".cm-table-widget th": {
+      backgroundColor: "hsl(var(--muted))",
+      fontWeight: "600",
     },
-    '.cm-table-editor th': { backgroundColor: 'hsl(var(--muted))', fontWeight: '600' },
-    '.cm-table-cell': { outline: 'none', minWidth: '40px' },
-    '.cm-table-toolbar': { display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' },
-    '.cm-table-source-toggle': { display: 'flex', justifyContent: 'flex-end', marginBottom: '6px' },
-    '.cm-table-toggle': {
-      border: '1px solid hsl(var(--border))',
-      backgroundColor: 'hsl(var(--background))',
-      color: 'hsl(var(--foreground))',
-      borderRadius: '6px',
-      padding: '4px 8px',
-      fontSize: '12px',
-      lineHeight: '1',
-      cursor: 'pointer',
+    ".cm-table-editor": { display: "block", overflowX: "auto", cursor: "text" },
+    ".cm-table-editor table": { borderCollapse: "collapse", width: "100%" },
+    ".cm-table-editor th, .cm-table-editor td": {
+      border: "1px solid hsl(var(--border))",
+      padding: "8px 12px",
     },
-    '.cm-table-source': {
+    ".cm-table-editor th": {
+      backgroundColor: "hsl(var(--muted))",
+      fontWeight: "600",
+    },
+    ".cm-table-cell": { outline: "none", minWidth: "40px" },
+    ".cm-table-toolbar": {
+      display: "flex",
+      justifyContent: "flex-end",
+      marginBottom: "6px",
+    },
+    ".cm-table-source-toggle": {
+      display: "flex",
+      justifyContent: "flex-end",
+      marginBottom: "6px",
+    },
+    ".cm-table-toggle": {
+      border: "1px solid hsl(var(--border))",
+      backgroundColor: "hsl(var(--background))",
+      color: "hsl(var(--foreground))",
+      borderRadius: "6px",
+      padding: "4px 8px",
+      fontSize: "12px",
+      lineHeight: "1",
+      cursor: "pointer",
+    },
+    ".cm-table-source": {
       fontFamily: "'JetBrains Mono', monospace !important",
-      whiteSpace: 'pre',
-      color: 'hsl(var(--foreground))',
-      display: 'block',
-      overflowX: 'auto',
-      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      whiteSpace: "pre",
+      color: "hsl(var(--foreground))",
+      display: "block",
+      overflowX: "auto",
+      backgroundColor: "rgba(59, 130, 246, 0.1)",
     },
 
     // === Code Block 样式（codemirror-live-markdown）===
-    '.cm-codeblock-widget': {
-      display: 'block',
-      position: 'relative',
-      overflow: 'hidden',
-      backgroundColor: 'var(--lumina-codeblock-bg)',
-      border: '1px solid var(--lumina-codeblock-border)',
-      borderRadius: '14px',
-      boxShadow: 'var(--lumina-codeblock-shadow)',
-      backdropFilter: 'blur(6px)',
+    ".cm-codeblock-widget": {
+      display: "block",
+      position: "relative",
+      overflow: "hidden",
+      backgroundColor: "var(--lumina-codeblock-bg)",
+      border: "1px solid var(--lumina-codeblock-border)",
+      borderRadius: "14px",
+      boxShadow: "var(--lumina-codeblock-shadow)",
+      backdropFilter: "blur(6px)",
     },
-    '.cm-lumina-codeblock-open': {
-      paddingLeft: '14px !important',
-      paddingRight: '78px !important',
-      paddingTop: '8px !important',
-      paddingBottom: '2px !important',
-      backgroundColor: 'var(--lumina-codeblock-bg)',
-      color: 'hsl(var(--muted-foreground) / 0.78)',
+    ".cm-lumina-codeblock-open": {
+      paddingLeft: "14px !important",
+      paddingRight: "78px !important",
+      paddingTop: "8px !important",
+      paddingBottom: "2px !important",
+      backgroundColor: "var(--lumina-codeblock-bg)",
+      color: "hsl(var(--muted-foreground) / 0.78)",
       fontFamily: "'JetBrains Mono', monospace",
-      border: '1px solid var(--lumina-codeblock-border)',
-      borderBottom: '1px solid var(--lumina-codeblock-border-soft)',
-      borderRadius: '14px 14px 0 0',
-      boxShadow: 'var(--lumina-codeblock-shadow)',
-      backdropFilter: 'blur(6px)',
+      border: "1px solid var(--lumina-codeblock-border)",
+      borderBottom: "1px solid var(--lumina-codeblock-border-soft)",
+      borderRadius: "14px 14px 0 0",
+      boxShadow: "var(--lumina-codeblock-shadow)",
+      backdropFilter: "blur(6px)",
     },
-    '.cm-lumina-codeblock-content-line': {
-      backgroundColor: 'var(--lumina-codeblock-bg)',
-      color: 'hsl(var(--foreground) / 0.96)',
+    ".cm-lumina-codeblock-content-line": {
+      backgroundColor: "var(--lumina-codeblock-bg)",
+      color: "hsl(var(--foreground) / 0.96)",
       fontFamily: "'JetBrains Mono', monospace",
-      paddingLeft: '14px !important',
-      paddingRight: '14px !important',
-      lineHeight: '1.7 !important',
+      paddingLeft: "14px !important",
+      paddingRight: "14px !important",
+      lineHeight: "1.7 !important",
       boxShadow:
-        'inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)',
+        "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
-    '.cm-lumina-codeblock-close': {
-      paddingLeft: '14px !important',
-      paddingRight: '14px !important',
-      paddingTop: '2px !important',
-      paddingBottom: '8px !important',
-      backgroundColor: 'var(--lumina-codeblock-bg)',
-      color: 'hsl(var(--muted-foreground) / 0.78)',
+    ".cm-lumina-codeblock-close": {
+      paddingLeft: "14px !important",
+      paddingRight: "14px !important",
+      paddingTop: "2px !important",
+      paddingBottom: "8px !important",
+      backgroundColor: "var(--lumina-codeblock-bg)",
+      color: "hsl(var(--muted-foreground) / 0.78)",
       fontFamily: "'JetBrains Mono', monospace",
-      borderLeft: '1px solid var(--lumina-codeblock-border)',
-      borderRight: '1px solid var(--lumina-codeblock-border)',
-      borderBottom: '1px solid var(--lumina-codeblock-border)',
-      borderRadius: '0 0 14px 14px',
-      boxShadow: 'var(--lumina-codeblock-shadow)',
-      backdropFilter: 'blur(6px)',
+      borderLeft: "1px solid var(--lumina-codeblock-border)",
+      borderRight: "1px solid var(--lumina-codeblock-border)",
+      borderBottom: "1px solid var(--lumina-codeblock-border)",
+      borderRadius: "0 0 14px 14px",
+      boxShadow: "var(--lumina-codeblock-shadow)",
+      backdropFilter: "blur(6px)",
     },
-    '.cm-codeblock-actions': {
-      position: 'absolute',
-      top: '10px',
-      right: '10px',
-      display: 'flex',
-      gap: '6px',
-      zIndex: '1',
+    ".cm-codeblock-actions": {
+      position: "absolute",
+      top: "10px",
+      right: "10px",
+      display: "flex",
+      gap: "6px",
+      zIndex: "1",
     },
-    '.cm-lumina-codeblock-copy-anchor': {
-      position: 'absolute',
-      top: '8px',
-      right: '10px',
-      zIndex: '2',
+    ".cm-lumina-codeblock-copy-anchor": {
+      position: "absolute",
+      top: "8px",
+      right: "10px",
+      zIndex: "2",
     },
-    '.cm-codeblock-widget code': {
+    ".cm-codeblock-widget code": {
       fontFamily: "'JetBrains Mono', monospace",
     },
-    '.cm-codeblock-line': {
-      display: 'block',
-      padding: '0 14px',
-      lineHeight: '1.75',
-      minHeight: '28px',
+    ".cm-codeblock-line": {
+      display: "block",
+      padding: "0 14px",
+      lineHeight: "1.75",
+      minHeight: "28px",
     },
-    '.cm-codeblock-fence': {
-      color: 'hsl(var(--muted-foreground) / 0.6)',
+    ".cm-codeblock-fence": {
+      color: "hsl(var(--muted-foreground) / 0.6)",
     },
-    '.cm-lumina-codeblock-open .cm-codeblock-fence, .cm-lumina-codeblock-close .cm-codeblock-fence':
+    ".cm-lumina-codeblock-open .cm-codeblock-fence, .cm-lumina-codeblock-close .cm-codeblock-fence":
       {
-        color: 'hsl(var(--muted-foreground) / 0.72)',
+        color: "hsl(var(--muted-foreground) / 0.72)",
       },
-    '.cm-codeblock-source-toggle': {
-      justifyContent: 'flex-end',
-      borderRadius: '14px 14px 0 0',
+    ".cm-codeblock-source-toggle": {
+      justifyContent: "flex-end",
+      borderRadius: "14px 14px 0 0",
     },
-    '.cm-codeblock-toggle, .cm-codeblock-copy': {
-      border: '1px solid hsl(var(--border) / 0.5)',
-      backgroundColor: 'hsl(var(--background) / 0.72)',
-      color: 'hsl(var(--foreground) / 0.84)',
-      borderRadius: '9px',
-      padding: '5px 9px',
-      fontSize: '12px',
-      lineHeight: '1',
-      cursor: 'pointer',
-      transition: 'background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease',
+    ".cm-codeblock-toggle, .cm-codeblock-copy": {
+      border: "1px solid hsl(var(--border) / 0.5)",
+      backgroundColor: "hsl(var(--background) / 0.72)",
+      color: "hsl(var(--foreground) / 0.84)",
+      borderRadius: "9px",
+      padding: "5px 9px",
+      fontSize: "12px",
+      lineHeight: "1",
+      cursor: "pointer",
+      transition:
+        "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease",
     },
-    '.cm-codeblock-toggle:hover, .cm-codeblock-copy:hover': {
-      backgroundColor: 'hsl(var(--background) / 0.92)',
-      borderColor: 'hsl(var(--border) / 0.8)',
-      color: 'hsl(var(--foreground) / 0.96)',
+    ".cm-codeblock-toggle:hover, .cm-codeblock-copy:hover": {
+      backgroundColor: "hsl(var(--background) / 0.92)",
+      borderColor: "hsl(var(--border) / 0.8)",
+      color: "hsl(var(--foreground) / 0.96)",
     },
-    '.cm-codeblock-copy-success': {
-      color: 'hsl(142 76% 36%)',
+    ".cm-codeblock-copy-success": {
+      color: "hsl(142 76% 36%)",
     },
-    '.cm-codeblock-source': {
-      backgroundColor: 'var(--lumina-codeblock-bg-source)',
-      color: 'hsl(var(--foreground) / 0.96)',
+    ".cm-codeblock-source": {
+      backgroundColor: "var(--lumina-codeblock-bg-source)",
+      color: "hsl(var(--foreground) / 0.96)",
       fontFamily: "'JetBrains Mono', monospace",
-      paddingLeft: '14px !important',
-      paddingRight: '14px !important',
+      paddingLeft: "14px !important",
+      paddingRight: "14px !important",
       boxShadow:
-        'inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)',
+        "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
 
     // === Inline code block styles ===
-    '.cm-codeblock-header': {
-      fontSize: '12px',
-      borderRadius: '14px 14px 0 0',
+    ".cm-codeblock-header": {
+      fontSize: "12px",
+      borderRadius: "14px 14px 0 0",
     },
-    '.cm-codeblock-lang': {
-      color: 'hsl(var(--muted-foreground) / 0.9)',
+    ".cm-codeblock-lang": {
+      color: "hsl(var(--muted-foreground) / 0.9)",
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '11px',
-      letterSpacing: '0.02em',
-      backgroundColor: 'hsl(var(--background) / 0.56)',
-      border: '1px solid hsl(var(--border) / 0.45)',
-      padding: '3px 7px',
-      borderRadius: '999px',
+      fontSize: "11px",
+      letterSpacing: "0.02em",
+      backgroundColor: "hsl(var(--background) / 0.56)",
+      border: "1px solid hsl(var(--border) / 0.45)",
+      padding: "3px 7px",
+      borderRadius: "999px",
     },
-    '.cm-codeblock-content': {
-      backgroundColor: 'var(--lumina-codeblock-bg) !important',
+    ".cm-codeblock-content": {
+      backgroundColor: "var(--lumina-codeblock-bg) !important",
       fontFamily: "'JetBrains Mono', monospace !important",
-      color: 'hsl(var(--foreground) / 0.96)',
-      padding: '0 14px !important',
-      lineHeight: '1.7 !important',
+      color: "hsl(var(--foreground) / 0.96)",
+      padding: "0 14px !important",
+      lineHeight: "1.7 !important",
       boxShadow:
-        'inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)',
+        "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
-    '.cm-codeblock-footer': {
-      backgroundColor: 'var(--lumina-codeblock-bg)',
-      borderLeft: '1px solid var(--lumina-codeblock-border)',
-      borderRight: '1px solid var(--lumina-codeblock-border)',
-      borderBottom: '1px solid var(--lumina-codeblock-border)',
-      borderRadius: '0 0 14px 14px',
-      boxShadow: 'var(--lumina-codeblock-shadow)',
-      height: '10px',
+    ".cm-codeblock-footer": {
+      backgroundColor: "var(--lumina-codeblock-bg)",
+      borderLeft: "1px solid var(--lumina-codeblock-border)",
+      borderRight: "1px solid var(--lumina-codeblock-border)",
+      borderBottom: "1px solid var(--lumina-codeblock-border)",
+      borderRadius: "0 0 14px 14px",
+      boxShadow: "var(--lumina-codeblock-shadow)",
+      height: "10px",
     },
     // hljs token colors
-    '.hljs-keyword': { color: 'hsl(var(--md-keyword, 280 70% 55%))' },
-    '.hljs-string': { color: 'hsl(var(--md-string, 120 50% 40%))' },
-    '.hljs-comment': { color: 'hsl(var(--muted-foreground))', fontStyle: 'italic' },
-    '.hljs-number': { color: 'hsl(var(--md-number, 30 80% 50%))' },
-    '.hljs-title': { color: 'hsl(var(--md-link, 210 80% 55%))' },
-    '.hljs-built_in': { color: 'hsl(var(--md-link, 210 80% 55%))' },
-    '.hljs-type': { color: 'hsl(var(--md-keyword, 280 70% 55%))' },
-    '.hljs-function': { color: 'hsl(var(--md-link, 210 80% 55%))' },
-    '.hljs-params': { color: 'hsl(var(--foreground))' },
-    '.hljs-literal': { color: 'hsl(var(--md-number, 30 80% 50%))' },
-    '.hljs-attr': { color: 'hsl(var(--md-link, 210 80% 55%))' },
-    '.hljs-variable': { color: 'hsl(var(--foreground))' },
-    '.hljs-meta': { color: 'hsl(var(--muted-foreground))' },
+    ".hljs-keyword": { color: "hsl(var(--md-keyword, 280 70% 55%))" },
+    ".hljs-string": { color: "hsl(var(--md-string, 120 50% 40%))" },
+    ".hljs-comment": {
+      color: "hsl(var(--muted-foreground))",
+      fontStyle: "italic",
+    },
+    ".hljs-number": { color: "hsl(var(--md-number, 30 80% 50%))" },
+    ".hljs-title": { color: "hsl(var(--md-link, 210 80% 55%))" },
+    ".hljs-built_in": { color: "hsl(var(--md-link, 210 80% 55%))" },
+    ".hljs-type": { color: "hsl(var(--md-keyword, 280 70% 55%))" },
+    ".hljs-function": { color: "hsl(var(--md-link, 210 80% 55%))" },
+    ".hljs-params": { color: "hsl(var(--foreground))" },
+    ".hljs-literal": { color: "hsl(var(--md-number, 30 80% 50%))" },
+    ".hljs-attr": { color: "hsl(var(--md-link, 210 80% 55%))" },
+    ".hljs-variable": { color: "hsl(var(--foreground))" },
+    ".hljs-meta": { color: "hsl(var(--muted-foreground))" },
 
     // 基础 Markdown 样式
-    '.cm-header-1': {
-      fontSize: '2em',
-      fontWeight: '700',
-      lineHeight: '1.3',
-      color: 'hsl(var(--md-heading, var(--foreground)))',
+    ".cm-header-1": {
+      fontSize: "2em",
+      fontWeight: "700",
+      lineHeight: "1.3",
+      color: "hsl(var(--md-heading, var(--foreground)))",
     },
-    '.cm-header-2': {
-      fontSize: '1.5em',
-      fontWeight: '600',
-      lineHeight: '1.4',
-      color: 'hsl(var(--md-heading, var(--foreground)))',
+    ".cm-header-2": {
+      fontSize: "1.5em",
+      fontWeight: "600",
+      lineHeight: "1.4",
+      color: "hsl(var(--md-heading, var(--foreground)))",
     },
-    '.cm-header-3': {
-      fontSize: '1.25em',
-      fontWeight: '600',
-      lineHeight: '1.5',
-      color: 'hsl(var(--md-heading, var(--foreground)))',
+    ".cm-header-3": {
+      fontSize: "1.25em",
+      fontWeight: "600",
+      lineHeight: "1.5",
+      color: "hsl(var(--md-heading, var(--foreground)))",
     },
-    '.cm-header-4, .cm-header-5': {
-      fontWeight: '600',
-      color: 'hsl(var(--md-heading, var(--foreground)))',
+    ".cm-header-4, .cm-header-5": {
+      fontWeight: "600",
+      color: "hsl(var(--md-heading, var(--foreground)))",
     },
-    '.cm-strong': { fontWeight: '700', color: 'hsl(var(--md-bold, var(--foreground)))' },
-    '.cm-emphasis': { fontStyle: 'italic', color: 'hsl(var(--md-italic, var(--foreground)))' },
-    '.cm-link': { color: 'hsl(var(--md-link, var(--primary)))', textDecoration: 'underline' },
-    '.cm-code': {
-      backgroundColor: 'hsl(var(--muted))',
-      padding: '2px 4px',
-      borderRadius: '3px',
-      fontFamily: 'monospace',
+    ".cm-strong": {
+      fontWeight: "700",
+      color: "hsl(var(--md-bold, var(--foreground)))",
     },
-    '.cm-wikilink': {
-      color: 'hsl(var(--primary))',
-      textDecoration: 'underline',
-      cursor: 'pointer',
+    ".cm-emphasis": {
+      fontStyle: "italic",
+      color: "hsl(var(--md-italic, var(--foreground)))",
     },
-    '.cm-strikethrough': { textDecoration: 'line-through', color: 'hsl(var(--muted-foreground))' },
-    '.cm-highlight': {
-      backgroundColor: 'hsl(50 100% 50% / 0.4)',
-      padding: '1px 2px',
-      borderRadius: '2px',
+    ".cm-link": {
+      color: "hsl(var(--md-link, var(--primary)))",
+      textDecoration: "underline",
     },
-    '.cm-highlight-source': { backgroundColor: 'hsl(50 100% 50% / 0.3)', borderRadius: '2px' },
-    '.cm-voice-preview': {
-      color: 'hsl(var(--muted-foreground))',
-      fontStyle: 'italic',
+    ".cm-code": {
+      backgroundColor: "hsl(var(--muted))",
+      padding: "2px 4px",
+      borderRadius: "3px",
+      fontFamily: "monospace",
+    },
+    ".cm-wikilink": {
+      color: "hsl(var(--primary))",
+      textDecoration: "underline",
+      cursor: "pointer",
+    },
+    ".cm-strikethrough": {
+      textDecoration: "line-through",
+      color: "hsl(var(--muted-foreground))",
+    },
+    ".cm-highlight": {
+      backgroundColor: "hsl(50 100% 50% / 0.4)",
+      padding: "1px 2px",
+      borderRadius: "2px",
+    },
+    ".cm-highlight-source": {
+      backgroundColor: "hsl(50 100% 50% / 0.3)",
+      borderRadius: "2px",
+    },
+    ".cm-voice-preview": {
+      color: "hsl(var(--muted-foreground))",
+      fontStyle: "italic",
       opacity: 0.8,
     },
-    '.cm-image-widget': { display: 'block', margin: '8px 0' },
-    '.cm-image-info': {
-      background: 'hsl(var(--muted))',
-      padding: '4px 8px',
-      borderRadius: '4px',
-      fontSize: '12px',
-      color: 'hsl(var(--muted-foreground))',
-      marginBottom: '4px',
-      fontFamily: 'monospace',
+    ".cm-image-widget": { display: "block", margin: "8px 0" },
+    ".cm-image-info": {
+      background: "hsl(var(--muted))",
+      padding: "4px 8px",
+      borderRadius: "4px",
+      fontSize: "12px",
+      color: "hsl(var(--muted-foreground))",
+      marginBottom: "4px",
+      fontFamily: "monospace",
     },
-    '.markdown-image': { maxWidth: '100%', borderRadius: '6px', cursor: 'pointer' },
+    ".markdown-image": {
+      maxWidth: "100%",
+      borderRadius: "6px",
+      cursor: "pointer",
+    },
 
     // Horizontal Rule styles
-    '.cm-hr': {
-      border: 'none',
-      borderTop: '1px solid hsl(var(--border))',
-      margin: '1rem 0',
-      display: 'block',
+    ".cm-hr": {
+      border: "none",
+      borderTop: "1px solid hsl(var(--border))",
+      margin: "1rem 0",
+      display: "block",
     },
-    '.cm-hr-source': { color: 'hsl(var(--muted-foreground))', opacity: 0.6 },
+    ".cm-hr-source": { color: "hsl(var(--muted-foreground))", opacity: 0.6 },
   });
 
 // ============ 4. Widgets ============
@@ -545,10 +601,13 @@ let prerenderScheduled = false;
 
 // 安全的 requestIdleCallback polyfill
 const safeRequestIdleCallback =
-  typeof window !== 'undefined' && 'requestIdleCallback' in window
+  typeof window !== "undefined" && "requestIdleCallback" in window
     ? (
         window as typeof window & {
-          requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number;
+          requestIdleCallback: (
+            cb: () => void,
+            opts?: { timeout: number },
+          ) => number;
         }
       ).requestIdleCallback
     : (cb: () => void) => setTimeout(cb, 16);
@@ -560,7 +619,9 @@ function schedulePrerenderBatch() {
   safeRequestIdleCallback(
     () => {
       const batch = prerenderQueue.splice(0, 5); // 每次处理 5 个
-      batch.forEach(({ formula, displayMode }) => prerenderMath(formula, displayMode));
+      batch.forEach(({ formula, displayMode }) =>
+        prerenderMath(formula, displayMode),
+      );
       prerenderScheduled = false;
       if (prerenderQueue.length > 0) schedulePrerenderBatch();
     },
@@ -571,7 +632,11 @@ function schedulePrerenderBatch() {
 function queuePrerender(formula: string, displayMode: boolean) {
   const key = `${formula}|${displayMode}`;
   if (katexCache.has(key)) return;
-  if (!prerenderQueue.some((q) => q.formula === formula && q.displayMode === displayMode)) {
+  if (
+    !prerenderQueue.some(
+      (q) => q.formula === formula && q.displayMode === displayMode,
+    )
+  ) {
     prerenderQueue.push({ formula, displayMode });
     schedulePrerenderBatch();
   }
@@ -597,17 +662,17 @@ class MathWidget extends WidgetType {
 
   toDOM() {
     const container = document.createElement(
-      this.displayMode || this.isPreviewPanel ? 'div' : 'span',
+      this.displayMode || this.isPreviewPanel ? "div" : "span",
     );
     container.className = this.isPreviewPanel
-      ? 'cm-math-preview-panel'
+      ? "cm-math-preview-panel"
       : this.displayMode
-        ? 'cm-math-block'
-        : 'cm-math-inline';
+        ? "cm-math-block"
+        : "cm-math-inline";
 
     // 只有非预览面板（即渲染态公式）才添加标记，用于点击检测
     if (!this.isPreviewPanel) {
-      container.dataset.widgetType = 'math';
+      container.dataset.widgetType = "math";
     }
 
     // 尝试使用缓存
@@ -649,16 +714,16 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
     }
   }
 
-  if (typeof document.execCommand !== 'function') {
+  if (typeof document.execCommand !== "function") {
     return false;
   }
 
-  const textarea = document.createElement('textarea');
+  const textarea = document.createElement("textarea");
   textarea.value = text;
-  textarea.setAttribute('readonly', 'true');
-  textarea.style.position = 'fixed';
-  textarea.style.top = '-9999px';
-  textarea.style.left = '-9999px';
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  textarea.style.left = "-9999px";
   document.body.appendChild(textarea);
 
   const selection = document.getSelection();
@@ -675,7 +740,7 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
 
   let copied = false;
   try {
-    copied = document.execCommand('copy');
+    copied = document.execCommand("copy");
   } catch {
     copied = false;
   }
@@ -699,30 +764,30 @@ class LiveCodeBlockCopyButtonWidget extends WidgetType {
   }
 
   toDOM() {
-    const anchor = document.createElement('span');
-    anchor.className = 'cm-lumina-codeblock-copy-anchor';
+    const anchor = document.createElement("span");
+    anchor.className = "cm-lumina-codeblock-copy-anchor";
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'cm-codeblock-copy';
-    button.textContent = 'Copy';
-    button.setAttribute('aria-label', 'Copy code');
-    button.addEventListener('click', async (event) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "cm-codeblock-copy";
+    button.textContent = "Copy";
+    button.setAttribute("aria-label", "Copy code");
+    button.addEventListener("click", async (event) => {
       event.preventDefault();
       event.stopPropagation();
 
       const copied = await copyTextToClipboard(this.code);
       if (copied) {
-        button.textContent = 'Copied!';
-        button.classList.add('cm-codeblock-copy-success');
+        button.textContent = "Copied!";
+        button.classList.add("cm-codeblock-copy-success");
         setTimeout(() => {
-          button.textContent = 'Copy';
-          button.classList.remove('cm-codeblock-copy-success');
+          button.textContent = "Copy";
+          button.classList.remove("cm-codeblock-copy-success");
         }, 2000);
       } else {
-        button.textContent = 'Failed';
+        button.textContent = "Failed";
         setTimeout(() => {
-          button.textContent = 'Copy';
+          button.textContent = "Copy";
         }, 2000);
       }
     });
@@ -745,29 +810,29 @@ class MermaidWidget extends WidgetType {
     return other.code === this.code;
   }
   toDOM() {
-    const container = document.createElement('div');
-    container.className = 'mermaid-container my-2';
-    container.dataset.widgetType = 'codeblock';
+    const container = document.createElement("div");
+    container.className = "mermaid-container my-2";
+    container.dataset.widgetType = "codeblock";
 
-    const pre = document.createElement('pre');
-    pre.className = 'mermaid';
+    const pre = document.createElement("pre");
+    pre.className = "mermaid";
     pre.textContent = this.code;
     container.appendChild(pre);
 
     // 异步渲染 mermaid
     setTimeout(async () => {
       try {
-        const isDark = document.documentElement.classList.contains('dark');
+        const isDark = document.documentElement.classList.contains("dark");
         mermaid.initialize({
           startOnLoad: false,
-          theme: isDark ? 'dark' : 'default',
-          securityLevel: 'loose',
+          theme: isDark ? "dark" : "default",
+          securityLevel: "loose",
         });
         await mermaid.run({ nodes: [pre] });
       } catch (err) {
-        console.error('[Mermaid] Render failed:', err);
+        console.error("[Mermaid] Render failed:", err);
         pre.textContent = `Mermaid Error: ${this.code}`;
-        pre.style.color = 'red';
+        pre.style.color = "red";
       }
     }, 0);
 
@@ -800,42 +865,42 @@ class CalloutBlockWidget extends WidgetType {
     );
   }
   toDOM() {
-    const wrapper = document.createElement('div');
-    wrapper.className = `callout callout-${this.color}${this.defaultFolded ? ' callout-folded' : ''}`;
+    const wrapper = document.createElement("div");
+    wrapper.className = `callout callout-${this.color}${this.defaultFolded ? " callout-folded" : ""}`;
 
-    const icon = document.createElement('span');
-    icon.className = 'callout-icon';
+    const icon = document.createElement("span");
+    icon.className = "callout-icon";
     icon.textContent = this.icon;
 
-    const body = document.createElement('div');
-    body.className = 'callout-body';
+    const body = document.createElement("div");
+    body.className = "callout-body";
 
-    const titleRow = document.createElement('div');
-    titleRow.className = 'callout-title';
+    const titleRow = document.createElement("div");
+    titleRow.className = "callout-title";
 
-    const titleText = document.createElement('span');
-    titleText.className = 'callout-title-text';
+    const titleText = document.createElement("span");
+    titleText.className = "callout-title-text";
     titleText.textContent = this.title;
     titleRow.appendChild(titleText);
 
     if (this.foldable) {
-      const fold = document.createElement('span');
-      fold.className = 'callout-fold';
-      fold.textContent = '\u25BC';
+      const fold = document.createElement("span");
+      fold.className = "callout-fold";
+      fold.textContent = "\u25BC";
       titleRow.appendChild(fold);
 
-      titleRow.addEventListener('click', (e) => {
+      titleRow.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        wrapper.classList.toggle('callout-folded');
+        wrapper.classList.toggle("callout-folded");
       });
     }
 
     body.appendChild(titleRow);
 
     if (this.content) {
-      const contentEl = document.createElement('div');
-      contentEl.className = 'callout-content';
+      const contentEl = document.createElement("div");
+      contentEl.className = "callout-content";
       contentEl.innerHTML = this.content;
       body.appendChild(contentEl);
     }
@@ -845,7 +910,7 @@ class CalloutBlockWidget extends WidgetType {
     return wrapper;
   }
   ignoreEvent(e: Event) {
-    return e.type === 'mousedown';
+    return e.type === "mousedown";
   }
 }
 
@@ -857,8 +922,8 @@ class VoicePreviewWidget extends WidgetType {
     return other.text === this.text;
   }
   toDOM() {
-    const s = document.createElement('span');
-    s.className = 'cm-voice-preview';
+    const s = document.createElement("span");
+    s.className = "cm-voice-preview";
     s.textContent = this.text;
     return s;
   }
@@ -875,9 +940,10 @@ class HorizontalRuleWidget extends WidgetType {
     return true;
   }
   toDOM() {
-    const hr = document.createElement('hr');
-    hr.className = 'cm-hr';
-    hr.style.cssText = 'border:none;border-top:1px solid hsl(var(--border));margin:1rem 0;';
+    const hr = document.createElement("hr");
+    hr.className = "cm-hr";
+    hr.style.cssText =
+      "border:none;border-top:1px solid hsl(var(--border));margin:1rem 0;";
     return hr;
   }
   ignoreEvent() {
@@ -890,7 +956,7 @@ class ImageWidget extends WidgetType {
     readonly src: string,
     readonly alt: string,
     readonly showInfo: boolean = false,
-    readonly vaultPath: string = '',
+    readonly vaultPath: string = "",
     readonly notePath: string | null = null,
   ) {
     super();
@@ -904,30 +970,30 @@ class ImageWidget extends WidgetType {
     );
   }
   toDOM() {
-    const container = document.createElement('div');
-    container.className = 'cm-image-widget';
-    container.style.cssText = 'display:block;margin:8px 0;';
-    container.dataset.widgetType = 'image';
+    const container = document.createElement("div");
+    container.className = "cm-image-widget";
+    container.style.cssText = "display:block;margin:8px 0;";
+    container.dataset.widgetType = "image";
     container.dataset.imageSrc = this.src;
 
     // 如果显示信息，添加路径提示
     if (this.showInfo) {
-      const info = document.createElement('div');
-      info.className = 'cm-image-info';
+      const info = document.createElement("div");
+      info.className = "cm-image-info";
       info.style.cssText =
-        'background:hsl(var(--primary)/0.1);padding:4px 8px;border-radius:4px;font-size:12px;color:hsl(var(--primary));margin-bottom:4px;font-family:monospace;display:inline-block;';
+        "background:hsl(var(--primary)/0.1);padding:4px 8px;border-radius:4px;font-size:12px;color:hsl(var(--primary));margin-bottom:4px;font-family:monospace;display:inline-block;";
       info.textContent = this.src;
       container.appendChild(info);
     }
 
-    const img = document.createElement('img');
+    const img = document.createElement("img");
     img.alt = this.alt;
-    img.className = 'markdown-image';
-    img.loading = 'lazy';
-    img.style.cssText = 'max-width:100%;border-radius:6px;cursor:pointer;';
+    img.className = "markdown-image";
+    img.loading = "lazy";
+    img.style.cssText = "max-width:100%;border-radius:6px;cursor:pointer;";
 
     // 处理图片路径
-    if (this.src.startsWith('http') || this.src.startsWith('data:')) {
+    if (this.src.startsWith("http") || this.src.startsWith("data:")) {
       // 网络图片或 data URL
       img.src = this.src;
     } else if (this.vaultPath) {
@@ -942,19 +1008,19 @@ class ImageWidget extends WidgetType {
       }
 
       // 先显示加载中状态
-      img.style.opacity = '0.5';
+      img.style.opacity = "0.5";
       img.alt = useLocaleStore.getState().t.common.loading;
 
       readBinaryFileBase64(fullPath)
         .then((base64) => {
           img.src = `data:${getImageMimeType(fullPath)};base64,${base64}`;
-          img.style.opacity = '1';
+          img.style.opacity = "1";
           img.alt = this.alt;
         })
         .catch((err) => {
-          console.error('[ImageWidget] Image load failed:', fullPath, err);
+          console.error("[ImageWidget] Image load failed:", fullPath, err);
           img.alt = `${useLocaleStore.getState().t.editor.imageLoadFailed}: ${this.src}`;
-          img.style.opacity = '1';
+          img.style.opacity = "1";
         });
     }
 
@@ -970,10 +1036,14 @@ class ImageWidget extends WidgetType {
 // shouldShowSource 从 codemirror-live-markdown 导入
 
 // ============ 6. StateFields & Plugins ============
-const LIVE_BLOCK_MARK_TYPES = new Set(['HeaderMark', 'ListMark', 'QuoteMark']);
-const LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES = new Set(['ListMark', 'QuoteMark']);
-const LIVE_INLINE_MARK_TYPES = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark']);
-const SKIP_LIVE_PREVIEW_PARENT_TYPES = new Set(['FencedCode', 'CodeBlock']);
+const LIVE_BLOCK_MARK_TYPES = new Set(["HeaderMark", "ListMark", "QuoteMark"]);
+const LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES = new Set(["ListMark", "QuoteMark"]);
+const LIVE_INLINE_MARK_TYPES = new Set([
+  "EmphasisMark",
+  "StrikethroughMark",
+  "CodeMark",
+]);
+const SKIP_LIVE_PREVIEW_PARENT_TYPES = new Set(["FencedCode", "CodeBlock"]);
 
 function isInsideSkippedLivePreviewParent(node: any): boolean {
   let parent = node.node.parent;
@@ -1009,14 +1079,18 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
     from: scanFrom,
     to: scanTo,
     enter: (node) => {
-      if (!LIVE_BLOCK_MARK_TYPES.has(node.name) && !LIVE_INLINE_MARK_TYPES.has(node.name)) return;
+      if (
+        !LIVE_BLOCK_MARK_TYPES.has(node.name) &&
+        !LIVE_INLINE_MARK_TYPES.has(node.name)
+      )
+        return;
       if (isInsideSkippedLivePreviewParent(node)) return;
 
-      if (node.name === 'CodeMark') {
+      if (node.name === "CodeMark") {
         const parent = node.node.parent;
-        if (parent && parent.name === 'InlineCode') {
+        if (parent && parent.name === "InlineCode") {
           const text = state.doc.sliceString(parent.from, parent.to);
-          if (text.startsWith('`$') && text.endsWith('$`')) {
+          if (text.startsWith("`$") && text.endsWith("$`")) {
             return;
           }
         }
@@ -1025,11 +1099,14 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
       if (LIVE_BLOCK_MARK_TYPES.has(node.name)) {
         const lineNum = state.doc.lineAt(node.from).number;
         const isActiveLine = activeLines.has(lineNum) && !isDrag;
-        const shouldShow = LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES.has(node.name) || isActiveLine;
+        const shouldShow =
+          LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES.has(node.name) || isActiveLine;
         const cls = shouldShow
-          ? 'cm-formatting-block cm-formatting-block-visible'
-          : 'cm-formatting-block';
-        decorations.push(Decoration.mark({ class: cls }).range(node.from, node.to));
+          ? "cm-formatting-block cm-formatting-block-visible"
+          : "cm-formatting-block";
+        decorations.push(
+          Decoration.mark({ class: cls }).range(node.from, node.to),
+        );
         return;
       }
 
@@ -1037,9 +1114,11 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
       const isTouched = shouldShowSource(state, node.from, node.to);
       const cls =
         isTouched && !isDrag
-          ? 'cm-formatting-inline cm-formatting-inline-visible'
-          : 'cm-formatting-inline';
-      decorations.push(Decoration.mark({ class: cls }).range(node.from, node.to));
+          ? "cm-formatting-inline cm-formatting-inline-visible"
+          : "cm-formatting-inline";
+      decorations.push(
+        Decoration.mark({ class: cls }).range(node.from, node.to),
+      );
     },
   });
 
@@ -1063,7 +1142,7 @@ const livePreviewPlugin = ViewPlugin.fromClass(
         this.decorations = buildLivePreviewDecorations(update.view);
         return;
       }
-      if (checkUpdateAction(update) === 'rebuild') {
+      if (checkUpdateAction(update) === "rebuild") {
         this.decorations = buildLivePreviewDecorations(update.view);
       }
     }
@@ -1071,7 +1150,7 @@ const livePreviewPlugin = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 );
 
-const LIVE_CODE_BLOCK_SKIPPED_LANGUAGES = new Set(['mermaid']);
+const LIVE_CODE_BLOCK_SKIPPED_LANGUAGES = new Set(["mermaid"]);
 const liveCodeBlockLowlight = createLowlight(lowlightCommon);
 
 function addLiveCodeBlockHighlightMarks(
@@ -1083,22 +1162,29 @@ function addLiveCodeBlockHighlightMarks(
   if (!nodes?.length) return;
 
   for (const node of nodes) {
-    if (node.type === 'text') {
+    if (node.type === "text") {
       offset.value += node.value?.length ?? 0;
       continue;
     }
-    if (node.type !== 'element') continue;
+    if (node.type !== "element") continue;
 
     const start = offset.value;
-    addLiveCodeBlockHighlightMarks(decorations, node.children, offset, absoluteFrom);
+    addLiveCodeBlockHighlightMarks(
+      decorations,
+      node.children,
+      offset,
+      absoluteFrom,
+    );
     const end = offset.value;
     const classNames = Array.isArray(node.properties?.className)
-      ? node.properties.className.filter((name: unknown): name is string => typeof name === 'string')
+      ? node.properties.className.filter(
+          (name: unknown): name is string => typeof name === "string",
+        )
       : [];
 
     if (start < end && classNames.length > 0) {
       decorations.push(
-        Decoration.mark({ class: classNames.join(' ') }).range(
+        Decoration.mark({ class: classNames.join(" ") }).range(
           absoluteFrom + start,
           absoluteFrom + end,
         ),
@@ -1125,7 +1211,12 @@ function addLiveCodeBlockSyntaxHighlight(
           : liveCodeBlockLowlight.highlightAuto(code);
 
     if (!tree) return;
-    addLiveCodeBlockHighlightMarks(decorations, tree.children, { value: 0 }, absoluteFrom);
+    addLiveCodeBlockHighlightMarks(
+      decorations,
+      tree.children,
+      { value: 0 },
+      absoluteFrom,
+    );
   } catch {
     // Keep editing functional even when highlight.js cannot parse a language.
   }
@@ -1136,59 +1227,92 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
 
   syntaxTree(state).iterate({
     enter: (node) => {
-      if (node.name !== 'FencedCode') return;
+      if (node.name !== "FencedCode") return;
 
-      const codeInfo = node.node.getChild('CodeInfo');
-      const language = codeInfo ? state.doc.sliceString(codeInfo.from, codeInfo.to).trim() : '';
+      const codeInfo = node.node.getChild("CodeInfo");
+      const language = codeInfo
+        ? state.doc.sliceString(codeInfo.from, codeInfo.to).trim()
+        : "";
       if (LIVE_CODE_BLOCK_SKIPPED_LANGUAGES.has(language.toLowerCase())) {
         return;
       }
-      const codeText = node.node.getChild('CodeText');
-      const code = codeText ? state.doc.sliceString(codeText.from, codeText.to) : '';
+      const codeText = node.node.getChild("CodeText");
+      const code = codeText
+        ? state.doc.sliceString(codeText.from, codeText.to)
+        : "";
 
       const openLine = state.doc.lineAt(node.from);
       const closeLine = state.doc.lineAt(Math.max(node.from, node.to - 1));
 
-      decorations.push(Decoration.line({ class: 'cm-lumina-codeblock-open' }).range(openLine.from));
+      decorations.push(
+        Decoration.line({ class: "cm-lumina-codeblock-open" }).range(
+          openLine.from,
+        ),
+      );
       decorations.push(
         Decoration.widget({
           widget: new LiveCodeBlockCopyButtonWidget(code),
           side: 1,
         }).range(openLine.to),
       );
-      for (let lineNumber = openLine.number + 1; lineNumber < closeLine.number; lineNumber += 1) {
+      for (
+        let lineNumber = openLine.number + 1;
+        lineNumber < closeLine.number;
+        lineNumber += 1
+      ) {
         const line = state.doc.line(lineNumber);
         decorations.push(
-          Decoration.line({ class: 'cm-lumina-codeblock-content-line' }).range(line.from),
+          Decoration.line({ class: "cm-lumina-codeblock-content-line" }).range(
+            line.from,
+          ),
         );
       }
       decorations.push(
-        Decoration.line({ class: 'cm-lumina-codeblock-close' }).range(closeLine.from),
+        Decoration.line({ class: "cm-lumina-codeblock-close" }).range(
+          closeLine.from,
+        ),
       );
 
       const openFenceEnd = codeInfo ? codeInfo.from : openLine.to;
       if (openFenceEnd > openLine.from) {
         decorations.push(
-          Decoration.mark({ class: 'cm-codeblock-fence' }).range(openLine.from, openFenceEnd),
+          Decoration.mark({ class: "cm-codeblock-fence" }).range(
+            openLine.from,
+            openFenceEnd,
+          ),
         );
       }
       if (codeInfo && codeInfo.from < codeInfo.to) {
         decorations.push(
-          Decoration.mark({ class: 'cm-codeblock-lang' }).range(codeInfo.from, codeInfo.to),
+          Decoration.mark({ class: "cm-codeblock-lang" }).range(
+            codeInfo.from,
+            codeInfo.to,
+          ),
         );
       }
       if (codeInfo && codeInfo.to < openLine.to) {
         decorations.push(
-          Decoration.mark({ class: 'cm-codeblock-fence' }).range(codeInfo.to, openLine.to),
+          Decoration.mark({ class: "cm-codeblock-fence" }).range(
+            codeInfo.to,
+            openLine.to,
+          ),
         );
       }
       if (closeLine.to > closeLine.from) {
         decorations.push(
-          Decoration.mark({ class: 'cm-codeblock-fence' }).range(closeLine.from, closeLine.to),
+          Decoration.mark({ class: "cm-codeblock-fence" }).range(
+            closeLine.from,
+            closeLine.to,
+          ),
         );
       }
       if (codeText) {
-        addLiveCodeBlockSyntaxHighlight(decorations, code, language, codeText.from);
+        addLiveCodeBlockSyntaxHighlight(
+          decorations,
+          code,
+          language,
+          codeText.from,
+        );
       }
     },
   });
@@ -1212,7 +1336,7 @@ const editableCodeBlockField = StateField.define<DecorationSet>({
 
 // 共享 doc.toString() 缓存：Text 是不可变持久化结构，同一引用 = 同一内容
 let _cachedDoc: Text | null = null;
-let _cachedDocString: string = '';
+let _cachedDocString: string = "";
 
 function docString(state: EditorState): string {
   if (state.doc !== _cachedDoc) {
@@ -1260,7 +1384,8 @@ const mathStateField = StateField.define<DecorationSet>({
         );
       if (
         touchesMath(oldSel) !== touchesMath(newSel) ||
-        (touchesMath(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+        (touchesMath(newSel) &&
+          (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
       ) {
         return buildMathDecorations(tr.state);
       }
@@ -1293,7 +1418,9 @@ function buildMathDecorations(state: EditorState): DecorationSet {
 
     if (shouldShowSource(state, from, to)) {
       // 编辑模式：源码高亮 + 预览面板(Preview Panel)
-      decorations.push(Decoration.mark({ class: 'cm-math-source' }).range(from, to));
+      decorations.push(
+        Decoration.mark({ class: "cm-math-source" }).range(from, to),
+      );
       decorations.push(
         Decoration.widget({
           widget: new MathWidget(formula, true, true),
@@ -1307,15 +1434,16 @@ function buildMathDecorations(state: EditorState): DecorationSet {
         toLine = state.doc.lineAt(to);
       const isFullLine = from === fromLine.from && to === toLine.to;
       decorations.push(
-        Decoration.replace({ widget: new MathWidget(formula, true), block: isFullLine }).range(
-          from,
-          to,
-        ),
+        Decoration.replace({
+          widget: new MathWidget(formula, true),
+          block: isFullLine,
+        }).range(from, to),
       );
     }
   }
 
-  const inlineRegex = /(?<!\\|\$)\$(?!\$)((?:[^$\n]|\n(?!\n))+?)(?<!\\|\$)\$(?!\$)/g;
+  const inlineRegex =
+    /(?<!\\|\$)\$(?!\$)((?:[^$\n]|\n(?!\n))+?)(?<!\\|\$)\$(?!\$)/g;
   while ((match = inlineRegex.exec(doc)) !== null) {
     const from = match.index,
       to = from + match[0].length;
@@ -1327,10 +1455,14 @@ function buildMathDecorations(state: EditorState): DecorationSet {
     queuePrerender(inlineFormula, false);
 
     if (shouldShowSource(state, from, to)) {
-      decorations.push(Decoration.mark({ class: 'cm-math-source' }).range(from, to));
+      decorations.push(
+        Decoration.mark({ class: "cm-math-source" }).range(from, to),
+      );
     } else {
       decorations.push(
-        Decoration.replace({ widget: new MathWidget(inlineFormula, false) }).range(from, to),
+        Decoration.replace({
+          widget: new MathWidget(inlineFormula, false),
+        }).range(from, to),
       );
     }
   }
@@ -1346,7 +1478,8 @@ let mermaidBlockPositionsCache: { from: number; to: number }[] = [];
 const mermaidStateField = StateField.define<DecorationSet>({
   create: buildMermaidDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.reconfigured) return buildMermaidDecorations(tr.state);
+    if (tr.docChanged || tr.reconfigured)
+      return buildMermaidDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
     if (wasDragging && !isDragging) return buildMermaidDecorations(tr.state);
@@ -1363,7 +1496,8 @@ const mermaidStateField = StateField.define<DecorationSet>({
         );
       if (
         touches(oldSel) !== touches(newSel) ||
-        (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+        (touches(newSel) &&
+          (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
       ) {
         return buildMermaidDecorations(tr.state);
       }
@@ -1373,7 +1507,11 @@ const mermaidStateField = StateField.define<DecorationSet>({
   provide: (f) => EditorView.decorations.from(f),
 });
 
-function shouldShowMermaidSource(state: EditorState, from: number, to: number): boolean {
+function shouldShowMermaidSource(
+  state: EditorState,
+  from: number,
+  to: number,
+): boolean {
   const shouldCollapse = state.facet(collapseOnSelectionFacet);
   if (!shouldCollapse) return false;
   const isDragging = state.field(mouseSelectingField, false);
@@ -1395,22 +1533,24 @@ function buildMermaidDecorations(state: EditorState): DecorationSet {
   mermaidBlockPositionsCache = [];
   syntaxTree(state).iterate({
     enter: (node) => {
-      if (node.name === 'FencedCode') {
+      if (node.name === "FencedCode") {
         const text = state.doc.sliceString(node.from, node.to);
-        const lines = text.split('\n');
+        const lines = text.split("\n");
         if (lines.length < 2) return;
         const lang = lines[0]
-          .replace(/^\s*`{3,}/, '')
+          .replace(/^\s*`{3,}/, "")
           .trim()
           .toLowerCase();
-        if (lang !== 'mermaid') return;
+        if (lang !== "mermaid") return;
 
         mermaidBlockPositionsCache.push({ from: node.from, to: node.to });
         if (shouldShowMermaidSource(state, node.from, node.to)) return;
 
-        const code = lines.slice(1, lines.length - 1).join('\n');
+        const code = lines.slice(1, lines.length - 1).join("\n");
         const widget = new MermaidWidget(code);
-        decorations.push(Decoration.replace({ widget, block: true }).range(node.from, node.to));
+        decorations.push(
+          Decoration.replace({ widget, block: true }).range(node.from, node.to),
+        );
       }
     },
   });
@@ -1423,7 +1563,8 @@ let highlightPositionsCache: { from: number; to: number }[] = [];
 const highlightStateField = StateField.define<DecorationSet>({
   create: buildHighlightDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.reconfigured) return buildHighlightDecorations(tr.state);
+    if (tr.docChanged || tr.reconfigured)
+      return buildHighlightDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
     if (wasDragging && !isDragging) return buildHighlightDecorations(tr.state);
@@ -1440,7 +1581,8 @@ const highlightStateField = StateField.define<DecorationSet>({
         );
       if (
         touches(oldSel) !== touches(newSel) ||
-        (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+        (touches(newSel) &&
+          (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
       ) {
         return buildHighlightDecorations(tr.state);
       }
@@ -1468,23 +1610,27 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
     const textEnd = to - 2; // 跳过结尾的 ==
 
     // 检查是否在代码块内
-    const lineStart = doc.lastIndexOf('\n', from) + 1;
+    const lineStart = doc.lastIndexOf("\n", from) + 1;
     const lineText = doc.slice(lineStart, from);
-    if (lineText.includes('`')) continue;
+    if (lineText.includes("`")) continue;
 
     const isTouched = shouldShowSource(state, from, to);
 
     // 高亮文本部分始终添加高亮样式
-    decorations.push(Decoration.mark({ class: 'cm-highlight' }).range(textStart, textEnd));
+    decorations.push(
+      Decoration.mark({ class: "cm-highlight" }).range(textStart, textEnd),
+    );
 
     // == 标记使用与加粗/斜体相同的动画类
     const markCls =
       isTouched && !isDrag
-        ? 'cm-formatting-inline cm-formatting-inline-visible'
-        : 'cm-formatting-inline';
+        ? "cm-formatting-inline cm-formatting-inline-visible"
+        : "cm-formatting-inline";
 
     // 开头的 ==
-    decorations.push(Decoration.mark({ class: markCls }).range(from, textStart));
+    decorations.push(
+      Decoration.mark({ class: markCls }).range(from, textStart),
+    );
     // 结尾的 ==
     decorations.push(Decoration.mark({ class: markCls }).range(textEnd, to));
   }
@@ -1501,7 +1647,8 @@ const selectionStatePlugin = ViewPlugin.fromClass(
       this.updateClass(view, false);
     }
     update(update: ViewUpdate) {
-      const isDragging = update.state.field(mouseSelectingField, false) ?? false;
+      const isDragging =
+        update.state.field(mouseSelectingField, false) ?? false;
       const wasDragging = update.startState.field(mouseSelectingField, false);
       if (isDragging !== wasDragging) {
         this.updateClass(update.view, isDragging);
@@ -1512,17 +1659,22 @@ const selectionStatePlugin = ViewPlugin.fromClass(
       }
     }
     destroy() {
-      this.view.dom.classList.remove('cm-has-selection');
-      this.view.dom.classList.remove('cm-drag-selecting');
-      this.view.dom.classList.remove('cm-drag-native-selection-suppressed');
+      this.view.dom.classList.remove("cm-has-selection");
+      this.view.dom.classList.remove("cm-drag-selecting");
+      this.view.dom.classList.remove("cm-drag-native-selection-suppressed");
     }
     private updateClass(view: EditorView, isDragTransition: boolean) {
       const isDragging = view.state.field(mouseSelectingField, false);
-      const hasSelection = view.state.selection.ranges.some((range) => range.from !== range.to);
-      const suppressNativeSelection = isDragging && shouldDisableDrawSelectionForTauriWebKit();
-      view.dom.classList.toggle('cm-drag-selecting', isDragging);
-      view.dom.classList.toggle('cm-has-selection', hasSelection);
-      view.dom.classList.toggle('cm-drag-native-selection-suppressed', suppressNativeSelection);
+      const hasSelection = view.state.selection.ranges.some(
+        (range) => range.from !== range.to,
+      );
+      const suppressNativeSelection = false;
+      view.dom.classList.toggle("cm-drag-selecting", isDragging);
+      view.dom.classList.toggle("cm-has-selection", hasSelection);
+      view.dom.classList.toggle(
+        "cm-drag-native-selection-suppressed",
+        suppressNativeSelection,
+      );
       // Skip text extraction at drag start — selection is about to change.
       // Only include text at drag end or for normal selection changes.
       const includeText = hasSelection && !isDragTransition;
@@ -1531,17 +1683,20 @@ const selectionStatePlugin = ViewPlugin.fromClass(
         ? {
             from: main.from,
             to: main.to,
-            text: includeText ? view.state.doc.sliceString(main.from, main.to) : '',
+            text: includeText
+              ? view.state.doc.sliceString(main.from, main.to)
+              : "",
             lineFrom: view.state.doc.lineAt(main.from).number,
             lineTo: view.state.doc.lineAt(main.to).number,
           }
         : null;
-      window.dispatchEvent(new CustomEvent(PLUGIN_EDITOR_SELECTION_EVENT, { detail }));
+      window.dispatchEvent(
+        new CustomEvent(PLUGIN_EDITOR_SELECTION_EVENT, { detail }),
+      );
     }
   },
   { decorations: () => Decoration.none },
 );
-
 
 function selectEntireDocument(view: EditorView) {
   const { state } = view;
@@ -1553,109 +1708,35 @@ function selectEntireDocument(view: EditorView) {
   ) {
     return;
   }
-  view.dispatch(state.update({ selection: { anchor: 0, head: doc.length }, userEvent: 'select' }));
+  view.dispatch(
+    state.update({
+      selection: { anchor: 0, head: doc.length },
+      userEvent: "select",
+    }),
+  );
 }
 
 function selectAllDebugEnabled() {
-  return typeof window !== 'undefined' && (window as any).__cmSelectAllDebug === true;
+  return (
+    typeof window !== "undefined" && (window as any).__cmSelectAllDebug === true
+  );
 }
-
-type DragLineRange = { from: number; to: number };
-
-type DragScrollRect = { top: number; bottom: number; height: number };
-
-const DRAG_AUTO_SCROLL_EDGE_ZONE_MIN_PX = 36;
-const DRAG_AUTO_SCROLL_EDGE_ZONE_MAX_PX = 96;
-const DRAG_AUTO_SCROLL_MAX_STEP_PX = 28;
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function getDragAutoScrollDelta(clientY: number, scrollerRect: DragScrollRect | null) {
-  if (!scrollerRect || scrollerRect.height <= 0) return 0;
-  const edgeZone = clampNumber(
-    Math.round(scrollerRect.height * 0.18),
-    DRAG_AUTO_SCROLL_EDGE_ZONE_MIN_PX,
-    DRAG_AUTO_SCROLL_EDGE_ZONE_MAX_PX,
-  );
-
-  const edgeDistance =
-    clientY < scrollerRect.top + edgeZone
-      ? clientY - (scrollerRect.top + edgeZone)
-      : clientY > scrollerRect.bottom - edgeZone
-        ? clientY - (scrollerRect.bottom - edgeZone)
-        : 0;
-
-  if (edgeDistance === 0) return 0;
-
-  const direction = edgeDistance > 0 ? 1 : -1;
-  const ratio = clampNumber(Math.abs(edgeDistance) / edgeZone, 0, 1);
-  const easedRatio = ratio * ratio;
-  const step = Math.max(1, Math.round(easedRatio * DRAG_AUTO_SCROLL_MAX_STEP_PX));
-  return direction * step;
-}
-
-export function resolveDragSelectionLineRange(
-  lineRange: DragLineRange | null | undefined,
-  clientY: number,
-  scrollerRect: DragScrollRect | null,
-) {
-  if (!lineRange) return null;
-  return getDragAutoScrollDelta(clientY, scrollerRect) === 0 ? lineRange : null;
-}
-
-function clampDragSelectionClientY(clientY: number, scrollerRect: DragScrollRect | null) {
-  if (!scrollerRect) return clientY;
-  const minY = scrollerRect.top + 1;
-  const maxY = Math.max(minY, scrollerRect.bottom - 1);
-  return clampNumber(clientY, minY, maxY);
-}
-
-function canElementScrollVertically(element: HTMLElement | null | undefined) {
-  if (!element) return false;
-  const style = window.getComputedStyle(element);
-  const overflowY = style.overflowY || style.overflow;
-  if (!/(auto|scroll|overlay)/.test(overflowY)) return false;
-  return element.scrollHeight > element.clientHeight + 1;
-}
-
-export function resolveDragScrollContainer(
-  view: Pick<EditorView, 'dom' | 'scrollDOM'>,
-  externalScrollContainerRef?: RefObject<HTMLElement> | null,
-): HTMLElement {
-  const explicitContainer = externalScrollContainerRef?.current ?? null;
-  if (canElementScrollVertically(explicitContainer)) {
-    return explicitContainer as HTMLElement;
-  }
-
-  let current: HTMLElement | null = view.dom.parentElement;
-  while (current) {
-    if (canElementScrollVertically(current)) {
-      return current;
-    }
-    current = current.parentElement;
-  }
-
-  if (canElementScrollVertically(view.scrollDOM)) {
-    return view.scrollDOM;
-  }
-
-  const scrollingElement = view.dom.ownerDocument.scrollingElement;
-  if (scrollingElement instanceof HTMLElement && canElementScrollVertically(scrollingElement)) {
-    return scrollingElement;
-  }
-
-  return view.scrollDOM;
-}
-
-type ModeCategory = 'view' | 'edit';
-type ModeTransitionKind = 'view-to-view' | 'view-to-edit' | 'edit-to-view' | 'edit-to-edit';
+type ModeCategory = "view" | "edit";
+type ModeTransitionKind =
+  | "view-to-view"
+  | "view-to-edit"
+  | "edit-to-view"
+  | "edit-to-edit";
 
 type SharedDocumentAnchor = {
   pos: number;
   offsetTop: number;
-  source: 'viewport';
+  source: "viewport";
 };
 
 type TransitionSelectionSnapshot = {
@@ -1687,43 +1768,64 @@ type PendingModeTransitionRestore = {
 };
 
 function getModeCategory(mode: ViewMode): ModeCategory {
-  return mode === 'reading' ? 'view' : 'edit';
+  return mode === "reading" ? "view" : "edit";
 }
 
-function classifyModeTransition(fromMode: ViewMode, toMode: ViewMode): ModeTransitionKind {
+function classifyModeTransition(
+  fromMode: ViewMode,
+  toMode: ViewMode,
+): ModeTransitionKind {
   const fromCategory = getModeCategory(fromMode);
   const toCategory = getModeCategory(toMode);
   return `${fromCategory}-to-${toCategory}` as ModeTransitionKind;
 }
 
 function resolveViewportScrollContainer(
-  view: Pick<EditorView, 'dom' | 'scrollDOM'>,
+  view: Pick<EditorView, "dom" | "scrollDOM">,
   externalScrollContainerRef?: RefObject<HTMLElement> | null,
 ): HTMLElement {
-  return resolveDragScrollContainer(view, externalScrollContainerRef);
+  const explicit = externalScrollContainerRef?.current;
+  if (explicit && explicit.scrollHeight > explicit.clientHeight + 1)
+    return explicit;
+  return view.scrollDOM;
 }
 
 function getViewportAnchorOffset(scrollContainer: HTMLElement) {
-  const clientHeight = Number.isFinite(scrollContainer.clientHeight) ? scrollContainer.clientHeight : 0;
+  const clientHeight = Number.isFinite(scrollContainer.clientHeight)
+    ? scrollContainer.clientHeight
+    : 0;
   if (clientHeight <= 0) return 32;
   return clampNumber(Math.round(clientHeight * 0.18), 24, 96);
 }
 
 function captureViewportAnchor(
-  view: Pick<EditorView, 'state' | 'viewport' | 'scrollDOM' | 'lineBlockAtHeight' | 'posAtCoords' | 'dom'>,
+  view: Pick<
+    EditorView,
+    | "state"
+    | "viewport"
+    | "scrollDOM"
+    | "lineBlockAtHeight"
+    | "posAtCoords"
+    | "dom"
+  >,
   scrollContainer: HTMLElement,
 ): SharedDocumentAnchor {
   const docLength = view.state.doc.length;
   const offsetTop = getViewportAnchorOffset(scrollContainer);
   if (docLength <= 0) {
-    return { pos: 0, offsetTop, source: 'viewport' };
+    return { pos: 0, offsetTop, source: "viewport" };
   }
 
   const rect = scrollContainer.getBoundingClientRect();
   const editorRect = view.dom.getBoundingClientRect();
   let pos: number | null = null;
 
-  if (Number.isFinite(rect.width) && rect.width > 0 && Number.isFinite(rect.height) && rect.height > 0) {
+  if (
+    Number.isFinite(rect.width) &&
+    rect.width > 0 &&
+    Number.isFinite(rect.height) &&
+    rect.height > 0
+  ) {
     const probeX = clampNumber(
       editorRect.left + Math.min(64, Math.max(24, editorRect.width * 0.18)),
       editorRect.left + 8,
@@ -1743,12 +1845,20 @@ function captureViewportAnchor(
   return {
     pos: clampNumber(pos ?? view.viewport.from, 0, docLength),
     offsetTop,
-    source: 'viewport',
+    source: "viewport",
   };
 }
 
 function captureModeTransitionSnapshot(
-  view: Pick<EditorView, 'state' | 'viewport' | 'scrollDOM' | 'lineBlockAtHeight' | 'posAtCoords' | 'dom'>,
+  view: Pick<
+    EditorView,
+    | "state"
+    | "viewport"
+    | "scrollDOM"
+    | "lineBlockAtHeight"
+    | "posAtCoords"
+    | "dom"
+  >,
   mode: ViewMode,
   scrollContainer: HTMLElement,
 ): ModeTransitionSnapshot {
@@ -1787,7 +1897,7 @@ function buildModeTransitionPlan(options: {
 }
 
 function restoreViewportAnchor(
-  view: Pick<EditorView, 'coordsAtPos' | 'dispatch' | 'scrollDOM'>,
+  view: Pick<EditorView, "coordsAtPos" | "dispatch" | "scrollDOM">,
   scrollContainer: HTMLElement,
   anchor: SharedDocumentAnchor,
 ) {
@@ -1801,21 +1911,20 @@ function restoreViewportAnchor(
         scrollContainer.scrollTop += delta;
       }
       return {
-        strategy: 'coords' as const,
+        strategy: "coords" as const,
         delta,
         targetPos: anchor.pos,
         offsetTop: anchor.offsetTop,
       };
     }
-  } catch {
-  }
+  } catch {}
 
   if (canMeasureTextGeometry()) {
     view.dispatch({
-      effects: EditorView.scrollIntoView(anchor.pos, { y: 'start' }),
+      effects: EditorView.scrollIntoView(anchor.pos, { y: "start" }),
     });
     return {
-      strategy: 'scrollIntoView' as const,
+      strategy: "scrollIntoView" as const,
       delta: null,
       targetPos: anchor.pos,
       offsetTop: anchor.offsetTop,
@@ -1823,7 +1932,7 @@ function restoreViewportAnchor(
   }
 
   return {
-    strategy: 'skipped' as const,
+    strategy: "skipped" as const,
     delta: null,
     targetPos: anchor.pos,
     offsetTop: anchor.offsetTop,
@@ -1833,19 +1942,41 @@ function restoreViewportAnchor(
 function isMeaningfulEditIntentKey(event: KeyboardEvent) {
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
   if (event.key.length === 1) return true;
-  return ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'Enter', 'Backspace', 'Delete', 'Tab'].includes(event.key);
+  return [
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
+    "Enter",
+    "Backspace",
+    "Delete",
+    "Tab",
+  ].includes(event.key);
 }
 
 function canMeasureTextGeometry() {
-  return typeof Range !== 'undefined' && typeof (Range.prototype as { getClientRects?: unknown }).getClientRects === 'function';
+  return (
+    typeof Range !== "undefined" &&
+    typeof (Range.prototype as { getClientRects?: unknown }).getClientRects ===
+      "function"
+  );
 }
 
 function getViewportSelectionAnchor(
-  view: Pick<EditorView, 'scrollDOM' | 'lineBlockAtHeight' | 'state' | 'viewport'>,
+  view: Pick<
+    EditorView,
+    "scrollDOM" | "lineBlockAtHeight" | "state" | "viewport"
+  >,
 ) {
   const docLength = view.state.doc.length;
   if (docLength <= 0) return 0;
-  const scrollTop = Number.isFinite(view.scrollDOM.scrollTop) ? view.scrollDOM.scrollTop : 0;
+  const scrollTop = Number.isFinite(view.scrollDOM.scrollTop)
+    ? view.scrollDOM.scrollTop
+    : 0;
   try {
     const block = view.lineBlockAtHeight(scrollTop);
     return clampNumber(block.from, 0, docLength);
@@ -1854,105 +1985,32 @@ function getViewportSelectionAnchor(
   }
 }
 
-type ManualDragSelectableView = {
-  inputState?: {
-    mouseSelection?: {
-      destroy?: () => void;
-    } | null;
-  } | null;
-};
-
-export function cancelNativeMouseSelectionForManualDrag(view: ManualDragSelectableView) {
-  const inputState = view.inputState;
-  const mouseSelection = inputState?.mouseSelection;
-  if (!mouseSelection || typeof mouseSelection.destroy !== 'function') {
-    return false;
-  }
-  mouseSelection.destroy();
-  if (inputState?.mouseSelection === mouseSelection) {
-    inputState.mouseSelection = null;
-  }
-  return true;
-}
-
-export function syncDragSelectionHeadFromCoords(
-  view: Pick<EditorView, 'posAtCoords' | 'dispatch' | 'state'>,
-  anchor: number,
-  x: number,
-  y: number,
-  lineRange?: DragLineRange | null,
-) {
-  let head = view.posAtCoords({ x, y }) ?? view.state.selection.main.head;
-  if (lineRange) {
-    head = Math.max(lineRange.from, Math.min(lineRange.to, head));
-  }
-  const currentAnchor = view.state.selection.main.anchor;
-  const currentHead = view.state.selection.main.head;
-  const currentFrom = view.state.selection.main.from ?? Math.min(currentAnchor, currentHead);
-  const currentTo = view.state.selection.main.to ?? Math.max(currentAnchor, currentHead);
-  const nextFrom = Math.min(anchor, head);
-  const nextTo = Math.max(anchor, head);
-  if (currentFrom === nextFrom && currentTo === nextTo) {
-    return false;
-  }
-  view.dispatch({ selection: { anchor, head } });
-  return true;
-}
-
-function getDragLineRangeFromTarget(
-  view: Pick<EditorView, 'posAtDOM' | 'state'>,
-  target: EventTarget | null,
-): DragLineRange | null {
-  const element = target instanceof HTMLElement ? target : null;
-  const line = element?.closest('.cm-line');
-  if (!line) return null;
-  try {
-    const lineStart = view.posAtDOM(line, 0);
-    const docLine = view.state.doc.lineAt(lineStart);
-    return { from: docLine.from, to: docLine.to };
-  } catch {
-    return null;
-  }
-}
-
-function shouldDisableDrawSelectionForTauriWebKit() {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-  const w = window as any;
-  if (w.__cmForceDisableDrawSelection === true) return true;
-  if (typeof process !== 'undefined' && (process as any)?.env?.VITEST) return false;
-  const isTauriRuntime = '__TAURI_INTERNALS__' in w || '__TAURI__' in w;
-  if (!isTauriRuntime) return false;
-  const ua = navigator.userAgent || '';
-  const isWebKit = /AppleWebKit/i.test(ua) && !/(Chrome|Chromium|Edg|OPR)/i.test(ua);
-  return isWebKit;
-}
-
-const CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY = 'cmSelectionVisualDebug';
-const CM_SELECTION_TRACE_STORAGE_KEY = 'cmSelectionVisualTrace';
+const CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY = "cmSelectionVisualDebug";
+const CM_SELECTION_TRACE_STORAGE_KEY = "cmSelectionVisualTrace";
 const CM_SELECTION_ANOMALY_THROTTLE_MS = 180;
 const CM_SELECTION_TRACE_DEFAULT_FRAME_INTERVAL_MS = 34;
 const CM_SELECTION_TRACE_MAX_EVENTS = 5000;
 const CM_SELECTION_TRACE_MAX_FRAMES = 3600;
-const DRAG_SELECTION_THRESHOLD_PX = 4;
 
 function selectionVisualDebugEnabled() {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   const w = window as any;
   if (w.__cmSelectionVisualDebug === true) return true;
   try {
-    return window.localStorage.getItem(CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY) === '1';
+    return (
+      window.localStorage.getItem(CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY) === "1"
+    );
   } catch {
     return false;
   }
 }
 
 function selectionVisualTraceEnabled() {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === "undefined") return false;
   const w = window as any;
   if (w.__cmSelectionTraceEnabled === true) return true;
-  if (import.meta.env.DEV && shouldDisableDrawSelectionForTauriWebKit()) return true;
   try {
-    return window.localStorage.getItem(CM_SELECTION_TRACE_STORAGE_KEY) === '1';
+    return window.localStorage.getItem(CM_SELECTION_TRACE_STORAGE_KEY) === "1";
   } catch {
     return false;
   }
@@ -2010,7 +2068,10 @@ type SelectionTraceControl = {
   enabled: () => boolean;
   event: (type: string, payload?: Record<string, unknown>) => void;
   snapshot: (source: string) => void;
-  anomaly: (source: string, details: ReturnType<typeof inspectSelectionVisualAnomaly>) => void;
+  anomaly: (
+    source: string,
+    details: ReturnType<typeof inspectSelectionVisualAnomaly>,
+  ) => void;
   destroy: (reason: string) => void;
 };
 
@@ -2020,10 +2081,14 @@ function pushLimited<T>(items: T[], item: T, max: number) {
   items.splice(0, items.length - max);
 }
 
-function collectSelectionOverlayMetrics(view: EditorView): SelectionOverlayMetrics {
+function collectSelectionOverlayMetrics(
+  view: EditorView,
+): SelectionOverlayMetrics {
   const scroller = view.scrollDOM;
   const scrollerRect = scroller?.getBoundingClientRect() ?? null;
-  const selectionBackgrounds = Array.from(view.dom.querySelectorAll('.cm-selectionBackground'));
+  const selectionBackgrounds = Array.from(
+    view.dom.querySelectorAll(".cm-selectionBackground"),
+  );
   const overlays = [...selectionBackgrounds];
 
   let fullLikeCount = 0;
@@ -2044,7 +2109,9 @@ function collectSelectionOverlayMetrics(view: EditorView): SelectionOverlayMetri
   }
 
   return {
-    selectionLayerPresent: Boolean(view.dom.querySelector('.cm-selectionLayer')),
+    selectionLayerPresent: Boolean(
+      view.dom.querySelector(".cm-selectionLayer"),
+    ),
     selectionBackgroundCount: selectionBackgrounds.length,
     selectionBridgeCount: 0,
     selectionGapCount: 0,
@@ -2055,7 +2122,10 @@ function collectSelectionOverlayMetrics(view: EditorView): SelectionOverlayMetri
   };
 }
 
-function buildSelectionTraceSummary(frames: SelectionTraceFrame[], events: SelectionTraceEvent[]) {
+function buildSelectionTraceSummary(
+  frames: SelectionTraceFrame[],
+  events: SelectionTraceEvent[],
+) {
   const anomalyFrames = frames.filter(
     (frame) =>
       frame.selection.selectedLength > 0 &&
@@ -2066,8 +2136,14 @@ function buildSelectionTraceSummary(frames: SelectionTraceFrame[], events: Selec
     eventCount: events.length,
     frameCount: frames.length,
     anomalyFrameCount: anomalyFrames,
-    maxWidthRatio: frames.reduce((max, frame) => Math.max(max, frame.overlay.maxWidthRatio), 0),
-    maxHeightRatio: frames.reduce((max, frame) => Math.max(max, frame.overlay.maxHeightRatio), 0),
+    maxWidthRatio: frames.reduce(
+      (max, frame) => Math.max(max, frame.overlay.maxWidthRatio),
+      0,
+    ),
+    maxHeightRatio: frames.reduce(
+      (max, frame) => Math.max(max, frame.overlay.maxHeightRatio),
+      0,
+    ),
   };
 }
 
@@ -2076,15 +2152,16 @@ function createSelectionTraceControl(
   options: { disableCustomDrawSelection: boolean },
 ): SelectionTraceControl {
   const ownerDoc = view.dom.ownerDocument;
-  const runtimeWindow = ownerDoc.defaultView || (typeof window !== 'undefined' ? window : null);
+  const runtimeWindow =
+    ownerDoc.defaultView || (typeof window !== "undefined" ? window : null);
   const sessionId = `cm-selection-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const data = {
     sessionId,
     startedAt: new Date().toISOString(),
     meta: {
-      userAgent: runtimeWindow?.navigator.userAgent ?? '',
-      platform: runtimeWindow?.navigator.platform ?? '',
-      language: runtimeWindow?.navigator.language ?? '',
+      userAgent: runtimeWindow?.navigator.userAgent ?? "",
+      platform: runtimeWindow?.navigator.platform ?? "",
+      language: runtimeWindow?.navigator.language ?? "",
       devicePixelRatio: runtimeWindow?.devicePixelRatio ?? null,
       drawSelectionDisabled: options.disableCustomDrawSelection,
       visualDebugEnabled: selectionVisualDebugEnabled(),
@@ -2100,7 +2177,8 @@ function createSelectionTraceControl(
   let lastFrameTs = 0;
   let startPerf = runtimeWindow?.performance.now() ?? Date.now();
   let frameIntervalMs = CM_SELECTION_TRACE_DEFAULT_FRAME_INTERVAL_MS;
-  let isEnabled = selectionVisualDebugEnabled() || selectionVisualTraceEnabled();
+  let isEnabled =
+    selectionVisualDebugEnabled() || selectionVisualTraceEnabled();
 
   const nowStamp = () => {
     const perfNow = runtimeWindow?.performance.now() ?? Date.now();
@@ -2148,8 +2226,8 @@ function createSelectionTraceControl(
         },
         state: {
           mouseSelectingField: view.state.field(mouseSelectingField, false),
-          dragClass: view.dom.classList.contains('cm-drag-selecting'),
-          hasSelectionClass: view.dom.classList.contains('cm-has-selection'),
+          dragClass: view.dom.classList.contains("cm-drag-selecting"),
+          hasSelectionClass: view.dom.classList.contains("cm-has-selection"),
           disableCustomDrawSelection: options.disableCustomDrawSelection,
         },
         viewport: {
@@ -2170,21 +2248,21 @@ function createSelectionTraceControl(
     if (!runtimeWindow || !frameLoop) return;
     runtimeWindow.cancelAnimationFrame(frameLoop);
     frameLoop = 0;
-    addEvent('trace-loop-stop', { reason });
+    addEvent("trace-loop-stop", { reason });
   };
 
   const runFrameLoop = (ts: number) => {
     if (!isEnabled || !runtimeWindow) return;
     if (lastFrameTs === 0 || ts - lastFrameTs >= frameIntervalMs) {
       lastFrameTs = ts;
-      captureFrame('raf');
+      captureFrame("raf");
     }
     frameLoop = runtimeWindow.requestAnimationFrame(runFrameLoop);
   };
 
   const startFrameLoop = (reason: string) => {
     if (!runtimeWindow || !isEnabled || frameLoop) return;
-    addEvent('trace-loop-start', { reason, frameIntervalMs });
+    addEvent("trace-loop-start", { reason, frameIntervalMs });
     frameLoop = runtimeWindow.requestAnimationFrame(runFrameLoop);
   };
 
@@ -2206,15 +2284,18 @@ function createSelectionTraceControl(
       enable: (persist = true) => {
         if (persist) {
           try {
-            runtimeWindow.localStorage.setItem(CM_SELECTION_TRACE_STORAGE_KEY, '1');
+            runtimeWindow.localStorage.setItem(
+              CM_SELECTION_TRACE_STORAGE_KEY,
+              "1",
+            );
           } catch {}
         }
         if (!isEnabled) {
           isEnabled = true;
           reset();
-          addEvent('trace-enabled', { source: 'window-api' });
-          captureFrame('trace-enabled');
-          startFrameLoop('window-api-enable');
+          addEvent("trace-enabled", { source: "window-api" });
+          captureFrame("trace-enabled");
+          startFrameLoop("window-api-enable");
         }
         return {
           sessionId,
@@ -2224,14 +2305,16 @@ function createSelectionTraceControl(
       disable: (persist = true) => {
         if (persist) {
           try {
-            runtimeWindow.localStorage.removeItem(CM_SELECTION_TRACE_STORAGE_KEY);
+            runtimeWindow.localStorage.removeItem(
+              CM_SELECTION_TRACE_STORAGE_KEY,
+            );
           } catch {}
         }
         if (isEnabled) {
-          addEvent('trace-disabled', { source: 'window-api' });
-          captureFrame('trace-disabled');
+          addEvent("trace-disabled", { source: "window-api" });
+          captureFrame("trace-disabled");
           isEnabled = false;
-          stopFrameLoop('window-api-disable');
+          stopFrameLoop("window-api-disable");
         }
         return {
           sessionId,
@@ -2240,15 +2323,15 @@ function createSelectionTraceControl(
       },
       clear: () => {
         reset();
-        addEvent('trace-cleared', { source: 'window-api' });
-        captureFrame('trace-cleared');
+        addEvent("trace-cleared", { source: "window-api" });
+        captureFrame("trace-cleared");
         return {
           sessionId,
           summary: buildSelectionTraceSummary(data.frames, data.events),
         };
       },
-      snapshot: (label: string = 'manual-snapshot') => {
-        addEvent('manual-snapshot', { label });
+      snapshot: (label: string = "manual-snapshot") => {
+        addEvent("manual-snapshot", { label });
         captureFrame(label);
         return {
           sessionId,
@@ -2260,9 +2343,9 @@ function createSelectionTraceControl(
         captureFrame(`event:${type}`);
       },
       setFrameIntervalMs: (next: number) => {
-        if (typeof next === 'number' && Number.isFinite(next)) {
+        if (typeof next === "number" && Number.isFinite(next)) {
           frameIntervalMs = Math.min(120, Math.max(8, Math.floor(next)));
-          addEvent('trace-frame-interval-updated', { frameIntervalMs });
+          addEvent("trace-frame-interval-updated", { frameIntervalMs });
         }
         return frameIntervalMs;
       },
@@ -2284,20 +2367,29 @@ function createSelectionTraceControl(
           2,
         );
         if (!runtimeWindow.URL?.createObjectURL) {
-          return { ok: false, reason: 'createObjectURL-unavailable', bytes: payload.length };
+          return {
+            ok: false,
+            reason: "createObjectURL-unavailable",
+            bytes: payload.length,
+          };
         }
         const safeName =
           fileName ||
-          `cm-selection-trace-${new Date().toISOString().replace(/[:.]/g, '-')}-${sessionId}.json`;
-        const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+          `cm-selection-trace-${new Date().toISOString().replace(/[:.]/g, "-")}-${sessionId}.json`;
+        const blob = new Blob([payload], {
+          type: "application/json;charset=utf-8",
+        });
         const href = runtimeWindow.URL.createObjectURL(blob);
-        const link = ownerDoc.createElement('a');
+        const link = ownerDoc.createElement("a");
         link.href = href;
         link.download = safeName;
         ownerDoc.body.appendChild(link);
         link.click();
         ownerDoc.body.removeChild(link);
-        runtimeWindow.setTimeout(() => runtimeWindow.URL.revokeObjectURL(href), 0);
+        runtimeWindow.setTimeout(
+          () => runtimeWindow.URL.revokeObjectURL(href),
+          0,
+        );
         return { ok: true, fileName: safeName, bytes: payload.length };
       },
     };
@@ -2308,13 +2400,13 @@ function createSelectionTraceControl(
   }
 
   if (isEnabled) {
-    addEvent('trace-initialized', {
-      source: 'editor-create',
+    addEvent("trace-initialized", {
+      source: "editor-create",
       frameIntervalMs,
       drawSelectionDisabled: options.disableCustomDrawSelection,
     });
-    captureFrame('trace-init');
-    startFrameLoop('editor-create');
+    captureFrame("trace-init");
+    startFrameLoop("editor-create");
   }
 
   return {
@@ -2326,7 +2418,7 @@ function createSelectionTraceControl(
       captureFrame(source);
     },
     anomaly: (source, details) => {
-      addEvent('selection-anomaly', {
+      addEvent("selection-anomaly", {
         source,
         fullLikeCount: details.fullLikeCount,
         oversizedCount: details.oversizedCount,
@@ -2339,7 +2431,7 @@ function createSelectionTraceControl(
     },
     destroy: (reason) => {
       if (isEnabled) {
-        addEvent('trace-destroy', { reason });
+        addEvent("trace-destroy", { reason });
         captureFrame(`destroy:${reason}`);
       }
       stopFrameLoop(reason);
@@ -2389,8 +2481,8 @@ function describeElement(element: Element | null) {
   const style = window.getComputedStyle(el);
   return {
     tag: el.tagName.toLowerCase(),
-    id: el.id || '',
-    className: el.className || '',
+    id: el.id || "",
+    className: el.className || "",
     rect: snapshotRect(el.getBoundingClientRect()),
     style: {
       position: style.position,
@@ -2401,7 +2493,7 @@ function describeElement(element: Element | null) {
       transform: style.transform,
       willChange: style.willChange,
       contain: style.contain,
-      zoom: (style as any).zoom || '',
+      zoom: (style as any).zoom || "",
       pointerEvents: style.pointerEvents,
     },
   };
@@ -2409,26 +2501,28 @@ function describeElement(element: Element | null) {
 
 function summarizeInteractionTarget(target: EventTarget | null) {
   const element = target instanceof HTMLElement ? target : null;
-  const line = element?.closest('.cm-line') as HTMLElement | null;
-  const widget = element?.closest('[data-widget-type]') as HTMLElement | null;
-  const link = element?.closest('a[href]') as HTMLAnchorElement | null;
+  const line = element?.closest(".cm-line") as HTMLElement | null;
+  const widget = element?.closest("[data-widget-type]") as HTMLElement | null;
+  const link = element?.closest("a[href]") as HTMLAnchorElement | null;
   return {
-    tag: element?.tagName.toLowerCase() || 'unknown',
-    className: element?.className || '',
-    text: (element?.textContent || '').slice(0, 120),
-    lineText: (line?.textContent || '').slice(0, 160),
-    widgetType: widget?.dataset.widgetType || '',
-    href: link?.getAttribute('href') || '',
+    tag: element?.tagName.toLowerCase() || "unknown",
+    className: element?.className || "",
+    text: (element?.textContent || "").slice(0, 120),
+    lineText: (line?.textContent || "").slice(0, 160),
+    widgetType: widget?.dataset.widgetType || "",
+    href: link?.getAttribute("href") || "",
   };
 }
 
-function summarizePointerLikeEvent(event: MouseEvent | PointerEvent | WheelEvent) {
+function summarizePointerLikeEvent(
+  event: MouseEvent | PointerEvent | WheelEvent,
+) {
   const base = {
     x: event.clientX,
     y: event.clientY,
-    button: 'button' in event ? event.button : -1,
-    buttons: 'buttons' in event ? event.buttons : 0,
-    detail: 'detail' in event ? event.detail : 0,
+    button: "button" in event ? event.button : -1,
+    buttons: "buttons" in event ? event.buttons : 0,
+    detail: "detail" in event ? event.detail : 0,
     ctrlKey: event.ctrlKey,
     metaKey: event.metaKey,
     shiftKey: event.shiftKey,
@@ -2444,7 +2538,9 @@ function summarizePointerLikeEvent(event: MouseEvent | PointerEvent | WheelEvent
       deltaMode: event.deltaMode,
     };
   }
-  const PointerEventCtor = (globalThis as { PointerEvent?: typeof PointerEvent }).PointerEvent;
+  const PointerEventCtor = (
+    globalThis as { PointerEvent?: typeof PointerEvent }
+  ).PointerEvent;
   if (PointerEventCtor && event instanceof PointerEventCtor) {
     return {
       ...base,
@@ -2473,11 +2569,11 @@ function collectTransformChain(element: Element | null, limit = 8) {
     const style = window.getComputedStyle(el);
     chain.push({
       tag: el.tagName.toLowerCase(),
-      id: el.id || '',
-      className: el.className || '',
+      id: el.id || "",
+      className: el.className || "",
       transform: style.transform,
       position: style.position,
-      zoom: (style as any).zoom || '',
+      zoom: (style as any).zoom || "",
     });
     current = current.parentElement;
     count += 1;
@@ -2488,23 +2584,46 @@ function collectTransformChain(element: Element | null, limit = 8) {
 function inspectSelectionVisualAnomaly(view: EditorView) {
   const scroller = view.scrollDOM;
   const scrollerRect = snapshotRect(scroller?.getBoundingClientRect() ?? null);
-  const selectionLayer = view.dom.querySelector('.cm-selectionLayer');
+  const selectionLayer = view.dom.querySelector(".cm-selectionLayer");
   const selectionLayerRect = snapshotRect(
     (selectionLayer as HTMLElement | null)?.getBoundingClientRect() ?? null,
   );
-  const selectionBackgrounds = Array.from(view.dom.querySelectorAll('.cm-selectionBackground'));
-  const selectionBridges = Array.from(view.dom.querySelectorAll('.cm-selection-bridge'));
-  const selectionGaps = Array.from(view.dom.querySelectorAll('.cm-selection-gap'));
+  const selectionBackgrounds = Array.from(
+    view.dom.querySelectorAll(".cm-selectionBackground"),
+  );
+  const selectionBridges = Array.from(
+    view.dom.querySelectorAll(".cm-selection-bridge"),
+  );
+  const selectionGaps = Array.from(
+    view.dom.querySelectorAll(".cm-selection-gap"),
+  );
 
   const overlayRects = [
-    ...selectionBackgrounds.map((node, index) => ({ node, index, kind: 'background' as const })),
-    ...selectionBridges.map((node, index) => ({ node, index, kind: 'bridge' as const })),
-    ...selectionGaps.map((node, index) => ({ node, index, kind: 'gap' as const })),
+    ...selectionBackgrounds.map((node, index) => ({
+      node,
+      index,
+      kind: "background" as const,
+    })),
+    ...selectionBridges.map((node, index) => ({
+      node,
+      index,
+      kind: "bridge" as const,
+    })),
+    ...selectionGaps.map((node, index) => ({
+      node,
+      index,
+      kind: "gap" as const,
+    })),
   ].map((entry) => {
     const rect = (entry.node as HTMLElement).getBoundingClientRect();
-    const widthRatio = scrollerRect && scrollerRect.width > 0 ? rect.width / scrollerRect.width : 0;
+    const widthRatio =
+      scrollerRect && scrollerRect.width > 0
+        ? rect.width / scrollerRect.width
+        : 0;
     const heightRatio =
-      scrollerRect && scrollerRect.height > 0 ? rect.height / scrollerRect.height : 0;
+      scrollerRect && scrollerRect.height > 0
+        ? rect.height / scrollerRect.height
+        : 0;
     return {
       index: entry.index,
       kind: entry.kind,
@@ -2522,11 +2641,14 @@ function inspectSelectionVisualAnomaly(view: EditorView) {
   );
 
   const main = view.state.selection.main;
-  const partialSelection = !(main.from === 0 && main.to === view.state.doc.length);
-  const isAnomaly = partialSelection && (fullLikeRects.length > 0 || oversizedRects.length > 0);
+  const partialSelection = !(
+    main.from === 0 && main.to === view.state.doc.length
+  );
+  const isAnomaly =
+    partialSelection && (fullLikeRects.length > 0 || oversizedRects.length > 0);
 
   const visualViewport =
-    typeof window !== 'undefined' && window.visualViewport
+    typeof window !== "undefined" && window.visualViewport
       ? {
           width: window.visualViewport.width,
           height: window.visualViewport.height,
@@ -2540,8 +2662,8 @@ function inspectSelectionVisualAnomaly(view: EditorView) {
   const inspect = inspectSelectAllUpgrade(view, ownerSelection);
   const activeElement = view.dom.ownerDocument.activeElement;
   const activeTag = activeElement
-    ? `${activeElement.tagName.toLowerCase()}${(activeElement as HTMLElement).className ? `.${(activeElement as HTMLElement).className}` : ''}`
-    : 'none';
+    ? `${activeElement.tagName.toLowerCase()}${(activeElement as HTMLElement).className ? `.${(activeElement as HTMLElement).className}` : ""}`
+    : "none";
 
   return {
     isAnomaly,
@@ -2562,7 +2684,8 @@ function inspectSelectionVisualAnomaly(view: EditorView) {
     viewMetrics: {
       scrollTop: scroller?.scrollTop ?? null,
       scrollLeft: scroller?.scrollLeft ?? null,
-      devicePixelRatio: typeof window !== 'undefined' ? window.devicePixelRatio : null,
+      devicePixelRatio:
+        typeof window !== "undefined" ? window.devicePixelRatio : null,
       visualViewport,
       activeTag,
     },
@@ -2577,14 +2700,18 @@ function inspectSelectionVisualAnomaly(view: EditorView) {
   };
 }
 
-function logSelectAll(view: EditorView, label: string, data: Record<string, unknown> = {}) {
+function logSelectAll(
+  view: EditorView,
+  label: string,
+  data: Record<string, unknown> = {},
+) {
   if (!selectAllDebugEnabled()) return;
   const selection = view.state.selection.main;
   const docLength = view.state.doc.length;
   const active = view.dom.ownerDocument.activeElement as HTMLElement | null;
   const activeTag = active
-    ? `${active.tagName.toLowerCase()}${active.className ? `.${active.className}` : ''}`
-    : 'none';
+    ? `${active.tagName.toLowerCase()}${active.className ? `.${active.className}` : ""}`
+    : "none";
   console.log(`[cm-selectAll] ${label}`, {
     from: selection.from,
     to: selection.to,
@@ -2604,7 +2731,7 @@ function isViewActive(view: EditorView, target: EventTarget | null) {
 }
 
 function applyChangesToContent(base: string, changes: ChangeSet): string {
-  let next = '';
+  let next = "";
   let cursor = 0;
   changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
     if (fromA > cursor) {
@@ -2619,10 +2746,13 @@ function applyChangesToContent(base: string, changes: ChangeSet): string {
   return next;
 }
 
-function inspectSelectAllUpgrade(view: EditorView, selection: Selection | null) {
+function inspectSelectAllUpgrade(
+  view: EditorView,
+  selection: Selection | null,
+) {
   const base = {
     shouldUpgrade: false,
-    reason: 'unknown',
+    reason: "unknown",
     from: null as number | null,
     to: null as number | null,
     coversViewport: false,
@@ -2631,13 +2761,18 @@ function inspectSelectAllUpgrade(view: EditorView, selection: Selection | null) 
     viewportTo: view.viewport.to,
     docLength: view.state.doc.length,
   };
-  if (!selection || selection.rangeCount === 0) return { ...base, reason: 'no-selection' };
-  if (selection.isCollapsed) return { ...base, reason: 'collapsed' };
+  if (!selection || selection.rangeCount === 0)
+    return { ...base, reason: "no-selection" };
+  if (selection.isCollapsed) return { ...base, reason: "collapsed" };
   const anchorNode = selection.anchorNode;
   const focusNode = selection.focusNode;
-  if (!anchorNode || !focusNode) return { ...base, reason: 'missing-anchor-focus' };
-  if (!view.contentDOM.contains(anchorNode) || !view.contentDOM.contains(focusNode)) {
-    return { ...base, reason: 'outside-content' };
+  if (!anchorNode || !focusNode)
+    return { ...base, reason: "missing-anchor-focus" };
+  if (
+    !view.contentDOM.contains(anchorNode) ||
+    !view.contentDOM.contains(focusNode)
+  ) {
+    return { ...base, reason: "outside-content" };
   }
   const range = selection.getRangeAt(0);
   let domFrom = 0;
@@ -2646,7 +2781,7 @@ function inspectSelectAllUpgrade(view: EditorView, selection: Selection | null) 
     domFrom = view.posAtDOM(range.startContainer, range.startOffset);
     domTo = view.posAtDOM(range.endContainer, range.endOffset);
   } catch {
-    return { ...base, reason: 'posAtDOM-failed' };
+    return { ...base, reason: "posAtDOM-failed" };
   }
   const from = Math.min(domFrom, domTo);
   const to = Math.max(domFrom, domTo);
@@ -2657,9 +2792,9 @@ function inspectSelectAllUpgrade(view: EditorView, selection: Selection | null) 
     shouldUpgrade: coversViewport && !alreadyFull,
     reason: coversViewport
       ? alreadyFull
-        ? 'already-full'
-        : 'covers-viewport'
-      : 'not-cover-viewport',
+        ? "already-full"
+        : "covers-viewport"
+      : "not-cover-viewport",
     from,
     to,
     coversViewport,
@@ -2673,8 +2808,8 @@ const SELECT_ALL_INTENT_WINDOW_MS = 1200;
 const selectAllDomHandlers = Prec.highest(
   EditorView.domEventHandlers({
     beforeinput(event, view) {
-      if (event.inputType !== 'selectAll') return false;
-      logSelectAll(view, 'dom-beforeinput', {
+      if (event.inputType !== "selectAll") return false;
+      logSelectAll(view, "dom-beforeinput", {
         inputType: event.inputType,
         viewActive: isViewActive(view, event.target),
       });
@@ -2685,9 +2820,9 @@ const selectAllDomHandlers = Prec.highest(
     keydown(event, view) {
       const isMod = event.metaKey || event.ctrlKey;
       if (!isMod || event.shiftKey || event.altKey) return false;
-      const key = event.key?.toLowerCase?.() ?? '';
-      if (key !== 'a' && event.code !== 'KeyA') return false;
-      logSelectAll(view, 'dom-keydown', {
+      const key = event.key?.toLowerCase?.() ?? "";
+      if (key !== "a" && event.code !== "KeyA") return false;
+      logSelectAll(view, "dom-keydown", {
         key: event.key,
         code: event.code,
         viewActive: isViewActive(view, event.target),
@@ -2702,14 +2837,14 @@ const selectAllDomHandlers = Prec.highest(
 // Table Keymap
 const tableKeymap = [
   {
-    key: 'Tab',
+    key: "Tab",
     run: (view: EditorView) => {
       const { state } = view;
       const { head } = state.selection.main;
       const line = state.doc.lineAt(head);
-      if (!line.text.includes('|')) return false;
+      if (!line.text.includes("|")) return false;
       const rest = line.text.slice(head - line.from);
-      const nextPipe = rest.indexOf('|');
+      const nextPipe = rest.indexOf("|");
       if (nextPipe !== -1) {
         view.dispatch({ selection: { anchor: head + nextPipe + 2 } });
         return true;
@@ -2718,15 +2853,15 @@ const tableKeymap = [
     },
   },
   {
-    key: 'Enter',
+    key: "Enter",
     run: (view: EditorView) => {
       const { state } = view;
       const { head } = state.selection.main;
       const line = state.doc.lineAt(head);
-      if (!line.text.includes('|')) return false;
+      if (!line.text.includes("|")) return false;
       const pipes = (line.text.match(/\|/g) || []).length;
       if (pipes < 2) return false;
-      const row = '\n' + '|  '.repeat(Math.max(1, pipes - 1)) + '|';
+      const row = "\n" + "|  ".repeat(Math.max(1, pipes - 1)) + "|";
       view.dispatch({
         changes: { from: head, insert: row },
         selection: { anchor: head + 4 },
@@ -2740,7 +2875,9 @@ const tableKeymap = [
 const wikiLinkStateField = StateField.define<DecorationSet>({
   create: buildWikiLinkDecorations,
   update(deco, tr) {
-    return tr.docChanged ? buildWikiLinkDecorations(tr.state) : deco.map(tr.changes);
+    return tr.docChanged
+      ? buildWikiLinkDecorations(tr.state)
+      : deco.map(tr.changes);
   },
   provide: (f) => EditorView.decorations.from(f),
 });
@@ -2752,8 +2889,8 @@ function buildWikiLinkDecorations(state: EditorState): DecorationSet {
   while ((match = regex.exec(docString(state))) !== null) {
     decorations.push(
       Decoration.mark({
-        class: 'cm-wikilink',
-        attributes: { 'data-wikilink': match[1].trim() },
+        class: "cm-wikilink",
+        attributes: { "data-wikilink": match[1].trim() },
       }).range(match.index, match.index + match[0].length),
     );
   }
@@ -2763,7 +2900,11 @@ function buildWikiLinkDecorations(state: EditorState): DecorationSet {
 // ============ Callout StateField ============
 let calloutPositionsCache: { from: number; to: number }[] = [];
 
-function shouldShowCalloutSource(state: EditorState, from: number, to: number): boolean {
+function shouldShowCalloutSource(
+  state: EditorState,
+  from: number,
+  to: number,
+): boolean {
   const shouldCollapse = state.facet(collapseOnSelectionFacet);
   if (!shouldCollapse) return false;
   const isDragging = state.field(mouseSelectingField, false);
@@ -2779,15 +2920,21 @@ function shouldShowCalloutSource(state: EditorState, from: number, to: number): 
   });
 }
 
-function parseCalloutContent(doc: Text, startLineNo: number): { lines: { from: number; text: string }[]; endLineNo: number } {
+function parseCalloutContent(
+  doc: Text,
+  startLineNo: number,
+): { lines: { from: number; text: string }[]; endLineNo: number } {
   const lines: { from: number; text: string }[] = [];
   let nextLineNo = startLineNo;
   while (nextLineNo <= doc.lines) {
     const nextLine = doc.line(nextLineNo);
     if (/^>\s?/.test(nextLine.text)) {
-      lines.push({ from: nextLine.from, text: nextLine.text.replace(/^>\s?/, '') });
+      lines.push({
+        from: nextLine.from,
+        text: nextLine.text.replace(/^>\s?/, ""),
+      });
       nextLineNo++;
-    } else if (nextLine.text.trim() === '') {
+    } else if (nextLine.text.trim() === "") {
       break;
     } else {
       break;
@@ -2814,7 +2961,7 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
 
     // Collect all lines in this callout block
     const contentResult = parseCalloutContent(doc, lineNo + 1);
-    const allLineFroms = [line.from, ...contentResult.lines.map(l => l.from)];
+    const allLineFroms = [line.from, ...contentResult.lines.map((l) => l.from)];
     const lastLineFrom = allLineFroms[allLineFroms.length - 1];
     const lastLine = doc.lineAt(lastLineFrom);
     const blockFrom = line.from;
@@ -2826,16 +2973,14 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
       // Active: show source with line decorations (editing mode)
       allLineFroms.forEach((from, idx) => {
         let cls = `callout-editing callout-${resolved.color}`;
-        if (idx === 0) cls += ' callout-editing-first';
-        if (idx === allLineFroms.length - 1) cls += ' callout-editing-last';
+        if (idx === 0) cls += " callout-editing-first";
+        if (idx === allLineFroms.length - 1) cls += " callout-editing-last";
         decorations.push(Decoration.line({ class: cls }).range(from));
       });
     } else {
       // Inactive: replace entire block with rendered widget
-      const contentMd = contentResult.lines
-        .map(l => l.text)
-        .join('\n');
-      const contentHtml = contentMd.trim() ? parseMarkdown(contentMd) : '';
+      const contentMd = contentResult.lines.map((l) => l.text).join("\n");
+      const contentHtml = contentMd.trim() ? parseMarkdown(contentMd) : "";
 
       decorations.push(
         Decoration.replace({
@@ -2864,7 +3009,8 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
 const calloutStateField = StateField.define<DecorationSet>({
   create: buildCalloutDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.reconfigured) return buildCalloutDecorations(tr.state);
+    if (tr.docChanged || tr.reconfigured)
+      return buildCalloutDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
     if (wasDragging && !isDragging) return buildCalloutDecorations(tr.state);
@@ -2881,7 +3027,8 @@ const calloutStateField = StateField.define<DecorationSet>({
         );
       if (
         touches(oldSel) !== touches(newSel) ||
-        (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+        (touches(newSel) &&
+          (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
       ) {
         return buildCalloutDecorations(tr.state);
       }
@@ -2932,18 +3079,27 @@ function createImageStateField(vaultPath: string, notePath: string | null) {
       if (
         tr.docChanged ||
         tr.reconfigured ||
-        tr.effects.some((e) => e.is(setMouseSelecting) || e.is(setImageShowInfo))
+        tr.effects.some(
+          (e) => e.is(setMouseSelecting) || e.is(setImageShowInfo),
+        )
       ) {
         return buildImageDecorations(tr.state, vaultPath, notePath);
       }
       if (tr.selection) {
         const oldSel = tr.startState.selection.main;
         const newSel = tr.state.selection.main;
-        const oldTouches = selectionTouchesCachedRange(oldSel, imagePositionsCache);
-        const newTouches = selectionTouchesCachedRange(newSel, imagePositionsCache);
+        const oldTouches = selectionTouchesCachedRange(
+          oldSel,
+          imagePositionsCache,
+        );
+        const newTouches = selectionTouchesCachedRange(
+          newSel,
+          imagePositionsCache,
+        );
         if (
           oldTouches !== newTouches ||
-          (newTouches && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+          (newTouches &&
+            (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
         ) {
           return buildImageDecorations(tr.state, vaultPath, notePath);
         }
@@ -2954,13 +3110,22 @@ function createImageStateField(vaultPath: string, notePath: string | null) {
   });
 }
 
-function buildImageDecorations(state: EditorState, vaultPath: string, notePath: string | null): DecorationSet {
+function buildImageDecorations(
+  state: EditorState,
+  vaultPath: string,
+  notePath: string | null,
+): DecorationSet {
   const decorations: any[] = [];
   const doc = docString(state);
   const showInfoSet = state.field(imageInfoField, false) || new Set<string>();
   imagePositionsCache = [];
 
-  const imageMatches: Array<{ from: number; to: number; alt: string; src: string }> = [];
+  const imageMatches: Array<{
+    from: number;
+    to: number;
+    alt: string;
+    src: string;
+  }> = [];
   const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
   const wikiImageRegex = /!\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
 
@@ -2983,13 +3148,17 @@ function buildImageDecorations(state: EditorState, vaultPath: string, notePath: 
     });
   }
 
-  for (const image of imageMatches.sort((left, right) => left.from - right.from)) {
+  for (const image of imageMatches.sort(
+    (left, right) => left.from - right.from,
+  )) {
     const { from, to, alt, src } = image;
     imagePositionsCache.push({ from, to });
 
     if (shouldShowSource(state, from, to)) {
       // 编辑模式：显示源码 + 图片预览
-      decorations.push(Decoration.mark({ class: 'cm-image-source' }).range(from, to));
+      decorations.push(
+        Decoration.mark({ class: "cm-image-source" }).range(from, to),
+      );
       decorations.push(
         Decoration.widget({
           widget: new ImageWidget(src, alt, true, vaultPath, notePath),
@@ -3021,10 +3190,12 @@ let horizontalRulePositionsCache: { from: number; to: number }[] = [];
 const horizontalRuleStateField = StateField.define<DecorationSet>({
   create: buildHorizontalRuleDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.reconfigured) return buildHorizontalRuleDecorations(tr.state);
+    if (tr.docChanged || tr.reconfigured)
+      return buildHorizontalRuleDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
-    if (wasDragging && !isDragging) return buildHorizontalRuleDecorations(tr.state);
+    if (wasDragging && !isDragging)
+      return buildHorizontalRuleDecorations(tr.state);
     if (isDragging) return deco;
     if (tr.selection) {
       const oldSel = tr.startState.selection.main;
@@ -3038,7 +3209,8 @@ const horizontalRuleStateField = StateField.define<DecorationSet>({
         );
       if (
         touches(oldSel) !== touches(newSel) ||
-        (touches(newSel) && (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
+        (touches(newSel) &&
+          (oldSel.from !== newSel.from || oldSel.to !== newSel.to))
       ) {
         return buildHorizontalRuleDecorations(tr.state);
       }
@@ -3054,12 +3226,17 @@ function buildHorizontalRuleDecorations(state: EditorState): DecorationSet {
 
   syntaxTree(state).iterate({
     enter: (node) => {
-      if (node.name === 'HorizontalRule') {
+      if (node.name === "HorizontalRule") {
         horizontalRulePositionsCache.push({ from: node.from, to: node.to });
 
         if (shouldShowSource(state, node.from, node.to)) {
           // 编辑模式：显示源码
-          decorations.push(Decoration.mark({ class: 'cm-hr-source' }).range(node.from, node.to));
+          decorations.push(
+            Decoration.mark({ class: "cm-hr-source" }).range(
+              node.from,
+              node.to,
+            ),
+          );
         } else {
           // 预览模式：替换为水平线
           decorations.push(
@@ -3092,12 +3269,12 @@ const readingModePlugin = ViewPlugin.fromClass(
         enter: (node) => {
           if (
             [
-              'HeaderMark',
-              'EmphasisMark',
-              'StrikethroughMark',
-              'CodeMark',
-              'ListMark',
-              'QuoteMark',
+              "HeaderMark",
+              "EmphasisMark",
+              "StrikethroughMark",
+              "CodeMark",
+              "ListMark",
+              "QuoteMark",
             ].includes(node.name)
           ) {
             this.hide(state, node.from, node.to, d);
@@ -3107,8 +3284,10 @@ const readingModePlugin = ViewPlugin.fromClass(
       return Decoration.set(d, true);
     }
     hide(state: EditorState, from: number, to: number, d: any[]) {
-      if (from >= to || state.doc.sliceString(from, to).includes('\n')) return;
-      d.push(Decoration.mark({ class: 'cm-formatting-hidden' }).range(from, to));
+      if (from >= to || state.doc.sliceString(from, to).includes("\n")) return;
+      d.push(
+        Decoration.mark({ class: "cm-formatting-hidden" }).range(from, to),
+      );
     }
   },
   { decorations: (v) => v.decorations },
@@ -3121,7 +3300,8 @@ const markdownStylePlugin = ViewPlugin.fromClass(
       this.decorations = this.build(view);
     }
     update(u: ViewUpdate) {
-      if (u.docChanged || u.viewportChanged) this.decorations = this.build(u.view);
+      if (u.docChanged || u.viewportChanged)
+        this.decorations = this.build(u.view);
     }
     build(view: EditorView) {
       const d: any[] = [];
@@ -3129,23 +3309,27 @@ const markdownStylePlugin = ViewPlugin.fromClass(
         enter: (node) => {
           const type = node.name;
           const map: Record<string, string> = {
-            ATXHeading1: 'cm-header-1',
-            ATXHeading2: 'cm-header-2',
-            ATXHeading3: 'cm-header-3',
-            ATXHeading4: 'cm-header-4',
-            StrongEmphasis: 'cm-strong',
-            Emphasis: 'cm-emphasis',
-            Strikethrough: 'cm-strikethrough',
-            InlineCode: 'cm-code',
-            Link: 'cm-link',
-            URL: 'cm-url',
+            ATXHeading1: "cm-header-1",
+            ATXHeading2: "cm-header-2",
+            ATXHeading3: "cm-header-3",
+            ATXHeading4: "cm-header-4",
+            StrongEmphasis: "cm-strong",
+            Emphasis: "cm-emphasis",
+            Strikethrough: "cm-strikethrough",
+            InlineCode: "cm-code",
+            Link: "cm-link",
+            URL: "cm-url",
           };
-          if (type.startsWith('ATXHeading')) {
-            const cls = map[type] || 'cm-header-4';
+          if (type.startsWith("ATXHeading")) {
+            const cls = map[type] || "cm-header-4";
             d.push(Decoration.mark({ class: cls }).range(node.from, node.to));
-            d.push(Decoration.line({ class: 'cm-heading-line' }).range(node.from));
+            d.push(
+              Decoration.line({ class: "cm-heading-line" }).range(node.from),
+            );
           } else if (map[type]) {
-            d.push(Decoration.mark({ class: map[type] }).range(node.from, node.to));
+            d.push(
+              Decoration.mark({ class: map[type] }).range(node.from, node.to),
+            );
           }
         },
       });
@@ -3165,1359 +3349,1285 @@ const voicePreviewField = StateField.define<DecorationSet>({
       if (e.is(setVoicePreview))
         deco = e.value.text
           ? Decoration.set([
-              Decoration.widget({ widget: new VoicePreviewWidget(e.value.text), side: 1 }).range(
-                e.value.from,
-              ),
+              Decoration.widget({
+                widget: new VoicePreviewWidget(e.value.text),
+                side: 1,
+              }).range(e.value.from),
             ])
           : Decoration.none;
       if (e.is(clearVoicePreview)) deco = Decoration.none;
     }
-    return tr.docChanged && deco !== Decoration.none ? deco.map(tr.changes) : deco;
+    return tr.docChanged && deco !== Decoration.none
+      ? deco.map(tr.changes)
+      : deco;
   },
   provide: (f) => EditorView.decorations.from(f),
 });
 
 // ============ 10. React 组件 ============
 
-export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
-  function CodeMirrorEditor(
-    { content, onChange, className = '', viewMode, livePreview, scrollContainerRef, filePath = null, collabConnection = null },
-    ref,
-  ) {
-    const { t } = useLocaleStore();
+export const CodeMirrorEditor = forwardRef<
+  CodeMirrorEditorRef,
+  CodeMirrorEditorProps
+>(function CodeMirrorEditor(
+  {
+    content,
+    onChange,
+    className = "",
+    viewMode,
+    livePreview,
+    scrollContainerRef,
+    filePath = null,
+    collabConnection = null,
+  },
+  ref,
+) {
+  const { t } = useLocaleStore();
 
-    const effectiveMode: ViewMode = viewMode ?? (livePreview === false ? 'source' : 'live');
-    const isReadOnly = effectiveMode === 'reading';
+  const effectiveMode: ViewMode =
+    viewMode ?? (livePreview === false ? "source" : "live");
+  const isReadOnly = effectiveMode === "reading";
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const viewRef = useRef<EditorView | null>(null);
-    const isExternalChange = useRef(false);
-    const lastInternalContent = useRef<string>(content);
-    const previousModeRef = useRef<ViewMode>(effectiveMode);
-    const effectiveModeRef = useRef<ViewMode>(effectiveMode);
-    const pendingModeTransitionRestoreRef = useRef<PendingModeTransitionRestore | null>(null);
-    const transitionSequenceRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const isExternalChange = useRef(false);
+  const lastInternalContent = useRef<string>(content);
+  const previousModeRef = useRef<ViewMode>(effectiveMode);
+  const effectiveModeRef = useRef<ViewMode>(effectiveMode);
+  const pendingModeTransitionRestoreRef =
+    useRef<PendingModeTransitionRestore | null>(null);
+  const transitionSequenceRef = useRef(0);
 
-    const { openVideoNoteTab, openPDFTab, fileTree, openFile, vaultPath, currentFile } = useFileStore(
-      useShallow((state) => ({
-        openVideoNoteTab: state.openVideoNoteTab,
-        openPDFTab: state.openPDFTab,
-        fileTree: state.fileTree,
-        openFile: state.openFile,
-        vaultPath: state.vaultPath,
-        currentFile: state.currentFile,
-      })),
-    );
-    const { openSecondaryPdf } = useSplitStore();
-    const { setSplitView, editorFontSize, editorInteractionTraceEnabled } = useUIStore();
+  const {
+    openVideoNoteTab,
+    openPDFTab,
+    fileTree,
+    openFile,
+    vaultPath,
+    currentFile,
+  } = useFileStore(
+    useShallow((state) => ({
+      openVideoNoteTab: state.openVideoNoteTab,
+      openPDFTab: state.openPDFTab,
+      fileTree: state.fileTree,
+      openFile: state.openFile,
+      vaultPath: state.vaultPath,
+      currentFile: state.currentFile,
+    })),
+  );
+  const { openSecondaryPdf } = useSplitStore();
+  const { setSplitView, editorFontSize, editorInteractionTraceEnabled } =
+    useUIStore();
 
-    const markTransitionTrace = useCallback((type: string, payload: Record<string, unknown>) => {
+  const markTransitionTrace = useCallback(
+    (type: string, payload: Record<string, unknown>) => {
       (window as any).__luminaEditorTrace?.mark?.(type, payload);
-    }, []);
-    const resolvedFilePath = filePath ?? currentFile;
-    const filePathRef = useRef<string | null>(resolvedFilePath);
+    },
+    [],
+  );
+  const resolvedFilePath = filePath ?? currentFile;
+  const filePathRef = useRef<string | null>(resolvedFilePath);
 
-    useEffect(() => {
-      filePathRef.current = resolvedFilePath;
-    }, [resolvedFilePath]);
+  useEffect(() => {
+    filePathRef.current = resolvedFilePath;
+  }, [resolvedFilePath]);
 
-    const getModeExtensions = useCallback(
-      (mode: ViewMode) => {
-        const imageField = vaultPath ? createImageStateField(vaultPath, resolvedFilePath) : null;
-        const widgets = [
-          mathStateField,
-          mermaidStateField,
-          calloutStateField,
-          highlightStateField,
-          horizontalRuleStateField,
-        ];
-        if (imageField) widgets.push(imageField);
-        switch (mode) {
-          case 'reading':
-            return [
-              collapseOnSelectionFacet.of(false),
-              readingModePlugin,
-              tableField,
-              editableCodeBlockField,
-              ...widgets,
-            ];
-          case 'live':
-            return [
-              collapseOnSelectionFacet.of(true),
-              livePreviewPlugin,
-              tableEditorPlugin(),
-              editableCodeBlockField,
-              ...widgets,
-            ];
-          case 'source':
-          default:
-            return [calloutStateField];
-        }
-      },
-      [resolvedFilePath, vaultPath],
+  const getModeExtensions = useCallback(
+    (mode: ViewMode) => {
+      const imageField = vaultPath
+        ? createImageStateField(vaultPath, resolvedFilePath)
+        : null;
+      const widgets = [
+        mathStateField,
+        mermaidStateField,
+        calloutStateField,
+        highlightStateField,
+        horizontalRuleStateField,
+      ];
+      if (imageField) widgets.push(imageField);
+      switch (mode) {
+        case "reading":
+          return [
+            collapseOnSelectionFacet.of(false),
+            readingModePlugin,
+            tableField,
+            editableCodeBlockField,
+            ...widgets,
+          ];
+        case "live":
+          return [
+            collapseOnSelectionFacet.of(true),
+            livePreviewPlugin,
+            tableEditorPlugin(),
+            editableCodeBlockField,
+            ...widgets,
+          ];
+        case "source":
+        default:
+          return [calloutStateField];
+      }
+    },
+    [resolvedFilePath, vaultPath],
+  );
+
+  const syncSelectionToViewport = useCallback(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    const scrollContainer = resolveViewportScrollContainer(
+      view,
+      scrollContainerRef,
     );
+    const selection = view.state.selection.main;
+    const nextAnchor = captureViewportAnchor(view, scrollContainer).pos;
+    if (selection.from === nextAnchor && selection.to === nextAnchor) {
+      return;
+    }
+    markTransitionTrace("selection-synced-to-viewport", {
+      previousAnchor: selection.anchor,
+      previousHead: selection.head,
+      previousFrom: selection.from,
+      previousTo: selection.to,
+      nextAnchor,
+      scrollTop: scrollContainer.scrollTop,
+      viewportFrom: view.viewport.from,
+      viewportTo: view.viewport.to,
+      mode: effectiveModeRef.current,
+    });
+    view.dispatch({
+      selection: { anchor: nextAnchor },
+      scrollIntoView: false,
+    });
+  }, [markTransitionTrace, scrollContainerRef]);
 
-    const syncSelectionToViewport = useCallback(() => {
-      const view = viewRef.current;
-      if (!view) return;
-      const scrollContainer = resolveViewportScrollContainer(view, scrollContainerRef);
-      const selection = view.state.selection.main;
-      const nextAnchor = captureViewportAnchor(view, scrollContainer).pos;
-      if (selection.from === nextAnchor && selection.to === nextAnchor) {
-        return;
-      }
-      markTransitionTrace('selection-synced-to-viewport', {
-        previousAnchor: selection.anchor,
-        previousHead: selection.head,
-        previousFrom: selection.from,
-        previousTo: selection.to,
-        nextAnchor,
-        scrollTop: scrollContainer.scrollTop,
-        viewportFrom: view.viewport.from,
-        viewportTo: view.viewport.to,
-        mode: effectiveModeRef.current,
-      });
-      view.dispatch({
-        selection: { anchor: nextAnchor },
-        scrollIntoView: false,
-      });
-    }, [markTransitionTrace, scrollContainerRef]);
+  const clearDocumentSelection = useCallback((ownerDoc: Document) => {
+    const domSelection = ownerDoc.getSelection();
+    if ((domSelection?.rangeCount ?? 0) > 0) {
+      domSelection?.removeAllRanges();
+    }
+  }, []);
 
-    const clearDocumentSelection = useCallback((ownerDoc: Document) => {
-      const domSelection = ownerDoc.getSelection();
-      if ((domSelection?.rangeCount ?? 0) > 0) {
-        domSelection?.removeAllRanges();
-      }
-    }, []);
-
-    const discardCrossModeCaret = useCallback(
-      (view: EditorView, anchor: SharedDocumentAnchor, transition: Omit<ModeTransitionPlan, 'viewportAnchor'>) => {
-        const currentSelection = view.state.selection.main;
-        if (currentSelection.from !== anchor.pos || currentSelection.to !== anchor.pos) {
-          view.dispatch({
-            selection: { anchor: anchor.pos },
-            scrollIntoView: false,
-          });
-        }
-
-        const ownerDoc = view.dom.ownerDocument;
-        clearDocumentSelection(ownerDoc);
-        const activeElement = ownerDoc.activeElement;
-        if (activeElement instanceof HTMLElement && view.dom.contains(activeElement)) {
-          activeElement.blur();
-        }
-
-        markTransitionTrace('mode-transition-caret-discarded', {
-          transitionId: transition.transitionId,
-          fromMode: transition.fromMode,
-          toMode: transition.toMode,
-          kind: transition.kind,
-          anchor: anchor.pos,
+  const discardCrossModeCaret = useCallback(
+    (
+      view: EditorView,
+      anchor: SharedDocumentAnchor,
+      transition: Omit<ModeTransitionPlan, "viewportAnchor">,
+    ) => {
+      const currentSelection = view.state.selection.main;
+      if (
+        currentSelection.from !== anchor.pos ||
+        currentSelection.to !== anchor.pos
+      ) {
+        view.dispatch({
+          selection: { anchor: anchor.pos },
+          scrollIntoView: false,
         });
-      },
-      [clearDocumentSelection, markTransitionTrace],
-    );
+      }
 
-    const applyModeTransitionPlan = useCallback(
-      (view: EditorView, plan: ModeTransitionPlan) => {
-        pendingModeTransitionRestoreRef.current = {
-          transitionId: plan.transitionId,
-          canceledByUserIntent: false,
-        };
+      const ownerDoc = view.dom.ownerDocument;
+      clearDocumentSelection(ownerDoc);
+      const activeElement = ownerDoc.activeElement;
+      if (
+        activeElement instanceof HTMLElement &&
+        view.dom.contains(activeElement)
+      ) {
+        activeElement.blur();
+      }
 
-        const applyRestore = (phase: 'raf-1' | 'raf-2') => {
-          if (viewRef.current !== view) return;
-          const pendingRestore = pendingModeTransitionRestoreRef.current;
-          if (pendingRestore?.transitionId === plan.transitionId && pendingRestore.canceledByUserIntent) {
-            markTransitionTrace('mode-transition-restore-skipped', {
-              transitionId: plan.transitionId,
-              phase,
-              fromMode: plan.fromMode,
-              toMode: plan.toMode,
-              reason: 'user-intent',
-            });
-            if (phase === 'raf-2') {
-              pendingModeTransitionRestoreRef.current = null;
-            }
-            return;
-          }
-          const scrollContainer = resolveViewportScrollContainer(view, scrollContainerRef);
-          const restoreResult = restoreViewportAnchor(view, scrollContainer, plan.viewportAnchor);
-          markTransitionTrace('mode-transition-restore-applied', {
+      markTransitionTrace("mode-transition-caret-discarded", {
+        transitionId: transition.transitionId,
+        fromMode: transition.fromMode,
+        toMode: transition.toMode,
+        kind: transition.kind,
+        anchor: anchor.pos,
+      });
+    },
+    [clearDocumentSelection, markTransitionTrace],
+  );
+
+  const applyModeTransitionPlan = useCallback(
+    (view: EditorView, plan: ModeTransitionPlan) => {
+      pendingModeTransitionRestoreRef.current = {
+        transitionId: plan.transitionId,
+        canceledByUserIntent: false,
+      };
+
+      const applyRestore = (phase: "raf-1" | "raf-2") => {
+        if (viewRef.current !== view) return;
+        const pendingRestore = pendingModeTransitionRestoreRef.current;
+        if (
+          pendingRestore?.transitionId === plan.transitionId &&
+          pendingRestore.canceledByUserIntent
+        ) {
+          markTransitionTrace("mode-transition-restore-skipped", {
             transitionId: plan.transitionId,
             phase,
             fromMode: plan.fromMode,
             toMode: plan.toMode,
-            kind: plan.kind,
-            selectionAnchor: view.state.selection.main.anchor,
-            selectionHead: view.state.selection.main.head,
-            scrollTop: scrollContainer.scrollTop,
-            viewportFrom: view.viewport.from,
-            viewportTo: view.viewport.to,
-            restoreStrategy: restoreResult.strategy,
-            restoreDelta: restoreResult.delta,
-            targetPos: restoreResult.targetPos,
-            offsetTop: restoreResult.offsetTop,
-            scrollContainerSource: scrollContainer === view.scrollDOM ? 'codemirror' : 'external',
+            reason: "user-intent",
           });
-          if (phase === 'raf-2' && pendingModeTransitionRestoreRef.current?.transitionId === plan.transitionId) {
+          if (phase === "raf-2") {
             pendingModeTransitionRestoreRef.current = null;
           }
-        };
+          return;
+        }
+        const scrollContainer = resolveViewportScrollContainer(
+          view,
+          scrollContainerRef,
+        );
+        const restoreResult = restoreViewportAnchor(
+          view,
+          scrollContainer,
+          plan.viewportAnchor,
+        );
+        markTransitionTrace("mode-transition-restore-applied", {
+          transitionId: plan.transitionId,
+          phase,
+          fromMode: plan.fromMode,
+          toMode: plan.toMode,
+          kind: plan.kind,
+          selectionAnchor: view.state.selection.main.anchor,
+          selectionHead: view.state.selection.main.head,
+          scrollTop: scrollContainer.scrollTop,
+          viewportFrom: view.viewport.from,
+          viewportTo: view.viewport.to,
+          restoreStrategy: restoreResult.strategy,
+          restoreDelta: restoreResult.delta,
+          targetPos: restoreResult.targetPos,
+          offsetTop: restoreResult.offsetTop,
+          scrollContainerSource:
+            scrollContainer === view.scrollDOM ? "codemirror" : "external",
+        });
+        if (
+          phase === "raf-2" &&
+          pendingModeTransitionRestoreRef.current?.transitionId ===
+            plan.transitionId
+        ) {
+          pendingModeTransitionRestoreRef.current = null;
+        }
+      };
 
+      requestAnimationFrame(() => {
+        applyRestore("raf-1");
         requestAnimationFrame(() => {
-          applyRestore('raf-1');
-          requestAnimationFrame(() => {
-            applyRestore('raf-2');
-          });
+          applyRestore("raf-2");
         });
+      });
+    },
+    [markTransitionTrace, scrollContainerRef],
+  );
+
+  const cancelPendingModeTransitionRestore = useCallback(
+    (reason: string, payload: Record<string, unknown> = {}) => {
+      const pendingRestore = pendingModeTransitionRestoreRef.current;
+      if (!pendingRestore || pendingRestore.canceledByUserIntent) return false;
+      pendingRestore.canceledByUserIntent = true;
+      markTransitionTrace("mode-transition-restore-cancelled", {
+        transitionId: pendingRestore.transitionId,
+        reason,
+        ...payload,
+      });
+      return true;
+    },
+    [markTransitionTrace],
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      getScrollLine: () => {
+        if (!viewRef.current) return 1;
+        const scrollContainer = resolveViewportScrollContainer(
+          viewRef.current,
+          scrollContainerRef,
+        );
+        const anchor = captureViewportAnchor(viewRef.current, scrollContainer);
+        return viewRef.current.state.doc.lineAt(anchor.pos).number;
       },
-      [markTransitionTrace, scrollContainerRef],
-    );
-
-    const cancelPendingModeTransitionRestore = useCallback(
-      (reason: string, payload: Record<string, unknown> = {}) => {
-        const pendingRestore = pendingModeTransitionRestoreRef.current;
-        if (!pendingRestore || pendingRestore.canceledByUserIntent) return false;
-        pendingRestore.canceledByUserIntent = true;
-        markTransitionTrace('mode-transition-restore-cancelled', {
-          transitionId: pendingRestore.transitionId,
-          reason,
-          ...payload,
-        });
-        return true;
-      },
-      [markTransitionTrace],
-    );
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        getScrollLine: () => {
-          if (!viewRef.current) return 1;
-          const scrollContainer = resolveViewportScrollContainer(viewRef.current, scrollContainerRef);
-          const anchor = captureViewportAnchor(viewRef.current, scrollContainer);
-          return viewRef.current.state.doc.lineAt(anchor.pos).number;
-        },
-        scrollToLine: (line: number) => {
-          if (!viewRef.current) return;
-          const target = Math.min(Math.max(1, line), viewRef.current.state.doc.lines);
-          viewRef.current.dispatch({
-            effects: EditorView.scrollIntoView(viewRef.current.state.doc.line(target).from, {
-              y: 'start',
-            }),
-          });
-        },
-        syncSelectionToViewport,
-      }),
-      [scrollContainerRef, syncSelectionToViewport],
-    );
-
-    useEffect(() => {
-      effectiveModeRef.current = effectiveMode;
-    }, [effectiveMode]);
-
-    useEffect(() => {
-      if (!containerRef.current) return;
-      const disableCustomDrawSelection = shouldDisableDrawSelectionForTauriWebKit();
-
-      const state = EditorState.create({
-        doc: content,
-        extensions: [
-          viewModeCompartment.of(getModeExtensions(effectiveMode)),
-          readOnlyCompartment.of(EditorState.readOnly.of(isReadOnly)),
-          themeCompartment.of([]),
-          pluginExtensionsCompartment.of([]),
-          history(),
-          keymap.of([...tableKeymap, ...defaultKeymap, ...historyKeymap]),
-          selectAllDomHandlers,
-          markdown({ base: markdownLanguage, extensions: [Table] }),
-          EditorView.lineWrapping,
-          drawSelection(),
-          fontSizeCompartment.of(createEditorTheme(editorFontSize)),
-          collabCompartment.of(
-            collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+      scrollToLine: (line: number) => {
+        if (!viewRef.current) return;
+        const target = Math.min(
+          Math.max(1, line),
+          viewRef.current.state.doc.lines,
+        );
+        viewRef.current.dispatch({
+          effects: EditorView.scrollIntoView(
+            viewRef.current.state.doc.line(target).from,
+            {
+              y: "start",
+            },
           ),
-          mouseSelectingField,
-          selectionStatePlugin,
-          wikiLinkStateField,
-          voicePreviewField,
-          markdownStylePlugin,
-          imageInfoField,
-          // Slash Command 扩展
-          ...slashCommandExtensions,
-          placeholderExtension(t.editor.slashMenu.placeholder),
-          EditorView.updateListener.of((update) => {
-            if (update.docChanged && !isExternalChange.current) {
-              const previousContent = lastInternalContent.current;
-              let newContent = previousContent;
-              try {
-                newContent = applyChangesToContent(previousContent, update.changes);
-              } catch {
-                newContent = update.state.doc.toString();
-              }
-              lastInternalContent.current = newContent;
-              onChange(newContent);
-            }
-          }),
-        ],
-      });
+        });
+      },
+      syncSelectionToViewport,
+    }),
+    [scrollContainerRef, syncSelectionToViewport],
+  );
 
-      const view = new EditorView({ state, parent: containerRef.current });
-      viewRef.current = view;
-      const ownerDoc = view.dom.ownerDocument;
-      const selectionTrace = createSelectionTraceControl(view, {
-        disableCustomDrawSelection,
-      });
-      const unbindPluginExtensions = pluginEditorRuntime.bindReconfigure((extensions) => {
+  useEffect(() => {
+    effectiveModeRef.current = effectiveMode;
+  }, [effectiveMode]);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const disableCustomDrawSelection = false;
+
+    const state = EditorState.create({
+      doc: content,
+      extensions: [
+        viewModeCompartment.of(getModeExtensions(effectiveMode)),
+        readOnlyCompartment.of(EditorState.readOnly.of(isReadOnly)),
+        themeCompartment.of([]),
+        pluginExtensionsCompartment.of([]),
+        history(),
+        keymap.of([...tableKeymap, ...defaultKeymap, ...historyKeymap]),
+        selectAllDomHandlers,
+        markdown({ base: markdownLanguage, extensions: [Table] }),
+        EditorView.lineWrapping,
+        drawSelection(),
+        fontSizeCompartment.of(createEditorTheme(editorFontSize)),
+        collabCompartment.of(
+          collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+        ),
+        mouseSelectingField,
+        selectionStatePlugin,
+        wikiLinkStateField,
+        voicePreviewField,
+        markdownStylePlugin,
+        imageInfoField,
+        // Slash Command 扩展
+        ...slashCommandExtensions,
+        placeholderExtension(t.editor.slashMenu.placeholder),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged && !isExternalChange.current) {
+            const previousContent = lastInternalContent.current;
+            let newContent = previousContent;
+            try {
+              newContent = applyChangesToContent(
+                previousContent,
+                update.changes,
+              );
+            } catch {
+              newContent = update.state.doc.toString();
+            }
+            lastInternalContent.current = newContent;
+            onChange(newContent);
+          }
+        }),
+      ],
+    });
+
+    const view = new EditorView({ state, parent: containerRef.current });
+    viewRef.current = view;
+    const ownerDoc = view.dom.ownerDocument;
+    const selectionTrace = createSelectionTraceControl(view, {
+      disableCustomDrawSelection,
+    });
+    const unbindPluginExtensions = pluginEditorRuntime.bindReconfigure(
+      (extensions) => {
         view.dispatch({
           effects: pluginExtensionsCompartment.reconfigure(extensions),
         });
+      },
+    );
+
+    let selectionProbeFrame = 0;
+    let selectionProbeActive = false;
+    let lastSelectionAnomalyAt = 0;
+    let selectionAnomalySeq = 0;
+
+    const reportSelectionVisualAnomaly = (source: string) => {
+      const v = viewRef.current;
+      if (!v || (!selectionVisualDebugEnabled() && !selectionTrace.enabled()))
+        return;
+      const details = inspectSelectionVisualAnomaly(v);
+      selectionTrace.event("selection-anomaly-check", {
+        source,
+        isAnomaly: details.isAnomaly,
+        fullLikeCount: details.fullLikeCount,
+        oversizedCount: details.oversizedCount,
+        selectionBackgroundCount: details.selectionBackgroundCount,
+        selectionBridgeCount: details.selectionBridgeCount,
+        selectionGapCount: details.selectionGapCount,
+        selection: details.selection,
       });
+      selectionTrace.snapshot(`anomaly-check:${source}`);
+      if (!details.isAnomaly) return;
+      const now = Date.now();
+      if (now - lastSelectionAnomalyAt < CM_SELECTION_ANOMALY_THROTTLE_MS)
+        return;
+      lastSelectionAnomalyAt = now;
+      selectionAnomalySeq += 1;
+      selectionTrace.anomaly(source, details);
+      console.warn(`[cm-selection-anomaly] ${source}`, {
+        seq: selectionAnomalySeq,
+        at: new Date(now).toISOString(),
+        ...details,
+      });
+    };
 
-      let selectionProbeFrame = 0;
-      let selectionProbeActive = false;
-      let lastSelectionAnomalyAt = 0;
-      let selectionAnomalySeq = 0;
-
-      const reportSelectionVisualAnomaly = (source: string) => {
-        const v = viewRef.current;
-        if (!v || (!selectionVisualDebugEnabled() && !selectionTrace.enabled())) return;
-        const details = inspectSelectionVisualAnomaly(v);
-        selectionTrace.event('selection-anomaly-check', {
-          source,
-          isAnomaly: details.isAnomaly,
-          fullLikeCount: details.fullLikeCount,
-          oversizedCount: details.oversizedCount,
-          selectionBackgroundCount: details.selectionBackgroundCount,
-          selectionBridgeCount: details.selectionBridgeCount,
-          selectionGapCount: details.selectionGapCount,
-          selection: details.selection,
-        });
-        selectionTrace.snapshot(`anomaly-check:${source}`);
-        if (!details.isAnomaly) return;
-        const now = Date.now();
-        if (now - lastSelectionAnomalyAt < CM_SELECTION_ANOMALY_THROTTLE_MS) return;
-        lastSelectionAnomalyAt = now;
-        selectionAnomalySeq += 1;
-        selectionTrace.anomaly(source, details);
-        console.warn(`[cm-selection-anomaly] ${source}`, {
-          seq: selectionAnomalySeq,
-          at: new Date(now).toISOString(),
-          ...details,
-        });
-      };
-
-      const stopSelectionProbe = () => {
-        selectionProbeActive = false;
-        if (selectionProbeFrame) {
-          cancelAnimationFrame(selectionProbeFrame);
-          selectionProbeFrame = 0;
-        }
-        selectionTrace.event('selection-probe-stop', {});
-        selectionTrace.snapshot('selection-probe-stop');
-      };
-
-      const runSelectionProbe = () => {
-        if (!selectionProbeActive) return;
-        reportSelectionVisualAnomaly('drag-frame');
-        selectionProbeFrame = requestAnimationFrame(runSelectionProbe);
-      };
-
-      const startSelectionProbe = () => {
-        if (!selectionVisualDebugEnabled() || selectionProbeActive) return;
-        selectionProbeActive = true;
-        selectionTrace.event('selection-probe-start', {});
-        selectionTrace.snapshot('selection-probe-start');
-        runSelectionProbe();
-      };
-
-      if (selectionVisualDebugEnabled()) {
-        selectionTrace.event('selection-visual-debug-enabled', {
-          storageKey: CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY,
-        });
-        console.log('[cm-selection-anomaly] visual probe enabled', {
-          storageKey: CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY,
-        });
-        if (disableCustomDrawSelection) {
-          selectionTrace.event('draw-selection-disabled-for-tauri-webkit', {});
-          console.warn('[cm-selection-anomaly] drawSelection-disabled-for-tauri-webkit');
-        }
+    const stopSelectionProbe = () => {
+      selectionProbeActive = false;
+      if (selectionProbeFrame) {
+        cancelAnimationFrame(selectionProbeFrame);
+        selectionProbeFrame = 0;
       }
+      selectionTrace.event("selection-probe-stop", {});
+      selectionTrace.snapshot("selection-probe-stop");
+    };
 
-      let mouseDownActive = false;
-      let dragSelectionActive = false;
-      let mouseDownX = 0;
-      let mouseDownY = 0;
-      let lastDragClientX = 0;
-      let lastDragClientY = 0;
-      let lastDragMoveSampleAt = 0;
-      let dragSelectionAnchor: number | null = null;
-      let lastDragLineRange: DragLineRange | null = null;
-      let dragAutoScrollFrame = 0;
-      const manualDragSelectionSyncEnabled = shouldDisableDrawSelectionForTauriWebKit();
+    const runSelectionProbe = () => {
+      if (!selectionProbeActive) return;
+      reportSelectionVisualAnomaly("drag-frame");
+      selectionProbeFrame = requestAnimationFrame(runSelectionProbe);
+    };
 
-      const stopDragAutoScroll = () => {
-        if (!dragAutoScrollFrame) return;
-        cancelAnimationFrame(dragAutoScrollFrame);
-        dragAutoScrollFrame = 0;
-      };
-
-        const syncDragSelectionFromCoords = (
-          x: number,
-          y: number,
-          source: string,
-          lineRange: DragLineRange | null = lastDragLineRange,
-        ) => {
-        if (!manualDragSelectionSyncEnabled) return false;
-        if (dragSelectionAnchor === null) {
-          dragSelectionAnchor = view.state.selection.main.anchor;
-        }
-        const dragScrollContainer = resolveDragScrollContainer(view, scrollContainerRef);
-        const scrollerRect = dragScrollContainer?.getBoundingClientRect() ?? null;
-        const effectiveLineRange = resolveDragSelectionLineRange(lineRange, y, scrollerRect);
-        lastDragLineRange = lineRange;
-        const changed = syncDragSelectionHeadFromCoords(
-          view,
-          dragSelectionAnchor,
-          x,
-          clampDragSelectionClientY(y, scrollerRect),
-          effectiveLineRange,
+    if (selectionVisualDebugEnabled()) {
+      selectionTrace.event("selection-visual-debug-enabled", {
+        storageKey: CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY,
+      });
+      console.log("[cm-selection-anomaly] visual probe enabled", {
+        storageKey: CM_SELECTION_VISUAL_DEBUG_STORAGE_KEY,
+      });
+      if (disableCustomDrawSelection) {
+        selectionTrace.event("draw-selection-disabled-for-tauri-webkit", {});
+        console.warn(
+          "[cm-selection-anomaly] drawSelection-disabled-for-tauri-webkit",
         );
-        if (changed) {
-          selectionTrace.event('drag-selection-synced', {
-            source,
-            x,
-            y,
-            anchor: dragSelectionAnchor,
-            head: view.state.selection.main.head,
-          });
-          selectionTrace.snapshot('drag-selection-synced');
-        }
-        return changed;
-      };
+      }
+    }
 
-      const scheduleDragAutoScroll = () => {
-        if (!manualDragSelectionSyncEnabled || dragAutoScrollFrame || !dragSelectionActive) return;
+    // Simplified drag tracking: only set mouseSelectingField so
+    // livePreviewPlugin freezes decoration updates during drag.
+    // All actual selection handling is left to CodeMirror's native
+    // MouseSelection (like Obsidian does).
+    let mouseDownActive = false;
+    let dragSelectionActive = false;
+    let mouseDownX = 0;
+    let mouseDownY = 0;
 
-        const runDragAutoScroll = () => {
-          dragAutoScrollFrame = 0;
-          if (!manualDragSelectionSyncEnabled || !mouseDownActive || !dragSelectionActive) return;
-
-          const scroller = resolveDragScrollContainer(view, scrollContainerRef);
-          const scrollerRect = scroller?.getBoundingClientRect() ?? null;
-          const delta = getDragAutoScrollDelta(lastDragClientY, scrollerRect);
-          if (!scroller || !scrollerRect || delta === 0) return;
-
-          const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-          const prevScrollTop = scroller.scrollTop;
-          const nextScrollTop = clampNumber(prevScrollTop + delta, 0, maxScrollTop);
-
-          if (nextScrollTop === prevScrollTop) return;
-
-          scroller.scrollTop = nextScrollTop;
-          syncDragSelectionFromCoords(lastDragClientX, lastDragClientY, 'drag-autoscroll', null);
-          selectionTrace.event('drag-autoscroll', {
-            delta,
-            prevScrollTop,
-            nextScrollTop,
-          });
-          selectionTrace.snapshot('drag-autoscroll');
-
-          if (getDragAutoScrollDelta(lastDragClientY, scrollerRect) !== 0) {
-            dragAutoScrollFrame = requestAnimationFrame(runDragAutoScroll);
-          }
-        };
-
-        dragAutoScrollFrame = requestAnimationFrame(runDragAutoScroll);
-      };
-
-      const clearDragSelectionState = () => {
-        const hadDragSelection = dragSelectionActive;
-        selectionTrace.event('drag-clear-requested', {
-          mouseDownActive,
-          dragSelectionActive,
-          dragClass: view.dom.classList.contains('cm-drag-selecting'),
-          mouseSelectingField: view.state.field(mouseSelectingField, false),
-        });
-        selectionTrace.snapshot('drag-clear-requested');
-        mouseDownActive = false;
-        dragSelectionAnchor = null;
-        lastDragLineRange = null;
-        stopDragAutoScroll();
-        if (!hadDragSelection) {
-          stopSelectionProbe();
-          return;
-        }
+    const clearDragState = () => {
+      if (dragSelectionActive) {
         dragSelectionActive = false;
         requestAnimationFrame(() => {
           view.dispatch({ effects: setMouseSelecting.of(false) });
-          selectionTrace.event('drag-end-dispatch', {
-            dragClass: view.dom.classList.contains('cm-drag-selecting'),
-            mouseSelectingField: view.state.field(mouseSelectingField, false),
-          });
-          selectionTrace.snapshot('drag-end-dispatch');
-          reportSelectionVisualAnomaly('mouseup');
-          stopSelectionProbe();
         });
-      };
-
-      const handleMouseDown = (event: MouseEvent) => {
-        if (event.button !== 0) return;
-        mouseDownActive = true;
-        mouseDownX = event.clientX;
-        mouseDownY = event.clientY;
-        lastDragClientX = event.clientX;
-        lastDragClientY = event.clientY;
-        dragSelectionAnchor = null;
-        lastDragLineRange = getDragLineRangeFromTarget(view, event.target);
-        selectionTrace.event('mouse-down', {
-          ...summarizePointerLikeEvent(event),
-          currentSelection: {
-            from: view.state.selection.main.from,
-            to: view.state.selection.main.to,
-            head: view.state.selection.main.head,
-          },
-        });
-        selectionTrace.snapshot('mouse-down');
-        reportSelectionVisualAnomaly('mousedown');
-      };
-      const handleMouseMove = (event: MouseEvent) => {
-        if (!mouseDownActive || (event.buttons & 1) === 0) return;
-        const dx = Math.abs(event.clientX - mouseDownX);
-        const dy = Math.abs(event.clientY - mouseDownY);
-        if (!dragSelectionActive) {
-          if (dx < DRAG_SELECTION_THRESHOLD_PX && dy < DRAG_SELECTION_THRESHOLD_PX) return;
-          dragSelectionActive = true;
-          lastDragMoveSampleAt = 0;
-          dragSelectionAnchor = view.state.selection.main.anchor;
-          let cancelledNativeMouseSelection = false;
-          if (manualDragSelectionSyncEnabled) {
-            cancelledNativeMouseSelection = cancelNativeMouseSelectionForManualDrag(view as any);
-            ownerDoc.getSelection()?.removeAllRanges();
-            event.preventDefault();
-          }
-          view.dispatch({ effects: setMouseSelecting.of(true) });
-          selectionTrace.event('drag-start-dispatch', {
-            dx,
-            dy,
-            threshold: DRAG_SELECTION_THRESHOLD_PX,
-            cancelledNativeMouseSelection,
-            dragClass: view.dom.classList.contains('cm-drag-selecting'),
-            mouseSelectingField: view.state.field(mouseSelectingField, false),
-          });
-          selectionTrace.snapshot('drag-start-dispatch');
-          requestAnimationFrame(() => {
-            selectionTrace.event('drag-start-next-frame', {
-              dragClass: view.dom.classList.contains('cm-drag-selecting'),
-              mouseSelectingField: view.state.field(mouseSelectingField, false),
-            });
-            selectionTrace.snapshot('drag-start-next-frame');
-          });
-          const dragLineRange = getDragLineRangeFromTarget(view, event.target);
-          if (syncDragSelectionFromCoords(event.clientX, event.clientY, 'drag-start', dragLineRange)) {
-            event.preventDefault();
-          }
-          scheduleDragAutoScroll();
-          startSelectionProbe();
-          reportSelectionVisualAnomaly('drag-start');
-          return;
-        }
-
-        lastDragClientX = event.clientX;
-        lastDragClientY = event.clientY;
-        const dragLineRange = getDragLineRangeFromTarget(view, event.target);
-        if (manualDragSelectionSyncEnabled) {
-          event.preventDefault();
-        }
-        if (syncDragSelectionFromCoords(event.clientX, event.clientY, 'drag-move', dragLineRange)) {
-          event.preventDefault();
-        }
-        scheduleDragAutoScroll();
-
-        const now = Date.now();
-        if (now - lastDragMoveSampleAt < 90) return;
-        lastDragMoveSampleAt = now;
-        const target = event.target instanceof HTMLElement ? event.target : null;
-        const line = target?.closest('.cm-line') as HTMLElement | null;
-        const lineRect = line?.getBoundingClientRect() ?? null;
-        selectionTrace.event('drag-move-sampled', {
-          x: event.clientX,
-          y: event.clientY,
-          dx,
-          dy,
-          dragClass: view.dom.classList.contains('cm-drag-selecting'),
-          mouseSelectingField: view.state.field(mouseSelectingField, false),
-          targetTag: target?.tagName || 'unknown',
-          targetClass: target?.className || '',
-          lineText: (line?.textContent || '').slice(0, 160),
-          lineRect: snapshotRect(lineRect),
-          currentSelection: {
-            from: view.state.selection.main.from,
-            to: view.state.selection.main.to,
-            selectedLength: view.state.selection.main.to - view.state.selection.main.from,
-          },
-        });
-        selectionTrace.snapshot('drag-move-sampled');
-      };
-      const handleMouseUp = () => {
-        selectionTrace.event('mouse-up', {
-          dragClass: view.dom.classList.contains('cm-drag-selecting'),
-          mouseSelectingField: view.state.field(mouseSelectingField, false),
-          currentSelection: {
-            from: view.state.selection.main.from,
-            to: view.state.selection.main.to,
-            head: view.state.selection.main.head,
-          },
-        });
-        selectionTrace.snapshot('mouse-up');
-        clearDragSelectionState();
-      };
-      const handleOwnerDocVisibilityChange = () => {
-        if (!ownerDoc.hidden) return;
-        selectionTrace.event('owner-doc-hidden', {});
-        selectionTrace.snapshot('owner-doc-hidden');
-        clearDragSelectionState();
-      };
-      const handleWindowBlur = () => {
-        selectionTrace.event('window-blur', {});
-        selectionTrace.snapshot('window-blur');
-        clearDragSelectionState();
-      };
-      let lastScrollTraceAt = 0;
-      let lastPointerMoveTraceAt = 0;
-      const traceScrollableSnapshot = (source: string, element: HTMLElement | null) => {
-        if (!element) return;
-        selectionTrace.event(source, {
-          scrollTop: element.scrollTop,
-          scrollLeft: element.scrollLeft,
-          clientHeight: element.clientHeight,
-          scrollHeight: element.scrollHeight,
-        });
-        selectionTrace.snapshot(source);
-      };
-      const traceInputEvent = (
-        source: string,
-        event: MouseEvent | PointerEvent | WheelEvent,
-        snapshot = true,
-      ) => {
-        selectionTrace.event(source, {
-          ...summarizePointerLikeEvent(event),
-          currentSelection: {
-            from: view.state.selection.main.from,
-            to: view.state.selection.main.to,
-            head: view.state.selection.main.head,
-          },
-          scrollTop: view.scrollDOM.scrollTop,
-          viewportFrom: view.viewport.from,
-          viewportTo: view.viewport.to,
-        });
-        if (snapshot) {
-          selectionTrace.snapshot(source);
-        }
-      };
-      const handleEditorScroll = () => {
-        const now = Date.now();
-        if (now - lastScrollTraceAt < 80) return;
-        lastScrollTraceAt = now;
-        traceScrollableSnapshot('editor-scroll', view.scrollDOM);
-      };
-      const handleEditorWheel = (event: WheelEvent) => {
-        traceInputEvent('editor-wheel', event);
-        cancelPendingModeTransitionRestore('wheel', {
-          mode: effectiveModeRef.current,
-          x: event.clientX,
-          y: event.clientY,
-          deltaX: event.deltaX,
-          deltaY: event.deltaY,
-        });
-      };
-      const handleContentPointerDown = (event: PointerEvent) => {
-        traceInputEvent('content-pointerdown', event);
-        if (event.button !== 0) return;
-        cancelPendingModeTransitionRestore('pointerdown', {
-          mode: effectiveModeRef.current,
-          x: event.clientX,
-          y: event.clientY,
-        });
-      };
-      const handleContentPointerMove = (event: PointerEvent) => {
-        const now = Date.now();
-        if (event.buttons === 0 && now - lastPointerMoveTraceAt < 120) return;
-        if (event.buttons !== 0 && now - lastPointerMoveTraceAt < 60) return;
-        lastPointerMoveTraceAt = now;
-        traceInputEvent('content-pointermove', event, event.buttons !== 0);
-      };
-      const handleContentPointerUp = (event: PointerEvent) => {
-        traceInputEvent('content-pointerup', event);
-      };
-      const handleContentMouseUp = (event: MouseEvent) => {
-        traceInputEvent('content-mouseup', event);
-      };
-      const handleContentFocusIn = (event: FocusEvent) => {
-        selectionTrace.event('content-focusin', {
-          ...summarizeInteractionTarget(event.target),
-          activeTag: ownerDoc.activeElement?.tagName || 'unknown',
-        });
-        selectionTrace.snapshot('content-focusin');
-      };
-      const handleContentFocusOut = (event: FocusEvent) => {
-        selectionTrace.event('content-focusout', {
-          ...summarizeInteractionTarget(event.target),
-          relatedTag: event.relatedTarget instanceof HTMLElement ? event.relatedTarget.tagName : 'unknown',
-        });
-        selectionTrace.snapshot('content-focusout');
-      };
-      const handleContentClick = (event: MouseEvent) => {
-        traceInputEvent('content-click', event);
-      };
-      const handleEditorKeyDown = (event: KeyboardEvent) => {
-        if (!isViewActive(view, event.target)) return;
-        if (!isMeaningfulEditIntentKey(event)) return;
-        cancelPendingModeTransitionRestore('keydown', {
-          mode: effectiveModeRef.current,
-          key: event.key,
-          code: event.code,
-        });
-      };
-      view.contentDOM.addEventListener('mousedown', handleMouseDown);
-      view.scrollDOM.addEventListener('scroll', handleEditorScroll, { passive: true });
-      view.scrollDOM.addEventListener('wheel', handleEditorWheel, { passive: true });
-      view.contentDOM.addEventListener('pointerdown', handleContentPointerDown);
-      view.contentDOM.addEventListener('pointermove', handleContentPointerMove);
-      ownerDoc.addEventListener('pointerup', handleContentPointerUp);
-      view.contentDOM.addEventListener('mouseup', handleContentMouseUp);
-      view.contentDOM.addEventListener('focusin', handleContentFocusIn);
-      view.contentDOM.addEventListener('focusout', handleContentFocusOut);
-      view.contentDOM.addEventListener('click', handleContentClick);
-      ownerDoc.addEventListener('mousemove', handleMouseMove);
-      ownerDoc.addEventListener('mouseup', handleMouseUp);
-      ownerDoc.addEventListener('keydown', handleEditorKeyDown, true);
-      ownerDoc.addEventListener('visibilitychange', handleOwnerDocVisibilityChange);
-      ownerDoc.defaultView?.addEventListener('blur', handleWindowBlur);
-
-      const handleSelectAllBeforeInput = (event: InputEvent) => {
-        const v = viewRef.current;
-        if (!v || event.inputType !== 'selectAll') return;
-        if (!isViewActive(v, event.target)) {
-          logSelectAll(v, 'doc-beforeinput-skip', {
-            inputType: event.inputType,
-            reason: 'inactive',
-            target: event.target?.constructor?.name,
-          });
-          return;
-        }
-        selectAllIntentAt = Date.now();
-        selectionTrace.event('select-all-beforeinput', {
-          inputType: event.inputType,
-          target: event.target?.constructor?.name || 'unknown',
-        });
-        selectionTrace.snapshot('select-all-beforeinput');
-        logSelectAll(v, 'doc-beforeinput', {
-          inputType: event.inputType,
-          target: event.target?.constructor?.name,
-        });
-        selectEntireDocument(v);
-        event.preventDefault();
-        event.stopPropagation();
-      };
-
-      const handleSelectAllKeyDown = (event: KeyboardEvent) => {
-        const v = viewRef.current;
-        if (!v) return;
-        const isMod = event.metaKey || event.ctrlKey;
-        if (!isMod || event.shiftKey || event.altKey) return;
-        const key = event.key?.toLowerCase?.() ?? '';
-        if (key !== 'a' && event.code !== 'KeyA') return;
-        if (!isViewActive(v, event.target)) {
-          logSelectAll(v, 'doc-keydown-skip', {
-            key: event.key,
-            code: event.code,
-            reason: 'inactive',
-            target: event.target?.constructor?.name,
-          });
-          return;
-        }
-        selectAllIntentAt = Date.now();
-        selectionTrace.event('select-all-keydown', {
-          key: event.key,
-          code: event.code,
-          target: event.target?.constructor?.name || 'unknown',
-        });
-        selectionTrace.snapshot('select-all-keydown');
-        logSelectAll(v, 'doc-keydown', {
-          key: event.key,
-          code: event.code,
-          target: event.target?.constructor?.name,
-        });
-        selectEntireDocument(v);
-        event.preventDefault();
-        event.stopPropagation();
-      };
-
-      let suppressSelectionChange = false;
-      let selectAllIntentAt = 0;
-      const handleSelectionChange = () => {
-        const v = viewRef.current;
-        if (!v || suppressSelectionChange) return;
-        if (!isViewActive(v, v.dom.ownerDocument.activeElement)) return;
-        const selection = ownerDoc.getSelection();
-        if (v.state.field(mouseSelectingField, false)) {
-          selectionTrace.event('selectionchange-while-dragging', {
-            rangeCount: selection?.rangeCount ?? 0,
-            collapsed: selection?.isCollapsed ?? true,
-          });
-          selectionTrace.snapshot('selectionchange-while-dragging');
-          reportSelectionVisualAnomaly('selectionchange-while-dragging');
-          return;
-        }
-        selectionTrace.event('selectionchange', {
-          rangeCount: selection?.rangeCount ?? 0,
-          collapsed: selection?.isCollapsed ?? true,
-        });
-        selectionTrace.snapshot('selectionchange');
-        reportSelectionVisualAnomaly('selectionchange');
-        const inspect = inspectSelectAllUpgrade(v, selection);
-        const hasRecentIntent =
-          selectAllIntentAt > 0 && Date.now() - selectAllIntentAt <= SELECT_ALL_INTENT_WINDOW_MS;
-        if (!hasRecentIntent) {
-          if (selectAllDebugEnabled()) {
-            logSelectAll(v, 'doc-selectionchange-skip', {
-              reason: 'no-selectall-intent',
-              rangeCount: selection?.rangeCount ?? 0,
-              domCollapsed: selection?.isCollapsed ?? true,
-              inspect,
-            });
-          }
-          return;
-        }
-        if (!inspect.shouldUpgrade) {
-          if (selectAllDebugEnabled()) {
-            logSelectAll(v, 'doc-selectionchange-skip', {
-              reason: `not-upgradable:${inspect.reason}`,
-              rangeCount: selection?.rangeCount ?? 0,
-              domCollapsed: selection?.isCollapsed ?? true,
-              inspect,
-            });
-          }
-          return;
-        }
-
-        logSelectAll(v, 'doc-selectionchange-upgrade', {
-          rangeCount: selection?.rangeCount ?? 0,
-          inspect,
-        });
-
-        suppressSelectionChange = true;
-        selectEntireDocument(v);
-        selectAllIntentAt = 0;
-        requestAnimationFrame(() => {
-          suppressSelectionChange = false;
-        });
-      };
-
-      ownerDoc.addEventListener('beforeinput', handleSelectAllBeforeInput, true);
-      ownerDoc.addEventListener('keydown', handleSelectAllKeyDown, true);
-      ownerDoc.addEventListener('selectionchange', handleSelectionChange);
-
-      // Paste Handler for Images
-      const handlePaste = async (e: ClipboardEvent) => {
-        const v = viewRef.current;
-        // 从 store 获取最新的 vaultPath
-        const currentVaultPath = useFileStore.getState().vaultPath;
-        if (!v || !currentVaultPath) {
-          return;
-        }
-
-        const items = e.clipboardData?.items;
-        if (!items) return;
-
-        for (const item of items) {
-          if (item.type.startsWith('image/')) {
-            e.preventDefault();
-
-            const file = item.getAsFile();
-            if (!file) continue;
-            const target = buildPastedImageTarget({
-              notePath: filePathRef.current ?? useFileStore.getState().currentFile,
-              vaultPath: currentVaultPath,
-              mimeType: file.type || 'image/png',
-            });
-
-            try {
-              const arrayBuffer = await file.arrayBuffer();
-              const data = new Uint8Array(arrayBuffer);
-              await createDir(target.directoryPath, { recursive: true });
-              await writeBinaryFile(target.filePath, data);
-              await useFileStore.getState().refreshFileTree();
-
-              const pos = v.state.selection.main.head;
-              const imageMarkdown = `![](${target.referencePath})`;
-              v.dispatch({
-                changes: { from: pos, insert: imageMarkdown },
-                selection: { anchor: pos + imageMarkdown.length },
-              });
-            } catch (err) {
-              reportOperationError({
-                source: "CodeMirrorEditor.handlePaste",
-                action: useLocaleStore.getState().t.editor.imagePasteFailed,
-                error: err,
-                context: { targetPath: target.filePath, mimeType: file.type },
-              });
-            }
-            return;
-          }
-        }
-      };
-
-      // Click Handler for Widgets
-      const handleClick = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        const v = viewRef.current;
-        if (!v) return;
-
-        // 0. Image Widget 点击处理
-        const imageWidget = target.closest('[data-widget-type="image"]') as HTMLElement;
-        if (imageWidget) {
-          const src = imageWidget.dataset.imageSrc;
-          if (src) {
-            e.preventDefault();
-            const currentShowInfo = v.state.field(imageInfoField, false) || new Set<string>();
-            const isShowing = currentShowInfo.has(src);
-
-            // 如果点击的是路径信息区域，或者已经显示路径信息再次点击 -> 聚焦到源码
-            const clickedInfo = target.closest('.cm-image-info');
-            if (clickedInfo || isShowing) {
-              // 查找图片源码位置并聚焦
-              const doc = v.state.doc.toString();
-              const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-              let match;
-              while ((match = imageRegex.exec(doc)) !== null) {
-                if (match[2] === src) {
-                  const pos = match.index;
-                  v.focus();
-                  v.dispatch({
-                    selection: { anchor: pos + 2 }, // 定位到 alt 文本位置
-                    effects: setImageShowInfo.of({ src, show: false }),
-                  });
-                  return;
-                }
-              }
-            } else {
-              // 第一次点击：显示路径信息
-              v.dispatch({ effects: setImageShowInfo.of({ src, show: true }) });
-            }
-          }
-          return;
-        }
-
-        // 1. Math/Table/CodeBlock Widget 点击 -> 聚焦源码
-        const widgetDom = target.closest('[data-widget-type="math"], [data-widget-type="table"]');
-        if (widgetDom) {
-          const pos = v.posAtDOM(widgetDom);
-          if (pos !== null) {
-            e.preventDefault();
-            v.focus();
-            v.dispatch({ selection: { anchor: pos + 1 } });
-            return;
-          }
-        }
-
-        // 2. Links
-        const link = target.closest('a[href]');
-        if (link?.getAttribute('href')?.startsWith('lumina://pdf')) {
-          e.preventDefault();
-          e.stopPropagation();
-          const parsed = parseLuminaLink(link.getAttribute('href')!);
-          if (parsed?.file)
-            e.ctrlKey || e.metaKey
-              ? (setSplitView(true), openSecondaryPdf(parsed.file, parsed.page || 1, parsed.id))
-              : openPDFTab(parsed.file);
-          return;
-        }
-
-        const wikiEl = target.closest('.cm-wikilink');
-        if (wikiEl && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          e.stopPropagation();
-          const name = wikiEl.getAttribute('data-wikilink');
-          if (name) {
-            const find = (arr: any[]): string | null => {
-              for (const i of arr) {
-                if (!i.is_dir && i.name.replace('.md', '').toLowerCase() === name.toLowerCase())
-                  return i.path;
-                if (i.is_dir) {
-                  const r = find(i.children);
-                  if (r) return r;
-                }
-              }
-              return null;
-            };
-            const path = find(fileTree);
-            path ? openFile(path) : console.log(`Not found: ${name}`);
-          }
-          return;
-        }
-
-        if ((e.ctrlKey || e.metaKey) && link) {
-          const h = link.getAttribute('href')!;
-          if (h.includes('bilibili') || h.includes('b23.tv')) {
-            e.preventDefault();
-            e.stopPropagation();
-            openVideoNoteTab(h);
-            return;
-          }
-        }
-      };
-
-      view.contentDOM.addEventListener('mousedown', handleClick);
-      view.contentDOM.addEventListener('paste', handlePaste);
-      return () => {
-        stopSelectionProbe();
-        selectionTrace.destroy('editor-cleanup');
-        view.contentDOM.removeEventListener('mousedown', handleMouseDown);
-        view.contentDOM.removeEventListener('mousedown', handleClick);
-        view.contentDOM.removeEventListener('paste', handlePaste);
-        view.contentDOM.removeEventListener('focusin', handleContentFocusIn);
-        view.contentDOM.removeEventListener('focusout', handleContentFocusOut);
-        view.contentDOM.removeEventListener('click', handleContentClick);
-        view.contentDOM.removeEventListener('pointerdown', handleContentPointerDown);
-        view.contentDOM.removeEventListener('pointermove', handleContentPointerMove);
-        ownerDoc.removeEventListener('pointerup', handleContentPointerUp);
-        view.contentDOM.removeEventListener('mouseup', handleContentMouseUp);
-        view.scrollDOM.removeEventListener('scroll', handleEditorScroll);
-        view.scrollDOM.removeEventListener('wheel', handleEditorWheel);
-        ownerDoc.removeEventListener('mousemove', handleMouseMove);
-        ownerDoc.removeEventListener('mouseup', handleMouseUp);
-        ownerDoc.removeEventListener('keydown', handleEditorKeyDown, true);
-        ownerDoc.removeEventListener('visibilitychange', handleOwnerDocVisibilityChange);
-        ownerDoc.defaultView?.removeEventListener('blur', handleWindowBlur);
-        ownerDoc.removeEventListener('beforeinput', handleSelectAllBeforeInput, true);
-        ownerDoc.removeEventListener('keydown', handleSelectAllKeyDown, true);
-        ownerDoc.removeEventListener('selectionchange', handleSelectionChange);
-        unbindPluginExtensions();
-        view.destroy();
-        _cachedDoc = null;
-        _cachedDocString = '';
-        viewRef.current = null;
-      };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    useEffect(() => {
-      const view = viewRef.current;
-      if (!view) return;
-
-      const previousMode = previousModeRef.current;
-      const modeChanged = previousMode !== effectiveMode;
-      const scrollContainer = resolveViewportScrollContainer(view, scrollContainerRef);
-      const transitionId = modeChanged ? transitionSequenceRef.current + 1 : transitionSequenceRef.current;
-      let transitionPlan: ModeTransitionPlan | null = null;
-
-      if (modeChanged) {
-        transitionSequenceRef.current = transitionId;
-        const snapshot = captureModeTransitionSnapshot(view, previousMode, scrollContainer);
-        transitionPlan = buildModeTransitionPlan({
-          transitionId,
-          snapshot,
-          toMode: effectiveMode,
-        });
-        markTransitionTrace('mode-transition-captured', {
-          transitionId,
-          fromMode: previousMode,
-          toMode: effectiveMode,
-          kind: transitionPlan.kind,
-          scrollTop: snapshot.scrollTop,
-          viewportAnchorPos: snapshot.viewportAnchor.pos,
-          viewportAnchorOffsetTop: snapshot.viewportAnchor.offsetTop,
-          selectionAnchor: snapshot.selection.anchor,
-          selectionHead: snapshot.selection.head,
-          selectionFrom: snapshot.selection.from,
-          selectionTo: snapshot.selection.to,
-          viewportFrom: snapshot.viewport.from,
-          viewportTo: snapshot.viewport.to,
-        });
-        discardCrossModeCaret(view, transitionPlan.viewportAnchor, transitionPlan);
       }
+      mouseDownActive = false;
+    };
 
-      markTransitionTrace('view-mode-reconfigure', {
-        transitionId,
-        previousMode,
-        mode: effectiveMode,
-        modeChanged,
-        readOnly: isReadOnly,
-        selectionAnchor: view.state.selection.main.anchor,
-        selectionHead: view.state.selection.main.head,
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      mouseDownActive = true;
+      mouseDownX = event.clientX;
+      mouseDownY = event.clientY;
+    };
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!mouseDownActive || (event.buttons & 1) === 0) return;
+      if (dragSelectionActive) return;
+      const dx = Math.abs(event.clientX - mouseDownX);
+      const dy = Math.abs(event.clientY - mouseDownY);
+      if (dx < 4 && dy < 4) return;
+      dragSelectionActive = true;
+      view.dispatch({ effects: setMouseSelecting.of(true) });
+    };
+    const handleMouseUp = () => {
+      clearDragState();
+    };
+    const handleOwnerDocVisibilityChange = () => {
+      if (ownerDoc.hidden) clearDragState();
+    };
+    const handleWindowBlur = () => {
+      clearDragState();
+    };
+    let lastScrollTraceAt = 0;
+    let lastPointerMoveTraceAt = 0;
+    const traceScrollableSnapshot = (
+      source: string,
+      element: HTMLElement | null,
+    ) => {
+      if (!element) return;
+      selectionTrace.event(source, {
+        scrollTop: element.scrollTop,
+        scrollLeft: element.scrollLeft,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+      });
+      selectionTrace.snapshot(source);
+    };
+    const traceInputEvent = (
+      source: string,
+      event: MouseEvent | PointerEvent | WheelEvent,
+      snapshot = true,
+    ) => {
+      selectionTrace.event(source, {
+        ...summarizePointerLikeEvent(event),
+        currentSelection: {
+          from: view.state.selection.main.from,
+          to: view.state.selection.main.to,
+          head: view.state.selection.main.head,
+        },
+        scrollTop: view.scrollDOM.scrollTop,
         viewportFrom: view.viewport.from,
         viewportTo: view.viewport.to,
-        scrollTop: scrollContainer.scrollTop,
-        scrollContainerSource: scrollContainer === view.scrollDOM ? 'codemirror' : 'external',
       });
-
-      view.dispatch({
-        effects: [
-          viewModeCompartment.reconfigure(getModeExtensions(effectiveMode)),
-          readOnlyCompartment.reconfigure(EditorState.readOnly.of(isReadOnly)),
-        ],
-      });
-
-      if (transitionPlan) {
-        applyModeTransitionPlan(view, transitionPlan);
+      if (snapshot) {
+        selectionTrace.snapshot(source);
       }
+    };
+    const handleEditorScroll = () => {
+      const now = Date.now();
+      if (now - lastScrollTraceAt < 80) return;
+      lastScrollTraceAt = now;
+      traceScrollableSnapshot("editor-scroll", view.scrollDOM);
+    };
+    const handleEditorWheel = (event: WheelEvent) => {
+      traceInputEvent("editor-wheel", event);
+      cancelPendingModeTransitionRestore("wheel", {
+        mode: effectiveModeRef.current,
+        x: event.clientX,
+        y: event.clientY,
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+      });
+    };
+    const handleContentPointerDown = (event: PointerEvent) => {
+      traceInputEvent("content-pointerdown", event);
+      if (event.button !== 0) return;
+      cancelPendingModeTransitionRestore("pointerdown", {
+        mode: effectiveModeRef.current,
+        x: event.clientX,
+        y: event.clientY,
+      });
+    };
+    const handleContentPointerMove = (event: PointerEvent) => {
+      const now = Date.now();
+      if (event.buttons === 0 && now - lastPointerMoveTraceAt < 120) return;
+      if (event.buttons !== 0 && now - lastPointerMoveTraceAt < 60) return;
+      lastPointerMoveTraceAt = now;
+      traceInputEvent("content-pointermove", event, event.buttons !== 0);
+    };
+    const handleContentPointerUp = (event: PointerEvent) => {
+      traceInputEvent("content-pointerup", event);
+    };
+    const handleContentMouseUp = (event: MouseEvent) => {
+      traceInputEvent("content-mouseup", event);
+    };
+    const handleContentFocusIn = (event: FocusEvent) => {
+      selectionTrace.event("content-focusin", {
+        ...summarizeInteractionTarget(event.target),
+        activeTag: ownerDoc.activeElement?.tagName || "unknown",
+      });
+      selectionTrace.snapshot("content-focusin");
+    };
+    const handleContentFocusOut = (event: FocusEvent) => {
+      selectionTrace.event("content-focusout", {
+        ...summarizeInteractionTarget(event.target),
+        relatedTag:
+          event.relatedTarget instanceof HTMLElement
+            ? event.relatedTarget.tagName
+            : "unknown",
+      });
+      selectionTrace.snapshot("content-focusout");
+    };
+    const handleContentClick = (event: MouseEvent) => {
+      traceInputEvent("content-click", event);
+    };
+    const handleEditorKeyDown = (event: KeyboardEvent) => {
+      if (!isViewActive(view, event.target)) return;
+      if (!isMeaningfulEditIntentKey(event)) return;
+      cancelPendingModeTransitionRestore("keydown", {
+        mode: effectiveModeRef.current,
+        key: event.key,
+        code: event.code,
+      });
+    };
+    view.contentDOM.addEventListener("mousedown", handleMouseDown);
+    view.scrollDOM.addEventListener("scroll", handleEditorScroll, {
+      passive: true,
+    });
+    view.scrollDOM.addEventListener("wheel", handleEditorWheel, {
+      passive: true,
+    });
+    view.contentDOM.addEventListener("pointerdown", handleContentPointerDown);
+    view.contentDOM.addEventListener("pointermove", handleContentPointerMove);
+    ownerDoc.addEventListener("pointerup", handleContentPointerUp);
+    view.contentDOM.addEventListener("mouseup", handleContentMouseUp);
+    view.contentDOM.addEventListener("focusin", handleContentFocusIn);
+    view.contentDOM.addEventListener("focusout", handleContentFocusOut);
+    view.contentDOM.addEventListener("click", handleContentClick);
+    ownerDoc.addEventListener("mousemove", handleMouseMove);
+    ownerDoc.addEventListener("mouseup", handleMouseUp);
+    ownerDoc.addEventListener("keydown", handleEditorKeyDown, true);
+    ownerDoc.addEventListener(
+      "visibilitychange",
+      handleOwnerDocVisibilityChange,
+    );
+    ownerDoc.defaultView?.addEventListener("blur", handleWindowBlur);
 
-      previousModeRef.current = effectiveMode;
-    }, [
-      applyModeTransitionPlan,
-      discardCrossModeCaret,
-      effectiveMode,
-      getModeExtensions,
-      isReadOnly,
-      markTransitionTrace,
-      scrollContainerRef,
-    ]);
-
-    useEffect(() => {
-      const traceApi = (window as any).__luminaEditorTrace;
-      if (!traceApi) return;
-      if (editorInteractionTraceEnabled) {
-        traceApi.enable(false);
-        traceApi.clear();
-        traceApi.mark('interaction-trace-toggle-enabled', {
-          source: 'ui-store',
-          mode: effectiveMode,
+    const handleSelectAllBeforeInput = (event: InputEvent) => {
+      const v = viewRef.current;
+      if (!v || event.inputType !== "selectAll") return;
+      if (!isViewActive(v, event.target)) {
+        logSelectAll(v, "doc-beforeinput-skip", {
+          inputType: event.inputType,
+          reason: "inactive",
+          target: event.target?.constructor?.name,
         });
         return;
       }
-      traceApi.mark('interaction-trace-toggle-disabled', {
-        source: 'ui-store',
+      selectAllIntentAt = Date.now();
+      selectionTrace.event("select-all-beforeinput", {
+        inputType: event.inputType,
+        target: event.target?.constructor?.name || "unknown",
+      });
+      selectionTrace.snapshot("select-all-beforeinput");
+      logSelectAll(v, "doc-beforeinput", {
+        inputType: event.inputType,
+        target: event.target?.constructor?.name,
+      });
+      selectEntireDocument(v);
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleSelectAllKeyDown = (event: KeyboardEvent) => {
+      const v = viewRef.current;
+      if (!v) return;
+      const isMod = event.metaKey || event.ctrlKey;
+      if (!isMod || event.shiftKey || event.altKey) return;
+      const key = event.key?.toLowerCase?.() ?? "";
+      if (key !== "a" && event.code !== "KeyA") return;
+      if (!isViewActive(v, event.target)) {
+        logSelectAll(v, "doc-keydown-skip", {
+          key: event.key,
+          code: event.code,
+          reason: "inactive",
+          target: event.target?.constructor?.name,
+        });
+        return;
+      }
+      selectAllIntentAt = Date.now();
+      selectionTrace.event("select-all-keydown", {
+        key: event.key,
+        code: event.code,
+        target: event.target?.constructor?.name || "unknown",
+      });
+      selectionTrace.snapshot("select-all-keydown");
+      logSelectAll(v, "doc-keydown", {
+        key: event.key,
+        code: event.code,
+        target: event.target?.constructor?.name,
+      });
+      selectEntireDocument(v);
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    let suppressSelectionChange = false;
+    let selectAllIntentAt = 0;
+    const handleSelectionChange = () => {
+      const v = viewRef.current;
+      if (!v || suppressSelectionChange) return;
+      if (!isViewActive(v, v.dom.ownerDocument.activeElement)) return;
+      const selection = ownerDoc.getSelection();
+      if (v.state.field(mouseSelectingField, false)) {
+        selectionTrace.event("selectionchange-while-dragging", {
+          rangeCount: selection?.rangeCount ?? 0,
+          collapsed: selection?.isCollapsed ?? true,
+        });
+        selectionTrace.snapshot("selectionchange-while-dragging");
+        reportSelectionVisualAnomaly("selectionchange-while-dragging");
+        return;
+      }
+      selectionTrace.event("selectionchange", {
+        rangeCount: selection?.rangeCount ?? 0,
+        collapsed: selection?.isCollapsed ?? true,
+      });
+      selectionTrace.snapshot("selectionchange");
+      reportSelectionVisualAnomaly("selectionchange");
+      const inspect = inspectSelectAllUpgrade(v, selection);
+      const hasRecentIntent =
+        selectAllIntentAt > 0 &&
+        Date.now() - selectAllIntentAt <= SELECT_ALL_INTENT_WINDOW_MS;
+      if (!hasRecentIntent) {
+        if (selectAllDebugEnabled()) {
+          logSelectAll(v, "doc-selectionchange-skip", {
+            reason: "no-selectall-intent",
+            rangeCount: selection?.rangeCount ?? 0,
+            domCollapsed: selection?.isCollapsed ?? true,
+            inspect,
+          });
+        }
+        return;
+      }
+      if (!inspect.shouldUpgrade) {
+        if (selectAllDebugEnabled()) {
+          logSelectAll(v, "doc-selectionchange-skip", {
+            reason: `not-upgradable:${inspect.reason}`,
+            rangeCount: selection?.rangeCount ?? 0,
+            domCollapsed: selection?.isCollapsed ?? true,
+            inspect,
+          });
+        }
+        return;
+      }
+
+      logSelectAll(v, "doc-selectionchange-upgrade", {
+        rangeCount: selection?.rangeCount ?? 0,
+        inspect,
+      });
+
+      suppressSelectionChange = true;
+      selectEntireDocument(v);
+      selectAllIntentAt = 0;
+      requestAnimationFrame(() => {
+        suppressSelectionChange = false;
+      });
+    };
+
+    ownerDoc.addEventListener("beforeinput", handleSelectAllBeforeInput, true);
+    ownerDoc.addEventListener("keydown", handleSelectAllKeyDown, true);
+    ownerDoc.addEventListener("selectionchange", handleSelectionChange);
+
+    // Paste Handler for Images
+    const handlePaste = async (e: ClipboardEvent) => {
+      const v = viewRef.current;
+      // 从 store 获取最新的 vaultPath
+      const currentVaultPath = useFileStore.getState().vaultPath;
+      if (!v || !currentVaultPath) {
+        return;
+      }
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          e.preventDefault();
+
+          const file = item.getAsFile();
+          if (!file) continue;
+          const target = buildPastedImageTarget({
+            notePath:
+              filePathRef.current ?? useFileStore.getState().currentFile,
+            vaultPath: currentVaultPath,
+            mimeType: file.type || "image/png",
+          });
+
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
+            await createDir(target.directoryPath, { recursive: true });
+            await writeBinaryFile(target.filePath, data);
+            await useFileStore.getState().refreshFileTree();
+
+            const pos = v.state.selection.main.head;
+            const imageMarkdown = `![](${target.referencePath})`;
+            v.dispatch({
+              changes: { from: pos, insert: imageMarkdown },
+              selection: { anchor: pos + imageMarkdown.length },
+            });
+          } catch (err) {
+            reportOperationError({
+              source: "CodeMirrorEditor.handlePaste",
+              action: useLocaleStore.getState().t.editor.imagePasteFailed,
+              error: err,
+              context: { targetPath: target.filePath, mimeType: file.type },
+            });
+          }
+          return;
+        }
+      }
+    };
+
+    // Click Handler for Widgets
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const v = viewRef.current;
+      if (!v) return;
+
+      // 0. Image Widget 点击处理
+      const imageWidget = target.closest(
+        '[data-widget-type="image"]',
+      ) as HTMLElement;
+      if (imageWidget) {
+        const src = imageWidget.dataset.imageSrc;
+        if (src) {
+          e.preventDefault();
+          const currentShowInfo =
+            v.state.field(imageInfoField, false) || new Set<string>();
+          const isShowing = currentShowInfo.has(src);
+
+          // 如果点击的是路径信息区域，或者已经显示路径信息再次点击 -> 聚焦到源码
+          const clickedInfo = target.closest(".cm-image-info");
+          if (clickedInfo || isShowing) {
+            // 查找图片源码位置并聚焦
+            const doc = v.state.doc.toString();
+            const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+            let match;
+            while ((match = imageRegex.exec(doc)) !== null) {
+              if (match[2] === src) {
+                const pos = match.index;
+                v.focus();
+                v.dispatch({
+                  selection: { anchor: pos + 2 }, // 定位到 alt 文本位置
+                  effects: setImageShowInfo.of({ src, show: false }),
+                });
+                return;
+              }
+            }
+          } else {
+            // 第一次点击：显示路径信息
+            v.dispatch({ effects: setImageShowInfo.of({ src, show: true }) });
+          }
+        }
+        return;
+      }
+
+      // 1. Math/Table/CodeBlock Widget 点击 -> 聚焦源码
+      const widgetDom = target.closest(
+        '[data-widget-type="math"], [data-widget-type="table"]',
+      );
+      if (widgetDom) {
+        const pos = v.posAtDOM(widgetDom);
+        if (pos !== null) {
+          e.preventDefault();
+          v.focus();
+          v.dispatch({ selection: { anchor: pos + 1 } });
+          return;
+        }
+      }
+
+      // 2. Links
+      const link = target.closest("a[href]");
+      if (link?.getAttribute("href")?.startsWith("lumina://pdf")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const parsed = parseLuminaLink(link.getAttribute("href")!);
+        if (parsed?.file)
+          e.ctrlKey || e.metaKey
+            ? (setSplitView(true),
+              openSecondaryPdf(parsed.file, parsed.page || 1, parsed.id))
+            : openPDFTab(parsed.file);
+        return;
+      }
+
+      const wikiEl = target.closest(".cm-wikilink");
+      if (wikiEl && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const name = wikiEl.getAttribute("data-wikilink");
+        if (name) {
+          const find = (arr: any[]): string | null => {
+            for (const i of arr) {
+              if (
+                !i.is_dir &&
+                i.name.replace(".md", "").toLowerCase() === name.toLowerCase()
+              )
+                return i.path;
+              if (i.is_dir) {
+                const r = find(i.children);
+                if (r) return r;
+              }
+            }
+            return null;
+          };
+          const path = find(fileTree);
+          path ? openFile(path) : console.log(`Not found: ${name}`);
+        }
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && link) {
+        const h = link.getAttribute("href")!;
+        if (h.includes("bilibili") || h.includes("b23.tv")) {
+          e.preventDefault();
+          e.stopPropagation();
+          openVideoNoteTab(h);
+          return;
+        }
+      }
+    };
+
+    view.contentDOM.addEventListener("mousedown", handleClick);
+    view.contentDOM.addEventListener("paste", handlePaste);
+    return () => {
+      stopSelectionProbe();
+      selectionTrace.destroy("editor-cleanup");
+      view.contentDOM.removeEventListener("mousedown", handleMouseDown);
+      view.contentDOM.removeEventListener("mousedown", handleClick);
+      view.contentDOM.removeEventListener("paste", handlePaste);
+      view.contentDOM.removeEventListener("focusin", handleContentFocusIn);
+      view.contentDOM.removeEventListener("focusout", handleContentFocusOut);
+      view.contentDOM.removeEventListener("click", handleContentClick);
+      view.contentDOM.removeEventListener(
+        "pointerdown",
+        handleContentPointerDown,
+      );
+      view.contentDOM.removeEventListener(
+        "pointermove",
+        handleContentPointerMove,
+      );
+      ownerDoc.removeEventListener("pointerup", handleContentPointerUp);
+      view.contentDOM.removeEventListener("mouseup", handleContentMouseUp);
+      view.scrollDOM.removeEventListener("scroll", handleEditorScroll);
+      view.scrollDOM.removeEventListener("wheel", handleEditorWheel);
+      ownerDoc.removeEventListener("mousemove", handleMouseMove);
+      ownerDoc.removeEventListener("mouseup", handleMouseUp);
+      ownerDoc.removeEventListener("keydown", handleEditorKeyDown, true);
+      ownerDoc.removeEventListener(
+        "visibilitychange",
+        handleOwnerDocVisibilityChange,
+      );
+      ownerDoc.defaultView?.removeEventListener("blur", handleWindowBlur);
+      ownerDoc.removeEventListener(
+        "beforeinput",
+        handleSelectAllBeforeInput,
+        true,
+      );
+      ownerDoc.removeEventListener("keydown", handleSelectAllKeyDown, true);
+      ownerDoc.removeEventListener("selectionchange", handleSelectionChange);
+      unbindPluginExtensions();
+      view.destroy();
+      _cachedDoc = null;
+      _cachedDocString = "";
+      viewRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+
+    const previousMode = previousModeRef.current;
+    const modeChanged = previousMode !== effectiveMode;
+    const scrollContainer = resolveViewportScrollContainer(
+      view,
+      scrollContainerRef,
+    );
+    const transitionId = modeChanged
+      ? transitionSequenceRef.current + 1
+      : transitionSequenceRef.current;
+    let transitionPlan: ModeTransitionPlan | null = null;
+
+    if (modeChanged) {
+      transitionSequenceRef.current = transitionId;
+      const snapshot = captureModeTransitionSnapshot(
+        view,
+        previousMode,
+        scrollContainer,
+      );
+      transitionPlan = buildModeTransitionPlan({
+        transitionId,
+        snapshot,
+        toMode: effectiveMode,
+      });
+      markTransitionTrace("mode-transition-captured", {
+        transitionId,
+        fromMode: previousMode,
+        toMode: effectiveMode,
+        kind: transitionPlan.kind,
+        scrollTop: snapshot.scrollTop,
+        viewportAnchorPos: snapshot.viewportAnchor.pos,
+        viewportAnchorOffsetTop: snapshot.viewportAnchor.offsetTop,
+        selectionAnchor: snapshot.selection.anchor,
+        selectionHead: snapshot.selection.head,
+        selectionFrom: snapshot.selection.from,
+        selectionTo: snapshot.selection.to,
+        viewportFrom: snapshot.viewport.from,
+        viewportTo: snapshot.viewport.to,
+      });
+      discardCrossModeCaret(
+        view,
+        transitionPlan.viewportAnchor,
+        transitionPlan,
+      );
+    }
+
+    markTransitionTrace("view-mode-reconfigure", {
+      transitionId,
+      previousMode,
+      mode: effectiveMode,
+      modeChanged,
+      readOnly: isReadOnly,
+      selectionAnchor: view.state.selection.main.anchor,
+      selectionHead: view.state.selection.main.head,
+      viewportFrom: view.viewport.from,
+      viewportTo: view.viewport.to,
+      scrollTop: scrollContainer.scrollTop,
+      scrollContainerSource:
+        scrollContainer === view.scrollDOM ? "codemirror" : "external",
+    });
+
+    view.dispatch({
+      effects: [
+        viewModeCompartment.reconfigure(getModeExtensions(effectiveMode)),
+        readOnlyCompartment.reconfigure(EditorState.readOnly.of(isReadOnly)),
+      ],
+    });
+
+    if (transitionPlan) {
+      applyModeTransitionPlan(view, transitionPlan);
+    }
+
+    previousModeRef.current = effectiveMode;
+  }, [
+    applyModeTransitionPlan,
+    discardCrossModeCaret,
+    effectiveMode,
+    getModeExtensions,
+    isReadOnly,
+    markTransitionTrace,
+    scrollContainerRef,
+  ]);
+
+  useEffect(() => {
+    const traceApi = (window as any).__luminaEditorTrace;
+    if (!traceApi) return;
+    if (editorInteractionTraceEnabled) {
+      traceApi.enable(false);
+      traceApi.clear();
+      traceApi.mark("interaction-trace-toggle-enabled", {
+        source: "ui-store",
         mode: effectiveMode,
       });
-      traceApi.disable(false);
-    }, [editorInteractionTraceEnabled, effectiveMode]);
+      return;
+    }
+    traceApi.mark("interaction-trace-toggle-disabled", {
+      source: "ui-store",
+      mode: effectiveMode,
+    });
+    traceApi.disable(false);
+  }, [editorInteractionTraceEnabled, effectiveMode]);
 
-    useEffect(() => {
-      const view = viewRef.current;
-      if (!view) return;
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: fontSizeCompartment.reconfigure(
+        createEditorTheme(editorFontSize),
+      ),
+    });
+  }, [editorFontSize]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: collabCompartment.reconfigure(
+        collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+      ),
+    });
+  }, [collabConnection]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || content === lastInternalContent.current) return;
+    const current = view.state.doc.toString();
+    if (current !== content) {
+      isExternalChange.current = true;
+      const sel = view.state.selection.main.head;
       view.dispatch({
-        effects: fontSizeCompartment.reconfigure(createEditorTheme(editorFontSize)),
+        changes: { from: 0, to: current.length, insert: content },
+        selection: { anchor: Math.min(sel, content.length) },
       });
-    }, [editorFontSize]);
+      lastInternalContent.current = content;
+      isExternalChange.current = false;
+    }
+  }, [content]);
 
-    useEffect(() => {
-      const view = viewRef.current;
-      if (!view) return;
-      view.dispatch({
-        effects: collabCompartment.reconfigure(
-          collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
-        ),
+  useEffect(() => {
+    const onVoiceInt = (e: any) =>
+      viewRef.current?.dispatch({
+        effects: e.detail?.text
+          ? setVoicePreview.of({
+              from: viewRef.current.state.selection.main.head,
+              text: e.detail.text,
+            })
+          : clearVoicePreview.of(null),
       });
-    }, [collabConnection]);
-
-    useEffect(() => {
-      const view = viewRef.current;
-      if (!view || content === lastInternalContent.current) return;
-      const current = view.state.doc.toString();
-      if (current !== content) {
-        isExternalChange.current = true;
-        const sel = view.state.selection.main.head;
-        view.dispatch({
-          changes: { from: 0, to: current.length, insert: content },
-          selection: { anchor: Math.min(sel, content.length) },
+    const onVoiceFin = (e: any) => {
+      if (e.detail?.text && viewRef.current) {
+        const p = viewRef.current.state.selection.main.head;
+        viewRef.current.dispatch({
+          changes: { from: p, to: p, insert: e.detail.text },
+          selection: { anchor: p + e.detail.text.length },
+          effects: clearVoicePreview.of(null),
         });
-        lastInternalContent.current = content;
-        isExternalChange.current = false;
       }
-    }, [content]);
-
-    useEffect(() => {
-      const onVoiceInt = (e: any) =>
-        viewRef.current?.dispatch({
-          effects: e.detail?.text
-            ? setVoicePreview.of({
-                from: viewRef.current.state.selection.main.head,
-                text: e.detail.text,
-              })
-            : clearVoicePreview.of(null),
-        });
-      const onVoiceFin = (e: any) => {
-        if (e.detail?.text && viewRef.current) {
-          const p = viewRef.current.state.selection.main.head;
-          viewRef.current.dispatch({
-            changes: { from: p, to: p, insert: e.detail.text },
-            selection: { anchor: p + e.detail.text.length },
-            effects: clearVoicePreview.of(null),
+    };
+    const onAi = (e: any) => {
+      if (!viewRef.current || !e.detail?.text) return;
+      const { mode, text, description } = e.detail;
+      const s = viewRef.current.state,
+        doc = s.doc.toString(),
+        sel = s.selection.main;
+      let mod = doc;
+      if (mode === "replace_selection")
+        mod = doc.slice(0, sel.from) + text + doc.slice(sel.to);
+      else if (mode === "append_callout")
+        mod = doc.slice(0, sel.to) + text + doc.slice(sel.to);
+      if (mod !== doc) {
+        const f = useFileStore.getState().currentFile;
+        if (f)
+          useAIStore.getState().setPendingDiff({
+            fileName: f.split("/").pop()!,
+            filePath: f,
+            original: doc,
+            modified: mod,
+            description: description || "AI Edit",
           });
-        }
-      };
-      const onAi = (e: any) => {
-        if (!viewRef.current || !e.detail?.text) return;
-        const { mode, text, description } = e.detail;
-        const s = viewRef.current.state,
-          doc = s.doc.toString(),
-          sel = s.selection.main;
-        let mod = doc;
-        if (mode === 'replace_selection') mod = doc.slice(0, sel.from) + text + doc.slice(sel.to);
-        else if (mode === 'append_callout') mod = doc.slice(0, sel.to) + text + doc.slice(sel.to);
-        if (mod !== doc) {
-          const f = useFileStore.getState().currentFile;
-          if (f)
-            useAIStore.getState().setPendingDiff({
-              fileName: f.split('/').pop()!,
-              filePath: f,
-              original: doc,
-              modified: mod,
-              description: description || 'AI Edit',
-            });
-        }
-      };
-      const onSum = (e: any) => {
-        if (viewRef.current && e.detail?.callout) {
-          const p = viewRef.current.state.selection.main.to;
-          viewRef.current.dispatch({
-            changes: { from: p, to: p, insert: e.detail.callout },
-            selection: { anchor: p + e.detail.callout.length },
-          });
-        }
-      };
-
-      // 处理右键菜单格式化
-      const onFormat = (e: any) => {
-        const view = viewRef.current;
-        if (!view || !e.detail?.format) return;
-
-        const { format } = e.detail;
-        const sel = view.state.selection.main;
-        const selectedText = view.state.doc.sliceString(sel.from, sel.to);
-
-        if (!selectedText) return;
-
-        let replacement = selectedText;
-        let cursorOffset = 0;
-
-        switch (format) {
-          case 'bold':
-            replacement = `**${selectedText}**`;
-            break;
-          case 'italic':
-            replacement = `*${selectedText}*`;
-            break;
-          case 'strikethrough':
-            replacement = `~~${selectedText}~~`;
-            break;
-          case 'highlight':
-            replacement = `==${selectedText}==`;
-            break;
-          case 'code':
-            replacement = `\`${selectedText}\``;
-            break;
-          case 'wikilink':
-            replacement = `[[${selectedText}]]`;
-            break;
-          case 'link':
-            replacement = `[${selectedText}](url)`;
-            cursorOffset = -4; // 光标移到 url 位置
-            break;
-          case 'ul':
-            replacement = selectedText
-              .split('\n')
-              .map((line) => `- ${line}`)
-              .join('\n');
-            break;
-          case 'ol':
-            replacement = selectedText
-              .split('\n')
-              .map((line, i) => `${i + 1}. ${line}`)
-              .join('\n');
-            break;
-          case 'task':
-            replacement = selectedText
-              .split('\n')
-              .map((line) => `- [ ] ${line}`)
-              .join('\n');
-            break;
-          case 'h1':
-            replacement = `# ${selectedText}`;
-            break;
-          case 'h2':
-            replacement = `## ${selectedText}`;
-            break;
-          case 'h3':
-            replacement = `### ${selectedText}`;
-            break;
-          case 'h4':
-            replacement = `#### ${selectedText}`;
-            break;
-          case 'h5':
-            replacement = `##### ${selectedText}`;
-            break;
-          case 'h6':
-            replacement = `###### ${selectedText}`;
-            break;
-          case 'quote':
-            replacement = selectedText
-              .split('\n')
-              .map((line) => `> ${line}`)
-              .join('\n');
-            break;
-          default:
-            return;
-        }
-
-        const newPos = sel.from + replacement.length + cursorOffset;
-        view.dispatch({
-          changes: { from: sel.from, to: sel.to, insert: replacement },
-          selection: { anchor: newPos },
+      }
+    };
+    const onSum = (e: any) => {
+      if (viewRef.current && e.detail?.callout) {
+        const p = viewRef.current.state.selection.main.to;
+        viewRef.current.dispatch({
+          changes: { from: p, to: p, insert: e.detail.callout },
+          selection: { anchor: p + e.detail.callout.length },
         });
-        view.focus();
-      };
+      }
+    };
 
-      window.addEventListener('voice-input-interim', onVoiceInt);
-      window.addEventListener('voice-input-final', onVoiceFin);
-      window.addEventListener('selection-ai-edit', onAi);
-      window.addEventListener('insert-summary-callout', onSum);
-      window.addEventListener('editor-format-text', onFormat);
-      return () => {
-        window.removeEventListener('voice-input-interim', onVoiceInt);
-        window.removeEventListener('voice-input-final', onVoiceFin);
-        window.removeEventListener('selection-ai-edit', onAi);
-        window.removeEventListener('insert-summary-callout', onSum);
-        window.removeEventListener('editor-format-text', onFormat);
-      };
-    }, []);
+    // 处理右键菜单格式化
+    const onFormat = (e: any) => {
+      const view = viewRef.current;
+      if (!view || !e.detail?.format) return;
 
-    // 监听自定义拖拽事件（从文件树拖拽创建双链）
-    useEffect(() => {
-      const handleLuminaDrop = (e: Event) => {
-        const { wikiLink, x, y } = (e as CustomEvent).detail;
-        const v = viewRef.current;
-        const container = containerRef.current;
-        if (!v || !container) return;
+      const { format } = e.detail;
+      const sel = view.state.selection.main;
+      const selectedText = view.state.doc.sliceString(sel.from, sel.to);
 
-        const rect = container.getBoundingClientRect();
-        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
+      if (!selectedText) return;
 
-        const pos = v.posAtCoords({ x, y }) ?? v.state.selection.main.head;
-        v.dispatch({
-          changes: { from: pos, insert: wikiLink },
-          selection: { anchor: pos + wikiLink.length },
-        });
-        v.focus();
-      };
+      let replacement = selectedText;
+      let cursorOffset = 0;
 
-      window.addEventListener('lumina-drop', handleLuminaDrop);
-      return () => window.removeEventListener('lumina-drop', handleLuminaDrop);
-    }, []);
+      switch (format) {
+        case "bold":
+          replacement = `**${selectedText}**`;
+          break;
+        case "italic":
+          replacement = `*${selectedText}*`;
+          break;
+        case "strikethrough":
+          replacement = `~~${selectedText}~~`;
+          break;
+        case "highlight":
+          replacement = `==${selectedText}==`;
+          break;
+        case "code":
+          replacement = `\`${selectedText}\``;
+          break;
+        case "wikilink":
+          replacement = `[[${selectedText}]]`;
+          break;
+        case "link":
+          replacement = `[${selectedText}](url)`;
+          cursorOffset = -4; // 光标移到 url 位置
+          break;
+        case "ul":
+          replacement = selectedText
+            .split("\n")
+            .map((line) => `- ${line}`)
+            .join("\n");
+          break;
+        case "ol":
+          replacement = selectedText
+            .split("\n")
+            .map((line, i) => `${i + 1}. ${line}`)
+            .join("\n");
+          break;
+        case "task":
+          replacement = selectedText
+            .split("\n")
+            .map((line) => `- [ ] ${line}`)
+            .join("\n");
+          break;
+        case "h1":
+          replacement = `# ${selectedText}`;
+          break;
+        case "h2":
+          replacement = `## ${selectedText}`;
+          break;
+        case "h3":
+          replacement = `### ${selectedText}`;
+          break;
+        case "h4":
+          replacement = `#### ${selectedText}`;
+          break;
+        case "h5":
+          replacement = `##### ${selectedText}`;
+          break;
+        case "h6":
+          replacement = `###### ${selectedText}`;
+          break;
+        case "quote":
+          replacement = selectedText
+            .split("\n")
+            .map((line) => `> ${line}`)
+            .join("\n");
+          break;
+        default:
+          return;
+      }
 
-    return (
-      <>
-        <div
-          ref={containerRef}
-          className={`codemirror-wrapper h-full ${className}`}
-        />
-        <SlashMenu view={viewRef.current} />
-      </>
-    );
-  },
-);
+      const newPos = sel.from + replacement.length + cursorOffset;
+      view.dispatch({
+        changes: { from: sel.from, to: sel.to, insert: replacement },
+        selection: { anchor: newPos },
+      });
+      view.focus();
+    };
+
+    window.addEventListener("voice-input-interim", onVoiceInt);
+    window.addEventListener("voice-input-final", onVoiceFin);
+    window.addEventListener("selection-ai-edit", onAi);
+    window.addEventListener("insert-summary-callout", onSum);
+    window.addEventListener("editor-format-text", onFormat);
+    return () => {
+      window.removeEventListener("voice-input-interim", onVoiceInt);
+      window.removeEventListener("voice-input-final", onVoiceFin);
+      window.removeEventListener("selection-ai-edit", onAi);
+      window.removeEventListener("insert-summary-callout", onSum);
+      window.removeEventListener("editor-format-text", onFormat);
+    };
+  }, []);
+
+  // 监听自定义拖拽事件（从文件树拖拽创建双链）
+  useEffect(() => {
+    const handleLuminaDrop = (e: Event) => {
+      const { wikiLink, x, y } = (e as CustomEvent).detail;
+      const v = viewRef.current;
+      const container = containerRef.current;
+      if (!v || !container) return;
+
+      const rect = container.getBoundingClientRect();
+      if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom)
+        return;
+
+      const pos = v.posAtCoords({ x, y }) ?? v.state.selection.main.head;
+      v.dispatch({
+        changes: { from: pos, insert: wikiLink },
+        selection: { anchor: pos + wikiLink.length },
+      });
+      v.focus();
+    };
+
+    window.addEventListener("lumina-drop", handleLuminaDrop);
+    return () => window.removeEventListener("lumina-drop", handleLuminaDrop);
+  }, []);
+
+  return (
+    <>
+      <div
+        ref={containerRef}
+        className={`codemirror-wrapper h-full ${className}`}
+      />
+      <SlashMenu view={viewRef.current} />
+    </>
+  );
+});
 
 export default CodeMirrorEditor;
