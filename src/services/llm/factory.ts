@@ -1,18 +1,19 @@
 import { LLMProvider, LLMConfig } from "./types";
 import { getLLMConfig } from "./config";
 import { normalizeThinkingMode, resolveThinkingModel } from "./thinking";
-import {
-  AnthropicProvider,
-  OpenAIProvider,
-  GeminiProvider,
-  MoonshotProvider,
-  DeepSeekProvider,
-  ZAIProvider,
-  GroqProvider,
-  OpenRouterProvider,
-  OllamaProvider,
-  CustomProvider,
-} from "./providers";
+ import {
+   AnthropicProvider,
+   OpenAIProvider,
+   GeminiProvider,
+   MoonshotProvider,
+   DeepSeekProvider,
+   ZAIProvider,
+   GroqProvider,
+   OpenRouterProvider,
+   OllamaProvider,
+   CustomProvider,
+   NovitaProvider,
+ } from "./providers";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 /**
@@ -61,15 +62,17 @@ export function createProvider(configOverride?: Partial<LLMConfig>): LLMProvider
       return new DeepSeekProvider(finalConfig);
     case "zai":
       return new ZAIProvider(finalConfig);
-    case "groq":
-      return new GroqProvider(finalConfig);
-    case "openrouter":
-      return new OpenRouterProvider(finalConfig);
-    case "ollama":
-      return new OllamaProvider(finalConfig);
-    case "custom":
-      return new CustomProvider(finalConfig);
-    default:
-      throw new Error(t.ai.unsupportedProvider.replace("{provider}", finalConfig.provider));
+     case "groq":
+       return new GroqProvider(finalConfig);
+     case "openrouter":
+       return new OpenRouterProvider(finalConfig);
+     case "ollama":
+       return new OllamaProvider(finalConfig);
+     case "custom":
+       return new CustomProvider(finalConfig);
+     case "novita":
+       return new NovitaProvider(finalConfig);
+     default:
+       throw new Error(t.ai.unsupportedProvider.replace("{provider}", finalConfig.provider));
   }
 }
