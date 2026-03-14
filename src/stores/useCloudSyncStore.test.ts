@@ -8,6 +8,16 @@ vi.mock('@/lib/tauriFetch', () => ({
   tauriFetchJson: (...args: unknown[]) => tauriFetchJsonMock(...args),
 }));
 
+const setSecureTokenMock = vi.fn().mockResolvedValue(undefined);
+const getSecureTokenMock = vi.fn().mockResolvedValue('mock-token');
+const deleteSecureTokenMock = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@/lib/secureStore', () => ({
+  getSecureToken: (...args: unknown[]) => getSecureTokenMock(...args),
+  setSecureToken: (...args: unknown[]) => setSecureTokenMock(...args),
+  deleteSecureToken: (...args: unknown[]) => deleteSecureTokenMock(...args),
+}));
+
 const resetStores = () => {
   useCloudSyncStore.persist?.clearStorage?.();
   useWebDAVStore.persist?.clearStorage?.();
@@ -50,6 +60,9 @@ const resetStores = () => {
 describe('useCloudSyncStore', () => {
   beforeEach(() => {
     tauriFetchJsonMock.mockReset();
+    setSecureTokenMock.mockReset().mockResolvedValue(undefined);
+    getSecureTokenMock.mockReset().mockResolvedValue('mock-token');
+    deleteSecureTokenMock.mockReset().mockResolvedValue(undefined);
     resetStores();
   });
 
@@ -109,6 +122,83 @@ describe('useCloudSyncStore', () => {
     expect(workspace?.id).toBe('workspace-2');
     expect(useCloudSyncStore.getState().session?.currentWorkspaceId).toBe('workspace-2');
     expect(useWebDAVStore.getState().config.remote_base_path).toBe('/workspace-2');
+  });
+
+  it('login saves token to keychain', async () => {
+    tauriFetchJsonMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: {
+        token: 'secure-token',
+        user: { id: 'user-1', email: 'dev@example.com' },
+        workspaces: [{ id: 'ws-1', name: 'Personal' }],
+      },
+    });
+
+    useCloudSyncStore.setState({
+      serverBaseUrl: 'https://sync.example.com',
+      email: 'dev@example.com',
+      password: 'secret',
+    });
+
+    await useCloudSyncStore.getState().login();
+
+    expect(setSecureTokenMock).toHaveBeenCalledWith('secure-token');
+  });
+
+  it('logout deletes token from keychain', () => {
+    useCloudSyncStore.setState({
+      session: {
+        token: 'some-token',
+        user: { id: 'u1', email: 'test@example.com' },
+        workspaces: [],
+        currentWorkspaceId: null,
+      },
+      authStatus: 'authenticated',
+    });
+
+    useCloudSyncStore.getState().logout();
+
+    expect(deleteSecureTokenMock).toHaveBeenCalled();
+    expect(useCloudSyncStore.getState().session).toBeNull();
+  });
+
+  it('rehydrateToken restores token from keychain', async () => {
+    getSecureTokenMock.mockResolvedValue('keychain-token');
+
+    useCloudSyncStore.setState({
+      session: {
+        token: '',
+        user: { id: 'u1', email: 'test@example.com' },
+        workspaces: [],
+        currentWorkspaceId: null,
+      },
+      authStatus: 'authenticated',
+    });
+
+    await useCloudSyncStore.getState().rehydrateToken();
+
+    expect(useCloudSyncStore.getState().session?.token).toBe('keychain-token');
+    expect(useCloudSyncStore.getState().authStatus).toBe('authenticated');
+  });
+
+  it('rehydrateToken forces re-login when keychain has no token', async () => {
+    getSecureTokenMock.mockResolvedValue(null);
+
+    useCloudSyncStore.setState({
+      session: {
+        token: '',
+        user: { id: 'u1', email: 'test@example.com' },
+        workspaces: [],
+        currentWorkspaceId: null,
+      },
+      authStatus: 'authenticated',
+    });
+
+    await useCloudSyncStore.getState().rehydrateToken();
+
+    expect(useCloudSyncStore.getState().session).toBeNull();
+    expect(useCloudSyncStore.getState().authStatus).toBe('anonymous');
   });
 
   it('logs out and clears cloud-derived webdav credentials', async () => {
