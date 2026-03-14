@@ -87,8 +87,14 @@ export function Sidebar() {
   const authStatus = useCloudSyncStore((s) => s.authStatus);
   const cloudSession = useCloudSyncStore((s) => s.session);
   const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
+  const rehydrateToken = useCloudSyncStore((s) => s.rehydrateToken);
   const setOrgConnection = useOrgStore((s) => s.setConnection);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Restore token from OS keychain on app startup
+  useEffect(() => {
+    rehydrateToken();
+  }, [rehydrateToken]);
 
   // Bridge CloudSync auth session to OrgStore so team API calls have credentials
   useEffect(() => {
