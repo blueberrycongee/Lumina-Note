@@ -1391,7 +1391,7 @@ mark {
 }
 
 .codemirror-wrapper .cm-scroller {
-  overflow: auto;
+  overflow: visible !important;
   font-family: var(--font-sans);
 }
 
