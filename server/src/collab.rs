@@ -13,6 +13,10 @@ use yrs::{Doc, ReadTxn, Transact, Update};
 use crate::error::AppError;
 use crate::state::AppState;
 
+/// Message type constants (byte 0 prefix for WebSocket frames).
+const MSG_SYNC: u8 = 0;
+const MSG_AWARENESS: u8 = 1;
+
 /// A single collaborative document room.
 ///
 /// The `Doc` is behind a `std::sync::Mutex` (not tokio) because yrs types
@@ -21,6 +25,8 @@ use crate::state::AppState;
 pub struct CollabRoom {
     doc: std::sync::Mutex<Doc>,
     pub peers: Arc<RwLock<HashMap<String, mpsc::UnboundedSender<Message>>>>,
+    /// Raw awareness bytes per peer. Server stores but never decodes these.
+    awareness: RwLock<HashMap<String, Vec<u8>>>,
 }
 
 impl CollabRoom {
@@ -79,9 +85,15 @@ impl CollabHub {
         let room = Arc::new(CollabRoom {
             doc: std::sync::Mutex::new(Doc::new()),
             peers: Arc::new(RwLock::new(HashMap::new())),
+            awareness: RwLock::new(HashMap::new()),
         });
         rooms.insert(doc_id.to_string(), room.clone());
         room
+    }
+
+    /// Remove a room from the hub (called when last peer disconnects).
+    pub async fn remove_room(&self, doc_id: &str) {
+        self.rooms.write().await.remove(doc_id);
     }
 }
 
@@ -100,27 +112,49 @@ pub async fn collab_handler(
     // Validate JWT token
     let _claims = crate::auth::decode_token(&query.token, &state.config)?;
 
-    let room = state.collab.get_or_create_room(&doc_id).await;
+    let hub = state.collab.clone();
+    let room = hub.get_or_create_room(&doc_id).await;
 
     Ok(ws.on_upgrade(move |socket| async move {
-        handle_collab_socket(socket, room, doc_id).await;
+        handle_collab_socket(socket, room, hub, doc_id).await;
     }))
 }
 
 /// Core WebSocket loop for a single collaborative peer.
-async fn handle_collab_socket(socket: WebSocket, room: Arc<CollabRoom>, doc_id: String) {
+async fn handle_collab_socket(
+    socket: WebSocket,
+    room: Arc<CollabRoom>,
+    hub: CollabHub,
+    doc_id: String,
+) {
     let (mut ws_tx, mut ws_rx) = socket.split();
     let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
 
     let peer_id = Uuid::new_v4().to_string();
 
-    // Register peer
-    room.peers.write().await.insert(peer_id.clone(), tx.clone());
+    // --- Initial sync: send state BEFORE registering peer for broadcasts ---
+    // This prevents the race where a broadcast arrives before the initial state.
 
-    // Send current document state as initial sync.
-    // All yrs work is done synchronously inside encode_state().
+    // 1. Encode and send current document state (with sync type prefix)
     let state_update = room.encode_state();
-    let _ = tx.send(Message::Binary(state_update));
+    let mut sync_msg = Vec::with_capacity(1 + state_update.len());
+    sync_msg.push(MSG_SYNC);
+    sync_msg.extend_from_slice(&state_update);
+    let _ = ws_tx.send(Message::Binary(sync_msg)).await;
+
+    // 2. Send existing awareness states from all current peers
+    {
+        let awareness_states = room.awareness.read().await;
+        for (_pid, raw) in awareness_states.iter() {
+            let mut msg = Vec::with_capacity(1 + raw.len());
+            msg.push(MSG_AWARENESS);
+            msg.extend_from_slice(raw);
+            let _ = ws_tx.send(Message::Binary(msg)).await;
+        }
+    }
+
+    // 3. NOW register peer for future broadcasts
+    room.peers.write().await.insert(peer_id.clone(), tx.clone());
 
     // Spawn task to forward outbound messages to the WebSocket
     let send_task = tokio::spawn(async move {
@@ -135,16 +169,46 @@ async fn handle_collab_socket(socket: WebSocket, room: Arc<CollabRoom>, doc_id: 
     while let Some(Ok(msg)) = ws_rx.next().await {
         match msg {
             Message::Binary(data) => {
-                // Apply update synchronously (no await while holding yrs types)
-                let applied = room.apply_update_v1(&data);
+                if data.is_empty() {
+                    continue;
+                }
 
-                if applied {
-                    // Broadcast to all other peers
-                    let peers = room.peers.read().await;
-                    for (id, sender) in peers.iter() {
-                        if *id != peer_id {
-                            let _ = sender.send(Message::Binary(data.clone()));
+                match data[0] {
+                    MSG_SYNC => {
+                        let payload = &data[1..];
+                        let applied = room.apply_update_v1(payload);
+
+                        if applied {
+                            // Broadcast the full message (with type prefix) to other peers
+                            let peers = room.peers.read().await;
+                            for (id, sender) in peers.iter() {
+                                if *id != peer_id {
+                                    let _ = sender.send(Message::Binary(data.clone()));
+                                }
+                            }
                         }
+                    }
+                    MSG_AWARENESS => {
+                        // Store raw awareness bytes for this peer
+                        room.awareness
+                            .write()
+                            .await
+                            .insert(peer_id.clone(), data[1..].to_vec());
+
+                        // Relay to all other peers (forward as-is with type prefix)
+                        let peers = room.peers.read().await;
+                        for (id, sender) in peers.iter() {
+                            if *id != peer_id {
+                                let _ = sender.send(Message::Binary(data.clone()));
+                            }
+                        }
+                    }
+                    other => {
+                        tracing::warn!(
+                            doc_id = %doc_id,
+                            msg_type = other,
+                            "unknown collab message type"
+                        );
                     }
                 }
             }
@@ -158,12 +222,23 @@ async fn handle_collab_socket(socket: WebSocket, room: Arc<CollabRoom>, doc_id: 
 
     send_task.abort();
 
-    // Unregister peer
+    // Unregister peer and clean up awareness
     room.peers.write().await.remove(&peer_id);
+    room.awareness.write().await.remove(&peer_id);
 
-    tracing::info!(
-        doc_id = %doc_id,
-        peer_id = %peer_id,
-        "collab peer disconnected"
-    );
+    // If this was the last peer, evict the room from memory
+    let peers_empty = room.peers.read().await.is_empty();
+    if peers_empty {
+        hub.remove_room(&doc_id).await;
+        tracing::info!(
+            doc_id = %doc_id,
+            "collab room evicted after last peer left"
+        );
+    } else {
+        tracing::info!(
+            doc_id = %doc_id,
+            peer_id = %peer_id,
+            "collab peer disconnected"
+        );
+    }
 }

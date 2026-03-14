@@ -3671,7 +3671,9 @@ export const CodeMirrorEditor = forwardRef<
         drawSelection(),
         fontSizeCompartment.of(createEditorTheme(editorFontSize)),
         collabCompartment.of(
-          collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+          collabConnection
+            ? yCollab(collabConnection.ytext, collabConnection.awareness)
+            : [],
         ),
         mouseSelectingField,
         selectionStatePlugin,
@@ -4397,7 +4399,9 @@ export const CodeMirrorEditor = forwardRef<
     if (!view) return;
     view.dispatch({
       effects: collabCompartment.reconfigure(
-        collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+        collabConnection
+          ? yCollab(collabConnection.ytext, collabConnection.awareness)
+          : [],
       ),
     });
   }, [collabConnection]);
