@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.16] - 2026-03-15
+
+### 安全
+- 认证 token 从 localStorage 迁移到 OS Keychain（macOS Keychain / Windows Credential Manager）
+- 移除 QR 配对界面中的 token 明文显示
+- 密码最低长度从 6 位提升到 8 位，新增邮箱格式校验
+
+### 改进
+- 编辑器 live 模式选区拖拽不再抖动，采用零布局偏移的格式标记隐藏技术
+- 消除双重选区渲染系统和自定义拖拽同步，回归 CodeMirror 原生选区处理
+- 编辑器 DOM 结构扁平化，cm-scroller 作为唯一滚动容器
+- 登录入口从侧边栏移至 Ribbon 底部图标，已登录时显示账户弹窗
+- Quick Action 卡片根据工作区笔记动态推荐，基于访问频率和修改时间评分
+
+### 修复
+- 修复 callout 在选区经过时不必要切换到源码模式导致的选区残留
+- 修复 cm-content padding 区域的原生 ::selection 残留
+- 修复 PublishSettingsSection 缺少 email/password 参数的编译错误
+
 ## [1.0.14] - 2026-03-13
 
 ### 改进
