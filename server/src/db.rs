@@ -1248,14 +1248,13 @@ pub async fn resolve_or_create_doc(
     user_id: &str,
 ) -> Result<String, AppError> {
     // Fast path: lookup existing
-    let existing = sqlx::query(
-        "SELECT id FROM document_registry WHERE project_id = ?1 AND rel_path = ?2",
-    )
-    .bind(project_id)
-    .bind(rel_path)
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| AppError::Internal(format!("lookup document_registry: {}", e)))?;
+    let existing =
+        sqlx::query("SELECT id FROM document_registry WHERE project_id = ?1 AND rel_path = ?2")
+            .bind(project_id)
+            .bind(rel_path)
+            .fetch_optional(pool)
+            .await
+            .map_err(|e| AppError::Internal(format!("lookup document_registry: {}", e)))?;
 
     if let Some(row) = existing {
         return Ok(row.get::<String, _>("id"));

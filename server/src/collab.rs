@@ -74,7 +74,9 @@ fn safe_filename(doc_id: &str) -> String {
 }
 
 fn collab_path(data_dir: &str, doc_id: &str) -> PathBuf {
-    Path::new(data_dir).join("collab").join(format!("{}.bin", safe_filename(doc_id)))
+    Path::new(data_dir)
+        .join("collab")
+        .join(format!("{}.bin", safe_filename(doc_id)))
 }
 
 /// Save room state to disk using atomic write (tmp + rename).

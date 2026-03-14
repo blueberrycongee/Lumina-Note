@@ -55,7 +55,10 @@ impl NotifyHub {
             );
         }
 
-        user_conns.push(NotifyConn { id: conn_id, sender });
+        user_conns.push(NotifyConn {
+            id: conn_id,
+            sender,
+        });
     }
 
     pub async fn unregister(&self, user_id: &str, conn_id: &str) {
