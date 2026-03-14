@@ -123,6 +123,7 @@ pub struct UpdateTaskRequest {
 }
 
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 pub struct TaskDetail {
     pub id: String,
     pub project_id: String,

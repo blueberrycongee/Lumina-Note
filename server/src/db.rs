@@ -700,6 +700,7 @@ pub async fn get_project(
     }))
 }
 
+#[allow(dead_code)]
 pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<(), AppError> {
     sqlx::query(
         r#"
@@ -1084,6 +1085,7 @@ pub async fn resolve_annotation(pool: &SqlitePool, annotation_id: &str) -> Resul
 // Notification CRUD
 // ---------------------------------------------------------------------------
 
+#[allow(dead_code)]
 pub async fn create_notification(
     pool: &SqlitePool,
     user_id: &str,
