@@ -616,6 +616,7 @@ mod tests {
     use super::*;
     use crate::config::Config;
     use crate::db;
+    use crate::collab::CollabHub;
     use crate::state::{RelayHub, ServerMetrics};
     use axum::http::{header::AUTHORIZATION, HeaderValue};
     use sqlx::sqlite::SqlitePoolOptions;
@@ -640,6 +641,7 @@ mod tests {
                 jwt_secret: "test-secret".to_string(),
             },
             relay: RelayHub::new(),
+            collab: CollabHub::new(),
             metrics: Arc::new(ServerMetrics::new()),
         }
     }
