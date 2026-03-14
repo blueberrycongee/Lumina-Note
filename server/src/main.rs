@@ -7,6 +7,7 @@ mod error;
 mod models;
 mod relay;
 mod routes;
+mod sites;
 mod state;
 
 use axum::http::{HeaderName, Request};
@@ -130,6 +131,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/relay", get(relay::relay_handler))
         .route("/dav/:workspace_id", any(dav::handle_dav_root))
         .route("/dav/:workspace_id/*path", any(dav::handle_dav_path))
+        // Published sites (public, no auth)
+        .route("/sites/:user_id", get(sites::serve_site_root))
+        .route("/sites/:user_id/*path", get(sites::serve_site_file))
         .with_state(state)
         .layer(PropagateRequestIdLayer::new(REQUEST_ID_HEADER))
         .layer(SetRequestIdLayer::new(REQUEST_ID_HEADER, MakeRequestUuid))
