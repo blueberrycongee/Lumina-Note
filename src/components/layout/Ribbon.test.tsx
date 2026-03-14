@@ -119,6 +119,15 @@ vi.mock("@/components/team/TeamAuthModal", () => ({
   ),
 }));
 
+vi.mock("@/components/team/AccountPopover", () => ({
+  AccountPopover: ({ onClose }: { onClose: () => void }) => (
+    <div>
+      <div>Account Popover</div>
+      <button onClick={onClose}>Close Account</button>
+    </div>
+  ),
+}));
+
 vi.mock("@tauri-apps/plugin-shell", () => ({
   open: async () => undefined,
 }));

@@ -39,6 +39,7 @@ import { useUpdateStore } from "@/stores/useUpdateStore";
 import { getRibbonUpdateState } from "./ribbonUpdateState";
 import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { TeamAuthModal } from "@/components/team/TeamAuthModal";
+import { AccountPopover } from "@/components/team/AccountPopover";
 
 interface RibbonProps {
   showMacTrafficLightSafeArea?: boolean;
@@ -51,6 +52,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showPlugins, setShowPlugins] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showAccountPopover, setShowAccountPopover] = useState(false);
   const authStatus = useCloudSyncStore((s) => s.authStatus);
   const userEmail = useCloudSyncStore((s) => s.session?.user?.email);
   const closeSettings = useCallback(() => setShowSettings(false), []);
@@ -478,22 +480,29 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
           </button>
 
           {/* Account */}
-          <button
-            onClick={() => {
-              if (authStatus !== 'authenticated') {
-                setShowAuthModal(true);
-              }
-            }}
-            className={cn(
-              "w-8 h-8 ui-icon-btn",
-              authStatus === 'authenticated'
-                ? "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15"
-                : "",
+          <div className="relative">
+            <button
+              onClick={() => {
+                if (authStatus === 'authenticated') {
+                  setShowAccountPopover((v) => !v);
+                } else {
+                  setShowAuthModal(true);
+                }
+              }}
+              className={cn(
+                "w-8 h-8 ui-icon-btn",
+                authStatus === 'authenticated'
+                  ? "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15"
+                  : "",
+              )}
+              title={authStatus === 'authenticated' ? (userEmail ?? t.auth.signIn) : t.auth.signIn}
+            >
+              <UserCircle size={18} />
+            </button>
+            {showAccountPopover && authStatus === 'authenticated' && (
+              <AccountPopover onClose={() => setShowAccountPopover(false)} />
             )}
-            title={authStatus === 'authenticated' ? (userEmail ?? t.auth.signIn) : t.auth.signIn}
-          >
-            <UserCircle size={18} />
-          </button>
+          </div>
 
           {/* Settings */}
           <button
