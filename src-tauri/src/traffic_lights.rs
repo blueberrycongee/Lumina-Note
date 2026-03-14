@@ -53,29 +53,34 @@ pub fn observe_resize<R: Runtime>(window: &tauri::WebviewWindow<R>) {
         // Initial positioning.
         reposition_buttons(ns_window_ptr);
 
-        // Register a native observer for NSWindowDidResizeNotification.
+        // Register native observers for window events that may reset
+        // traffic-light positions.
         let center = objc2_foundation::NSNotificationCenter::defaultCenter();
-        let name = objc2_foundation::NSString::from_str("NSWindowDidResizeNotification");
-
-        let captured = ns_window_ptr;
-        let block = block2::StackBlock::new(
-            move |_notif: std::ptr::NonNull<objc2_foundation::NSNotification>| {
-                reposition_buttons(captured);
-            },
-        );
-
         let ns_window: &objc2_app_kit::NSWindow =
             &*(ns_window_ptr as *const objc2_app_kit::NSWindow);
 
-        center.addObserverForName_object_queue_usingBlock(
-            Some(&name),
-            Some(ns_window),
-            None,
-            &block,
-        );
+        let notifications = [
+            "NSWindowDidResizeNotification",
+            "NSWindowDidDeminiaturizeNotification",
+            "NSWindowDidExitFullScreenNotification",
+            "NSWindowDidChangeBackingPropertiesNotification",
+        ];
 
-        // The block is copied internally by NSNotificationCenter, so
-        // `block` (stack-allocated) can safely drop here.
+        for name in notifications {
+            let captured = ns_window_ptr;
+            let block = block2::StackBlock::new(
+                move |_notif: std::ptr::NonNull<objc2_foundation::NSNotification>| {
+                    reposition_buttons(captured);
+                },
+            );
+            let ns_name = objc2_foundation::NSString::from_str(name);
+            center.addObserverForName_object_queue_usingBlock(
+                Some(&ns_name),
+                Some(ns_window),
+                None,
+                &block,
+            );
+        }
     }
 }
 
