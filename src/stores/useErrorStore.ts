@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type AppErrorLevel = "error" | "warning";
+export type AppErrorLevel = "error" | "warning" | "info";
 
 export interface AppErrorNotice {
   id: string;

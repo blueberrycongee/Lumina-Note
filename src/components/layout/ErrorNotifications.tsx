@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Copy, X } from "lucide-react";
+import { AlertTriangle, CheckCircle, Copy, X } from "lucide-react";
 import { useErrorStore, type AppErrorNotice } from "@/stores/useErrorStore";
 
 const buildIssuePayload = (notice: AppErrorNotice): string =>
@@ -48,11 +48,17 @@ export function ErrorNotifications() {
           className={`rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur-sm ${
             notice.level === "warning"
               ? "border-warning/40 text-warning"
-              : "border-destructive/40 text-destructive"
+              : notice.level === "info"
+                ? "border-primary/40 text-primary"
+                : "border-destructive/40 text-destructive"
           }`}
         >
           <div className="flex items-start gap-2">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            {notice.level === "info" ? (
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold">
                 {notice.title}
