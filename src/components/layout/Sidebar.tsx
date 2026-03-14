@@ -25,8 +25,12 @@ import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { useShallow } from "zustand/react/shallow";
 import { OrgSwitcher } from "../team/OrgSwitcher";
 import { useOrgStore } from "@/stores/useOrgStore";
+import { useNotificationStore } from "@/stores/useNotificationStore";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
-import { useSidebarFileOperations, type CreatingState } from "./hooks/useSidebarFileOperations";
+import {
+  useSidebarFileOperations,
+  type CreatingState,
+} from "./hooks/useSidebarFileOperations";
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarQuickActions } from "./SidebarQuickActions";
 import { OpenClawSection } from "./OpenClawSection";
@@ -50,7 +54,13 @@ export function Sidebar() {
       isLoadingTree: state.isLoadingTree,
     })),
   );
-  const { config: ragConfig, isIndexing: ragIsIndexing, indexStatus, rebuildIndex, cancelIndex } = useRAGStore();
+  const {
+    config: ragConfig,
+    isIndexing: ragIsIndexing,
+    indexStatus,
+    rebuildIndex,
+    cancelIndex,
+  } = useRAGStore();
   const {
     favorites,
     manualOrder,
@@ -59,45 +69,58 @@ export function Sidebar() {
     moveFavorite,
     toggleFavorite,
     getFavorites,
-  } = useFavoriteStore(useShallow((state) => ({
-    favorites: state.favorites,
-    manualOrder: state.manualOrder,
-    favoriteSortMode: state.defaultSortMode,
-    setFavoriteSortMode: state.setDefaultSortMode,
-    moveFavorite: state.moveFavorite,
-    toggleFavorite: state.toggleFavorite,
-    getFavorites: state.getFavorites,
-  })));
+  } = useFavoriteStore(
+    useShallow((state) => ({
+      favorites: state.favorites,
+      manualOrder: state.manualOrder,
+      favoriteSortMode: state.defaultSortMode,
+      setFavoriteSortMode: state.setDefaultSortMode,
+      moveFavorite: state.moveFavorite,
+      toggleFavorite: state.toggleFavorite,
+      getFavorites: state.getFavorites,
+    })),
+  );
   const favoriteEntries = useMemo(
     () => getFavorites(favoriteSortMode),
     [getFavorites, favoriteSortMode, favorites, manualOrder],
   );
 
-  const { currentOrgId, projects, currentProjectId, switchProject } = useOrgStore(
-    useShallow((state) => ({
-      currentOrgId: state.currentOrgId,
-      projects: state.projects,
-      currentProjectId: state.currentProjectId,
-      switchProject: state.switchProject,
-    })),
-  );
+  const { currentOrgId, projects, currentProjectId, switchProject } =
+    useOrgStore(
+      useShallow((state) => ({
+        currentOrgId: state.currentOrgId,
+        projects: state.projects,
+        currentProjectId: state.currentProjectId,
+        switchProject: state.switchProject,
+      })),
+    );
 
   const authStatus = useCloudSyncStore((s) => s.authStatus);
   const cloudSession = useCloudSyncStore((s) => s.session);
   const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
   const rehydrateToken = useCloudSyncStore((s) => s.rehydrateToken);
   const setOrgConnection = useOrgStore((s) => s.setConnection);
+  const setNotificationConnection = useNotificationStore(
+    (s) => s.setConnection,
+  );
   // Restore token from OS keychain on app startup
   useEffect(() => {
     rehydrateToken();
   }, [rehydrateToken]);
 
-  // Bridge CloudSync auth session to OrgStore so team API calls have credentials
+  // Bridge CloudSync auth session to OrgStore and NotificationStore so API calls have credentials
   useEffect(() => {
-    if (authStatus === 'authenticated' && cloudSession?.token && cloudBaseUrl) {
+    if (authStatus === "authenticated" && cloudSession?.token && cloudBaseUrl) {
       setOrgConnection(cloudBaseUrl, cloudSession.token);
+      setNotificationConnection(cloudBaseUrl, cloudSession.token);
     }
-  }, [authStatus, cloudSession?.token, cloudBaseUrl, setOrgConnection]);
+  }, [
+    authStatus,
+    cloudSession?.token,
+    cloudBaseUrl,
+    setOrgConnection,
+    setNotificationConnection,
+  ]);
 
   const ops = useSidebarFileOperations();
   const {
@@ -142,33 +165,39 @@ export function Sidebar() {
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [rootContextMenu, setRootContextMenu] = useState<RootContextMenuState | null>(null);
+  const [rootContextMenu, setRootContextMenu] =
+    useState<RootContextMenuState | null>(null);
   const [isRootDragOver, setIsRootDragOver] = useState(false);
   const [isFileTreeScrollActive, setIsFileTreeScrollActive] = useState(false);
   const fileTreeScrollFadeTimerRef = useRef<number | null>(null);
 
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, entry: FileEntry) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        entry,
+        isDirectory: entry.is_dir,
+      });
+    },
+    [],
+  );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, entry: FileEntry) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      entry,
-      isDirectory: entry.is_dir,
-    });
-  }, []);
-
-  const handleRootContextMenu = useCallback((e: React.MouseEvent) => {
-    if (!vaultPath) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setSelectedPath(vaultPath);
-    setRootContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-    });
-  }, [vaultPath, setSelectedPath]);
+  const handleRootContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (!vaultPath) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedPath(vaultPath);
+      setRootContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+      });
+    },
+    [vaultPath, setSelectedPath],
+  );
 
   const closeContextMenu = useCallback(() => {
     setContextMenu(null);
@@ -187,7 +216,10 @@ export function Sidebar() {
       const normalize = (p: string) => p.replace(/\\/g, "/");
       const normalizedSource = normalize(sourcePath);
       const normalizedVault = normalize(vaultPath);
-      const sourceParent = normalizedSource.substring(0, normalizedSource.lastIndexOf("/"));
+      const sourceParent = normalizedSource.substring(
+        0,
+        normalizedSource.lastIndexOf("/"),
+      );
       if (sourceParent === normalizedVault) return;
 
       try {
@@ -201,9 +233,15 @@ export function Sidebar() {
       }
     };
 
-    window.addEventListener("lumina-folder-drop", handleRootDrop as unknown as EventListener);
+    window.addEventListener(
+      "lumina-folder-drop",
+      handleRootDrop as unknown as EventListener,
+    );
     return () => {
-      window.removeEventListener("lumina-folder-drop", handleRootDrop as unknown as EventListener);
+      window.removeEventListener(
+        "lumina-folder-drop",
+        handleRootDrop as unknown as EventListener,
+      );
     };
   }, [isRootDragOver, vaultPath, moveFileToFolder, moveFolderToFolder]);
 
@@ -223,9 +261,15 @@ export function Sidebar() {
       focusTreePath(targetPath);
     };
 
-    window.addEventListener("lumina-focus-file-tree-path", handleFocusPath as EventListener);
+    window.addEventListener(
+      "lumina-focus-file-tree-path",
+      handleFocusPath as EventListener,
+    );
     return () => {
-      window.removeEventListener("lumina-focus-file-tree-path", handleFocusPath as EventListener);
+      window.removeEventListener(
+        "lumina-focus-file-tree-path",
+        handleFocusPath as EventListener,
+      );
     };
   }, [focusTreePath]);
 
@@ -263,158 +307,166 @@ export function Sidebar() {
 
       {/* Toolbar Zone */}
       <div className="flex flex-col gap-3 py-2 border-b border-border/60">
-      {/* Quick Actions */}
-      <SidebarQuickActions vaultPath={vaultPath} onQuickNote={handleQuickNote} />
+        {/* Quick Actions */}
+        <SidebarQuickActions
+          vaultPath={vaultPath}
+          onQuickNote={handleQuickNote}
+        />
 
-      {/* Team Organization Section (visible only when authenticated) */}
-      {authStatus === 'authenticated' && (
-        <div className="px-2">
-          <OrgSwitcher />
-          {currentOrgId && projects.length > 0 && (
-            <div className="mt-2">
-              <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                {t.team.projects}
+        {/* Team Organization Section (visible only when authenticated) */}
+        {authStatus === "authenticated" && (
+          <div className="px-2">
+            <OrgSwitcher />
+            {currentOrgId && projects.length > 0 && (
+              <div className="mt-2">
+                <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  {t.team.projects}
+                </div>
+                {projects.map((proj) => (
+                  <button
+                    key={proj.id}
+                    className={cn(
+                      "w-full text-left px-2 py-1.5 text-sm rounded-md truncate",
+                      "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                      currentProjectId === proj.id &&
+                        "bg-zinc-100 dark:bg-zinc-800 font-medium",
+                    )}
+                    onClick={() => switchProject(proj.id)}
+                    title={proj.description || proj.name}
+                  >
+                    {proj.name}
+                  </button>
+                ))}
               </div>
-              {projects.map((proj) => (
-                <button
-                  key={proj.id}
+            )}
+          </div>
+        )}
+
+        {/* OpenClaw */}
+        {vaultPath && (
+          <OpenClawSection
+            vaultPath={vaultPath}
+            currentFile={currentFile}
+            openFile={openFile}
+            focusTreePath={focusTreePath}
+            expandedMountedPaths={expandedMountedPaths}
+            toggleMountedExpanded={toggleMountedExpanded}
+          />
+        )}
+
+        {/* Favorites */}
+        <div className="px-2">
+          <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm bg-amber-500/5 px-2 py-1">
+            <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+              <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
+              {t.favorites.title}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setFavoriteSortMode("manual")}
+                className={cn(
+                  "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
+                  favoriteSortMode === "manual"
+                    ? "bg-accent text-foreground border-border"
+                    : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
+                )}
+                title={t.favorites.sortManual}
+              >
+                {t.favorites.sortManual}
+              </button>
+              <button
+                onClick={() => setFavoriteSortMode("recentAdded")}
+                className={cn(
+                  "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
+                  favoriteSortMode === "recentAdded"
+                    ? "bg-accent text-foreground border-border"
+                    : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
+                )}
+                title={t.favorites.sortRecentAdded}
+              >
+                {t.favorites.sortRecentAdded}
+              </button>
+              <button
+                onClick={() => setFavoriteSortMode("recentOpened")}
+                className={cn(
+                  "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
+                  favoriteSortMode === "recentOpened"
+                    ? "bg-accent text-foreground border-border"
+                    : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
+                )}
+                title={t.favorites.sortRecentOpened}
+              >
+                {t.favorites.sortRecentOpened}
+              </button>
+            </div>
+          </div>
+          {favoriteEntries.length === 0 ? (
+            <div className="px-2 py-2 text-xs text-muted-foreground">
+              {t.favorites.empty}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {favoriteEntries.map((entry, index) => (
+                <div
+                  key={entry.path}
                   className={cn(
-                    "w-full text-left px-2 py-1.5 text-sm rounded-md truncate",
-                    "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                    currentProjectId === proj.id && "bg-zinc-100 dark:bg-zinc-800 font-medium",
+                    "group flex items-center gap-2 px-2 py-1 rounded-ui-md text-xs",
+                    currentFile === entry.path
+                      ? "bg-accent text-foreground"
+                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
                   )}
-                  onClick={() => switchProject(proj.id)}
-                  title={proj.description || proj.name}
                 >
-                  {proj.name}
-                </button>
+                  <button
+                    onClick={() => openFile(entry.path)}
+                    className="flex-1 flex items-center gap-2 text-left truncate"
+                    title={entry.path}
+                  >
+                    <Star className="w-3.5 h-3.5 text-yellow-500" />
+                    <span className="truncate">
+                      {getFileName(entry.path).replace(/\.md$/i, "")}
+                    </span>
+                  </button>
+                  {favoriteSortMode === "manual" && (
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveFavorite(index, index - 1);
+                        }}
+                        className="p-0.5 rounded-ui-sm hover:bg-accent/60"
+                        title={t.favorites.moveUp}
+                        disabled={index === 0}
+                      >
+                        <ChevronUp className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveFavorite(index, index + 1);
+                        }}
+                        className="p-0.5 rounded-ui-sm hover:bg-accent/60"
+                        title={t.favorites.moveDown}
+                        disabled={index === favoriteEntries.length - 1}
+                      >
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(entry.path);
+                    }}
+                    className="p-0.5 rounded-ui-sm hover:bg-accent/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title={t.favorites.remove}
+                  >
+                    <StarOff className="w-3 h-3" />
+                  </button>
+                </div>
               ))}
             </div>
           )}
         </div>
-      )}
-
-      {/* OpenClaw */}
-      {vaultPath && (
-        <OpenClawSection
-          vaultPath={vaultPath}
-          currentFile={currentFile}
-          openFile={openFile}
-          focusTreePath={focusTreePath}
-          expandedMountedPaths={expandedMountedPaths}
-          toggleMountedExpanded={toggleMountedExpanded}
-        />
-      )}
-
-      {/* Favorites */}
-      <div className="px-2">
-        <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm bg-amber-500/5 px-2 py-1">
-          <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
-            <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
-            {t.favorites.title}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setFavoriteSortMode("manual")}
-              className={cn(
-                "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
-                favoriteSortMode === "manual"
-                  ? "bg-accent text-foreground border-border"
-                  : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
-              )}
-              title={t.favorites.sortManual}
-            >
-              {t.favorites.sortManual}
-            </button>
-            <button
-              onClick={() => setFavoriteSortMode("recentAdded")}
-              className={cn(
-                "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
-                favoriteSortMode === "recentAdded"
-                  ? "bg-accent text-foreground border-border"
-                  : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
-              )}
-              title={t.favorites.sortRecentAdded}
-            >
-              {t.favorites.sortRecentAdded}
-            </button>
-            <button
-              onClick={() => setFavoriteSortMode("recentOpened")}
-              className={cn(
-                "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
-                favoriteSortMode === "recentOpened"
-                  ? "bg-accent text-foreground border-border"
-                  : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
-              )}
-              title={t.favorites.sortRecentOpened}
-            >
-              {t.favorites.sortRecentOpened}
-            </button>
-          </div>
-        </div>
-        {favoriteEntries.length === 0 ? (
-          <div className="px-2 py-2 text-xs text-muted-foreground">
-            {t.favorites.empty}
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {favoriteEntries.map((entry, index) => (
-              <div
-                key={entry.path}
-                className={cn(
-                  "group flex items-center gap-2 px-2 py-1 rounded-ui-md text-xs",
-                  currentFile === entry.path ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-                )}
-              >
-                <button
-                  onClick={() => openFile(entry.path)}
-                  className="flex-1 flex items-center gap-2 text-left truncate"
-                  title={entry.path}
-                >
-                  <Star className="w-3.5 h-3.5 text-yellow-500" />
-                  <span className="truncate">{getFileName(entry.path).replace(/\.md$/i, "")}</span>
-                </button>
-                {favoriteSortMode === "manual" && (
-                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        moveFavorite(index, index - 1);
-                      }}
-                      className="p-0.5 rounded-ui-sm hover:bg-accent/60"
-                      title={t.favorites.moveUp}
-                      disabled={index === 0}
-                    >
-                      <ChevronUp className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        moveFavorite(index, index + 1);
-                      }}
-                      className="p-0.5 rounded-ui-sm hover:bg-accent/60"
-                      title={t.favorites.moveDown}
-                      disabled={index === favoriteEntries.length - 1}
-                    >
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(entry.path);
-                  }}
-                  className="p-0.5 rounded-ui-sm hover:bg-accent/60 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title={t.favorites.remove}
-                >
-                  <StarOff className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
       </div>
 
       {/* Vault Name - root drop zone */}
@@ -447,7 +499,10 @@ export function Sidebar() {
           onClick={handleSelectRoot}
           onContextMenu={handleRootContextMenu}
           onKeyDown={(e) => {
-            if ((e.key === "Enter" || e.key === "F2") && selectedPath === vaultPath) {
+            if (
+              (e.key === "Enter" || e.key === "F2") &&
+              selectedPath === vaultPath
+            ) {
               e.preventDefault();
               handleStartRootRename();
             }
@@ -462,7 +517,8 @@ export function Sidebar() {
           className={cn(
             "cursor-pointer select-none px-3 py-2 text-sm font-medium truncate bg-background/35 transition-colors hover:bg-background/45",
             isRootDragOver && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
-            selectedPath === vaultPath && "bg-primary/10 ring-1 ring-primary/30 ring-inset text-primary",
+            selectedPath === vaultPath &&
+              "bg-primary/10 ring-1 ring-primary/30 ring-inset text-primary",
           )}
         >
           {vaultPath?.split(/[/\\]/).pop() || "Notes"}
@@ -548,13 +604,21 @@ export function Sidebar() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  ragIsIndexing ? "bg-warning animate-pulse" :
-                  indexStatus?.initialized ? "bg-success" : "bg-gray-400"
-                }`}></div>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    ragIsIndexing
+                      ? "bg-warning animate-pulse"
+                      : indexStatus?.initialized
+                        ? "bg-success"
+                        : "bg-gray-400"
+                  }`}
+                ></div>
                 <span>
-                  {ragIsIndexing ? t.rag.indexing :
-                   indexStatus?.initialized ? `${t.rag.indexed}: ${indexStatus.totalFiles} ${t.rag.files}` : `${t.rag.indexed}: ${t.rag.notInitialized}`}
+                  {ragIsIndexing
+                    ? t.rag.indexing
+                    : indexStatus?.initialized
+                      ? `${t.rag.indexed}: ${indexStatus.totalFiles} ${t.rag.files}`
+                      : `${t.rag.indexed}: ${t.rag.notInitialized}`}
                 </span>
               </div>
               <div className="flex items-center gap-1">
@@ -588,8 +652,17 @@ export function Sidebar() {
                   />
                 </div>
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>{indexStatus.progress.current}/{indexStatus.progress.total}</span>
-                  <span>{Math.round((indexStatus.progress.current / Math.max(indexStatus.progress.total, 1)) * 100)}%</span>
+                  <span>
+                    {indexStatus.progress.current}/{indexStatus.progress.total}
+                  </span>
+                  <span>
+                    {Math.round(
+                      (indexStatus.progress.current /
+                        Math.max(indexStatus.progress.total, 1)) *
+                        100,
+                    )}
+                    %
+                  </span>
                 </div>
               </div>
             )}
@@ -598,7 +671,9 @@ export function Sidebar() {
         {!ragConfig.enabled && (
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-            <span>{t.rag.indexed}: {t.rag.notEnabled}</span>
+            <span>
+              {t.rag.indexed}: {t.rag.notEnabled}
+            </span>
           </div>
         )}
       </div>
@@ -617,7 +692,14 @@ interface CreateInputRowProps {
   level: number;
 }
 
-function CreateInputRow({ type, value, onChange, onSubmit, onCancel, level }: CreateInputRowProps) {
+function CreateInputRow({
+  type,
+  value,
+  onChange,
+  onSubmit,
+  onCancel,
+  level,
+}: CreateInputRowProps) {
   const { t } = useLocaleStore();
   const paddingLeft = 12 + level * 16 + 20;
 
@@ -657,11 +739,19 @@ function CreateInputRow({ type, value, onChange, onSubmit, onCancel, level }: Cr
         }}
         onKeyDown={handleKeyDown}
         autoFocus
-        placeholder={type === "folder" ? t.file.folderNamePlaceholder : t.file.fileNamePlaceholder}
+        placeholder={
+          type === "folder"
+            ? t.file.folderNamePlaceholder
+            : t.file.fileNamePlaceholder
+        }
         className="flex-1 ui-input h-6 px-1.5 border-transparent bg-transparent focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/30"
       />
-      {type === "file" && <span className="text-muted-foreground text-sm">.md</span>}
-      {type === "diagram" && <span className="text-muted-foreground text-sm">.diagram.json</span>}
+      {type === "file" && (
+        <span className="text-muted-foreground text-sm">.md</span>
+      )}
+      {type === "diagram" && (
+        <span className="text-muted-foreground text-sm">.diagram.json</span>
+      )}
     </div>
   );
 }
@@ -728,7 +818,9 @@ function FileTreeItem({
   const paddingLeft = 12 + level * 16;
 
   const selectedIsFile = selectedPath?.toLowerCase().endsWith(".md");
-  const showActive = (isActive && (!selectedIsFile || selectedPath === currentFile)) || (isSelected && !entry.is_dir);
+  const showActive =
+    (isActive && (!selectedIsFile || selectedPath === currentFile)) ||
+    (isSelected && !entry.is_dir);
 
   const isCreatingHere = creating && creating.parentPath === entry.path;
 
@@ -758,7 +850,11 @@ function FileTreeItem({
     if (dragData?.isDragging && entry.is_dir) {
       if (dragData.filePath === entry.path) return;
       const normalize = (p: string) => p.replace(/\\/g, "/");
-      if (dragData.isFolder && normalize(entry.path).startsWith(normalize(dragData.filePath) + "/")) return;
+      if (
+        dragData.isFolder &&
+        normalize(entry.path).startsWith(normalize(dragData.filePath) + "/")
+      )
+        return;
       setIsDragOver(true);
     }
   }, [entry.path, entry.is_dir]);
@@ -786,9 +882,15 @@ function FileTreeItem({
       }
     };
 
-    window.addEventListener("lumina-folder-drop", handleFolderDrop as unknown as EventListener);
+    window.addEventListener(
+      "lumina-folder-drop",
+      handleFolderDrop as unknown as EventListener,
+    );
     return () => {
-      window.removeEventListener("lumina-folder-drop", handleFolderDrop as unknown as EventListener);
+      window.removeEventListener(
+        "lumina-folder-drop",
+        handleFolderDrop as unknown as EventListener,
+      );
     };
   }, [isDragOver, entry.path, moveFileToFolder, moveFolderToFolder]);
 
@@ -843,11 +945,11 @@ function FileTreeItem({
           style={{ paddingLeft }}
         >
           {isExpanded ? (
-                  <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
-                ) : (
-                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
-                )}
-                {isExpanded ? (
+            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+          )}
+          {isExpanded ? (
             <FolderOpen className="w-4 h-4 text-amber-500/80 shrink-0 pointer-events-none" />
           ) : (
             <Folder className="w-4 h-4 text-amber-500/70 shrink-0 pointer-events-none" />
@@ -925,13 +1027,23 @@ function FileTreeItem({
     if (name.endsWith(".db.json")) {
       return <Database className="w-4 h-4 text-indigo-500 shrink-0" />;
     }
-    if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json")) {
+    if (
+      name.endsWith(".excalidraw.json") ||
+      name.endsWith(".diagram.json") ||
+      name.endsWith(".drawio.json")
+    ) {
       return <Shapes className="w-4 h-4 text-cyan-500 shrink-0" />;
     }
     if (name.endsWith(".pdf")) {
       return <FileText className="w-4 h-4 text-red-500 shrink-0" />;
     }
-    if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".gif") || name.endsWith(".webp")) {
+    if (
+      name.endsWith(".png") ||
+      name.endsWith(".jpg") ||
+      name.endsWith(".jpeg") ||
+      name.endsWith(".gif") ||
+      name.endsWith(".webp")
+    ) {
       return <Image className="w-4 h-4 text-green-500 shrink-0" />;
     }
     return <File className="w-4 h-4 text-primary/50 shrink-0" />;
@@ -968,7 +1080,9 @@ function FileTreeItem({
       style={{ paddingLeft: paddingLeft + 20 }}
     >
       <span className="pointer-events-none">{getFileIcon()}</span>
-      <span className="truncate pointer-events-none">{getFileName(entry.name)}</span>
+      <span className="truncate pointer-events-none">
+        {getFileName(entry.name)}
+      </span>
     </div>
   );
 }
