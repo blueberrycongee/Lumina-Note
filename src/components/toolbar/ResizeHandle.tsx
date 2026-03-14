@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   getResizeHandleIndicatorClassName,
@@ -36,10 +36,17 @@ export function ResizeHandle({
     [direction, onResize]
   );
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  const flushPendingDelta = useCallback(() => {
+    const delta = latestXRef.current - lastXRef.current;
+    lastXRef.current = latestXRef.current;
+    emitResize(delta);
+  }, [emitResize]);
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      e.currentTarget.setPointerCapture(e.pointerId);
       lastXRef.current = e.clientX;
       latestXRef.current = e.clientX;
       setIsDragging(true);
@@ -50,16 +57,20 @@ export function ResizeHandle({
     []
   );
 
-  useEffect(() => {
-    if (!isDragging) return;
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      // Track cursor Y for proximity mask (works during both hover and drag)
+      if (indicatorRef.current) {
+        const rect = indicatorRef.current.getBoundingClientRect();
+        indicatorRef.current.style.setProperty(
+          "--cursor-y",
+          `${e.clientY - rect.top}px`
+        );
+      }
 
-    const flushPendingDelta = () => {
-      const delta = latestXRef.current - lastXRef.current;
-      lastXRef.current = latestXRef.current;
-      emitResize(delta);
-    };
+      // Only process resize when pointer is captured (dragging)
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
       latestXRef.current = e.clientX;
 
       // 使用 requestAnimationFrame 节流，并始终消费最新坐标，避免帧内丢增量
@@ -69,9 +80,14 @@ export function ResizeHandle({
         flushPendingDelta();
         rafRef.current = null;
       });
-    };
+    },
+    [flushPendingDelta]
+  );
 
-    const handleMouseUp = () => {
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+
       setIsDragging(false);
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -82,36 +98,9 @@ export function ResizeHandle({
       latestXRef.current = 0;
       // 恢复过渡动画
       document.body.classList.remove("resizing");
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    // Change cursor globally while dragging
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-      }
-    };
-  }, [emitResize, isDragging]);
-
-  // Track cursor Y on the indicator (via ref, no re-render)
-  const updateCursorY = useCallback((e: React.MouseEvent) => {
-    if (indicatorRef.current) {
-      const rect = indicatorRef.current.getBoundingClientRect();
-      indicatorRef.current.style.setProperty(
-        "--cursor-y",
-        `${e.clientY - rect.top}px`
-      );
-    }
-  }, []);
+    },
+    [flushPendingDelta]
+  );
 
   const hitAreaStyle =
     direction === "left"
@@ -144,13 +133,27 @@ export function ResizeHandle({
 
       {/* Clickable area - 这是实际的点击区域 */}
       <div
-        className="absolute inset-y-0 cursor-col-resize z-30"
+        className="absolute inset-y-0 cursor-col-resize z-30 touch-none"
         style={hitAreaStyle}
-        onMouseDown={handleMouseDown}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onLostPointerCapture={() => {
+          if (isDragging) {
+            setIsDragging(false);
+            if (rafRef.current) {
+              cancelAnimationFrame(rafRef.current);
+              rafRef.current = null;
+              flushPendingDelta();
+            }
+            lastXRef.current = 0;
+            latestXRef.current = 0;
+            document.body.classList.remove("resizing");
+          }
+        }}
         onDoubleClick={onDoubleClick}
-        onMouseEnter={() => setIsHovering(true)}
-        onMouseLeave={() => setIsHovering(false)}
-        onMouseMove={updateCursorY}
+        onPointerEnter={() => setIsHovering(true)}
+        onPointerLeave={() => setIsHovering(false)}
       />
     </div>
   );

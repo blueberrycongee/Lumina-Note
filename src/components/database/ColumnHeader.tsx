@@ -53,6 +53,7 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
   
   const inputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const resizeRef = useRef({ startX: 0, startWidth: 0 });
   
   // 点击外部关闭菜单
   useEffect(() => {
@@ -269,24 +270,20 @@ export function ColumnHeader({ dbId, column, onDragStart, onDragEnd }: ColumnHea
       
       {/* 调整列宽手柄 */}
       <div
-        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors"
-        onMouseDown={(e) => {
+        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors touch-none"
+        onPointerDown={(e) => {
           e.preventDefault();
-          const startX = e.clientX;
-          const startWidth = column.width || 180;
-          
-          const onMouseMove = (e: MouseEvent) => {
-            const newWidth = Math.max(100, startWidth + e.clientX - startX);
-            updateColumn(dbId, column.id, { width: newWidth });
-          };
-          
-          const onMouseUp = () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-          };
-          
-          document.addEventListener('mousemove', onMouseMove);
-          document.addEventListener('mouseup', onMouseUp);
+          e.currentTarget.setPointerCapture(e.pointerId);
+          resizeRef.current = { startX: e.clientX, startWidth: column.width || 180 };
+        }}
+        onPointerMove={(e) => {
+          if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+          const { startX, startWidth } = resizeRef.current;
+          const newWidth = Math.max(100, startWidth + e.clientX - startX);
+          updateColumn(dbId, column.id, { width: newWidth });
+        }}
+        onPointerUp={() => {
+          // Pointer capture is automatically released
         }}
       />
     </th>

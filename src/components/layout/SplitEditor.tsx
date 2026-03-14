@@ -180,48 +180,27 @@ export function SplitEditor() {
   // 拖拽调整分栏大小
   const [primarySize, setPrimarySize] = useState(50); // 百分比
   const containerRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
-  
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
-    isDragging.current = true;
-    document.body.style.cursor = isHorizontal ? 'col-resize' : 'row-resize';
-    document.body.style.userSelect = 'none';
-  }, [isHorizontal]);
-  
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current || !containerRef.current) return;
-      
-      const rect = containerRef.current.getBoundingClientRect();
-      let newSize: number;
-      
-      if (isHorizontal) {
-        newSize = ((e.clientX - rect.left) / rect.width) * 100;
-      } else {
-        newSize = ((e.clientY - rect.top) / rect.height) * 100;
-      }
-      
-      // 限制最小/最大尺寸 (10% - 90%)
-      newSize = Math.max(10, Math.min(90, newSize));
-      setPrimarySize(newSize);
-    };
-    
-    const handleMouseUp = () => {
-      if (isDragging.current) {
-        isDragging.current = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-      }
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    if (!containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    let newSize: number;
+
+    if (isHorizontal) {
+      newSize = ((e.clientX - rect.left) / rect.width) * 100;
+    } else {
+      newSize = ((e.clientY - rect.top) / rect.height) * 100;
+    }
+
+    // 限制最小/最大尺寸 (10% - 90%)
+    newSize = Math.max(10, Math.min(90, newSize));
+    setPrimarySize(newSize);
   }, [isHorizontal]);
   
   // 切换方向时重置大小
@@ -296,9 +275,10 @@ export function SplitEditor() {
             isHorizontal 
               ? "w-1 cursor-col-resize hover:w-1" 
               : "h-1 cursor-row-resize hover:h-1",
-            "group relative"
+            "group relative touch-none"
           )}
-          onMouseDown={handleMouseDown}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
         >
           {/* 拖拽手柄指示器 */}
           <div className={cn(
