@@ -620,7 +620,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       const isSelected = selectedNode?.id === node.id;
       const isFirstDegree = focusNodeId ? connectedToFocus.has(node.id) : false;
       const isSecondDegree = focusNodeId ? secondDegreeNeighbors.has(node.id) : false;
-      const isCurrent = !node.isFolder && currentFile?.includes(node.label);
+      const isCurrent = !node.isFolder && currentFile === node.path;
       const target = isHovered || isSelected ? 1.0 : isFirstDegree ? 0.7 : isSecondDegree ? 0.35 : isCurrent && !hasSelection ? 0.2 : 0;
       const next = (emphasis.get(node.id) ?? 0) + (target - (emphasis.get(node.id) ?? 0)) * 0.18;
       emphasis.set(node.id, next);
@@ -695,7 +695,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
     // Draw nodes
     nodesRef.current.forEach((node) => {
-      const isCurrent = !node.isFolder && currentFile?.includes(node.label);
+      const isCurrent = !node.isFolder && currentFile === node.path;
       const nodeEmphasis = emphasis.get(node.id) ?? 0;
       // Tiered radius: hover 1.18x, first-degree 1.10x, second-degree 1.0x
       const radiusScale = nodeEmphasis > 0.85 ? 1.18
