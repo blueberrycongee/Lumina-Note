@@ -85,7 +85,17 @@ export function Sidebar() {
   );
 
   const authStatus = useCloudSyncStore((s) => s.authStatus);
+  const cloudSession = useCloudSyncStore((s) => s.session);
+  const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
+  const setOrgConnection = useOrgStore((s) => s.setConnection);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Bridge CloudSync auth session to OrgStore so team API calls have credentials
+  useEffect(() => {
+    if (authStatus === 'authenticated' && cloudSession?.token && cloudBaseUrl) {
+      setOrgConnection(cloudBaseUrl, cloudSession.token);
+    }
+  }, [authStatus, cloudSession?.token, cloudBaseUrl, setOrgConnection]);
 
   const ops = useSidebarFileOperations();
   const {
