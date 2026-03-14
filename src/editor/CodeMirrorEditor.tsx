@@ -1526,10 +1526,7 @@ const selectionBridgeField = StateField.define<DecorationSet>({
     if (wasDragging && !isDragging) return buildSelectionBridgeDecorations(tr.state);
     if (!tr.selection) return deco;
     if (isDragging) {
-      if (shouldDisableDrawSelectionForTauriWebKit()) {
-        return buildSelectionBridgeDecorations(tr.state);
-      }
-      return Decoration.none;
+      return buildSelectionBridgeDecorations(tr.state);
     }
     return buildSelectionBridgeDecorations(tr.state);
   },
@@ -2719,6 +2716,9 @@ function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
   const seen = new Set<string>();
   const blockTypes = new Set(['HeaderMark', 'ListMark', 'QuoteMark']);
   const inlineTypes = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark']);
+  // During drag or in reading mode, bridge all inline marks in selection
+  // regardless of shouldShowSource (marks are hidden/frozen)
+  const bridgeAllInline = isDragging || !collapseEnabled;
 
   syntaxTree(state).iterate({
     from: scanFrom,
@@ -2751,7 +2751,7 @@ function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
       }
 
       if (node.from >= node.to) return;
-      if (!shouldShowSource(state, node.from, node.to)) return;
+      if (!bridgeAllInline && !shouldShowSource(state, node.from, node.to)) return;
       const inlineKey = `${node.from}:${node.to}:bridge`;
       if (seen.has(inlineKey)) return;
       seen.add(inlineKey);
