@@ -200,7 +200,10 @@ async fn build_prop_entry(
     })
 }
 
-pub(crate) async fn respond_get(absolute: &Path, metrics: &ServerMetrics) -> Result<Response<Body>, AppError> {
+pub(crate) async fn respond_get(
+    absolute: &Path,
+    metrics: &ServerMetrics,
+) -> Result<Response<Body>, AppError> {
     let metadata = tokio::fs::metadata(absolute)
         .await
         .map_err(|_| AppError::NotFound)?;
@@ -346,7 +349,10 @@ pub(crate) async fn respond_delete(absolute: &Path) -> Result<Response<Body>, Ap
         .map_err(|e| AppError::Internal(format!("build response: {}", e)))
 }
 
-pub(crate) async fn authorize_request(state: &AppState, headers: &HeaderMap) -> Result<String, AppError> {
+pub(crate) async fn authorize_request(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> Result<String, AppError> {
     let header = headers
         .get(axum::http::header::AUTHORIZATION)
         .ok_or(AppError::Unauthorized)?;

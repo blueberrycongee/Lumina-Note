@@ -1261,10 +1261,7 @@ pub async fn get_published_site(
     Ok(row)
 }
 
-pub async fn delete_published_site(
-    pool: &SqlitePool,
-    user_id: &str,
-) -> Result<(), AppError> {
+pub async fn delete_published_site(pool: &SqlitePool, user_id: &str) -> Result<(), AppError> {
     sqlx::query("DELETE FROM published_sites WHERE user_id = ?")
         .bind(user_id)
         .execute(pool)
