@@ -2692,7 +2692,8 @@ const selectAllDomHandlers = Prec.highest(
 );
 
 function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
-  if (!state.facet(collapseOnSelectionFacet)) return Decoration.none;
+  const collapseEnabled = state.facet(collapseOnSelectionFacet);
+  const isDragging = state.field(mouseSelectingField, false);
   const hasSelection = state.selection.ranges.some((range) => range.from !== range.to);
   if (!hasSelection) return Decoration.none;
 
