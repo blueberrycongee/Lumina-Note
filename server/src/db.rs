@@ -489,6 +489,27 @@ pub async fn get_organization(
     }))
 }
 
+pub async fn update_organization_name(
+    pool: &SqlitePool,
+    org_id: &str,
+    name: &str,
+) -> Result<(), AppError> {
+    sqlx::query(
+        r#"
+        UPDATE organizations
+        SET name = ?1
+        WHERE id = ?2;
+        "#,
+    )
+    .bind(name)
+    .bind(org_id)
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("update organization name: {}", e)))?;
+
+    Ok(())
+}
+
 pub async fn add_org_member(
     pool: &SqlitePool,
     org_id: &str,
@@ -1018,6 +1039,35 @@ pub async fn list_annotation_replies(
             )
         })
         .collect())
+}
+
+pub async fn get_annotation(
+    pool: &SqlitePool,
+    annotation_id: &str,
+) -> Result<Option<AnnotationRow>, AppError> {
+    let row = sqlx::query(
+        r#"
+        SELECT id, doc_path, org_id, user_id, range_start, range_end, content, resolved, created_at
+        FROM annotations
+        WHERE id = ?1;
+        "#,
+    )
+    .bind(annotation_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("get annotation: {}", e)))?;
+
+    Ok(row.map(|row| AnnotationRow {
+        id: row.get::<String, _>("id"),
+        doc_path: row.get::<String, _>("doc_path"),
+        org_id: row.get::<String, _>("org_id"),
+        user_id: row.get::<String, _>("user_id"),
+        range_start: row.get::<i64, _>("range_start"),
+        range_end: row.get::<i64, _>("range_end"),
+        content: row.get::<String, _>("content"),
+        resolved: row.get::<i32, _>("resolved") != 0,
+        created_at: row.get::<i64, _>("created_at"),
+    }))
 }
 
 pub async fn resolve_annotation(pool: &SqlitePool, annotation_id: &str) -> Result<(), AppError> {

@@ -9,7 +9,7 @@ mod routes;
 mod state;
 
 use axum::http::{HeaderName, Request};
-use axum::routing::{any, get, post};
+use axum::routing::{any, delete, get, post, put};
 use axum::Router;
 use config::Config;
 use sqlx::sqlite::SqlitePoolOptions;
@@ -80,6 +80,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/workspaces",
             get(routes::list_workspaces).post(routes::create_workspace),
         )
+        // Organization routes
+        .route("/orgs", get(routes::list_orgs).post(routes::create_org))
+        .route("/orgs/:org_id", get(routes::get_org).put(routes::update_org))
+        .route("/orgs/:org_id/members", post(routes::add_member))
+        .route("/orgs/:org_id/members/:user_id", delete(routes::remove_member))
+        // Project routes
+        .route("/orgs/:org_id/projects", get(routes::list_org_projects).post(routes::create_project))
+        // Task routes
+        .route("/projects/:project_id/tasks", get(routes::list_project_tasks).post(routes::create_task))
+        .route("/tasks/:task_id", put(routes::update_task_handler).delete(routes::delete_task_handler))
+        // Annotation routes
+        .route("/orgs/:org_id/annotations", get(routes::list_annotations_handler).post(routes::create_annotation_handler))
+        .route("/annotations/:annotation_id/replies", post(routes::create_reply))
+        .route("/annotations/:annotation_id/resolve", put(routes::resolve_annotation_handler))
+        // Notification routes
+        .route("/notifications", get(routes::list_notifications_handler))
+        .route("/notifications/read", put(routes::mark_read))
+        .route("/notifications/read-all", put(routes::mark_all_read))
+        .route("/notifications/unread-count", get(routes::unread_count))
+        // Existing routes
         .route("/relay", get(relay::relay_handler))
         .route("/dav/:workspace_id", any(dav::handle_dav_root))
         .route("/dav/:workspace_id/*path", any(dav::handle_dav_path))
