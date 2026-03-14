@@ -670,15 +670,14 @@ pub async fn open_new_window(app: AppHandle) -> Result<(), AppError> {
             .as_millis()
     );
 
-    let window =
-        WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
-            .title("Lumina Note")
-            .inner_size(1200.0, 800.0)
-            .min_inner_size(800.0, 600.0)
-            .resizable(true)
-            .center()
-            .build()
-            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    let window = WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
+        .title("Lumina Note")
+        .inner_size(1200.0, 800.0)
+        .min_inner_size(800.0, 600.0)
+        .resizable(true)
+        .center()
+        .build()
+        .map_err(|e| AppError::InvalidPath(e.to_string()))?;
 
     #[cfg(target_os = "macos")]
     {
