@@ -227,7 +227,7 @@ export function OpenClawSection({
   }
 
   return (
-    <div className="mx-2 mb-2 rounded-lg border border-border bg-background/70 p-2">
+    <div className="px-2">
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <div className="truncate text-xs font-semibold text-foreground">

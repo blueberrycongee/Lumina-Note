@@ -19,11 +19,11 @@ export function SidebarQuickActions({ vaultPath, onQuickNote }: SidebarQuickActi
   } = useVoiceNote();
 
   return (
-    <div className="px-2 mb-2 space-y-2">
+    <div className="px-2 space-y-1">
       <button
         onClick={onQuickNote}
         disabled={!vaultPath}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground bg-background hover:bg-accent border border-border rounded-md transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
+        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground rounded-ui-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
         title={t.file.quickNote}
       >
         <Calendar size={14} />
@@ -77,7 +77,7 @@ export function SidebarQuickActions({ vaultPath, onQuickNote }: SidebarQuickActi
         <button
           onClick={startRecording}
           disabled={!vaultPath}
-          className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground bg-background hover:bg-accent border border-border rounded-md transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
+          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground rounded-ui-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
           title={t.file.voiceRecordHint}
         >
           <Mic size={14} />

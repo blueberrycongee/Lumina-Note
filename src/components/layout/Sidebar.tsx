@@ -243,11 +243,13 @@ export function Sidebar() {
         onNewWindow={handleNewWindow}
       />
 
+      {/* Toolbar Zone */}
+      <div className="flex flex-col gap-3 py-2 border-b border-border/60">
       {/* Quick Actions */}
       <SidebarQuickActions vaultPath={vaultPath} onQuickNote={handleQuickNote} />
 
       {/* Team Organization Section */}
-      <div className="px-2 py-1">
+      <div className="px-2">
         <OrgSwitcher />
         {currentOrgId && projects.length > 0 && (
           <div className="mt-2">
@@ -285,7 +287,7 @@ export function Sidebar() {
       )}
 
       {/* Favorites */}
-      <div className="px-2 mb-2">
+      <div className="px-2">
         <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm bg-amber-500/5 px-2 py-1">
           <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
             <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
@@ -393,10 +395,11 @@ export function Sidebar() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Vault Name - root drop zone */}
       {renamingPath === vaultPath ? (
-        <div className="border-b border-border/60 bg-background/35 px-2 py-1.5">
+        <div className="bg-background/35 px-2 py-1.5">
           <input
             type="text"
             value={renameValue}
@@ -437,7 +440,7 @@ export function Sidebar() {
           }}
           onMouseLeave={() => setIsRootDragOver(false)}
           className={cn(
-            "cursor-pointer select-none px-3 py-2 text-sm font-medium truncate border-b border-border/60 bg-background/35 transition-colors hover:bg-background/45",
+            "cursor-pointer select-none px-3 py-2 text-sm font-medium truncate bg-background/35 transition-colors hover:bg-background/45",
             isRootDragOver && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
             selectedPath === vaultPath && "bg-primary/10 ring-1 ring-primary/30 ring-inset text-primary",
           )}
