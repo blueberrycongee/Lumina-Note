@@ -403,7 +403,7 @@ export function RightPanel() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [isDraggingAI, setIsDraggingAI] = useState(false);
-  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+  const dragStartPosRef = useRef({ x: 0, y: 0 });
   const [isDraggingFileOver, setIsDraggingFileOver] = useState(false);
   const panelRef = useRef<HTMLElement>(null);
 
@@ -420,44 +420,37 @@ export function RightPanel() {
     }
   }, [rightPanelTab, aiPanelMode, isMainAIActive, chatMode, checkChatFirstLoad]);
 
-  // 处理 AI tab 拖拽开始
-  const handleAIDragStart = (e: React.MouseEvent) => {
+  // 处理 AI tab 拖拽 (pointer capture)
+  const handleAIPointerDown = (e: React.PointerEvent) => {
     if (aiPanelMode === "floating") return;
-    setDragStartPos({ x: e.clientX, y: e.clientY });
+    e.currentTarget.setPointerCapture(e.pointerId);
+    dragStartPosRef.current = { x: e.clientX, y: e.clientY };
     setIsDraggingAI(true);
   };
 
-  // 处理拖拽中
-  useEffect(() => {
-    if (!isDraggingAI) return;
+  const handleAIPointerMove = (e: React.PointerEvent) => {
+    if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+    const dx = e.clientX - dragStartPosRef.current.x;
+    const dy = e.clientY - dragStartPosRef.current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const dx = e.clientX - dragStartPos.x;
-      const dy = e.clientY - dragStartPos.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // 拖拽超过 50px 触发悬浮模式
-      if (distance > 50) {
-        setIsDraggingAI(false);
-        setFloatingBallPosition({ x: e.clientX - 28, y: e.clientY - 28 });
-        setAIPanelMode("floating");
-        setFloatingBallDragging(true); // 继承拖拽状态到悬浮球
-        setRightPanelTab("outline"); // 自动切换到大纲
-      }
-    };
-
-    const handleMouseUp = () => {
+    // 拖拽超过 50px 触发悬浮模式
+    if (distance > 50) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
       setIsDraggingAI(false);
-    };
+      setFloatingBallPosition({ x: e.clientX - 28, y: e.clientY - 28 });
+      setAIPanelMode("floating");
+      setFloatingBallDragging(true); // 继承拖拽状态到悬浮球
+      setRightPanelTab("outline"); // 自动切换到大纲
+    }
+  };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDraggingAI, dragStartPos, setFloatingBallPosition, setAIPanelMode]);
+  const handleAIPointerUp = (e: React.PointerEvent) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsDraggingAI(false);
+  };
 
   // Listen for tag-clicked events to switch to Tags tab
   useEffect(() => {
@@ -540,8 +533,10 @@ export function RightPanel() {
         {aiPanelMode === "docked" && !isMainAIActive && (
           <button
             onClick={() => setRightPanelTab("chat")}
-            onMouseDown={handleAIDragStart}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 select-none whitespace-nowrap hover:bg-accent/50 ${
+            onPointerDown={handleAIPointerDown}
+            onPointerMove={handleAIPointerMove}
+            onPointerUp={handleAIPointerUp}
+            className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 select-none whitespace-nowrap hover:bg-accent/50 touch-none ${
               rightPanelTab === "chat"
                 ? "text-primary border-b-2 border-primary bg-primary/5"
                 : "text-muted-foreground hover:text-foreground"
