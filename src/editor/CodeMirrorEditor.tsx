@@ -2904,15 +2904,14 @@ function shouldShowCalloutSource(
   if (!shouldCollapse) return false;
   const isDragging = state.field(mouseSelectingField, false);
   if (isDragging) return false;
-  return state.selection.ranges.some((range) => {
-    if (range.from === range.to) {
-      // Caret inside callout
-      return range.from >= from && range.from <= to;
-    }
-    // Selection overlaps callout at all (not just fully inside)
-    // This prevents blue selection remnants on the widget when dragging across
-    return range.from <= to && range.to >= from;
-  });
+  // Only switch to source when cursor (collapsed selection) is inside callout.
+  // Drag selections that cross over the callout keep it in widget mode,
+  // matching Obsidian's behavior — drawSelection() paints over the widget
+  // without triggering a DOM rebuild.
+  return state.selection.ranges.some(
+    (range) =>
+      range.from === range.to && range.from >= from && range.from <= to,
+  );
 }
 
 function parseCalloutContent(
