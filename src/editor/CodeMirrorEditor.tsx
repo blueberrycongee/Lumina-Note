@@ -961,7 +961,15 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
   }
   const isDrag = state.field(mouseSelectingField, false);
 
+  // Scope iteration to viewport for performance — mark decorations
+  // outside the visible area have no visual effect and will be rebuilt
+  // when the viewport changes (checkUpdateAction handles viewportChanged).
+  const scanFrom = view.viewport.from;
+  const scanTo = view.viewport.to;
+
   syntaxTree(state).iterate({
+    from: scanFrom,
+    to: scanTo,
     enter: (node) => {
       if (!LIVE_BLOCK_MARK_TYPES.has(node.name) && !LIVE_INLINE_MARK_TYPES.has(node.name)) return;
       if (isInsideSkippedLivePreviewParent(node)) return;
