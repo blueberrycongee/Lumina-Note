@@ -5,6 +5,8 @@ import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
+import { useOrgStore } from "@/stores/useOrgStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
 import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce, getFileName } from "@/lib/utils";
@@ -13,6 +15,11 @@ import {
   type CodeMirrorEditorRef,
   ViewMode,
 } from "./CodeMirrorEditor";
+import {
+  createCollabConnection,
+  type CollabConnection,
+} from "@/services/team/collabProvider";
+import { resolveDocId } from "@/services/team/client";
 import { SelectionToolbar } from "@/components/toolbar/SelectionToolbar";
 import { SelectionContextMenu } from "@/components/toolbar/SelectionContextMenu";
 import {
@@ -106,6 +113,76 @@ export function Editor() {
     useAIStore();
   const { sessions: agentSessions, currentSessionId: agentSessionId } =
     useRustAgentStore();
+
+  // ── Collaborative editing connection ─────────────────────────────
+  const authStatus = useCloudSyncStore((s) => s.authStatus);
+  const serverBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
+  const cloudToken = useCloudSyncStore((s) => s.session?.token ?? "");
+  const cloudEmail = useCloudSyncStore((s) => s.email);
+  const currentOrgId = useOrgStore((s) => s.currentOrgId);
+  const currentProjectId = useOrgStore((s) => s.currentProjectId);
+
+  const [collabConnection, setCollabConnection] =
+    useState<CollabConnection | null>(null);
+
+  useEffect(() => {
+    if (
+      authStatus !== "authenticated" ||
+      !currentOrgId ||
+      !currentProjectId ||
+      !currentFile ||
+      !serverBaseUrl ||
+      !cloudToken
+    ) {
+      return;
+    }
+
+    let destroyed = false;
+    let conn: CollabConnection | null = null;
+
+    (async () => {
+      try {
+        const docId = await resolveDocId(
+          serverBaseUrl,
+          cloudToken,
+          currentProjectId,
+          currentFile,
+        );
+        if (destroyed) return;
+
+        const wsUrl = serverBaseUrl.replace(/^http/, "ws").replace(/\/+$/, "");
+        conn = createCollabConnection({
+          serverUrl: wsUrl,
+          docId,
+          token: cloudToken,
+          userName: cloudEmail || undefined,
+        });
+        if (destroyed) {
+          conn.destroy();
+          return;
+        }
+        setCollabConnection(conn);
+      } catch {
+        // Collab is best-effort — editor works without it
+      }
+    })();
+
+    return () => {
+      destroyed = true;
+      if (conn) {
+        conn.destroy();
+      }
+      setCollabConnection(null);
+    };
+  }, [
+    authStatus,
+    currentOrgId,
+    currentProjectId,
+    currentFile,
+    serverBaseUrl,
+    cloudToken,
+    cloudEmail,
+  ]);
 
   const editorRef = useRef<CodeMirrorEditorRef>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -570,6 +647,7 @@ export function Editor() {
             }}
             viewMode={editorMode as ViewMode}
             filePath={currentFile}
+            collabConnection={collabConnection}
           />
         </div>
       )}
