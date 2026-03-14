@@ -105,18 +105,33 @@ describe('parseMarkdown', () => {
     it('should parse note callout', () => {
       const result = parseMarkdown('> [!note] Title\n> Content');
       expect(result).toContain('class="callout');
-      expect(result).toContain('callout-note');
+      expect(result).toContain('callout-blue');
+      expect(result).toContain('callout-icon');
+      expect(result).toContain('📝');
     });
 
     it('should parse warning callout', () => {
       const result = parseMarkdown('> [!warning]\n> Be careful');
-      expect(result).toContain('callout-warning');
+      expect(result).toContain('callout-yellow');
+      expect(result).toContain('⚠️');
     });
 
     it('should parse tip callout', () => {
       const result = parseMarkdown('> [!tip] Pro tip\n> Do this');
-      expect(result).toContain('callout-tip');
       expect(result).toContain('callout-green');
+      expect(result).toContain('💡');
+    });
+
+    it('should parse foldable callout with - modifier', () => {
+      const result = parseMarkdown('> [!note]- Collapsed\n> Hidden content');
+      expect(result).toContain('callout-folded');
+      expect(result).toContain('callout-fold');
+    });
+
+    it('should parse foldable callout with + modifier', () => {
+      const result = parseMarkdown('> [!note]+ Expanded\n> Visible content');
+      expect(result).toContain('callout-fold');
+      expect(result).not.toContain('callout-folded');
     });
   });
 
