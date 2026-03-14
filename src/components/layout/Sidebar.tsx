@@ -19,10 +19,13 @@ import {
   Shapes,
   Star,
   StarOff,
+  LogIn,
 } from "lucide-react";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
+import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { useShallow } from "zustand/react/shallow";
 import { OrgSwitcher } from "../team/OrgSwitcher";
+import { TeamAuthModal } from "../team/TeamAuthModal";
 import { useOrgStore } from "@/stores/useOrgStore";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
 import { useSidebarFileOperations, type CreatingState } from "./hooks/useSidebarFileOperations";
@@ -80,6 +83,9 @@ export function Sidebar() {
       switchProject: state.switchProject,
     })),
   );
+
+  const authStatus = useCloudSyncStore((s) => s.authStatus);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const ops = useSidebarFileOperations();
   const {
@@ -249,30 +255,51 @@ export function Sidebar() {
       <SidebarQuickActions vaultPath={vaultPath} onQuickNote={handleQuickNote} />
 
       {/* Team Organization Section */}
-      <div className="px-2">
-        <OrgSwitcher />
-        {currentOrgId && projects.length > 0 && (
-          <div className="mt-2">
-            <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-              {t.team.projects}
+      {authStatus === 'authenticated' ? (
+        <div className="px-2">
+          <OrgSwitcher />
+          {currentOrgId && projects.length > 0 && (
+            <div className="mt-2">
+              <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                {t.team.projects}
+              </div>
+              {projects.map((proj) => (
+                <button
+                  key={proj.id}
+                  className={cn(
+                    "w-full text-left px-2 py-1.5 text-sm rounded-md truncate",
+                    "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                    currentProjectId === proj.id && "bg-zinc-100 dark:bg-zinc-800 font-medium",
+                  )}
+                  onClick={() => switchProject(proj.id)}
+                  title={proj.description || proj.name}
+                >
+                  {proj.name}
+                </button>
+              ))}
+
             </div>
-            {projects.map((proj) => (
-              <button
-                key={proj.id}
-                className={cn(
-                  "w-full text-left px-2 py-1.5 text-sm rounded-md truncate",
-                  "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                  currentProjectId === proj.id && "bg-zinc-100 dark:bg-zinc-800 font-medium",
-                )}
-                onClick={() => switchProject(proj.id)}
-                title={proj.description || proj.name}
-              >
-                {proj.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="px-2 py-1">
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+          >
+            <LogIn className="w-4 h-4" />
+            {t.auth.signInToAccess}
+          </button>
+        </div>
+      )}
+
+      {/* Team Auth Modal */}
+      {showAuthModal && (
+        <TeamAuthModal
+          onClose={() => setShowAuthModal(false)}
+          onAuthenticated={() => setShowAuthModal(false)}
+        />
+      )}
 
       {/* OpenClaw */}
       {vaultPath && (
