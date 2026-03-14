@@ -23,17 +23,24 @@ import {
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { ChatInput, type ChatInputRef } from "./ChatInput";
 import type { AttachedImage, QuoteReference } from "@/types/chat";
-import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
-import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
+import {
+  processMessageWithFiles,
+  type ReferencedFile,
+} from "@/hooks/useChatSend";
+import {
+  getImagesFromContent,
+  getTextFromContent,
+  getUserMessageDisplay,
+} from "./messageContentUtils";
 
 // Edit suggestion card
-function EditCard({ 
-  edit, 
-  onApply, 
-  onReject 
-}: { 
-  edit: EditSuggestion; 
-  onApply: () => void; 
+function EditCard({
+  edit,
+  onApply,
+  onReject,
+}: {
+  edit: EditSuggestion;
+  onApply: () => void;
   onReject: () => void;
 }) {
   const { t } = useLocaleStore();
@@ -66,26 +73,35 @@ function EditCard({
         </div>
       </div>
       <p className="text-xs text-muted-foreground">{edit.description}</p>
-      
+
       <div className="text-xs font-mono bg-background/50 rounded border border-border/60 overflow-hidden max-h-[200px] overflow-y-auto">
         {diff.map((part, index) => {
           if (part.added) {
             return (
-              <div key={index} className="bg-success/10 text-success px-2 py-0.5 whitespace-pre-wrap border-l-2 border-success">
+              <div
+                key={index}
+                className="bg-success/10 text-success px-2 py-0.5 whitespace-pre-wrap border-l-2 border-success"
+              >
                 {part.value}
               </div>
             );
           }
           if (part.removed) {
             return (
-              <div key={index} className="bg-destructive/10 text-destructive px-2 py-0.5 whitespace-pre-wrap line-through opacity-70 border-l-2 border-destructive">
+              <div
+                key={index}
+                className="bg-destructive/10 text-destructive px-2 py-0.5 whitespace-pre-wrap line-through opacity-70 border-l-2 border-destructive"
+              >
                 {part.value}
               </div>
             );
           }
           // Context
           return (
-            <div key={index} className="text-muted-foreground px-2 py-0.5 whitespace-pre-wrap opacity-50">
+            <div
+              key={index}
+              className="text-muted-foreground px-2 py-0.5 whitespace-pre-wrap opacity-50"
+            >
               {part.value}
             </div>
           );
@@ -100,12 +116,12 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ compact = false }: ChatPanelProps) {
-  const { 
-    messages, 
-    isLoading, 
+  const {
+    messages,
+    isLoading,
     isStreaming,
     streamingContent,
-    error, 
+    error,
     referencedFiles,
     pendingEdits,
     sendMessageStream,
@@ -117,23 +133,29 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   } = useAIStore();
   const currentFile = useFileStore((state) => state.currentFile);
   const { t } = useLocaleStore();
-  
+
   const [inputValue, setInputValue] = useState("");
   const [canSend, setCanSend] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
-  const { isRecording, interimText, toggleRecording } = useSpeechToText((text: string) => {
-    setInputValue((prev) => (prev ? prev + " " + text : text));
-  });
+  const { isRecording, interimText, toggleRecording } = useSpeechToText(
+    (text: string) => {
+      setInputValue((prev) => (prev ? prev + " " + text : text));
+    },
+  );
 
   // 滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
   }, [messages, isLoading, isStreaming]);
 
   const getCurrentFileInfo = useCallback(() => {
-    const { currentFile: activeFile, currentContent: activeContent } = useFileStore.getState();
+    const { currentFile: activeFile, currentContent: activeContent } =
+      useFileStore.getState();
     if (!activeFile) return null;
     const name = activeFile.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "";
     return {
@@ -154,27 +176,37 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   }, [currentFile]);
 
   // Handle send message with referenced files and images
-  const handleSendWithFiles = useCallback(async (
-    message: string,
-    files: ReferencedFile[],
-    images?: AttachedImage[],
-    quotedSelections: QuoteReference[] = [],
-  ) => {
-    if (!message.trim() && files.length === 0 && quotedSelections.length === 0 && (!images || images.length === 0)) return;
-    if (isLoading || isStreaming) return;
+  const handleSendWithFiles = useCallback(
+    async (
+      message: string,
+      files: ReferencedFile[],
+      images?: AttachedImage[],
+      quotedSelections: QuoteReference[] = [],
+    ) => {
+      if (
+        !message.trim() &&
+        files.length === 0 &&
+        quotedSelections.length === 0 &&
+        (!images || images.length === 0)
+      )
+        return;
+      if (isLoading || isStreaming) return;
 
-    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, files, quotedSelections);
-    const latestFileInfo = getCurrentFileInfo();
+      const { displayMessage, fullMessage, attachments } =
+        await processMessageWithFiles(message, files, quotedSelections);
+      const latestFileInfo = getCurrentFileInfo();
 
-    setInputValue("");
-    await sendMessageStream(
-      fullMessage,
-      files.length === 0 ? (latestFileInfo || undefined) : undefined,
-      displayMessage,
-      images,
-      attachments
-    );
-  }, [isLoading, isStreaming, sendMessageStream, getCurrentFileInfo]);
+      setInputValue("");
+      await sendMessageStream(
+        fullMessage,
+        files.length === 0 ? latestFileInfo || undefined : undefined,
+        displayMessage,
+        images,
+        attachments,
+      );
+    },
+    [isLoading, isStreaming, sendMessageStream, getCurrentFileInfo],
+  );
 
   const handlePrimaryAction = useCallback(() => {
     if (isLoading || isStreaming) {
@@ -185,51 +217,63 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   }, [isLoading, isStreaming, stopStreaming]);
 
   // Preview edit in diff view
-  const handlePreviewEdit = useCallback((edit: EditSuggestion) => {
-    const editFileName = edit.filePath.replace(/\.md$/, "").toLowerCase();
-    
-    let file = referencedFiles.find(f => {
-      const refName = f.name.replace(/\.md$/, "").toLowerCase();
-      return f.path.toLowerCase().includes(editFileName) || 
-             refName.includes(editFileName) ||
-             editFileName.includes(refName);
-    });
-    
-    const latestFileInfo = getCurrentFileInfo();
-    if (!file && latestFileInfo) {
-      const currentName = latestFileInfo.name.toLowerCase();
-      if (
-        latestFileInfo.path.toLowerCase().includes(editFileName) ||
-        currentName.includes(editFileName) ||
-        editFileName.includes(currentName) ||
-        currentName === editFileName
-      ) {
-        file = latestFileInfo;
-      }
-    }
+  const handlePreviewEdit = useCallback(
+    (edit: EditSuggestion) => {
+      const editFileName = edit.filePath.replace(/\.md$/, "").toLowerCase();
 
-    if (file && file.content && file.path) {
-      const modified = applyEdit(file.content, edit);
-      if (modified !== file.content) {
-        setPendingDiff({
-          fileName: file.name,
-          filePath: file.path,
-          original: file.content,
-          modified,
-          description: edit.description,
-        });
+      let file = referencedFiles.find((f) => {
+        const refName = f.name.replace(/\.md$/, "").toLowerCase();
+        return (
+          f.path.toLowerCase().includes(editFileName) ||
+          refName.includes(editFileName) ||
+          editFileName.includes(refName)
+        );
+      });
+
+      const latestFileInfo = getCurrentFileInfo();
+      if (!file && latestFileInfo) {
+        const currentName = latestFileInfo.name.toLowerCase();
+        if (
+          latestFileInfo.path.toLowerCase().includes(editFileName) ||
+          currentName.includes(editFileName) ||
+          editFileName.includes(currentName) ||
+          currentName === editFileName
+        ) {
+          file = latestFileInfo;
+        }
       }
-    } else {
-      alert(t.ai.editFileNotFound);
-    }
-  }, [referencedFiles, getCurrentFileInfo, setPendingDiff, t.ai.editFileNotFound]);
+
+      if (file && file.content && file.path) {
+        const modified = applyEdit(file.content, edit);
+        if (modified !== file.content) {
+          setPendingDiff({
+            fileName: file.name,
+            filePath: file.path,
+            original: file.content,
+            modified,
+            description: edit.description,
+          });
+        }
+      } else {
+        alert(t.ai.editFileNotFound);
+      }
+    },
+    [
+      referencedFiles,
+      getCurrentFileInfo,
+      setPendingDiff,
+      t.ai.editFileNotFound,
+    ],
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Context indicator - shows which file(s) will be sent to AI */}
       {!compact && (
         <div className="p-2 border-b border-border/60">
-          <div className="text-xs text-muted-foreground mb-1">{t.ai.contextLabel}</div>
+          <div className="text-xs text-muted-foreground mb-1">
+            {t.ai.contextLabel}
+          </div>
           <div className="flex flex-wrap gap-1">
             {referencedFiles.length > 0 ? (
               referencedFiles.map((file) => (
@@ -248,32 +292,49 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
               <span className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
                 <FileText size={10} />
                 {currentFileMeta.name}
-                <span className="text-[10px] opacity-60">({t.common.auto})</span>
+                <span className="text-[10px] opacity-60">
+                  ({t.common.auto})
+                </span>
               </span>
             ) : (
-              <span className="text-xs text-muted-foreground/60">{t.ai.noContextFiles}</span>
+              <span className="text-xs text-muted-foreground/60">
+                {t.ai.noContextFiles}
+              </span>
             )}
           </div>
         </div>
       )}
 
       {/* Chat History */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-3 space-y-3"
+      >
         {/* Welcome message */}
         {messages.length === 0 && (
           <div className="text-sm text-muted-foreground leading-relaxed">
             <p>{t.ai.welcomeEdit}</p>
-            {!compact && <p className="mt-2 text-xs opacity-70">{t.ai.currentNoteContextHint}</p>}
+            {!compact && (
+              <p className="mt-2 text-xs opacity-70">
+                {t.ai.currentNoteContextHint}
+              </p>
+            )}
           </div>
         )}
 
         {/* Messages */}
         {messages.map((msg, idx) => (
-          <div key={idx} className={`${msg.role === "user" ? "flex justify-end" : ""}`}>
+          <div
+            key={idx}
+            className={`${msg.role === "user" ? "flex justify-end" : ""}`}
+          >
             {msg.role === "user" ? (
               <div className="max-w-[85%] bg-primary text-primary-foreground rounded-2xl rounded-br-sm px-4 py-2.5 text-sm">
                 {(() => {
-                  const { text: userText, attachments } = getUserMessageDisplay(msg.content, msg.attachments);
+                  const { text: userText, attachments } = getUserMessageDisplay(
+                    msg.content,
+                    msg.attachments,
+                  );
                   const images = getImagesFromContent(msg.content);
                   return (
                     <>
@@ -281,20 +342,24 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                         <div className="mb-2 flex flex-wrap gap-1.5">
                           {attachments.map((attachment, attachmentIdx) => (
                             <span
-                              key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? attachment.path ?? attachment.name : attachment.sourcePath ?? attachment.source}`}
+                              key={`${attachment.type}-${attachmentIdx}-${attachment.type === "file" ? (attachment.path ?? attachment.name) : (attachment.sourcePath ?? attachment.source)}`}
                               className="inline-flex items-center gap-1 rounded-full bg-primary-foreground/20 px-2 py-0.5 text-xs"
                             >
                               {attachment.type === "file" ? (
                                 <>
                                   <FileText size={10} />
-                                  <span className="max-w-[180px] truncate">{attachment.name}</span>
+                                  <span className="max-w-[180px] truncate">
+                                    {attachment.name}
+                                  </span>
                                 </>
                               ) : (
                                 <>
                                   <Quote size={10} />
                                   <span className="max-w-[220px] truncate">
                                     {attachment.source}
-                                    {attachment.locator ? ` (${attachment.locator})` : ""}
+                                    {attachment.locator
+                                      ? ` (${attachment.locator})`
+                                      : ""}
                                   </span>
                                 </>
                               )}
@@ -302,9 +367,13 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                           ))}
                         </div>
                       )}
-                      {userText && <span className="whitespace-pre-wrap">{userText}</span>}
+                      {userText && (
+                        <span className="whitespace-pre-wrap">{userText}</span>
+                      )}
                       {images.length > 0 && (
-                        <div className={`flex flex-wrap gap-2 ${userText || attachments.length > 0 ? "mt-2" : ""}`}>
+                        <div
+                          className={`flex flex-wrap gap-2 ${userText || attachments.length > 0 ? "mt-2" : ""}`}
+                        >
                           {images.map((img, imageIdx) => (
                             <img
                               key={`${img.source.data.slice(0, 16)}-${imageIdx}`}
@@ -320,20 +389,25 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                 })()}
               </div>
             ) : (
-              <div 
+              <div
                 className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none [&_*]:!text-xs [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-xs"
-                dangerouslySetInnerHTML={{ __html: parseMarkdown(getTextFromContent(msg.content)) }}
+                dangerouslySetInnerHTML={{
+                  __html: parseMarkdown(getTextFromContent(msg.content)),
+                }}
               />
             )}
           </div>
         ))}
 
-
         {/* Pending edits */}
         {pendingEdits.length > 0 && (
           <div className="space-y-2 p-2 bg-warning/10 border border-warning/30 rounded-lg">
             <p className="text-xs font-semibold text-warning">
-              📝 {t.ai.pendingEdits.replace('{count}', String(pendingEdits.length))}
+              📝{" "}
+              {t.ai.pendingEdits.replace(
+                "{count}",
+                String(pendingEdits.length),
+              )}
             </p>
             {pendingEdits.map((edit, idx) => (
               <EditCard
@@ -350,21 +424,47 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
         {(isLoading || isStreaming) && (
           <div>
             {streamingContent ? (
-              <div 
-                className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none streaming-content-enter [&_*]:!text-xs [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-xs"
-              >
-                <span dangerouslySetInnerHTML={{ __html: parseMarkdown(streamingContent) }} />
-                <div className="mt-2 flex items-center gap-1.5" aria-hidden>
-                  <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
-                  <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
-                  <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
-                </div>
+              <div className="text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none streaming-content-enter [&_*]:!text-xs [&_h1]:!text-base [&_h2]:!text-sm [&_h3]:!text-xs">
+                <span
+                  dangerouslySetInnerHTML={{
+                    __html: parseMarkdown(streamingContent),
+                  }}
+                />
+                <span
+                  className="ml-1 inline-flex items-center gap-1 align-middle"
+                  aria-hidden
+                >
+                  <span
+                    className="streaming-dot"
+                    style={{ animationDelay: "0ms" }}
+                  />
+                  <span
+                    className="streaming-dot"
+                    style={{ animationDelay: "160ms" }}
+                  />
+                  <span
+                    className="streaming-dot"
+                    style={{ animationDelay: "320ms" }}
+                  />
+                </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 h-6 streaming-content-enter" aria-hidden>
-                <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
-                <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
-                <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
+              <div
+                className="flex items-center gap-1.5 h-6 streaming-content-enter"
+                aria-hidden
+              >
+                <span
+                  className="streaming-dot"
+                  style={{ animationDelay: "0ms" }}
+                />
+                <span
+                  className="streaming-dot"
+                  style={{ animationDelay: "160ms" }}
+                />
+                <span
+                  className="streaming-dot"
+                  style={{ animationDelay: "320ms" }}
+                />
               </div>
             )}
           </div>
@@ -378,31 +478,47 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
         )}
 
         {/* Retry button */}
-        {messages.length > 0 && messages.some(m => m.role === "assistant") && !isLoading && !isStreaming && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                const latestFileInfo = getCurrentFileInfo();
-                retry(currentFile ? {
-                  path: latestFileInfo?.path || currentFile,
-                  name: latestFileInfo?.name || currentFile.split(/[/\\]/).pop() || currentFile,
-                  content: latestFileInfo?.content || "",
-                } : undefined);
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-              title={t.ai.regenerate}
-            >
-              <RefreshCw size={12} />
-              {t.ai.regenerate}
-            </button>
-          </div>
-        )}
+        {messages.length > 0 &&
+          messages.some((m) => m.role === "assistant") &&
+          !isLoading &&
+          !isStreaming && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  const latestFileInfo = getCurrentFileInfo();
+                  retry(
+                    currentFile
+                      ? {
+                          path: latestFileInfo?.path || currentFile,
+                          name:
+                            latestFileInfo?.name ||
+                            currentFile.split(/[/\\]/).pop() ||
+                            currentFile,
+                          content: latestFileInfo?.content || "",
+                        }
+                      : undefined,
+                  );
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+                title={t.ai.regenerate}
+              >
+                <RefreshCw size={12} />
+                {t.ai.regenerate}
+              </button>
+            </div>
+          )}
 
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
-      <div className={compact ? "p-2 border-t border-border/60" : "p-3 border-t border-border/60"}>
+      <div
+        className={
+          compact
+            ? "p-2 border-t border-border/60"
+            : "p-3 border-t border-border/60"
+        }
+      >
         <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
           <ChatInput
             ref={chatInputRef}
@@ -421,7 +537,9 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
             </div>
             {/* 流式显示中间识别结果 */}
             <div className="flex-1 truncate text-sm text-foreground/70 italic">
-              {interimText && <span className="animate-pulse">{interimText}...</span>}
+              {interimText && (
+                <span className="animate-pulse">{interimText}...</span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button
@@ -437,21 +555,25 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                 {isRecording && (
                   <span className="absolute inset-0 rounded-md animate-ping bg-destructive/30" />
                 )}
-                {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
+                {isRecording ? (
+                  <MicOff size={14} className="relative z-10" />
+                ) : (
+                  <Mic size={14} />
+                )}
               </button>
               <button
                 onClick={handlePrimaryAction}
                 disabled={!canSend && !(isLoading || isStreaming)}
                 className={`${
-                  (isLoading || isStreaming)
+                  isLoading || isStreaming
                     ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     : canSend
                       ? "bg-primary hover:bg-primary/90 text-primary-foreground"
                       : "bg-muted text-muted-foreground"
                 } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
-                title={(isLoading || isStreaming) ? t.ai.stop : t.ai.send}
+                title={isLoading || isStreaming ? t.ai.stop : t.ai.send}
               >
-                {(isLoading || isStreaming) ? (
+                {isLoading || isStreaming ? (
                   <Square size={14} fill="currentColor" />
                 ) : (
                   <Send size={14} />
