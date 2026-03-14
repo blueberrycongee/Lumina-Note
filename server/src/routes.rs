@@ -746,8 +746,9 @@ mod tests {
                 jwt_secret: "test-secret".to_string(),
             },
             relay: RelayHub::new(),
-            collab: CollabHub::new(),
+            collab: CollabHub::new(&data_dir.display().to_string()),
             metrics: Arc::new(ServerMetrics::new()),
+            notify: crate::notify_ws::NotifyHub::new(),
         }
     }
 
