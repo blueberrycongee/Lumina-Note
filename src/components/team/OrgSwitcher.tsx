@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useOrgStore } from '@/stores/useOrgStore';
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ChevronDown, Plus, Building2, Check, Loader2 } from 'lucide-react';
+import { ChevronDown, Plus, Building2, Check, Loader2, LogOut } from 'lucide-react';
+import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
 
 const roleBadgeClass: Record<string, string> = {
   admin: 'bg-blue-500/20 text-blue-400',
@@ -20,6 +21,9 @@ export function OrgSwitcher() {
       createOrg: s.createOrg,
     })),
   );
+
+  const logout = useCloudSyncStore((s) => s.logout);
+  const email = useCloudSyncStore((s) => s.email);
 
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -186,6 +190,24 @@ export function OrgSwitcher() {
               <span>{t.team.createOrganization}</span>
             </button>
           )}
+
+          {/* Divider */}
+          <div className="border-t border-zinc-700 my-1" />
+
+          {/* User info + Logout */}
+          <div className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-xs text-zinc-500 truncate max-w-[160px]">
+              {email}
+            </span>
+            <button
+              type="button"
+              onClick={() => { logout(); }}
+              className="flex items-center gap-1 text-xs text-zinc-500 hover:text-red-400 transition-colors"
+            >
+              <LogOut size={12} />
+              {t.auth.logout}
+            </button>
+          </div>
         </div>
       )}
     </div>
