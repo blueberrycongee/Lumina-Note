@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useShallow } from "zustand/react/shallow";
+import { OrgSwitcher } from "../team/OrgSwitcher";
+import { useOrgStore } from "@/stores/useOrgStore";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
 import { useSidebarFileOperations, type CreatingState } from "./hooks/useSidebarFileOperations";
 import { SidebarHeader } from "./SidebarHeader";
@@ -68,6 +70,15 @@ export function Sidebar() {
   const favoriteEntries = useMemo(
     () => getFavorites(favoriteSortMode),
     [getFavorites, favoriteSortMode, favorites, manualOrder],
+  );
+
+  const { currentOrgId, projects, currentProjectId, switchProject } = useOrgStore(
+    useShallow((state) => ({
+      currentOrgId: state.currentOrgId,
+      projects: state.projects,
+      currentProjectId: state.currentProjectId,
+      switchProject: state.switchProject,
+    })),
   );
 
   const ops = useSidebarFileOperations();
@@ -234,6 +245,32 @@ export function Sidebar() {
 
       {/* Quick Actions */}
       <SidebarQuickActions vaultPath={vaultPath} onQuickNote={handleQuickNote} />
+
+      {/* Team Organization Section */}
+      <div className="px-2 py-1">
+        <OrgSwitcher />
+        {currentOrgId && projects.length > 0 && (
+          <div className="mt-2">
+            <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
+              Projects
+            </div>
+            {projects.map((proj) => (
+              <button
+                key={proj.id}
+                className={cn(
+                  "w-full text-left px-2 py-1.5 text-sm rounded-md truncate",
+                  "hover:bg-zinc-100 dark:hover:bg-zinc-800",
+                  currentProjectId === proj.id && "bg-zinc-100 dark:bg-zinc-800 font-medium",
+                )}
+                onClick={() => switchProject(proj.id)}
+                title={proj.description || proj.name}
+              >
+                {proj.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* OpenClaw */}
       {vaultPath && (

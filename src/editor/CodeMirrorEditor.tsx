@@ -42,6 +42,8 @@ import {
   PLUGIN_EDITOR_SELECTION_EVENT,
   pluginEditorRuntime,
 } from '@/services/plugins/editorRuntime';
+import { yCollab } from 'y-codemirror.next';
+import type { CollabConnection } from '@/services/team/collabProvider';
 import {
   checkUpdateAction,
   collapseOnSelectionFacet,
@@ -69,6 +71,7 @@ const readOnlyCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const pluginExtensionsCompartment = new Compartment();
 const fontSizeCompartment = new Compartment();
+const collabCompartment = new Compartment();
 
 // ============ 2. 全局状态 ============
 // mouseSelectingField 和 setMouseSelecting 从 codemirror-live-markdown 导入
@@ -81,6 +84,7 @@ interface CodeMirrorEditorProps {
   livePreview?: boolean;
   scrollContainerRef?: RefObject<HTMLElement>;
   filePath?: string | null;
+  collabConnection?: CollabConnection | null;
 }
 
 export interface CodeMirrorEditorRef {
@@ -3212,7 +3216,7 @@ const voicePreviewField = StateField.define<DecorationSet>({
 
 export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditorProps>(
   function CodeMirrorEditor(
-    { content, onChange, className = '', viewMode, livePreview, scrollContainerRef, filePath = null },
+    { content, onChange, className = '', viewMode, livePreview, scrollContainerRef, filePath = null, collabConnection = null },
     ref,
   ) {
     const { t } = useLocaleStore();
@@ -3466,6 +3470,9 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           EditorView.lineWrapping,
           drawSelection(),
           fontSizeCompartment.of(createEditorTheme(editorFontSize)),
+          collabCompartment.of(
+            collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+          ),
           mouseSelectingField,
           selectionStatePlugin,
           selectionBridgeField,
@@ -4331,6 +4338,16 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
         effects: fontSizeCompartment.reconfigure(createEditorTheme(editorFontSize)),
       });
     }, [editorFontSize]);
+
+    useEffect(() => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: collabCompartment.reconfigure(
+          collabConnection ? yCollab(collabConnection.ytext, undefined) : [],
+        ),
+      });
+    }, [collabConnection]);
 
     useEffect(() => {
       const view = viewRef.current;
