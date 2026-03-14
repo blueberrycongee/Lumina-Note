@@ -208,6 +208,18 @@ pub struct MarkNotificationReadRequest {
     pub notification_ids: Vec<String>,
 }
 
+// ── Document Registry ───────────────────────────────────────────────
+
+#[derive(Debug, Deserialize)]
+pub struct ResolveDocRequest {
+    pub rel_path: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ResolveDocResponse {
+    pub doc_id: String,
+}
+
 // ── Publish ─────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize)]

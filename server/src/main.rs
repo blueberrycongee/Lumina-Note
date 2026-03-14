@@ -101,6 +101,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "/orgs/:org_id/projects",
             get(routes::list_org_projects).post(routes::create_project),
         )
+        // Document registry
+        .route(
+            "/projects/:project_id/docs/resolve",
+            post(routes::resolve_doc),
+        )
         // Task routes
         .route(
             "/projects/:project_id/tasks",

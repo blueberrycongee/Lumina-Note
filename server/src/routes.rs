@@ -13,7 +13,8 @@ use crate::models::{
     CreateAnnotationReplyRequest, CreateAnnotationRequest, CreateOrgRequest, CreateProjectRequest,
     CreateTaskRequest, CreateWorkspaceRequest, LoginRequest, MarkNotificationReadRequest,
     NotificationSummary, OrgDetail, OrgMemberInfo, OrgSummary, ProjectSummary, RegisterRequest,
-    TaskSummary, TokenResponse, UpdateOrgRequest, UpdateTaskRequest, UserSummary, WorkspaceSummary,
+    ResolveDocRequest, ResolveDocResponse, TaskSummary, TokenResponse, UpdateOrgRequest,
+    UpdateTaskRequest, UserSummary, WorkspaceSummary,
 };
 use crate::state::AppState;
 
@@ -340,6 +341,22 @@ async fn require_project_member(
     let user_id = require_org_member(state, headers, &org_id).await?;
     Ok((user_id, org_id))
 }
+
+// ── Document Registry ───────────────────────────────────────────────
+
+pub async fn resolve_doc(
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+    headers: HeaderMap,
+    Json(payload): Json<ResolveDocRequest>,
+) -> Result<Json<ResolveDocResponse>, AppError> {
+    let (user_id, _org_id) = require_project_member(&state, &headers, &project_id).await?;
+    let doc_id =
+        db::resolve_or_create_doc(&state.pool, &project_id, &payload.rel_path, &user_id).await?;
+    Ok(Json(ResolveDocResponse { doc_id }))
+}
+
+// ── Task ────────────────────────────────────────────────────────────
 
 pub async fn create_task(
     State(state): State<AppState>,

@@ -1,8 +1,8 @@
 // ===== Constants =====
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'cancelled';
-export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
-export type OrgRole = 'admin' | 'member' | 'guest';
+export type TaskStatus = "todo" | "in_progress" | "done" | "cancelled";
+export type TaskPriority = "low" | "medium" | "high" | "urgent";
+export type OrgRole = "admin" | "member" | "guest";
 
 // ===== Organization =====
 
@@ -131,6 +131,12 @@ export interface CreateAnnotationRequest {
 
 export interface CreateAnnotationReplyRequest {
   content: string;
+}
+
+// ===== Document Registry =====
+
+export interface ResolveDocResponse {
+  doc_id: string;
 }
 
 // ===== Notification =====

@@ -1,4 +1,4 @@
-import { tauriFetchJson } from '@/lib/tauriFetch';
+import { tauriFetchJson } from "@/lib/tauriFetch";
 import type {
   CreateOrgRequest,
   OrgSummary,
@@ -15,18 +15,19 @@ import type {
   CreateAnnotationReplyRequest,
   NotificationSummary,
   MarkNotificationReadRequest,
-} from './types';
+  ResolveDocResponse,
+} from "./types";
 
 // ===== Helpers =====
 
 function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.trim().replace(/\/+$/, '');
+  return baseUrl.trim().replace(/\/+$/, "");
 }
 
 function parseErrorMessage(raw: string): string {
   try {
     const parsed = JSON.parse(raw) as { code?: string; message?: string };
-    if (typeof parsed.message === 'string' && parsed.message.length > 0) {
+    if (typeof parsed.message === "string" && parsed.message.length > 0) {
       return parsed.message;
     }
   } catch {
@@ -35,58 +36,66 @@ function parseErrorMessage(raw: string): string {
   return raw;
 }
 
-async function postJson<T>(url: string, body: unknown, token: string): Promise<T> {
+async function postJson<T>(
+  url: string,
+  body: unknown,
+  token: string,
+): Promise<T> {
   const response = await tauriFetchJson<T>(url, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
   if (!response.ok || !response.data) {
-    throw new Error(parseErrorMessage(response.error || 'Request failed'));
+    throw new Error(parseErrorMessage(response.error || "Request failed"));
   }
   return response.data;
 }
 
 async function getJson<T>(url: string, token: string): Promise<T> {
   const response = await tauriFetchJson<T>(url, {
-    method: 'GET',
+    method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
   if (!response.ok || !response.data) {
-    throw new Error(parseErrorMessage(response.error || 'Request failed'));
+    throw new Error(parseErrorMessage(response.error || "Request failed"));
   }
   return response.data;
 }
 
-async function putJson<T>(url: string, body: unknown, token: string): Promise<T> {
+async function putJson<T>(
+  url: string,
+  body: unknown,
+  token: string,
+): Promise<T> {
   const response = await tauriFetchJson<T>(url, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
   if (!response.ok || !response.data) {
-    throw new Error(parseErrorMessage(response.error || 'Request failed'));
+    throw new Error(parseErrorMessage(response.error || "Request failed"));
   }
   return response.data;
 }
 
 async function deleteJson(url: string, token: string): Promise<void> {
   const response = await tauriFetchJson<unknown>(url, {
-    method: 'DELETE',
+    method: "DELETE",
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
   if (!response.ok) {
-    throw new Error(parseErrorMessage(response.error || 'Request failed'));
+    throw new Error(parseErrorMessage(response.error || "Request failed"));
   }
 }
 
@@ -95,18 +104,25 @@ async function deleteJson(url: string, token: string): Promise<void> {
 export async function createOrg(
   baseUrl: string,
   token: string,
-  req: CreateOrgRequest
+  req: CreateOrgRequest,
 ): Promise<OrgSummary> {
   const base = normalizeBaseUrl(baseUrl);
   return postJson<OrgSummary>(`${base}/orgs`, req, token);
 }
 
-export async function listOrgs(baseUrl: string, token: string): Promise<OrgSummary[]> {
+export async function listOrgs(
+  baseUrl: string,
+  token: string,
+): Promise<OrgSummary[]> {
   const base = normalizeBaseUrl(baseUrl);
   return getJson<OrgSummary[]>(`${base}/orgs`, token);
 }
 
-export async function getOrg(baseUrl: string, token: string, orgId: string): Promise<OrgDetail> {
+export async function getOrg(
+  baseUrl: string,
+  token: string,
+  orgId: string,
+): Promise<OrgDetail> {
   const base = normalizeBaseUrl(baseUrl);
   return getJson<OrgDetail>(`${base}/orgs/${orgId}`, token);
 }
@@ -115,7 +131,7 @@ export async function updateOrg(
   baseUrl: string,
   token: string,
   orgId: string,
-  req: UpdateOrgRequest
+  req: UpdateOrgRequest,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await putJson<void>(`${base}/orgs/${orgId}`, req, token);
@@ -125,7 +141,7 @@ export async function addOrgMember(
   baseUrl: string,
   token: string,
   orgId: string,
-  req: AddOrgMemberRequest
+  req: AddOrgMemberRequest,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await postJson<void>(`${base}/orgs/${orgId}/members`, req, token);
@@ -135,7 +151,7 @@ export async function removeOrgMember(
   baseUrl: string,
   token: string,
   orgId: string,
-  userId: string
+  userId: string,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await deleteJson(`${base}/orgs/${orgId}/members/${userId}`, token);
@@ -147,7 +163,7 @@ export async function createProject(
   baseUrl: string,
   token: string,
   orgId: string,
-  req: CreateProjectRequest
+  req: CreateProjectRequest,
 ): Promise<ProjectSummary> {
   const base = normalizeBaseUrl(baseUrl);
   return postJson<ProjectSummary>(`${base}/orgs/${orgId}/projects`, req, token);
@@ -156,10 +172,27 @@ export async function createProject(
 export async function listProjects(
   baseUrl: string,
   token: string,
-  orgId: string
+  orgId: string,
 ): Promise<ProjectSummary[]> {
   const base = normalizeBaseUrl(baseUrl);
   return getJson<ProjectSummary[]>(`${base}/orgs/${orgId}/projects`, token);
+}
+
+// ===== Document Registry =====
+
+export async function resolveDocId(
+  baseUrl: string,
+  token: string,
+  projectId: string,
+  relPath: string,
+): Promise<string> {
+  const base = normalizeBaseUrl(baseUrl);
+  const result = await postJson<ResolveDocResponse>(
+    `${base}/projects/${projectId}/docs/resolve`,
+    { rel_path: relPath },
+    token,
+  );
+  return result.doc_id;
 }
 
 // ===== Tasks =====
@@ -168,16 +201,20 @@ export async function createTask(
   baseUrl: string,
   token: string,
   projectId: string,
-  req: CreateTaskRequest
+  req: CreateTaskRequest,
 ): Promise<TaskDetail> {
   const base = normalizeBaseUrl(baseUrl);
-  return postJson<TaskDetail>(`${base}/projects/${projectId}/tasks`, req, token);
+  return postJson<TaskDetail>(
+    `${base}/projects/${projectId}/tasks`,
+    req,
+    token,
+  );
 }
 
 export async function listTasks(
   baseUrl: string,
   token: string,
-  projectId: string
+  projectId: string,
 ): Promise<TaskDetail[]> {
   const base = normalizeBaseUrl(baseUrl);
   return getJson<TaskDetail[]>(`${base}/projects/${projectId}/tasks`, token);
@@ -187,13 +224,17 @@ export async function updateTask(
   baseUrl: string,
   token: string,
   taskId: string,
-  req: UpdateTaskRequest
+  req: UpdateTaskRequest,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await putJson<void>(`${base}/tasks/${taskId}`, req, token);
 }
 
-export async function deleteTask(baseUrl: string, token: string, taskId: string): Promise<void> {
+export async function deleteTask(
+  baseUrl: string,
+  token: string,
+  taskId: string,
+): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await deleteJson(`${base}/tasks/${taskId}`, token);
 }
@@ -204,22 +245,26 @@ export async function createAnnotation(
   baseUrl: string,
   token: string,
   orgId: string,
-  req: CreateAnnotationRequest
+  req: CreateAnnotationRequest,
 ): Promise<AnnotationDetail> {
   const base = normalizeBaseUrl(baseUrl);
-  return postJson<AnnotationDetail>(`${base}/orgs/${orgId}/annotations`, req, token);
+  return postJson<AnnotationDetail>(
+    `${base}/orgs/${orgId}/annotations`,
+    req,
+    token,
+  );
 }
 
 export async function listAnnotations(
   baseUrl: string,
   token: string,
   orgId: string,
-  docPath: string
+  docPath: string,
 ): Promise<AnnotationDetail[]> {
   const base = normalizeBaseUrl(baseUrl);
   return getJson<AnnotationDetail[]>(
     `${base}/orgs/${orgId}/annotations?doc_path=${encodeURIComponent(docPath)}`,
-    token
+    token,
   );
 }
 
@@ -227,19 +272,27 @@ export async function createAnnotationReply(
   baseUrl: string,
   token: string,
   annotationId: string,
-  req: CreateAnnotationReplyRequest
+  req: CreateAnnotationReplyRequest,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
-  await postJson<void>(`${base}/annotations/${annotationId}/replies`, req, token);
+  await postJson<void>(
+    `${base}/annotations/${annotationId}/replies`,
+    req,
+    token,
+  );
 }
 
 export async function resolveAnnotation(
   baseUrl: string,
   token: string,
-  annotationId: string
+  annotationId: string,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
-  await postJson<void>(`${base}/annotations/${annotationId}/resolve`, {}, token);
+  await postJson<void>(
+    `${base}/annotations/${annotationId}/resolve`,
+    {},
+    token,
+  );
 }
 
 // ===== Notifications =====
@@ -247,29 +300,38 @@ export async function resolveAnnotation(
 export async function listNotifications(
   baseUrl: string,
   token: string,
-  limit?: number
+  limit?: number,
 ): Promise<NotificationSummary[]> {
   const base = normalizeBaseUrl(baseUrl);
-  const query = limit !== undefined ? `?limit=${limit}` : '';
+  const query = limit !== undefined ? `?limit=${limit}` : "";
   return getJson<NotificationSummary[]>(`${base}/notifications${query}`, token);
 }
 
 export async function markNotificationsRead(
   baseUrl: string,
   token: string,
-  req: MarkNotificationReadRequest
+  req: MarkNotificationReadRequest,
 ): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await postJson<void>(`${base}/notifications/read`, req, token);
 }
 
-export async function markAllNotificationsRead(baseUrl: string, token: string): Promise<void> {
+export async function markAllNotificationsRead(
+  baseUrl: string,
+  token: string,
+): Promise<void> {
   const base = normalizeBaseUrl(baseUrl);
   await postJson<void>(`${base}/notifications/read-all`, {}, token);
 }
 
-export async function getUnreadNotificationCount(baseUrl: string, token: string): Promise<number> {
+export async function getUnreadNotificationCount(
+  baseUrl: string,
+  token: string,
+): Promise<number> {
   const base = normalizeBaseUrl(baseUrl);
-  const result = await getJson<{ count: number }>(`${base}/notifications/unread-count`, token);
+  const result = await getJson<{ count: number }>(
+    `${base}/notifications/unread-count`,
+    token,
+  );
   return result.count;
 }

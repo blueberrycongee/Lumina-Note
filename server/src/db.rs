@@ -192,6 +192,23 @@ pub async fn init_db(pool: &SqlitePool) -> Result<(), AppError> {
     .await
     .map_err(|e| AppError::Internal(format!("create published_sites table: {}", e)))?;
 
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS document_registry (
+            id          TEXT PRIMARY KEY,
+            project_id  TEXT NOT NULL,
+            rel_path    TEXT NOT NULL,
+            created_by  TEXT NOT NULL,
+            created_at  INTEGER NOT NULL,
+            UNIQUE(project_id, rel_path),
+            FOREIGN KEY(project_id) REFERENCES projects(id)
+        );
+        "#,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("create document_registry table: {}", e)))?;
+
     Ok(())
 }
 
@@ -1217,6 +1234,74 @@ pub async fn count_unread_notifications(pool: &SqlitePool, user_id: &str) -> Res
     .map_err(|e| AppError::Internal(format!("count unread notifications: {}", e)))?;
 
     Ok(row.get::<i64, _>("cnt"))
+}
+
+// ---------------------------------------------------------------------------
+// Document Registry
+// ---------------------------------------------------------------------------
+
+/// Return existing doc_id for (project_id, rel_path), or create a new one.
+pub async fn resolve_or_create_doc(
+    pool: &SqlitePool,
+    project_id: &str,
+    rel_path: &str,
+    user_id: &str,
+) -> Result<String, AppError> {
+    // Fast path: lookup existing
+    let existing = sqlx::query(
+        "SELECT id FROM document_registry WHERE project_id = ?1 AND rel_path = ?2",
+    )
+    .bind(project_id)
+    .bind(rel_path)
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| AppError::Internal(format!("lookup document_registry: {}", e)))?;
+
+    if let Some(row) = existing {
+        return Ok(row.get::<String, _>("id"));
+    }
+
+    // Insert new
+    let doc_id = Uuid::new_v4().to_string();
+    let now = Utc::now().timestamp();
+
+    let result = sqlx::query(
+        r#"
+        INSERT INTO document_registry (id, project_id, rel_path, created_by, created_at)
+        VALUES (?1, ?2, ?3, ?4, ?5)
+        "#,
+    )
+    .bind(&doc_id)
+    .bind(project_id)
+    .bind(rel_path)
+    .bind(user_id)
+    .bind(now)
+    .execute(pool)
+    .await;
+
+    match result {
+        Ok(_) => Ok(doc_id),
+        Err(err) => {
+            // Race condition: another request inserted between our SELECT and INSERT.
+            // Re-query to get the winner's id.
+            if err.to_string().contains("UNIQUE") {
+                let row = sqlx::query(
+                    "SELECT id FROM document_registry WHERE project_id = ?1 AND rel_path = ?2",
+                )
+                .bind(project_id)
+                .bind(rel_path)
+                .fetch_one(pool)
+                .await
+                .map_err(|e| AppError::Internal(format!("re-lookup document_registry: {}", e)))?;
+                Ok(row.get::<String, _>("id"))
+            } else {
+                Err(AppError::Internal(format!(
+                    "insert document_registry: {}",
+                    err
+                )))
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
