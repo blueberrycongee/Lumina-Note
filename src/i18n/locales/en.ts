@@ -2111,4 +2111,138 @@ Requirements:
     expandPanel: 'Expand detail panel',
     statsSummary: '{total} images · {orphans} orphans · {totalSize}',
   },
+
+  // Team collaboration
+  team: {
+    // Common
+    projects: 'Projects',
+    admin: 'Admin',
+    member: 'Member',
+    guest: 'Guest',
+
+    // Status
+    statusTodo: 'Todo',
+    statusInProgress: 'In Progress',
+    statusDone: 'Done',
+    statusCancelled: 'Cancelled',
+
+    // Priority
+    priorityLow: 'Low',
+    priorityMedium: 'Medium',
+    priorityHigh: 'High',
+    priorityUrgent: 'Urgent',
+
+    // Org Switcher
+    selectOrganization: 'Select organization',
+    noOrganizations: 'No organizations',
+    orgNamePlaceholder: 'Organization name',
+    createOrganization: 'Create organization',
+    ok: 'OK',
+
+    // Org Settings
+    orgSettings: 'Organization Settings',
+    noOrgSelected: 'No organization selected.',
+    name: 'Name',
+    members: 'Members',
+    noMembers: 'No members',
+    removeMember: 'Remove member',
+    inviteMember: 'Invite Member',
+    emailPlaceholder: 'user@email.com',
+    role: 'Role',
+
+    // Task Table
+    title: 'Title',
+    status: 'Status',
+    priority: 'Priority',
+    assignee: 'Assignee',
+    dueDate: 'Due Date',
+    unassigned: 'Unassigned',
+    noTasksFound: 'No tasks found',
+
+    // Task Kanban (uses status/priority labels above)
+
+    // Task Calendar
+    daySun: 'Sun',
+    dayMon: 'Mon',
+    dayTue: 'Tue',
+    dayWed: 'Wed',
+    dayThu: 'Thu',
+    dayFri: 'Fri',
+    daySat: 'Sat',
+    monthJanuary: 'January',
+    monthFebruary: 'February',
+    monthMarch: 'March',
+    monthApril: 'April',
+    monthMay: 'May',
+    monthJune: 'June',
+    monthJuly: 'July',
+    monthAugust: 'August',
+    monthSeptember: 'September',
+    monthOctober: 'October',
+    monthNovember: 'November',
+    monthDecember: 'December',
+    today: 'Today',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+    moreCount: '+{count} more',
+
+    // Task Gantt
+    viewDay: 'Day',
+    viewWeek: 'Week',
+    viewMonth: 'Month',
+    noTasksWithStartDates: 'No tasks with start dates',
+    ganttEmptyHint: 'Add a start date to your tasks to see them on the Gantt chart.',
+
+    // Task Detail Panel
+    taskDetails: 'Task Details',
+    description: 'Description',
+    assigneeId: 'Assignee ID',
+    userIdPlaceholder: 'User ID',
+    startDate: 'Start Date',
+    created: 'Created',
+    updated: 'Updated',
+    taskId: 'ID',
+    confirmDelete: 'Confirm Delete',
+    deleteTask: 'Delete Task',
+    taskNotFound: 'Task not found',
+
+    // Task View Container
+    viewTable: 'Table',
+    viewKanban: 'Kanban',
+    viewCalendar: 'Calendar',
+    viewGantt: 'Gantt',
+    newTask: 'New Task',
+    taskTitleRequired: 'Task title *',
+    descriptionPlaceholder: 'Description',
+    creating: 'Creating...',
+    searchPlaceholder: 'Search...',
+    filter: 'Filter',
+
+    // Notifications
+    notifications: 'Notifications',
+    markAllRead: 'Mark all read',
+    noNotifications: 'No notifications',
+    justNow: 'just now',
+    minutesAgo: '{count}m ago',
+    hoursAgo: '{count}h ago',
+    daysAgo: '{count}d ago',
+
+    // Annotations
+    annotations: 'Annotations',
+    annotationCount: '{count} annotation(s)',
+    resolved: 'Resolved',
+    reply: 'Reply',
+    replies: 'reply',
+    repliesPlural: 'replies',
+    replyPlaceholder: 'Reply...',
+    sendReply: 'Send reply',
+    resolve: 'Resolve',
+    addAnnotation: 'Add Annotation',
+    rangeStart: 'Start',
+    rangeEnd: 'End',
+    annotationPlaceholder: 'Write your annotation...',
+    loadingAnnotations: 'Loading annotations...',
+    noAnnotationsYet: 'No annotations yet.',
+    noAnnotationsHint: 'Select text in the editor and add one below.',
+  },
 };
