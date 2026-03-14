@@ -16,6 +16,9 @@ mod typesetting;
 mod update_manager;
 mod vector_db;
 
+#[cfg(target_os = "macos")]
+pub mod traffic_lights;
+
 pub use commands::*;
 pub use error::*;
 pub use fs::*;

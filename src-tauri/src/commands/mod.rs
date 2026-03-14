@@ -670,14 +670,27 @@ pub async fn open_new_window(app: AppHandle) -> Result<(), AppError> {
             .as_millis()
     );
 
-    WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
-        .title("Lumina Note")
-        .inner_size(1200.0, 800.0)
-        .min_inner_size(800.0, 600.0)
-        .resizable(true)
-        .center()
-        .build()
-        .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    let window =
+        WebviewWindowBuilder::new(&app, &label, WebviewUrl::App("index.html".into()))
+            .title("Lumina Note")
+            .inner_size(1200.0, 800.0)
+            .min_inner_size(800.0, 600.0)
+            .resizable(true)
+            .center()
+            .build()
+            .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+
+    #[cfg(target_os = "macos")]
+    {
+        crate::traffic_lights::observe_resize(&window);
+
+        let win = window.clone();
+        window.on_window_event(move |event| {
+            if matches!(event, tauri::WindowEvent::ThemeChanged(..)) {
+                crate::traffic_lights::center_in_titlebar(&win);
+            }
+        });
+    }
 
     Ok(())
 }
