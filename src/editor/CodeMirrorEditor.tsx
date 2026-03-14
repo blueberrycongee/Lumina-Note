@@ -146,34 +146,27 @@ const createEditorTheme = (fontSize: number) =>
       pointerEvents: 'none',
     },
 
-    // 2. 行内标记 (Bold, Italic) - 默认隐藏 (收缩)
+    // 2. 行内标记 (Bold, Italic) - 默认隐藏
+    //    Obsidian 方案: font-size: 1px + letter-spacing: -1ch
+    //    字符互相重叠，视觉宽度趋近于零，但不改变布局结构
     '.cm-formatting-inline': {
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      whiteSpace: 'nowrap',
-      verticalAlign: 'baseline',
-      color: 'hsl(var(--muted-foreground) / 0.6)',
-      fontFamily: "'JetBrains Mono', monospace",
-      fontSize: '0.85em',
-      // 关键动画属性：初始宽度为0，透明度为0
-      maxWidth: '0',
-      opacity: '0',
-      transform: 'scaleX(0.8)',
-      transition: 'opacity 0.15s ease-out, transform 0.15s ease-out',
+      display: 'inline',
+      fontSize: '1px',
+      letterSpacing: '-1ch',
+      fontFamily: 'monospace',
+      color: 'transparent',
       pointerEvents: 'none',
     },
 
     // 3. 行内标记 - 激活状态 (展开)
     '.cm-formatting-inline-visible': {
-      maxWidth: '4ch', // 足够容纳符号
-      opacity: '1',
-      transform: 'scaleX(1)',
-      margin: '0 1px',
+      fontSize: '0.85em',
+      letterSpacing: 'normal',
+      fontFamily: "'JetBrains Mono', monospace",
+      color: 'hsl(var(--muted-foreground) / 0.6)',
       pointerEvents: 'auto',
     },
-    '&.cm-drag-selecting .cm-formatting-inline, &.cm-drag-selecting .cm-formatting-block, &.cm-drag-selecting .cm-math-inline, &.cm-drag-selecting .cm-math-source, &.cm-drag-selecting .cm-selection-bridge, &.cm-drag-selecting .cm-selection-gap': {
+    '&.cm-drag-selecting .cm-math-inline, &.cm-drag-selecting .cm-math-source, &.cm-drag-selecting .cm-selection-bridge, &.cm-drag-selecting .cm-selection-gap': {
       transition: 'none !important',
       animation: 'none !important',
     },
@@ -183,21 +176,18 @@ const createEditorTheme = (fontSize: number) =>
     },
 
     // 块级标记 (标题/列表/引用) - 默认隐藏
+    //    Obsidian 方案: font-size: 0, display: inline — 无 transition
     '.cm-formatting-block': {
       display: 'inline',
-      overflow: 'hidden',
-      fontSize: '0.01em',
-      lineHeight: 'inherit',
-      opacity: '0',
-      color: 'hsl(var(--muted-foreground))',
+      fontSize: '0',
+      color: 'transparent',
       fontFamily: "'JetBrains Mono', monospace",
-      transition: 'opacity 0.2s ease-out',
     },
 
     // 块级标记 - 激活状态 (展开)
     '.cm-formatting-block-visible': {
       fontSize: '1em',
-      opacity: '0.6',
+      color: 'hsl(var(--muted-foreground) / 0.6)',
     },
 
     // Selection bridge for visible formatting marks and their gap spaces.
