@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAnnotationStore } from '@/stores/useAnnotationStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import { useShallow } from 'zustand/react/shallow';
 import type { AnnotationDetail } from '@/services/team/types';
 import { MessageSquare, Check, Reply, X } from 'lucide-react';
@@ -20,6 +21,7 @@ function formatDate(ts: number): string {
 }
 
 function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
+  const { t } = useLocaleStore();
   const { replyToAnnotation, resolveAnnotation, selectAnnotation, activeAnnotationId } =
     useAnnotationStore(
       useShallow((s) => ({
@@ -85,7 +87,7 @@ function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
           </div>
           {isResolved && (
             <span className="flex-shrink-0 rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-              Resolved
+              {t.team.resolved}
             </span>
           )}
         </div>
@@ -106,7 +108,7 @@ function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
             onClick={() => setShowReplies(!showReplies)}
           >
             <Reply className="h-3 w-3" />
-            {annotation.replies.length} repl{annotation.replies.length === 1 ? 'y' : 'ies'}
+            {annotation.replies.length} {annotation.replies.length === 1 ? t.team.replies : t.team.repliesPlural}
           </button>
 
           {showReplies && (
@@ -138,7 +140,7 @@ function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
           <input
             type="text"
             className="flex-1 rounded border border-gray-200 bg-transparent px-2 py-1 text-xs text-gray-700 placeholder-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500"
-            placeholder="Reply..."
+            placeholder={t.team.replyPlaceholder}
             value={replyText}
             onChange={(e) => setReplyText(e.target.value)}
             onKeyDown={(e) => {
@@ -153,7 +155,7 @@ function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
             onClick={handleReply}
             disabled={!replyText.trim()}
             className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-blue-600 disabled:opacity-40 dark:hover:bg-gray-800 dark:hover:text-blue-400"
-            title="Send reply"
+            title={t.team.sendReply}
           >
             <Reply className="h-3.5 w-3.5" />
           </button>
@@ -161,7 +163,7 @@ function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
             type="button"
             onClick={handleResolve}
             className="rounded p-1 text-gray-400 hover:bg-green-50 hover:text-green-600 dark:hover:bg-green-900/20 dark:hover:text-green-400"
-            title="Resolve"
+            title={t.team.resolve}
           >
             <Check className="h-3.5 w-3.5" />
           </button>
@@ -172,6 +174,7 @@ function AnnotationCard({ annotation }: { annotation: AnnotationDetail }) {
 }
 
 export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelProps) {
+  const { t } = useLocaleStore();
   const { annotations, loading, error, fetchAnnotations, createAnnotation } =
     useAnnotationStore(
       useShallow((s) => ({
@@ -223,7 +226,7 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
         <div className="flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-            Annotations
+            {t.team.annotations}
           </h3>
           <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
             {annotations.filter((a) => !a.resolved).length}
@@ -247,7 +250,7 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-8 text-xs text-gray-400">
-          Loading annotations...
+          {t.team.loadingAnnotations}
         </div>
       )}
 
@@ -255,9 +258,9 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
       <div className="flex-1 space-y-2 overflow-y-auto p-3">
         {!loading && sorted.length === 0 && (
           <div className="py-8 text-center text-xs text-gray-400 dark:text-gray-500">
-            No annotations yet.
+            {t.team.noAnnotationsYet}
             <br />
-            Select text in the editor and add one below.
+            {t.team.noAnnotationsHint}
           </div>
         )}
         {sorted.map((ann) => (
@@ -268,11 +271,11 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
       {/* Add annotation area */}
       <div className="border-t border-gray-200 p-3 dark:border-gray-700">
         <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
-          Add Annotation
+          {t.team.addAnnotation}
         </p>
         <div className="mb-2 flex gap-2">
           <div className="flex-1">
-            <label className="mb-0.5 block text-[10px] text-gray-400">Start</label>
+            <label className="mb-0.5 block text-[10px] text-gray-400">{t.team.rangeStart}</label>
             <input
               type="number"
               min={0}
@@ -282,7 +285,7 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
             />
           </div>
           <div className="flex-1">
-            <label className="mb-0.5 block text-[10px] text-gray-400">End</label>
+            <label className="mb-0.5 block text-[10px] text-gray-400">{t.team.rangeEnd}</label>
             <input
               type="number"
               min={0}
@@ -295,7 +298,7 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
         <textarea
           className="mb-2 w-full resize-none rounded border border-gray-200 bg-transparent px-2 py-1.5 text-xs text-gray-700 placeholder-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500"
           rows={2}
-          placeholder="Write your annotation..."
+          placeholder={t.team.annotationPlaceholder}
           value={newContent}
           onChange={(e) => setNewContent(e.target.value)}
         />
@@ -305,7 +308,7 @@ export default function AnnotationPanel({ docPath, onClose }: AnnotationPanelPro
           disabled={!newContent.trim()}
           className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Add Annotation
+          {t.team.addAnnotation}
         </button>
       </div>
     </div>
