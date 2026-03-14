@@ -43,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
 
     std::fs::create_dir_all(&config.data_dir)?;
+    std::fs::create_dir_all(std::path::Path::new(&config.data_dir).join("collab"))?;
 
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
@@ -52,11 +53,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let bind_addr = config.bind.parse().map_err(|_| "invalid LUMINA_BIND")?;
 
+    let collab_hub = collab::CollabHub::new(&config.data_dir);
+    collab_hub.spawn_flush_task();
+
     let state = AppState {
         pool,
         config,
         relay: state::RelayHub::new(),
-        collab: collab::CollabHub::new(),
+        collab: collab_hub,
         metrics: Arc::new(state::ServerMetrics::new()),
         notify: notify_ws::NotifyHub::new(),
     };
