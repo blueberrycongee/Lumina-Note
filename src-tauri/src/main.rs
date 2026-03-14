@@ -20,6 +20,7 @@ mod mobile_gateway;
 mod node_runtime;
 mod plugins;
 mod proxy;
+mod secure_store;
 #[cfg(target_os = "macos")]
 mod traffic_lights;
 mod typesetting;
@@ -184,6 +185,10 @@ fn main() {
             proxy::set_proxy_config,
             proxy::get_proxy_config,
             proxy::test_proxy_connection,
+            // Secure store commands
+            secure_store::secure_store_get,
+            secure_store::secure_store_set,
+            secure_store::secure_store_delete,
             // Resumable updater commands
             update_manager::update_start_resumable_install,
             update_manager::update_get_resumable_status,
