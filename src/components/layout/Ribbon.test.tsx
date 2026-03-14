@@ -67,6 +67,9 @@ vi.mock("@/stores/useLocaleStore", () => ({
         switchToDark: "Switch to dark mode",
         settings: "Settings",
       },
+      auth: {
+        signIn: "Sign In",
+      },
       updateChecker: {
         title: "Software Update",
         descReady: "Update is ready",
@@ -100,6 +103,20 @@ vi.mock("@/stores/usePluginUiStore", () => ({
 vi.mock("@/stores/useUpdateStore", () => ({
   useUpdateStore: (selector: (state: typeof updateStoreState) => unknown) => selector(updateStoreState),
   hasActionableTerminalInstallPhase: () => false,
+}));
+
+vi.mock("@/stores/useCloudSyncStore", () => ({
+  useCloudSyncStore: (selector: (state: { authStatus: string; session: null }) => unknown) =>
+    selector({ authStatus: "anonymous", session: null }),
+}));
+
+vi.mock("@/components/team/TeamAuthModal", () => ({
+  TeamAuthModal: ({ onClose }: { onClose: () => void }) => (
+    <div>
+      <div>Auth Modal</div>
+      <button onClick={onClose}>Close Auth</button>
+    </div>
+  ),
 }));
 
 vi.mock("@tauri-apps/plugin-shell", () => ({

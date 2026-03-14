@@ -25,6 +25,7 @@ import {
   Loader2,
   RefreshCw,
   RotateCcw,
+  UserCircle,
 } from "lucide-react";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 
@@ -36,6 +37,8 @@ import { type PluginRibbonItem, usePluginUiStore } from "@/stores/usePluginUiSto
 import { InstalledPluginsModal } from "@/components/plugins/InstalledPluginsModal";
 import { useUpdateStore } from "@/stores/useUpdateStore";
 import { getRibbonUpdateState } from "./ribbonUpdateState";
+import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
+import { TeamAuthModal } from "@/components/team/TeamAuthModal";
 
 interface RibbonProps {
   showMacTrafficLightSafeArea?: boolean;
@@ -47,6 +50,9 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
   const [showSettings, setShowSettings] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showPlugins, setShowPlugins] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const authStatus = useCloudSyncStore((s) => s.authStatus);
+  const userEmail = useCloudSyncStore((s) => s.session?.user?.email);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const closeUpdateModal = useCallback(() => setShowUpdateModal(false), []);
   const closePlugins = useCallback(() => setShowPlugins(false), []);
@@ -471,6 +477,24 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
+          {/* Account */}
+          <button
+            onClick={() => {
+              if (authStatus !== 'authenticated') {
+                setShowAuthModal(true);
+              }
+            }}
+            className={cn(
+              "w-8 h-8 ui-icon-btn",
+              authStatus === 'authenticated'
+                ? "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15"
+                : "",
+            )}
+            title={authStatus === 'authenticated' ? (userEmail ?? t.auth.signIn) : t.auth.signIn}
+          >
+            <UserCircle size={18} />
+          </button>
+
           {/* Settings */}
           <button
             onClick={handleOpenSettings}
@@ -483,13 +507,19 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
       </div>
 
       {/* Settings Modal */}
-      <SettingsModal 
-        isOpen={showSettings} 
-        onClose={closeSettings} 
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={closeSettings}
         onOpenUpdateModal={handleOpenUpdateFromSettings}
       />
       <UpdateModal isOpen={showUpdateModal} onClose={closeUpdateModal} />
       <InstalledPluginsModal isOpen={showPlugins} onClose={closePlugins} />
+      {showAuthModal && (
+        <TeamAuthModal
+          onClose={() => setShowAuthModal(false)}
+          onAuthenticated={() => setShowAuthModal(false)}
+        />
+      )}
     </div>
   );
 }

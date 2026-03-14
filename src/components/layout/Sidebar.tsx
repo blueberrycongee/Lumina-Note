@@ -19,13 +19,11 @@ import {
   Shapes,
   Star,
   StarOff,
-  LogIn,
 } from "lucide-react";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { useShallow } from "zustand/react/shallow";
 import { OrgSwitcher } from "../team/OrgSwitcher";
-import { TeamAuthModal } from "../team/TeamAuthModal";
 import { useOrgStore } from "@/stores/useOrgStore";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
 import { useSidebarFileOperations, type CreatingState } from "./hooks/useSidebarFileOperations";
@@ -89,8 +87,6 @@ export function Sidebar() {
   const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
   const rehydrateToken = useCloudSyncStore((s) => s.rehydrateToken);
   const setOrgConnection = useOrgStore((s) => s.setConnection);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-
   // Restore token from OS keychain on app startup
   useEffect(() => {
     rehydrateToken();
@@ -270,8 +266,8 @@ export function Sidebar() {
       {/* Quick Actions */}
       <SidebarQuickActions vaultPath={vaultPath} onQuickNote={handleQuickNote} />
 
-      {/* Team Organization Section */}
-      {authStatus === 'authenticated' ? (
+      {/* Team Organization Section (visible only when authenticated) */}
+      {authStatus === 'authenticated' && (
         <div className="px-2">
           <OrgSwitcher />
           {currentOrgId && projects.length > 0 && (
@@ -293,28 +289,9 @@ export function Sidebar() {
                   {proj.name}
                 </button>
               ))}
-
             </div>
           )}
         </div>
-      ) : (
-        <div className="px-2 py-1">
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
-          >
-            <LogIn className="w-4 h-4" />
-            {t.auth.signInToAccess}
-          </button>
-        </div>
-      )}
-
-      {/* Team Auth Modal */}
-      {showAuthModal && (
-        <TeamAuthModal
-          onClose={() => setShowAuthModal(false)}
-          onAuthenticated={() => setShowAuthModal(false)}
-        />
       )}
 
       {/* OpenClaw */}
