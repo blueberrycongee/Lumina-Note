@@ -2,6 +2,25 @@ import { fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ResizeHandle } from "./ResizeHandle";
 
+/**
+ * Mock pointer capture APIs on a DOM element (jsdom doesn't implement them).
+ */
+function mockPointerCapture(el: HTMLElement) {
+  let captured = false;
+  el.setPointerCapture = vi.fn(() => { captured = true; });
+  el.releasePointerCapture = vi.fn(() => { captured = false; });
+  el.hasPointerCapture = vi.fn(() => captured);
+}
+
+/**
+ * jsdom's PointerEvent constructor doesn't reliably pass MouseEvent init
+ * properties (clientX, etc.). Dispatch a MouseEvent with the pointer event
+ * type name — React matches on the type string, not the constructor.
+ */
+function firePointer(el: Element, type: string, init: MouseEventInit = {}) {
+  fireEvent(el, new MouseEvent(type, { bubbles: true, cancelable: true, ...init }));
+}
+
 describe("ResizeHandle", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -19,11 +38,12 @@ describe("ResizeHandle", () => {
 
     const { container } = render(<ResizeHandle direction="left" onResize={onResize} />);
     const hitArea = container.querySelector(".z-30") as HTMLDivElement;
+    mockPointerCapture(hitArea);
 
-    fireEvent.mouseDown(hitArea, { clientX: 100 });
+    firePointer(hitArea, "pointerdown", { clientX: 100 });
 
-    fireEvent.mouseMove(document, { clientX: 110 });
-    fireEvent.mouseMove(document, { clientX: 130 });
+    firePointer(hitArea, "pointermove", { clientX: 110 });
+    firePointer(hitArea, "pointermove", { clientX: 130 });
 
     expect(rafCallback).toBeDefined();
     if (!rafCallback) {
@@ -50,13 +70,16 @@ describe("ResizeHandle", () => {
 
     const { container } = render(<ResizeHandle direction="right" onResize={onResize} />);
     const hitArea = container.querySelector(".z-30") as HTMLDivElement;
+    mockPointerCapture(hitArea);
 
     expect(hitArea.style.left).toBe("-1px");
     expect(hitArea.style.right).toBe("-7px");
 
-    fireEvent.mouseDown(hitArea, { clientX: 100 });
-    fireEvent.mouseMove(document, { clientX: 120 });
-    fireEvent.mouseUp(document);
+    firePointer(hitArea, "pointerdown", { clientX: 100 });
+    firePointer(hitArea, "pointermove", { clientX: 120 });
+
+    // pointerUp fires while capture is still held (browser releases after the event)
+    firePointer(hitArea, "pointerup", { clientX: 120 });
 
     expect(onResize).toHaveBeenCalledWith(-20);
   });
