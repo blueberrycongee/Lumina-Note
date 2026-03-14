@@ -389,7 +389,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           }
 
           const fileNode: GraphNode = {
-            id: nodeName,
+            id: entry.path,
             label: nodeName,
             path: entry.path,
             x: 0,
@@ -403,13 +403,15 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
             depth,
           };
           nodes.push(fileNode);
-          nodeMap.set(nodeName.toLowerCase(), fileNode);
+          if (!nodeMap.has(nodeName.toLowerCase())) {
+            nodeMap.set(nodeName.toLowerCase(), fileNode);
+          }
 
           // 创建文件到父文件夹的父子关系边
           if (parentPath) {
             edges.push({
               source: `folder:${parentPath}`,
-              target: nodeName,
+              target: entry.path,
               type: 'hierarchy',
             });
           }
