@@ -207,3 +207,13 @@ pub struct NotificationSummary {
 pub struct MarkNotificationReadRequest {
     pub notification_ids: Vec<String>,
 }
+
+// ── Publish ─────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct PublishStatusResponse {
+    pub published: bool,
+    pub url: Option<String>,
+    pub published_at: Option<i64>,
+    pub updated_at: Option<i64>,
+}

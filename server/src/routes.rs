@@ -7,6 +7,7 @@ use serde_json::json;
 use crate::auth::{create_token, decode_token, hash_password, verify_password};
 use crate::db;
 use crate::error::AppError;
+use crate::models;
 use crate::models::{
     AddOrgMemberRequest, AnnotationDetail, AnnotationReplyDetail, AuthResponse,
     CreateAnnotationReplyRequest, CreateAnnotationRequest, CreateOrgRequest, CreateProjectRequest,
@@ -607,6 +608,56 @@ pub async fn unread_count(
     let user_id = require_user(&state, &headers).await?;
     let count = db::count_unread_notifications(&state.pool, &user_id).await?;
     Ok(Json(json!({ "count": count })))
+}
+
+// ── Publish ─────────────────────────────────────────────────────────
+
+pub async fn publish_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<models::PublishStatusResponse>, AppError> {
+    let user_id = require_user(&state, &headers).await?;
+    match db::get_published_site(&state.pool, &user_id).await? {
+        Some((url, published_at, updated_at)) => Ok(Json(models::PublishStatusResponse {
+            published: true,
+            url: Some(url),
+            published_at: Some(published_at),
+            updated_at: Some(updated_at),
+        })),
+        None => Ok(Json(models::PublishStatusResponse {
+            published: false,
+            url: None,
+            published_at: None,
+            updated_at: None,
+        })),
+    }
+}
+
+pub async fn publish_confirm(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let user_id = require_user(&state, &headers).await?;
+    let site_url = format!("/sites/{}/", user_id);
+    db::upsert_published_site(&state.pool, &user_id, &site_url).await?;
+    Ok(Json(json!({ "ok": true, "url": site_url })))
+}
+
+pub async fn unpublish(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let user_id = require_user(&state, &headers).await?;
+    db::delete_published_site(&state.pool, &user_id).await?;
+
+    let site_dir = crate::dav::site_root(&state, &user_id);
+    if site_dir.exists() {
+        tokio::fs::remove_dir_all(&site_dir)
+            .await
+            .map_err(|e| AppError::Internal(format!("remove site dir: {}", e)))?;
+    }
+
+    Ok(Json(json!({ "ok": true })))
 }
 
 // ── Tests ───────────────────────────────────────────────────────────

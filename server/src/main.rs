@@ -137,6 +137,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Site publishing (WebDAV upload, auth required)
         .route("/dav-sites", any(dav::handle_site_dav_root))
         .route("/dav-sites/*path", any(dav::handle_site_dav_path))
+        // Publish status API
+        .route(
+            "/publish/status",
+            get(routes::publish_status).post(routes::publish_confirm),
+        )
+        .route("/publish", delete(routes::unpublish))
         .with_state(state)
         .layer(PropagateRequestIdLayer::new(REQUEST_ID_HEADER))
         .layer(SetRequestIdLayer::new(REQUEST_ID_HEADER, MakeRequestUuid))
