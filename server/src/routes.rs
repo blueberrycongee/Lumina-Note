@@ -610,6 +610,42 @@ pub async fn unread_count(
     Ok(Json(json!({ "count": count })))
 }
 
+/// Create a notification in the DB and push it via WebSocket.
+pub async fn push_notification(
+    state: &AppState,
+    user_id: &str,
+    org_id: &str,
+    ntype: &str,
+    title: &str,
+    body: &str,
+    ref_id: &str,
+) -> Result<String, AppError> {
+    let notification_id =
+        db::create_notification(&state.pool, user_id, org_id, ntype, title, body, ref_id).await?;
+
+    let unread_count = db::count_unread_notifications(&state.pool, user_id).await?;
+
+    let payload = serde_json::to_string(&json!({
+        "type": "notification",
+        "data": {
+            "id": &notification_id,
+            "org_id": org_id,
+            "type": ntype,
+            "title": title,
+            "body": body,
+            "ref_id": ref_id,
+            "read": false,
+            "created_at": chrono::Utc::now().timestamp(),
+        },
+        "unread_count": unread_count,
+    }))
+    .map_err(|e| AppError::Internal(format!("serialize notification: {}", e)))?;
+
+    state.notify.send(user_id, &payload).await;
+
+    Ok(notification_id)
+}
+
 // ── Publish ─────────────────────────────────────────────────────────
 
 pub async fn publish_status(

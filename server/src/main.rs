@@ -58,6 +58,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         relay: state::RelayHub::new(),
         collab: collab::CollabHub::new(),
         metrics: Arc::new(state::ServerMetrics::new()),
+        notify: notify_ws::NotifyHub::new(),
     };
 
     let trace_layer = TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
@@ -127,6 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/notifications/read", put(routes::mark_read))
         .route("/notifications/read-all", put(routes::mark_all_read))
         .route("/notifications/unread-count", get(routes::unread_count))
+        .route("/ws/notifications", get(notify_ws::notify_handler))
         // Existing routes
         .route("/collab/:doc_id", get(collab::collab_handler))
         .route("/relay", get(relay::relay_handler))

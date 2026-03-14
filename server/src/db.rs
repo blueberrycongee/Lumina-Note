@@ -1097,7 +1097,6 @@ pub async fn resolve_annotation(pool: &SqlitePool, annotation_id: &str) -> Resul
 // Notification CRUD
 // ---------------------------------------------------------------------------
 
-#[allow(dead_code)]
 pub async fn create_notification(
     pool: &SqlitePool,
     user_id: &str,
