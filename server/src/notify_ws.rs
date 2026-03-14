@@ -1,8 +1,21 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
+use std::time::Duration;
 
-use axum::extract::ws::Message;
+use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::extract::{Query, State};
+use axum::response::Response;
+use futures_util::{SinkExt, StreamExt};
+use serde::Deserialize;
+use serde_json::json;
 use tokio::sync::{mpsc, RwLock};
+use uuid::Uuid;
+
+use crate::auth::decode_token;
+use crate::db;
+use crate::error::AppError;
+use crate::state::AppState;
 
 const MAX_CONNECTIONS_PER_USER: usize = 5;
 
@@ -64,4 +77,97 @@ impl NotifyHub {
             }
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct NotifyQuery {
+    pub token: String,
+}
+
+pub async fn notify_handler(
+    ws: WebSocketUpgrade,
+    State(state): State<AppState>,
+    Query(query): Query<NotifyQuery>,
+) -> Result<Response, AppError> {
+    let claims = decode_token(&query.token, &state.config)?;
+    let user_id = claims.sub;
+    Ok(ws.on_upgrade(move |socket| async move {
+        handle_notify_socket(state, socket, user_id).await;
+    }))
+}
+
+async fn handle_notify_socket(state: AppState, socket: WebSocket, user_id: String) {
+    let (mut ws_tx, mut ws_rx) = socket.split();
+    let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
+
+    let conn_id = Uuid::new_v4().to_string();
+    state
+        .notify
+        .register(&user_id, conn_id.clone(), tx.clone())
+        .await;
+
+    // Send initial unread count
+    match db::count_unread_notifications(&state.pool, &user_id).await {
+        Ok(count) => {
+            let _ = tx.send(Message::Text(
+                json!({"type": "unread", "count": count}).to_string(),
+            ));
+        }
+        Err(err) => {
+            tracing::error!(user_id = %user_id, error = %err, "failed to fetch unread count");
+        }
+    }
+
+    let last_recv = Arc::new(AtomicI64::new(chrono::Utc::now().timestamp()));
+    let last_recv_clone = Arc::clone(&last_recv);
+
+    let send_task = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(30));
+        loop {
+            tokio::select! {
+                msg = rx.recv() => {
+                    match msg {
+                        Some(msg) => {
+                            if ws_tx.send(msg).await.is_err() {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+                }
+                _ = interval.tick() => {
+                    let now = chrono::Utc::now().timestamp();
+                    let last = last_recv_clone.load(Ordering::Relaxed);
+                    if now - last > 45 {
+                        tracing::debug!("notify ws: client appears dead, closing");
+                        break;
+                    }
+                    if ws_tx.send(Message::Ping(vec![])).await.is_err() {
+                        break;
+                    }
+                }
+            }
+        }
+    });
+
+    while let Some(message) = ws_rx.next().await {
+        let msg = match message {
+            Ok(msg) => msg,
+            Err(_) => break,
+        };
+        match msg {
+            Message::Pong(_) => {
+                last_recv.store(chrono::Utc::now().timestamp(), Ordering::Relaxed);
+            }
+            Message::Ping(payload) => {
+                last_recv.store(chrono::Utc::now().timestamp(), Ordering::Relaxed);
+                let _ = tx.send(Message::Pong(payload));
+            }
+            Message::Close(_) => break,
+            _ => {}
+        }
+    }
+
+    send_task.abort();
+    state.notify.unregister(&user_id, &conn_id).await;
 }
