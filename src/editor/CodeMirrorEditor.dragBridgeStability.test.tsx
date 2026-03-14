@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render } from '@testing-library/react';
 import { EditorView } from '@codemirror/view';
-import { mouseSelectingField, setMouseSelecting } from 'codemirror-live-markdown';
+import { setMouseSelecting } from 'codemirror-live-markdown';
 import { CodeMirrorEditor } from './CodeMirrorEditor';
 
 function setupEditor(content: string, viewMode: 'live' | 'reading' | 'source' = 'live') {

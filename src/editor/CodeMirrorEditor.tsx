@@ -1461,10 +1461,10 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
 const selectionStatePlugin = ViewPlugin.fromClass(
   class {
     constructor(private view: EditorView) {
-      this.updateClass(view);
+      this.updateClass(view, false);
     }
     update(update: ViewUpdate) {
-      const isDragging = update.state.field(mouseSelectingField, false);
+      const isDragging = update.state.field(mouseSelectingField, false) ?? false;
       const wasDragging = update.startState.field(mouseSelectingField, false);
       if (isDragging !== wasDragging) {
         this.updateClass(update.view, isDragging);
