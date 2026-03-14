@@ -628,6 +628,7 @@ pub async fn unread_count(
 }
 
 /// Create a notification in the DB and push it via WebSocket.
+#[allow(dead_code)]
 pub async fn push_notification(
     state: &AppState,
     user_id: &str,

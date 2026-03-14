@@ -19,6 +19,7 @@ use crate::state::AppState;
 
 const MAX_CONNECTIONS_PER_USER: usize = 5;
 
+#[allow(dead_code)]
 struct NotifyConn {
     id: String,
     sender: mpsc::UnboundedSender<Message>,
@@ -71,6 +72,7 @@ impl NotifyHub {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn send(&self, user_id: &str, payload: &str) {
         let mut conns = self.connections.write().await;
         if let Some(user_conns) = conns.get_mut(user_id) {
