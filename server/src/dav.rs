@@ -404,6 +404,48 @@ pub(crate) fn sanitize_path(path: &str) -> Result<PathBuf, AppError> {
     Ok(cleaned.to_path_buf())
 }
 
+pub async fn handle_site_dav_root(
+    State(state): State<AppState>,
+    req: Request<Body>,
+) -> Result<Response<Body>, AppError> {
+    handle_site_dav(state, "".to_string(), req).await
+}
+
+pub async fn handle_site_dav_path(
+    State(state): State<AppState>,
+    AxumPath(path): AxumPath<String>,
+    req: Request<Body>,
+) -> Result<Response<Body>, AppError> {
+    handle_site_dav(state, path, req).await
+}
+
+async fn handle_site_dav(
+    state: AppState,
+    path: String,
+    req: Request<Body>,
+) -> Result<Response<Body>, AppError> {
+    let user_id = authorize_request(&state, req.headers()).await?;
+
+    let root = site_root(&state, &user_id);
+    tokio::fs::create_dir_all(&root)
+        .await
+        .map_err(|e| AppError::Internal(format!("create site dir: {}", e)))?;
+
+    let relative = sanitize_path(&path)?;
+    let absolute = root.join(&relative);
+
+    match req.method().as_str() {
+        "OPTIONS" => respond_options(),
+        "PUT" => respond_put(&absolute, req, &state.metrics).await,
+        "MKCOL" => respond_mkcol(&absolute).await,
+        "DELETE" => respond_delete(&absolute).await,
+        _ => Ok(Response::builder()
+            .status(StatusCode::METHOD_NOT_ALLOWED)
+            .body(Body::empty())
+            .map_err(|e| AppError::Internal(format!("build response: {}", e)))?),
+    }
+}
+
 #[derive(Debug)]
 struct PropEntry {
     href: String,
