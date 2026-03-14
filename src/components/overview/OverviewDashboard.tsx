@@ -9,6 +9,7 @@ import { ensureOpenClawTodayMemoryNote } from "@/services/openclaw/workspace";
 import { getFileName } from "@/lib/utils";
 import { join } from "@/lib/path";
 import { openFilteredView } from "@/lib/events";
+import { reportOperationError } from "@/lib/reportError";
 
 export function OverviewDashboard() {
   const { t } = useLocaleStore();
@@ -22,6 +23,87 @@ export function OverviewDashboard() {
   const visibleRecentMemory = snapshot?.recentMemoryPaths.slice(0, 4) ?? [];
   const visiblePlanFiles = snapshot?.planFilePaths.slice(0, 4) ?? [];
   const visibleArtifactDirectories = snapshot?.artifactDirectoryPaths.slice(0, 3) ?? [];
+
+  // Wrapped openFile with error handling
+  const handleOpenFile = (filePath: string, label: string) => {
+    try {
+      if (!filePath) {
+        reportOperationError({
+          source: 'OverviewDashboard.handleOpenFile',
+          action: 'Open file',
+          error: new Error('File path is empty'),
+          userMessage: t.overview.openClawFileNotFound.replace('{file}', label),
+          level: 'warning',
+          context: { label, filePath },
+        });
+        return;
+      }
+      openFile(filePath);
+    } catch (error) {
+      reportOperationError({
+        source: 'OverviewDashboard.handleOpenFile',
+        action: 'Open file',
+        error,
+        userMessage: t.overview.openClawOpenFileError.replace('{file}', label),
+        level: 'error',
+        context: { label, filePath },
+      });
+    }
+  };
+
+  // Wrapped ensureOpenClawTodayMemoryNote with error handling
+  const handleOpenTodayMemory = async (workspacePath: string) => {
+    try {
+      if (!workspacePath) {
+        reportOperationError({
+          source: 'OverviewDashboard.handleOpenTodayMemory',
+          action: 'Open today memory',
+          error: new Error('Workspace path is empty'),
+          userMessage: t.overview.openClawNoWorkspace,
+          level: 'warning',
+          context: { workspacePath },
+        });
+        return;
+      }
+      await ensureOpenClawTodayMemoryNote(workspacePath).then(openFile);
+    } catch (error) {
+      reportOperationError({
+        source: 'OverviewDashboard.handleOpenTodayMemory',
+        action: 'Open today memory',
+        error,
+        userMessage: t.overview.openClawTodayMemoryError,
+        level: 'error',
+        context: { workspacePath },
+      });
+    }
+  };
+
+  // Wrapped openFilteredView with error handling
+  const handleOpenFilteredView = (scopeLabel: string, pathPrefixes: string[], label: string) => {
+    try {
+      if (!pathPrefixes || pathPrefixes.length === 0) {
+        reportOperationError({
+          source: 'OverviewDashboard.handleOpenFilteredView',
+          action: 'Open filtered view',
+          error: new Error('No paths provided'),
+          userMessage: t.overview.openClawNoPathsToSearch.replace('{label}', label),
+          level: 'warning',
+          context: { label, scopeLabel, pathPrefixes },
+        });
+        return;
+      }
+      openFilteredView(scopeLabel, pathPrefixes);
+    } catch (error) {
+      reportOperationError({
+        source: 'OverviewDashboard.handleOpenFilteredView',
+        action: 'Open filtered view',
+        error,
+        userMessage: t.overview.openClawSearchError.replace('{label}', label),
+        level: 'error',
+        context: { label, scopeLabel, pathPrefixes },
+      });
+    }
+  };
 
 
   return (
@@ -98,14 +180,14 @@ export function OverviewDashboard() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
-                          onClick={() => void openFile(join(snapshot.workspacePath, "AGENTS.md"))}
+                          onClick={() => handleOpenFile(join(snapshot.workspacePath, "AGENTS.md"), "AGENTS.md")}
                           className="rounded-md border border-border bg-background/70 px-3 py-1.5 text-xs text-foreground hover:bg-accent"
                         >
                           AGENTS.md
                         </button>
                         <button
                           type="button"
-                          onClick={() => void ensureOpenClawTodayMemoryNote(snapshot.workspacePath).then(openFile)}
+                          onClick={() => void handleOpenTodayMemory(snapshot.workspacePath)}
                           className="rounded-md border border-border bg-background/70 px-3 py-1.5 text-xs text-foreground hover:bg-accent"
                         >
                           {t.overview.openClawTodayMemory}
@@ -116,9 +198,9 @@ export function OverviewDashboard() {
                           <button
                             type="button"
                             onClick={() =>
-                              openFilteredView(t.overview.openClawSearchMemory, [
+                              handleOpenFilteredView(t.overview.openClawSearchMemory, [
                                 snapshot.memoryDirectoryPath as string,
-                              ])
+                              ], t.overview.openClawSearchMemory)
                             }
                             className="rounded-md border border-border bg-background/70 px-3 py-1.5 text-xs text-foreground hover:bg-accent"
                           >
@@ -129,9 +211,10 @@ export function OverviewDashboard() {
                           <button
                             type="button"
                             onClick={() =>
-                              openFilteredView(
+                              handleOpenFilteredView(
                                 t.overview.openClawSearchPlans,
                                 snapshot.planDirectoryPaths,
+                                t.overview.openClawSearchPlans
                               )
                             }
                             className="rounded-md border border-border bg-background/70 px-3 py-1.5 text-xs text-foreground hover:bg-accent"
@@ -143,9 +226,10 @@ export function OverviewDashboard() {
                           <button
                             type="button"
                             onClick={() =>
-                              openFilteredView(
+                              handleOpenFilteredView(
                                 t.overview.openClawSearchArtifacts,
                                 snapshot.artifactDirectoryPaths,
+                                t.overview.openClawSearchArtifacts
                               )
                             }
                             className="rounded-md border border-border bg-background/70 px-3 py-1.5 text-xs text-foreground hover:bg-accent"
