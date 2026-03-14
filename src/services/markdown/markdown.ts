@@ -2,68 +2,35 @@ import { Marked, Renderer } from "marked";
 import TurndownService from "turndown";
 import katex from "katex";
 import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
-
-// Callout type icons and colors
-const calloutTypes: Record<string, { icon: string; color: string }> = {
-  note: { icon: "📝", color: "blue" },
-  abstract: { icon: "📄", color: "blue" },
-  tip: { icon: "💡", color: "green" },
-  warning: { icon: "⚠️", color: "yellow" },
-  danger: { icon: "🔴", color: "red" },
-  example: { icon: "📋", color: "purple" },
-  info: { icon: "ℹ️", color: "blue" },
-  question: { icon: "❓", color: "yellow" },
-  success: { icon: "✅", color: "green" },
-  failure: { icon: "❌", color: "red" },
-  bug: { icon: "🐛", color: "red" },
-  quote: { icon: "💬", color: "gray" },
-};
+import { resolveCalloutType } from "@/editor/calloutConfig";
 
 // Custom renderer for Obsidian-style callouts
 const renderer = new Renderer();
 
-// Check if a string is an emoji (or emoji sequence)
-function isEmoji(str: string): boolean {
-  const emojiRegex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\u200D(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F))*$/u;
-  return emojiRegex.test(str);
-}
-
 renderer.blockquote = function (quote: string | { text: string }) {
   try {
     const text = typeof quote === "string" ? quote : (quote?.text || "");
-    // Match Obsidian callout syntax: > [!type] Title
-    // Support both word types (note, tip, etc.) and emoji types (📝, 💡, etc.)
-    const calloutMatch = text.match(/^\s*\[!([^\]]+)\]\s*(.*)$/m);
-    
+    const calloutMatch = text.match(/^\s*\[!([^\]]+)\]\s*([+-])?\s*(.*)$/m);
+
     if (calloutMatch) {
       const rawType = calloutMatch[1].trim();
-      const type = rawType.toLowerCase();
-      const title = calloutMatch[2] || (isEmoji(rawType) ? "" : type.charAt(0).toUpperCase() + type.slice(1));
-      
-      // For emoji types, use the emoji as icon; otherwise use predefined config
-      const isEmojiType = isEmoji(rawType);
-      const config = isEmojiType 
-        ? { icon: rawType, color: "blue" }  // Default color for emoji types
-        : (calloutTypes[type] || calloutTypes.note);
-      
-      // Remove the callout header from content and parse remaining content
+      const modifier = calloutMatch[2] as '+' | '-' | undefined;
+      const titleText = (calloutMatch[3] || '').trim();
+      const resolved = resolveCalloutType(rawType);
+      const title = titleText || resolved.label;
+      const foldable = modifier !== undefined;
+      const folded = modifier === '-';
+
       const content = text.replace(/^\s*\[![^\]]+\].*$/m, "").trim();
-      
-      return `
-        <div class="callout callout-${type} callout-${config.color}">
-          <div class="callout-title">
-            <span class="callout-icon">${config.icon}</span>
-            <span class="callout-title-text">${title}</span>
-          </div>
-          <div class="callout-content">${content}</div>
-        </div>
-      `;
+
+      const foldArrow = foldable ? `<span class="callout-fold">\u25BC</span>` : '';
+      const foldedClass = folded ? ' callout-folded' : '';
+
+      return `<div class="callout callout-${resolved.color}${foldedClass}"><span class="callout-icon">${resolved.icon}</span><div class="callout-body"><div class="callout-title"><span class="callout-title-text">${title}</span>${foldArrow}</div><div class="callout-content">${content}</div></div></div>`;
     }
-    
-    // Default blockquote rendering
+
     return `<blockquote>${text}</blockquote>`;
   } catch (e) {
-    // Fallback for any errors
     const text = typeof quote === "string" ? quote : (quote?.text || String(quote));
     return `<blockquote>${text}</blockquote>`;
   }
