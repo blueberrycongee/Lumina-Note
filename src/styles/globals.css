@@ -694,12 +694,29 @@ body {
   color: hsl(var(--foreground));
 }
 
-/* ===== Obsidian Callout Styles ===== */
+/* ===== Callout Styles (Notion-style) ===== */
+
+/* --- Base callout block --- */
 .callout {
-  margin: 1rem 0;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  border-left: 4px solid;
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: 0.375rem;
+  font-size: inherit;
+  line-height: 1.6;
+}
+
+.callout-icon {
+  flex-shrink: 0;
+  font-size: 1.5em;
+  line-height: 1;
+  padding-top: 0.1em;
+}
+
+.callout-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .callout-title {
@@ -707,20 +724,31 @@ body {
   align-items: center;
   gap: 0.5rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  cursor: pointer;
+  user-select: none;
 }
 
-.callout-icon {
-  font-size: 1.1em;
+.callout-fold {
+  margin-left: auto;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.callout-fold:hover {
+  opacity: 0.8;
+}
+
+.callout-folded .callout-fold {
+  transform: rotate(-90deg);
 }
 
 .callout-content {
-  font-size: 0.95rem;
-  line-height: 1.6;
+  margin-top: 0.375rem;
 }
 
 .callout-content p {
-  margin: 0.5rem 0;
+  margin: 0.375rem 0;
 }
 
 .callout-content p:first-child {
@@ -731,105 +759,74 @@ body {
   margin-bottom: 0;
 }
 
-/* Callout Colors */
-.callout-blue {
-  background: hsl(210 100% 95%);
-  border-color: hsl(210 100% 50%);
+.callout-folded .callout-content {
+  display: none;
 }
-.callout-blue .callout-title { color: hsl(210 100% 40%); }
 
-.callout-green {
-  background: hsl(140 70% 95%);
-  border-color: hsl(140 70% 45%);
-}
-.callout-green .callout-title { color: hsl(140 70% 35%); }
+/* --- Colors (light) --- */
+.callout-blue   { background: hsl(210 30% 95%); }
+.callout-green  { background: hsl(140 25% 95%); }
+.callout-yellow { background: hsl(45 35% 94%); }
+.callout-red    { background: hsl(0 30% 96%); }
+.callout-purple { background: hsl(270 25% 96%); }
+.callout-gray   { background: hsl(0 0% 95%); }
 
-.callout-yellow {
-  background: hsl(45 100% 94%);
-  border-color: hsl(45 100% 50%);
-}
-.callout-yellow .callout-title { color: hsl(35 100% 35%); }
+.callout-blue   .callout-title { color: hsl(210 40% 40%); }
+.callout-green  .callout-title { color: hsl(140 35% 35%); }
+.callout-yellow .callout-title { color: hsl(40 50% 35%); }
+.callout-red    .callout-title { color: hsl(0 40% 40%); }
+.callout-purple .callout-title { color: hsl(270 35% 42%); }
+.callout-gray   .callout-title { color: hsl(0 0% 40%); }
 
-.callout-red {
-  background: hsl(0 100% 96%);
-  border-color: hsl(0 80% 55%);
-}
-.callout-red .callout-title { color: hsl(0 80% 40%); }
+/* --- Colors (dark) --- */
+.dark .callout-blue   { background: hsl(210 25% 18%); }
+.dark .callout-green  { background: hsl(140 20% 18%); }
+.dark .callout-yellow { background: hsl(45 25% 18%); }
+.dark .callout-red    { background: hsl(0 25% 18%); }
+.dark .callout-purple { background: hsl(270 20% 18%); }
+.dark .callout-gray   { background: hsl(0 0% 20%); }
 
-.callout-purple {
-  background: hsl(270 100% 96%);
-  border-color: hsl(270 70% 55%);
-}
-.callout-purple .callout-title { color: hsl(270 70% 45%); }
+.dark .callout-blue   .callout-title { color: hsl(210 40% 72%); }
+.dark .callout-green  .callout-title { color: hsl(140 35% 68%); }
+.dark .callout-yellow .callout-title { color: hsl(45 45% 68%); }
+.dark .callout-red    .callout-title { color: hsl(0 40% 72%); }
+.dark .callout-purple .callout-title { color: hsl(270 35% 74%); }
+.dark .callout-gray   .callout-title { color: hsl(0 0% 70%); }
 
-.callout-gray {
-  background: hsl(0 0% 95%);
-  border-color: hsl(0 0% 60%);
-}
-.callout-gray .callout-title { color: hsl(0 0% 40%); }
-
-/* Dark mode callouts */
-.dark .callout-blue {
-  background: hsl(210 50% 15%);
-  border-color: hsl(210 80% 55%);
-}
-.dark .callout-blue .callout-title { color: hsl(210 80% 70%); }
-
-.dark .callout-green {
-  background: hsl(140 30% 15%);
-  border-color: hsl(140 60% 50%);
-}
-.dark .callout-green .callout-title { color: hsl(140 60% 65%); }
-
-.dark .callout-yellow {
-  background: hsl(45 40% 15%);
-  border-color: hsl(45 80% 55%);
-}
-.dark .callout-yellow .callout-title { color: hsl(45 80% 65%); }
-
-.dark .callout-red {
-  background: hsl(0 40% 15%);
-  border-color: hsl(0 70% 55%);
-}
-.dark .callout-red .callout-title { color: hsl(0 70% 70%); }
-
-.dark .callout-purple {
-  background: hsl(270 30% 15%);
-  border-color: hsl(270 60% 60%);
-}
-.dark .callout-purple .callout-title { color: hsl(270 60% 75%); }
-
-.dark .callout-gray {
-  background: hsl(0 0% 18%);
-  border-color: hsl(0 0% 50%);
-}
-.dark .callout-gray .callout-title { color: hsl(0 0% 70%); }
-
-/* Callouts inside CodeMirror live editor - 更紧凑的行样式 */
-.codemirror-wrapper .callout {
+/* --- CodeMirror editor: editing mode (active callout) --- */
+.codemirror-wrapper .callout-editing {
   margin: 0;
   padding: 0.15rem 0.75rem;
   border-radius: 0;
-  border-left-width: 3px;
+  border-left: 3px solid;
+  display: block;
 }
 
-/* 第一行 callout 加顶部圆角 */
-.codemirror-wrapper .callout.callout-first {
-  border-top-left-radius: 0.5rem;
-  border-top-right-radius: 0.5rem;
+.codemirror-wrapper .callout-editing.callout-editing-first {
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+  padding-top: 0.5rem;
 }
 
-/* 最后一行 callout 加底部圆角 */
-.codemirror-wrapper .callout.callout-last {
-  border-bottom-left-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
+.codemirror-wrapper .callout-editing.callout-editing-last {
+  border-bottom-left-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  padding-bottom: 0.5rem;
 }
 
-/* 相邻的 callou
-/* 相邻的 callout 行之间不增加额外间距，看起来像一个整体块 */
-.codemirror-wrapper .callout + .callout {
-  margin-top: 0;
-}
+.callout-editing.callout-blue   { border-color: hsl(210 40% 55%); background: hsl(210 30% 95%); }
+.callout-editing.callout-green  { border-color: hsl(140 35% 50%); background: hsl(140 25% 95%); }
+.callout-editing.callout-yellow { border-color: hsl(45 50% 55%); background: hsl(45 35% 94%); }
+.callout-editing.callout-red    { border-color: hsl(0 40% 55%); background: hsl(0 30% 96%); }
+.callout-editing.callout-purple { border-color: hsl(270 35% 55%); background: hsl(270 25% 96%); }
+.callout-editing.callout-gray   { border-color: hsl(0 0% 55%); background: hsl(0 0% 95%); }
+
+.dark .callout-editing.callout-blue   { border-color: hsl(210 40% 55%); background: hsl(210 25% 18%); }
+.dark .callout-editing.callout-green  { border-color: hsl(140 35% 50%); background: hsl(140 20% 18%); }
+.dark .callout-editing.callout-yellow { border-color: hsl(45 50% 55%); background: hsl(45 25% 18%); }
+.dark .callout-editing.callout-red    { border-color: hsl(0 40% 55%); background: hsl(0 25% 18%); }
+.dark .callout-editing.callout-purple { border-color: hsl(270 35% 55%); background: hsl(270 20% 18%); }
+.dark .callout-editing.callout-gray   { border-color: hsl(0 0% 50%); background: hsl(0 0% 20%); }
 
 /* ===== Prose Styles (for reading/live view) ===== */
 .prose {
