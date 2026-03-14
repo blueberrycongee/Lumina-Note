@@ -589,9 +589,9 @@ pub async fn mark_read(
     headers: HeaderMap,
     Json(payload): Json<MarkNotificationReadRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let _user_id = require_user(&state, &headers).await?;
+    let user_id = require_user(&state, &headers).await?;
     for id in &payload.notification_ids {
-        db::mark_notification_read(&state.pool, id).await?;
+        db::mark_notification_read(&state.pool, id, &user_id).await?;
     }
     Ok(Json(json!({ "ok": true })))
 }

@@ -1162,15 +1162,17 @@ pub async fn list_notifications(
 pub async fn mark_notification_read(
     pool: &SqlitePool,
     notification_id: &str,
+    user_id: &str,
 ) -> Result<(), AppError> {
     sqlx::query(
         r#"
         UPDATE notifications
         SET read = 1
-        WHERE id = ?1;
+        WHERE id = ?1 AND user_id = ?2;
         "#,
     )
     .bind(notification_id)
+    .bind(user_id)
     .execute(pool)
     .await
     .map_err(|e| AppError::Internal(format!("mark notification read: {}", e)))?;
