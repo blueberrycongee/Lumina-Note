@@ -618,9 +618,10 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     for (const node of nodesRef.current) {
       const isHovered = node.id === hoverNode;
       const isSelected = selectedNode?.id === node.id;
-      const isNeighbor = focusNodeId ? connectedToFocus.has(node.id) : false;
+      const isFirstDegree = focusNodeId ? connectedToFocus.has(node.id) : false;
+      const isSecondDegree = focusNodeId ? secondDegreeNeighbors.has(node.id) : false;
       const isCurrent = !node.isFolder && currentFile?.includes(node.label);
-      const target = isHovered || isSelected ? 1 : isNeighbor ? 0.62 : isCurrent && !hasSelection ? 0.2 : 0;
+      const target = isHovered || isSelected ? 1.0 : isFirstDegree ? 0.7 : isSecondDegree ? 0.35 : isCurrent && !hasSelection ? 0.2 : 0;
       const next = (emphasis.get(node.id) ?? 0) + (target - (emphasis.get(node.id) ?? 0)) * 0.18;
       emphasis.set(node.id, next);
     }
