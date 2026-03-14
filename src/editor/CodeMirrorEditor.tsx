@@ -4,7 +4,6 @@ import {
   useImperativeHandle,
   forwardRef,
   useCallback,
-  type RefObject,
 } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
@@ -99,7 +98,6 @@ interface CodeMirrorEditorProps {
   className?: string;
   viewMode?: ViewMode;
   livePreview?: boolean;
-  scrollContainerRef?: RefObject<HTMLElement>;
   filePath?: string | null;
   collabConnection?: CollabConnection | null;
 }
@@ -108,6 +106,7 @@ export interface CodeMirrorEditorRef {
   getScrollLine: () => number;
   scrollToLine: (line: number) => void;
   syncSelectionToViewport: () => void;
+  getScrollDOM: () => HTMLElement | null;
 }
 
 // ============ 3. 样式定义 (动画与布局核心) ============
@@ -1782,11 +1781,7 @@ function classifyModeTransition(
 
 function resolveViewportScrollContainer(
   view: Pick<EditorView, "dom" | "scrollDOM">,
-  externalScrollContainerRef?: RefObject<HTMLElement> | null,
 ): HTMLElement {
-  const explicit = externalScrollContainerRef?.current;
-  if (explicit && explicit.scrollHeight > explicit.clientHeight + 1)
-    return explicit;
   return view.scrollDOM;
 }
 
@@ -3376,7 +3371,6 @@ export const CodeMirrorEditor = forwardRef<
     className = "",
     viewMode,
     livePreview,
-    scrollContainerRef,
     filePath = null,
     collabConnection = null,
   },
@@ -3473,10 +3467,7 @@ export const CodeMirrorEditor = forwardRef<
   const syncSelectionToViewport = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
-    const scrollContainer = resolveViewportScrollContainer(
-      view,
-      scrollContainerRef,
-    );
+    const scrollContainer = resolveViewportScrollContainer(view);
     const selection = view.state.selection.main;
     const nextAnchor = captureViewportAnchor(view, scrollContainer).pos;
     if (selection.from === nextAnchor && selection.to === nextAnchor) {
@@ -3497,7 +3488,7 @@ export const CodeMirrorEditor = forwardRef<
       selection: { anchor: nextAnchor },
       scrollIntoView: false,
     });
-  }, [markTransitionTrace, scrollContainerRef]);
+  }, [markTransitionTrace]);
 
   const clearDocumentSelection = useCallback((ownerDoc: Document) => {
     const domSelection = ownerDoc.getSelection();
@@ -3570,10 +3561,7 @@ export const CodeMirrorEditor = forwardRef<
           }
           return;
         }
-        const scrollContainer = resolveViewportScrollContainer(
-          view,
-          scrollContainerRef,
-        );
+        const scrollContainer = resolveViewportScrollContainer(view);
         const restoreResult = restoreViewportAnchor(
           view,
           scrollContainer,
@@ -3613,7 +3601,7 @@ export const CodeMirrorEditor = forwardRef<
         });
       });
     },
-    [markTransitionTrace, scrollContainerRef],
+    [markTransitionTrace],
   );
 
   const cancelPendingModeTransitionRestore = useCallback(
@@ -3636,10 +3624,7 @@ export const CodeMirrorEditor = forwardRef<
     () => ({
       getScrollLine: () => {
         if (!viewRef.current) return 1;
-        const scrollContainer = resolveViewportScrollContainer(
-          viewRef.current,
-          scrollContainerRef,
-        );
+        const scrollContainer = resolveViewportScrollContainer(viewRef.current);
         const anchor = captureViewportAnchor(viewRef.current, scrollContainer);
         return viewRef.current.state.doc.lineAt(anchor.pos).number;
       },
@@ -3659,8 +3644,9 @@ export const CodeMirrorEditor = forwardRef<
         });
       },
       syncSelectionToViewport,
+      getScrollDOM: () => viewRef.current?.scrollDOM ?? null,
     }),
-    [scrollContainerRef, syncSelectionToViewport],
+    [syncSelectionToViewport],
   );
 
   useEffect(() => {
@@ -4302,10 +4288,7 @@ export const CodeMirrorEditor = forwardRef<
 
     const previousMode = previousModeRef.current;
     const modeChanged = previousMode !== effectiveMode;
-    const scrollContainer = resolveViewportScrollContainer(
-      view,
-      scrollContainerRef,
-    );
+    const scrollContainer = resolveViewportScrollContainer(view);
     const transitionId = modeChanged
       ? transitionSequenceRef.current + 1
       : transitionSequenceRef.current;
@@ -4379,7 +4362,6 @@ export const CodeMirrorEditor = forwardRef<
     getModeExtensions,
     isReadOnly,
     markTransitionTrace,
-    scrollContainerRef,
   ]);
 
   useEffect(() => {

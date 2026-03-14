@@ -1553,6 +1553,16 @@ mark {
   font-family: var(--font-sans);
 }
 
+/* Editor content centering and padding — replaces the wrapper divs
+   that previously sat between the scroll container and CM. Applying
+   these directly on .cm-content keeps cm-scroller as the sole scroll
+   container so drawSelection() positions correctly. */
+.codemirror-wrapper .cm-content {
+  max-width: 56rem; /* max-w-4xl */
+  margin: 0 auto;
+  padding: 1rem 2rem; /* py-4 px-8 */
+}
+
 /* 暗色模式适配 */
 .dark .codemirror-wrapper .cm-editor {
   background-color: hsl(var(--background));

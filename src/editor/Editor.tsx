@@ -8,7 +8,11 @@ import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
 import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce, getFileName } from "@/lib/utils";
-import { CodeMirrorEditor, ViewMode } from "./CodeMirrorEditor";
+import {
+  CodeMirrorEditor,
+  type CodeMirrorEditorRef,
+  ViewMode,
+} from "./CodeMirrorEditor";
 import { SelectionToolbar } from "@/components/toolbar/SelectionToolbar";
 import { SelectionContextMenu } from "@/components/toolbar/SelectionContextMenu";
 import {
@@ -103,10 +107,11 @@ export function Editor() {
   const { sessions: agentSessions, currentSessionId: agentSessionId } =
     useRustAgentStore();
 
+  const editorRef = useRef<CodeMirrorEditorRef>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastOuterScrollTraceAtRef = useRef(0);
   const editorScrollFadeTimerRef = useRef<number | null>(null);
-  const [isEditorScrollActive, setIsEditorScrollActive] = useState(false);
+  const [_isEditorScrollActive, setIsEditorScrollActive] = useState(false);
 
   const getLineFromScrollPosition = useCallback(
     (container: HTMLElement): number => {
@@ -524,60 +529,48 @@ export function Editor() {
               </button>
             ))}
 
-          <div
-            ref={scrollContainerRef}
-            className={cn(
-              "editor-scroll-shell h-full overflow-hidden",
-              isEditorScrollActive && "is-scroll-active",
-            )}
-          >
-            {/* Selection Toolbar - Add to Chat */}
-            <SelectionToolbar containerRef={scrollContainerRef} />
-            {/* Selection Context Menu - Right Click */}
-            <SelectionContextMenu
-              containerRef={scrollContainerRef}
-              onFormatText={(format, text) => {
-                // 通过事件通知 CodeMirror 编辑器执行格式化
-                window.dispatchEvent(
-                  new CustomEvent("editor-format-text", {
-                    detail: { format, text },
-                  }),
-                );
-              }}
-            />
+          {/* Selection Toolbar - Add to Chat */}
+          <SelectionToolbar containerRef={scrollContainerRef} />
+          {/* Selection Context Menu - Right Click */}
+          <SelectionContextMenu
+            containerRef={scrollContainerRef}
+            onFormatText={(format, text) => {
+              window.dispatchEvent(
+                new CustomEvent("editor-format-text", {
+                  detail: { format, text },
+                }),
+              );
+            }}
+          />
 
-            <div className="max-w-4xl mx-auto px-8 py-4 editor-mode-container">
-              {isVideoNoteFile && (
-                <div className="mb-3 flex items-center justify-between px-3 py-2 bg-blue-500/5 border border-blue-500/30 rounded-md text-xs text-blue-700 dark:text-blue-300">
-                  <span>{t.editor.videoNoteDetected}</span>
-                  <button
-                    onClick={() =>
-                      openVideoNoteFromContent(
-                        currentContent,
-                        getFileName(currentFile || "VideoNote"),
-                      )
-                    }
-                    className="ml-3 px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 text-xs font-medium"
-                  >
-                    {t.editor.openAsVideoNote}
-                  </button>
-                </div>
-              )}
-              {/* 统一使用 CodeMirrorEditor，通过 viewMode 切换模式 */}
-              <div key="editor" className="editor-mode-content h-full">
-                <CodeMirrorEditor
-                  content={currentContent}
-                  onChange={(newContent) => {
-                    updateContent(newContent);
-                    debouncedSave();
-                  }}
-                  viewMode={editorMode as ViewMode}
-                  scrollContainerRef={scrollContainerRef}
-                  filePath={currentFile}
-                />
-              </div>
+          {isVideoNoteFile && (
+            <div className="max-w-4xl mx-auto px-8 mb-0 mt-4 flex items-center justify-between py-2 bg-blue-500/5 border border-blue-500/30 rounded-md text-xs text-blue-700 dark:text-blue-300">
+              <span className="px-3">{t.editor.videoNoteDetected}</span>
+              <button
+                onClick={() =>
+                  openVideoNoteFromContent(
+                    currentContent,
+                    getFileName(currentFile || "VideoNote"),
+                  )
+                }
+                className="ml-3 mr-3 px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 text-xs font-medium"
+              >
+                {t.editor.openAsVideoNote}
+              </button>
             </div>
-          </div>
+          )}
+
+          {/* CodeMirror editor — cm-scroller is the sole scroll container */}
+          <CodeMirrorEditor
+            ref={editorRef}
+            content={currentContent}
+            onChange={(newContent) => {
+              updateContent(newContent);
+              debouncedSave();
+            }}
+            viewMode={editorMode as ViewMode}
+            filePath={currentFile}
+          />
         </div>
       )}
     </div>
