@@ -9,6 +9,10 @@
 /// run-loop iteration — preventing the per-frame flicker that occurs
 /// with Tauri's `on_window_event` (which fires asynchronously after
 /// the system layout pass has already reset button positions).
+///
+/// During fullscreen transitions, buttons are hidden to avoid fighting
+/// with Core Animation's interpolated frames, then repositioned and
+/// shown once the transition completes.
 
 /// Height of the custom title bar area in logical points.
 /// Must stay in sync with the CSS safe-area class `h-11` (= 44 px).
@@ -17,7 +21,11 @@ const TITLEBAR_HEIGHT: f64 = 44.0;
 /// Horizontal inset for the first (close) button.
 const BUTTON_OFFSET_X: f64 = 14.0;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::Runtime;
+
+/// Whether a fullscreen transition animation is in progress.
+static IN_FULLSCREEN_TRANSITION: AtomicBool = AtomicBool::new(false);
 
 /// Re-position the three standard window-control buttons so they sit
 /// vertically centred inside the custom 44 px title-bar area.
@@ -53,27 +61,24 @@ pub fn observe_resize<R: Runtime>(window: &tauri::WebviewWindow<R>) {
         // Initial positioning.
         reposition_buttons(ns_window_ptr);
 
-        // Register native observers for window events that may reset
-        // traffic-light positions.
         let center = objc2_foundation::NSNotificationCenter::defaultCenter();
         let ns_window: &objc2_app_kit::NSWindow =
             &*(ns_window_ptr as *const objc2_app_kit::NSWindow);
 
-        let notifications = [
+        // Notifications that should reposition immediately (no animation conflict).
+        let reposition_notifications = [
             "NSWindowDidResizeNotification",
             "NSWindowDidDeminiaturizeNotification",
-            "NSWindowWillExitFullScreenNotification",
-            "NSWindowDidExitFullScreenNotification",
-            "NSWindowWillEnterFullScreenNotification",
-            "NSWindowDidEnterFullScreenNotification",
             "NSWindowDidChangeBackingPropertiesNotification",
         ];
 
-        for name in notifications {
+        for name in reposition_notifications {
             let captured = ns_window_ptr;
             let block = block2::StackBlock::new(
                 move |_notif: std::ptr::NonNull<objc2_foundation::NSNotification>| {
-                    reposition_buttons(captured);
+                    if !IN_FULLSCREEN_TRANSITION.load(Ordering::Acquire) {
+                        reposition_buttons(captured);
+                    }
                 },
             );
             let ns_name = objc2_foundation::NSString::from_str(name);
@@ -84,6 +89,70 @@ pub fn observe_resize<R: Runtime>(window: &tauri::WebviewWindow<R>) {
                 &block,
             );
         }
+
+        // Fullscreen transition start: hide buttons to avoid fighting Core Animation.
+        let will_notifications = [
+            "NSWindowWillEnterFullScreenNotification",
+            "NSWindowWillExitFullScreenNotification",
+        ];
+
+        for name in will_notifications {
+            let captured = ns_window_ptr;
+            let block = block2::StackBlock::new(
+                move |_notif: std::ptr::NonNull<objc2_foundation::NSNotification>| {
+                    IN_FULLSCREEN_TRANSITION.store(true, Ordering::Release);
+                    set_buttons_hidden(captured, true);
+                },
+            );
+            let ns_name = objc2_foundation::NSString::from_str(name);
+            center.addObserverForName_object_queue_usingBlock(
+                Some(&ns_name),
+                Some(ns_window),
+                None,
+                &block,
+            );
+        }
+
+        // Fullscreen transition end: reposition and show buttons.
+        let did_notifications = [
+            "NSWindowDidEnterFullScreenNotification",
+            "NSWindowDidExitFullScreenNotification",
+        ];
+
+        for name in did_notifications {
+            let captured = ns_window_ptr;
+            let block = block2::StackBlock::new(
+                move |_notif: std::ptr::NonNull<objc2_foundation::NSNotification>| {
+                    IN_FULLSCREEN_TRANSITION.store(false, Ordering::Release);
+                    reposition_buttons(captured);
+                    set_buttons_hidden(captured, false);
+                },
+            );
+            let ns_name = objc2_foundation::NSString::from_str(name);
+            center.addObserverForName_object_queue_usingBlock(
+                Some(&ns_name),
+                Some(ns_window),
+                None,
+                &block,
+            );
+        }
+    }
+}
+
+/// Hide or show the three traffic-light buttons.
+unsafe fn set_buttons_hidden(ns_window_ptr: *mut std::ffi::c_void, hidden: bool) {
+    use objc2_app_kit::{NSWindow, NSWindowButton};
+
+    let ns_window: &NSWindow = &*(ns_window_ptr as *const NSWindow);
+
+    if let Some(close) = ns_window.standardWindowButton(NSWindowButton::CloseButton) {
+        close.setHidden(hidden);
+    }
+    if let Some(minimize) = ns_window.standardWindowButton(NSWindowButton::MiniaturizeButton) {
+        minimize.setHidden(hidden);
+    }
+    if let Some(zoom) = ns_window.standardWindowButton(NSWindowButton::ZoomButton) {
+        zoom.setHidden(hidden);
     }
 }
 
