@@ -48,6 +48,22 @@ const isAppearancePlugin = (permissions: string[]) =>
 const isPurelyAppearancePlugin = (permissions: string[]) =>
   permissions.length > 0 && permissions.every((perm) => APPEARANCE_PERMISSIONS.has(perm));
 
+export type PluginCategory = 'functional' | 'appearance' | 'system';
+
+export const categorizePlugin = (plugin: PluginInfo): PluginCategory => {
+  // 系统插件：builtin 来源
+  if (plugin.source === 'builtin') return 'system';
+  
+  const perms = plugin.permissions || [];
+  
+  // 外观插件：只有外观相关权限
+  const hasAppearancePerm = perms.some(p => APPEARANCE_PERMISSIONS.has(p));
+  const hasFunctionalPerm = perms.some(p => !APPEARANCE_PERMISSIONS.has(p));
+  
+  if (hasAppearancePerm && !hasFunctionalPerm) return 'appearance';
+  return 'functional';
+};
+
 const DEFAULT_DISABLED_SAMPLE_PLUGIN_IDS = new Set<string>([
   "hello-lumina",
   "ui-overhaul-lab",
