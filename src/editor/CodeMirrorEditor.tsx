@@ -164,7 +164,7 @@ const createEditorTheme = (fontSize: number) =>
     },
 
     // 2. 行内标记 (Bold, Italic) - 默认隐藏
-    //    Obsidian 方案: font-size: 1px + letter-spacing: -1ch
+    //    Zero-layout-shift: font-size: 1px + letter-spacing: -1ch
     //    字符互相重叠，视觉宽度趋近于零，但不改变布局结构
     ".cm-formatting-inline": {
       display: "inline",
@@ -195,7 +195,7 @@ const createEditorTheme = (fontSize: number) =>
       },
 
     // 块级标记 (标题/列表/引用) - 默认隐藏
-    //    Obsidian 方案: font-size: 0, display: inline — 无 transition
+    //    Zero-layout-shift: font-size: 0, display: inline — no transition
     ".cm-formatting-block": {
       display: "inline",
       fontSize: "0",
@@ -2906,7 +2906,7 @@ function shouldShowCalloutSource(
   if (isDragging) return false;
   // Only switch to source when cursor (collapsed selection) is inside callout.
   // Drag selections that cross over the callout keep it in widget mode,
-  // matching Obsidian's behavior — drawSelection() paints over the widget
+  // drawSelection() paints over the widget
   // without triggering a DOM rebuild.
   return state.selection.ranges.some(
     (range) =>
@@ -3784,7 +3784,7 @@ export const CodeMirrorEditor = forwardRef<
     // Simplified drag tracking: only set mouseSelectingField so
     // livePreviewPlugin freezes decoration updates during drag.
     // All actual selection handling is left to CodeMirror's native
-    // MouseSelection (like Obsidian does).
+    // All actual selection handling is left to CodeMirror's native MouseSelection.
     let mouseDownActive = false;
     let dragSelectionActive = false;
     let mouseDownX = 0;

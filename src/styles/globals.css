@@ -1553,7 +1553,7 @@ mark {
   font-family: var(--font-sans);
 }
 
-/* Editor centering — Obsidian approach: center on .cm-sizer (parent
+/* Editor centering — center on .cm-sizer (parent
    of .cm-content), not on .cm-content itself. This prevents ::selection
    from painting in padding zones since .cm-content has no extra padding. */
 .codemirror-wrapper .cm-sizer {
