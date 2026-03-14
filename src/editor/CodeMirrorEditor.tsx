@@ -3687,15 +3687,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           });
           selectionTrace.snapshot('drag-end-dispatch');
           reportSelectionVisualAnomaly('mouseup');
-          requestAnimationFrame(() => {
-            selectionTrace.event('drag-end-next-frame', {
-              dragClass: view.dom.classList.contains('cm-drag-selecting'),
-              mouseSelectingField: view.state.field(mouseSelectingField, false),
-            });
-            selectionTrace.snapshot('drag-end-next-frame');
-            reportSelectionVisualAnomaly('mouseup-next-frame');
-            stopSelectionProbe();
-          });
+          stopSelectionProbe();
         });
       };
 
