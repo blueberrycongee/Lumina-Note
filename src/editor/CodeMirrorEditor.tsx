@@ -961,7 +961,15 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
   }
   const isDrag = state.field(mouseSelectingField, false);
 
+  // Scope iteration to viewport for performance — mark decorations
+  // outside the visible area have no visual effect and will be rebuilt
+  // when the viewport changes (checkUpdateAction handles viewportChanged).
+  const scanFrom = view.viewport.from;
+  const scanTo = view.viewport.to;
+
   syntaxTree(state).iterate({
+    from: scanFrom,
+    to: scanTo,
     enter: (node) => {
       if (!LIVE_BLOCK_MARK_TYPES.has(node.name) && !LIVE_INLINE_MARK_TYPES.has(node.name)) return;
       if (isInsideSkippedLivePreviewParent(node)) return;
@@ -1453,17 +1461,17 @@ function buildHighlightDecorations(state: EditorState): DecorationSet {
 const selectionStatePlugin = ViewPlugin.fromClass(
   class {
     constructor(private view: EditorView) {
-      this.updateClass(view);
+      this.updateClass(view, false);
     }
     update(update: ViewUpdate) {
-      const isDragging = update.state.field(mouseSelectingField, false);
+      const isDragging = update.state.field(mouseSelectingField, false) ?? false;
       const wasDragging = update.startState.field(mouseSelectingField, false);
       if (isDragging !== wasDragging) {
-        this.updateClass(update.view);
+        this.updateClass(update.view, isDragging);
         return;
       }
       if (update.selectionSet && !isDragging) {
-        this.updateClass(update.view);
+        this.updateClass(update.view, false);
       }
     }
     destroy() {
@@ -1471,19 +1479,22 @@ const selectionStatePlugin = ViewPlugin.fromClass(
       this.view.dom.classList.remove('cm-drag-selecting');
       this.view.dom.classList.remove('cm-drag-native-selection-suppressed');
     }
-    private updateClass(view: EditorView) {
+    private updateClass(view: EditorView, isDragTransition: boolean) {
       const isDragging = view.state.field(mouseSelectingField, false);
       const hasSelection = view.state.selection.ranges.some((range) => range.from !== range.to);
       const suppressNativeSelection = isDragging && shouldDisableDrawSelectionForTauriWebKit();
       view.dom.classList.toggle('cm-drag-selecting', isDragging);
       view.dom.classList.toggle('cm-has-selection', hasSelection);
       view.dom.classList.toggle('cm-drag-native-selection-suppressed', suppressNativeSelection);
+      // Skip text extraction at drag start — selection is about to change.
+      // Only include text at drag end or for normal selection changes.
+      const includeText = hasSelection && !isDragTransition;
       const main = view.state.selection.main;
       const detail = hasSelection
         ? {
             from: main.from,
             to: main.to,
-            text: view.state.doc.sliceString(main.from, main.to),
+            text: includeText ? view.state.doc.sliceString(main.from, main.to) : '',
             lineFrom: view.state.doc.lineAt(main.from).number,
             lineTo: view.state.doc.lineAt(main.to).number,
           }
@@ -1515,10 +1526,7 @@ const selectionBridgeField = StateField.define<DecorationSet>({
     if (wasDragging && !isDragging) return buildSelectionBridgeDecorations(tr.state);
     if (!tr.selection) return deco;
     if (isDragging) {
-      if (shouldDisableDrawSelectionForTauriWebKit()) {
-        return buildSelectionBridgeDecorations(tr.state);
-      }
-      return Decoration.none;
+      return buildSelectionBridgeDecorations(tr.state);
     }
     return buildSelectionBridgeDecorations(tr.state);
   },
@@ -2684,7 +2692,8 @@ const selectAllDomHandlers = Prec.highest(
 );
 
 function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
-  if (!state.facet(collapseOnSelectionFacet)) return Decoration.none;
+  const collapseEnabled = state.facet(collapseOnSelectionFacet);
+  const isDragging = state.field(mouseSelectingField, false);
   const hasSelection = state.selection.ranges.some((range) => range.from !== range.to);
   if (!hasSelection) return Decoration.none;
 
@@ -2707,6 +2716,9 @@ function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
   const seen = new Set<string>();
   const blockTypes = new Set(['HeaderMark', 'ListMark', 'QuoteMark']);
   const inlineTypes = new Set(['EmphasisMark', 'StrikethroughMark', 'CodeMark']);
+  // During drag or in reading mode, bridge all inline marks in selection
+  // regardless of shouldShowSource (marks are hidden/frozen)
+  const bridgeAllInline = isDragging || !collapseEnabled;
 
   syntaxTree(state).iterate({
     from: scanFrom,
@@ -2739,7 +2751,7 @@ function buildSelectionBridgeDecorations(state: EditorState): DecorationSet {
       }
 
       if (node.from >= node.to) return;
-      if (!shouldShowSource(state, node.from, node.to)) return;
+      if (!bridgeAllInline && !shouldShowSource(state, node.from, node.to)) return;
       const inlineKey = `${node.from}:${node.to}:bridge`;
       if (seen.has(inlineKey)) return;
       seen.add(inlineKey);
@@ -3675,15 +3687,7 @@ export const CodeMirrorEditor = forwardRef<CodeMirrorEditorRef, CodeMirrorEditor
           });
           selectionTrace.snapshot('drag-end-dispatch');
           reportSelectionVisualAnomaly('mouseup');
-          requestAnimationFrame(() => {
-            selectionTrace.event('drag-end-next-frame', {
-              dragClass: view.dom.classList.contains('cm-drag-selecting'),
-              mouseSelectingField: view.state.field(mouseSelectingField, false),
-            });
-            selectionTrace.snapshot('drag-end-next-frame');
-            reportSelectionVisualAnomaly('mouseup-next-frame');
-            stopSelectionProbe();
-          });
+          stopSelectionProbe();
         });
       };
 
