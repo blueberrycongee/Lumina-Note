@@ -111,6 +111,24 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
     });
   }, [currentFile, filePath, html, vaultPath]);
 
+  // Callout fold toggle in preview mode
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleCalloutFold = (e: MouseEvent) => {
+      const title = (e.target as HTMLElement).closest('.callout-title');
+      if (!title) return;
+      const callout = title.closest('.callout');
+      if (!callout?.querySelector('.callout-fold')) return;
+      e.stopPropagation();
+      callout.classList.toggle('callout-folded');
+    };
+
+    container.addEventListener('click', handleCalloutFold);
+    return () => container.removeEventListener('click', handleCalloutFold);
+  }, [html]);
+
   // Handle WikiLink, Tag, and Lumina link clicks
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
