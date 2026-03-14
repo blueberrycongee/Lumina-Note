@@ -614,9 +614,9 @@ pub async fn unread_count(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collab::CollabHub;
     use crate::config::Config;
     use crate::db;
-    use crate::collab::CollabHub;
     use crate::state::{RelayHub, ServerMetrics};
     use axum::http::{header::AUTHORIZATION, HeaderValue};
     use sqlx::sqlite::SqlitePoolOptions;
