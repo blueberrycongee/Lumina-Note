@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveCalloutType, matchCalloutHeader, parseFoldModifier, isEmoji, CALLOUT_CONFIG } from './calloutConfig';
+import { resolveCalloutType, matchCalloutHeader, parseFoldModifier, isEmoji } from './calloutConfig';
 
 describe('calloutConfig', () => {
   describe('resolveCalloutType', () => {

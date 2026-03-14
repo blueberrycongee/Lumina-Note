@@ -2,7 +2,7 @@ import { Marked, Renderer } from "marked";
 import TurndownService from "turndown";
 import katex from "katex";
 import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
-import { resolveCalloutType, isEmoji } from "@/editor/calloutConfig";
+import { resolveCalloutType } from "@/editor/calloutConfig";
 
 // Custom renderer for Obsidian-style callouts
 const renderer = new Renderer();
