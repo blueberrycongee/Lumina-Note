@@ -40,6 +40,7 @@ pub struct AppState {
     pub relay: RelayHub,
     pub collab: crate::collab::CollabHub,
     pub metrics: Arc<ServerMetrics>,
+    pub notify: crate::notify_ws::NotifyHub,
 }
 
 #[derive(Debug, Default)]

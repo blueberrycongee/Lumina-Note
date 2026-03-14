@@ -1,24 +1,28 @@
-import { useState, useRef, useEffect } from 'react';
-import { Bell } from 'lucide-react';
-import { useNotificationStore } from '@/stores/useNotificationStore';
-import { useShallow } from 'zustand/react/shallow';
-import { NotificationPanel } from './NotificationPanel';
+import { useState, useRef, useEffect } from "react";
+import { Bell } from "lucide-react";
+import { useNotificationStore } from "@/stores/useNotificationStore";
+import { useShallow } from "zustand/react/shallow";
+import { NotificationPanel } from "./NotificationPanel";
 
 export function NotificationBell() {
-  const { unreadCount, fetchUnreadCount } = useNotificationStore(useShallow(s => ({
-    unreadCount: s.unreadCount,
-    fetchUnreadCount: s.fetchUnreadCount,
-  })));
+  const { unreadCount, fetchUnreadCount, wsConnected } = useNotificationStore(
+    useShallow((s) => ({
+      unreadCount: s.unreadCount,
+      fetchUnreadCount: s.fetchUnreadCount,
+      wsConnected: s.wsConnected,
+    })),
+  );
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Poll unread count periodically
+  // Fallback polling only when WebSocket is not connected
   useEffect(() => {
+    if (wsConnected) return;
     fetchUnreadCount();
     const interval = setInterval(fetchUnreadCount, 60_000);
     return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  }, [wsConnected, fetchUnreadCount]);
 
   // Close on outside click
   useEffect(() => {
@@ -27,8 +31,8 @@ export function NotificationBell() {
         setOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   return (
@@ -40,7 +44,7 @@ export function NotificationBell() {
         <Bell size={16} className="text-muted-foreground" />
         {unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center px-0.5 leading-none font-medium">
-            {unreadCount > 99 ? '99+' : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
