@@ -2891,9 +2891,12 @@ function shouldShowCalloutSource(state: EditorState, from: number, to: number): 
   if (isDragging) return false;
   return state.selection.ranges.some((range) => {
     if (range.from === range.to) {
+      // Caret inside callout
       return range.from >= from && range.from <= to;
     }
-    return range.from >= from && range.to <= to;
+    // Selection overlaps callout at all (not just fully inside)
+    // This prevents blue selection remnants on the widget when dragging across
+    return range.from <= to && range.to >= from;
   });
 }
 
