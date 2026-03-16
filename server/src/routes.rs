@@ -30,8 +30,11 @@ pub async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
 
 pub async fn register(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
+    let ip = crate::rate_limit::extract_client_ip(&headers);
+    state.auth_limiter.check(&ip).map_err(AppError::RateLimited)?;
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim().to_string();
     if email.is_empty() || password.len() < 8 {
@@ -59,8 +62,11 @@ pub async fn register(
 
 pub async fn login(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
+    let ip = crate::rate_limit::extract_client_ip(&headers);
+    state.auth_limiter.check(&ip).map_err(AppError::RateLimited)?;
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim().to_string();
     if email.is_empty() || password.is_empty() {
@@ -92,6 +98,8 @@ pub async fn refresh(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<TokenResponse>, AppError> {
+    let ip = crate::rate_limit::extract_client_ip(&headers);
+    state.auth_limiter.check(&ip).map_err(AppError::RateLimited)?;
     let token = extract_bearer(&headers).ok_or(AppError::Unauthorized)?;
     let claims = decode_token(&token, &state.config)?;
     let new_token = create_token(&claims.sub, &state.config)?;
@@ -770,6 +778,7 @@ mod tests {
 
         let response = register(
             State(state),
+            HeaderMap::new(),
             Json(RegisterRequest {
                 email: "dev@example.com".to_string(),
                 password: "change-me".to_string(),
@@ -791,6 +800,7 @@ mod tests {
 
         let result = register(
             State(state),
+            HeaderMap::new(),
             Json(RegisterRequest {
                 email: "dev@example.com".to_string(),
                 password: "1234567".to_string(),
@@ -812,6 +822,7 @@ mod tests {
 
         let registered = register(
             State(state.clone()),
+            HeaderMap::new(),
             Json(RegisterRequest {
                 email: "dev@example.com".to_string(),
                 password: "change-me".to_string(),
@@ -823,6 +834,7 @@ mod tests {
 
         let login_response = login(
             State(state.clone()),
+            HeaderMap::new(),
             Json(LoginRequest {
                 email: "dev@example.com".to_string(),
                 password: "change-me".to_string(),
@@ -853,5 +865,83 @@ mod tests {
             .unwrap()
             .0;
         assert_eq!(listed.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn login_rejects_after_rate_limit_exceeded() {
+        let data_dir = std::env::temp_dir().join(format!("lumina-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&data_dir).unwrap();
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        db::init_db(&pool).await.unwrap();
+
+        let state = AppState {
+            pool,
+            config: Config {
+                bind: "127.0.0.1:0".to_string(),
+                db_url: "sqlite::memory:".to_string(),
+                data_dir: data_dir.display().to_string(),
+                jwt_secret: "test-secret".to_string(),
+                auth_rate_limit_burst: 2,
+                auth_rate_limit_window_secs: 60,
+            },
+            relay: RelayHub::new(),
+            collab: CollabHub::new(&data_dir.display().to_string()),
+            metrics: Arc::new(ServerMetrics::new()),
+            notify: crate::notify_ws::NotifyHub::new(),
+            auth_limiter: crate::rate_limit::AuthRateLimiter::new(2, 60),
+        };
+
+        let ip_headers = {
+            let mut h = HeaderMap::new();
+            h.insert("x-forwarded-for", HeaderValue::from_static("10.0.0.99"));
+            h
+        };
+
+        // Request 1: register (uses 1 of 2 tokens)
+        let _ = register(
+            State(state.clone()),
+            ip_headers.clone(),
+            Json(RegisterRequest {
+                email: "ratelimit@example.com".to_string(),
+                password: "strongpass123".to_string(),
+            }),
+        )
+        .await
+        .unwrap();
+
+        // Request 2: login (uses 2 of 2 tokens)
+        let _ = login(
+            State(state.clone()),
+            ip_headers.clone(),
+            Json(LoginRequest {
+                email: "ratelimit@example.com".to_string(),
+                password: "strongpass123".to_string(),
+            }),
+        )
+        .await
+        .unwrap();
+
+        // Request 3: should be rate limited
+        let result = login(
+            State(state),
+            ip_headers,
+            Json(LoginRequest {
+                email: "ratelimit@example.com".to_string(),
+                password: "strongpass123".to_string(),
+            }),
+        )
+        .await;
+
+        match result {
+            Err(AppError::RateLimited(secs)) => {
+                assert!(secs > 0);
+            }
+            other => panic!("expected RateLimited, got {other:?}"),
+        }
     }
 }
