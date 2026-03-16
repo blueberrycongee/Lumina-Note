@@ -1,3 +1,4 @@
+use axum::http::HeaderMap;
 use governor::clock::{Clock, DefaultClock};
 use governor::state::keyed::DashMapStateStore;
 use governor::{Quota, RateLimiter as GovRateLimiter};
@@ -33,5 +34,52 @@ impl AuthRateLimiter {
                 .as_secs()
                 .max(1)
         })
+    }
+}
+
+/// Extract client IP from proxy headers, falling back to "unknown".
+pub fn extract_client_ip(headers: &HeaderMap) -> String {
+    if let Some(forwarded) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
+        if let Some(first) = forwarded.split(',').next() {
+            let ip = first.trim();
+            if !ip.is_empty() {
+                return ip.to_string();
+            }
+        }
+    }
+    if let Some(real_ip) = headers.get("x-real-ip").and_then(|v| v.to_str().ok()) {
+        let ip = real_ip.trim();
+        if !ip.is_empty() {
+            return ip.to_string();
+        }
+    }
+    "unknown".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extracts_ip_from_x_forwarded_for() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "x-forwarded-for",
+            "203.0.113.50, 70.41.3.18".parse().unwrap(),
+        );
+        assert_eq!(extract_client_ip(&headers), "203.0.113.50");
+    }
+
+    #[test]
+    fn extracts_ip_from_x_real_ip() {
+        let mut headers = HeaderMap::new();
+        headers.insert("x-real-ip", "198.51.100.1".parse().unwrap());
+        assert_eq!(extract_client_ip(&headers), "198.51.100.1");
+    }
+
+    #[test]
+    fn falls_back_to_unknown() {
+        let headers = HeaderMap::new();
+        assert_eq!(extract_client_ip(&headers), "unknown");
     }
 }
