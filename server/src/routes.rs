@@ -1,8 +1,9 @@
-use axum::extract::{Json, Path, Query, State};
+use axum::extract::{ConnectInfo, Json, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use serde::Deserialize;
 use serde_json::json;
+use std::net::SocketAddr;
 
 use crate::auth::{create_token, decode_token, hash_password, verify_password};
 use crate::db;
@@ -30,10 +31,15 @@ pub async fn metrics(State(state): State<AppState>) -> impl IntoResponse {
 
 pub async fn register(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    let ip = crate::rate_limit::extract_client_ip(&headers);
+    let ip = crate::rate_limit::resolve_client_ip(
+        addr.ip(),
+        &headers,
+        state.config.trusted_proxy_hops,
+    );
     state.auth_limiter.check(&ip).map_err(|secs| {
         state
             .metrics
@@ -68,10 +74,15 @@ pub async fn register(
 
 pub async fn login(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    let ip = crate::rate_limit::extract_client_ip(&headers);
+    let ip = crate::rate_limit::resolve_client_ip(
+        addr.ip(),
+        &headers,
+        state.config.trusted_proxy_hops,
+    );
     state.auth_limiter.check(&ip).map_err(|secs| {
         state
             .metrics
@@ -108,9 +119,14 @@ pub async fn login(
 
 pub async fn refresh(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
 ) -> Result<Json<TokenResponse>, AppError> {
-    let ip = crate::rate_limit::extract_client_ip(&headers);
+    let ip = crate::rate_limit::resolve_client_ip(
+        addr.ip(),
+        &headers,
+        state.config.trusted_proxy_hops,
+    );
     state.auth_limiter.check(&ip).map_err(|secs| {
         state
             .metrics
@@ -749,9 +765,16 @@ mod tests {
     use crate::config::Config;
     use crate::db;
     use crate::state::{RelayHub, ServerMetrics};
+    use axum::extract::ConnectInfo;
     use axum::http::{header::AUTHORIZATION, HeaderValue};
     use sqlx::sqlite::SqlitePoolOptions;
+    use std::net::SocketAddr;
     use std::sync::Arc;
+
+    const TEST_ADDR: SocketAddr = SocketAddr::new(
+        std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)),
+        9999,
+    );
     async fn test_state() -> AppState {
         let data_dir = std::env::temp_dir().join(format!("lumina-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&data_dir).unwrap();
@@ -797,6 +820,7 @@ mod tests {
 
         let response = register(
             State(state),
+            ConnectInfo(TEST_ADDR),
             HeaderMap::new(),
             Json(RegisterRequest {
                 email: "dev@example.com".to_string(),
@@ -819,6 +843,7 @@ mod tests {
 
         let result = register(
             State(state),
+            ConnectInfo(TEST_ADDR),
             HeaderMap::new(),
             Json(RegisterRequest {
                 email: "dev@example.com".to_string(),
@@ -841,6 +866,7 @@ mod tests {
 
         let registered = register(
             State(state.clone()),
+            ConnectInfo(TEST_ADDR),
             HeaderMap::new(),
             Json(RegisterRequest {
                 email: "dev@example.com".to_string(),
@@ -853,6 +879,7 @@ mod tests {
 
         let login_response = login(
             State(state.clone()),
+            ConnectInfo(TEST_ADDR),
             HeaderMap::new(),
             Json(LoginRequest {
                 email: "dev@example.com".to_string(),
@@ -916,16 +943,11 @@ mod tests {
             auth_limiter: crate::rate_limit::AuthRateLimiter::new(2, 60),
         };
 
-        let ip_headers = {
-            let mut h = HeaderMap::new();
-            h.insert("x-forwarded-for", HeaderValue::from_static("10.0.0.99"));
-            h
-        };
-
         // Request 1: register (uses 1 of 2 tokens)
         let _ = register(
             State(state.clone()),
-            ip_headers.clone(),
+            ConnectInfo(TEST_ADDR),
+            HeaderMap::new(),
             Json(RegisterRequest {
                 email: "ratelimit@example.com".to_string(),
                 password: "strongpass123".to_string(),
@@ -937,7 +959,8 @@ mod tests {
         // Request 2: login (uses 2 of 2 tokens)
         let _ = login(
             State(state.clone()),
-            ip_headers.clone(),
+            ConnectInfo(TEST_ADDR),
+            HeaderMap::new(),
             Json(LoginRequest {
                 email: "ratelimit@example.com".to_string(),
                 password: "strongpass123".to_string(),
@@ -949,7 +972,8 @@ mod tests {
         // Request 3: should be rate limited
         let result = login(
             State(state),
-            ip_headers,
+            ConnectInfo(TEST_ADDR),
+            HeaderMap::new(),
             Json(LoginRequest {
                 email: "ratelimit@example.com".to_string(),
                 password: "strongpass123".to_string(),

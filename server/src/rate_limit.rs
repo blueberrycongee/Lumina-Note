@@ -38,27 +38,6 @@ impl AuthRateLimiter {
     }
 }
 
-/// Deprecated: use `resolve_client_ip` instead. Kept temporarily until
-/// routes.rs call sites are migrated (Task 4).
-#[deprecated(note = "use resolve_client_ip with socket IP and trusted_proxy_hops")]
-pub fn extract_client_ip(headers: &HeaderMap) -> String {
-    if let Some(forwarded) = headers.get("x-forwarded-for").and_then(|v| v.to_str().ok()) {
-        if let Some(first) = forwarded.split(',').next() {
-            let ip = first.trim();
-            if !ip.is_empty() {
-                return ip.to_string();
-            }
-        }
-    }
-    if let Some(real_ip) = headers.get("x-real-ip").and_then(|v| v.to_str().ok()) {
-        let ip = real_ip.trim();
-        if !ip.is_empty() {
-            return ip.to_string();
-        }
-    }
-    "unknown".to_string()
-}
-
 /// Resolve client IP for rate limiting.
 ///
 /// - `trusted_proxy_hops == 0` (default): use the TCP socket address directly.

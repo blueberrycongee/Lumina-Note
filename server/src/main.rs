@@ -18,6 +18,7 @@ use axum::Router;
 use config::Config;
 use sqlx::sqlite::SqlitePoolOptions;
 use state::AppState;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer};
 use tower_http::trace::TraceLayer;
@@ -168,7 +169,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(trace_layer);
     tracing::info!("Lumina Sync Server listening on {}", bind_addr);
     axum::Server::bind(&bind_addr)
-        .serve(app.into_make_service())
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await?;
 
     Ok(())
