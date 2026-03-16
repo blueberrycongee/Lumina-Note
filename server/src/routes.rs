@@ -35,11 +35,8 @@ pub async fn register(
     headers: HeaderMap,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    let ip = crate::rate_limit::resolve_client_ip(
-        addr.ip(),
-        &headers,
-        state.config.trusted_proxy_hops,
-    );
+    let ip =
+        crate::rate_limit::resolve_client_ip(addr.ip(), &headers, state.config.trusted_proxy_hops);
     state.auth_limiter.check(&ip).map_err(|secs| {
         state
             .metrics
@@ -78,11 +75,8 @@ pub async fn login(
     headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
-    let ip = crate::rate_limit::resolve_client_ip(
-        addr.ip(),
-        &headers,
-        state.config.trusted_proxy_hops,
-    );
+    let ip =
+        crate::rate_limit::resolve_client_ip(addr.ip(), &headers, state.config.trusted_proxy_hops);
     state.auth_limiter.check(&ip).map_err(|secs| {
         state
             .metrics
@@ -122,11 +116,8 @@ pub async fn refresh(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
 ) -> Result<Json<TokenResponse>, AppError> {
-    let ip = crate::rate_limit::resolve_client_ip(
-        addr.ip(),
-        &headers,
-        state.config.trusted_proxy_hops,
-    );
+    let ip =
+        crate::rate_limit::resolve_client_ip(addr.ip(), &headers, state.config.trusted_proxy_hops);
     state.auth_limiter.check(&ip).map_err(|secs| {
         state
             .metrics

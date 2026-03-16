@@ -46,7 +46,11 @@ impl AuthRateLimiter {
 ///   position `len - N` (counting from the right). Each trusted proxy layer
 ///   appends one entry, so the Nth-from-right is the first untrusted hop.
 ///   Falls back to socket IP if XFF is missing or has fewer than N entries.
-pub fn resolve_client_ip(socket_ip: IpAddr, headers: &HeaderMap, trusted_proxy_hops: u32) -> String {
+pub fn resolve_client_ip(
+    socket_ip: IpAddr,
+    headers: &HeaderMap,
+    trusted_proxy_hops: u32,
+) -> String {
     if trusted_proxy_hops == 0 {
         return socket_ip.to_string();
     }
