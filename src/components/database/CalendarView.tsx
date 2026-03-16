@@ -3,7 +3,14 @@ import { useDatabaseStore } from "@/stores/useDatabaseStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import type { DatabaseRow } from "@/types/database";
-import { AlertCircle, CalendarDays, Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 import { DatabaseIconButton, DatabasePanel } from "./primitives";
 import { DatabaseScaledContent } from "./ViewScaleControl";
 import {
@@ -24,21 +31,34 @@ type RowInteractionStatus = "opening" | "rescheduling" | "saved" | "error";
 
 export function CalendarView({ dbId }: CalendarViewProps) {
   const { t, locale } = useLocaleStore();
-  const { databases, getFilteredSortedRows, updateView, updateCell } = useDatabaseStore();
+  const { databases, getFilteredSortedRows, updateView, updateCell } =
+    useDatabaseStore();
   const openFile = useFileStore((state) => state.openFile);
   const db = databases[dbId];
-  const rows = useMemo(() => getFilteredSortedRows(dbId), [dbId, getFilteredSortedRows, db?.rows, db?.views]);
+  const rows = useMemo(
+    () => getFilteredSortedRows(dbId),
+    [dbId, getFilteredSortedRows, db?.rows, db?.views, db?.activeViewId],
+  );
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
   const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [rowStatus, setRowStatus] = useState<Record<string, RowInteractionStatus>>({});
-  const statusTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [rowStatus, setRowStatus] = useState<
+    Record<string, RowInteractionStatus>
+  >({});
+  const statusTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>(
+    {},
+  );
 
   const activeView = db?.views.find((view) => view.id === db.activeViewId);
-  const dateColumns = db ? db.columns.filter((column) => column.type === "date") : [];
-  const activeDateColumnId = db && activeView ? resolveCalendarDateColumnId(db.columns, activeView.dateColumn) : undefined;
+  const dateColumns = db
+    ? db.columns.filter((column) => column.type === "date")
+    : [];
+  const activeDateColumnId =
+    db && activeView
+      ? resolveCalendarDateColumnId(db.columns, activeView.dateColumn)
+      : undefined;
 
   useEffect(() => {
     if (!activeView || activeView.type !== "calendar") return;
@@ -49,14 +69,20 @@ export function CalendarView({ dbId }: CalendarViewProps) {
 
   useEffect(() => {
     return () => {
-      Object.values(statusTimersRef.current).forEach((timer) => clearTimeout(timer));
+      Object.values(statusTimersRef.current).forEach((timer) =>
+        clearTimeout(timer),
+      );
     };
   }, []);
 
   if (!db || !activeView) return null;
 
   const setRowInteractionStatus = useCallback(
-    (rowId: string, status: RowInteractionStatus | "idle", timeoutMs?: number) => {
+    (
+      rowId: string,
+      status: RowInteractionStatus | "idle",
+      timeoutMs?: number,
+    ) => {
       const timers = statusTimersRef.current;
       if (timers[rowId]) {
         clearTimeout(timers[rowId]);
@@ -88,13 +114,19 @@ export function CalendarView({ dbId }: CalendarViewProps) {
 
   const monthGrid = useMemo(() => buildMonthGrid(currentMonth), [currentMonth]);
   const monthLabel = useMemo(
-    () => new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(currentMonth),
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        month: "long",
+        year: "numeric",
+      }).format(currentMonth),
     [currentMonth, locale],
   );
   const weekdayLabels = useMemo(() => {
     const base = new Date(Date.UTC(2026, 0, 4)); // Sunday
     const formatter = new Intl.DateTimeFormat(locale, { weekday: "short" });
-    return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(base.getTime() + index * 86400000)));
+    return Array.from({ length: 7 }, (_, index) =>
+      formatter.format(new Date(base.getTime() + index * 86400000)),
+    );
   }, [locale]);
 
   const dateGroups = useMemo(
@@ -104,7 +136,10 @@ export function CalendarView({ dbId }: CalendarViewProps) {
         : { grouped: {}, undated: rows },
     [activeDateColumnId, rows],
   );
-  const rowMap = useMemo(() => new Map(rows.map((row) => [row.id, row])), [rows]);
+  const rowMap = useMemo(
+    () => new Map(rows.map((row) => [row.id, row])),
+    [rows],
+  );
   const todayKey = toDateKey(new Date());
   const emptyDateStrategy = activeView.calendarEmptyDateStrategy ?? "show";
   const viewScale = normalizeDatabaseViewScale(activeView.scale);
@@ -125,35 +160,48 @@ export function CalendarView({ dbId }: CalendarViewProps) {
         setLiveMessage(t.database.calendar.openNoteError);
       }
     },
-    [openFile, setRowInteractionStatus, t.database.calendar.openNoteError, t.database.calendar.openNoteSuccess, t.database.calendar.openingNote],
+    [
+      openFile,
+      setRowInteractionStatus,
+      t.database.calendar.openNoteError,
+      t.database.calendar.openNoteSuccess,
+      t.database.calendar.openingNote,
+    ],
   );
 
-  const handleDragStart = useCallback((event: React.DragEvent<HTMLElement>, rowId: string) => {
-    setDraggedRowId(rowId);
-    setErrorMessage(null);
-    setLiveMessage(t.database.calendar.dragHint);
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", rowId);
-  }, [t.database.calendar.dragHint]);
+  const handleDragStart = useCallback(
+    (event: React.DragEvent<HTMLElement>, rowId: string) => {
+      setDraggedRowId(rowId);
+      setErrorMessage(null);
+      setLiveMessage(t.database.calendar.dragHint);
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", rowId);
+    },
+    [t.database.calendar.dragHint],
+  );
 
   const handleDragEnd = useCallback(() => {
     setDraggedRowId(null);
     setDragOverDateKey(null);
   }, []);
 
-  const handleDayDragOver = useCallback((event: React.DragEvent<HTMLElement>, dayKey: string) => {
-    if (!activeDateColumnId) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-    setDragOverDateKey(dayKey);
-  }, [activeDateColumnId]);
+  const handleDayDragOver = useCallback(
+    (event: React.DragEvent<HTMLElement>, dayKey: string) => {
+      if (!activeDateColumnId) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      setDragOverDateKey(dayKey);
+    },
+    [activeDateColumnId],
+  );
 
   const handleDayDrop = useCallback(
     async (event: React.DragEvent<HTMLElement>, dayKey: string) => {
       event.preventDefault();
       if (!activeDateColumnId) return;
 
-      const droppedRowId = draggedRowId || event.dataTransfer.getData("text/plain");
+      const droppedRowId =
+        draggedRowId || event.dataTransfer.getData("text/plain");
       setDraggedRowId(null);
       setDragOverDateKey(null);
       if (!droppedRowId) return;
@@ -167,7 +215,9 @@ export function CalendarView({ dbId }: CalendarViewProps) {
       setErrorMessage(null);
       setLiveMessage(t.database.calendar.rescheduling);
       setRowInteractionStatus(droppedRowId, "rescheduling");
-      const ok = await updateCell(dbId, droppedRowId, activeDateColumnId, { start: dayKey });
+      const ok = await updateCell(dbId, droppedRowId, activeDateColumnId, {
+        start: dayKey,
+      });
       if (ok) {
         setRowInteractionStatus(droppedRowId, "saved", 1200);
         setLiveMessage(t.database.calendar.rescheduleSuccess);
@@ -196,7 +246,9 @@ export function CalendarView({ dbId }: CalendarViewProps) {
         <div className="db-empty-state h-full flex flex-col items-center justify-center gap-2">
           <CalendarDays className="w-5 h-5 text-muted-foreground" />
           <p>{t.database.calendar.noDateColumnTitle}</p>
-          <p className="text-xs text-muted-foreground">{t.database.calendar.noDateColumnDesc}</p>
+          <p className="text-xs text-muted-foreground">
+            {t.database.calendar.noDateColumnDesc}
+          </p>
         </div>
       </div>
     );
@@ -246,7 +298,11 @@ export function CalendarView({ dbId }: CalendarViewProps) {
       )}
 
       <DatabaseScaledContent scale={viewScale} className="mt-3">
-        <div className="grid grid-cols-7 gap-2" role="grid" aria-label={monthLabel}>
+        <div
+          className="grid grid-cols-7 gap-2"
+          role="grid"
+          aria-label={monthLabel}
+        >
           {weekdayLabels.map((label) => (
             <div key={label} className="px-2 text-xs text-muted-foreground">
               {label}
@@ -258,7 +314,9 @@ export function CalendarView({ dbId }: CalendarViewProps) {
               <DatabasePanel
                 key={day.key}
                 className={`min-h-[120px] p-2 ${
-                  day.key === todayKey ? "ring-1 ring-primary/55 bg-primary/[0.06]" : ""
+                  day.key === todayKey
+                    ? "ring-1 ring-primary/55 bg-primary/[0.06]"
+                    : ""
                 } ${dragOverDateKey === day.key ? "ring-2 ring-primary/55 bg-primary/[0.1]" : ""} ${
                   !day.inCurrentMonth ? "opacity-60" : ""
                 } transition-[opacity,background-color,box-shadow,transform] duration-180 ease-out motion-reduce:transition-none`}
@@ -269,8 +327,12 @@ export function CalendarView({ dbId }: CalendarViewProps) {
                 aria-label={day.key}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{day.date.getDate()}</span>
-                  {dayRows.length > 0 && <span className="db-count-badge">{dayRows.length}</span>}
+                  <span className="text-xs text-muted-foreground">
+                    {day.date.getDate()}
+                  </span>
+                  {dayRows.length > 0 && (
+                    <span className="db-count-badge">{dayRows.length}</span>
+                  )}
                 </div>
                 <div className="mt-1.5 space-y-1">
                   {dayRows.slice(0, 3).map((row) => (
@@ -286,7 +348,9 @@ export function CalendarView({ dbId }: CalendarViewProps) {
                     />
                   ))}
                   {dayRows.length > 3 && (
-                    <p className="text-[11px] text-muted-foreground">+{dayRows.length - 3} {t.database.calendar.more}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      +{dayRows.length - 3} {t.database.calendar.more}
+                    </p>
                   )}
                 </div>
               </DatabasePanel>
@@ -297,8 +361,12 @@ export function CalendarView({ dbId }: CalendarViewProps) {
         {emptyDateStrategy === "show" && dateGroups.undated.length > 0 && (
           <DatabasePanel className="mt-3 p-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{t.database.calendar.noDateBucket}</p>
-              <span className="db-count-badge">{dateGroups.undated.length}</span>
+              <p className="text-sm font-medium">
+                {t.database.calendar.noDateBucket}
+              </p>
+              <span className="db-count-badge">
+                {dateGroups.undated.length}
+              </span>
             </div>
             <div className="mt-2 grid gap-1">
               {dateGroups.undated.slice(0, 8).map((row) => (
@@ -345,13 +413,14 @@ function CalendarNoteCard({
   onDragStart,
   onDragEnd,
 }: CalendarNoteCardProps) {
-  const statusClass = status === "error"
-    ? "ring-1 ring-destructive/50 bg-destructive/[0.08]"
-    : status === "saved"
-      ? "bg-primary/[0.1]"
-      : status === "opening" || status === "rescheduling"
-        ? "ring-1 ring-primary/50 bg-primary/[0.08]"
-        : "";
+  const statusClass =
+    status === "error"
+      ? "ring-1 ring-destructive/50 bg-destructive/[0.08]"
+      : status === "saved"
+        ? "bg-primary/[0.1]"
+        : status === "opening" || status === "rescheduling"
+          ? "ring-1 ring-primary/50 bg-primary/[0.08]"
+          : "";
 
   return (
     <button
@@ -361,7 +430,9 @@ function CalendarNoteCard({
       onDragStart={(event) => onDragStart(event, row.id)}
       onDragEnd={onDragEnd}
       className={`db-focus-ring group w-full rounded-ui-sm border border-border/60 bg-background px-1.5 py-1 text-left text-xs transition-[transform,opacity,background-color,border-color] duration-120 ease-out motion-reduce:transform-none motion-reduce:transition-none ${
-        isDragging ? "scale-[0.99] opacity-55" : "hover:-translate-y-[1px] hover:border-border/80 motion-reduce:hover:translate-y-0"
+        isDragging
+          ? "scale-[0.99] opacity-55"
+          : "hover:-translate-y-[1px] hover:border-border/80 motion-reduce:hover:translate-y-0"
       } ${statusClass}`}
       aria-label={`${openNoteLabel}: ${row.noteTitle}`}
       title={openNoteLabel}
@@ -369,10 +440,17 @@ function CalendarNoteCard({
       <div className="flex items-start gap-1.5">
         <p className="min-w-0 flex-1 truncate">{row.noteTitle}</p>
         {(status === "opening" || status === "rescheduling") && (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" aria-hidden />
+          <Loader2
+            className="h-3.5 w-3.5 animate-spin text-primary"
+            aria-hidden
+          />
         )}
-        {status === "saved" && <Check className="h-3.5 w-3.5 text-primary" aria-hidden />}
-        {status === "error" && <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden />}
+        {status === "saved" && (
+          <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+        )}
+        {status === "error" && (
+          <AlertCircle className="h-3.5 w-3.5 text-destructive" aria-hidden />
+        )}
       </div>
     </button>
   );
