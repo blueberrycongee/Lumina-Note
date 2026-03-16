@@ -34,10 +34,13 @@ pub async fn register(
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
     let ip = crate::rate_limit::extract_client_ip(&headers);
-    state
-        .auth_limiter
-        .check(&ip)
-        .map_err(AppError::RateLimited)?;
+    state.auth_limiter.check(&ip).map_err(|secs| {
+        state
+            .metrics
+            .auth_rate_limited
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        AppError::RateLimited(secs)
+    })?;
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim().to_string();
     if email.is_empty() || password.len() < 8 {
@@ -69,10 +72,13 @@ pub async fn login(
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<AuthResponse>, AppError> {
     let ip = crate::rate_limit::extract_client_ip(&headers);
-    state
-        .auth_limiter
-        .check(&ip)
-        .map_err(AppError::RateLimited)?;
+    state.auth_limiter.check(&ip).map_err(|secs| {
+        state
+            .metrics
+            .auth_rate_limited
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        AppError::RateLimited(secs)
+    })?;
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim().to_string();
     if email.is_empty() || password.is_empty() {
@@ -105,10 +111,13 @@ pub async fn refresh(
     headers: HeaderMap,
 ) -> Result<Json<TokenResponse>, AppError> {
     let ip = crate::rate_limit::extract_client_ip(&headers);
-    state
-        .auth_limiter
-        .check(&ip)
-        .map_err(AppError::RateLimited)?;
+    state.auth_limiter.check(&ip).map_err(|secs| {
+        state
+            .metrics
+            .auth_rate_limited
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        AppError::RateLimited(secs)
+    })?;
     let token = extract_bearer(&headers).ok_or(AppError::Unauthorized)?;
     let claims = decode_token(&token, &state.config)?;
     let new_token = create_token(&claims.sub, &state.config)?;

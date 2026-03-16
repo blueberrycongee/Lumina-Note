@@ -53,6 +53,7 @@ pub struct ServerMetrics {
     pub relay_connections: AtomicU64,
     pub relay_active: AtomicU64,
     pub relay_failures: AtomicU64,
+    pub auth_rate_limited: AtomicU64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -64,6 +65,7 @@ pub struct ServerMetricsSnapshot {
     pub relay_connections: u64,
     pub relay_active: u64,
     pub relay_failures: u64,
+    pub auth_rate_limited: u64,
 }
 
 impl ServerMetrics {
@@ -80,6 +82,7 @@ impl ServerMetrics {
             relay_connections: self.relay_connections.load(Ordering::Relaxed),
             relay_active: self.relay_active.load(Ordering::Relaxed),
             relay_failures: self.relay_failures.load(Ordering::Relaxed),
+            auth_rate_limited: self.auth_rate_limited.load(Ordering::Relaxed),
         }
     }
 
