@@ -8,6 +8,7 @@ pub struct Config {
     pub jwt_secret: String,
     pub auth_rate_limit_burst: u32,
     pub auth_rate_limit_window_secs: u64,
+    pub trusted_proxy_hops: u32,
 }
 
 impl Config {
@@ -29,6 +30,11 @@ impl Config {
             .unwrap_or(60)
             .max(1);
 
+        let trusted_proxy_hops = env::var("LUMINA_TRUSTED_PROXY_HOPS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0);
+
         Self {
             bind,
             db_url,
@@ -36,6 +42,7 @@ impl Config {
             jwt_secret,
             auth_rate_limit_burst,
             auth_rate_limit_window_secs,
+            trusted_proxy_hops,
         }
     }
 }
