@@ -1,12 +1,17 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "lumina-note",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "identifier": "com.luminanote.app",
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": ["nsis", "msi", "dmg", "app"],
+    "targets": [
+      "nsis",
+      "msi",
+      "dmg",
+      "app"
+    ],
     "windows": {
       "nsis": {
         "installMode": "currentUser"
@@ -51,11 +56,15 @@
       }
     ],
     "security": {
-      "dangerousDisableAssetCspModification": ["script-src"],
+      "dangerousDisableAssetCspModification": [
+        "script-src"
+      ],
       "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: asset: https://asset.localhost; img-src * data: blob: asset: https://asset.localhost; media-src * data: blob:; frame-src *; connect-src * data: blob:;",
       "assetProtocol": {
         "enable": true,
-        "scope": ["**"]
+        "scope": [
+          "**"
+        ]
       }
     }
   },
