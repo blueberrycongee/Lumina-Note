@@ -57,6 +57,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let collab_hub = collab::CollabHub::new(&config.data_dir);
     collab_hub.spawn_flush_task();
 
+    let auth_limiter = rate_limit::AuthRateLimiter::new(
+        config.auth_rate_limit_burst,
+        config.auth_rate_limit_window_secs,
+    );
+
     let state = AppState {
         pool,
         config,
@@ -64,6 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         collab: collab_hub,
         metrics: Arc::new(state::ServerMetrics::new()),
         notify: notify_ws::NotifyHub::new(),
+        auth_limiter,
     };
 
     let trace_layer = TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {

@@ -41,6 +41,7 @@ pub struct AppState {
     pub collab: crate::collab::CollabHub,
     pub metrics: Arc<ServerMetrics>,
     pub notify: crate::notify_ws::NotifyHub,
+    pub auth_limiter: crate::rate_limit::AuthRateLimiter,
 }
 
 #[derive(Debug, Default)]

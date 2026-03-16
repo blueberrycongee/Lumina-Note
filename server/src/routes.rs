@@ -744,11 +744,14 @@ mod tests {
                 db_url: "sqlite::memory:".to_string(),
                 data_dir: data_dir.display().to_string(),
                 jwt_secret: "test-secret".to_string(),
+                auth_rate_limit_burst: 100,
+                auth_rate_limit_window_secs: 1,
             },
             relay: RelayHub::new(),
             collab: CollabHub::new(&data_dir.display().to_string()),
             metrics: Arc::new(ServerMetrics::new()),
             notify: crate::notify_ws::NotifyHub::new(),
+            auth_limiter: crate::rate_limit::AuthRateLimiter::new(100, 1),
         }
     }
 
