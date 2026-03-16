@@ -2246,7 +2246,7 @@ export default {
     email: '電子郵件',
     emailPlaceholder: 'you@example.com',
     password: '密碼',
-    passwordPlaceholder: '至少 6 個字元',
+    passwordPlaceholder: '至少 8 個字元',
     serverUrl: '伺服器位址',
     serverUrlPlaceholder: 'https://sync.example.com',
     welcomeTitle: '團隊協作',

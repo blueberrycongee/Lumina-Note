@@ -34,7 +34,7 @@ pub async fn register(
 ) -> Result<Json<AuthResponse>, AppError> {
     let email = payload.email.trim().to_lowercase();
     let password = payload.password.trim().to_string();
-    if email.is_empty() || password.len() < 6 {
+    if email.is_empty() || password.len() < 8 {
         return Err(AppError::BadRequest(
             "invalid email or password".to_string(),
         ));
@@ -780,6 +780,27 @@ mod tests {
         assert!(!response.token.is_empty());
         assert_eq!(response.workspaces.len(), 1);
         assert_eq!(response.workspaces[0].name, "My Workspace");
+    }
+
+    #[tokio::test]
+    async fn register_rejects_passwords_shorter_than_eight_characters() {
+        let state = test_state().await;
+
+        let result = register(
+            State(state),
+            Json(RegisterRequest {
+                email: "dev@example.com".to_string(),
+                password: "1234567".to_string(),
+            }),
+        )
+        .await;
+
+        match result {
+            Err(AppError::BadRequest(message)) => {
+                assert_eq!(message, "invalid email or password");
+            }
+            other => panic!("expected bad request, got {other:?}"),
+        }
     }
 
     #[tokio::test]

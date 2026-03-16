@@ -2271,7 +2271,7 @@ Requirements:
     email: 'Email',
     emailPlaceholder: 'you@example.com',
     password: 'Password',
-    passwordPlaceholder: 'At least 6 characters',
+    passwordPlaceholder: 'At least 8 characters',
     serverUrl: 'Server URL',
     serverUrlPlaceholder: 'https://sync.example.com',
     welcomeTitle: 'Team Collaboration',

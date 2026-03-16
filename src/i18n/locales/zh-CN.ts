@@ -2247,7 +2247,7 @@ export default {
     email: '邮箱',
     emailPlaceholder: 'you@example.com',
     password: '密码',
-    passwordPlaceholder: '至少 6 个字符',
+    passwordPlaceholder: '至少 8 个字符',
     serverUrl: '服务器地址',
     serverUrlPlaceholder: 'https://sync.example.com',
     welcomeTitle: '团队协作',

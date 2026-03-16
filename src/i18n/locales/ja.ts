@@ -2246,7 +2246,7 @@ JSONのみを出力：{"type": "<chat|search|create|edit|organize|flashcard|comp
     email: 'メールアドレス',
     emailPlaceholder: 'you@example.com',
     password: 'パスワード',
-    passwordPlaceholder: '6文字以上',
+    passwordPlaceholder: '8文字以上',
     serverUrl: 'サーバーURL',
     serverUrlPlaceholder: 'https://sync.example.com',
     welcomeTitle: 'チームコラボレーション',
