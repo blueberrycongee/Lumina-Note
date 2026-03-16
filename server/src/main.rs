@@ -6,6 +6,7 @@ mod db;
 mod error;
 mod models;
 mod notify_ws;
+mod rate_limit;
 mod relay;
 mod routes;
 mod sites;
