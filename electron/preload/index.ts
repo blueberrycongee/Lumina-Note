@@ -2,12 +2,11 @@
  * Electron preload — shims window.__TAURI_INTERNALS__ and window.__TAURI__
  *
  * This lets every @tauri-apps/* import in the existing codebase work
- * without any changes. contextIsolation is false so function refs cross
- * the boundary cleanly (same JS world as renderer).
+ * without any changes. contextIsolation is false so the window object is
+ * shared with the renderer's JS world.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { ipcRenderer } = require('electron') as typeof import('electron')
+import { ipcRenderer } from 'electron'
 
 // ── Event bus (replaces Tauri's Rust-side event system) ─────────────────────
 type EventHandler = (payload: unknown) => void
@@ -23,8 +22,8 @@ ipcRenderer.on('__tauri_event__', (_event, eventName: string, payload: unknown) 
 })
 
 // ── Tauri v2 internals shim ──────────────────────────────────────────────────
-window.__TAURI_INTERNALS__ = {
-  invoke: async (cmd: string, args: Record<string, unknown> = {}) => {
+const tauriInternals = {
+  invoke: async (cmd: string, args: Record<string, unknown> = {}): Promise<unknown> => {
     return ipcRenderer.invoke('tauri-invoke', cmd, args)
   },
 
@@ -32,7 +31,11 @@ window.__TAURI_INTERNALS__ = {
     if (!eventHandlers.has(event)) eventHandlers.set(event, new Map())
     const id = nextHandlerId++
     eventHandlers.get(event)!.set(id, handler)
-    return () => eventHandlers.get(event)?.delete(id)
+    // Register with main process (returns an ID but we manage locally)
+    ipcRenderer.invoke('tauri-invoke', 'plugin:event|listen', { event, handler: id }).catch(() => {})
+    return () => {
+      eventHandlers.get(event)?.delete(id)
+    }
   },
 
   emit: async (event: string, payload: unknown): Promise<void> => {
@@ -45,11 +48,12 @@ window.__TAURI_INTERNALS__ = {
       handler(e)
       unlisten?.()
     }
-    unlisten = await (window.__TAURI_INTERNALS__ as TauriInternals).listen(event, wrappedHandler)
+    unlisten = await tauriInternals.listen(event, wrappedHandler)
     return unlisten
   },
 
-  // transformCallback: used by some @tauri-apps packages internally
+  // transformCallback: used by some @tauri-apps packages internally to register
+  // callbacks as window-level properties referenced by numeric IDs
   transformCallback: (callback: (...args: unknown[]) => unknown, once = false): number => {
     const id = nextHandlerId++
     const key = `_cb_${id}`
@@ -61,24 +65,14 @@ window.__TAURI_INTERNALS__ = {
   },
 }
 
+// Expose on window (contextIsolation: false means preload and renderer share window)
+;(window as Record<string, unknown>)['__TAURI_INTERNALS__'] = tauriInternals
+
 // isTauriAvailable() in src/lib/tauri.ts checks window.__TAURI__.core.invoke
-window.__TAURI__ = {
+;(window as Record<string, unknown>)['__TAURI__'] = {
   core: {
-    invoke: (window.__TAURI_INTERNALS__ as TauriInternals).invoke,
+    invoke: tauriInternals.invoke,
   },
 }
 
-interface TauriInternals {
-  invoke: (cmd: string, args?: Record<string, unknown>) => Promise<unknown>
-  listen: (event: string, handler: EventHandler) => Promise<() => void>
-  emit: (event: string, payload: unknown) => Promise<void>
-  once: (event: string, handler: EventHandler) => Promise<() => void>
-  transformCallback: (callback: (...args: unknown[]) => unknown, once?: boolean) => number
-}
-
-declare global {
-  interface Window {
-    __TAURI_INTERNALS__: TauriInternals
-    __TAURI__: { core: { invoke: TauriInternals['invoke'] } }
-  }
-}
+console.log('[preload] __TAURI_INTERNALS__ shim installed')

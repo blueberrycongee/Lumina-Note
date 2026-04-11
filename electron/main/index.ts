@@ -7,6 +7,9 @@ import { stopAllWatchers } from './handlers/watcher.js'
 let mainWindow: BrowserWindow | null = null
 
 export default function createWindow(): BrowserWindow {
+  const preloadPath = path.join(__dirname, '../preload/index.js')
+  console.log('[main] preload path:', preloadPath)
+
   const win = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -16,13 +19,18 @@ export default function createWindow(): BrowserWindow {
     trafficLightPosition: { x: 12, y: 16 },
     backgroundColor: '#1a1a2e',
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: preloadPath,
       // contextIsolation: false so our __TAURI_INTERNALS__ shim works as a
       // plain window property visible to the renderer's JS world.
       contextIsolation: false,
       nodeIntegration: false,
       sandbox: false,
     },
+  })
+
+  // Log any preload errors (silent by default in Electron)
+  win.webContents.on('preload-error', (_event, _preloadPath, error) => {
+    console.error('[main] Preload script error:', error)
   })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
