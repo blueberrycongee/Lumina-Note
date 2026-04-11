@@ -17,6 +17,13 @@ function notImplemented(cmd: string) {
   return null
 }
 
+// ── Proxy / diagnostics stubs ───────────────────────────────────────────────
+const miscStubs: Record<string, () => unknown> = {
+  set_proxy_config: () => null,
+  test_proxy_connection: () => ({ success: true, latency_ms: 0 }),
+  export_diagnostics: () => null,
+}
+
 // ── Agent / Skills stubs ────────────────────────────────────────────────────
 const agentStubs: Record<string, () => unknown> = {
   agent_list_skills: () => [],
@@ -87,6 +94,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
     // ── Store ────────────────────────────────────────────────────────────
     if (cmd in storeHandlers) return storeHandlers[cmd](args)
+
+    // ── Misc stubs ───────────────────────────────────────────────────────
+    if (cmd in miscStubs) return miscStubs[cmd]()
 
     // ── Agent / Skills stubs ─────────────────────────────────────────────
     if (cmd in agentStubs) return agentStubs[cmd]()

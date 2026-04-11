@@ -156,4 +156,23 @@ export const fsHandlers: Record<string, (args: Record<string, unknown>) => Promi
   async 'plugin:fs|copy_file'({ from: f, to: t }) {
     await fs.promises.copyFile(f as string, t as string)
   },
+
+  // ── Extra commands used by renderer ────────────────────────────────────
+  async write_text_file({ path: p, content }) {
+    await fs.promises.writeFile(p as string, content as string, 'utf-8')
+  },
+
+  async ensure_dir({ path: p }) {
+    await fs.promises.mkdir(p as string, { recursive: true })
+  },
+
+  // Security allowlist — no-op in Electron (no sandboxed FS restrictions)
+  async fs_set_allowed_roots() { return null },
+
+  async append_debug_log({ content }) {
+    // Write to userData/lumina-debug.log
+    const { app } = await import('electron')
+    const logPath = path.join(app.getPath('userData'), 'lumina-debug.log')
+    await fs.promises.appendFile(logPath, (content as string) + '\n', 'utf-8')
+  },
 }
