@@ -19,17 +19,29 @@ interface CloudRelayConfig {
   password: string;
 }
 
+const EMPTY_CLOUD_RELAY_CONFIG: CloudRelayConfig = {
+  relay_url: "",
+  email: "",
+  password: "",
+};
+
+function normalizeCloudRelayConfig(
+  config: Partial<CloudRelayConfig> | null | undefined,
+): CloudRelayConfig {
+  return {
+    relay_url: typeof config?.relay_url === "string" ? config.relay_url : "",
+    email: typeof config?.email === "string" ? config.email : "",
+    password: typeof config?.password === "string" ? config.password : "",
+  };
+}
+
 export function CloudRelaySection() {
   const { t } = useLocaleStore();
   const [status, setStatus] = useState<CloudRelayStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState<CloudRelayConfig>({
-    relay_url: "",
-    email: "",
-    password: "",
-  });
+  const [formData, setFormData] = useState<CloudRelayConfig>(EMPTY_CLOUD_RELAY_CONFIG);
 
   const loadStatus = async () => {
     try {
@@ -49,8 +61,8 @@ export function CloudRelaySection() {
 
   useEffect(() => {
     loadStatus();
-    invoke<CloudRelayConfig>("cloud_relay_get_config")
-      .then((config) => setFormData(config))
+    invoke<CloudRelayConfig | null>("cloud_relay_get_config")
+      .then((config) => setFormData(normalizeCloudRelayConfig(config)))
       .catch((err) => {
         reportOperationError({
           source: "CloudRelaySection",
