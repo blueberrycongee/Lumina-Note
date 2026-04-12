@@ -17,6 +17,19 @@ export interface FileEntry {
   children: FileEntry[] | null;
 }
 
+export type DialogFilter = {
+  name: string;
+  extensions: string[];
+};
+
+export type OpenDialogOptions = {
+  filters?: DialogFilter[];
+  multiple?: boolean;
+  directory?: boolean;
+  defaultPath?: string;
+  title?: string;
+};
+
 /**
  * Read file content from disk
  */
@@ -360,6 +373,12 @@ export async function writeFile(path: string, content: string): Promise<void> {
  */
 export async function exists(path: string): Promise<boolean> {
   return invoke<boolean>("path_exists", { path });
+}
+
+export async function openDialog(
+  options: OpenDialogOptions = {},
+): Promise<string | string[] | null> {
+  return invoke<string | string[] | null>("plugin:dialog|open", { options });
 }
 
 /**

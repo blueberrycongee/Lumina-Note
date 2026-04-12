@@ -2,6 +2,14 @@ import os from 'os'
 import path from 'path'
 import { app, shell, dialog, BrowserWindow } from 'electron'
 
+function unwrapDialogOptions(args: Record<string, unknown>): Record<string, unknown> {
+  const nested = args.options
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>
+  }
+  return args
+}
+
 export const platformHandlers: Record<string, (args: Record<string, unknown>, win?: BrowserWindow) => Promise<unknown>> = {
   // ── @tauri-apps/api/path ────────────────────────────────────────────────
   async 'plugin:path|home_dir'() { return os.homedir() },
@@ -57,7 +65,8 @@ export const platformHandlers: Record<string, (args: Record<string, unknown>, wi
   },
 
   // ── Dialog ───────────────────────────────────────────────────────────────
-  async 'plugin:dialog|open'({ filters, multiple, directory, defaultPath, title }, win) {
+  async 'plugin:dialog|open'(args, win) {
+    const { filters, multiple, directory, defaultPath, title } = unwrapDialogOptions(args)
     const options: Electron.OpenDialogOptions = {
       title: title as string | undefined,
       defaultPath: defaultPath as string | undefined,
@@ -79,7 +88,8 @@ export const platformHandlers: Record<string, (args: Record<string, unknown>, wi
     return multiple ? result.filePaths : result.filePaths[0]
   },
 
-  async 'plugin:dialog|save'({ filters, defaultPath, title }, win) {
+  async 'plugin:dialog|save'(args, win) {
+    const { filters, defaultPath, title } = unwrapDialogOptions(args)
     const options: Electron.SaveDialogOptions = {
       title: title as string | undefined,
       defaultPath: defaultPath as string | undefined,

@@ -21,7 +21,7 @@ export default defineConfig({
         external: ['electron'],
         output: {
           format: 'cjs',
-          entryFileNames: '[name].js',
+          entryFileNames: '[name].cjs',
         },
       },
     },
@@ -40,6 +40,9 @@ export default defineConfig({
       alias: {
         '@': path.resolve(__dirname, './src'),
         '@lumina/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
+        '@tauri-apps/api/app': path.resolve(__dirname, './src/electron-shims/tauri/app.ts'),
+        '@tauri-apps/api/core': path.resolve(__dirname, './src/electron-shims/tauri/core.ts'),
+        '@tauri-apps/api/event': path.resolve(__dirname, './src/electron-shims/tauri/event.ts'),
       },
     },
     server: {

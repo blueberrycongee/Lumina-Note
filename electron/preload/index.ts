@@ -1,17 +1,15 @@
 /**
- * Electron preload — shims window.__TAURI_INTERNALS__ and window.__TAURI__
- *
- * This lets every @tauri-apps/* import in the existing codebase work
- * without any changes. contextIsolation is false so the window object is
- * shared with the renderer's JS world.
+ * Electron preload — exposes window.__TAURI_INTERNALS__ and window.__TAURI__
+ * via contextBridge so the renderer always sees a stable bridge.
  */
 
-import { ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 // ── Event bus (replaces Tauri's Rust-side event system) ─────────────────────
 type EventHandler = (payload: unknown) => void
 const eventHandlers = new Map<string, Map<number, EventHandler>>()
 let nextHandlerId = 1
+const callbacks = new Map<number, (...args: unknown[]) => unknown>()
 
 ipcRenderer.on('__tauri_event__', (_event, eventName: string, payload: unknown) => {
   const handlers = eventHandlers.get(eventName)
@@ -56,23 +54,28 @@ const tauriInternals = {
   // callbacks as window-level properties referenced by numeric IDs
   transformCallback: (callback: (...args: unknown[]) => unknown, once = false): number => {
     const id = nextHandlerId++
-    const key = `_cb_${id}`
-    ;(window as Record<string, unknown>)[key] = (...args: unknown[]) => {
-      if (once) delete (window as Record<string, unknown>)[key]
+    callbacks.set(id, (...args: unknown[]) => {
+      if (once) callbacks.delete(id)
       return callback(...args)
-    }
+    })
     return id
+  },
+
+  unregisterCallback: (id: number): void => {
+    callbacks.delete(id)
+  },
+
+  runCallback: (id: number, ...args: unknown[]): unknown => {
+    return callbacks.get(id)?.(...args)
   },
 }
 
-// Expose on window (contextIsolation: false means preload and renderer share window)
-;(window as Record<string, unknown>)['__TAURI_INTERNALS__'] = tauriInternals
-
-// isTauriAvailable() in src/lib/tauri.ts checks window.__TAURI__.core.invoke
-;(window as Record<string, unknown>)['__TAURI__'] = {
+contextBridge.exposeInMainWorld('__TAURI_INTERNALS__', tauriInternals)
+contextBridge.exposeInMainWorld('__TAURI__', {
   core: {
     invoke: tauriInternals.invoke,
   },
-}
+})
 
+ipcRenderer.send('__preload_ready')
 console.log('[preload] __TAURI_INTERNALS__ shim installed')

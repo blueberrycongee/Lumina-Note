@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect, useCallback, useState, useRef } from "react"
 import { useShallow } from "zustand/react/shallow";
 import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
 import { ResizeHandle } from "@/components/toolbar/ResizeHandle";
@@ -35,7 +34,7 @@ import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
-import { saveFile, startFileWatcher } from "@/lib/tauri";
+import { openDialog, saveFile, startFileWatcher } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
@@ -822,16 +821,20 @@ function App() {
 
   // Open folder dialog
   const handleOpenVault = useCallback(async () => {
-    const selected = await open({
-      directory: true,
-      multiple: false,
-      title: t.welcome.openFolder,
-    });
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        title: t.welcome.openFolder,
+      });
 
-    if (selected && typeof selected === "string") {
-      setVaultPath(selected);
+      if (selected && typeof selected === "string") {
+        setVaultPath(selected);
+      }
+    } catch (error) {
+      console.error("[App.handleOpenVault] Open folder dialog failed:", error);
     }
-  }, [setVaultPath]);
+  }, [setVaultPath, t.welcome.openFolder]);
 
   // Listen for window-level entry actions dispatched from top-level chrome
   useEffect(() => {

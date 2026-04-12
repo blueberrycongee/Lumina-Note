@@ -119,4 +119,9 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       if (!w.isDestroyed()) w.webContents.send('__tauri_event__', eventName, payload)
     })
   })
+
+  ipcMain.on('__preload_ready', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    console.log('[main] preload bridge ready for window', win?.id ?? 'unknown')
+  })
 }

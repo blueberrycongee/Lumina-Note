@@ -12,13 +12,13 @@ import {
   createFile,
   createDir,
   exists,
+  openDialog,
   openNewWindow,
   saveFile,
   readFile,
 } from "@/lib/tauri";
 import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
 import { reportOperationError } from "@/lib/reportError";
 import { FolderOpen, AppWindow, Shapes, Star, StarOff } from "lucide-react";
 import type { MenuItem } from "../../toolbar/ContextMenu";
@@ -137,7 +137,7 @@ export function useSidebarFileOperations() {
   // ── Open folder / New window ──────────────────────────────────────────
   const handleOpenFolder = useCallback(async () => {
     try {
-      const selected = await open({
+      const selected = await openDialog({
         directory: true,
         multiple: false,
         title: t.file.selectWorkingDir,
