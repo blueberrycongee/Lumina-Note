@@ -2,8 +2,11 @@
 node_modules/
 
 # Build
+out/
+build/
 dist/
 dist-ssr/
+*.tsbuildinfo
 mobile/android/.gradle/
 mobile/android/app/build/
 mobile/ios/build/

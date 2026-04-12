@@ -1,22 +1,24 @@
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import pkg from './package.json'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
     build: {
+      externalizeDeps: { include: ['electron'] },
       rollupOptions: {
         input: path.resolve(__dirname, 'electron/main/index.ts'),
+        external: ['electron'],
       },
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
     build: {
+      externalizeDeps: { include: ['electron'] },
       rollupOptions: {
         input: path.resolve(__dirname, 'electron/preload/index.ts'),
+        external: ['electron'],
         output: {
           format: 'cjs',
           entryFileNames: '[name].js',
