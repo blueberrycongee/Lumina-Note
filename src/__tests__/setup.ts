@@ -4,6 +4,41 @@
 import { vi } from 'vitest';
 import '@testing-library/jest-dom';
 
+function ensureStorageSupport(kind: 'localStorage' | 'sessionStorage') {
+  const existing = globalThis[kind];
+  if (existing && typeof existing.getItem === 'function' && typeof existing.setItem === 'function') {
+    return;
+  }
+
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => (store.has(key) ? store.get(key)! : null),
+    setItem: (key: string, value: string) => {
+      store.set(String(key), String(value));
+    },
+    removeItem: (key: string) => {
+      store.delete(String(key));
+    },
+    clear: () => {
+      store.clear();
+    },
+    key: (index: number) => Array.from(store.keys())[index] ?? null,
+    get length() {
+      return store.size;
+    },
+  };
+
+  Object.defineProperty(globalThis, kind, {
+    configurable: true,
+    enumerable: true,
+    writable: true,
+    value: storage,
+  });
+}
+
+ensureStorageSupport('localStorage');
+ensureStorageSupport('sessionStorage');
+
 // Most unit tests assert Chinese UI copy. Make the locale deterministic in CI
 // (jsdom defaults to en-US) by pre-seeding the persisted locale store.
 try {
@@ -153,11 +188,13 @@ vi.mock('@tauri-apps/api/path', () => ({
 }));
 
 // Global test utilities
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+class MockResizeObserver {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+}
+
+global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
 
 // Mock window.matchMedia (jsdom only)
 if (typeof window !== "undefined") {

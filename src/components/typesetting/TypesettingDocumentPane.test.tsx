@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
 import * as tauri from "@/lib/tauri";
 import {
@@ -35,6 +35,11 @@ const buildDoc = (path: string, overrides: Partial<TypesettingDoc> = {}): Typese
 describe("TypesettingDocumentPane", () => {
   beforeEach(() => {
     useTypesettingDocStore.setState({ docs: {} });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("stores layout cache after a layout run", async () => {
