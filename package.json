@@ -60,7 +60,7 @@
     "@tauri-apps/plugin-updater": "^2.10.0",
     "@types/diff": "^7.0.2",
     "clsx": "^2.1.1",
-    "codemirror-live-markdown": "https://codeload.github.com/blueberrycongee/codemirror-live-markdown/tar.gz/52f401c50647b9336fd4b86e4164b2454dc1835b",
+    "codemirror-live-markdown": "0.5.1-alpha.1",
     "diff": "^8.0.3",
     "fflate": "^0.8.2",
     "framer-motion": "^12.23.25",
