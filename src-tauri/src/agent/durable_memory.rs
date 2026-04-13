@@ -1,4 +1,6 @@
 use crate::agent::llm_client::LlmClient;
+use crate::agent::orchestrator::OrchestrationDecision;
+use crate::agent::types::TaskContext;
 use crate::agent::types::{AgentConfig, Message, MessageRole};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -10,23 +12,109 @@ use tauri::Manager;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum MemoryScope {
-    Identity,
-    Projects,
-    Relationships,
-    Patterns,
+    Session,
+    #[serde(alias = "identity")]
+    UserIdentity,
+    #[serde(alias = "projects")]
+    Project,
+    LocalContext,
+    #[serde(alias = "relationships")]
+    Relationship,
+    #[serde(alias = "patterns")]
+    Pattern,
+    TeamShared,
 }
 
 impl MemoryScope {
     fn dir_name(&self) -> &'static str {
         match self {
-            Self::Identity => "identity",
-            Self::Projects => "projects",
-            Self::Relationships => "relationships",
-            Self::Patterns => "patterns",
+            Self::Session => "session",
+            Self::UserIdentity => "identity",
+            Self::Project => "projects",
+            Self::LocalContext => "local_context",
+            Self::Relationship => "relationships",
+            Self::Pattern => "patterns",
+            Self::TeamShared => "team_shared",
         }
+    }
+
+    fn display_name(&self) -> &'static str {
+        match self {
+            Self::Session => "Session",
+            Self::UserIdentity => "User Identity",
+            Self::Project => "Project",
+            Self::LocalContext => "Local Context",
+            Self::Relationship => "Relationship",
+            Self::Pattern => "Pattern",
+            Self::TeamShared => "Team Shared",
+        }
+    }
+
+    fn default_visibility(&self) -> MemoryVisibility {
+        match self {
+            Self::TeamShared => MemoryVisibility::Shared,
+            _ => MemoryVisibility::Private,
+        }
+    }
+
+    fn write_rule(&self) -> &'static str {
+        match self {
+            Self::Session => "Reserved for session memory summaries; do not persist as durable entries.",
+            Self::UserIdentity => {
+                "Store stable user profile, preferences, communication style, and long-lived personal context."
+            }
+            Self::Project => {
+                "Store durable project goals, constraints, timelines, and non-derivable ongoing context."
+            }
+            Self::LocalContext => {
+                "Store device, environment, local toolchain, filesystem, or workflow constraints tied to this machine."
+            }
+            Self::Relationship => {
+                "Store important people, collaboration roles, and recurring interpersonal context."
+            }
+            Self::Pattern => {
+                "Store recurring habits, workflows, templates, and decision patterns that should shape future help."
+            }
+            Self::TeamShared => {
+                "Store broadly shareable team/project knowledge that is safe for shared context."
+            }
+        }
+    }
+
+    fn read_rule(&self) -> &'static str {
+        match self {
+            Self::Session => "Load only for continuity within the active session.",
+            Self::UserIdentity => "Load when tone, explanation style, or user-specific preferences matter.",
+            Self::Project => "Load for most workspace tasks that depend on broader initiative context.",
+            Self::LocalContext => {
+                "Load when commands, environment, installation, filesystem, or device constraints matter."
+            }
+            Self::Relationship => {
+                "Load when the task mentions collaborators, stakeholders, reviewers, or team coordination."
+            }
+            Self::Pattern => {
+                "Load when planning, formatting, or execution style should follow recurring user habits."
+            }
+            Self::TeamShared => {
+                "Load when project-wide conventions, shared policies, or team knowledge matter."
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryVisibility {
+    Private,
+    Shared,
+}
+
+impl Default for MemoryVisibility {
+    fn default() -> Self {
+        Self::Private
     }
 }
 
@@ -74,6 +162,8 @@ pub struct MemoryEntryVersion {
 pub struct MemoryEntry {
     pub id: String,
     pub scope: MemoryScope,
+    #[serde(default)]
+    pub visibility: MemoryVisibility,
     pub title: String,
     pub summary: String,
     pub details: String,
@@ -112,6 +202,7 @@ pub enum MemoryMergeAction {
     Deduped,
     SkippedLowConfidence,
     SkippedEmpty,
+    SkippedInvalidScope,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -144,6 +235,22 @@ pub struct DurableMemoryConfig {
     pub minimum_confidence_to_write: MemoryConfidence,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryEntryInput {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    pub scope: MemoryScope,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visibility: Option<MemoryVisibility>,
+    pub title: String,
+    pub summary: String,
+    pub details: String,
+    #[serde(default)]
+    pub confidence: MemoryConfidence,
+    #[serde(default)]
+    pub tags: Vec<String>,
+}
+
 impl Default for DurableMemoryConfig {
     fn default() -> Self {
         Self {
@@ -160,6 +267,8 @@ impl Default for DurableMemoryConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct DurableMemoryCandidate {
     scope: MemoryScope,
+    #[serde(default)]
+    visibility: Option<MemoryVisibility>,
     title: String,
     summary: String,
     details: String,
@@ -328,9 +437,10 @@ fn format_manifest_for_prompt(manifest: &DurableMemoryManifest, max_entries: usi
         .take(max_entries)
         .map(|entry| {
             format!(
-                "- {} [{} / {:?} / v{}] {}",
+                "- {} [{} / {:?} / {:?} / v{}] {}",
                 entry.id,
-                entry.scope.dir_name(),
+                entry.scope.display_name(),
+                entry.visibility,
                 entry.confidence,
                 entry.version,
                 entry.title
@@ -347,10 +457,12 @@ async fn ensure_memory_layout(workspace_path: &str) -> Result<(), String> {
         .map_err(|err| format!("Failed to create durable manifest dir: {}", err))?;
 
     for scope in [
-        MemoryScope::Identity,
-        MemoryScope::Projects,
-        MemoryScope::Relationships,
-        MemoryScope::Patterns,
+        MemoryScope::UserIdentity,
+        MemoryScope::Project,
+        MemoryScope::LocalContext,
+        MemoryScope::Relationship,
+        MemoryScope::Pattern,
+        MemoryScope::TeamShared,
     ] {
         tokio::fs::create_dir_all(build_scope_dir(workspace_path, &scope))
             .await
@@ -439,9 +551,10 @@ fn render_memory_markdown(entry: &MemoryEntry) -> String {
     };
 
     format!(
-        "---\nid: {}\nscope: {}\nconfidence: {:?}\nversion: {}\ncreated_at: {}\nupdated_at: {}\ntags: {}\n---\n\n# {}\n\n{}\n\n## Details\n\n{}\n\n## Sources\n\n{}\n\n## History\n\n{}\n",
+        "---\nid: {}\nscope: {}\nvisibility: {:?}\nconfidence: {:?}\nversion: {}\ncreated_at: {}\nupdated_at: {}\ntags: {}\n---\n\n# {}\n\n{}\n\n## Scope Guidance\n\n- Read rule: {}\n- Write rule: {}\n\n## Details\n\n{}\n\n## Sources\n\n{}\n\n## History\n\n{}\n",
         entry.id,
         entry.scope.dir_name(),
+        entry.visibility,
         entry.confidence,
         entry.version,
         entry.created_at,
@@ -449,6 +562,8 @@ fn render_memory_markdown(entry: &MemoryEntry) -> String {
         tags,
         entry.title,
         entry.summary,
+        entry.scope.read_rule(),
+        entry.scope.write_rule(),
         entry.details,
         sources,
         history
@@ -543,6 +658,21 @@ fn merge_candidate(
     candidate: DurableMemoryCandidate,
     config: &DurableMemoryConfig,
 ) -> (MemoryMergeResult, Option<usize>) {
+    if matches!(candidate.scope, MemoryScope::Session) {
+        return (
+            MemoryMergeResult {
+                action: MemoryMergeAction::SkippedInvalidScope,
+                entry_id: None,
+                scope: Some(candidate.scope),
+                title: candidate.title,
+                path: None,
+                detail: "Session scope is managed by session memory, not durable memory"
+                    .to_string(),
+            },
+            None,
+        );
+    }
+
     if !candidate_is_meaningful(&candidate) {
         return (
             MemoryMergeResult {
@@ -580,13 +710,19 @@ fn merge_candidate(
         let changed = normalize_for_compare(&entry.summary) != normalized_summary
             || normalize_for_compare(&entry.details) != normalized_details
             || entry.confidence != candidate.confidence
-            || entry.scope != candidate.scope;
+            || entry.scope != candidate.scope
+            || entry.visibility
+                != candidate
+                    .visibility
+                    .clone()
+                    .unwrap_or(entry.visibility.clone());
 
         entry.tags = merge_tags(&entry.tags, &candidate.tags);
         entry.source_refs = merge_source_refs(&entry.source_refs, source_ref);
         entry.updated_at = now_millis();
 
         if changed {
+            let next_scope = candidate.scope.clone();
             entry.history.push(MemoryEntryVersion {
                 version: entry.version,
                 summary: entry.summary.clone(),
@@ -598,7 +734,13 @@ fn merge_candidate(
             entry.summary = trim_for_storage(&candidate.summary, 500);
             entry.details = trim_for_storage(&candidate.details, 2000);
             entry.confidence = candidate.confidence;
-            entry.scope = candidate.scope;
+            entry.visibility = candidate
+                .visibility
+                .clone()
+                .unwrap_or_else(|| next_scope.default_visibility());
+            entry.scope = next_scope;
+            entry.file_path =
+                build_entry_path(workspace_path, &entry.scope, &entry.title, &entry.id);
 
             return (
                 MemoryMergeResult {
@@ -634,6 +776,10 @@ fn merge_candidate(
     let entry = MemoryEntry {
         id: entry_id.clone(),
         scope: candidate.scope.clone(),
+        visibility: candidate
+            .visibility
+            .clone()
+            .unwrap_or_else(|| candidate.scope.default_visibility()),
         title: trim_for_storage(&candidate.title, 120),
         summary: trim_for_storage(&candidate.summary, 500),
         details: trim_for_storage(&candidate.details, 2000),
@@ -689,6 +835,247 @@ pub async fn get_durable_memory_snapshot(
     workspace_path: &str,
 ) -> Result<DurableMemorySnapshot, String> {
     let manifest = load_manifest(workspace_path).await?;
+    let state = load_runtime_state(workspace_path).await;
+    Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
+}
+
+fn infer_relevant_scopes(task: &str, context: &TaskContext) -> Vec<MemoryScope> {
+    let lower = task.to_ascii_lowercase();
+    let mut scopes = BTreeSet::new();
+    scopes.insert(MemoryScope::UserIdentity);
+    scopes.insert(MemoryScope::Project);
+    scopes.insert(MemoryScope::Pattern);
+
+    let environmentish = [
+        "install",
+        "env",
+        "environment",
+        "terminal",
+        "shell",
+        "path",
+        "local",
+        "machine",
+        "设备",
+        "环境",
+        "本地",
+        "终端",
+        "路径",
+        "安装",
+    ];
+    if environmentish.iter().any(|term| lower.contains(term))
+        || context
+            .active_note_path
+            .as_deref()
+            .map(|path| path.contains("/Users/") || path.contains(":\\"))
+            .unwrap_or(false)
+    {
+        scopes.insert(MemoryScope::LocalContext);
+    }
+
+    let collaborationish = [
+        "team",
+        "reviewer",
+        "review",
+        "stakeholder",
+        "manager",
+        "teammate",
+        "collabor",
+        "团队",
+        "同事",
+        "评审",
+        "reviewer",
+        "负责人",
+    ];
+    if collaborationish.iter().any(|term| lower.contains(term)) {
+        scopes.insert(MemoryScope::Relationship);
+        scopes.insert(MemoryScope::TeamShared);
+    }
+
+    let shareish = [
+        "policy",
+        "convention",
+        "shared",
+        "release",
+        "project",
+        "repo",
+        "workflow",
+        "规范",
+        "约定",
+        "共享",
+        "发布",
+        "项目",
+    ];
+    if shareish.iter().any(|term| lower.contains(term)) {
+        scopes.insert(MemoryScope::TeamShared);
+    }
+
+    scopes.into_iter().collect()
+}
+
+fn format_scope_rule_summary(scopes: &[MemoryScope]) -> String {
+    scopes
+        .iter()
+        .map(|scope| {
+            format!(
+                "- {}: read when {}; write rule: {}",
+                scope.display_name(),
+                scope.read_rule(),
+                scope.write_rule()
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn select_relevant_entries(
+    manifest: &DurableMemoryManifest,
+    scopes: &[MemoryScope],
+) -> Vec<MemoryEntry> {
+    let allowed = scopes.iter().cloned().collect::<BTreeSet<_>>();
+    let mut by_scope = HashMap::<MemoryScope, Vec<MemoryEntry>>::new();
+    for entry in manifest.entries.iter().cloned() {
+        if allowed.contains(&entry.scope) {
+            by_scope.entry(entry.scope.clone()).or_default().push(entry);
+        }
+    }
+
+    let mut selected = Vec::new();
+    for scope in scopes {
+        let mut items = by_scope.remove(scope).unwrap_or_default();
+        items.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        let per_scope_limit = match scope {
+            MemoryScope::UserIdentity | MemoryScope::Project | MemoryScope::Pattern => 3,
+            MemoryScope::LocalContext | MemoryScope::Relationship | MemoryScope::TeamShared => 2,
+            MemoryScope::Session => 1,
+        };
+        selected.extend(items.into_iter().take(per_scope_limit));
+    }
+    selected
+}
+
+pub async fn build_memory_context_message(
+    workspace_path: &str,
+    task: &str,
+    context: &TaskContext,
+    decision: &OrchestrationDecision,
+) -> Result<Option<String>, String> {
+    if workspace_path.trim().is_empty() {
+        return Ok(None);
+    }
+
+    let manifest = load_manifest(workspace_path).await?;
+    let mut scopes = infer_relevant_scopes(task, context);
+    if decision.mode == crate::agent::types::AgentExecutionMode::Orchestrated {
+        scopes.push(MemoryScope::Relationship);
+        scopes.push(MemoryScope::TeamShared);
+    }
+    scopes.sort();
+    scopes.dedup();
+
+    let selected_entries = select_relevant_entries(&manifest, &scopes);
+    let entries_block = if selected_entries.is_empty() {
+        "(no matching durable memories loaded)".to_string()
+    } else {
+        selected_entries
+            .iter()
+            .map(|entry| {
+                format!(
+                    "- [{} / {:?} / {:?}] {} — {}\n  how to use: {}",
+                    entry.scope.display_name(),
+                    entry.visibility,
+                    entry.confidence,
+                    entry.title,
+                    entry.summary,
+                    entry.scope.read_rule()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    if entries_block == "(no matching durable memories loaded)" {
+        return Ok(None);
+    }
+
+    Ok(Some(format!(
+        "# Layered Memory Context\nSelected layers for this task:\n{}\n\n## Durable Layers\n{}",
+        format_scope_rule_summary(&scopes),
+        entries_block
+    )))
+}
+
+pub async fn upsert_durable_memory_entry_impl(
+    workspace_path: &str,
+    entry: MemoryEntryInput,
+) -> Result<DurableMemorySnapshot, String> {
+    if workspace_path.trim().is_empty() {
+        return Err("workspace_path is required".to_string());
+    }
+    if matches!(entry.scope, MemoryScope::Session) {
+        return Err(
+            "Session scope is managed by session memory and cannot be edited here".to_string(),
+        );
+    }
+
+    let mut manifest = load_manifest(workspace_path).await?;
+    let session_id = "manual-edit";
+    let candidate = DurableMemoryCandidate {
+        scope: entry.scope,
+        visibility: entry.visibility,
+        title: entry.title,
+        summary: entry.summary,
+        details: entry.details,
+        confidence: entry.confidence,
+        tags: entry.tags,
+        existing_entry_id: entry.id,
+        source_excerpt: Some("Manually updated by user/editor".to_string()),
+    };
+    let (merge_result, touched_index) = merge_candidate(
+        workspace_path,
+        session_id,
+        &mut manifest,
+        candidate,
+        &DurableMemoryConfig::default(),
+    );
+    manifest.updated_at = now_millis();
+    save_manifest(workspace_path, &manifest).await?;
+    if let Some(index) = touched_index {
+        if let Some(memory_entry) = manifest.entries.get(index) {
+            write_entry_file(memory_entry).await?;
+        }
+    }
+    let state = load_runtime_state(workspace_path).await;
+    Ok(build_snapshot(
+        workspace_path,
+        manifest,
+        vec![merge_result],
+        &state,
+    ))
+}
+
+pub async fn delete_durable_memory_entry_impl(
+    workspace_path: &str,
+    entry_id: &str,
+) -> Result<DurableMemorySnapshot, String> {
+    if workspace_path.trim().is_empty() {
+        return Err("workspace_path is required".to_string());
+    }
+
+    let mut manifest = load_manifest(workspace_path).await?;
+    let mut removed_path = None::<String>;
+    manifest.entries.retain(|entry| {
+        if entry.id == entry_id {
+            removed_path = Some(entry.file_path.clone());
+            false
+        } else {
+            true
+        }
+    });
+    manifest.updated_at = now_millis();
+    save_manifest(workspace_path, &manifest).await?;
+    if let Some(path) = removed_path {
+        let _ = tokio::fs::remove_file(path).await;
+    }
     let state = load_runtime_state(workspace_path).await;
     Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
 }
@@ -796,7 +1183,7 @@ pub async fn extract_durable_memories_impl(
         let prompt = format!(
             "You extract durable memories for Lumina.\n\
 Return JSON only with this shape:\n\
-{{\"candidates\":[{{\"scope\":\"identity|projects|relationships|patterns\",\"title\":\"...\",\"summary\":\"...\",\"details\":\"...\",\"confidence\":\"low|medium|high\",\"tags\":[\"...\"],\"existing_entry_id\":\"optional-id\",\"source_excerpt\":\"optional supporting quote or paraphrase\"}}]}}\n\n\
+{{\"candidates\":[{{\"scope\":\"user_identity|project|local_context|relationship|pattern|team_shared\",\"visibility\":\"private|shared\",\"title\":\"...\",\"summary\":\"...\",\"details\":\"...\",\"confidence\":\"low|medium|high\",\"tags\":[\"...\"],\"existing_entry_id\":\"optional-id\",\"source_excerpt\":\"optional supporting quote or paraphrase\"}}]}}\n\n\
 Only include knowledge worth keeping beyond the current task. Do NOT save:\n\
 - code structure, file paths, implementation details derivable from the repo\n\
 - temporary debugging state or current task progress\n\
@@ -805,9 +1192,12 @@ Only include knowledge worth keeping beyond the current task. Do NOT save:\n\
 Prioritize:\n\
 - stable user preferences and communication patterns\n\
 - long-lived project context, goals, and constraints\n\
+- local environment or machine-specific constraints only when they are recurrent and durable\n\
 - recurring collaboration patterns or relationships\n\
-- durable facts that will still help in future sessions\n\n\
+- durable facts that will still help in future sessions\n\
+- shared team/project knowledge only when it is safe to treat as shared context\n\n\
 If a fact mentions relative dates, convert them to absolute dates.\n\
+Do not output session scope. Session continuity is handled separately.\n\
 Prefer updating an existing memory via existing_entry_id instead of creating duplicates.\n\
 Return at most {} candidates.\n\n\
 Existing durable memory manifest:\n{}\n\n\
@@ -913,6 +1303,22 @@ pub async fn agent_extract_durable_memories(
     .await
 }
 
+#[tauri::command]
+pub async fn agent_upsert_durable_memory_entry(
+    workspace_path: String,
+    entry: MemoryEntryInput,
+) -> Result<DurableMemorySnapshot, String> {
+    upsert_durable_memory_entry_impl(&workspace_path, entry).await
+}
+
+#[tauri::command]
+pub async fn agent_delete_durable_memory_entry(
+    workspace_path: String,
+    entry_id: String,
+) -> Result<DurableMemorySnapshot, String> {
+    delete_durable_memory_entry_impl(&workspace_path, &entry_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -924,6 +1330,7 @@ mod tests {
     ) -> DurableMemoryCandidate {
         DurableMemoryCandidate {
             scope,
+            visibility: None,
             title: title.to_string(),
             summary: "Summary".to_string(),
             details: "Details".to_string(),
@@ -943,7 +1350,7 @@ mod tests {
             "session-1",
             &mut manifest,
             candidate(
-                MemoryScope::Identity,
+                MemoryScope::UserIdentity,
                 "User preference",
                 MemoryConfidence::Low,
             ),
@@ -962,7 +1369,8 @@ mod tests {
             updated_at: created_at,
             entries: vec![MemoryEntry {
                 id: "entry-1".to_string(),
-                scope: MemoryScope::Projects,
+                scope: MemoryScope::Project,
+                visibility: MemoryVisibility::Private,
                 title: "Release freeze".to_string(),
                 summary: "Old summary".to_string(),
                 details: "Old details".to_string(),
@@ -977,7 +1385,7 @@ mod tests {
             }],
         };
         let mut next = candidate(
-            MemoryScope::Projects,
+            MemoryScope::Project,
             "Release freeze",
             MemoryConfidence::High,
         );
@@ -1006,7 +1414,7 @@ mod tests {
             "session-1",
             &mut manifest,
             candidate(
-                MemoryScope::Relationships,
+                MemoryScope::Relationship,
                 "Core reviewer responsibilities",
                 MemoryConfidence::High,
             ),
@@ -1017,5 +1425,14 @@ mod tests {
         assert!(manifest.entries[0]
             .file_path
             .contains("/memory/relationships/"));
+    }
+
+    #[test]
+    fn local_context_scope_is_selected_for_environment_tasks() {
+        let scopes = infer_relevant_scopes(
+            "帮我排查本地 terminal 环境里的 cargo path 问题",
+            &TaskContext::default(),
+        );
+        assert!(scopes.contains(&MemoryScope::LocalContext));
     }
 }

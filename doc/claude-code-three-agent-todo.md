@@ -301,28 +301,37 @@
 
 建议分层：
 
-- [ ] `Session`
+- [x] `Session`
   - 当前会话临时摘要
-- [ ] `User Identity`
+- [x] `User Identity`
   - 用户身份、背景、长期偏好、价值观、沟通风格
-- [ ] `Project`
+- [x] `Project`
   - 当前项目、长期目标、进行中的工作流
-- [ ] `Local Context`
+- [x] `Local Context`
   - 设备、本地习惯、环境约束
-- [ ] `Relationship`
+- [x] `Relationship`
   - 用户提及的重要人物、团队关系、协作上下文
-- [ ] `Pattern`
+- [x] `Pattern`
   - 用户高频动作、常见决策模式、固定模板
-- [ ] `Team / Shared`
+- [x] `Team / Shared`
   - 可共享的项目知识
 
 设计任务：
 
-- [ ] 定义 `MemoryScope` 枚举
-- [ ] 定义每一层的写入规则和读取规则
-- [ ] agent 启动时按任务类型选择性加载 memory，而不是全量注入
-- [ ] 支持 scope 级别的隐私控制
-- [ ] 支持用户查看、编辑、删除每层 memory
+- [x] 定义 `MemoryScope` 枚举
+- [x] 定义每一层的写入规则和读取规则
+- [x] agent 启动时按任务类型选择性加载 memory，而不是全量注入
+- [x] 支持 scope 级别的隐私控制
+- [x] 支持用户查看、编辑、删除每层 memory
+
+当前实现补充说明：
+
+- `MemoryScope` 已扩展为 `session / user_identity / project / local_context / relationship / pattern / team_shared`
+- `session` 仍由 `session-memory.md` 管理；durable memory 只允许写入其余长期层
+- durable entry 新增 `visibility: private | shared`，默认由 scope 决定，`team_shared` 默认 `shared`
+- Rust 侧会根据当前任务文本推断需要加载的层，只把相关 durable memories 注入 agent 启动 prompt
+- 新增 durable memory 管理命令，已支持读取快照、手动 upsert、按 `entry_id` 删除
+- 现阶段“查看/编辑/删除”能力已在后端命令层与前端 service 层可用，完整可视化编辑面板可放到后续阶段继续完善
 
 ---
 

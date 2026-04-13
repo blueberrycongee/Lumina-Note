@@ -4,6 +4,7 @@
 //!
 //! 使用 Forge LoopNode 构建和执行 Agent 循环
 
+use crate::agent::durable_memory::build_memory_context_message;
 use crate::agent::explore::run_explore;
 use crate::agent::forge_loop::{
     build_runtime_with_client, run_forge_loop, ForgeRunResult, ForgeRuntime, TauriEventSink,
@@ -385,7 +386,8 @@ async fn execute_task_inner(
         &context,
         &config.provider,
         &orchestration_decision,
-    );
+    )
+    .await;
     emit_agent_event(
         &app,
         AgentEvent::PromptStack {
@@ -838,7 +840,7 @@ fn build_permission_session(auto_approve: bool) -> Arc<LocalPermissionSession> {
     }
 }
 
-fn build_initial_messages(
+async fn build_initial_messages(
     app: &AppHandle,
     task: &str,
     context: &TaskContext,
@@ -878,6 +880,16 @@ fn build_initial_messages(
         name: None,
         tool_call_id: None,
     });
+    if let Ok(Some(memory_content)) =
+        build_memory_context_message(&context.workspace_path, task, context, decision).await
+    {
+        messages.push(Message {
+            role: MessageRole::System,
+            content: memory_content,
+            name: None,
+            tool_call_id: None,
+        });
+    }
     if let Some(skills_content) = skills_index.clone() {
         messages.push(Message {
             role: MessageRole::System,

@@ -2,10 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import type { AgentConfig, Message } from "@/stores/useRustAgentStore";
 
 export type MemoryScope =
-  | "identity"
-  | "projects"
-  | "relationships"
-  | "patterns";
+  | "session"
+  | "user_identity"
+  | "project"
+  | "local_context"
+  | "relationship"
+  | "pattern"
+  | "team_shared";
+
+export type MemoryVisibility = "private" | "shared";
 
 export type MemoryConfidence = "low" | "medium" | "high";
 
@@ -14,7 +19,8 @@ export type MemoryMergeAction =
   | "updated"
   | "deduped"
   | "skipped_low_confidence"
-  | "skipped_empty";
+  | "skipped_empty"
+  | "skipped_invalid_scope";
 
 export interface MemorySourceRef {
   sessionId: string;
@@ -33,6 +39,7 @@ export interface MemoryEntryVersion {
 export interface MemoryEntry {
   id: string;
   scope: MemoryScope;
+  visibility: MemoryVisibility;
   title: string;
   summary: string;
   details: string;
@@ -73,6 +80,17 @@ export interface DurableMemoryConfig {
   minimumConfidenceToWrite: MemoryConfidence;
 }
 
+export interface MemoryEntryInput {
+  id?: string;
+  scope: Exclude<MemoryScope, "session">;
+  visibility?: MemoryVisibility;
+  title: string;
+  summary: string;
+  details: string;
+  confidence?: MemoryConfidence;
+  tags?: string[];
+}
+
 interface ExtractDurableMemoriesInput {
   workspacePath: string;
   sessionId: string;
@@ -99,6 +117,7 @@ interface BackendMemoryEntryVersion {
 interface BackendMemoryEntry {
   id: string;
   scope: MemoryScope;
+  visibility?: MemoryVisibility;
   title: string;
   summary: string;
   details: string;
@@ -170,6 +189,7 @@ function toFrontendEntry(entry: BackendMemoryEntry): MemoryEntry {
   return {
     id: entry.id,
     scope: entry.scope,
+    visibility: entry.visibility ?? (entry.scope === "team_shared" ? "shared" : "private"),
     title: entry.title,
     summary: entry.summary,
     details: entry.details,
@@ -280,5 +300,39 @@ export async function extractDurableMemories(
     },
   );
 
+  return toFrontendSnapshot(snapshot);
+}
+
+export async function upsertDurableMemoryEntry(
+  workspacePath: string,
+  entry: MemoryEntryInput,
+): Promise<DurableMemorySnapshot | null> {
+  if (!workspacePath) return null;
+  const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
+    "agent_upsert_durable_memory_entry",
+    {
+      workspacePath,
+      entry: {
+        ...entry,
+        confidence: entry.confidence ?? "medium",
+        tags: entry.tags ?? [],
+      },
+    },
+  );
+  return toFrontendSnapshot(snapshot);
+}
+
+export async function deleteDurableMemoryEntry(
+  workspacePath: string,
+  entryId: string,
+): Promise<DurableMemorySnapshot | null> {
+  if (!workspacePath || !entryId) return null;
+  const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
+    "agent_delete_durable_memory_entry",
+    {
+      workspacePath,
+      entryId,
+    },
+  );
   return toFrontendSnapshot(snapshot);
 }

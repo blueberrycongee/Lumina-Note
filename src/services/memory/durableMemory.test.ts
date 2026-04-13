@@ -21,7 +21,8 @@ describe("durableMemory", () => {
       entries: [
         {
           id: "entry-1",
-          scope: "identity",
+          scope: "user_identity",
+          visibility: "private",
           title: "User prefers terse updates",
           summary: "Keep answers short.",
           details: "The user prefers concise, direct responses in coding sessions.",
@@ -54,6 +55,7 @@ describe("durableMemory", () => {
       workspacePath: "/vault",
     });
     expect(snapshot?.entries[0].filePath).toContain("/memory/identity/");
+    expect(snapshot?.entries[0].visibility).toBe("private");
     expect(hasDurableMemories(snapshot)).toBe(true);
   });
 
@@ -92,5 +94,28 @@ describe("durableMemory", () => {
 
   it("returns false when snapshot is empty", () => {
     expect(hasDurableMemories(null)).toBe(false);
+  });
+
+  it("delegates durable memory manual upsert to rust", async () => {
+    const { upsertDurableMemoryEntry } = await import("./durableMemory");
+    await upsertDurableMemoryEntry("/vault", {
+      scope: "project",
+      visibility: "shared",
+      title: "Release freeze",
+      summary: "Freeze starts Friday.",
+      details: "Non-critical merges pause on Friday for release branch cut.",
+      tags: ["release"],
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      "agent_upsert_durable_memory_entry",
+      expect.objectContaining({
+        workspacePath: "/vault",
+        entry: expect.objectContaining({
+          scope: "project",
+          visibility: "shared",
+        }),
+      }),
+    );
   });
 });

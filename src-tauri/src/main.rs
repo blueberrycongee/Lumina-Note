@@ -134,6 +134,8 @@ fn main() {
             agent::agent_read_skill,
             agent::agent_get_durable_memory_snapshot,
             agent::agent_extract_durable_memories,
+            agent::agent_upsert_durable_memory_entry,
+            agent::agent_delete_durable_memory_entry,
             agent::agent_get_session_memory_snapshot,
             agent::agent_update_session_memory,
             agent::agent_reset_session_memory,
