@@ -1625,7 +1625,7 @@ impl LlmClient {
         Ok(full_content)
     }
 
-    // ============ 简化接口（用于 Deep Research 等场景）============
+    // ============ 简化接口（用于轻量非流式场景）============
 
     /// 简单的非流式调用（只传入 prompt）
     pub async fn call_simple(&self, prompt: &str) -> Result<String, String> {

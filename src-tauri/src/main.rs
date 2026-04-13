@@ -137,11 +137,6 @@ fn main() {
             agent::agent_disable_debug,
             agent::agent_is_debug_enabled,
             agent::agent_get_debug_log_path,
-            // Deep Research commands
-            agent::deep_research_start,
-            agent::deep_research_resume,
-            agent::deep_research_abort,
-            agent::deep_research_is_running,
             // MCP commands
             mcp::mcp_init,
             mcp::mcp_list_servers,
@@ -197,7 +192,6 @@ fn main() {
         ])
         .manage(webdav::commands::WebDAVState::new())
         .manage(agent::AgentState::new())
-        .manage(agent::DeepResearchStateManager::new())
         .manage(codex_vscode_host::CodexVscodeHostState::default())
         .manage(mobile_gateway::MobileGatewayState::new())
         .manage(cloud_relay::CloudRelayState::new())

@@ -38,9 +38,9 @@ interface UIState {
   rightPanelTab: "chat" | "outline" | "backlinks" | "tags";
   setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags") => void;
 
-  // Chat mode (simple chat vs agent vs research vs codex)
-  chatMode: "chat" | "agent" | "research" | "codex";
-  setChatMode: (mode: "chat" | "agent" | "research" | "codex") => void;
+  // Chat mode (simple chat vs agent vs codex)
+  chatMode: "chat" | "agent" | "codex";
+  setChatMode: (mode: "chat" | "agent" | "codex") => void;
 
   // AI Panel (docked in right panel or floating)
   aiPanelMode: AIPanelMode;

@@ -37,7 +37,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
         featureMarkdown: "Markdown Native",
         featureMarkdownDesc: "Write in pure Markdown with live preview",
         featureAI: "AI Powered",
-        featureAIDesc: "Chat, search, and research with AI",
+        featureAIDesc: "Chat, search, and agent workflows with AI",
         featureLocal: "Local First",
         featureLocalDesc: "Your notes stay on your device",
       },
@@ -76,7 +76,7 @@ describe("WelcomeScreen", () => {
     expect(screen.getByText("Local First")).toBeInTheDocument();
 
     expect(screen.getByText("Write in pure Markdown with live preview")).toBeInTheDocument();
-    expect(screen.getByText("Chat, search, and research with AI")).toBeInTheDocument();
+    expect(screen.getByText("Chat, search, and agent workflows with AI")).toBeInTheDocument();
     expect(screen.getByText("Your notes stay on your device")).toBeInTheDocument();
   });
 });

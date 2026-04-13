@@ -15,6 +15,7 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useAgentProfileStore } from "@/stores/useAgentProfileStore";
 import {
+  getResolvedModelForPurpose,
   callLLM,
   normalizeThinkingMode,
   PROVIDER_REGISTRY,
@@ -165,6 +166,7 @@ export interface DebugPromptStack {
   provider: string;
   baseSystem: string;
   systemPrompt: string;
+  rolePrompt: string;
   builtInAgent: string;
   workspaceAgent: string;
   skillsIndex: string | null;
@@ -200,7 +202,7 @@ interface AgentEventPayload {
 interface MobileSessionSummary {
   id: string;
   title: string;
-  session_type: "agent" | "chat" | "research";
+  session_type: "agent" | "chat";
   created_at: number;
   updated_at: number;
   last_message_preview?: string;
@@ -249,12 +251,14 @@ export interface AgentConfig {
   provider: string;
   model: string;
   api_key: string;
+  complex_task_model?: string;
   base_url?: string;
   temperature?: number;
   thinking_mode?: "auto" | "thinking" | "instant";
   max_tokens?: number;
   max_plan_iterations?: number;
   max_steps?: number;
+  execution_mode?: "auto" | "legacy_single_agent" | "orchestrated";
   auto_approve?: boolean;
   locale?: string;
 }
@@ -623,11 +627,16 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
   const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
     ? aiConfig.customModelId
     : aiConfig.model;
+  const complexTaskModel = getResolvedModelForPurpose(aiConfig, "complex");
+  const shouldUseComplexTaskModel = complexTaskModel !== actualModel;
 
   return {
     provider: aiConfig.provider,
     model: actualModel,
     api_key: aiConfig.apiKey || "",
+    ...(shouldUseComplexTaskModel
+      ? { complex_task_model: complexTaskModel }
+      : {}),
     base_url: aiConfig.baseUrl,
     temperature:
       aiConfig.temperature ??
@@ -637,6 +646,7 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
     // 0 means unlimited
     max_plan_iterations: 0,
     max_steps: 0,
+    execution_mode: "auto",
     auto_approve: autoApprove,
     locale: "zh-CN",
   };
@@ -1616,6 +1626,7 @@ export const useRustAgentStore = create<RustAgentState>()(
               provider?: string;
               base_system?: string;
               system_prompt?: string;
+              role_prompt?: string;
               built_in_agent?: string;
               workspace_agent?: string;
               skills_index?: string | null;
@@ -1625,6 +1636,7 @@ export const useRustAgentStore = create<RustAgentState>()(
                 provider: typeof data?.provider === "string" ? data.provider : "unknown",
                 baseSystem: typeof data?.base_system === "string" ? data.base_system : "",
                 systemPrompt: typeof data?.system_prompt === "string" ? data.system_prompt : "",
+                rolePrompt: typeof data?.role_prompt === "string" ? data.role_prompt : "",
                 builtInAgent: typeof data?.built_in_agent === "string" ? data.built_in_agent : "",
                 workspaceAgent: typeof data?.workspace_agent === "string" ? data.workspace_agent : "",
                 skillsIndex: typeof data?.skills_index === "string" ? data.skills_index : null,
@@ -2130,4 +2142,3 @@ export function cleanupRustAgentListeners() {
 }
 
 // ============ 统计计算 ============
-

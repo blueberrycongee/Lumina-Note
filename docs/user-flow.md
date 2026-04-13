@@ -19,14 +19,17 @@ This guide is for new users who want a practical workflow, not a full feature re
 
 1. Launch the app and choose a local folder as your vault.
 2. Configure model provider and API key in the right AI panel.
-3. Create your first note and add some content.
-4. Add a `[[WikiLink]]` to another page and fill that page.
-5. Open Knowledge Graph and confirm both notes are connected.
+3. In `Dynamic Routing`, keep the defaults or set models by purpose:
+Main Model = default editing and agent work; Chat Model = lower-cost chat and simple search; Complex Task Model = orchestrated agent work, complex planning, and heavier reasoning.
+4. Create your first note and add some content.
+5. Add a `[[WikiLink]]` to another page and fill that page.
+6. Open Knowledge Graph and confirm both notes are connected.
 
 ### Expected Outcome
 
 - You can create/edit/save Markdown notes
 - AI chat is available
+- You understand when to leave `Chat` / `Complex Task` on `Follow Main Model`
 - Graph shows relationships between notes
 
 ## Workflow A: Daily Notes to Structured Knowledge
@@ -72,6 +75,7 @@ Use AI for controlled restructuring, not one-shot rewrite.
 
 - Notes are local-first by default.
 - Cloud model requests depend on your prompt and provider settings.
+- Dynamic Routing reuses the same provider credentials by default and only changes model selection by task purpose.
 - For sensitive data, use stricter provider/config separation.
 
 ## Quick FAQ
@@ -80,6 +84,7 @@ Use AI for controlled restructuring, not one-shot rewrite.
 
 - Check API key validity
 - Confirm model/provider config
+- If routing is unclear, set `Chat` and `Complex Task` back to `Follow Main Model`
 - Verify network/proxy setup
 
 ### Retrieval quality is weak
@@ -90,4 +95,3 @@ Use AI for controlled restructuring, not one-shot rewrite.
 ### What should I learn first
 
 - Start with `WikiLinks + AI panel + Knowledge Graph`
-

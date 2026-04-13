@@ -7,7 +7,6 @@ import {
   Plus,
   Sparkles,
   Bot,
-  Microscope,
 } from "lucide-react";
 import type { ExportMessage } from "@/features/conversation-export/exportUtils";
 
@@ -132,20 +131,6 @@ export function ModeToggle({ className }: { className?: string }) {
         <span className="flex items-center gap-1 min-w-0">
           <Bot size={12} />
           <span className="ai-mode-label ui-compact-text">{t.ai.modeAgent}</span>
-        </span>
-      </button>
-      <button
-        onClick={() => setChatMode("research")}
-        title={t.deepResearch.modeTitle}
-        className={`shrink-0 px-3 py-1 text-xs font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
-          chatMode === "research"
-            ? "bg-background text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <span className="flex items-center gap-1 min-w-0">
-          <Microscope size={12} />
-          <span className="ai-mode-label ui-compact-text">{t.deepResearch.modeLabel}</span>
         </span>
       </button>
       <button

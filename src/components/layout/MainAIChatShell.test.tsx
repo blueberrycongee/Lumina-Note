@@ -54,7 +54,7 @@ describe("MainAIChatShell", () => {
   });
 
   it("consumes queued input appends from store on mount", () => {
-    useUIStore.setState({ chatMode: "research" });
+    useUIStore.setState({ chatMode: "chat" });
     useAIStore.getState().enqueueInputAppend("Queued from PDF");
     render(<MainAIChatShell />);
 

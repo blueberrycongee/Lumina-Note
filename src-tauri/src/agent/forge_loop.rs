@@ -241,7 +241,7 @@ pub async fn run_forge_loop(
                                 message_id: message_id.clone(),
                                 text: warning.clone(),
                             })?;
-                            state.final_result = Some(warning);
+                            state.set_final_result(Some(warning));
                             break;
                         }
                         if tool_calls.is_empty() {
@@ -268,7 +268,7 @@ pub async fn run_forge_loop(
                                 message_id: message_id.clone(),
                                 text: final_text.clone(),
                             })?;
-                            state.final_result = Some(final_text);
+                            state.set_final_result(Some(final_text));
                             break;
                         }
 
@@ -290,7 +290,7 @@ pub async fn run_forge_loop(
                                 message_id: message_id.clone(),
                                 text: message.clone(),
                             })?;
-                            state.final_result = Some(message);
+                            state.set_final_result(Some(message));
                             break;
                         }
 
@@ -372,9 +372,7 @@ fn pop_next_call(queue: &mut Vec<ToolCall>) -> Option<ToolCall> {
 
 fn handle_tool_success(state: &mut GraphState, call: &ToolCall, output: ToolOutput) {
     let content = tool_output_text(&output);
-    state
-        .observations
-        .push(format!("[{}] {}", call.name, content));
+    state.push_observation(format!("[{}] {}", call.name, content));
     state.messages.push(Message {
         role: MessageRole::Tool,
         content,
@@ -385,9 +383,7 @@ fn handle_tool_success(state: &mut GraphState, call: &ToolCall, output: ToolOutp
 
 fn handle_tool_error(state: &mut GraphState, call: &ToolCall, err: &GraphError) {
     let message = format!("Tool {} failed: {}", call.name, err);
-    state
-        .observations
-        .push(format!("[{}] {}", call.name, message));
+    state.push_observation(format!("[{}] {}", call.name, message));
     state.messages.push(Message {
         role: MessageRole::Tool,
         content: message,

@@ -5,7 +5,6 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore, initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useRAGStore } from "@/stores/useRAGStore";
-import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -28,7 +27,6 @@ import {
   AlertCircle,
   Check,
   Settings,
-  Globe,
   Bug,
 } from "lucide-react";
 import { useSessionManagement } from "./hooks/useSessionManagement";
@@ -52,14 +50,8 @@ import {
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
-import { DeepResearchCard } from "../deep-research";
 import { CodexPanelSlot } from "@/components/codex/CodexPanelSlot";
 import { join as joinPath } from "@tauri-apps/api/path";
-import { 
-  useDeepResearchStore, 
-  setupDeepResearchListener,
-  type DeepResearchConfig,
-} from "@/stores/useDeepResearchStore";
 import {
   buildAgentExportMessages,
   buildChatExportMessages,
@@ -120,7 +112,6 @@ export function MainAIChatShell() {
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionIndex, setMentionIndex] = useState(0);
   const [showDebug, setShowDebug] = useState(false);
-  const [enableWebSearch, setEnableWebSearch] = useState(false);
   const [isExportSelectionMode, setIsExportSelectionMode] = useState(false);
   const [selectedExportIds, setSelectedExportIds] = useState<string[]>([]);
   const [isExportingConversation, setIsExportingConversation] = useState(false);
@@ -258,17 +249,9 @@ export function MainAIChatShell() {
 
   useRAGStore();
 
-  // Deep Research
-  const { startResearch, isRunning: isResearchRunning, abortResearch, currentSession: _researchSession } = useDeepResearchStore();
-  
-  // 设置 Deep Research 事件监听
-  useEffect(() => {
-    setupDeepResearchListener();
-  }, []);
-
   // Wrap session hooks with local state side effects
   const handleSwitchSession = useCallback(
-    (id: string, type: "agent" | "chat" | "research") => {
+    (id: string, type: "agent" | "chat") => {
       _sessionSwitch(id, type);
       setShowHistory(false);
     },
@@ -304,11 +287,9 @@ export function MainAIChatShell() {
   // Chat 模式下，流式进行中也算已开始（确保流式消息能正确显示）
   const hasStarted = isCodexMode
     ? true
-    : chatMode === "research"
-      ? _researchSession !== null
-      : chatMode === "agent"
-        ? agentMessages.length > 0 || agentStatus === "error"
-        : chatMessages.length > 0 || chatStreaming || !!chatError;
+    : chatMode === "agent"
+      ? agentMessages.length > 0 || agentStatus === "error"
+      : chatMessages.length > 0 || chatStreaming || !!chatError;
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof performance === "undefined") {
@@ -330,16 +311,12 @@ export function MainAIChatShell() {
 
   // 获取当前消息列表
   const messages =
-    chatMode === "agent" ? agentMessages : chatMode === "chat" ? chatMessages : [];
+    chatMode === "agent" ? agentMessages : chatMessages;
 
   // 判断是否正在加载
-  const isLoading = chatMode === "research"
-    ? isResearchRunning
-    : chatMode === "agent"
-      ? agentStatus === "running"
-      : chatMode === "chat"
-        ? chatLoading || chatStreaming
-        : false;
+  const isLoading = chatMode === "agent"
+    ? agentStatus === "running"
+    : chatLoading || chatStreaming;
   const isAgentWaitingApproval = chatMode === "agent" && agentStatus === "waiting_approval";
   const agentQueueCount = rustQueuedTasks.length;
 
@@ -811,39 +788,7 @@ export function MainAIChatShell() {
       performance.mark("lumina:send:processed");
     }
 
-    if (chatMode === "research") {
-      // Deep Research 模式
-      // 使用 store 中的 config（已从持久化存储恢复）
-      // 处理 model === 'custom' 的情况
-      const actualModel = config.model === 'custom' ? (config.customModelId || config.model) : config.model;
-      
-      // 检查是否启用网络搜索（需要开关打开 + 配置了 Tavily API Key）
-      const shouldWebSearch = enableWebSearch && !!config.tavilyApiKey;
-      
-      const researchConfig: DeepResearchConfig = {
-        provider: config.provider,
-        model: actualModel,
-        api_key: config.apiKey,
-        base_url: config.baseUrl || undefined,
-        temperature: 0.7,
-        max_search_results: 20,
-        max_notes_to_read: 10,
-        report_style: "detailed",
-        include_citations: true,
-        locale: "zh-CN",
-        // 网络搜索配置
-        enable_web_search: shouldWebSearch,
-        tavily_api_key: config.tavilyApiKey || undefined,
-        max_web_search_results: 10,
-      };
-      await startResearch(fullMessage, vaultPath || "", researchConfig, {
-        chatId: chatSessionId || undefined,
-        reportStyle: "detailed",
-        includeCitations: true,
-        preSearchedNotes: [],
-      });
-      finalizePerf();
-    } else if (chatMode === "agent") {
+    if (chatMode === "agent") {
       // 使用 Rust Agent
       await rustStartTask(fullMessage, {
         workspace_path: vaultPath || "",
@@ -864,7 +809,7 @@ export function MainAIChatShell() {
       await sendMessageStream(fullMessage, currentFileInfo, displayMessage, undefined, attachments);
       finalizePerf();
     }
-  }, [input, chatMode, isLoading, isAgentWaitingApproval, vaultPath, currentFile, currentContent, referencedFiles, textSelections, clearTextSelections, rustStartTask, sendMessageStream, isOnlyWebLink, startResearch, enableWebSearch, config, selectedSkills, isExportSelectionMode]);
+  }, [input, chatMode, isLoading, isAgentWaitingApproval, vaultPath, currentFile, currentContent, referencedFiles, textSelections, clearTextSelections, rustStartTask, sendMessageStream, isOnlyWebLink, config, selectedSkills, isExportSelectionMode]);
 
   const handleSendRef = useRef(handleSend);
   useLayoutEffect(() => {
@@ -955,34 +900,12 @@ export function MainAIChatShell() {
 
   // 停止生成
   const handleStop = useCallback(() => {
-    if (chatMode === "research") {
-      abortResearch();
-    } else if (chatMode === "agent") {
+    if (chatMode === "agent") {
       agentAbort();
     } else if (chatMode === "chat") {
       stopStreaming();
     }
-  }, [chatMode, agentAbort, stopStreaming, abortResearch]);
-
-  // 获取标签用于动态 placeholder
-  const { allTags } = useNoteIndexStore();
-  
-  // 动态 Research placeholder
-  const researchPlaceholder = useMemo(() => {
-    if (allTags.length === 0) {
-      return t.deepResearch.placeholderFallback;
-    }
-    // 随机选择一个标签作为示例
-    const randomTag = allTags[Math.floor(Math.random() * Math.min(allTags.length, 10))];
-    const tag = randomTag?.tag || t.deepResearch.exampleTagFallback;
-    const examples = [
-      t.deepResearch.exampleTemplates.bestPractices.replace('{tag}', tag),
-      t.deepResearch.exampleTemplates.introGuide.replace('{tag}', tag),
-      t.deepResearch.exampleTemplates.tipsSummary.replace('{tag}', tag),
-    ];
-    const example = examples[Math.floor(Math.random() * examples.length)];
-    return t.deepResearch.placeholderExample.replace('{example}', example);
-  }, [allTags, t]);
+  }, [chatMode, agentAbort, stopStreaming]);
 
 
   const resolveCreatedFilePath = useCallback((path: string): string => {
@@ -1322,9 +1245,6 @@ export function MainAIChatShell() {
                   <StreamingOutput mode={chatMode} />
                 )}
 
-                {/* Deep Research 卡片 */}
-                <DeepResearchCard className="mb-6" chatId={chatSessionId} />
-
                 {/* Agent 错误提示 */}
                 {chatMode === "agent" && agentStatus === "error" && (
                   <div className="text-sm text-destructive p-2 bg-destructive/10 rounded mb-4">
@@ -1490,7 +1410,7 @@ export function MainAIChatShell() {
                     value={input}
                     onChange={(e) => handleInputChange(e.target.value, e.target.selectionStart)}
                     onKeyDown={handleKeyDown}
-                    placeholder={chatMode === "research" ? researchPlaceholder : chatMode === "agent" ? t.ai.agentInputPlaceholder : t.ai.chatInputPlaceholder}
+                    placeholder={chatMode === "agent" ? t.ai.agentInputPlaceholder : t.ai.chatInputPlaceholder}
                     className="w-full resize-none outline-none text-foreground placeholder:text-muted-foreground placeholder:whitespace-nowrap placeholder:overflow-hidden placeholder:text-ellipsis min-h-[40px] max-h-[200px] bg-transparent text-base leading-relaxed"
                     rows={1}
                     autoFocus
@@ -1567,22 +1487,8 @@ export function MainAIChatShell() {
                 {/* 底部工具栏 */}
                 <div className="ai-toolbar-row px-4 pb-3 pt-1 flex items-center justify-between">
                   <div className="ai-toolbar-left flex items-center gap-2 min-w-0 overflow-hidden">
-                    {/* Chat/Agent/Research/Codex 切换滑块 */}
+                    {/* Chat/Agent/Codex 切换滑块 */}
                     {<ModeToggle />}
-
-                    {/* 网络搜索按钮（独立于模式切换） */}
-                    <button
-                      onClick={() => setEnableWebSearch(!enableWebSearch)}
-                      title={enableWebSearch ? t.ai.webSearchDisable : t.ai.webSearchEnable}
-                      className={`ml-2 flex items-center gap-1 px-2 py-1 text-xs rounded-md transition-all duration-200 ${
-                        enableWebSearch
-                          ? "bg-primary/10 text-primary border border-primary/30"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                    >
-                      <Globe size={12} />
-                      {enableWebSearch && <Check size={10} />}
-                    </button>
 
                     {/* 设置按钮：紧挨着模式切换的小齿轮，打开 AI 对话设置 */}
                     <button
@@ -1772,6 +1678,7 @@ export function MainAIChatShell() {
                     {[
                       { label: "Base System", content: debugPromptStack.baseSystem },
                       { label: "System Prompt", content: debugPromptStack.systemPrompt },
+                      { label: "Role Prompt", content: debugPromptStack.rolePrompt },
                       { label: "Built-in Agent", content: debugPromptStack.builtInAgent },
                       { label: "Workspace Agent", content: debugPromptStack.workspaceAgent },
                       { label: "Skills Index", content: debugPromptStack.skillsIndex || "(none)" },

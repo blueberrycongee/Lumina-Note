@@ -30,7 +30,7 @@ Vos notes restent sur votre appareil. Lumina Note vous aide à écrire, relier, 
 
 - **Conçu en local-first** : votre vault reste en local et vous décidez ce qui part vers les fournisseurs de modèles.
 - **Flux de travail centré sur la connaissance** : édition Markdown, WikiLinks, vue graphe et recherche IA fonctionnent comme un seul système.
-- **Une IA qui agit vraiment** : `Chat`, `Agent`, `Deep Research` et `Codex` prennent en charge de vraies tâches d'édition et de recherche.
+- **Une IA qui agit vraiment** : `Chat`, `Agent` et `Codex` prennent en charge de vraies tâches d'édition, de planification et d'automatisation.
 
 ---
 
@@ -70,8 +70,10 @@ Récupérez la dernière version depuis [Releases](https://github.com/blueberryc
 
 <h3 align="center">Espace de travail IA</h3>
 
-- Modes : `Chat` / `Agent` / `Deep Research` / `Codex` (extension VS Code intégrée dans la barre latérale)
+- Modes : `Chat` / `Agent` / `Codex` (extension VS Code intégrée dans la barre latérale)
 - Support multi-fournisseurs : OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- Routage simple des modèles par usage : `Main Model` / `Chat Model` / `Complex Task Model`
+- Runtime d'agent orchestré pour les tâches plus lourdes, avec un chemin rapide pour les demandes simples
 - Recherche sémantique locale (RAG) dans votre vault
 
 <h3 align="center">Éditeur et graphe de connaissances</h3>
@@ -109,7 +111,7 @@ Récupérez la dernière version depuis [Releases](https://github.com/blueberryc
 
 1. Installez Lumina Note depuis Releases.
 2. Choisissez un dossier local comme vault au premier lancement.
-3. Configurez un fournisseur de modèle et votre clé API dans le panneau IA.
+3. Configurez un fournisseur de modèle et votre clé API dans le panneau IA, puis définissez si besoin des modèles `Main` / `Chat` / `Complex Task` dans Dynamic Routing.
 4. Créez votre première note et commencez à relier avec `[[WikiLinks]]`.
 
 ---

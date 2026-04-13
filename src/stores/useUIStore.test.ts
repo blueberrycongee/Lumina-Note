@@ -62,12 +62,12 @@ describe('useUIStore', () => {
     const { useUIStore } = await loadStore();
 
     useUIStore.getState().setThemeId('ocean');
-    useUIStore.getState().setChatMode('research');
+    useUIStore.getState().setChatMode('codex');
 
     expect(localStorage.getItem('neurone-ui')).toBeNull();
     const persisted = parsePersistedState('lumina-ui');
     expect(persisted.themeId).toBe('ocean');
-    expect(persisted.chatMode).toBe('research');
+    expect(persisted.chatMode).toBe('codex');
   });
 
   it('does not persist temporary modal and floating panel state', async () => {

@@ -1,9 +1,9 @@
 import { motion } from "framer-motion";
-import { Bot, MessageSquare, Microscope, Trash2, X } from "lucide-react";
+import { Bot, MessageSquare, Trash2, X } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { formatSessionTime } from "./hooks/useSessionManagement";
 
-type SessionType = "agent" | "chat" | "research";
+type SessionType = "agent" | "chat";
 
 interface SessionItem {
   id: string;
@@ -69,15 +69,11 @@ export function ChatHistorySidebar({
               const IconComponent =
                 session.type === "agent"
                   ? Bot
-                  : session.type === "research"
-                    ? Microscope
-                    : MessageSquare;
+                  : MessageSquare;
               const iconColor =
                 session.type === "agent"
                   ? "text-purple-500"
-                  : session.type === "research"
-                    ? "text-emerald-500"
-                    : "text-muted-foreground";
+                  : "text-muted-foreground";
 
               return (
                 <div
@@ -94,11 +90,6 @@ export function ChatHistorySidebar({
                       {session.type === "agent" && (
                         <span className="text-[9px] text-purple-600 bg-purple-50 dark:bg-purple-900/30 px-1 rounded">
                           Agent
-                        </span>
-                      )}
-                      {session.type === "research" && (
-                        <span className="text-[9px] text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-1 rounded">
-                          Research
                         </span>
                       )}
                       <span className="text-[10px] text-muted-foreground">

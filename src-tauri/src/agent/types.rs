@@ -42,6 +42,38 @@ impl Default for AgentType {
     }
 }
 
+/// 执行模式
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentExecutionMode {
+    Auto,
+    LegacySingleAgent,
+    Orchestrated,
+}
+
+impl Default for AgentExecutionMode {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
+/// 编排阶段
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentStage {
+    Explore,
+    Plan,
+    Execute,
+    Verify,
+    Report,
+}
+
+impl Default for AgentStage {
+    fn default() -> Self {
+        Self::Execute
+    }
+}
+
 /// 任务意图
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -153,6 +185,37 @@ pub struct ResolvedLink {
 pub struct GraphState {
     /// 消息历史
     pub messages: Vec<Message>,
+    /// 原始任务输入
+    #[serde(default)]
+    pub task: TaskState,
+    /// 编排状态
+    #[serde(default)]
+    pub orchestration: OrchestrationState,
+    /// Explore 阶段状态
+    #[serde(default)]
+    pub explore: ExploreStageState,
+    /// Plan 阶段状态
+    #[serde(default)]
+    pub plan: PlanStageState,
+    /// Execute 阶段状态
+    #[serde(default)]
+    pub execute: ExecuteStageState,
+    /// Verify 阶段状态
+    #[serde(default)]
+    pub verify: VerifyStageState,
+    /// Report 阶段状态
+    #[serde(default)]
+    pub report: ReportStageState,
+    /// 下一个节点
+    #[serde(default)]
+    pub goto: String,
+    /// 当前状态
+    #[serde(default)]
+    pub status: AgentStatus,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct TaskState {
     /// 用户任务
     pub user_task: String,
     /// 工作区路径
@@ -166,12 +229,54 @@ pub struct GraphState {
     /// 文件树
     #[serde(skip_serializing_if = "Option::is_none")]
     pub file_tree: Option<String>,
-    /// RAG 结果
+    /// 是否自动审批
+    #[serde(default)]
+    pub auto_approve: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrchestrationState {
+    /// 预期执行模式
+    #[serde(default)]
+    pub mode: AgentExecutionMode,
+    /// 当前阶段
+    #[serde(default)]
+    pub current_stage: AgentStage,
+    /// 计划阶段序列
+    #[serde(default = "default_orchestration_stages")]
+    pub stages: Vec<AgentStage>,
+    /// 当前是否降级回单 Agent 执行
+    #[serde(default)]
+    pub fallback_to_single_agent: bool,
+    /// 降级原因
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fallback_reason: Option<String>,
+}
+
+impl Default for OrchestrationState {
+    fn default() -> Self {
+        Self {
+            mode: AgentExecutionMode::default(),
+            current_stage: AgentStage::default(),
+            stages: default_orchestration_stages(),
+            fallback_to_single_agent: false,
+            fallback_reason: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExploreStageState {
+    /// 预处理后的 RAG 结果
     #[serde(default)]
     pub rag_results: Vec<RagResult>,
-    /// 解析的 WikiLinks
+    /// 已解析 WikiLinks
     #[serde(default)]
     pub resolved_links: Vec<ResolvedLink>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PlanStageState {
     /// 任务意图
     #[serde(default)]
     pub intent: TaskIntent,
@@ -181,27 +286,43 @@ pub struct GraphState {
     /// 计划迭代次数
     #[serde(default)]
     pub plan_iterations: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExecuteStageState {
     /// 当前步骤索引
     #[serde(default)]
     pub current_step_index: usize,
     /// 观察结果（工具输出）
     #[serde(default)]
     pub observations: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VerifyStageState {
+    /// 当前验证摘要
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ReportStageState {
     /// 最终结果
     #[serde(skip_serializing_if = "Option::is_none")]
     pub final_result: Option<String>,
-    /// 下一个节点
-    #[serde(default)]
-    pub goto: String,
-    /// 是否自动审批
-    #[serde(default)]
-    pub auto_approve: bool,
-    /// 当前状态
-    #[serde(default)]
-    pub status: AgentStatus,
     /// 错误信息
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
+}
+
+fn default_orchestration_stages() -> Vec<AgentStage> {
+    vec![
+        AgentStage::Explore,
+        AgentStage::Plan,
+        AgentStage::Execute,
+        AgentStage::Verify,
+        AgentStage::Report,
+    ]
 }
 
 /// Agent 配置
@@ -211,6 +332,9 @@ pub struct AgentConfig {
     pub provider: String,
     /// 模型名称
     pub model: String,
+    /// 复杂任务模型（可选，供编排模式使用）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub complex_task_model: Option<String>,
     /// API Key
     pub api_key: String,
     /// Base URL
@@ -231,6 +355,9 @@ pub struct AgentConfig {
     /// 最大步骤数（0 表示无限制）
     #[serde(default = "default_max_steps")]
     pub max_steps: usize,
+    /// 执行模式
+    #[serde(default)]
+    pub execution_mode: AgentExecutionMode,
     /// 是否自动审批
     #[serde(default)]
     pub auto_approve: bool,
@@ -278,6 +405,7 @@ impl Default for AgentConfig {
         Self {
             provider: "openai".to_string(),
             model: "gpt-4o-mini".to_string(),
+            complex_task_model: None,
             api_key: String::new(),
             base_url: None,
             temperature: default_temperature(),
@@ -285,6 +413,7 @@ impl Default for AgentConfig {
             max_tokens: default_max_tokens(),
             max_plan_iterations: default_max_plan_iterations(),
             max_steps: default_max_steps(),
+            execution_mode: AgentExecutionMode::Auto,
             auto_approve: false,
             locale: default_locale(),
         }
@@ -355,10 +484,19 @@ pub enum AgentEvent {
         provider: String,
         base_system: String,
         system_prompt: String,
+        role_prompt: String,
         built_in_agent: String,
         workspace_agent: String,
         #[serde(skip_serializing_if = "Option::is_none")]
         skills_index: Option<String>,
+    },
+    /// 编排流程更新
+    OrchestrationUpdated {
+        mode: AgentExecutionMode,
+        stage: AgentStage,
+        stages: Vec<AgentStage>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        fallback_reason: Option<String>,
     },
 }
 
@@ -395,7 +533,7 @@ pub struct SkillContext {
 }
 
 /// 任务上下文（从前端传入）
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TaskContext {
     pub workspace_path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -416,6 +554,36 @@ pub struct TaskContext {
     pub skills: Vec<SkillContext>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mobile_session_id: Option<String>,
+}
+
+impl GraphState {
+    pub fn user_task(&self) -> &str {
+        &self.task.user_task
+    }
+
+    pub fn workspace_path(&self) -> &str {
+        &self.task.workspace_path
+    }
+
+    pub fn set_stage(&mut self, stage: AgentStage) {
+        self.orchestration.current_stage = stage;
+    }
+
+    pub fn final_result(&self) -> Option<&str> {
+        self.report.final_result.as_deref()
+    }
+
+    pub fn set_final_result(&mut self, result: Option<String>) {
+        self.report.final_result = result;
+    }
+
+    pub fn set_error(&mut self, error: Option<String>) {
+        self.report.error = error;
+    }
+
+    pub fn push_observation(&mut self, observation: String) {
+        self.execute.observations.push(observation);
+    }
 }
 
 // ============ 实现 Forge GraphState trait ============

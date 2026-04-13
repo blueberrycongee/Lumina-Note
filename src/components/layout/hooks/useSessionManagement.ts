@@ -1,7 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useDeepResearchStore } from "@/stores/useDeepResearchStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useShallow } from "zustand/react/shallow";
 
@@ -44,14 +43,6 @@ export function useSessionManagement() {
     })),
   );
 
-  const {
-    sessions: researchSessions,
-    selectedSessionId: researchSelectedId,
-    selectSession: selectResearchSession,
-    deleteSession: deleteResearchSession,
-    reset: resetResearch,
-  } = useDeepResearchStore();
-
   const allSessions = useMemo(() => {
     const agentList = rustSessions.map((s) => ({
       ...s,
@@ -61,72 +52,56 @@ export function useSessionManagement() {
       ...s,
       type: "chat" as const,
     }));
-    const researchList = researchSessions.map((s) => ({
-      ...s,
-      type: "research" as const,
-      title: s.topic,
-      updatedAt: (s.completedAt || s.startedAt).getTime(),
-    }));
-    return [...agentList, ...chatList, ...researchList].sort(
+    return [...agentList, ...chatList].sort(
       (a, b) => b.updatedAt - a.updatedAt,
     );
-  }, [rustSessions, chatSessions, researchSessions]);
+  }, [rustSessions, chatSessions]);
 
   const createSession =
     chatMode === "agent" ? rustCreateSession : createChatSession;
 
   const handleSwitchSession = useCallback(
-    (id: string, type: "agent" | "chat" | "research") => {
+    (id: string, type: "agent" | "chat") => {
       if (type === "agent") {
         rustSwitchSession(id);
         if (chatMode !== "agent") setChatMode("agent");
-      } else if (type === "research") {
-        selectResearchSession(id);
-        if (chatMode !== "research") setChatMode("research");
       } else {
         switchChatSession(id);
         if (chatMode !== "chat") setChatMode("chat");
       }
     },
-    [chatMode, setChatMode, rustSwitchSession, switchChatSession, selectResearchSession],
+    [chatMode, setChatMode, rustSwitchSession, switchChatSession],
   );
 
   const handleDeleteSession = useCallback(
-    (id: string, type: "agent" | "chat" | "research") => {
+    (id: string, type: "agent" | "chat") => {
       if (type === "agent") {
         rustDeleteSession(id);
-      } else if (type === "research") {
-        deleteResearchSession(id);
       } else {
         deleteChatSession(id);
       }
     },
-    [rustDeleteSession, deleteChatSession, deleteResearchSession],
+    [rustDeleteSession, deleteChatSession],
   );
 
   const isCurrentSession = useCallback(
-    (id: string, type: "agent" | "chat" | "research") => {
+    (id: string, type: "agent" | "chat") => {
       if (type === "agent") {
         return chatMode === "agent" && rustSessionId === id;
       }
-      if (type === "research") {
-        return researchSelectedId === id;
-      }
       return chatMode === "chat" && chatSessionId === id;
     },
-    [chatMode, rustSessionId, chatSessionId, researchSelectedId],
+    [chatMode, rustSessionId, chatSessionId],
   );
 
   const handleNewChat = useCallback(() => {
     if (chatMode === "codex") return;
-    if (chatMode === "research") {
-      resetResearch();
-    } else if (chatMode === "agent") {
+    if (chatMode === "agent") {
       rustClearChat();
     } else {
       createSession();
     }
-  }, [chatMode, resetResearch, rustClearChat, createSession]);
+  }, [chatMode, rustClearChat, createSession]);
 
   return {
     allSessions,

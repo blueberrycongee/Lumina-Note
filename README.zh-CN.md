@@ -30,7 +30,7 @@
 
 - **本地优先**：你的笔记库保留在本地，是否发送给模型服务商由你决定。
 - **围绕知识工作流设计**：Markdown 编辑、双链、图谱和 AI 检索是一个整体。
-- **AI 不只是聊天**：`Chat`、`Agent`、`Deep Research`、`Codex` 支持真实编辑与研究任务。
+- **AI 不只是聊天**：`Chat`、`Agent`、`Codex` 支持真实编辑、规划与自动化任务。
 
 ---
 
@@ -70,8 +70,10 @@
 
 <h3 align="center">AI 工作区</h3>
 
-- 模式：`Chat` / `Agent` / `Deep Research` / `Codex`（侧边栏内嵌 VS Code 扩展）
+- 模式：`Chat` / `Agent` / `Codex`（侧边栏内嵌 VS Code 扩展）
 - 支持多模型服务商：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- 支持按用途配置模型：`主模型` / `聊天模型` / `复杂任务模型`
+- 复杂任务会进入编排式 Agent 运行时，简单任务保持轻量快速路径
 - 基于本地笔记库的语义检索（RAG）
 
 <h3 align="center">编辑器与知识图谱</h3>
@@ -109,7 +111,7 @@
 
 1. 从 Releases 安装 Lumina Note。
 2. 首次启动时选择一个本地文件夹作为笔记库。
-3. 在 AI 面板中配置模型服务商和 API Key。
+3. 在 AI 面板中配置模型服务商和 API Key，并可在 Dynamic Routing 中按用途设置 `主模型` / `聊天模型` / `复杂任务模型`。
 4. 创建第一条笔记，并通过 `[[WikiLinks]]` 建立连接。
 
 ---

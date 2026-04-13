@@ -4,12 +4,13 @@
 //!
 //! 使用 Forge LoopNode 构建和执行 Agent 循环
 
-use crate::agent::deep_research::{
-    build_deep_research_graph, DeepResearchConfig, DeepResearchContext, DeepResearchEvent,
-    DeepResearchRequest, DeepResearchState, ResearchPhase,
-};
 use crate::agent::forge_loop::{
     build_runtime_with_client, run_forge_loop, ForgeRunResult, ForgeRuntime, TauriEventSink,
+};
+use crate::agent::orchestrator::{
+    build_initial_graph_state_with_decision, mark_run_completed, mark_run_failed,
+    mark_waiting_for_approval, plan_orchestration, prepare_for_forge_execution,
+    resolve_runtime_config, OrchestrationDecision,
 };
 use crate::agent::skills::{list_skills, read_skill, SkillDetail, SkillInfo};
 use crate::agent::types::*;
@@ -18,15 +19,14 @@ use crate::forge_runtime::permissions::{
 };
 use crate::mobile_gateway::{emit_agent_event, MobileGatewayState};
 use forge::runtime::cancel::CancellationToken;
-use forge::runtime::error::{Interrupt, ResumeCommand};
+use forge::runtime::error::Interrupt;
 use forge::runtime::event::{Event, EventSink, PermissionReply};
-use forge::runtime::executor::{Checkpoint, ExecutionResult};
 use forge::runtime::permission::PermissionDecision;
 use forge::runtime::session_state::RunStatus;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::{fs, path::Path};
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -60,6 +60,7 @@ struct PromptStackSnapshot {
     provider: String,
     base_system: String,
     system_prompt: String,
+    role_prompt: String,
     built_in_agent: String,
     workspace_agent: String,
     skills_index: Option<String>,
@@ -134,7 +135,7 @@ async fn build_queue_snapshot(state: &AgentState) -> AgentQueueSnapshot {
             .lock()
             .await
             .as_ref()
-            .map(|graph| task_preview(&graph.user_task, 80))
+            .map(|graph| task_preview(graph.user_task(), 80))
     } else {
         None
     };
@@ -192,54 +193,60 @@ async fn execute_task_inner(
         dbg::log_skills(&context.skills);
     }
 
-    let (messages, prompt_stack) = build_initial_messages(&app, &task, &context, &config.provider);
+    let orchestration_decision = plan_orchestration(&task, &context, config.execution_mode.clone());
+    let (messages, prompt_stack) = build_initial_messages(
+        &app,
+        &task,
+        &context,
+        &config.provider,
+        &orchestration_decision,
+    );
     emit_agent_event(
         &app,
         AgentEvent::PromptStack {
             provider: prompt_stack.provider.clone(),
             base_system: prompt_stack.base_system.clone(),
             system_prompt: prompt_stack.system_prompt.clone(),
+            role_prompt: prompt_stack.role_prompt.clone(),
             built_in_agent: prompt_stack.built_in_agent.clone(),
             workspace_agent: prompt_stack.workspace_agent.clone(),
             skills_index: prompt_stack.skills_index.clone(),
         },
     );
-    let initial_state = GraphState {
+    let mut initial_state = build_initial_graph_state_with_decision(
         messages,
-        user_task: task.clone(),
-        workspace_path: context.workspace_path,
-        active_note_path: context.active_note_path,
-        active_note_content: context.active_note_content,
-        file_tree: context.file_tree,
-        rag_results: context.rag_results,
-        resolved_links: context.resolved_links,
-        intent: TaskIntent::default(),
-        current_plan: None,
-        plan_iterations: 0,
-        current_step_index: 0,
-        observations: vec![],
-        final_result: None,
-        goto: String::new(),
-        auto_approve: config.auto_approve,
-        status: AgentStatus::Running,
-        error: None,
-    };
+        task.clone(),
+        context,
+        &config,
+        orchestration_decision,
+    );
+    prepare_for_forge_execution(&mut initial_state);
+    let runtime_config = resolve_runtime_config(&config, &initial_state);
 
     {
         let mut current_state = state.current_state.lock().await;
         *current_state = Some(initial_state.clone());
     }
+    emit_agent_event(
+        &app,
+        AgentEvent::OrchestrationUpdated {
+            mode: initial_state.orchestration.mode.clone(),
+            stage: initial_state.orchestration.current_stage.clone(),
+            stages: initial_state.orchestration.stages.clone(),
+            fallback_reason: initial_state.orchestration.fallback_reason.clone(),
+        },
+    );
     emit_queue_updated(&app, state).await;
 
     let permissions = build_permission_session(config.auto_approve);
     let proxy_client = app.state::<crate::proxy::ProxyState>().client().await;
     let runtime = build_runtime_with_client(
-        &initial_state.workspace_path,
+        initial_state.workspace_path(),
         permissions,
         Some(proxy_client),
     );
     let runtime_state = ForgeRuntimeState {
-        config: config.clone(),
+        config: runtime_config.clone(),
         runtime,
         session_id: Uuid::new_v4().to_string(),
         message_id: Uuid::new_v4().to_string(),
@@ -266,7 +273,7 @@ async fn execute_task_inner(
     let http_client = build_llm_http_client(&app).await?;
     let result = run_forge_loop(
         app.clone(),
-        config,
+        runtime_config,
         initial_state,
         runtime_state.runtime.clone(),
         Vec::new(),
@@ -654,9 +661,11 @@ fn build_initial_messages(
     task: &str,
     context: &TaskContext,
     provider: &str,
+    decision: &OrchestrationDecision,
 ) -> (Vec<Message>, PromptStackSnapshot) {
     let base_system = base_system_prompt(provider).to_string();
     let system_prompt = build_system_prompt(context, provider);
+    let role_prompt = build_role_prompt(decision);
     let built_in_agent = load_builtin_agent_instructions(app);
     let workspace_agent = load_workspace_agent_instructions(&context.workspace_path)
         .unwrap_or_else(|| WORKSPACE_AGENT_TEMPLATE.to_string());
@@ -666,6 +675,12 @@ fn build_initial_messages(
     messages.push(Message {
         role: MessageRole::System,
         content: system_prompt.clone(),
+        name: None,
+        tool_call_id: None,
+    });
+    messages.push(Message {
+        role: MessageRole::System,
+        content: role_prompt.clone(),
         name: None,
         tool_call_id: None,
     });
@@ -702,6 +717,7 @@ fn build_initial_messages(
             provider: provider.to_string(),
             base_system,
             system_prompt,
+            role_prompt,
             built_in_agent,
             workspace_agent,
             skills_index,
@@ -863,16 +879,79 @@ fn base_system_prompt(provider: &str) -> &'static str {
 }
 
 fn build_system_prompt(context: &TaskContext, provider: &str) -> String {
-    let mut prompt = String::from(base_system_prompt(provider));
-    prompt.push_str(&format!("\nWorkspace: {}", context.workspace_path));
+    let mut lines = vec![
+        "# Runtime Context".to_string(),
+        format!("- Provider family: {}", provider),
+        format!("- Workspace: {}", context.workspace_path),
+    ];
     if let Some(path) = context.active_note_path.as_deref() {
-        prompt.push_str(&format!("\nActive note: {}", path));
+        lines.push(format!("- Active note: {}", path));
     }
+    lines.push(format!(
+        "- Attached history messages: {}",
+        context.history.len()
+    ));
+    lines.push(format!("- Selected skills: {}", context.skills.len()));
+    lines.push(format!(
+        "- Retrieved note snippets: {}",
+        context.rag_results.len()
+    ));
+    lines.push(format!(
+        "- Resolved wikilinks: {}",
+        context.resolved_links.len()
+    ));
     if let Some(tree) = context.file_tree.as_deref() {
-        prompt.push_str("\nFile tree:\n");
-        prompt.push_str(tree);
+        lines.push("\n## File Tree Snapshot".to_string());
+        lines.push(tree.to_string());
     }
-    prompt
+    format!("{}\n\n{}", base_system_prompt(provider), lines.join("\n"))
+}
+
+fn build_role_prompt(decision: &OrchestrationDecision) -> String {
+    match decision.mode {
+        AgentExecutionMode::LegacySingleAgent => String::from(
+            r#"# Role
+You are Lumina's primary implementation agent.
+
+Operate like a strong general-purpose coding assistant:
+- Read before you edit
+- Prefer minimal, correct changes over broad rewrites
+- Use tools instead of guessing
+- Stop once the requested work is complete
+- If you are blocked by ambiguity, ask one precise clarification question"#
+        ),
+        AgentExecutionMode::Orchestrated => {
+            let fallback_note = decision
+                .fallback_reason
+                .as_deref()
+                .unwrap_or("The orchestration layer may temporarily collapse phases into one execution loop.");
+            format!(
+                r#"# Role
+You are Lumina's execution agent inside a staged workflow inspired by Claude Code's layered agent prompts.
+
+## Workflow Stages
+- Explore: inspect the codebase and gather facts without editing
+- Plan: turn findings into an implementation strategy
+- Execute: make the smallest correct code changes
+- Verify: check behavior with tests, builds, or direct inspection
+- Report: summarize what changed, what was verified, and any remaining risk
+
+## Current Assignment
+You are handling the Execute phase.
+- Assume upstream exploration/planning context may be partial
+- Read enough context yourself before editing
+- Leave the workspace in a state that is easy to verify
+- Keep track of evidence that a later Verify/Report step can reuse
+
+## Phase 1 Note
+{}"#,
+                fallback_note
+            )
+        }
+        AgentExecutionMode::Auto => String::from(
+            "# Role\nYou are Lumina's primary agent. Follow the active task with minimal, tool-grounded work."
+        ),
+    }
 }
 
 fn normalized_template(input: &str) -> String {
@@ -938,6 +1017,7 @@ async fn handle_forge_result(
             let mut final_state = run.state;
             if let Some(pending) = run.pending {
                 final_state.status = AgentStatus::WaitingApproval;
+                mark_waiting_for_approval(&mut final_state);
                 let checkpoint_id = Uuid::new_v4().to_string();
                 {
                     let mut checkpoint_lock = state.checkpoint.lock().await;
@@ -964,6 +1044,7 @@ async fn handle_forge_result(
             }
 
             final_state.status = AgentStatus::Completed;
+            mark_run_completed(&mut final_state);
             {
                 let mut current_state = state.current_state.lock().await;
                 *current_state = Some(final_state);
@@ -988,7 +1069,7 @@ async fn handle_forge_result(
                 let mut current_state = state.current_state.lock().await;
                 if let Some(ref mut current) = *current_state {
                     current.status = AgentStatus::Error;
-                    current.error = Some(err.clone());
+                    mark_run_failed(current, err.clone());
                 }
             }
             {
@@ -1019,337 +1100,6 @@ async fn handle_forge_result(
     emit_queue_updated(&app, state).await;
 
     Ok(true)
-}
-
-// ============ Deep Research 状态管理 ============
-
-/// Deep Research 状态管理
-pub struct DeepResearchStateManager {
-    is_running: Arc<Mutex<bool>>,
-    /// 保存中断时的检查点（用于恢复执行）
-    checkpoint: Arc<Mutex<Option<Checkpoint<DeepResearchState>>>>,
-    /// 保存当前配置（用于恢复时重建图）
-    current_config: Arc<Mutex<Option<DeepResearchConfig>>>,
-}
-
-impl DeepResearchStateManager {
-    pub fn new() -> Self {
-        Self {
-            is_running: Arc::new(Mutex::new(false)),
-            checkpoint: Arc::new(Mutex::new(None)),
-            current_config: Arc::new(Mutex::new(None)),
-        }
-    }
-}
-
-impl Default for DeepResearchStateManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// ============ Deep Research 命令 ============
-
-/// 启动 Deep Research 任务
-#[tauri::command]
-pub async fn deep_research_start(
-    app: AppHandle,
-    state: State<'_, DeepResearchStateManager>,
-    config: DeepResearchConfig,
-    request: DeepResearchRequest,
-) -> Result<(), String> {
-    // 检查是否已在运行
-    {
-        let mut is_running = state.is_running.lock().await;
-        if *is_running {
-            return Err("Deep Research is already running".to_string());
-        }
-        *is_running = true;
-    }
-
-    // 判断搜索模式：如果有预搜索结果则用语义搜索，否则用关键词搜索
-    let search_mode = if !request.pre_searched_notes.is_empty() {
-        crate::agent::deep_research::SearchMode::Semantic
-    } else {
-        crate::agent::deep_research::SearchMode::Keyword
-    };
-
-    // 构建初始状态
-    let initial_state = DeepResearchState {
-        topic: request.topic,
-        workspace_path: request.workspace_path,
-        search_scope: request.search_scope,
-        search_mode,
-        pre_searched_notes: request.pre_searched_notes,
-        phase: ResearchPhase::Init,
-        keywords: vec![],
-        found_notes: vec![],
-        web_search_results: vec![],
-        crawled_pages: vec![],
-        read_notes: vec![],
-        outline: None,
-        report: None,
-        report_chunks: vec![],
-        goto: String::new(),
-        error: None,
-        clarification: None, // 澄清字段，interrupt 恢复后填充
-    };
-
-    // 发送开始事件
-    let _ = app.emit(
-        "deep-research-event",
-        DeepResearchEvent::PhaseChange {
-            phase: ResearchPhase::Init,
-            message: "开始深度研究...".to_string(),
-        },
-    );
-
-    // 创建配置，合并请求中的选项
-    let mut final_config = config;
-    final_config.report_style = request.report_style;
-    final_config.include_citations = request.include_citations;
-
-    // 保存配置（用于 resume 时重建图）
-    {
-        let mut config_lock = state.current_config.lock().await;
-        *config_lock = Some(final_config.clone());
-    }
-
-    // 异步执行研究
-    let app_clone = app.clone();
-    let state_is_running = state.is_running.clone();
-    let state_checkpoint = state.checkpoint.clone();
-    let http_client = app.state::<crate::proxy::ProxyState>().client().await;
-
-    tokio::spawn(async move {
-        let result = run_deep_research_resumable(
-            app_clone.clone(),
-            final_config,
-            initial_state,
-            state_checkpoint.clone(),
-            http_client,
-        )
-        .await;
-
-        match result {
-            Ok(exec_result) => {
-                match exec_result {
-                    ExecutionResult::Complete(_final_state) => {
-                        // 成功完成（事件已在节点中发送）
-                        let mut is_running = state_is_running.lock().await;
-                        *is_running = false;
-                    }
-                    ExecutionResult::Interrupted {
-                        checkpoint,
-                        interrupts: _,
-                    } => {
-                        // 保存检查点，等待用户输入
-                        let mut cp_lock = state_checkpoint.lock().await;
-                        *cp_lock = Some(checkpoint);
-                        // 中断时也设为 false，因为研究已暂停
-                        // resume 时会重新设为 true
-                        let mut is_running = state_is_running.lock().await;
-                        *is_running = false;
-                    }
-                }
-            }
-            Err(e) => {
-                let _ = app_clone.emit(
-                    "deep-research-event",
-                    DeepResearchEvent::Error { message: e },
-                );
-                let mut is_running = state_is_running.lock().await;
-                *is_running = false;
-            }
-        }
-    });
-
-    Ok(())
-}
-
-/// 执行 Deep Research（支持中断/恢复）
-async fn run_deep_research_resumable(
-    app: AppHandle,
-    config: DeepResearchConfig,
-    initial_state: DeepResearchState,
-    _checkpoint_store: Arc<Mutex<Option<Checkpoint<DeepResearchState>>>>,
-    http_client: reqwest::Client,
-) -> Result<ExecutionResult<DeepResearchState>, String> {
-    // 创建执行上下文
-    let ctx = DeepResearchContext::new(app, config.clone(), http_client);
-
-    // 构建图
-    let graph = build_deep_research_graph(ctx)
-        .map_err(|e| format!("Failed to build deep research graph: {}", e))?;
-
-    // 配置并执行
-    let graph = graph.with_max_iterations(20).with_debug(false);
-
-    // 使用可中断执行
-    graph
-        .invoke_resumable(initial_state)
-        .await
-        .map_err(|e| format!("Deep research execution error: {}", e))
-}
-
-/// 恢复 Deep Research 任务（用户提供澄清后）
-#[tauri::command]
-pub async fn deep_research_resume(
-    app: AppHandle,
-    state: State<'_, DeepResearchStateManager>,
-    clarification: String,
-) -> Result<(), String> {
-    // 获取保存的检查点和配置
-    let checkpoint = {
-        let mut cp_lock = state.checkpoint.lock().await;
-        cp_lock.take()
-    };
-
-    let config = {
-        let config_lock = state.current_config.lock().await;
-        config_lock.clone()
-    };
-
-    let checkpoint =
-        checkpoint.ok_or("No checkpoint found. Research may not be in clarification state.")?;
-    let config = config.ok_or("No config found.")?;
-
-    // 设置为运行中
-    {
-        let mut is_running = state.is_running.lock().await;
-        *is_running = true;
-    }
-
-    // 更新状态，添加用户澄清
-    let mut resumed_checkpoint = checkpoint;
-    resumed_checkpoint.state.clarification = Some(clarification.clone());
-    resumed_checkpoint.state.phase = ResearchPhase::AnalyzingTopic; // 重新进入分析阶段
-
-    // 发送恢复事件
-    let _ = app.emit(
-        "deep-research-event",
-        DeepResearchEvent::PhaseChange {
-            phase: ResearchPhase::AnalyzingTopic,
-            message: format!("收到用户澄清，继续研究: {}", clarification),
-        },
-    );
-
-    // 异步恢复执行
-    let app_clone = app.clone();
-    let state_is_running = state.is_running.clone();
-    let state_checkpoint = state.checkpoint.clone();
-    let http_client = app.state::<crate::proxy::ProxyState>().client().await;
-
-    tokio::spawn(async move {
-        // 创建执行上下文
-        let ctx = DeepResearchContext::new(app_clone.clone(), config.clone(), http_client);
-
-        // 构建图
-        let graph = match build_deep_research_graph(ctx) {
-            Ok(g) => g.with_max_iterations(20).with_debug(false),
-            Err(e) => {
-                let _ = app_clone.emit(
-                    "deep-research-event",
-                    DeepResearchEvent::Error {
-                        message: format!("Failed to rebuild graph: {}", e),
-                    },
-                );
-                return;
-            }
-        };
-
-        // 恢复执行（兼容 Forge 多中断恢复规则）
-        let resume_cmd = if resumed_checkpoint.pending_interrupts.len() > 1 {
-            let values = resumed_checkpoint
-                .pending_interrupts
-                .iter()
-                .map(|interrupt| {
-                    (
-                        interrupt.id.clone(),
-                        serde_json::json!(clarification.clone()),
-                    )
-                })
-                .collect();
-            ResumeCommand::with_map(values)
-        } else if let Some(interrupt) = resumed_checkpoint.pending_interrupts.first() {
-            ResumeCommand::with_id(clarification.clone(), interrupt.id.clone())
-        } else {
-            ResumeCommand::new(clarification.clone())
-        };
-        let result = graph.resume(resumed_checkpoint, resume_cmd).await;
-
-        match result {
-            Ok(exec_result) => {
-                match exec_result {
-                    ExecutionResult::Complete(_final_state) => {
-                        // 成功完成
-                        let mut is_running = state_is_running.lock().await;
-                        *is_running = false;
-                    }
-                    ExecutionResult::Interrupted {
-                        checkpoint,
-                        interrupts: _,
-                    } => {
-                        // 又一次中断（可能需要更多澄清）
-                        let mut cp_lock = state_checkpoint.lock().await;
-                        *cp_lock = Some(checkpoint);
-                    }
-                }
-            }
-            Err(e) => {
-                let _ = app_clone.emit(
-                    "deep-research-event",
-                    DeepResearchEvent::Error {
-                        message: format!("Resume error: {}", e),
-                    },
-                );
-                let mut is_running = state_is_running.lock().await;
-                *is_running = false;
-            }
-        }
-    });
-
-    Ok(())
-}
-
-/// 中止 Deep Research 任务
-#[tauri::command]
-pub async fn deep_research_abort(
-    app: AppHandle,
-    state: State<'_, DeepResearchStateManager>,
-) -> Result<(), String> {
-    // 清空检查点
-    {
-        let mut cp_lock = state.checkpoint.lock().await;
-        *cp_lock = None;
-    }
-
-    {
-        let mut is_running = state.is_running.lock().await;
-        if !*is_running {
-            return Ok(());
-        }
-        *is_running = false;
-    }
-
-    // 发送中止事件
-    let _ = app.emit(
-        "deep-research-event",
-        DeepResearchEvent::Error {
-            message: "研究已被中止".to_string(),
-        },
-    );
-
-    Ok(())
-}
-
-/// 获取 Deep Research 运行状态
-#[tauri::command]
-pub async fn deep_research_is_running(
-    state: State<'_, DeepResearchStateManager>,
-) -> Result<bool, String> {
-    let is_running = state.is_running.lock().await;
-    Ok(*is_running)
 }
 
 // ============ 调试命令 ============

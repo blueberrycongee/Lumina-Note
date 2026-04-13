@@ -15,6 +15,7 @@ import {
 import { readFile } from "@/lib/tauri";
 import {
   callLLMStream,
+  buildConfigOverrideForPurpose,
   normalizeThinkingMode,
   supportsThinkingModeSwitch,
   type LLMProviderType,
@@ -449,7 +450,7 @@ export const useAIStore = create<AIState>()(
             response = await chat(
               modelMessages,
               filesToSend,
-              undefined,
+              buildConfigOverrideForPurpose(config, "chat"),
               { intent: "chat" }
             );
           } catch (chatError) {
@@ -690,7 +691,11 @@ export const useAIStore = create<AIState>()(
           let reasoningContent = "";
           
           // 流式接收内容
-          for await (const chunk of callLLMStream(llmMessages, { useDefaultTemperature: true, signal: abortController.signal })) {
+          for await (const chunk of callLLMStream(
+            llmMessages,
+            { useDefaultTemperature: true, signal: abortController.signal },
+            buildConfigOverrideForPurpose(runtimeConfig, "chat"),
+          )) {
             // 每次迭代检查 abort 信号，确保用户点击停止后立即退出循环
             if (abortController.signal.aborted) break;
 

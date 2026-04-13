@@ -30,7 +30,7 @@
 
 - **로컬 우선 설계**: 볼트는 로컬에 보관되며, 어떤 내용을 모델 제공자에게 보낼지 직접 결정할 수 있습니다.
 - **지식 작업 흐름 중심**: Markdown 편집, WikiLinks, 그래프 뷰, AI 검색이 하나의 시스템으로 이어집니다.
-- **실제로 작업하는 AI**: `Chat`, `Agent`, `Deep Research`, `Codex` 모드가 편집과 리서치 작업을 지원합니다.
+- **실제로 작업하는 AI**: `Chat`, `Agent`, `Codex` 모드가 실제 편집, 계획, 자동화 작업을 지원합니다.
 
 ---
 
@@ -70,8 +70,10 @@
 
 <h3 align="center">AI 워크스페이스</h3>
 
-- 모드: `Chat` / `Agent` / `Deep Research` / `Codex` (사이드바에 내장된 VS Code 확장)
+- 모드: `Chat` / `Agent` / `Codex` (사이드바에 내장된 VS Code 확장)
 - 다중 모델 제공자 지원: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- 목적별로 간단하게 모델을 나눠 설정: `Main Model` / `Chat Model` / `Complex Task Model`
+- 무거운 작업은 오케스트레이션 Agent 런타임으로 보내고, 단순 요청은 빠른 경로를 유지
 - 로컬 볼트를 대상으로 한 시맨틱 검색(RAG)
 
 <h3 align="center">에디터와 지식 그래프</h3>
@@ -109,7 +111,7 @@
 
 1. Releases 에서 Lumina Note 를 설치합니다.
 2. 처음 실행할 때 로컬 폴더를 볼트로 선택합니다.
-3. AI 패널에서 모델 제공자와 API 키를 설정합니다.
+3. AI 패널에서 모델 제공자와 API 키를 설정하고, 필요하면 Dynamic Routing 에서 `Main` / `Chat` / `Complex Task` 모델을 정합니다.
 4. 첫 노트를 만들고 `[[WikiLinks]]` 로 연결을 시작합니다.
 
 ---

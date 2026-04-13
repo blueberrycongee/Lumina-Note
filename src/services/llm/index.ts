@@ -29,6 +29,12 @@ export type {
 
 // Provider 注册表
 export { PROVIDER_REGISTRY } from "./types";
+export {
+  buildConfigOverrideForPurpose,
+  FOLLOW_MAIN_MODEL,
+  getResolvedModelForPurpose,
+  hasPurposeModelOverride,
+} from "./routing";
 
 // 配置管理
 export { getLLMConfig, setLLMConfig, resetLLMConfig } from "./config";

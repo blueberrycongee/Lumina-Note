@@ -13,7 +13,6 @@ import {
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
-  Microscope,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -85,17 +84,13 @@ export function ConversationList({ className }: ConversationListProps) {
           
           // 根据类型选择图标
           const Icon = session.type === "agent" 
-            ? Bot 
-            : session.type === "research" 
-              ? Microscope 
-              : MessageSquare;
+            ? Bot
+            : MessageSquare;
           
           // 图标颜色
           const iconColor = session.type === "agent" 
             ? "text-purple-500" 
-            : session.type === "research"
-              ? "text-emerald-500"
-              : "text-slate-500";
+            : "text-slate-500";
 
           return (
             <div
@@ -136,11 +131,6 @@ export function ConversationList({ className }: ConversationListProps) {
                     {session.type === "agent" && (
                       <span className="text-[10px] text-purple-600 bg-purple-50 dark:bg-purple-900/30 px-1.5 rounded-full inline-block mt-0.5">
                         Agent
-                      </span>
-                    )}
-                    {session.type === "research" && (
-                      <span className="text-[10px] text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 rounded-full inline-block mt-0.5">
-                        Research
                       </span>
                     )}
                   </div>

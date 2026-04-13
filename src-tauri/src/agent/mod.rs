@@ -4,9 +4,9 @@
 
 pub mod commands;
 pub mod debug_log;
-pub mod deep_research;
 pub mod forge_loop;
 pub mod llm_client;
+pub mod orchestrator;
 pub mod skills;
 pub mod types;
 

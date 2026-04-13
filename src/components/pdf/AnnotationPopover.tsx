@@ -101,9 +101,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     setRightSidebarOpen(true);
     setRightPanelTab('chat');
     setFloatingPanelOpen(true);
-    if (chatMode === 'research') {
-      useAIStore.getState().enqueueInputAppend(citationText);
-    } else if (chatMode === 'codex') {
+    if (chatMode === 'codex') {
       navigator.clipboard.writeText(citationText).catch((err) => {
         console.warn('Failed to copy PDF selection for Codex:', err);
       });
