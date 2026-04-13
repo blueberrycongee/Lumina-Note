@@ -10,6 +10,7 @@ import {
   extractDurableMemories,
   hasDurableMemories,
   loadDurableMemorySnapshot,
+  reverifyDurableMemoryEntry,
 } from "./durableMemory";
 
 describe("durableMemory", () => {
@@ -32,6 +33,7 @@ describe("durableMemory", () => {
           version: 1,
           created_at: 100,
           updated_at: 120,
+          last_verified_at: 125,
           source_refs: [
             {
               session_id: "session-1",
@@ -42,6 +44,9 @@ describe("durableMemory", () => {
           history: [],
         },
       ],
+      wiki_root: "/vault/memory/wiki",
+      wiki_pages: [],
+      stale_entry_ids: [],
       merge_results: [],
       extraction_in_flight: false,
       last_extracted_at: 120,
@@ -56,6 +61,7 @@ describe("durableMemory", () => {
     });
     expect(snapshot?.entries[0].filePath).toContain("/memory/identity/");
     expect(snapshot?.entries[0].visibility).toBe("private");
+    expect(snapshot?.entries[0].lastVerifiedAt).toBe(125);
     expect(hasDurableMemories(snapshot)).toBe(true);
   });
 
@@ -94,6 +100,18 @@ describe("durableMemory", () => {
 
   it("returns false when snapshot is empty", () => {
     expect(hasDurableMemories(null)).toBe(false);
+  });
+
+  it("delegates durable memory reverification to rust", async () => {
+    await reverifyDurableMemoryEntry("/vault", "entry-1");
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      "agent_reverify_durable_memory_entry",
+      expect.objectContaining({
+        workspacePath: "/vault",
+        entryId: "entry-1",
+      }),
+    );
   });
 
   it("delegates durable memory manual upsert to rust", async () => {

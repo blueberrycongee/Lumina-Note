@@ -49,8 +49,18 @@ export interface MemoryEntry {
   version: number;
   createdAt: number;
   updatedAt: number;
+  lastVerifiedAt: number | null;
   sourceRefs: MemorySourceRef[];
   history: MemoryEntryVersion[];
+}
+
+export interface WikiPageSummary {
+  id: string;
+  title: string;
+  path: string;
+  entryIds: string[];
+  staleEntryCount: number;
+  updatedAt: number | null;
 }
 
 export interface MemoryMergeResult {
@@ -66,6 +76,9 @@ export interface DurableMemorySnapshot {
   workspacePath: string;
   manifestPath: string;
   entries: MemoryEntry[];
+  wikiRoot: string;
+  wikiPages: WikiPageSummary[];
+  staleEntryIds: string[];
   mergeResults: MemoryMergeResult[];
   extractionInFlight: boolean;
   lastExtractedAt: number | null;
@@ -127,8 +140,18 @@ interface BackendMemoryEntry {
   version: number;
   created_at: number;
   updated_at: number;
+  last_verified_at?: number | null;
   source_refs: BackendMemorySourceRef[];
   history: BackendMemoryEntryVersion[];
+}
+
+interface BackendWikiPageSummary {
+  id: string;
+  title: string;
+  path: string;
+  entry_ids: string[];
+  stale_entry_count: number;
+  updated_at?: number | null;
 }
 
 interface BackendMemoryMergeResult {
@@ -144,6 +167,9 @@ interface BackendDurableMemorySnapshot {
   workspace_path: string;
   manifest_path: string;
   entries: BackendMemoryEntry[];
+  wiki_root?: string;
+  wiki_pages?: BackendWikiPageSummary[];
+  stale_entry_ids?: string[];
   merge_results: BackendMemoryMergeResult[];
   extraction_in_flight: boolean;
   last_extracted_at?: number | null;
@@ -199,8 +225,20 @@ function toFrontendEntry(entry: BackendMemoryEntry): MemoryEntry {
     version: entry.version,
     createdAt: entry.created_at,
     updatedAt: entry.updated_at,
+    lastVerifiedAt: entry.last_verified_at ?? null,
     sourceRefs: entry.source_refs.map(toFrontendSourceRef),
     history: entry.history.map(toFrontendEntryVersion),
+  };
+}
+
+function toFrontendWikiPage(page: BackendWikiPageSummary): WikiPageSummary {
+  return {
+    id: page.id,
+    title: page.title,
+    path: page.path,
+    entryIds: page.entry_ids,
+    staleEntryCount: page.stale_entry_count,
+    updatedAt: page.updated_at ?? null,
   };
 }
 
@@ -220,6 +258,9 @@ function toFrontendSnapshot(snapshot: BackendDurableMemorySnapshot): DurableMemo
     workspacePath: snapshot.workspace_path,
     manifestPath: snapshot.manifest_path,
     entries: snapshot.entries.map(toFrontendEntry),
+    wikiRoot: snapshot.wiki_root ?? "",
+    wikiPages: (snapshot.wiki_pages ?? []).map(toFrontendWikiPage),
+    staleEntryIds: snapshot.stale_entry_ids ?? [],
     mergeResults: snapshot.merge_results.map(toFrontendMergeResult),
     extractionInFlight: snapshot.extraction_in_flight,
     lastExtractedAt: snapshot.last_extracted_at ?? null,
@@ -329,6 +370,21 @@ export async function deleteDurableMemoryEntry(
   if (!workspacePath || !entryId) return null;
   const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
     "agent_delete_durable_memory_entry",
+    {
+      workspacePath,
+      entryId,
+    },
+  );
+  return toFrontendSnapshot(snapshot);
+}
+
+export async function reverifyDurableMemoryEntry(
+  workspacePath: string,
+  entryId: string,
+): Promise<DurableMemorySnapshot | null> {
+  if (!workspacePath || !entryId) return null;
+  const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
+    "agent_reverify_durable_memory_entry",
     {
       workspacePath,
       entryId,

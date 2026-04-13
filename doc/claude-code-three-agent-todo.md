@@ -349,36 +349,36 @@
 
 建议 wiki 形态：
 
-- [ ] `Me`
+- [x] `Me`
   - 用户自我画像
-- [ ] `Timeline`
+- [x] `Timeline`
   - 最近阶段、重要演化
-- [ ] `Projects`
+- [x] `Projects`
   - 每个项目一组页面
-- [ ] `People`
+- [x] `People`
   - 人物与关系
-- [ ] `Preferences`
+- [x] `Preferences`
   - 写作风格、工具偏好、习惯
-- [ ] `Routines`
+- [x] `Routines`
   - 重复流程与模板
-- [ ] `Beliefs / Open Questions`
+- [x] `Beliefs / Open Questions`
   - 仍不确定的事情、待验证认知
 
 产品动作：
 
-- [ ] 将 durable memory 自动映射到 wiki 页面
-- [ ] 支持 wiki 页面之间的双链和引用
-- [ ] 支持“该结论来自哪些对话/文档”
-- [ ] 支持“这条记忆最近一次被验证是什么时候”
-- [ ] 支持 stale memory 检测与重验证
+- [x] 将 durable memory 自动映射到 wiki 页面
+- [x] 支持 wiki 页面之间的双链和引用
+- [x] 支持“该结论来自哪些对话/文档”
+- [x] 支持“这条记忆最近一次被验证是什么时候”
+- [x] 支持 stale memory 检测与重验证
 
 建议新增目录或数据库：
 
-- `Wiki/Me/`（待新增）
-- `Wiki/Projects/`（待新增）
-- `Wiki/People/`（待新增）
-- `Wiki/Preferences/`（待新增）
-- `Wiki/Patterns/`（待新增）
+- `memory/wiki/Me/`（已落地）
+- `memory/wiki/Projects/`（已落地）
+- `memory/wiki/People/`（已落地）
+- `memory/wiki/Preferences/`（已落地）
+- `memory/wiki/Routines/`（已落地）
 
 ---
 

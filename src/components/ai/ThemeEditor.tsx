@@ -191,7 +191,11 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             >
               {previewMode === 'light' ? <Moon size={16} /> : <Sun size={16} />}
             </button>
-            <button onClick={onClose} className="p-2 rounded hover:bg-accent transition-colors">
+            <button
+              onClick={onClose}
+              className="p-2 rounded hover:bg-accent transition-colors"
+              title={t.themeEditor.cancel}
+            >
               <X size={16} />
             </button>
           </div>
@@ -235,6 +239,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent'
                   }`}
+                  title={`切换到颜色分组：${t.themeEditor[group.nameKey as keyof typeof t.themeEditor] || group.nameKey}`}
                 >
                   {t.themeEditor[group.nameKey as keyof typeof t.themeEditor] || group.nameKey}
                 </button>
@@ -332,6 +337,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             <button
               onClick={() => setShowImport(!showImport)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors"
+              title={showImport ? t.themeEditor.cancel : t.themeEditor.import}
             >
               <Upload size={14} />
               {t.themeEditor.import}
@@ -339,6 +345,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             <button
               onClick={handleExport}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors"
+              title={t.themeEditor.copyJson}
             >
               <Copy size={14} />
               {t.themeEditor.copyJson}
@@ -346,6 +353,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             <button
               onClick={handleDownload}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded hover:bg-accent transition-colors"
+              title={t.themeEditor.download}
             >
               <Download size={14} />
               {t.themeEditor.download}
@@ -356,12 +364,14 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             <button
               onClick={onClose}
               className="px-4 py-1.5 text-sm rounded hover:bg-accent transition-colors"
+              title={t.themeEditor.cancel}
             >
               {t.themeEditor.cancel}
             </button>
             <button
               onClick={handleSave}
               className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:opacity-90 transition-opacity"
+              title={t.themeEditor.saveToVault}
             >
               <Save size={14} />
               {t.themeEditor.saveToVault}
@@ -382,12 +392,14 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
               <button
                 onClick={() => setShowImport(false)}
                 className="px-3 py-1 text-sm rounded hover:bg-accent"
+                title={t.themeEditor.cancel}
               >
                 {t.themeEditor.cancel}
               </button>
               <button
                 onClick={handleImport}
                 className="px-3 py-1 text-sm bg-primary text-primary-foreground rounded"
+                title={t.themeEditor.import}
               >
                 {t.themeEditor.import}
               </button>

@@ -39,6 +39,7 @@ pub use agent::{
     agent_disable_debug, agent_enable_debug, agent_extract_durable_memories,
     agent_get_debug_log_path, agent_get_durable_memory_snapshot, agent_get_queue_status,
     agent_get_session_memory_snapshot, agent_get_status, agent_is_debug_enabled,
+    agent_reverify_durable_memory_entry,
     agent_reset_session_memory, agent_start_task, agent_update_session_memory,
     agent_upsert_durable_memory_entry, AgentState,
 };

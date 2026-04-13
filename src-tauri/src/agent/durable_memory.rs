@@ -12,6 +12,18 @@ use tauri::Manager;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+const MEMORY_STALE_AFTER_DAYS: u64 = 30;
+
+const WIKI_SECTIONS: [(&str, &str); 7] = [
+    ("Me", "me"),
+    ("Timeline", "timeline"),
+    ("Projects", "projects"),
+    ("People", "people"),
+    ("Preferences", "preferences"),
+    ("Routines", "routines"),
+    ("Beliefs-Open-Questions", "beliefs_open_questions"),
+];
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum MemoryScope {
@@ -173,8 +185,20 @@ pub struct MemoryEntry {
     pub version: u32,
     pub created_at: u64,
     pub updated_at: u64,
+    #[serde(default)]
+    pub last_verified_at: Option<u64>,
     pub source_refs: Vec<MemorySourceRef>,
     pub history: Vec<MemoryEntryVersion>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WikiPageSummary {
+    pub id: String,
+    pub title: String,
+    pub path: String,
+    pub entry_ids: Vec<String>,
+    pub stale_entry_count: usize,
+    pub updated_at: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -220,6 +244,9 @@ pub struct DurableMemorySnapshot {
     pub workspace_path: String,
     pub manifest_path: String,
     pub entries: Vec<MemoryEntry>,
+    pub wiki_root: String,
+    pub wiki_pages: Vec<WikiPageSummary>,
+    pub stale_entry_ids: Vec<String>,
     pub merge_results: Vec<MemoryMergeResult>,
     pub extraction_in_flight: bool,
     pub last_extracted_at: Option<u64>,
@@ -356,6 +383,16 @@ fn build_manifest_path(workspace_path: &str) -> PathBuf {
     build_manifest_dir(workspace_path).join("manifest.json")
 }
 
+fn build_wiki_root(workspace_path: &str) -> PathBuf {
+    build_durable_root(workspace_path).join("wiki")
+}
+
+fn build_wiki_section_path(workspace_path: &str, section: &str) -> PathBuf {
+    build_wiki_root(workspace_path)
+        .join(section)
+        .join("README.md")
+}
+
 fn build_scope_dir(workspace_path: &str, scope: &MemoryScope) -> PathBuf {
     build_durable_root(workspace_path).join(scope.dir_name())
 }
@@ -381,6 +418,55 @@ fn estimate_tokens(text: &str) -> usize {
     let ascii = text.chars().filter(|ch| ch.is_ascii()).count();
     let non_ascii = text.chars().count().saturating_sub(ascii);
     ascii.div_ceil(4) + non_ascii.div_ceil(2)
+}
+
+fn age_days_from(now: u64, timestamp: u64) -> u64 {
+    if now <= timestamp {
+        return 0;
+    }
+    (now - timestamp) / 86_400_000
+}
+
+fn entry_last_verified_at(entry: &MemoryEntry) -> u64 {
+    entry.last_verified_at.unwrap_or(entry.updated_at)
+}
+
+fn entry_is_stale(entry: &MemoryEntry, now: u64) -> bool {
+    age_days_from(now, entry_last_verified_at(entry)) > MEMORY_STALE_AFTER_DAYS
+}
+
+fn likely_doc_ref(token: &str) -> bool {
+    let cleaned = token
+        .trim()
+        .trim_matches(|ch: char| "()[]{}<>,.:;\"'`".contains(ch));
+    if cleaned.is_empty() || cleaned.contains("//") {
+        return false;
+    }
+    let lower = cleaned.to_ascii_lowercase();
+    [
+        ".md", ".ts", ".tsx", ".js", ".jsx", ".rs", ".py", ".json", ".toml", ".yaml",
+        ".yml",
+    ]
+    .iter()
+    .any(|suffix| lower.ends_with(suffix))
+}
+
+fn extract_document_refs(entry: &MemoryEntry) -> Vec<String> {
+    let mut refs = BTreeSet::new();
+    for token in entry
+        .summary
+        .split_whitespace()
+        .chain(entry.details.split_whitespace())
+    {
+        if likely_doc_ref(token) {
+            refs.insert(
+                token
+                    .trim_matches(|ch: char| "()[]{}<>,.:;\"'`".contains(ch))
+                    .to_string(),
+            );
+        }
+    }
+    refs.into_iter().take(6).collect()
 }
 
 fn estimate_message_tokens(messages: &[Message]) -> usize {
@@ -497,6 +583,17 @@ async fn save_manifest(
 }
 
 fn render_memory_markdown(entry: &MemoryEntry) -> String {
+    let now = now_millis();
+    let verified_at = entry_last_verified_at(entry);
+    let stale_days = age_days_from(now, verified_at);
+    let stale_note = if stale_days > MEMORY_STALE_AFTER_DAYS {
+        format!(
+            "Potentially stale ({} days since last verification)",
+            stale_days
+        )
+    } else {
+        "Fresh enough for default use".to_string()
+    };
     let tags = if entry.tags.is_empty() {
         "[]".to_string()
     } else {
@@ -551,7 +648,7 @@ fn render_memory_markdown(entry: &MemoryEntry) -> String {
     };
 
     format!(
-        "---\nid: {}\nscope: {}\nvisibility: {:?}\nconfidence: {:?}\nversion: {}\ncreated_at: {}\nupdated_at: {}\ntags: {}\n---\n\n# {}\n\n{}\n\n## Scope Guidance\n\n- Read rule: {}\n- Write rule: {}\n\n## Details\n\n{}\n\n## Sources\n\n{}\n\n## History\n\n{}\n",
+        "---\nid: {}\nscope: {}\nvisibility: {:?}\nconfidence: {:?}\nversion: {}\ncreated_at: {}\nupdated_at: {}\nlast_verified_at: {}\ntags: {}\n---\n\n# {}\n\n{}\n\n## Verification\n\n- Last verified at: {}\n- Staleness: {}\n\n## Scope Guidance\n\n- Read rule: {}\n- Write rule: {}\n\n## Details\n\n{}\n\n## Sources\n\n{}\n\n## History\n\n{}\n",
         entry.id,
         entry.scope.dir_name(),
         entry.visibility,
@@ -559,9 +656,12 @@ fn render_memory_markdown(entry: &MemoryEntry) -> String {
         entry.version,
         entry.created_at,
         entry.updated_at,
+        verified_at,
         tags,
         entry.title,
         entry.summary,
+        verified_at,
+        stale_note,
         entry.scope.read_rule(),
         entry.scope.write_rule(),
         entry.details,
@@ -575,6 +675,168 @@ async fn write_entry_file(entry: &MemoryEntry) -> Result<(), String> {
     tokio::fs::write(&entry.file_path, body)
         .await
         .map_err(|err| format!("Failed to write durable memory entry: {}", err))
+}
+
+fn render_sources_line(entry: &MemoryEntry) -> String {
+    let mut parts = Vec::new();
+    for source in entry.source_refs.iter().rev().take(2) {
+        parts.push(format!("conversation:{}", source.session_id));
+    }
+    for doc in extract_document_refs(entry) {
+        parts.push(format!("doc:{}", doc));
+    }
+    if parts.is_empty() {
+        "none".to_string()
+    } else {
+        parts.join(", ")
+    }
+}
+
+fn render_entry_wiki_bullet(entry: &MemoryEntry, now: u64) -> String {
+    let stale = if entry_is_stale(entry, now) {
+        "stale"
+    } else {
+        "fresh"
+    };
+    format!(
+        "- [[{}]] (`{}` / {:?} / {:?}, {})\n  - sources: {}\n  - last_verified_at: {}",
+        entry.title,
+        entry.id,
+        entry.scope,
+        entry.confidence,
+        stale,
+        render_sources_line(entry),
+        entry_last_verified_at(entry)
+    )
+}
+
+fn section_entries<'a>(manifest: &'a DurableMemoryManifest, page_id: &str) -> Vec<&'a MemoryEntry> {
+    let mut entries = manifest.entries.iter().collect::<Vec<_>>();
+    entries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    match page_id {
+        "me" => entries
+            .into_iter()
+            .filter(|entry| entry.scope == MemoryScope::UserIdentity)
+            .collect(),
+        "timeline" => entries,
+        "projects" => entries
+            .into_iter()
+            .filter(|entry| entry.scope == MemoryScope::Project)
+            .collect(),
+        "people" => entries
+            .into_iter()
+            .filter(|entry| entry.scope == MemoryScope::Relationship)
+            .collect(),
+        "preferences" => entries
+            .into_iter()
+            .filter(|entry| {
+                entry.scope == MemoryScope::UserIdentity || entry.scope == MemoryScope::Pattern
+            })
+            .collect(),
+        "routines" => entries
+            .into_iter()
+            .filter(|entry| entry.scope == MemoryScope::Pattern)
+            .collect(),
+        "beliefs_open_questions" => entries
+            .into_iter()
+            .filter(|entry| {
+                entry.confidence == MemoryConfidence::Low
+                    || entry.summary.contains("?")
+                    || entry.details.contains("待确认")
+                    || entry.details.to_ascii_lowercase().contains("open question")
+            })
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn render_wiki_page(
+    title: &str,
+    page_id: &str,
+    entries: &[&MemoryEntry],
+    now: u64,
+) -> String {
+    let nav = WIKI_SECTIONS
+        .iter()
+        .map(|(section_title, _)| format!("[[{}]]", section_title))
+        .collect::<Vec<_>>()
+        .join(" · ");
+    let stale_count = entries
+        .iter()
+        .filter(|entry| entry_is_stale(entry, now))
+        .count();
+    let body = if entries.is_empty() {
+        "- No mapped durable memories yet.".to_string()
+    } else {
+        entries
+            .iter()
+            .take(50)
+            .map(|entry| render_entry_wiki_bullet(entry, now))
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    format!(
+        "---\npage: {}\nentry_count: {}\nstale_entry_count: {}\ngenerated_at: {}\n---\n\n# {}\n\n## Navigation\n\n{}\n\n## Entries\n\n{}\n",
+        page_id,
+        entries.len(),
+        stale_count,
+        now,
+        title,
+        nav,
+        body
+    )
+}
+
+fn build_wiki_page_summaries(
+    workspace_path: &str,
+    manifest: &DurableMemoryManifest,
+) -> Vec<WikiPageSummary> {
+    let now = now_millis();
+    WIKI_SECTIONS
+        .iter()
+        .map(|(section_title, page_id)| {
+            let entries = section_entries(manifest, page_id);
+            WikiPageSummary {
+                id: (*page_id).to_string(),
+                title: (*section_title).to_string(),
+                path: build_wiki_section_path(workspace_path, section_title)
+                    .display()
+                    .to_string(),
+                entry_ids: entries.iter().map(|entry| entry.id.clone()).collect(),
+                stale_entry_count: entries
+                    .iter()
+                    .filter(|entry| entry_is_stale(entry, now))
+                    .count(),
+                updated_at: entries.iter().map(|entry| entry.updated_at).max(),
+            }
+        })
+        .collect()
+}
+
+async fn sync_wiki_from_manifest(
+    workspace_path: &str,
+    manifest: &DurableMemoryManifest,
+) -> Result<(), String> {
+    let wiki_root = build_wiki_root(workspace_path);
+    tokio::fs::create_dir_all(&wiki_root)
+        .await
+        .map_err(|err| format!("Failed to create wiki root: {}", err))?;
+
+    let now = now_millis();
+    for (section_title, page_id) in WIKI_SECTIONS {
+        let section_dir = wiki_root.join(section_title);
+        tokio::fs::create_dir_all(&section_dir)
+            .await
+            .map_err(|err| format!("Failed to create wiki section dir: {}", err))?;
+        let entries = section_entries(manifest, page_id);
+        let markdown = render_wiki_page(section_title, page_id, &entries, now);
+        tokio::fs::write(section_dir.join("README.md"), markdown)
+            .await
+            .map_err(|err| format!("Failed to write wiki page {}: {}", section_title, err))?;
+    }
+
+    Ok(())
 }
 
 fn trim_for_storage(text: &str, max_chars: usize) -> String {
@@ -720,6 +982,7 @@ fn merge_candidate(
         entry.tags = merge_tags(&entry.tags, &candidate.tags);
         entry.source_refs = merge_source_refs(&entry.source_refs, source_ref);
         entry.updated_at = now_millis();
+        entry.last_verified_at = Some(entry.updated_at);
 
         if changed {
             let next_scope = candidate.scope.clone();
@@ -794,6 +1057,7 @@ fn merge_candidate(
         version: 1,
         created_at,
         updated_at: created_at,
+        last_verified_at: Some(created_at),
         source_refs: vec![source_ref],
         history: Vec::new(),
     };
@@ -821,10 +1085,21 @@ fn build_snapshot(
     merge_results: Vec<MemoryMergeResult>,
     state: &DurableMemoryRuntimeState,
 ) -> DurableMemorySnapshot {
+    let now = now_millis();
+    let stale_entry_ids = manifest
+        .entries
+        .iter()
+        .filter(|entry| entry_is_stale(entry, now))
+        .map(|entry| entry.id.clone())
+        .collect::<Vec<_>>();
+    let wiki_pages = build_wiki_page_summaries(workspace_path, &manifest);
     DurableMemorySnapshot {
         workspace_path: workspace_path.to_string(),
         manifest_path: build_manifest_path(workspace_path).display().to_string(),
         entries: manifest.entries,
+        wiki_root: build_wiki_root(workspace_path).display().to_string(),
+        wiki_pages,
+        stale_entry_ids,
         merge_results,
         extraction_in_flight: state.extraction_in_flight,
         last_extracted_at: state.last_extracted_at,
@@ -835,6 +1110,7 @@ pub async fn get_durable_memory_snapshot(
     workspace_path: &str,
 ) -> Result<DurableMemorySnapshot, String> {
     let manifest = load_manifest(workspace_path).await?;
+    sync_wiki_from_manifest(workspace_path, &manifest).await?;
     let state = load_runtime_state(workspace_path).await;
     Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
 }
@@ -1039,6 +1315,7 @@ pub async fn upsert_durable_memory_entry_impl(
     );
     manifest.updated_at = now_millis();
     save_manifest(workspace_path, &manifest).await?;
+    sync_wiki_from_manifest(workspace_path, &manifest).await?;
     if let Some(index) = touched_index {
         if let Some(memory_entry) = manifest.entries.get(index) {
             write_entry_file(memory_entry).await?;
@@ -1073,9 +1350,40 @@ pub async fn delete_durable_memory_entry_impl(
     });
     manifest.updated_at = now_millis();
     save_manifest(workspace_path, &manifest).await?;
+    sync_wiki_from_manifest(workspace_path, &manifest).await?;
     if let Some(path) = removed_path {
         let _ = tokio::fs::remove_file(path).await;
     }
+    let state = load_runtime_state(workspace_path).await;
+    Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
+}
+
+pub async fn reverify_durable_memory_entry_impl(
+    workspace_path: &str,
+    entry_id: &str,
+) -> Result<DurableMemorySnapshot, String> {
+    if workspace_path.trim().is_empty() {
+        return Err("workspace_path is required".to_string());
+    }
+
+    let mut manifest = load_manifest(workspace_path).await?;
+    let now = now_millis();
+    let mut found = false;
+    for entry in manifest.entries.iter_mut() {
+        if entry.id == entry_id {
+            entry.last_verified_at = Some(now);
+            found = true;
+            break;
+        }
+    }
+
+    if !found {
+        return Err(format!("Durable memory entry not found: {}", entry_id));
+    }
+
+    manifest.updated_at = now;
+    save_manifest(workspace_path, &manifest).await?;
+    sync_wiki_from_manifest(workspace_path, &manifest).await?;
     let state = load_runtime_state(workspace_path).await;
     Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
 }
@@ -1249,6 +1557,7 @@ Recent session transcript:\n{}",
 
             manifest.updated_at = now_millis();
             save_manifest(workspace_path, &manifest).await?;
+            sync_wiki_from_manifest(workspace_path, &manifest).await?;
 
             for index in touched_indices {
                 if let Some(entry) = manifest.entries.get(index) {
@@ -1319,6 +1628,14 @@ pub async fn agent_delete_durable_memory_entry(
     delete_durable_memory_entry_impl(&workspace_path, &entry_id).await
 }
 
+#[tauri::command]
+pub async fn agent_reverify_durable_memory_entry(
+    workspace_path: String,
+    entry_id: String,
+) -> Result<DurableMemorySnapshot, String> {
+    reverify_durable_memory_entry_impl(&workspace_path, &entry_id).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1380,6 +1697,7 @@ mod tests {
                 version: 1,
                 created_at,
                 updated_at: created_at,
+                last_verified_at: Some(created_at),
                 source_refs: Vec::new(),
                 history: Vec::new(),
             }],

@@ -119,6 +119,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
           <button
             onClick={onClose}
             className="p-2 rounded-full transition-colors hover:bg-muted"
+            title={t.common.close}
           >
             <X size={18} className="text-foreground/70" />
           </button>
@@ -135,6 +136,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
               <button
                 onClick={handleNewTheme}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg border border-border/60 bg-background/60 hover:bg-muted transition-colors"
+                title={t.settingsModal.createTheme}
               >
                 <Plus size={14} />
                 {t.settingsModal.createTheme}
@@ -159,6 +161,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                       <button
                         onClick={() => setThemeId(theme.id)}
                         className="w-full text-left"
+                        title={`应用主题：${theme.name}`}
                       >
                         {/* 颜色预览 */}
                         <div className="flex gap-1 mb-2">
@@ -219,6 +222,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                       ? "ring-2 ring-primary bg-primary/10"
                       : "bg-background/60 hover:bg-muted/50"
                   }`}
+                  title={`应用主题：${(t.settingsModal.themes as any)?.[theme.id]?.name || theme.name}`}
                 >
                   {/* 颜色预览 */}
                   <div className="flex gap-1 mb-2">
@@ -375,6 +379,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                 onClick={onOpenUpdateModal}
                 data-testid="settings-open-update-modal"
                 className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                title={t.settingsModal.softwareUpdateOpen}
               >
                 {t.settingsModal.softwareUpdateOpen}
               </button>

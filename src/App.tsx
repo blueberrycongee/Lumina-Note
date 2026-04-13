@@ -214,6 +214,43 @@ interface GlobalSearchRequest {
 // 避免在 React 严格模式和 HMR 下重复注册浏览器新标签事件监听
 let browserNewTabListenerRegistered = false;
 const watchedPaths = new Set<string>();
+const AUTO_TOOLTIP_FLAG = "data-lumina-auto-tooltip";
+
+function inferButtonTooltip(button: HTMLButtonElement): string {
+  const ariaLabel = button.getAttribute("aria-label")?.trim();
+  if (ariaLabel) return ariaLabel;
+
+  const dataTooltip = button.getAttribute("data-tooltip")?.trim();
+  if (dataTooltip) return dataTooltip;
+
+  const text = button.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  if (text.length > 0) {
+    return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+  }
+
+  return "点击执行此操作";
+}
+
+function applyAutoButtonTooltips(root: ParentNode) {
+  const buttons = root.querySelectorAll<HTMLButtonElement>("button");
+  buttons.forEach((button) => {
+    const currentTitle = button.getAttribute("title")?.trim() ?? "";
+    const autoTitle = button.getAttribute(AUTO_TOOLTIP_FLAG)?.trim() ?? "";
+    const hasExplicitTitle = currentTitle.length > 0 && currentTitle !== autoTitle;
+    if (hasExplicitTitle) {
+      button.removeAttribute(AUTO_TOOLTIP_FLAG);
+      return;
+    }
+
+    const inferred = inferButtonTooltip(button);
+    if (currentTitle !== inferred) {
+      button.setAttribute("title", inferred);
+    }
+    if (autoTitle !== inferred) {
+      button.setAttribute(AUTO_TOOLTIP_FLAG, inferred);
+    }
+  });
+}
 
 function App() {
   if (IS_TYPESETTING_HARNESS) {
@@ -274,6 +311,43 @@ function App() {
   const [codexPanelOpen, setCodexPanelOpen] = useState(false);
   const [welcomePreview, setWelcomePreview] = useState(false);
   const welcomeTapRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({ count: 0, timer: null });
+
+  // Global button tooltip fallback: auto-fill title for buttons that don't define one.
+  useEffect(() => {
+    applyAutoButtonTooltips(document);
+
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach((node) => {
+            if (!(node instanceof HTMLElement)) return;
+            if (node.tagName === "BUTTON") {
+              applyAutoButtonTooltips(node.parentElement ?? document);
+              return;
+            }
+            applyAutoButtonTooltips(node);
+          });
+        }
+
+        if (
+          mutation.type === "attributes" &&
+          mutation.target instanceof HTMLButtonElement
+        ) {
+          const button = mutation.target;
+          applyAutoButtonTooltips(button.parentElement ?? document);
+        }
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["aria-label", "data-tooltip", "title"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   // 首次启动时默认打开 AI Chat
   useEffect(() => {
@@ -1193,6 +1267,7 @@ function App() {
             <button
               onClick={() => setEvalPanelOpen(false)}
               className="px-4 py-2 bg-muted rounded hover:bg-muted/80"
+              title={`${t.common.close} Agent Eval 面板`}
             >
               ✕ {t.common.close} (Esc)
             </button>
@@ -1208,6 +1283,7 @@ function App() {
             <button
               onClick={() => setCodexPanelOpen(false)}
               className="px-4 py-2 bg-muted rounded hover:bg-muted/80"
+              title={`${t.common.close} Codex Host 面板`}
             >
               ✕ {t.common.close} (Esc)
             </button>

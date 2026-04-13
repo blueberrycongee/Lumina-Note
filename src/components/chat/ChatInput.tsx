@@ -468,6 +468,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 onClick={() => setActiveCommand(null)}
                 className="hover:bg-primary/20 rounded p-0.5 ml-1"
                 aria-label="Remove command"
+                title="移除当前快捷命令"
               >
                 <X size={10} />
               </button>
@@ -484,6 +485,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <button
                 onClick={() => removeReference(file.path)}
                 className="hover:bg-primary/20 rounded p-0.5"
+                title={`移除引用：${file.name}`}
               >
                 <X size={10} />
               </button>
@@ -502,6 +504,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <button
                 onClick={() => removeTextSelection(sel.id)}
                 className="hover:bg-accent/80 rounded p-0.5 shrink-0"
+                title="移除这段引用文本"
               >
                 <X size={10} />
               </button>
@@ -614,6 +617,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                         setFilePickerQuery("");
                       }}
                       className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors"
+                      title={`引用 ${file.name}`}
                     >
                       {file.isFolder ? (
                         <Folder size={14} className="text-yellow-500 shrink-0" />
@@ -646,6 +650,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               onClick={handleSend}
               disabled={(!value.trim() && referencedFiles.length === 0 && attachedImages.length === 0) || isLoading}
               className="self-end bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground rounded-lg p-2 transition-colors"
+              title={t.ai.send}
             >
               {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             </button>
@@ -673,6 +678,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors",
                   index === mentionIndex && "bg-accent"
                 )}
+                title={`引用 ${file.name}`}
               >
                 {file.isFolder ? (
                   <Folder size={14} className="text-yellow-500 shrink-0" />
@@ -714,6 +720,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   <button
                     onClick={() => selectCommand(cmd)}
                     className="flex-1 px-3 py-2 text-sm text-left flex flex-col gap-0.5"
+                    title={`使用快捷命令 /${cmd.key}`}
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">/{cmd.key}</span>
@@ -767,6 +774,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               setShowCommand(false);
             }}
             className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-t border-border/60 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            title={t.ai.slashCommands.createShortcut}
           >
             <Plus size={14} />
             {t.ai.slashCommands.createShortcut}

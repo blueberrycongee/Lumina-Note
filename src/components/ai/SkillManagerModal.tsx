@@ -77,6 +77,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
               onClick={loadSkills}
               className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors flex items-center gap-1"
               disabled={loading}
+              title={t.ai.skillsManagerRefresh}
             >
               <RefreshCcw size={12} className={loading ? "animate-spin" : ""} />
               {loading ? t.ai.skillsManagerLoading : t.ai.skillsManagerRefresh}
@@ -85,6 +86,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
               onClick={onClose}
               className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors flex items-center gap-1"
               aria-label={t.common.close}
+              title={t.ai.skillsManagerClose}
             >
               <X size={12} />
               {t.ai.skillsManagerClose}

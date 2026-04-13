@@ -197,6 +197,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
           <button
             onClick={onClose}
             className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
+            title={t.aiSettings.close}
           >
             {t.aiSettings.close}
           </button>
@@ -262,6 +263,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                         ? "border-destructive/50 bg-destructive/10 text-destructive"
                         : "border-border/60 hover:bg-muted"
                   }`}
+                      title={t.aiSettings.testButton}
                 >
                   {testResult.status === "testing" ? (
                     <>
@@ -592,6 +594,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                       onClick={rebuildIndex}
                       disabled={ragIsIndexing}
                       className="px-2 py-1 rounded border border-border/60 text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={t.aiSettings.rebuildIndex}
                     >
                       {t.aiSettings.rebuildIndex}
                     </button>
@@ -600,6 +603,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                         type="button"
                         onClick={cancelIndex}
                         className="px-2 py-1 rounded border border-destructive/60 text-xs text-destructive hover:bg-destructive/10"
+                        title={t.aiSettings.cancelIndex}
                       >
                         {t.aiSettings.cancelIndex}
                       </button>
@@ -829,6 +833,7 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                     onClick={() => rebuildIndex()}
                     disabled={ragIsIndexing || (ragConfig.embeddingProvider === 'openai' && !ragConfig.embeddingApiKey)}
                     className="w-full text-xs py-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title={t.aiSettings.rebuildIndex}
                   >
                     {ragIsIndexing ? t.aiSettings.indexing : t.aiSettings.rebuildIndex}
                   </button>
