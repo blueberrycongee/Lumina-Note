@@ -24,6 +24,7 @@ vi.mock("@/services/llm", () => ({
     return "auto";
   },
   supportsThinkingModeSwitch: () => true,
+  buildConfigOverrideForPurpose: () => undefined,
 }));
 
 vi.mock("@/services/ai/ai", () => ({
@@ -74,7 +75,7 @@ describe("useAIStore sendMessageStream", () => {
       config: {
         provider: "moonshot",
         model: "kimi-k2-0711-preview",
-        apiKey: "",
+        apiKey: "sk-test-key",
         temperature: 0.5,
       },
       messages: [],
