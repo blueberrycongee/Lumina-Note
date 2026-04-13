@@ -444,8 +444,7 @@ fn likely_doc_ref(token: &str) -> bool {
     }
     let lower = cleaned.to_ascii_lowercase();
     [
-        ".md", ".ts", ".tsx", ".js", ".jsx", ".rs", ".py", ".json", ".toml", ".yaml",
-        ".yml",
+        ".md", ".ts", ".tsx", ".js", ".jsx", ".rs", ".py", ".json", ".toml", ".yaml", ".yml",
     ]
     .iter()
     .any(|suffix| lower.ends_with(suffix))
@@ -750,12 +749,7 @@ fn section_entries<'a>(manifest: &'a DurableMemoryManifest, page_id: &str) -> Ve
     }
 }
 
-fn render_wiki_page(
-    title: &str,
-    page_id: &str,
-    entries: &[&MemoryEntry],
-    now: u64,
-) -> String {
+fn render_wiki_page(title: &str, page_id: &str, entries: &[&MemoryEntry], now: u64) -> String {
     let nav = WIKI_SECTIONS
         .iter()
         .map(|(section_title, _)| format!("[[{}]]", section_title))
