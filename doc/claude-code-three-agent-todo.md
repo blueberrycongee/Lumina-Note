@@ -99,6 +99,13 @@
   - 已在执行后接入 `Verify`，输出结构化 verdict：`pass / fail / partial`
   - 已在执行阶段记录修改文件与执行命令，供 Verify 复用
   - 已将计划与阶段状态同步到前端 `PlanCard`
+- `Phase 3` 已完成第一版 session memory
+  - 已新增 `src/services/memory/sessionMemory.ts`
+  - 已为每个 agent 会话维护 `memory/session/<sessionId>/session-memory.md`
+  - 已加入模板初始化与 per-session 运行时快照
+  - 已在任务完成、compact 前、会话切换时按阈值触发更新
+  - 已加入提炼互斥逻辑，避免同一会话重复并发写入
+  - 已让 compact 优先利用 session memory 作为高质量摘要层
 - 旧 `Deep Research` 模式已移除，不再作为当前主线；若未来恢复研究工作流，将基于新的编排框架重建，而不是恢复旧实现
 
 ---
@@ -203,30 +210,38 @@
 
 在 Lumina 中建议做法：
 
-- [ ] 新增 `Session Memory` 子系统
-- [ ] 为每个会话维护一份 `session-memory.md`
-- [ ] 更新策略不要按“每轮必写”，而采用阈值触发：
+- [x] 新增 `Session Memory` 子系统
+- [x] 为每个会话维护一份 `session-memory.md`
+- [x] 更新策略不要按“每轮必写”，而采用阈值触发：
   - token 增量
   - 工具调用次数
   - 任务阶段结束
   - 用户离开 / 会话切换
-- [ ] 使用后台只读/受限写入 subagent 提炼 session memory
-- [ ] session memory 不直接替代消息历史，而是作为 compact 时的高质量摘要层
-- [ ] 对 session memory 增加初始化模板，而不是从空文件裸写
-- [ ] 增加“本轮是否已写入 memory”的互斥逻辑，避免重复提炼
+- [x] 使用后台异步提炼会话 memory（现已收敛到 Rust 命令层执行）
+- [x] session memory 不直接替代消息历史，而是作为 compact 时的高质量摘要层
+- [x] 对 session memory 增加初始化模板，而不是从空文件裸写
+- [x] 增加“本轮是否已写入 memory”的互斥逻辑，避免重复提炼
 
 建议新增文件：
 
-- `src/services/memory/sessionMemory.ts`（待新增）
-- `src/services/memory/sessionMemory.test.ts`（待新增）
-- `src-tauri/src/agent/memory_extract.rs`（待新增）
+- `src/services/memory/sessionMemory.ts`
+- `src/services/memory/sessionMemory.test.ts`
+- `src-tauri/src/agent/memory_extract.rs`
 
 建议数据结构：
 
-- [ ] `SessionMemory`
-- [ ] `SessionMemoryConfig`
-- [ ] `SessionMemoryUpdateReason`
-- [ ] `SessionMemorySnapshot`
+- [x] `SessionMemory`
+- [x] `SessionMemoryConfig`
+- [x] `SessionMemoryUpdateReason`
+- [x] `SessionMemorySnapshot`
+
+当前实现补充说明：
+
+- Session memory 当前存储位置为 `workspace/memory/session/<sessionId>/session-memory.md`
+- 触发点已覆盖 `task_stage_completed / compact_prepare / session_switch`
+- compact 不会直接把 session memory 原文塞进历史，而是把它作为摘要生成的高质量输入层
+- 前端 `sessionMemory.ts` 现已退化为 Tauri 薄封装，真正的提炼逻辑位于 Rust 侧 `memory_extract.rs`
+- Rust 侧维护会话级互斥状态、阈值判断与 `session-memory.md` 读写，并复用现有 `LlmClient` 完成提炼
 
 ---
 

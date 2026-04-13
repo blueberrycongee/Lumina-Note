@@ -7,6 +7,7 @@ pub mod debug_log;
 pub mod explore;
 pub mod forge_loop;
 pub mod llm_client;
+pub mod memory_extract;
 pub mod orchestrator;
 pub mod plan;
 pub mod skills;
@@ -15,5 +16,7 @@ pub mod verify;
 
 #[allow(unused_imports)]
 pub use commands::*;
+#[allow(unused_imports)]
+pub use memory_extract::*;
 #[allow(unused_imports)]
 pub use skills::*;

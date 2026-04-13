@@ -28,6 +28,14 @@ import type { MessageAttachment } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { formatUserFriendlyError } from "./aiErrorFormatting";
 import type { SelectedSkill } from "@/types/skills";
+import {
+  isSessionMemoryMeaningful,
+  loadSessionMemorySnapshot,
+  resetSessionMemory,
+  type SessionMemorySnapshot,
+  type SessionMemoryUpdateReason,
+  updateSessionMemory,
+} from "@/services/memory/sessionMemory";
 
 // ============ 类型定义 ============
 
@@ -578,6 +586,8 @@ interface RustAgentState {
   orchestrationFallbackReason: string | null;
   exploreReport: ExploreReport | null;
   verificationReport: VerificationReport | null;
+  sessionMemorySnapshot: SessionMemorySnapshot | null;
+  sessionMemoryBusy: boolean;
   error: string | null;
   
   // 意图分析结果
@@ -657,6 +667,16 @@ interface RustAgentState {
   _setupListeners: () => Promise<UnlistenFn | null>;
   _saveCurrentSession: () => void;
   _compactSession: () => Promise<void>;
+  _refreshSessionMemorySnapshot: (workspacePath?: string | null, sessionId?: string | null) => Promise<void>;
+  _updateSessionMemory: (
+    reason: SessionMemoryUpdateReason,
+    options?: {
+      workspacePath?: string | null;
+      sessionId?: string | null;
+      messages?: Message[];
+      force?: boolean;
+    }
+  ) => Promise<SessionMemorySnapshot | null>;
 }
 
 interface MobileSessionCommand {
@@ -740,6 +760,8 @@ export const useRustAgentStore = create<RustAgentState>()(
       orchestrationFallbackReason: null,
       exploreReport: null,
       verificationReport: null,
+      sessionMemorySnapshot: null,
+      sessionMemoryBusy: false,
       error: null,
       lastIntent: null,
       streamingContent: "",
@@ -795,6 +817,64 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 心跳监控初始状态（新增）
       lastHeartbeat: null,
       connectionStatus: "unknown",
+
+      _refreshSessionMemorySnapshot: async (
+        workspacePath = resolveVaultPath(),
+        sessionId = get().currentSessionId,
+      ) => {
+        if (!workspacePath || !sessionId) {
+          set({ sessionMemorySnapshot: null, sessionMemoryBusy: false });
+          return;
+        }
+        try {
+          const snapshot = await loadSessionMemorySnapshot(workspacePath, sessionId);
+          if (get().currentSessionId === sessionId) {
+            set({ sessionMemorySnapshot: snapshot, sessionMemoryBusy: false });
+          }
+        } catch (error) {
+          console.warn("[RustAgent] Failed to refresh session memory snapshot:", error);
+          if (get().currentSessionId === sessionId) {
+            set({ sessionMemoryBusy: false });
+          }
+        }
+      },
+
+      _updateSessionMemory: async (reason, options = {}) => {
+        const workspacePath = options.workspacePath ?? resolveVaultPath();
+        const sessionId = options.sessionId ?? get().currentSessionId;
+        const messages = options.messages ?? get().messages;
+
+        if (!workspacePath || !sessionId || messages.length === 0) {
+          return null;
+        }
+
+        const isCurrentSession = get().currentSessionId === sessionId;
+        if (isCurrentSession) {
+          set({ sessionMemoryBusy: true });
+        }
+
+        try {
+          const agentConfig = buildAgentConfig(getAIConfig(), get().autoApprove);
+          const snapshot = await updateSessionMemory({
+            workspacePath,
+            sessionId,
+            messages,
+            reason,
+            config: agentConfig,
+            force: options.force,
+          });
+          if (isCurrentSession && get().currentSessionId === sessionId) {
+            set({ sessionMemorySnapshot: snapshot, sessionMemoryBusy: false });
+          }
+          return snapshot;
+        } catch (error) {
+          console.warn("[RustAgent] Session memory update failed:", error);
+          if (isCurrentSession && get().currentSessionId === sessionId) {
+            set({ sessionMemoryBusy: false });
+          }
+          return null;
+        }
+      },
 
       // 启动任务
       startTask: async (task: string, context: TaskContext) => {
@@ -931,6 +1011,13 @@ export const useRustAgentStore = create<RustAgentState>()(
 
       // 清空聊天
       clearChat: () => {
+        const workspacePath = resolveVaultPath();
+        const sessionId = get().currentSessionId;
+        if (workspacePath && sessionId) {
+          void resetSessionMemory(workspacePath, sessionId).catch((error) => {
+            console.warn("[RustAgent] Failed to reset session memory:", error);
+          });
+        }
         set({
           status: "idle",
           messages: [],
@@ -940,6 +1027,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           orchestrationFallbackReason: null,
           exploreReport: null,
           verificationReport: null,
+          sessionMemorySnapshot: null,
+          sessionMemoryBusy: false,
           error: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1066,6 +1155,15 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 创建新会话
       createSession: (title?: string) => {
         const t = getCurrentTranslations();
+        const previousState = get();
+        const workspacePath = resolveVaultPath();
+        if (workspacePath && previousState.currentSessionId && previousState.messages.length > 0) {
+          void previousState._updateSessionMemory("session_switch", {
+            workspacePath,
+            sessionId: previousState.currentSessionId,
+            messages: previousState.messages,
+          });
+        }
         // 先保存当前会话，再基于最新 sessions 追加一个全新会话
         get()._saveCurrentSession();
         const sessions = get().sessions;
@@ -1093,6 +1191,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           orchestrationFallbackReason: null,
           exploreReport: null,
           verificationReport: null,
+          sessionMemorySnapshot: null,
+          sessionMemoryBusy: false,
           lastIntent: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1102,10 +1202,20 @@ export const useRustAgentStore = create<RustAgentState>()(
           lastTokenUsage: null,
         });
         void get().syncMobileSessions();
+        void get()._refreshSessionMemorySnapshot(resolveVaultPath(), id);
       },
 
       // 切换会话
       switchSession: (id: string) => {
+        const previousState = get();
+        const workspacePath = resolveVaultPath();
+        if (workspacePath && previousState.currentSessionId && previousState.messages.length > 0) {
+          void previousState._updateSessionMemory("session_switch", {
+            workspacePath,
+            sessionId: previousState.currentSessionId,
+            messages: previousState.messages,
+          });
+        }
         // 保存当前会话，再切换到目标会话（使用最新 sessions）
         get()._saveCurrentSession();
         const sessions = get().sessions;
@@ -1125,6 +1235,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           orchestrationFallbackReason: null,
           exploreReport: null,
           verificationReport: null,
+          sessionMemorySnapshot: null,
+          sessionMemoryBusy: false,
           lastIntent: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1133,6 +1245,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           isCompacting: false,
           lastTokenUsage: null,
         });
+        void get()._refreshSessionMemorySnapshot(resolveVaultPath(), id);
       },
 
       // 删除会话
@@ -1155,6 +1268,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               orchestrationFallbackReason: null,
               exploreReport: null,
               verificationReport: null,
+              sessionMemorySnapshot: null,
+              sessionMemoryBusy: false,
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
               pendingCompaction: false,
@@ -1182,6 +1297,8 @@ export const useRustAgentStore = create<RustAgentState>()(
               orchestrationFallbackReason: null,
               exploreReport: null,
               verificationReport: null,
+              sessionMemorySnapshot: null,
+              sessionMemoryBusy: false,
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
               pendingCompaction: false,
@@ -1193,6 +1310,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           set({ sessions: newSessions });
         }
         void get().syncMobileSessions();
+        const nextSessionId = useRustAgentStore.getState().currentSessionId;
+        void get()._refreshSessionMemorySnapshot(resolveVaultPath(), nextSessionId);
       },
 
       // 重命名会话
@@ -1320,10 +1439,20 @@ export const useRustAgentStore = create<RustAgentState>()(
         const snapshotSessionId = currentSessionId;
         const snapshotMessages = messages;
         const snapshotLength = snapshotMessages.length;
+        const workspacePath = resolveVaultPath();
 
         set({ isCompacting: true });
 
         try {
+          const sessionMemory =
+            workspacePath && snapshotSessionId
+              ? await get()._updateSessionMemory("compact_prepare", {
+                  workspacePath,
+                  sessionId: snapshotSessionId,
+                  messages: snapshotMessages,
+                })
+              : null;
+
           const { summaryMessage, toSummarize, tail } = splitMessagesForCompaction(snapshotMessages);
           if (toSummarize.length === 0) {
             set((state) => (
@@ -1335,7 +1464,11 @@ export const useRustAgentStore = create<RustAgentState>()(
           }
 
           const summarySeed = summaryMessage ? [summaryMessage, ...toSummarize] : toSummarize;
-          const summarySource = formatMessagesForSummary(summarySeed);
+          const memoryPrefix =
+            sessionMemory && isSessionMemoryMeaningful(sessionMemory.content)
+              ? `[Session Memory]\n${sessionMemory.content}\n\n`
+              : "";
+          const summarySource = `${memoryPrefix}[Conversation To Compact]\n${formatMessagesForSummary(summarySeed)}`;
           if (!summarySource.trim()) {
             set((state) => (
               state.currentSessionId === snapshotSessionId
@@ -1501,6 +1634,18 @@ export const useRustAgentStore = create<RustAgentState>()(
               llmRequestId: null,
               llmRetryState: null,
             });
+            {
+              const workspacePath = resolveVaultPath();
+              const sessionId = get().currentSessionId;
+              const latestMessages = get().messages;
+              if (workspacePath && sessionId && latestMessages.length > 0) {
+                void get()._updateSessionMemory("task_stage_completed", {
+                  workspacePath,
+                  sessionId,
+                  messages: latestMessages,
+                });
+              }
+            }
             void get()._compactSession();
             break;
           }
@@ -2252,6 +2397,7 @@ export async function initRustAgentListeners() {
     unlistenFn = await useRustAgentStore.getState()._setupListeners();
     await useRustAgentStore.getState().syncQueueStatus();
     await useRustAgentStore.getState().syncMobileSessions();
+    await useRustAgentStore.getState()._refreshSessionMemorySnapshot();
     console.log("[RustAgent] Listener initialized");
   } finally {
     isInitializing = false;

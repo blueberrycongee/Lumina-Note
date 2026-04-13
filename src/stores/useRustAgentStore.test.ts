@@ -50,6 +50,13 @@ vi.mock('@/stores/useLocaleStore', () => ({
   }),
 }));
 
+vi.mock('@/services/memory/sessionMemory', () => ({
+  isSessionMemoryMeaningful: (content: string) => Boolean(content && content.trim()),
+  loadSessionMemorySnapshot: vi.fn(async () => null),
+  resetSessionMemory: vi.fn(async () => undefined),
+  updateSessionMemory: vi.fn(async () => null),
+}));
+
 // Import after mocks
 import { useRustAgentStore, type Message } from './useRustAgentStore';
 

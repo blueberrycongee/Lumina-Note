@@ -132,6 +132,9 @@ fn main() {
             agent::agent_continue_with_answer,
             agent::agent_list_skills,
             agent::agent_read_skill,
+            agent::agent_get_session_memory_snapshot,
+            agent::agent_update_session_memory,
+            agent::agent_reset_session_memory,
             // Agent debug commands
             agent::agent_enable_debug,
             agent::agent_disable_debug,
