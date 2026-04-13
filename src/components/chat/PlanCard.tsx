@@ -7,11 +7,13 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Circle, Loader2, ListTodo, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import type { Plan, PlanStepStatus } from "@/stores/useRustAgentStore";
+import type { AgentStage, Plan, PlanStepStatus } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface PlanCardProps {
   plan: Plan;
+  currentStage?: AgentStage | null;
+  fallbackReason?: string | null;
   className?: string;
 }
 
@@ -22,7 +24,15 @@ const statusConfig: Record<PlanStepStatus, { icon: "completed" | "in_progress" |
   pending: { icon: "pending", textClass: "text-muted-foreground/70" },
 };
 
-export function PlanCard({ plan, className = "" }: PlanCardProps) {
+const stageLabel: Record<AgentStage, string> = {
+  explore: "Explore",
+  plan: "Plan",
+  execute: "Execute",
+  verify: "Verify",
+  report: "Report",
+};
+
+export function PlanCard({ plan, currentStage = null, fallbackReason = null, className = "" }: PlanCardProps) {
   const { t } = useLocaleStore();
   const [isExpanded, setIsExpanded] = useState(true);
   
@@ -85,6 +95,18 @@ export function PlanCard({ plan, className = "" }: PlanCardProps) {
                 {plan.explanation}
               </div>
             )}
+            {(currentStage || fallbackReason) && (
+              <div className="px-3 py-2 text-xs border-b border-border/50 bg-background/40">
+                {currentStage && (
+                  <span className="inline-flex items-center rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium text-foreground">
+                    {stageLabel[currentStage]}
+                  </span>
+                )}
+                {fallbackReason && (
+                  <p className="mt-1 text-muted-foreground">{fallbackReason}</p>
+                )}
+              </div>
+            )}
             
             <div className="px-3 py-2 space-y-1.5">
               {plan.steps.map((step, index) => {
@@ -113,6 +135,19 @@ export function PlanCard({ plan, className = "" }: PlanCardProps) {
                     <div className="flex-1 min-w-0">
                       <span className="text-xs text-muted-foreground mr-1.5">{index + 1}.</span>
                       <span>{step.step}</span>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {stageLabel[step.role]}
+                        </span>
+                        {step.expected_artifacts.map((artifact) => (
+                          <span
+                            key={`${step.id}-${artifact}`}
+                            className="rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                          >
+                            {artifact}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </motion.div>
                 );

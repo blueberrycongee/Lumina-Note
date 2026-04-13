@@ -4,16 +4,19 @@
 //!
 //! 使用 Forge LoopNode 构建和执行 Agent 循环
 
+use crate::agent::explore::run_explore;
 use crate::agent::forge_loop::{
     build_runtime_with_client, run_forge_loop, ForgeRunResult, ForgeRuntime, TauriEventSink,
 };
 use crate::agent::orchestrator::{
-    build_initial_graph_state_with_decision, mark_run_completed, mark_run_failed,
-    mark_waiting_for_approval, plan_orchestration, prepare_for_forge_execution,
-    resolve_runtime_config, OrchestrationDecision,
+    apply_verification_result_to_report, build_initial_graph_state_with_decision,
+    mark_run_completed, mark_run_failed, mark_waiting_for_approval, plan_orchestration,
+    prepare_for_forge_execution, resolve_runtime_config, OrchestrationDecision,
 };
+use crate::agent::plan::{mark_stage_completed, run_plan, sync_plan_statuses};
 use crate::agent::skills::{list_skills, read_skill, SkillDetail, SkillInfo};
 use crate::agent::types::*;
+use crate::agent::verify::run_verify;
 use crate::forge_runtime::permissions::{
     default_ruleset, PermissionRule, PermissionSession as LocalPermissionSession,
 };
@@ -173,6 +176,188 @@ async fn emit_queue_updated(app: &AppHandle, state: &AgentState) {
     );
 }
 
+async fn sync_graph_state(state: &AgentState, graph_state: &GraphState) {
+    let mut current_state = state.current_state.lock().await;
+    *current_state = Some(graph_state.clone());
+}
+
+fn emit_orchestration_updated(app: &AppHandle, graph_state: &GraphState) {
+    emit_agent_event(
+        app,
+        AgentEvent::OrchestrationUpdated {
+            mode: graph_state.orchestration.mode.clone(),
+            stage: graph_state.orchestration.current_stage.clone(),
+            stages: graph_state.orchestration.stages.clone(),
+            fallback_reason: graph_state.orchestration.fallback_reason.clone(),
+        },
+    );
+}
+
+fn emit_plan_updated_if_present(app: &AppHandle, graph_state: &GraphState) {
+    if let Some(plan) = graph_state.plan.current_plan.clone() {
+        emit_agent_event(app, AgentEvent::PlanUpdated { plan });
+    }
+}
+
+async fn enter_stage(
+    app: &AppHandle,
+    state: &AgentState,
+    graph_state: &mut GraphState,
+    stage: AgentStage,
+) {
+    if let Some(plan) = graph_state.plan.current_plan.as_mut() {
+        sync_plan_statuses(plan, stage.clone());
+    }
+    graph_state.set_stage(stage);
+    sync_graph_state(state, graph_state).await;
+    emit_orchestration_updated(app, graph_state);
+    emit_plan_updated_if_present(app, graph_state);
+}
+
+fn insert_execution_context_messages(state: &mut GraphState) {
+    if state.orchestration.mode != AgentExecutionMode::Orchestrated {
+        return;
+    }
+
+    let mut injected = Vec::new();
+    if let Some(report) = state.explore.report.as_ref() {
+        let key_locations = report
+            .key_locations
+            .iter()
+            .map(|item| format!("- {} :: {}", item.file_path, item.reason))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let risks = report
+            .risks
+            .iter()
+            .map(|item| format!("- {}", item))
+            .collect::<Vec<_>>()
+            .join("\n");
+        injected.push(format!(
+            "# Explore Report\n{}\n\n## Related Files\n{}\n\n## Key Locations\n{}\n\n## Risks\n{}",
+            report.summary,
+            if report.related_files.is_empty() {
+                "(none)".to_string()
+            } else {
+                report
+                    .related_files
+                    .iter()
+                    .map(|item| format!("- {}", item))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            },
+            if key_locations.is_empty() {
+                "(none)".to_string()
+            } else {
+                key_locations
+            },
+            if risks.is_empty() {
+                "(none)".to_string()
+            } else {
+                risks
+            }
+        ));
+    }
+
+    if let Some(plan) = state.plan.current_plan.as_ref() {
+        let steps = plan
+            .steps
+            .iter()
+            .map(|step| {
+                let artifacts = if step.expected_artifacts.is_empty() {
+                    String::new()
+                } else {
+                    format!(" | artifacts: {}", step.expected_artifacts.join(", "))
+                };
+                format!(
+                    "- [{}] {}{} ",
+                    stage_label(&step.role),
+                    step.step,
+                    artifacts
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        injected.push(format!(
+            "# Approved Plan\n{}\n\n{}",
+            plan.explanation
+                .clone()
+                .unwrap_or_else(|| "Follow this plan before introducing extra scope.".to_string()),
+            steps
+        ));
+    }
+
+    if injected.is_empty() {
+        return;
+    }
+
+    let insert_at = state
+        .messages
+        .iter()
+        .rposition(|message| message.role == MessageRole::User)
+        .unwrap_or(state.messages.len());
+    for (offset, content) in injected.into_iter().enumerate() {
+        state.messages.insert(
+            insert_at + offset,
+            Message {
+                role: MessageRole::System,
+                content,
+                name: None,
+                tool_call_id: None,
+            },
+        );
+    }
+}
+
+fn stage_label(stage: &AgentStage) -> &'static str {
+    match stage {
+        AgentStage::Explore => "explore",
+        AgentStage::Plan => "plan",
+        AgentStage::Execute => "execute",
+        AgentStage::Verify => "verify",
+        AgentStage::Report => "report",
+    }
+}
+
+async fn run_pre_execute_orchestration(
+    app: &AppHandle,
+    state: &AgentState,
+    config: &AgentConfig,
+    graph_state: &mut GraphState,
+    http_client: reqwest::Client,
+) {
+    if graph_state.orchestration.mode != AgentExecutionMode::Orchestrated {
+        prepare_for_forge_execution(graph_state);
+        enter_stage(app, state, graph_state, AgentStage::Execute).await;
+        return;
+    }
+
+    enter_stage(app, state, graph_state, AgentStage::Explore).await;
+    let explore_report = run_explore(config, graph_state, http_client.clone()).await;
+    graph_state.explore.report = Some(explore_report.clone());
+    emit_agent_event(
+        app,
+        AgentEvent::ExploreUpdated {
+            report: explore_report,
+        },
+    );
+    sync_graph_state(state, graph_state).await;
+
+    enter_stage(app, state, graph_state, AgentStage::Plan).await;
+    graph_state.plan = run_plan(config, graph_state, http_client).await;
+    if let Some(plan) = graph_state.plan.current_plan.as_mut() {
+        mark_stage_completed(plan, AgentStage::Explore);
+        mark_stage_completed(plan, AgentStage::Plan);
+        sync_plan_statuses(plan, AgentStage::Execute);
+    }
+    emit_plan_updated_if_present(app, graph_state);
+    sync_graph_state(state, graph_state).await;
+
+    prepare_for_forge_execution(graph_state);
+    insert_execution_context_messages(graph_state);
+    enter_stage(app, state, graph_state, AgentStage::Execute).await;
+}
+
 async fn execute_task_inner(
     app: AppHandle,
     state: &AgentState,
@@ -220,23 +405,21 @@ async fn execute_task_inner(
         &config,
         orchestration_decision,
     );
-    prepare_for_forge_execution(&mut initial_state);
     let runtime_config = resolve_runtime_config(&config, &initial_state);
 
-    {
-        let mut current_state = state.current_state.lock().await;
-        *current_state = Some(initial_state.clone());
-    }
-    emit_agent_event(
-        &app,
-        AgentEvent::OrchestrationUpdated {
-            mode: initial_state.orchestration.mode.clone(),
-            stage: initial_state.orchestration.current_stage.clone(),
-            stages: initial_state.orchestration.stages.clone(),
-            fallback_reason: initial_state.orchestration.fallback_reason.clone(),
-        },
-    );
+    sync_graph_state(state, &initial_state).await;
+    emit_orchestration_updated(&app, &initial_state);
     emit_queue_updated(&app, state).await;
+
+    let http_client = build_llm_http_client(&app).await?;
+    run_pre_execute_orchestration(
+        &app,
+        state,
+        &runtime_config,
+        &mut initial_state,
+        http_client.clone(),
+    )
+    .await;
 
     let permissions = build_permission_session(config.auto_approve);
     let proxy_client = app.state::<crate::proxy::ProxyState>().client().await;
@@ -270,7 +453,6 @@ async fn execute_task_inner(
         },
     );
 
-    let http_client = build_llm_http_client(&app).await?;
     let result = run_forge_loop(
         app.clone(),
         runtime_config,
@@ -1043,11 +1225,39 @@ async fn handle_forge_result(
                 return Ok(false);
             }
 
+            if final_state.orchestration.mode == AgentExecutionMode::Orchestrated {
+                enter_stage(&app, state, &mut final_state, AgentStage::Verify).await;
+                let verify_report = run_verify(
+                    &runtime_state.config,
+                    &final_state,
+                    build_llm_http_client(&app).await?,
+                )
+                .await;
+                final_state.verify.summary = Some(verify_report.summary.clone());
+                final_state.verify.report = Some(verify_report.clone());
+                emit_agent_event(
+                    &app,
+                    AgentEvent::VerificationUpdated {
+                        report: verify_report,
+                    },
+                );
+                apply_verification_result_to_report(&mut final_state);
+                sync_graph_state(state, &final_state).await;
+            }
+
             final_state.status = AgentStatus::Completed;
+            if let Some(plan) = final_state.plan.current_plan.as_mut() {
+                mark_stage_completed(plan, AgentStage::Execute);
+                mark_stage_completed(plan, AgentStage::Verify);
+            }
             mark_run_completed(&mut final_state);
             {
                 let mut current_state = state.current_state.lock().await;
                 *current_state = Some(final_state);
+            }
+            if let Some(current) = state.current_state.lock().await.clone() {
+                emit_orchestration_updated(&app, &current);
+                emit_plan_updated_if_present(&app, &current);
             }
             emit_agent_event_safe(
                 &sink,

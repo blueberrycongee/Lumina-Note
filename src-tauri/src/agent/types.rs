@@ -150,8 +150,13 @@ impl Default for PlanStepStatus {
 /// 计划步骤 (Windsurf 风格)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanStep {
+    pub id: String,
     pub step: String,
+    #[serde(default = "default_plan_step_role")]
+    pub role: AgentStage,
     pub status: PlanStepStatus,
+    #[serde(default)]
+    pub expected_artifacts: Vec<String>,
 }
 
 /// 任务计划 (Windsurf 风格)
@@ -160,6 +165,10 @@ pub struct Plan {
     pub steps: Vec<PlanStep>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub explanation: Option<String>,
+}
+
+fn default_plan_step_role() -> AgentStage {
+    AgentStage::Execute
 }
 
 /// RAG 搜索结果
@@ -178,6 +187,79 @@ pub struct ResolvedLink {
     pub link_name: String,
     pub file_path: String,
     pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExploreFileRef {
+    pub file_path: String,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExploreContextEntry {
+    pub source: String,
+    pub file_path: String,
+    pub note: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExploreReport {
+    pub summary: String,
+    #[serde(default)]
+    pub related_files: Vec<String>,
+    #[serde(default)]
+    pub key_locations: Vec<ExploreFileRef>,
+    #[serde(default)]
+    pub similar_patterns: Vec<ExploreFileRef>,
+    #[serde(default)]
+    pub risks: Vec<String>,
+    #[serde(default)]
+    pub recommended_entry_points: Vec<String>,
+    #[serde(default)]
+    pub retrieved_context: Vec<ExploreContextEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum VerificationVerdict {
+    Pass,
+    Fail,
+    Partial,
+}
+
+impl Default for VerificationVerdict {
+    fn default() -> Self {
+        Self::Partial
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VerificationCheck {
+    pub label: String,
+    pub result: VerificationVerdict,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VerificationCommandResult {
+    pub command: String,
+    pub description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exit_code: Option<i32>,
+    pub ran: bool,
+    pub output: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct VerificationReport {
+    pub verdict: VerificationVerdict,
+    pub summary: String,
+    #[serde(default)]
+    pub checks: Vec<VerificationCheck>,
+    #[serde(default)]
+    pub command_results: Vec<VerificationCommandResult>,
+    #[serde(default)]
+    pub outstanding_risks: Vec<String>,
 }
 
 /// Agent 图状态
@@ -273,6 +355,9 @@ pub struct ExploreStageState {
     /// 已解析 WikiLinks
     #[serde(default)]
     pub resolved_links: Vec<ResolvedLink>,
+    /// Explore 阶段结构化报告
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub report: Option<ExploreReport>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -296,6 +381,12 @@ pub struct ExecuteStageState {
     /// 观察结果（工具输出）
     #[serde(default)]
     pub observations: Vec<String>,
+    /// 执行阶段修改过的文件
+    #[serde(default)]
+    pub modified_files: Vec<String>,
+    /// 执行阶段运行过的命令
+    #[serde(default)]
+    pub executed_commands: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -303,6 +394,9 @@ pub struct VerifyStageState {
     /// 当前验证摘要
     #[serde(skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
+    /// 结构化验证报告
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub report: Option<VerificationReport>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -498,6 +592,10 @@ pub enum AgentEvent {
         #[serde(skip_serializing_if = "Option::is_none")]
         fallback_reason: Option<String>,
     },
+    /// Explore 阶段结构化结果
+    ExploreUpdated { report: ExploreReport },
+    /// Verify 阶段结构化结果
+    VerificationUpdated { report: VerificationReport },
 }
 
 /// 队列任务摘要（用于前端展示）
@@ -583,6 +681,28 @@ impl GraphState {
 
     pub fn push_observation(&mut self, observation: String) {
         self.execute.observations.push(observation);
+    }
+
+    pub fn record_modified_file(&mut self, file_path: impl Into<String>) {
+        let path = file_path.into();
+        if path.is_empty() || self.execute.modified_files.iter().any(|item| item == &path) {
+            return;
+        }
+        self.execute.modified_files.push(path);
+    }
+
+    pub fn record_executed_command(&mut self, command: impl Into<String>) {
+        let command = command.into();
+        if command.is_empty()
+            || self
+                .execute
+                .executed_commands
+                .iter()
+                .any(|item| item == &command)
+        {
+            return;
+        }
+        self.execute.executed_commands.push(command);
     }
 }
 

@@ -157,6 +157,8 @@ export function MainAIChatShell() {
     lastIntent: rustLastIntent,
     totalTokensUsed: rustTotalTokens,
     currentPlan: rustCurrentPlan,
+    currentStage: rustCurrentStage,
+    orchestrationFallbackReason: rustOrchestrationFallbackReason,
     startTask: rustStartTask,
     abort: agentAbort,
     debugEnabled,
@@ -1054,7 +1056,12 @@ export function MainAIChatShell() {
 
                 {/* Agent 模式：任务计划卡片 + 消息渲染 */}
                 {chatMode === "agent" && !isExportSelectionMode && rustCurrentPlan && rustCurrentPlan.steps.length > 0 && (
-                  <PlanCard plan={rustCurrentPlan} className="mb-4" />
+                  <PlanCard
+                    plan={rustCurrentPlan}
+                    currentStage={rustCurrentStage}
+                    fallbackReason={rustOrchestrationFallbackReason}
+                    className="mb-4"
+                  />
                 )}
 
                 {isExportSelectionMode ? (

@@ -49,6 +49,13 @@ export type AgentType =
   | "organizer" 
   | "reporter";
 
+export type AgentStage =
+  | "explore"
+  | "plan"
+  | "execute"
+  | "verify"
+  | "report";
+
 export interface Message {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
@@ -226,13 +233,61 @@ interface MobileAgentProfileOption {
 // Plan 步骤状态 (Windsurf 风格)
 export type PlanStepStatus = "pending" | "in_progress" | "completed";
 
+export type VerificationVerdict = "pass" | "fail" | "partial";
+
 // Plan 结构 (Windsurf 风格)
 export interface Plan {
   steps: {
+    id: string;
     step: string;
+    role: AgentStage;
     status: PlanStepStatus;
+    expected_artifacts: string[];
   }[];
   explanation?: string;
+}
+
+export interface ExploreFileRef {
+  file_path: string;
+  reason: string;
+}
+
+export interface ExploreContextEntry {
+  source: string;
+  file_path: string;
+  note: string;
+}
+
+export interface ExploreReport {
+  summary: string;
+  related_files: string[];
+  key_locations: ExploreFileRef[];
+  similar_patterns: ExploreFileRef[];
+  risks: string[];
+  recommended_entry_points: string[];
+  retrieved_context: ExploreContextEntry[];
+}
+
+export interface VerificationCheck {
+  label: string;
+  result: VerificationVerdict;
+  detail: string;
+}
+
+export interface VerificationCommandResult {
+  command: string;
+  description: string;
+  exit_code?: number | null;
+  ran: boolean;
+  output: string;
+}
+
+export interface VerificationReport {
+  verdict: VerificationVerdict;
+  summary: string;
+  checks: VerificationCheck[];
+  command_results: VerificationCommandResult[];
+  outstanding_risks: string[];
 }
 
 export interface TaskContext {
@@ -518,6 +573,11 @@ interface RustAgentState {
   status: AgentStatus;
   messages: Message[];
   currentPlan: Plan | null;
+  currentStage: AgentStage | null;
+  orchestrationStages: AgentStage[];
+  orchestrationFallbackReason: string | null;
+  exploreReport: ExploreReport | null;
+  verificationReport: VerificationReport | null;
   error: string | null;
   
   // 意图分析结果
@@ -675,6 +735,11 @@ export const useRustAgentStore = create<RustAgentState>()(
       status: "idle",
       messages: [],
       currentPlan: null,
+      currentStage: null,
+      orchestrationStages: [],
+      orchestrationFallbackReason: null,
+      exploreReport: null,
+      verificationReport: null,
       error: null,
       lastIntent: null,
       streamingContent: "",
@@ -751,6 +816,11 @@ export const useRustAgentStore = create<RustAgentState>()(
                 status: "running",
                 error: null,
                 currentPlan: null,
+                currentStage: null,
+                orchestrationStages: [],
+                orchestrationFallbackReason: null,
+                exploreReport: null,
+                verificationReport: null,
                 lastIntent: null,
                 streamingContent: "",
                 streamingReasoning: "",
@@ -865,6 +935,11 @@ export const useRustAgentStore = create<RustAgentState>()(
           status: "idle",
           messages: [],
           currentPlan: null,
+          currentStage: null,
+          orchestrationStages: [],
+          orchestrationFallbackReason: null,
+          exploreReport: null,
+          verificationReport: null,
           error: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1013,6 +1088,11 @@ export const useRustAgentStore = create<RustAgentState>()(
           status: "idle",
           error: null,
           currentPlan: null,
+          currentStage: null,
+          orchestrationStages: [],
+          orchestrationFallbackReason: null,
+          exploreReport: null,
+          verificationReport: null,
           lastIntent: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1040,6 +1120,11 @@ export const useRustAgentStore = create<RustAgentState>()(
           status: "idle",
           error: null,
           currentPlan: null,
+          currentStage: null,
+          orchestrationStages: [],
+          orchestrationFallbackReason: null,
+          exploreReport: null,
+          verificationReport: null,
           lastIntent: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1064,6 +1149,12 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: firstSession.id,
               messages: firstSession.messages,
               totalTokensUsed: firstSession.totalTokensUsed,
+              currentPlan: null,
+              currentStage: null,
+              orchestrationStages: [],
+              orchestrationFallbackReason: null,
+              exploreReport: null,
+              verificationReport: null,
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
               pendingCompaction: false,
@@ -1085,6 +1176,12 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: newSession.id,
               messages: [],
               totalTokensUsed: 0,
+              currentPlan: null,
+              currentStage: null,
+              orchestrationStages: [],
+              orchestrationFallbackReason: null,
+              exploreReport: null,
+              verificationReport: null,
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
               pendingCompaction: false,
@@ -1646,6 +1743,21 @@ export const useRustAgentStore = create<RustAgentState>()(
             break;
           }
 
+          case "orchestration_updated": {
+            const data = event.data as {
+              stage?: AgentStage;
+              stages?: AgentStage[];
+              fallback_reason?: string | null;
+            };
+            set({
+              currentStage: data?.stage ?? null,
+              orchestrationStages: Array.isArray(data?.stages) ? data.stages : [],
+              orchestrationFallbackReason:
+                typeof data?.fallback_reason === "string" ? data.fallback_reason : null,
+            });
+            break;
+          }
+
           case "step_finish": {
             const { tokens } = event.data as { tokens?: { input?: number; output?: number } };
             const inputTokens = tokens?.input ?? 0;
@@ -1778,6 +1890,18 @@ export const useRustAgentStore = create<RustAgentState>()(
             const { plan } = event.data as { plan: Plan };
             console.log("[RustAgent] plan_updated:", plan);
             set({ currentPlan: plan });
+            break;
+          }
+
+          case "explore_updated": {
+            const { report } = event.data as { report: ExploreReport };
+            set({ exploreReport: report });
+            break;
+          }
+
+          case "verification_updated": {
+            const { report } = event.data as { report: VerificationReport };
+            set({ verificationReport: report });
             break;
           }
 

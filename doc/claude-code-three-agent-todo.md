@@ -83,7 +83,7 @@
 - 第三阶段：把 memory 升级成 wiki，不再只是 hidden prompt context
 - 第四阶段：让 wiki 反向驱动 agent 的理解、规划、建议和主动服务
 
-### 当前进度（2026-04-12）
+### 当前进度（2026-04-13）
 
 - `Phase 1` 已完成第一版骨架
   - 已新增 `orchestrator.rs`
@@ -91,7 +91,14 @@
   - 已引入 `explore -> plan -> execute -> verify -> report` 阶段枚举和分阶段状态
   - 已保留 `legacy_single_agent` fallback
   - 已增加 Claude Code 风格的分层 prompt 组装，以及 `role prompt` 调试面板
-- `Phase 2` 仅完成基础设施，尚未拆出真正独立的 `Explore / Plan / Verify` agent
+- `Phase 2` 已完成第一版真实多角色落地
+  - 已新增 `explore.rs / plan.rs / verify.rs`
+  - 已在执行前接入 `Explore -> Plan`，而不是直接跳到 Forge loop
+  - 已让 `Explore` 产出结构化 `ExploreReport`，并合并 `rag_results / resolved_links`
+  - 已让 `Plan` 产出真实执行前计划，包含 `step id / role / status / expected artifacts`
+  - 已在执行后接入 `Verify`，输出结构化 verdict：`pass / fail / partial`
+  - 已在执行阶段记录修改文件与执行命令，供 Verify 复用
+  - 已将计划与阶段状态同步到前端 `PlanCard`
 - 旧 `Deep Research` 模式已移除，不再作为当前主线；若未来恢复研究工作流，将基于新的编排框架重建，而不是恢复旧实现
 
 ---
@@ -122,44 +129,44 @@
 
 当前状态：
 
-- [ ] 尚未拆出 `explore.rs / plan.rs / verify.rs`（计划中新文件）
-- [ ] 当前只有阶段状态、复杂任务模型路由、以及面向编排执行的 `role prompt`
-- [ ] 也就是说“编排骨架已落地”，但“真正多角色 agent”仍未开始
+- [x] 已拆出 `explore.rs / plan.rs / verify.rs`
+- [x] 已从“只有阶段状态和 role prompt”升级为“真正多角色编排”
+- [x] 已不再在复杂任务入口直接跳过 Explore / Plan / Verify
 
 ### Explore Agent
 
-- [ ] 新增 `ExploreAgent` 的只读角色定义
-- [ ] 限制 Explore 只能调用只读工具：文件读取、检索、RAG、WikiLink 解析、目录浏览
-- [ ] 让 Explore 输出结构化结果，例如：
+- [x] 新增 `ExploreAgent` 的只读角色定义
+- [x] 将 Explore 设计为只读探索阶段，不承担编辑职责
+- [x] 让 Explore 输出结构化结果，例如：
   - 相关文件列表
   - 关键实现位置
   - 相似模式
   - 潜在风险点
   - 推荐后续切入文件
-- [ ] 优先并发执行多个只读探索任务
-- [ ] 把当前 `rag_results`、`resolved_links` 的预处理逻辑合并进 Explore 输出
+- [x] 通过文件名命中与内容命中并发探测多个只读探索任务
+- [x] 把当前 `rag_results`、`resolved_links` 的预处理逻辑合并进 Explore 输出
 
 ### Plan Agent
 
-- [ ] 新增 `PlanAgent`，只读，不允许编辑
-- [ ] 输入为：用户任务 + `ExploreReport`
-- [ ] 输出为结构化 `Plan`
-- [ ] 将现有 `current_plan` 从“UI 展示结构”升级为“真实执行前计划”
-- [ ] 给计划增加 `step id / role / status / expected artifacts`
-- [ ] 为复杂任务启用“先计划再执行”，简单任务允许跳过计划阶段
+- [x] 新增 `PlanAgent`，只读，不允许编辑
+- [x] 输入为：用户任务 + `ExploreReport`
+- [x] 输出为结构化 `Plan`
+- [x] 将现有 `current_plan` 从“UI 展示结构”升级为“真实执行前计划”
+- [x] 给计划增加 `step id / role / status / expected artifacts`
+- [x] 为复杂任务启用“先计划再执行”，简单任务允许跳过计划阶段
 
 ### Verification Agent
 
-- [ ] 新增 `VerificationAgent`
-- [ ] 默认只读，不允许修改项目文件
-- [ ] 输入为：
+- [x] 新增 `VerificationAgent`
+- [x] 默认只读，不允许修改项目文件
+- [x] 输入为：
   - 原始用户目标
   - 实际修改文件列表
   - 执行阶段产物
   - 计划目标
-- [ ] 输出明确 verdict：`pass / fail / partial`
-- [ ] 根据任务类型决定验证策略
-- [ ] 允许在必要时运行项目测试命令
+- [x] 输出明确 verdict：`pass / fail / partial`
+- [x] 根据任务类型决定验证策略
+- [x] 允许在必要时运行项目测试命令
 
 建议涉及文件：
 
@@ -171,6 +178,14 @@
 - `src-tauri/src/agent/types.rs`
 - `src/stores/useRustAgentStore.ts`
 - `src/components/chat/PlanCard.tsx`
+
+当前实现补充说明：
+
+- 复杂任务现在会先运行 `Explore` 和 `Plan`，再把结果注入 `Execute`
+- `ExploreReport` 与 `VerificationReport` 都有独立事件，可直接给前端消费
+- `Execute` 阶段会记录 `modified_files / executed_commands / observations`
+- `PlanCard` 已展示当前阶段、计划角色和预期产物
+- 目前 Explore / Plan / Verify 仍是“同一主 agent 进程中的分阶段角色”，还不是独立子进程/独立 tool sandbox
 
 ---
 

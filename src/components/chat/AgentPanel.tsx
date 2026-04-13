@@ -197,7 +197,12 @@ export function AgentPanel() {
 
         {/* 任务计划卡片 */}
         {rustStore.currentPlan && rustStore.currentPlan.steps.length > 0 && (
-          <PlanCard plan={rustStore.currentPlan} className="mb-2" />
+          <PlanCard
+            plan={rustStore.currentPlan}
+            currentStage={rustStore.currentStage}
+            fallbackReason={rustStore.orchestrationFallbackReason}
+            className="mb-2"
+          />
         )}
 
         {(queuedTasks.length > 0 || activeTaskPreview || (llmRetryState && status === "running")) && (

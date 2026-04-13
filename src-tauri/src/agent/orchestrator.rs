@@ -1,15 +1,13 @@
+use crate::agent::plan::{mark_stage_completed, sync_plan_statuses};
 use crate::agent::types::{
     AgentConfig, AgentExecutionMode, AgentStage, AgentStatus, ExecuteStageState, ExploreStageState,
     GraphState, Message, OrchestrationState, PlanStageState, ReportStageState, TaskContext,
-    TaskState, VerifyStageState,
+    TaskState, VerificationVerdict, VerifyStageState,
 };
 
 const COMPLEX_TASK_CHAR_THRESHOLD: usize = 160;
 const COMPLEX_HISTORY_THRESHOLD: usize = 6;
 const COMPLEX_CONTEXT_THRESHOLD: usize = 3;
-const FALLBACK_REASON: &str =
-    "Phase 1 先建立多阶段编排骨架，实际执行仍回退到现有单 Agent Forge loop。";
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OrchestrationDecision {
     pub mode: AgentExecutionMode,
@@ -59,6 +57,7 @@ pub fn build_initial_graph_state_with_decision(
         explore: ExploreStageState {
             rag_results: context.rag_results,
             resolved_links: context.resolved_links,
+            report: None,
         },
         plan: PlanStageState::default(),
         execute: ExecuteStageState::default(),
@@ -102,6 +101,9 @@ pub fn resolve_runtime_config(config: &AgentConfig, state: &GraphState) -> Agent
 }
 
 pub fn prepare_for_forge_execution(state: &mut GraphState) {
+    if let Some(plan) = state.plan.current_plan.as_mut() {
+        sync_plan_statuses(plan, AgentStage::Execute);
+    }
     state.set_stage(AgentStage::Execute);
 }
 
@@ -110,12 +112,14 @@ pub fn mark_waiting_for_approval(state: &mut GraphState) {
 }
 
 pub fn mark_run_completed(state: &mut GraphState) {
+    if let Some(plan) = state.plan.current_plan.as_mut() {
+        mark_stage_completed(plan, AgentStage::Verify);
+        mark_stage_completed(plan, AgentStage::Report);
+    }
     if state.orchestration.mode == AgentExecutionMode::Orchestrated
-        && state.orchestration.fallback_to_single_agent
         && state.verify.summary.is_none()
     {
-        state.verify.summary =
-            Some("当前任务已经走过编排层，但 Verify 角色仍由 Phase 1 fallback 占位。".to_string());
+        state.verify.summary = Some("验证阶段未生成结构化总结。".to_string());
     }
     state.set_stage(AgentStage::Report);
 }
@@ -144,8 +148,33 @@ fn orchestrated_decision() -> OrchestrationDecision {
             AgentStage::Verify,
             AgentStage::Report,
         ],
-        fallback_to_single_agent: true,
-        fallback_reason: Some(FALLBACK_REASON.to_string()),
+        fallback_to_single_agent: false,
+        fallback_reason: None,
+    }
+}
+
+pub fn apply_verification_result_to_report(state: &mut GraphState) {
+    let Some(report) = state.verify.report.as_ref() else {
+        return;
+    };
+    if matches!(report.verdict, VerificationVerdict::Pass) {
+        return;
+    }
+
+    let prefix = match report.verdict {
+        VerificationVerdict::Fail => "Verification: fail",
+        VerificationVerdict::Partial => "Verification: partial",
+        VerificationVerdict::Pass => "Verification: pass",
+    };
+    let note = format!("{} - {}", prefix, report.summary);
+    match state.report.final_result.as_mut() {
+        Some(final_result) => {
+            if !final_result.contains(prefix) {
+                final_result.push_str("\n\n");
+                final_result.push_str(&note);
+            }
+        }
+        None => state.report.final_result = Some(note),
     }
 }
 
@@ -236,7 +265,7 @@ mod tests {
         );
 
         assert_eq!(decision.mode, AgentExecutionMode::Orchestrated);
-        assert!(decision.fallback_to_single_agent);
+        assert!(!decision.fallback_to_single_agent);
         assert_eq!(
             decision.stages,
             vec![

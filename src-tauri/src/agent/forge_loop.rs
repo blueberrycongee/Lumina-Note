@@ -371,6 +371,7 @@ fn pop_next_call(queue: &mut Vec<ToolCall>) -> Option<ToolCall> {
 }
 
 fn handle_tool_success(state: &mut GraphState, call: &ToolCall, output: ToolOutput) {
+    record_execution_artifacts(state, call);
     let content = tool_output_text(&output);
     state.push_observation(format!("[{}] {}", call.name, content));
     state.messages.push(Message {
@@ -382,6 +383,7 @@ fn handle_tool_success(state: &mut GraphState, call: &ToolCall, output: ToolOutp
 }
 
 fn handle_tool_error(state: &mut GraphState, call: &ToolCall, err: &GraphError) {
+    record_execution_artifacts(state, call);
     let message = format!("Tool {} failed: {}", call.name, err);
     state.push_observation(format!("[{}] {}", call.name, message));
     state.messages.push(Message {
@@ -390,6 +392,32 @@ fn handle_tool_error(state: &mut GraphState, call: &ToolCall, err: &GraphError) 
         name: Some(call.name.clone()),
         tool_call_id: Some(call.id.clone()),
     });
+}
+
+fn record_execution_artifacts(state: &mut GraphState, call: &ToolCall) {
+    match call.name.as_str() {
+        "write" | "edit" => {
+            if let Some(path) = call
+                .params
+                .get("filePath")
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+            {
+                state.record_modified_file(path.to_string());
+            }
+        }
+        "bash" => {
+            if let Some(command) = call
+                .params
+                .get("command")
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+            {
+                state.record_executed_command(command.to_string());
+            }
+        }
+        _ => {}
+    }
 }
 
 fn tool_output_text(output: &ToolOutput) -> String {
