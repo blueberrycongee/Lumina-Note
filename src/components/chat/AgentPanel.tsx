@@ -6,12 +6,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useMemoryStore } from "@/stores/useMemoryStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { reverifyDurableMemoryEntry } from "@/services/memory/durableMemory";
 import { ChatInput } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
 import { PlanCard } from "./PlanCard";
+import { MemoryReviewPanel } from "@/components/memory/MemoryReviewPanel";
 import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
@@ -31,6 +33,7 @@ import {
   Bug,
   FileText,
   BookOpen,
+  Layers3,
 } from "lucide-react";
 
 export function AgentPanel() {
@@ -46,11 +49,15 @@ export function AgentPanel() {
 
   // 使用 Rust Agent store
   const rustStore = useRustAgentStore();
+  const hydrateMemory = useMemoryStore((state) => state.hydrateFromSnapshot);
   
   // 选择实际使用的 store 数据
   const status = rustStore.status;
   const durableMemorySnapshot = rustStore.durableMemorySnapshot;
   const durableMemoryBusy = rustStore.durableMemoryBusy;
+  const exploreReport = rustStore.exploreReport;
+  const verificationReport = rustStore.verificationReport;
+  const orchestrationStages = rustStore.orchestrationStages;
   // 转换 Rust Agent 消息格式（tool role -> assistant）
   const messages = rustStore.messages.map(m => ({
     ...m,
@@ -109,6 +116,10 @@ export function AgentPanel() {
   const staleEntries = (durableMemorySnapshot?.staleEntryIds ?? [])
     .map((id) => durableMemorySnapshot?.entries.find((entry) => entry.id === id))
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+
+  useEffect(() => {
+    hydrateMemory(durableMemorySnapshot);
+  }, [durableMemorySnapshot, hydrateMemory]);
 
   // 滚动到底部
   useEffect(() => {
@@ -216,6 +227,67 @@ export function AgentPanel() {
           />
         )}
 
+        {(rustStore.currentStage || orchestrationStages.length > 0) && (
+          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium flex items-center gap-1.5">
+                <Layers3 className="w-3.5 h-3.5" />
+                Agent Stages
+              </span>
+              <span className="text-muted-foreground">
+                {rustStore.currentStage ? `Current: ${rustStore.currentStage}` : "Waiting for stage events"}
+              </span>
+            </div>
+            {orchestrationStages.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {orchestrationStages.map((stage) => (
+                  <span
+                    key={stage}
+                    className={`rounded-full border px-2 py-0.5 text-[10px] ${stage === rustStore.currentStage
+                      ? "border-primary/50 bg-primary/10 text-foreground"
+                      : "border-border/60 text-muted-foreground"
+                    }`}
+                  >
+                    {stage}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {exploreReport && (
+          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
+            <p className="text-xs font-medium">Explore summary</p>
+            <p className="mt-1 text-xs text-muted-foreground">{exploreReport.summary}</p>
+            <div className="mt-1.5 text-[11px] text-muted-foreground">
+              related files: {exploreReport.related_files.slice(0, 4).join(", ") || "none"}
+            </div>
+          </div>
+        )}
+
+        {verificationReport && (
+          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
+            <div className="flex items-center justify-between text-xs">
+              <p className="font-medium">Verification report</p>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] ${verificationReport.verdict === "pass"
+                ? "bg-success/10 text-success"
+                : verificationReport.verdict === "fail"
+                  ? "bg-destructive/10 text-destructive"
+                  : "bg-warning/10 text-warning"
+              }`}>
+                {verificationReport.verdict}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">{verificationReport.summary}</p>
+            {verificationReport.outstanding_risks.length > 0 && (
+              <p className="mt-1.5 text-[11px] text-warning truncate">
+                risks: {verificationReport.outstanding_risks.slice(0, 2).join("; ")}
+              </p>
+            )}
+          </div>
+        )}
+
         {(queuedTasks.length > 0 || activeTaskPreview || (llmRetryState && status === "running")) && (
           <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
             <div className="flex items-center justify-between gap-2 text-xs">
@@ -260,85 +332,120 @@ export function AgentPanel() {
         )}
 
         {(durableMemoryBusy || durableMemorySnapshot) && (
-          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
-            <button
-              onClick={() => setMemoryExpanded((prev) => !prev)}
-              className="w-full flex items-center justify-between gap-2 text-xs"
-              title={memoryExpanded ? "收起 Memory Wiki 面板" : "展开 Memory Wiki 面板"}
-            >
-              <span className="font-medium flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5" />
-                Memory Wiki
-              </span>
-              <span className="text-muted-foreground">
-                {durableMemorySnapshot
-                  ? `${durableMemorySnapshot.entries.length} entries · ${durableMemorySnapshot.wikiPages.length} pages`
-                  : "loading..."}
-              </span>
-            </button>
+          <>
+            <MemoryReviewPanel
+              workspacePath={vaultPath || null}
+              snapshot={durableMemorySnapshot}
+              sessionSnapshot={rustStore.sessionMemorySnapshot}
+              onSnapshotChanged={(nextSnapshot) => {
+                if (nextSnapshot) {
+                  hydrateMemory(nextSnapshot);
+                  rustStore._refreshDurableMemorySnapshot(vaultPath);
+                }
+              }}
+            />
 
-            {memoryExpanded && durableMemorySnapshot && (
-              <div className="mt-2 space-y-2">
-                <div className="flex flex-wrap gap-1.5">
-                  {durableMemorySnapshot.wikiPages.map((page) => (
-                    <button
-                      key={page.id}
-                      onClick={() => void useFileStore.getState().openFile(page.path)}
-                      className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent"
-                      title={`打开 Wiki 页面：${page.title}（${page.path}）`}
-                    >
-                      {page.title}
-                      {page.staleEntryCount > 0 ? ` (${page.staleEntryCount} stale)` : ""}
-                    </button>
-                  ))}
-                </div>
+            <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
+              <button
+                onClick={() => setMemoryExpanded((prev) => !prev)}
+                className="w-full flex items-center justify-between gap-2 text-xs"
+                title={memoryExpanded ? "收起 Memory Wiki 面板" : "展开 Memory Wiki 面板"}
+              >
+                <span className="font-medium flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Memory Wiki
+                </span>
+                <span className="text-muted-foreground">
+                  {durableMemorySnapshot
+                    ? `${durableMemorySnapshot.entries.length} entries · ${durableMemorySnapshot.wikiPages.length} pages`
+                    : "loading..."}
+                </span>
+              </button>
 
-                {staleEntries.length > 0 ? (
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] text-warning">Stale memories: {staleEntries.length}</p>
-                    {staleEntries.slice(0, 5).map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between gap-2 text-xs bg-background/60 border border-border/50 rounded px-2 py-1">
-                        <div className="min-w-0">
-                          <p className="truncate text-foreground">{entry.title}</p>
-                          <p className="truncate text-muted-foreground">{entry.scope}</p>
-                        </div>
+              {memoryExpanded && durableMemorySnapshot && (
+                <div className="mt-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                    {[
+                      ["我是谁", "me"],
+                      ["我的项目", "projects"],
+                      ["我的人物关系", "people"],
+                      ["我的工作模式", "routines"],
+                    ].map(([label, id]) => {
+                      const page = durableMemorySnapshot.wikiPages.find((item) => item.id === id);
+                      return (
                         <button
-                          onClick={async () => {
-                            if (!vaultPath || reverifyBusyId) return;
-                            setMemoryError(null);
-                            setReverifyBusyId(entry.id);
-                            try {
-                              await reverifyDurableMemoryEntry(vaultPath, entry.id);
-                              await rustStore._refreshDurableMemorySnapshot(vaultPath);
-                            } catch (error) {
-                              setMemoryError(error instanceof Error ? error.message : String(error));
-                            } finally {
-                              setReverifyBusyId(null);
-                            }
-                          }}
-                          disabled={!vaultPath || reverifyBusyId !== null}
-                          className="shrink-0 rounded border border-border/60 px-2 py-0.5 text-[10px] text-foreground hover:bg-accent disabled:opacity-60"
-                          title={
-                            reverifyBusyId === entry.id
-                              ? `正在重验证：${entry.title}`
-                              : `重验证这条记忆并刷新 last verified 时间：${entry.title}`
-                          }
+                          key={id}
+                          onClick={() => page && void useFileStore.getState().openFile(page.path)}
+                          className="rounded border border-border/60 px-2 py-1 text-left text-muted-foreground hover:bg-accent hover:text-foreground"
+                          disabled={!page}
                         >
-                          {reverifyBusyId === entry.id ? "Reverifying..." : "Reverify"}
+                          {label}
                         </button>
-                      </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {durableMemorySnapshot.wikiPages.map((page) => (
+                      <button
+                        key={page.id}
+                        onClick={() => void useFileStore.getState().openFile(page.path)}
+                        className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent"
+                        title={`打开 Wiki 页面：${page.title}（${page.path}）`}
+                      >
+                        {page.title}
+                        {page.staleEntryCount > 0 ? ` (${page.staleEntryCount} stale)` : ""}
+                      </button>
                     ))}
                   </div>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">No stale memories detected.</p>
-                )}
 
-                {memoryError && (
-                  <p className="text-[11px] text-destructive">{memoryError}</p>
-                )}
-              </div>
-            )}
-          </div>
+                  {staleEntries.length > 0 ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[11px] text-warning">Stale memories: {staleEntries.length}</p>
+                      {staleEntries.slice(0, 5).map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between gap-2 text-xs bg-background/60 border border-border/50 rounded px-2 py-1">
+                          <div className="min-w-0">
+                            <p className="truncate text-foreground">{entry.title}</p>
+                            <p className="truncate text-muted-foreground">{entry.scope}</p>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (!vaultPath || reverifyBusyId) return;
+                              setMemoryError(null);
+                              setReverifyBusyId(entry.id);
+                              try {
+                                await reverifyDurableMemoryEntry(vaultPath, entry.id);
+                                await rustStore._refreshDurableMemorySnapshot(vaultPath);
+                              } catch (error) {
+                                setMemoryError(error instanceof Error ? error.message : String(error));
+                              } finally {
+                                setReverifyBusyId(null);
+                              }
+                            }}
+                            disabled={!vaultPath || reverifyBusyId !== null}
+                            className="shrink-0 rounded border border-border/60 px-2 py-0.5 text-[10px] text-foreground hover:bg-accent disabled:opacity-60"
+                            title={
+                              reverifyBusyId === entry.id
+                                ? `正在重验证：${entry.title}`
+                                : `重验证这条记忆并刷新 last verified 时间：${entry.title}`
+                            }
+                          >
+                            {reverifyBusyId === entry.id ? "Reverifying..." : "Reverify"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">No stale memories detected.</p>
+                  )}
+
+                  {memoryError && (
+                    <p className="text-[11px] text-destructive">{memoryError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* 消息列表 - 使用 AgentMessageRenderer 组件 */}
@@ -365,7 +472,25 @@ export function AgentPanel() {
         {/* 错误状态 */}
         {status === "error" && (
           <div className="text-sm text-destructive p-2 bg-destructive/10 rounded">
-            {rustStore.error || t.ai.errorRetry}
+            <p>{rustStore.error || t.ai.errorRetry}</p>
+            <button
+              onClick={() => {
+                const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+                if (lastUserMsg && vaultPath) {
+                  const { currentFile, currentContent } = useFileStore.getState();
+                  startTask(lastUserMsg.rawContent || lastUserMsg.content, {
+                    workspacePath: vaultPath,
+                    activeNote: currentFile || undefined,
+                    activeNoteContent: currentContent || undefined,
+                    displayMessage: lastUserMsg.content,
+                    attachments: lastUserMsg.attachments,
+                  });
+                }
+              }}
+              className="mt-2 inline-flex items-center gap-1 rounded border border-destructive/40 px-2 py-0.5 text-xs hover:bg-destructive/10"
+            >
+              <RefreshCw size={12} /> Retry failed stage
+            </button>
           </div>
         )}
 

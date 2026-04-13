@@ -79,6 +79,8 @@ export interface DurableMemorySnapshot {
   wikiRoot: string;
   wikiPages: WikiPageSummary[];
   staleEntryIds: string[];
+  duplicateEntryIds: string[];
+  conflictEntryIds: string[];
   mergeResults: MemoryMergeResult[];
   extractionInFlight: boolean;
   lastExtractedAt: number | null;
@@ -170,6 +172,8 @@ interface BackendDurableMemorySnapshot {
   wiki_root?: string;
   wiki_pages?: BackendWikiPageSummary[];
   stale_entry_ids?: string[];
+  duplicate_entry_ids?: string[];
+  conflict_entry_ids?: string[];
   merge_results: BackendMemoryMergeResult[];
   extraction_in_flight: boolean;
   last_extracted_at?: number | null;
@@ -261,6 +265,8 @@ function toFrontendSnapshot(snapshot: BackendDurableMemorySnapshot): DurableMemo
     wikiRoot: snapshot.wiki_root ?? "",
     wikiPages: (snapshot.wiki_pages ?? []).map(toFrontendWikiPage),
     staleEntryIds: snapshot.stale_entry_ids ?? [],
+    duplicateEntryIds: snapshot.duplicate_entry_ids ?? [],
+    conflictEntryIds: snapshot.conflict_entry_ids ?? [],
     mergeResults: snapshot.merge_results.map(toFrontendMergeResult),
     extractionInFlight: snapshot.extraction_in_flight,
     lastExtractedAt: snapshot.last_extracted_at ?? null,
@@ -389,6 +395,15 @@ export async function reverifyDurableMemoryEntry(
       workspacePath,
       entryId,
     },
+  );
+  return toFrontendSnapshot(snapshot);
+}
+
+export async function gcDurableMemory(workspacePath: string): Promise<DurableMemorySnapshot | null> {
+  if (!workspacePath) return null;
+  const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
+    "agent_gc_durable_memory",
+    { workspacePath },
   );
   return toFrontendSnapshot(snapshot);
 }

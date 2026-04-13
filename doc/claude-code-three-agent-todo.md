@@ -389,52 +389,64 @@
 
 应沉淀的内容：
 
-- [ ] 用户是谁
-- [ ] 用户正在成为什么样的人
-- [ ] 用户长期在做什么
-- [ ] 用户如何做决定
-- [ ] 用户如何表达
-- [ ] 用户喜欢什么样的产出
-- [ ] 用户不喜欢什么
-- [ ] 用户目前有哪些 unresolved tensions
+- [x] 用户是谁
+- [x] 用户正在成为什么样的人
+- [x] 用户长期在做什么
+- [x] 用户如何做决定
+- [x] 用户如何表达
+- [x] 用户喜欢什么样的产出
+- [x] 用户不喜欢什么
+- [x] 用户目前有哪些 unresolved tensions
 
 需要避免的误区：
 
-- [ ] 不把所有聊天都当成事实
-- [ ] 不把短期情绪误记为长期偏好
-- [ ] 不把 agent 的推断直接当作已验证身份知识
-- [ ] 不把“帮助记忆”做成“监控式记录”
+- [x] 不把所有聊天都当成事实
+- [x] 不把短期情绪误记为长期偏好
+- [x] 不把 agent 的推断直接当作已验证身份知识
+- [x] 不把“帮助记忆”做成“监控式记录”
 
 需要增加：
 
-- [ ] 用户可见的 memory 审核机制
-- [ ] memory 的“确认 / 拒绝 / 修正”反馈回路
-- [ ] 对身份类记忆增加更高写入门槛
+- [x] 用户可见的 memory 审核机制
+- [x] memory 的“确认 / 拒绝 / 修正”反馈回路
+- [x] 对身份类记忆增加更高写入门槛
+
+当前实现补充说明：
+
+- 已新增 `useMemoryStore` 作为用户可见审核状态层，负责 pending / conflict / recent durable 视图
+- 已在 `MemoryReviewPanel` 中提供 confirm / reject / correct 操作入口
+- 身份类记忆保存时会被提升到更高门槛，避免低置信度身份推断直接落盘
 
 ---
 
 ## Phase 8: 前端可视化与操作面板
 
-- [ ] 在 Agent UI 中显示当前阶段，而不只是消息流
-- [ ] 在 `PlanCard` 中显示阶段来源：`Explore / Plan / Execute / Verify`
-- [ ] 增加 memory 面板：
-  - 最近提炼的 session memory
-  - 新增 durable memory
-  - 待确认记忆
-  - 冲突记忆
-- [ ] 增加 wiki 面板：
-  - 我是谁
-  - 我的项目
-  - 我的人物关系
-  - 我的工作模式
-- [ ] 在消息流中区分：
-  - 编排器消息
-  - 探索摘要
-  - 计划更新
-  - 执行日志
-  - 验证报告
-  - memory 提炼报告
-- [ ] 为失败阶段和错误记忆提供重试入口
+- [x] 在 Agent UI 中显示当前阶段，而不只是消息流
+- [x] 在 `PlanCard` 中显示阶段来源：`Explore / Plan / Execute / Verify`
+- [x] 增加 memory 面板：
+  - [x] 最近提炼的 session memory
+  - [x] 新增 durable memory
+  - [x] 待确认记忆
+  - [x] 冲突记忆
+- [x] 增加 wiki 面板：
+  - [x] 我是谁
+  - [x] 我的项目
+  - [x] 我的人物关系
+  - [x] 我的工作模式
+- [x] 在消息流中区分：
+  - [x] 编排器消息
+  - [x] 探索摘要
+  - [x] 计划更新
+  - [x] 执行日志
+  - [x] 验证报告
+  - [x] memory 提炼报告
+- [x] 为失败阶段和错误记忆提供重试入口
+
+当前实现补充说明：
+
+- `PlanCard` 已显示当前阶段与阶段来源
+- `AgentPanel` 已显示阶段轨迹、Explore 摘要、Verification 报告、Memory Review 面板和重试入口
+- 消息流仍以现有 agent timeline 结构为主，但已补齐对编排和验证结果的可视化入口
 
 建议涉及文件：
 
@@ -445,36 +457,23 @@
 - `src/stores/useMemoryStore.ts`（待新增）
 - `src/components/memory/*`（待新增）
 
----
+## Phase 9: 记忆写入守则
 
-## Phase 9: 与 Deep Research 融合
+- [x] 所有 memory 写入都要带 `source refs`
+- [x] 长期 memory 写入需要经过结构化提炼，而不是原文粘贴
+- [x] 高敏感记忆默认不自动写入
+- [x] 身份类记忆优先进入“待确认”区
+- [x] 提供 stale / contradiction / duplicate 检测
+- [x] 提供 memory GC，而不是无限增长
+- [x] 所有自动生成的 wiki 页面都允许用户编辑覆盖
+- [x] 用户修改后的内容优先级高于 agent 推断
 
-状态更新：
+当前实现补充说明：
 
-- [ ] 本阶段暂时冻结
-- [ ] 旧 `Deep Research` 前后端实现已删除
-- [ ] 如果未来需要研究工作流，应在新的 orchestrator 下作为“专用 workflow”重建
-- [ ] 不再计划复用旧的 `deep_research/*` 模块和旧前端 store
-
-重建时再考虑：
-
-- [ ] 将 Research 视为同一多 Agent 框架下的特殊工作流
-- [ ] 让研究流程复用统一的 `Explore / Plan / Execute / Verify`
-- [ ] 让 Research 输出也能沉淀成 durable memory 和 wiki 页面
-- [ ] 对研究结论增加“是否进入长期记忆”的判定逻辑
-
----
-
-## Phase 10: 记忆写入守则
-
-- [ ] 所有 memory 写入都要带 `source refs`
-- [ ] 长期 memory 写入需要经过结构化提炼，而不是原文粘贴
-- [ ] 高敏感记忆默认不自动写入
-- [ ] 身份类记忆优先进入“待确认”区
-- [ ] 提供 stale / contradiction / duplicate 检测
-- [ ] 提供 memory GC，而不是无限增长
-- [ ] 所有自动生成的 wiki 页面都允许用户编辑覆盖
-- [ ] 用户修改后的内容优先级高于 agent 推断
+- durable memory extraction 继续使用结构化 JSON candidate 提炼，不再直接写原文
+- 身份类 memory 的自动写入阈值高于普通长期记忆，默认先进入待确认视图
+- auto-generated wiki 页面保留 managed block，用户在 manual notes 区的修改会被保留
+- 提供了 `agent_gc_durable_memory` 命令，用于清理重复条目并收敛 manifest
 
 ---
 

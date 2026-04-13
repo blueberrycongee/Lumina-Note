@@ -224,6 +224,7 @@ pub enum MemoryMergeAction {
     Created,
     Updated,
     Deduped,
+    SkippedSensitive,
     SkippedLowConfidence,
     SkippedEmpty,
     SkippedInvalidScope,
@@ -247,6 +248,8 @@ pub struct DurableMemorySnapshot {
     pub wiki_root: String,
     pub wiki_pages: Vec<WikiPageSummary>,
     pub stale_entry_ids: Vec<String>,
+    pub duplicate_entry_ids: Vec<String>,
+    pub conflict_entry_ids: Vec<String>,
     pub merge_results: Vec<MemoryMergeResult>,
     pub extraction_in_flight: bool,
     pub last_extracted_at: Option<u64>,
@@ -433,6 +436,119 @@ fn entry_last_verified_at(entry: &MemoryEntry) -> u64 {
 
 fn entry_is_stale(entry: &MemoryEntry, now: u64) -> bool {
     age_days_from(now, entry_last_verified_at(entry)) > MEMORY_STALE_AFTER_DAYS
+}
+
+fn scope_confidence_floor(scope: &MemoryScope) -> MemoryConfidence {
+    match scope {
+        MemoryScope::UserIdentity => MemoryConfidence::High,
+        MemoryScope::TeamShared => MemoryConfidence::Medium,
+        _ => MemoryConfidence::Medium,
+    }
+}
+
+fn is_manual_override(entry: &MemoryEntry) -> bool {
+    entry
+        .source_refs
+        .iter()
+        .any(|source| source.session_id == "manual-edit")
+}
+
+fn is_sensitive_candidate(candidate: &DurableMemoryCandidate) -> bool {
+    let text = format!(
+        "{} {} {}",
+        candidate.title, candidate.summary, candidate.details
+    )
+    .to_ascii_lowercase();
+    let patterns = [
+        "password",
+        "passcode",
+        "token",
+        "secret",
+        "api key",
+        "apikey",
+        "private key",
+        "access token",
+        "refresh token",
+        "ssn",
+        "social security",
+        "bank",
+        "credit card",
+        "身份证",
+        "手机号",
+        "手机号",
+        "邮箱",
+        "address",
+        "home address",
+        "passport",
+    ];
+    patterns.iter().any(|pattern| text.contains(pattern))
+}
+
+fn entry_duplicate_key(entry: &MemoryEntry) -> String {
+    format!(
+        "{}::{}::{}::{}",
+        entry.scope.dir_name(),
+        normalize_for_compare(&entry.title),
+        normalize_for_compare(&entry.summary),
+        normalize_for_compare(&entry.details)
+    )
+}
+
+fn entry_conflict_key(entry: &MemoryEntry) -> String {
+    format!(
+        "{}::{}",
+        entry.scope.dir_name(),
+        normalize_for_compare(&entry.title)
+    )
+}
+
+fn detect_duplicate_entry_ids(entries: &[MemoryEntry]) -> Vec<String> {
+    let mut seen = HashMap::<String, String>::new();
+    let mut duplicate_ids = BTreeSet::new();
+    for entry in entries {
+        let key = entry_duplicate_key(entry);
+        if let Some(existing) = seen.insert(key, entry.id.clone()) {
+            duplicate_ids.insert(existing);
+            duplicate_ids.insert(entry.id.clone());
+        }
+    }
+    duplicate_ids.into_iter().collect()
+}
+
+fn detect_conflict_entry_ids(entries: &[MemoryEntry]) -> Vec<String> {
+    let mut grouped = HashMap::<String, Vec<&MemoryEntry>>::new();
+    for entry in entries {
+        grouped
+            .entry(entry_conflict_key(entry))
+            .or_default()
+            .push(entry);
+    }
+
+    let mut conflict_ids = BTreeSet::new();
+    for siblings in grouped.values() {
+        if siblings.len() < 2 {
+            continue;
+        }
+        let summary_set = siblings
+            .iter()
+            .map(|entry| normalize_for_compare(&entry.summary))
+            .collect::<BTreeSet<_>>();
+        let details_set = siblings
+            .iter()
+            .map(|entry| normalize_for_compare(&entry.details))
+            .collect::<BTreeSet<_>>();
+        let confidence_set = siblings
+            .iter()
+            .map(|entry| entry.confidence.clone())
+            .collect::<BTreeSet<_>>();
+        if summary_set.len() > 1 || details_set.len() > 1 || confidence_set.len() > 1 {
+            for entry in siblings {
+                conflict_ids.insert(entry.id.clone());
+            }
+        }
+    }
+
+    conflict_ids.into_iter().collect()
 }
 
 fn likely_doc_ref(token: &str) -> bool {
@@ -771,7 +887,7 @@ fn render_wiki_page(title: &str, page_id: &str, entries: &[&MemoryEntry], now: u
     };
 
     format!(
-        "---\npage: {}\nentry_count: {}\nstale_entry_count: {}\ngenerated_at: {}\n---\n\n# {}\n\n## Navigation\n\n{}\n\n## Entries\n\n{}\n",
+        "---\npage: {}\nentry_count: {}\nstale_entry_count: {}\ngenerated_at: {}\nmanaged: true\n---\n\n# {}\n\n<!-- lumina-wiki:auto-start -->\n## Navigation\n\n{}\n\n## Entries\n\n{}\n<!-- lumina-wiki:auto-end -->\n\n## Manual Notes\n\n_Add your own notes below this section. Content outside the managed block is preserved on refresh._\n",
         page_id,
         entries.len(),
         stale_count,
@@ -780,6 +896,32 @@ fn render_wiki_page(title: &str, page_id: &str, entries: &[&MemoryEntry], now: u
         nav,
         body
     )
+}
+
+fn merge_managed_wiki_content(existing: Option<String>, generated: &str) -> String {
+    let Some(existing) = existing else {
+        return generated.to_string();
+    };
+
+    let start_marker = "<!-- lumina-wiki:auto-start -->";
+    let end_marker = "<!-- lumina-wiki:auto-end -->";
+    let Some(start) = existing.find(start_marker) else {
+        return generated.to_string();
+    };
+    let Some(end) = existing.find(end_marker) else {
+        return generated.to_string();
+    };
+
+    let prefix = &existing[..start];
+    let suffix = &existing[end + end_marker.len()..];
+    let generated_start = generated.find(start_marker).unwrap_or(0);
+    let generated_end = generated
+        .find(end_marker)
+        .map(|idx| idx + end_marker.len())
+        .unwrap_or(generated.len());
+    let managed_block = &generated[generated_start..generated_end];
+
+    format!("{}{}{}", prefix, managed_block, suffix)
 }
 
 fn build_wiki_page_summaries(
@@ -825,7 +967,12 @@ async fn sync_wiki_from_manifest(
             .map_err(|err| format!("Failed to create wiki section dir: {}", err))?;
         let entries = section_entries(manifest, page_id);
         let markdown = render_wiki_page(section_title, page_id, &entries, now);
-        tokio::fs::write(section_dir.join("README.md"), markdown)
+        let page_path = section_dir.join("README.md");
+        let merged = match tokio::fs::read_to_string(&page_path).await {
+            Ok(existing) => merge_managed_wiki_content(Some(existing), &markdown),
+            Err(_) => markdown,
+        };
+        tokio::fs::write(page_path, merged)
             .await
             .map_err(|err| format!("Failed to write wiki page {}: {}", section_title, err))?;
     }
@@ -890,6 +1037,18 @@ fn find_existing_entry_index(
     })
 }
 
+fn effective_confidence_floor(
+    candidate: &DurableMemoryCandidate,
+    config: &DurableMemoryConfig,
+) -> MemoryConfidence {
+    let scope_floor = scope_confidence_floor(&candidate.scope);
+    if scope_floor.rank() > config.minimum_confidence_to_write.rank() {
+        scope_floor
+    } else {
+        config.minimum_confidence_to_write.clone()
+    }
+}
+
 fn build_source_ref(session_id: &str, candidate: &DurableMemoryCandidate) -> MemorySourceRef {
     MemorySourceRef {
         session_id: session_id.to_string(),
@@ -943,7 +1102,23 @@ fn merge_candidate(
         );
     }
 
-    if candidate.confidence.rank() < config.minimum_confidence_to_write.rank() {
+    if is_sensitive_candidate(&candidate) && session_id != "manual-edit" {
+        return (
+            MemoryMergeResult {
+                action: MemoryMergeAction::SkippedSensitive,
+                entry_id: None,
+                scope: Some(candidate.scope),
+                title: candidate.title,
+                path: None,
+                detail: "Sensitive memory is held for manual review instead of automatic write"
+                    .to_string(),
+            },
+            None,
+        );
+    }
+
+    let minimum_confidence = effective_confidence_floor(&candidate, config);
+    if candidate.confidence.rank() < minimum_confidence.rank() {
         return (
             MemoryMergeResult {
                 action: MemoryMergeAction::SkippedLowConfidence,
@@ -960,6 +1135,7 @@ fn merge_candidate(
     if let Some(index) = find_existing_entry_index(manifest, &candidate) {
         let source_ref = build_source_ref(session_id, &candidate);
         let entry = manifest.entries.get_mut(index).expect("entry exists");
+        let entry_was_manual_override = is_manual_override(entry);
         let previous_updated_at = entry.updated_at;
         let normalized_summary = normalize_for_compare(&candidate.summary);
         let normalized_details = normalize_for_compare(&candidate.details);
@@ -972,6 +1148,23 @@ fn merge_candidate(
                     .visibility
                     .clone()
                     .unwrap_or(entry.visibility.clone());
+
+        if entry_was_manual_override && session_id != "manual-edit" && changed {
+            entry.source_refs = merge_source_refs(&entry.source_refs, source_ref);
+            entry.updated_at = now_millis();
+            return (
+                MemoryMergeResult {
+                    action: MemoryMergeAction::Deduped,
+                    entry_id: Some(entry.id.clone()),
+                    scope: Some(entry.scope.clone()),
+                    title: entry.title.clone(),
+                    path: Some(entry.file_path.clone()),
+                    detail: "Preserved user-edited durable memory and skipped automatic overwrite"
+                        .to_string(),
+                },
+                Some(index),
+            );
+        }
 
         entry.tags = merge_tags(&entry.tags, &candidate.tags);
         entry.source_refs = merge_source_refs(&entry.source_refs, source_ref);
@@ -1086,6 +1279,8 @@ fn build_snapshot(
         .filter(|entry| entry_is_stale(entry, now))
         .map(|entry| entry.id.clone())
         .collect::<Vec<_>>();
+    let duplicate_entry_ids = detect_duplicate_entry_ids(&manifest.entries);
+    let conflict_entry_ids = detect_conflict_entry_ids(&manifest.entries);
     let wiki_pages = build_wiki_page_summaries(workspace_path, &manifest);
     DurableMemorySnapshot {
         workspace_path: workspace_path.to_string(),
@@ -1094,10 +1289,76 @@ fn build_snapshot(
         wiki_root: build_wiki_root(workspace_path).display().to_string(),
         wiki_pages,
         stale_entry_ids,
+        duplicate_entry_ids,
+        conflict_entry_ids,
         merge_results,
         extraction_in_flight: state.extraction_in_flight,
         last_extracted_at: state.last_extracted_at,
     }
+}
+
+pub async fn gc_durable_memory_impl(workspace_path: &str) -> Result<DurableMemorySnapshot, String> {
+    if workspace_path.trim().is_empty() {
+        return Err("workspace_path is required".to_string());
+    }
+
+    let mut manifest = load_manifest(workspace_path).await?;
+    let mut grouped = HashMap::<String, Vec<usize>>::new();
+    for (index, entry) in manifest.entries.iter().enumerate() {
+        grouped
+            .entry(entry_duplicate_key(entry))
+            .or_default()
+            .push(index);
+    }
+
+    let mut remove_indices = BTreeSet::new();
+    for indices in grouped.values() {
+        if indices.len() < 2 {
+            continue;
+        }
+        let mut sorted = indices.clone();
+        sorted.sort_by_key(|index| {
+            manifest
+                .entries
+                .get(*index)
+                .map(|entry| entry.updated_at)
+                .unwrap_or(0)
+        });
+        let keep_count = sorted.len().saturating_sub(1);
+        for index in sorted.into_iter().take(keep_count) {
+            remove_indices.insert(index);
+        }
+    }
+
+    if !remove_indices.is_empty() {
+        let removed_paths = manifest
+            .entries
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| remove_indices.contains(index))
+            .map(|(_, entry)| entry.file_path.clone())
+            .collect::<Vec<_>>();
+        let mut keep =
+            Vec::with_capacity(manifest.entries.len().saturating_sub(remove_indices.len()));
+        for (index, entry) in manifest.entries.into_iter().enumerate() {
+            if !remove_indices.contains(&index) {
+                keep.push(entry);
+            }
+        }
+        manifest.entries = keep;
+        manifest.updated_at = now_millis();
+        save_manifest(workspace_path, &manifest).await?;
+        sync_wiki_from_manifest(workspace_path, &manifest).await?;
+        for path in removed_paths {
+            let _ = tokio::fs::remove_file(path).await;
+        }
+        for entry in manifest.entries.iter() {
+            write_entry_file(entry).await?;
+        }
+    }
+
+    let state = load_runtime_state(workspace_path).await;
+    Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
 }
 
 pub async fn get_durable_memory_snapshot(
@@ -1630,6 +1891,13 @@ pub async fn agent_reverify_durable_memory_entry(
     reverify_durable_memory_entry_impl(&workspace_path, &entry_id).await
 }
 
+#[tauri::command]
+pub async fn agent_gc_durable_memory(
+    workspace_path: String,
+) -> Result<DurableMemorySnapshot, String> {
+    gc_durable_memory_impl(&workspace_path).await
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1746,5 +2014,118 @@ mod tests {
             &TaskContext::default(),
         );
         assert!(scopes.contains(&MemoryScope::LocalContext));
+    }
+
+    #[test]
+    fn identity_scope_requires_high_confidence() {
+        let mut manifest = DurableMemoryManifest::default();
+        let mut next = candidate(
+            MemoryScope::UserIdentity,
+            "User prefers terse updates",
+            MemoryConfidence::Medium,
+        );
+        next.summary = "Keep answers short".to_string();
+        next.details = "The user prefers concise responses".to_string();
+
+        let (result, touched) = merge_candidate(
+            "/tmp/workspace",
+            "session-1",
+            &mut manifest,
+            next,
+            &DurableMemoryConfig::default(),
+        );
+
+        assert_eq!(result.action, MemoryMergeAction::SkippedLowConfidence);
+        assert!(touched.is_none());
+        assert!(manifest.entries.is_empty());
+    }
+
+    #[test]
+    fn sensitive_candidates_are_skipped_for_auto_extraction() {
+        let mut manifest = DurableMemoryManifest::default();
+        let mut next = candidate(
+            MemoryScope::Project,
+            "API token rotation",
+            MemoryConfidence::High,
+        );
+        next.summary = "Store the API token in the vault".to_string();
+        next.details = "The token should not be shared".to_string();
+
+        let (result, touched) = merge_candidate(
+            "/tmp/workspace",
+            "session-1",
+            &mut manifest,
+            next,
+            &DurableMemoryConfig::default(),
+        );
+
+        assert_eq!(result.action, MemoryMergeAction::SkippedSensitive);
+        assert!(touched.is_none());
+        assert!(manifest.entries.is_empty());
+    }
+
+    #[test]
+    fn manual_override_is_preserved_from_auto_updates() {
+        let created_at = now_millis();
+        let mut manifest = DurableMemoryManifest {
+            version: 1,
+            updated_at: created_at,
+            entries: vec![MemoryEntry {
+                id: "entry-1".to_string(),
+                scope: MemoryScope::Project,
+                visibility: MemoryVisibility::Private,
+                title: "Release freeze".to_string(),
+                summary: "User approved freeze window".to_string(),
+                details: "Manual note".to_string(),
+                confidence: MemoryConfidence::High,
+                tags: vec![],
+                file_path: "/tmp/workspace/memory/projects/release-freeze--entry-1.md".to_string(),
+                version: 1,
+                created_at,
+                updated_at: created_at,
+                last_verified_at: Some(created_at),
+                source_refs: vec![MemorySourceRef {
+                    session_id: "manual-edit".to_string(),
+                    extracted_at: created_at,
+                    source_excerpt: Some("edited by user".to_string()),
+                }],
+                history: Vec::new(),
+            }],
+        };
+        let mut next = candidate(
+            MemoryScope::Project,
+            "Release freeze",
+            MemoryConfidence::High,
+        );
+        next.summary = "Auto summary should not overwrite".to_string();
+        next.details = "Auto details should not overwrite".to_string();
+
+        let (result, touched) = merge_candidate(
+            "/tmp/workspace",
+            "session-2",
+            &mut manifest,
+            next,
+            &DurableMemoryConfig::default(),
+        );
+
+        assert_eq!(result.action, MemoryMergeAction::Deduped);
+        assert_eq!(touched, Some(0));
+        assert_eq!(manifest.entries[0].summary, "User approved freeze window");
+        assert_eq!(manifest.entries[0].details, "Manual note");
+        assert!(manifest.entries[0]
+            .source_refs
+            .iter()
+            .any(|source| source.session_id == "session-2"));
+    }
+
+    #[test]
+    fn managed_wiki_content_preserves_manual_suffix() {
+        let generated = render_wiki_page("Me", "me", &[], now_millis());
+        let existing = format!("{}\n\n## Personal Notes\nKeep this section.", generated);
+        let merged = merge_managed_wiki_content(Some(existing), &generated);
+
+        assert!(merged.contains("## Personal Notes"));
+        assert!(merged.contains("<!-- lumina-wiki:auto-start -->"));
+        assert!(merged.contains("<!-- lumina-wiki:auto-end -->"));
     }
 }

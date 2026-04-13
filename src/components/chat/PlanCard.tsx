@@ -40,6 +40,9 @@ export function PlanCard({ plan, currentStage = null, fallbackReason = null, cla
   const totalCount = plan.steps.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const isAllCompleted = completedCount === totalCount && totalCount > 0;
+  const activeStep = plan.steps.find((step) => step.status === "in_progress")
+    ?? (currentStage ? plan.steps.find((step) => step.role === currentStage) : undefined);
+  const stageSource = activeStep ? stageLabel[activeStep.role] : (currentStage ? stageLabel[currentStage] : null);
 
   return (
     <motion.div
@@ -101,6 +104,9 @@ export function PlanCard({ plan, currentStage = null, fallbackReason = null, cla
                   <span className="inline-flex items-center rounded-full border border-border/70 px-2 py-0.5 text-[11px] font-medium text-foreground">
                     {stageLabel[currentStage]}
                   </span>
+                )}
+                {stageSource && (
+                  <p className="mt-1 text-muted-foreground">Stage source: {stageSource}</p>
                 )}
                 {fallbackReason && (
                   <p className="mt-1 text-muted-foreground">{fallbackReason}</p>
