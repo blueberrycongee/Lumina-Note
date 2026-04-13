@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const existsMock = vi.hoisted(() => vi.fn<[string], Promise<boolean>>());
-const createDirMock = vi.hoisted(() => vi.fn<[string, { recursive?: boolean }?], Promise<void>>());
-const saveFileMock = vi.hoisted(() => vi.fn<[string, string], Promise<void>>());
-const homeDirMock = vi.hoisted(() => vi.fn<[], Promise<string>>());
+const existsMock = vi.hoisted(() => vi.fn<(path: string) => Promise<boolean>>());
+const createDirMock = vi.hoisted(() =>
+  vi.fn<(path: string, options?: { recursive?: boolean }) => Promise<void>>(),
+);
+const saveFileMock = vi.hoisted(() => vi.fn<(path: string, content: string) => Promise<void>>());
+const homeDirMock = vi.hoisted(() => vi.fn<() => Promise<string>>());
 
 vi.mock("@/lib/tauri", () => ({
   exists: existsMock,

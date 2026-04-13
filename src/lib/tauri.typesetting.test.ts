@@ -5,11 +5,19 @@ import {
   getTypesettingPreviewPageMm,
 } from "@/lib/tauri";
 
+const tauriInvokeBridge = async <T = unknown>(
+  _cmd?: string,
+  _args?: Record<string, unknown>,
+  _options?: unknown,
+): Promise<T> => undefined as T;
+
 describe("typesetting tauri wrappers", () => {
   beforeEach(() => {
     vi.mocked(invoke).mockClear();
-    (window as typeof window & { __TAURI__?: { core?: { invoke?: () => void } } }).__TAURI__ = {
-      core: { invoke: () => undefined },
+    (window as typeof window & {
+      __TAURI__?: { core?: { invoke?: typeof tauriInvokeBridge } };
+    }).__TAURI__ = {
+      core: { invoke: tauriInvokeBridge },
     };
   });
   afterEach(() => {

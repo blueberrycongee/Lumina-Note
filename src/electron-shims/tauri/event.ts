@@ -1,3 +1,5 @@
+import type { TauriInternals } from "./core";
+
 export type EventCallback<T> = (event: {
   event: string;
   id: number;
@@ -8,11 +10,7 @@ export type UnlistenFn = () => void;
 
 declare global {
   interface Window {
-    __TAURI_INTERNALS__?: {
-      listen?: (event: string, handler: EventCallback<unknown>) => Promise<UnlistenFn>;
-      once?: (event: string, handler: EventCallback<unknown>) => Promise<UnlistenFn>;
-      emit?: (event: string, payload?: unknown) => Promise<void>;
-    };
+    __TAURI_INTERNALS__?: TauriInternals;
   }
 }
 

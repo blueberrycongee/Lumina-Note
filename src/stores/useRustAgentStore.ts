@@ -29,6 +29,11 @@ import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { formatUserFriendlyError } from "./aiErrorFormatting";
 import type { SelectedSkill } from "@/types/skills";
 import {
+  extractDurableMemories,
+  loadDurableMemorySnapshot,
+  type DurableMemorySnapshot,
+} from "@/services/memory/durableMemory";
+import {
   isSessionMemoryMeaningful,
   loadSessionMemorySnapshot,
   resetSessionMemory,
@@ -586,6 +591,8 @@ interface RustAgentState {
   orchestrationFallbackReason: string | null;
   exploreReport: ExploreReport | null;
   verificationReport: VerificationReport | null;
+  durableMemorySnapshot: DurableMemorySnapshot | null;
+  durableMemoryBusy: boolean;
   sessionMemorySnapshot: SessionMemorySnapshot | null;
   sessionMemoryBusy: boolean;
   error: string | null;
@@ -667,6 +674,13 @@ interface RustAgentState {
   _setupListeners: () => Promise<UnlistenFn | null>;
   _saveCurrentSession: () => void;
   _compactSession: () => Promise<void>;
+  _refreshDurableMemorySnapshot: (workspacePath?: string | null) => Promise<void>;
+  _extractDurableMemories: (options?: {
+    workspacePath?: string | null;
+    sessionId?: string | null;
+    messages?: Message[];
+    force?: boolean;
+  }) => Promise<DurableMemorySnapshot | null>;
   _refreshSessionMemorySnapshot: (workspacePath?: string | null, sessionId?: string | null) => Promise<void>;
   _updateSessionMemory: (
     reason: SessionMemoryUpdateReason,
@@ -760,6 +774,8 @@ export const useRustAgentStore = create<RustAgentState>()(
       orchestrationFallbackReason: null,
       exploreReport: null,
       verificationReport: null,
+      durableMemorySnapshot: null,
+      durableMemoryBusy: false,
       sessionMemorySnapshot: null,
       sessionMemoryBusy: false,
       error: null,
@@ -817,6 +833,61 @@ export const useRustAgentStore = create<RustAgentState>()(
       // 心跳监控初始状态（新增）
       lastHeartbeat: null,
       connectionStatus: "unknown",
+
+      _refreshDurableMemorySnapshot: async (
+        workspacePath = resolveVaultPath(),
+      ) => {
+        if (!workspacePath) {
+          set({ durableMemorySnapshot: null, durableMemoryBusy: false });
+          return;
+        }
+        try {
+          const snapshot = await loadDurableMemorySnapshot(workspacePath);
+          if (resolveVaultPath() === workspacePath) {
+            set({ durableMemorySnapshot: snapshot, durableMemoryBusy: false });
+          }
+        } catch (error) {
+          console.warn("[RustAgent] Failed to refresh durable memory snapshot:", error);
+          if (resolveVaultPath() === workspacePath) {
+            set({ durableMemoryBusy: false });
+          }
+        }
+      },
+
+      _extractDurableMemories: async (options = {}) => {
+        const workspacePath = options.workspacePath ?? resolveVaultPath();
+        const sessionId = options.sessionId ?? get().currentSessionId;
+        const messages = options.messages ?? get().messages;
+
+        if (!workspacePath || !sessionId || messages.length === 0) {
+          return null;
+        }
+
+        if (resolveVaultPath() === workspacePath) {
+          set({ durableMemoryBusy: true });
+        }
+
+        try {
+          const agentConfig = buildAgentConfig(getAIConfig(), get().autoApprove);
+          const snapshot = await extractDurableMemories({
+            workspacePath,
+            sessionId,
+            messages,
+            config: agentConfig,
+            force: options.force,
+          });
+          if (resolveVaultPath() === workspacePath) {
+            set({ durableMemorySnapshot: snapshot, durableMemoryBusy: false });
+          }
+          return snapshot;
+        } catch (error) {
+          console.warn("[RustAgent] Durable memory extraction failed:", error);
+          if (resolveVaultPath() === workspacePath) {
+            set({ durableMemoryBusy: false });
+          }
+          return null;
+        }
+      },
 
       _refreshSessionMemorySnapshot: async (
         workspacePath = resolveVaultPath(),
@@ -901,6 +972,7 @@ export const useRustAgentStore = create<RustAgentState>()(
                 orchestrationFallbackReason: null,
                 exploreReport: null,
                 verificationReport: null,
+                durableMemoryBusy: false,
                 lastIntent: null,
                 streamingContent: "",
                 streamingReasoning: "",
@@ -1027,6 +1099,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           orchestrationFallbackReason: null,
           exploreReport: null,
           verificationReport: null,
+          durableMemoryBusy: false,
           sessionMemorySnapshot: null,
           sessionMemoryBusy: false,
           error: null,
@@ -1191,6 +1264,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           orchestrationFallbackReason: null,
           exploreReport: null,
           verificationReport: null,
+          durableMemoryBusy: false,
           sessionMemorySnapshot: null,
           sessionMemoryBusy: false,
           lastIntent: null,
@@ -1202,6 +1276,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           lastTokenUsage: null,
         });
         void get().syncMobileSessions();
+        void get()._refreshDurableMemorySnapshot(resolveVaultPath());
         void get()._refreshSessionMemorySnapshot(resolveVaultPath(), id);
       },
 
@@ -1235,6 +1310,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           orchestrationFallbackReason: null,
           exploreReport: null,
           verificationReport: null,
+          durableMemoryBusy: false,
           sessionMemorySnapshot: null,
           sessionMemoryBusy: false,
           lastIntent: null,
@@ -1245,6 +1321,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           isCompacting: false,
           lastTokenUsage: null,
         });
+        void get()._refreshDurableMemorySnapshot(resolveVaultPath());
         void get()._refreshSessionMemorySnapshot(resolveVaultPath(), id);
       },
 
@@ -1268,6 +1345,7 @@ export const useRustAgentStore = create<RustAgentState>()(
               orchestrationFallbackReason: null,
               exploreReport: null,
               verificationReport: null,
+              durableMemoryBusy: false,
               sessionMemorySnapshot: null,
               sessionMemoryBusy: false,
               streamingReasoning: "",
@@ -1297,6 +1375,7 @@ export const useRustAgentStore = create<RustAgentState>()(
               orchestrationFallbackReason: null,
               exploreReport: null,
               verificationReport: null,
+              durableMemoryBusy: false,
               sessionMemorySnapshot: null,
               sessionMemoryBusy: false,
               streamingReasoning: "",
@@ -1311,6 +1390,7 @@ export const useRustAgentStore = create<RustAgentState>()(
         }
         void get().syncMobileSessions();
         const nextSessionId = useRustAgentStore.getState().currentSessionId;
+        void get()._refreshDurableMemorySnapshot(resolveVaultPath());
         void get()._refreshSessionMemorySnapshot(resolveVaultPath(), nextSessionId);
       },
 
@@ -1640,6 +1720,11 @@ export const useRustAgentStore = create<RustAgentState>()(
               const latestMessages = get().messages;
               if (workspacePath && sessionId && latestMessages.length > 0) {
                 void get()._updateSessionMemory("task_stage_completed", {
+                  workspacePath,
+                  sessionId,
+                  messages: latestMessages,
+                });
+                void get()._extractDurableMemories({
                   workspacePath,
                   sessionId,
                   messages: latestMessages,
@@ -2397,6 +2482,7 @@ export async function initRustAgentListeners() {
     unlistenFn = await useRustAgentStore.getState()._setupListeners();
     await useRustAgentStore.getState().syncQueueStatus();
     await useRustAgentStore.getState().syncMobileSessions();
+    await useRustAgentStore.getState()._refreshDurableMemorySnapshot();
     await useRustAgentStore.getState()._refreshSessionMemorySnapshot();
     console.log("[RustAgent] Listener initialized");
   } finally {

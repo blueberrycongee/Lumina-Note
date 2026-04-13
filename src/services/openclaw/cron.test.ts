@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const existsMock = vi.hoisted(() => vi.fn<[string], Promise<boolean>>());
-const readFileMock = vi.hoisted(() => vi.fn<[string], Promise<string>>());
-const saveFileMock = vi.hoisted(() => vi.fn<[string, string], Promise<void>>());
-const createDirMock = vi.hoisted(() => vi.fn<[string, { recursive?: boolean }?], Promise<void>>());
-const invokeMock = vi.hoisted(() => vi.fn<[string, Record<string, unknown>?], Promise<unknown>>());
-const registerWorkspaceMock = vi.hoisted(() => vi.fn<[string], void>());
+const existsMock = vi.hoisted(() => vi.fn<(path: string) => Promise<boolean>>());
+const readFileMock = vi.hoisted(() => vi.fn<(path: string) => Promise<string>>());
+const saveFileMock = vi.hoisted(() => vi.fn<(path: string, content: string) => Promise<void>>());
+const createDirMock = vi.hoisted(() =>
+  vi.fn<(path: string, options?: { recursive?: boolean }) => Promise<void>>(),
+);
+const invokeMock = vi.hoisted(() =>
+  vi.fn<(cmd: string, args?: Record<string, unknown>) => Promise<unknown>>(),
+);
+const registerWorkspaceMock = vi.hoisted(() => vi.fn<(path: string) => void>());
 
 vi.mock("@/lib/tauri", () => ({
   exists: existsMock,

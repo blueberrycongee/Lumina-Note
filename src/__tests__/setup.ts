@@ -70,9 +70,17 @@ function ensureResizableBufferSupport() {
 
 ensureResizableBufferSupport();
 
+const tauriInvokeBridge = async <T = unknown>(
+  _cmd?: string,
+  _args?: Record<string, unknown>,
+  _options?: unknown,
+): Promise<T> => undefined as T;
+
 if (typeof window !== "undefined") {
-  (window as typeof window & { __TAURI__?: { core?: { invoke?: () => void } } }).__TAURI__ = {
-    core: { invoke: () => undefined },
+  (window as typeof window & {
+    __TAURI__?: { core?: { invoke?: typeof tauriInvokeBridge } };
+  }).__TAURI__ = {
+    core: { invoke: tauriInvokeBridge },
   };
 }
 

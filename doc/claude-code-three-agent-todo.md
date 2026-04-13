@@ -258,13 +258,13 @@
 
 在 Lumina 中建议做法：
 
-- [ ] 新增 `durable memory extraction` 机制
-- [ ] 在完整任务闭环后提炼长期价值内容
-- [ ] durable memory 只写入 memory 空间，不直接修改普通笔记
-- [ ] 区分“临时上下文”与“长期可信知识”
-- [ ] 对 durable memory 的写入提供 dedupe / merge / versioning
-- [ ] 增加 memory manifest，先让 agent 知道已有记忆全貌，再决定写哪里
-- [ ] 对提炼结果做置信度标注，低置信信息不直接升级为长期事实
+- [x] 新增 `durable memory extraction` 机制
+- [x] 在完整任务闭环后提炼长期价值内容
+- [x] durable memory 只写入 memory 空间，不直接修改普通笔记
+- [x] 区分“临时上下文”与“长期可信知识”
+- [x] 对 durable memory 的写入提供 dedupe / merge / versioning
+- [x] 增加 memory manifest，先让 agent 知道已有记忆全貌，再决定写哪里
+- [x] 对提炼结果做置信度标注，低置信信息不直接升级为长期事实
 
 建议新增目录：
 
@@ -277,11 +277,20 @@
 
 建议数据结构：
 
-- [ ] `MemoryEntry`
-- [ ] `MemoryScope`
-- [ ] `MemoryConfidence`
-- [ ] `MemorySourceRef`
-- [ ] `MemoryMergeResult`
+- [x] `MemoryEntry`
+- [x] `MemoryScope`
+- [x] `MemoryConfidence`
+- [x] `MemorySourceRef`
+- [x] `MemoryMergeResult`
+
+当前实现补充说明：
+
+- Rust 侧新增 `src-tauri/src/agent/durable_memory.rs`，使用结构化 JSON 候选提炼 durable memory，而不是让模型自由写文件
+- 提炼触发点接入 `run_completed`，与 session memory 并行运行，但 durable memory 只面向长期知识抽取
+- durable memory 的真实落盘范围被限制在 `workspace/memory/identity|projects|relationships|patterns/` 与 `workspace/memory/durable/manifest.json`
+- `manifest.json` 作为 source of truth，单条 memory markdown 文件为派生输出，便于后续 UI / wiki 化
+- merge 逻辑支持按 `existing_entry_id` 或 `scope + title` 去重，命中后执行 version 递增与 history 保留
+- `low` 置信度候选会被直接跳过，不会升级为长期 durable memory
 
 ---
 

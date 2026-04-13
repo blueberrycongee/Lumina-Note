@@ -2,12 +2,21 @@ export const SERIALIZE_TO_IPC_FN = "__TAURI_TO_IPC_KEY__";
 
 export type InvokeArgs = Record<string, unknown>;
 
-type TauriInternals = {
+export type TauriInternals = {
   invoke?: <T = unknown>(
     cmd: string,
     args?: Record<string, unknown>,
     options?: unknown,
   ) => Promise<T>;
+  listen?: <T = unknown>(
+    event: string,
+    handler: (event: { event: string; id: number; payload: T }) => void,
+  ) => Promise<() => void>;
+  once?: <T = unknown>(
+    event: string,
+    handler: (event: { event: string; id: number; payload: T }) => void,
+  ) => Promise<() => void>;
+  emit?: (event: string, payload?: unknown) => Promise<void>;
   transformCallback?: (callback: (...args: unknown[]) => unknown, once?: boolean) => number;
   unregisterCallback?: (id: number) => void;
   convertFileSrc?: (filePath: string, protocol?: string) => string;

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PluginInfo } from "@/types/plugins";
 
-const listPluginsMock = vi.hoisted(() => vi.fn<[], Promise<PluginInfo[]>>());
-const syncMock = vi.hoisted(() => vi.fn());
+const listPluginsMock = vi.hoisted(() => vi.fn<() => Promise<PluginInfo[]>>());
+const syncMock = vi.hoisted(() => vi.fn<() => Promise<unknown>>());
 
 vi.mock("@/lib/tauri", () => ({
   listPlugins: listPluginsMock,

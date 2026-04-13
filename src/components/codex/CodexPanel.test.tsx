@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import {
@@ -33,14 +33,11 @@ if (!globalThis.fetch) {
 }
 
 describe("CodexPanel", () => {
-  let fetchSpy: MockInstance<Parameters<typeof fetch>, ReturnType<typeof fetch>>;
-  let cryptoSpy: MockInstance<
-    Parameters<(typeof globalThis.crypto)["randomUUID"]>,
-    ReturnType<(typeof globalThis.crypto)["randomUUID"]>
-  >;
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  let cryptoSpy: ReturnType<typeof vi.spyOn>;
 
   const mockHostReadyFetch = () => {
-    fetchSpy.mockImplementation((input) => {
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         return Promise.resolve({
@@ -208,7 +205,7 @@ describe("CodexPanel", () => {
     });
 
     let healthChecks = 0;
-    fetchSpy.mockImplementation((input) => {
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         healthChecks += 1;
@@ -233,7 +230,7 @@ describe("CodexPanel", () => {
   });
 
   it("maps an unregistered Codex view timeout to user-facing guidance", async () => {
-    fetchSpy.mockImplementation((input) => {
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         return Promise.resolve({
@@ -311,7 +308,7 @@ describe("CodexPanel", () => {
     });
 
     let healthChecks = 0;
-    fetchSpy.mockImplementation((input) => {
+    fetchSpy.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.endsWith("/health")) {
         healthChecks += 1;

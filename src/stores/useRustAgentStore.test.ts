@@ -50,6 +50,12 @@ vi.mock('@/stores/useLocaleStore', () => ({
   }),
 }));
 
+vi.mock('@/services/memory/durableMemory', () => ({
+  extractDurableMemories: vi.fn(async () => null),
+  hasDurableMemories: vi.fn(() => false),
+  loadDurableMemorySnapshot: vi.fn(async () => null),
+}));
+
 vi.mock('@/services/memory/sessionMemory', () => ({
   isSessionMemoryMeaningful: (content: string) => Boolean(content && content.trim()),
   loadSessionMemorySnapshot: vi.fn(async () => null),

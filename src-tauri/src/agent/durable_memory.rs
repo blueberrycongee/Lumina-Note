@@ -1,0 +1,1021 @@
+use crate::agent::llm_client::LlmClient;
+use crate::agent::types::{AgentConfig, Message, MessageRole};
+use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::{BTreeSet, HashMap};
+use std::path::PathBuf;
+use std::time::Duration;
+use tauri::Manager;
+use tokio::sync::Mutex;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryScope {
+    Identity,
+    Projects,
+    Relationships,
+    Patterns,
+}
+
+impl MemoryScope {
+    fn dir_name(&self) -> &'static str {
+        match self {
+            Self::Identity => "identity",
+            Self::Projects => "projects",
+            Self::Relationships => "relationships",
+            Self::Patterns => "patterns",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryConfidence {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for MemoryConfidence {
+    fn default() -> Self {
+        Self::Medium
+    }
+}
+
+impl MemoryConfidence {
+    fn rank(&self) -> u8 {
+        match self {
+            Self::Low => 1,
+            Self::Medium => 2,
+            Self::High => 3,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemorySourceRef {
+    pub session_id: String,
+    pub extracted_at: u64,
+    pub source_excerpt: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryEntryVersion {
+    pub version: u32,
+    pub summary: String,
+    pub details: String,
+    pub confidence: MemoryConfidence,
+    pub updated_at: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryEntry {
+    pub id: String,
+    pub scope: MemoryScope,
+    pub title: String,
+    pub summary: String,
+    pub details: String,
+    pub confidence: MemoryConfidence,
+    pub tags: Vec<String>,
+    pub file_path: String,
+    pub version: u32,
+    pub created_at: u64,
+    pub updated_at: u64,
+    pub source_refs: Vec<MemorySourceRef>,
+    pub history: Vec<MemoryEntryVersion>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DurableMemoryManifest {
+    pub version: u32,
+    pub updated_at: u64,
+    pub entries: Vec<MemoryEntry>,
+}
+
+impl Default for DurableMemoryManifest {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            updated_at: 0,
+            entries: Vec::new(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryMergeAction {
+    Created,
+    Updated,
+    Deduped,
+    SkippedLowConfidence,
+    SkippedEmpty,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryMergeResult {
+    pub action: MemoryMergeAction,
+    pub entry_id: Option<String>,
+    pub scope: Option<MemoryScope>,
+    pub title: String,
+    pub path: Option<String>,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DurableMemorySnapshot {
+    pub workspace_path: String,
+    pub manifest_path: String,
+    pub entries: Vec<MemoryEntry>,
+    pub merge_results: Vec<MemoryMergeResult>,
+    pub extraction_in_flight: bool,
+    pub last_extracted_at: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DurableMemoryConfig {
+    pub minimum_messages_to_extract: usize,
+    pub minimum_tokens_to_extract: usize,
+    pub max_transcript_chars: usize,
+    pub max_manifest_entries_in_prompt: usize,
+    pub max_candidates: usize,
+    pub minimum_confidence_to_write: MemoryConfidence,
+}
+
+impl Default for DurableMemoryConfig {
+    fn default() -> Self {
+        Self {
+            minimum_messages_to_extract: 6,
+            minimum_tokens_to_extract: 1200,
+            max_transcript_chars: 20_000,
+            max_manifest_entries_in_prompt: 40,
+            max_candidates: 5,
+            minimum_confidence_to_write: MemoryConfidence::Medium,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DurableMemoryCandidate {
+    scope: MemoryScope,
+    title: String,
+    summary: String,
+    details: String,
+    confidence: MemoryConfidence,
+    #[serde(default)]
+    tags: Vec<String>,
+    #[serde(default)]
+    existing_entry_id: Option<String>,
+    #[serde(default)]
+    source_excerpt: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct DurableMemoryCandidateEnvelope {
+    #[serde(default)]
+    candidates: Vec<DurableMemoryCandidate>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct DurableMemoryRuntimeState {
+    extraction_in_flight: bool,
+    last_extracted_at: Option<u64>,
+    last_session_id: Option<String>,
+    last_transcript_fingerprint: Option<String>,
+}
+
+static DURABLE_MEMORY_STATE: Lazy<Mutex<HashMap<String, DurableMemoryRuntimeState>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
+
+fn now_millis() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as u64)
+        .unwrap_or(0)
+}
+
+fn sanitize_filename_fragment(raw: &str) -> String {
+    let lowered = raw.trim().to_ascii_lowercase();
+    let mut chars = lowered
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .collect::<String>();
+    while chars.contains("--") {
+        chars = chars.replace("--", "-");
+    }
+    chars.trim_matches('-').to_string()
+}
+
+fn normalize_for_compare(raw: &str) -> String {
+    raw.to_ascii_lowercase()
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { ' ' })
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn workspace_state_key(workspace_path: &str) -> String {
+    workspace_path.to_string()
+}
+
+async fn load_runtime_state(workspace_path: &str) -> DurableMemoryRuntimeState {
+    let key = workspace_state_key(workspace_path);
+    let mut states = DURABLE_MEMORY_STATE.lock().await;
+    states.entry(key).or_default().clone()
+}
+
+async fn store_runtime_state(workspace_path: &str, state: DurableMemoryRuntimeState) {
+    let key = workspace_state_key(workspace_path);
+    let mut states = DURABLE_MEMORY_STATE.lock().await;
+    states.insert(key, state);
+}
+
+fn build_durable_root(workspace_path: &str) -> PathBuf {
+    PathBuf::from(workspace_path).join("memory")
+}
+
+fn build_manifest_dir(workspace_path: &str) -> PathBuf {
+    build_durable_root(workspace_path).join("durable")
+}
+
+fn build_manifest_path(workspace_path: &str) -> PathBuf {
+    build_manifest_dir(workspace_path).join("manifest.json")
+}
+
+fn build_scope_dir(workspace_path: &str, scope: &MemoryScope) -> PathBuf {
+    build_durable_root(workspace_path).join(scope.dir_name())
+}
+
+fn build_entry_path(
+    workspace_path: &str,
+    scope: &MemoryScope,
+    title: &str,
+    entry_id: &str,
+) -> String {
+    let slug = sanitize_filename_fragment(title);
+    let short_id = entry_id.chars().take(8).collect::<String>();
+    build_scope_dir(workspace_path, scope)
+        .join(format!("{}--{}.md", slug, short_id))
+        .display()
+        .to_string()
+}
+
+fn estimate_tokens(text: &str) -> usize {
+    if text.is_empty() {
+        return 0;
+    }
+    let ascii = text.chars().filter(|ch| ch.is_ascii()).count();
+    let non_ascii = text.chars().count().saturating_sub(ascii);
+    ascii.div_ceil(4) + non_ascii.div_ceil(2)
+}
+
+fn estimate_message_tokens(messages: &[Message]) -> usize {
+    messages
+        .iter()
+        .map(|message| estimate_tokens(&message.content) + 4)
+        .sum()
+}
+
+fn format_messages_for_extraction(messages: &[Message], max_chars: usize) -> String {
+    let blocks = messages
+        .iter()
+        .map(|message| {
+            let role = match message.role {
+                MessageRole::System => "SYSTEM",
+                MessageRole::User => "USER",
+                MessageRole::Assistant => "ASSISTANT",
+                MessageRole::Tool => "TOOL",
+            };
+            format!("[{}] {}", role, message.content.trim())
+        })
+        .collect::<Vec<_>>();
+
+    let mut total = 0usize;
+    let mut kept = Vec::new();
+    for block in blocks.into_iter().rev() {
+        if total + block.len() > max_chars {
+            continue;
+        }
+        total += block.len();
+        kept.push(block);
+    }
+    kept.reverse();
+    kept.join("\n\n")
+}
+
+fn transcript_fingerprint(session_id: &str, transcript: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(session_id.as_bytes());
+    hasher.update(b"\n");
+    hasher.update(transcript.as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+fn format_manifest_for_prompt(manifest: &DurableMemoryManifest, max_entries: usize) -> String {
+    if manifest.entries.is_empty() {
+        return "No durable memories saved yet.".to_string();
+    }
+
+    let mut entries = manifest.entries.clone();
+    entries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    entries
+        .into_iter()
+        .take(max_entries)
+        .map(|entry| {
+            format!(
+                "- {} [{} / {:?} / v{}] {}",
+                entry.id,
+                entry.scope.dir_name(),
+                entry.confidence,
+                entry.version,
+                entry.title
+            ) + &format!(" — {}", entry.summary)
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+async fn ensure_memory_layout(workspace_path: &str) -> Result<(), String> {
+    let manifest_dir = build_manifest_dir(workspace_path);
+    tokio::fs::create_dir_all(&manifest_dir)
+        .await
+        .map_err(|err| format!("Failed to create durable manifest dir: {}", err))?;
+
+    for scope in [
+        MemoryScope::Identity,
+        MemoryScope::Projects,
+        MemoryScope::Relationships,
+        MemoryScope::Patterns,
+    ] {
+        tokio::fs::create_dir_all(build_scope_dir(workspace_path, &scope))
+            .await
+            .map_err(|err| format!("Failed to create durable memory dir: {}", err))?;
+    }
+    Ok(())
+}
+
+async fn load_manifest(workspace_path: &str) -> Result<DurableMemoryManifest, String> {
+    ensure_memory_layout(workspace_path).await?;
+    let path = build_manifest_path(workspace_path);
+    if tokio::fs::metadata(&path).await.is_err() {
+        return Ok(DurableMemoryManifest::default());
+    }
+    let raw = tokio::fs::read_to_string(&path)
+        .await
+        .map_err(|err| format!("Failed to read durable manifest: {}", err))?;
+    serde_json::from_str(&raw).map_err(|err| format!("Failed to parse durable manifest: {}", err))
+}
+
+async fn save_manifest(
+    workspace_path: &str,
+    manifest: &DurableMemoryManifest,
+) -> Result<(), String> {
+    ensure_memory_layout(workspace_path).await?;
+    let path = build_manifest_path(workspace_path);
+    let body = serde_json::to_string_pretty(manifest)
+        .map_err(|err| format!("Failed to serialize durable manifest: {}", err))?;
+    tokio::fs::write(path, body)
+        .await
+        .map_err(|err| format!("Failed to write durable manifest: {}", err))
+}
+
+fn render_memory_markdown(entry: &MemoryEntry) -> String {
+    let tags = if entry.tags.is_empty() {
+        "[]".to_string()
+    } else {
+        format!(
+            "[{}]",
+            entry
+                .tags
+                .iter()
+                .map(|tag| format!("\"{}\"", tag))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    };
+    let sources = if entry.source_refs.is_empty() {
+        "- None".to_string()
+    } else {
+        entry
+            .source_refs
+            .iter()
+            .rev()
+            .take(5)
+            .map(|source| {
+                let excerpt = source
+                    .source_excerpt
+                    .as_ref()
+                    .map(|text| format!(" — {}", text))
+                    .unwrap_or_default();
+                format!(
+                    "- session `{}` at {}{}",
+                    source.session_id, source.extracted_at, excerpt
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    let history = if entry.history.is_empty() {
+        "- v1 created".to_string()
+    } else {
+        entry
+            .history
+            .iter()
+            .rev()
+            .take(5)
+            .map(|version| {
+                format!(
+                    "- v{} at {} ({:?}) — {}",
+                    version.version, version.updated_at, version.confidence, version.summary
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+
+    format!(
+        "---\nid: {}\nscope: {}\nconfidence: {:?}\nversion: {}\ncreated_at: {}\nupdated_at: {}\ntags: {}\n---\n\n# {}\n\n{}\n\n## Details\n\n{}\n\n## Sources\n\n{}\n\n## History\n\n{}\n",
+        entry.id,
+        entry.scope.dir_name(),
+        entry.confidence,
+        entry.version,
+        entry.created_at,
+        entry.updated_at,
+        tags,
+        entry.title,
+        entry.summary,
+        entry.details,
+        sources,
+        history
+    )
+}
+
+async fn write_entry_file(entry: &MemoryEntry) -> Result<(), String> {
+    let body = render_memory_markdown(entry);
+    tokio::fs::write(&entry.file_path, body)
+        .await
+        .map_err(|err| format!("Failed to write durable memory entry: {}", err))
+}
+
+fn trim_for_storage(text: &str, max_chars: usize) -> String {
+    let trimmed = text.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+    trimmed
+        .chars()
+        .take(max_chars.saturating_sub(1))
+        .collect::<String>()
+        + "…"
+}
+
+fn merge_tags(existing: &[String], incoming: &[String]) -> Vec<String> {
+    let mut tags = BTreeSet::new();
+    for tag in existing.iter().chain(incoming.iter()) {
+        let normalized = tag.trim();
+        if !normalized.is_empty() {
+            tags.insert(normalized.to_string());
+        }
+    }
+    tags.into_iter().collect()
+}
+
+fn merge_source_refs(
+    existing: &[MemorySourceRef],
+    incoming: MemorySourceRef,
+) -> Vec<MemorySourceRef> {
+    let mut refs = existing.to_vec();
+    let duplicate = refs.iter().any(|item| {
+        item.session_id == incoming.session_id && item.source_excerpt == incoming.source_excerpt
+    });
+    if !duplicate {
+        refs.push(incoming);
+    }
+    refs
+}
+
+fn find_existing_entry_index(
+    manifest: &DurableMemoryManifest,
+    candidate: &DurableMemoryCandidate,
+) -> Option<usize> {
+    if let Some(entry_id) = &candidate.existing_entry_id {
+        if let Some(index) = manifest
+            .entries
+            .iter()
+            .position(|entry| &entry.id == entry_id)
+        {
+            return Some(index);
+        }
+    }
+
+    let normalized_title = normalize_for_compare(&candidate.title);
+    manifest.entries.iter().position(|entry| {
+        entry.scope == candidate.scope && normalize_for_compare(&entry.title) == normalized_title
+    })
+}
+
+fn build_source_ref(session_id: &str, candidate: &DurableMemoryCandidate) -> MemorySourceRef {
+    MemorySourceRef {
+        session_id: session_id.to_string(),
+        extracted_at: now_millis(),
+        source_excerpt: candidate
+            .source_excerpt
+            .as_ref()
+            .map(|text| trim_for_storage(text, 220)),
+    }
+}
+
+fn candidate_is_meaningful(candidate: &DurableMemoryCandidate) -> bool {
+    !(candidate.title.trim().is_empty()
+        || candidate.summary.trim().is_empty()
+        || candidate.details.trim().is_empty())
+}
+
+fn merge_candidate(
+    workspace_path: &str,
+    session_id: &str,
+    manifest: &mut DurableMemoryManifest,
+    candidate: DurableMemoryCandidate,
+    config: &DurableMemoryConfig,
+) -> (MemoryMergeResult, Option<usize>) {
+    if !candidate_is_meaningful(&candidate) {
+        return (
+            MemoryMergeResult {
+                action: MemoryMergeAction::SkippedEmpty,
+                entry_id: None,
+                scope: Some(candidate.scope),
+                title: candidate.title,
+                path: None,
+                detail: "Candidate missing title, summary, or details".to_string(),
+            },
+            None,
+        );
+    }
+
+    if candidate.confidence.rank() < config.minimum_confidence_to_write.rank() {
+        return (
+            MemoryMergeResult {
+                action: MemoryMergeAction::SkippedLowConfidence,
+                entry_id: None,
+                scope: Some(candidate.scope),
+                title: candidate.title,
+                path: None,
+                detail: "Confidence below durable write threshold".to_string(),
+            },
+            None,
+        );
+    }
+
+    if let Some(index) = find_existing_entry_index(manifest, &candidate) {
+        let source_ref = build_source_ref(session_id, &candidate);
+        let entry = manifest.entries.get_mut(index).expect("entry exists");
+        let previous_updated_at = entry.updated_at;
+        let normalized_summary = normalize_for_compare(&candidate.summary);
+        let normalized_details = normalize_for_compare(&candidate.details);
+        let changed = normalize_for_compare(&entry.summary) != normalized_summary
+            || normalize_for_compare(&entry.details) != normalized_details
+            || entry.confidence != candidate.confidence
+            || entry.scope != candidate.scope;
+
+        entry.tags = merge_tags(&entry.tags, &candidate.tags);
+        entry.source_refs = merge_source_refs(&entry.source_refs, source_ref);
+        entry.updated_at = now_millis();
+
+        if changed {
+            entry.history.push(MemoryEntryVersion {
+                version: entry.version,
+                summary: entry.summary.clone(),
+                details: entry.details.clone(),
+                confidence: entry.confidence.clone(),
+                updated_at: previous_updated_at,
+            });
+            entry.version += 1;
+            entry.summary = trim_for_storage(&candidate.summary, 500);
+            entry.details = trim_for_storage(&candidate.details, 2000);
+            entry.confidence = candidate.confidence;
+            entry.scope = candidate.scope;
+
+            return (
+                MemoryMergeResult {
+                    action: MemoryMergeAction::Updated,
+                    entry_id: Some(entry.id.clone()),
+                    scope: Some(entry.scope.clone()),
+                    title: entry.title.clone(),
+                    path: Some(entry.file_path.clone()),
+                    detail: "Merged into existing durable memory and incremented version"
+                        .to_string(),
+                },
+                Some(index),
+            );
+        }
+
+        return (
+            MemoryMergeResult {
+                action: MemoryMergeAction::Deduped,
+                entry_id: Some(entry.id.clone()),
+                scope: Some(entry.scope.clone()),
+                title: entry.title.clone(),
+                path: Some(entry.file_path.clone()),
+                detail: "Matched existing durable memory without material content changes"
+                    .to_string(),
+            },
+            Some(index),
+        );
+    }
+
+    let entry_id = Uuid::new_v4().to_string();
+    let created_at = now_millis();
+    let source_ref = build_source_ref(session_id, &candidate);
+    let entry = MemoryEntry {
+        id: entry_id.clone(),
+        scope: candidate.scope.clone(),
+        title: trim_for_storage(&candidate.title, 120),
+        summary: trim_for_storage(&candidate.summary, 500),
+        details: trim_for_storage(&candidate.details, 2000),
+        confidence: candidate.confidence,
+        tags: merge_tags(&[], &candidate.tags),
+        file_path: build_entry_path(
+            workspace_path,
+            &candidate.scope,
+            &candidate.title,
+            &entry_id,
+        ),
+        version: 1,
+        created_at,
+        updated_at: created_at,
+        source_refs: vec![source_ref],
+        history: Vec::new(),
+    };
+    let path = entry.file_path.clone();
+    let scope = entry.scope.clone();
+    let title = entry.title.clone();
+    manifest.entries.push(entry);
+    let index = manifest.entries.len().saturating_sub(1);
+    (
+        MemoryMergeResult {
+            action: MemoryMergeAction::Created,
+            entry_id: Some(entry_id),
+            scope: Some(scope),
+            title,
+            path: Some(path),
+            detail: "Created new durable memory entry".to_string(),
+        },
+        Some(index),
+    )
+}
+
+fn build_snapshot(
+    workspace_path: &str,
+    manifest: DurableMemoryManifest,
+    merge_results: Vec<MemoryMergeResult>,
+    state: &DurableMemoryRuntimeState,
+) -> DurableMemorySnapshot {
+    DurableMemorySnapshot {
+        workspace_path: workspace_path.to_string(),
+        manifest_path: build_manifest_path(workspace_path).display().to_string(),
+        entries: manifest.entries,
+        merge_results,
+        extraction_in_flight: state.extraction_in_flight,
+        last_extracted_at: state.last_extracted_at,
+    }
+}
+
+pub async fn get_durable_memory_snapshot(
+    workspace_path: &str,
+) -> Result<DurableMemorySnapshot, String> {
+    let manifest = load_manifest(workspace_path).await?;
+    let state = load_runtime_state(workspace_path).await;
+    Ok(build_snapshot(workspace_path, manifest, Vec::new(), &state))
+}
+
+fn extract_json_payload(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.starts_with("```") {
+        let without_fence = trimmed
+            .trim_start_matches("```json")
+            .trim_start_matches("```")
+            .trim_end_matches("```")
+            .trim();
+        if without_fence.starts_with('{') && without_fence.ends_with('}') {
+            return Some(without_fence.to_string());
+        }
+    }
+    let start = trimmed.find('{')?;
+    let end = trimmed.rfind('}')?;
+    (start < end).then(|| trimmed[start..=end].to_string())
+}
+
+fn parse_candidate_response(raw: &str) -> Result<DurableMemoryCandidateEnvelope, String> {
+    let json = extract_json_payload(raw).ok_or_else(|| {
+        "Durable memory extraction response did not contain a JSON object".to_string()
+    })?;
+    serde_json::from_str::<DurableMemoryCandidateEnvelope>(&json).map_err(|err| {
+        format!(
+            "Failed to parse durable memory extraction response: {}",
+            err
+        )
+    })
+}
+
+pub async fn extract_durable_memories_impl(
+    app: &tauri::AppHandle,
+    config: AgentConfig,
+    workspace_path: &str,
+    session_id: &str,
+    messages: &[Message],
+    force: bool,
+    durable_memory_config: Option<DurableMemoryConfig>,
+) -> Result<DurableMemorySnapshot, String> {
+    if workspace_path.trim().is_empty() {
+        return Err("workspace_path is required".to_string());
+    }
+    if session_id.trim().is_empty() || messages.is_empty() {
+        return get_durable_memory_snapshot(workspace_path).await;
+    }
+
+    let cfg = durable_memory_config.unwrap_or_default();
+    let transcript = format_messages_for_extraction(messages, cfg.max_transcript_chars);
+    let token_count = estimate_message_tokens(messages);
+    if !force
+        && (messages.len() < cfg.minimum_messages_to_extract
+            || token_count < cfg.minimum_tokens_to_extract
+            || transcript.trim().is_empty())
+    {
+        return get_durable_memory_snapshot(workspace_path).await;
+    }
+
+    let mut runtime = load_runtime_state(workspace_path).await;
+    if runtime.extraction_in_flight {
+        return get_durable_memory_snapshot(workspace_path).await;
+    }
+
+    let fingerprint = transcript_fingerprint(session_id, &transcript);
+    if !force
+        && runtime.last_session_id.as_deref() == Some(session_id)
+        && runtime.last_transcript_fingerprint.as_deref() == Some(fingerprint.as_str())
+    {
+        return get_durable_memory_snapshot(workspace_path).await;
+    }
+
+    let mut manifest = load_manifest(workspace_path).await?;
+    let prompt_manifest = format_manifest_for_prompt(&manifest, cfg.max_manifest_entries_in_prompt);
+
+    if config.api_key.trim().is_empty()
+        && config.provider != "ollama"
+        && config.provider != "custom"
+    {
+        return Ok(build_snapshot(
+            workspace_path,
+            manifest,
+            Vec::new(),
+            &runtime,
+        ));
+    }
+
+    runtime.extraction_in_flight = true;
+    store_runtime_state(workspace_path, runtime.clone()).await;
+
+    let llm_result = async {
+        let http_client = app
+            .state::<crate::proxy::ProxyState>()
+            .client_with_timeout(Duration::from_secs(300))
+            .await
+            .map_err(|err| format!("Failed to build LLM client: {}", err))?;
+        let mut llm_config = config.clone();
+        llm_config.temperature = 0.1;
+        llm_config.max_tokens = 1800;
+        let llm = LlmClient::new(llm_config, http_client);
+        let prompt = format!(
+            "You extract durable memories for Lumina.\n\
+Return JSON only with this shape:\n\
+{{\"candidates\":[{{\"scope\":\"identity|projects|relationships|patterns\",\"title\":\"...\",\"summary\":\"...\",\"details\":\"...\",\"confidence\":\"low|medium|high\",\"tags\":[\"...\"],\"existing_entry_id\":\"optional-id\",\"source_excerpt\":\"optional supporting quote or paraphrase\"}}]}}\n\n\
+Only include knowledge worth keeping beyond the current task. Do NOT save:\n\
+- code structure, file paths, implementation details derivable from the repo\n\
+- temporary debugging state or current task progress\n\
+- vague impressions or speculative claims\n\
+- low-confidence facts\n\n\
+Prioritize:\n\
+- stable user preferences and communication patterns\n\
+- long-lived project context, goals, and constraints\n\
+- recurring collaboration patterns or relationships\n\
+- durable facts that will still help in future sessions\n\n\
+If a fact mentions relative dates, convert them to absolute dates.\n\
+Prefer updating an existing memory via existing_entry_id instead of creating duplicates.\n\
+Return at most {} candidates.\n\n\
+Existing durable memory manifest:\n{}\n\n\
+Recent session transcript:\n{}",
+            cfg.max_candidates, prompt_manifest, transcript
+        );
+        let response = llm
+            .call(
+                &[
+                    Message {
+                        role: MessageRole::System,
+                        content: "Extract durable, high-confidence long-term memory candidates. Return JSON only."
+                            .to_string(),
+                        name: None,
+                        tool_call_id: None,
+                    },
+                    Message {
+                        role: MessageRole::User,
+                        content: prompt,
+                        name: None,
+                        tool_call_id: None,
+                    },
+                ],
+                None,
+            )
+            .await
+            .map_err(|err| format!("Durable memory extraction failed: {}", err))?;
+        Ok::<String, String>(response.content)
+    }
+    .await;
+
+    let mut final_state = load_runtime_state(workspace_path).await;
+    final_state.extraction_in_flight = false;
+
+    let result = match llm_result {
+        Ok(content) => {
+            let envelope = parse_candidate_response(&content)?;
+            let mut merge_results = Vec::new();
+            let mut touched_indices = BTreeSet::new();
+
+            for candidate in envelope.candidates.into_iter().take(cfg.max_candidates) {
+                let (merge_result, touched_index) =
+                    merge_candidate(workspace_path, session_id, &mut manifest, candidate, &cfg);
+                if let Some(index) = touched_index {
+                    touched_indices.insert(index);
+                }
+                merge_results.push(merge_result);
+            }
+
+            manifest.updated_at = now_millis();
+            save_manifest(workspace_path, &manifest).await?;
+
+            for index in touched_indices {
+                if let Some(entry) = manifest.entries.get(index) {
+                    write_entry_file(entry).await?;
+                }
+            }
+
+            final_state.last_extracted_at = Some(now_millis());
+            final_state.last_session_id = Some(session_id.to_string());
+            final_state.last_transcript_fingerprint = Some(fingerprint);
+
+            Ok(build_snapshot(
+                workspace_path,
+                manifest,
+                merge_results,
+                &final_state,
+            ))
+        }
+        Err(err) => Err(err),
+    };
+
+    store_runtime_state(workspace_path, final_state).await;
+    result
+}
+
+#[tauri::command]
+pub async fn agent_get_durable_memory_snapshot(
+    workspace_path: String,
+) -> Result<DurableMemorySnapshot, String> {
+    get_durable_memory_snapshot(&workspace_path).await
+}
+
+#[tauri::command]
+pub async fn agent_extract_durable_memories(
+    app: tauri::AppHandle,
+    config: AgentConfig,
+    workspace_path: String,
+    session_id: String,
+    messages: Vec<Message>,
+    force: Option<bool>,
+    durable_memory_config: Option<DurableMemoryConfig>,
+) -> Result<DurableMemorySnapshot, String> {
+    extract_durable_memories_impl(
+        &app,
+        config,
+        &workspace_path,
+        &session_id,
+        &messages,
+        force.unwrap_or(false),
+        durable_memory_config,
+    )
+    .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn candidate(
+        scope: MemoryScope,
+        title: &str,
+        confidence: MemoryConfidence,
+    ) -> DurableMemoryCandidate {
+        DurableMemoryCandidate {
+            scope,
+            title: title.to_string(),
+            summary: "Summary".to_string(),
+            details: "Details".to_string(),
+            confidence,
+            tags: vec!["alpha".to_string()],
+            existing_entry_id: None,
+            source_excerpt: Some("excerpt".to_string()),
+        }
+    }
+
+    #[test]
+    fn low_confidence_candidates_are_skipped() {
+        let mut manifest = DurableMemoryManifest::default();
+        let config = DurableMemoryConfig::default();
+        let (result, touched) = merge_candidate(
+            "/tmp/workspace",
+            "session-1",
+            &mut manifest,
+            candidate(
+                MemoryScope::Identity,
+                "User preference",
+                MemoryConfidence::Low,
+            ),
+            &config,
+        );
+        assert_eq!(result.action, MemoryMergeAction::SkippedLowConfidence);
+        assert!(touched.is_none());
+        assert!(manifest.entries.is_empty());
+    }
+
+    #[test]
+    fn matching_titles_merge_and_increment_version() {
+        let created_at = now_millis();
+        let mut manifest = DurableMemoryManifest {
+            version: 1,
+            updated_at: created_at,
+            entries: vec![MemoryEntry {
+                id: "entry-1".to_string(),
+                scope: MemoryScope::Projects,
+                title: "Release freeze".to_string(),
+                summary: "Old summary".to_string(),
+                details: "Old details".to_string(),
+                confidence: MemoryConfidence::Medium,
+                tags: vec!["release".to_string()],
+                file_path: "/tmp/workspace/memory/projects/release-freeze--entry-1.md".to_string(),
+                version: 1,
+                created_at,
+                updated_at: created_at,
+                source_refs: Vec::new(),
+                history: Vec::new(),
+            }],
+        };
+        let mut next = candidate(
+            MemoryScope::Projects,
+            "Release freeze",
+            MemoryConfidence::High,
+        );
+        next.summary = "New summary".to_string();
+        next.details = "New details".to_string();
+
+        let (result, touched) = merge_candidate(
+            "/tmp/workspace",
+            "session-1",
+            &mut manifest,
+            next,
+            &DurableMemoryConfig::default(),
+        );
+        assert_eq!(result.action, MemoryMergeAction::Updated);
+        assert_eq!(touched, Some(0));
+        assert_eq!(manifest.entries[0].version, 2);
+        assert_eq!(manifest.entries[0].history.len(), 1);
+        assert_eq!(manifest.entries[0].confidence, MemoryConfidence::High);
+    }
+
+    #[test]
+    fn new_entries_get_scope_specific_paths() {
+        let mut manifest = DurableMemoryManifest::default();
+        let (result, touched) = merge_candidate(
+            "/tmp/workspace",
+            "session-1",
+            &mut manifest,
+            candidate(
+                MemoryScope::Relationships,
+                "Core reviewer responsibilities",
+                MemoryConfidence::High,
+            ),
+            &DurableMemoryConfig::default(),
+        );
+        assert_eq!(result.action, MemoryMergeAction::Created);
+        assert_eq!(touched, Some(0));
+        assert!(manifest.entries[0]
+            .file_path
+            .contains("/memory/relationships/"));
+    }
+}
