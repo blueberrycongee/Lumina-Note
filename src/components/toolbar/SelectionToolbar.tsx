@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MessageSquarePlus, Video, Sparkles, Languages } from "lucide-react";
+import { MessageSquarePlus, Sparkles, Languages } from "lucide-react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { callLLM, type Message } from '@/services/llm';
@@ -34,7 +34,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   const [isPolishing, setIsPolishing] = useState(false);
   const [isTodoing, setIsTodoing] = useState(false);
   const { addTextSelection } = useAIStore();
-  const { currentFile, openVideoNoteFromContent } = useFileStore();
+  const { currentFile } = useFileStore();
 
   const toolbarRef = useRef<HTMLDivElement | null>(null);
 
@@ -397,18 +397,6 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     }
   };
 
-  const handleOpenAsVideoNote = () => {
-    if (!selectedText.trim()) return;
-
-    // 直接利用现有解析逻辑：允许用户选中完整的视频笔记 Markdown 段落
-    // 若解析失败，底层会降级为普通空视频标签
-    openVideoNoteFromContent(selectedText, t.selectionToolbar.videoNote);
-
-    window.getSelection()?.removeAllRanges();
-    setPosition(null);
-    setSelectedText("");
-  };
-
   if (!position || !selectedText) return null;
 
   return (
@@ -465,14 +453,6 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         >
           <span className={isTodoing ? "animate-spin" : ""}>☑</span>
           <span>{t.selectionToolbar.todos}</span>
-        </button>
-        <button
-          onClick={handleOpenAsVideoNote}
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
-          title={t.selectionToolbar.videoNote}
-        >
-          <Video size={13} />
-          <span>{t.selectionToolbar.videoNote}</span>
         </button>
       </div>
       {/* 左侧小三角指向选中文字 */}
