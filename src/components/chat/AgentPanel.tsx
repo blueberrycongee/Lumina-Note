@@ -10,7 +10,6 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ChatInput } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
-import { PlanCard } from "./PlanCard";
 import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
@@ -29,7 +28,6 @@ import {
   RefreshCw,
   Bug,
   FileText,
-  Layers3,
 } from "lucide-react";
 
 export function AgentPanel() {
@@ -45,9 +43,6 @@ export function AgentPanel() {
 
   // 选择实际使用的 store 数据
   const status = rustStore.status;
-  const exploreReport = rustStore.exploreReport;
-  const verificationReport = rustStore.verificationReport;
-  const orchestrationStages = rustStore.orchestrationStages;
   // 转换 Rust Agent 消息格式（tool role -> assistant）
   const messages = rustStore.messages.map(m => ({
     ...m,
@@ -196,77 +191,6 @@ export function AgentPanel() {
           <div className="text-sm text-muted-foreground leading-relaxed">
             <p>{t.ai.welcomeAgent}</p>
             <p className="mt-2 text-xs opacity-70">{t.ai.startTask}</p>
-          </div>
-        )}
-
-        {/* 任务计划卡片 */}
-        {rustStore.currentPlan && rustStore.currentPlan.steps.length > 0 && (
-          <PlanCard
-            plan={rustStore.currentPlan}
-            currentStage={rustStore.currentStage}
-            fallbackReason={rustStore.orchestrationFallbackReason}
-            className="mb-2"
-          />
-        )}
-
-        {(rustStore.currentStage || orchestrationStages.length > 0) && (
-          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium flex items-center gap-1.5">
-                <Layers3 className="w-3.5 h-3.5" />
-                Agent Stages
-              </span>
-              <span className="text-muted-foreground">
-                {rustStore.currentStage ? `Current: ${rustStore.currentStage}` : "Waiting for stage events"}
-              </span>
-            </div>
-            {orchestrationStages.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {orchestrationStages.map((stage) => (
-                  <span
-                    key={stage}
-                    className={`rounded-full border px-2 py-0.5 text-[10px] ${stage === rustStore.currentStage
-                      ? "border-primary/50 bg-primary/10 text-foreground"
-                      : "border-border/60 text-muted-foreground"
-                    }`}
-                  >
-                    {stage}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {exploreReport && (
-          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
-            <p className="text-xs font-medium">Explore summary</p>
-            <p className="mt-1 text-xs text-muted-foreground">{exploreReport.summary}</p>
-            <div className="mt-1.5 text-[11px] text-muted-foreground">
-              related files: {exploreReport.related_files.slice(0, 4).join(", ") || "none"}
-            </div>
-          </div>
-        )}
-
-        {verificationReport && (
-          <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
-            <div className="flex items-center justify-between text-xs">
-              <p className="font-medium">Verification report</p>
-              <span className={`rounded-full px-2 py-0.5 text-[10px] ${verificationReport.verdict === "pass"
-                ? "bg-success/10 text-success"
-                : verificationReport.verdict === "fail"
-                  ? "bg-destructive/10 text-destructive"
-                  : "bg-warning/10 text-warning"
-              }`}>
-                {verificationReport.verdict}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">{verificationReport.summary}</p>
-            {verificationReport.outstanding_risks.length > 0 && (
-              <p className="mt-1.5 text-[11px] text-warning truncate">
-                risks: {verificationReport.outstanding_risks.slice(0, 2).join("; ")}
-              </p>
-            )}
           </div>
         )}
 

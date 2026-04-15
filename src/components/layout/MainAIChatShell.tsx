@@ -47,7 +47,6 @@ import {
   ThinkingCollapsible,
 } from "../chat/AgentMessageRenderer";
 import { AssistantDiagramPanels } from "../chat/AssistantDiagramPanels";
-import { PlanCard } from "../chat/PlanCard";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
 import { UserMessageBubbleContent } from "../chat/UserMessageBubbleContent";
@@ -168,11 +167,7 @@ export function MainAIChatShell() {
     status: agentStatus,
     messages: rustAgentMessages,
     error: _rustError,
-    lastIntent: rustLastIntent,
     totalTokensUsed: rustTotalTokens,
-    currentPlan: rustCurrentPlan,
-    currentStage: rustCurrentStage,
-    orchestrationFallbackReason: rustOrchestrationFallbackReason,
     startTask: rustStartTask,
     abort: agentAbort,
     debugEnabled,
@@ -1180,19 +1175,6 @@ export function MainAIChatShell() {
                       : { duration: 0.25, ease: [0.22, 1, 0.36, 1] }
                   }
                 >
-                  {/* Agent 模式：任务计划卡片 + 消息渲染 */}
-                  {chatMode === "agent" &&
-                    !isExportSelectionMode &&
-                    rustCurrentPlan &&
-                    rustCurrentPlan.steps.length > 0 && (
-                      <PlanCard
-                        plan={rustCurrentPlan}
-                        currentStage={rustCurrentStage}
-                        fallbackReason={rustOrchestrationFallbackReason}
-                        className="mb-4"
-                      />
-                    )}
-
                   {isExportSelectionMode ? (
                     <>
                       <div className="mb-4 rounded-xl border border-border/60 bg-card/70 px-3 py-2 flex flex-wrap items-center gap-2">
@@ -2042,59 +2024,6 @@ export function MainAIChatShell() {
                       ))}
                     </div>
                   )}
-
-                  {/* 意图识别调试信息 */}
-                  <div className="p-3 rounded-lg border bg-muted/30 border-border/60 mb-4">
-                    {(() => {
-                      // 使用 store 中的意图状态
-                      const displayIntent = rustLastIntent;
-
-                      return (
-                        <>
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="font-bold text-muted-foreground flex items-center gap-2">
-                              <span>🔍 {t.ai.intentResult}</span>
-                              <span className="px-1.5 py-0.5 rounded text-[10px] bg-orange-500/20 text-orange-600">
-                                🦀 Rust
-                              </span>
-                              {displayIntent && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] bg-success/20 text-success">
-                                  ✓ {t.ai.intentRecognized}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {displayIntent ? (
-                            <div className="space-y-2">
-                              <div className="flex gap-2">
-                                <span className="text-muted-foreground w-16 shrink-0">
-                                  {t.ai.intentTypeLabel}
-                                </span>
-                                <span className="font-bold text-foreground bg-background px-1 rounded border border-border/50">
-                                  {displayIntent.type}
-                                </span>
-                              </div>
-                              <div className="flex gap-2">
-                                <span className="text-muted-foreground w-16 shrink-0">
-                                  {t.ai.intentRouteLabel}
-                                </span>
-                                <span className="text-foreground/80">
-                                  {"route" in displayIntent
-                                    ? displayIntent.route
-                                    : "-"}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-muted-foreground italic opacity-70">
-                              {t.ai.intentEmpty}
-                            </div>
-                          )}
-                        </>
-                      );
-                    })()}
-                  </div>
 
                   {fullMessages.map((msg, idx) => (
                     <div
