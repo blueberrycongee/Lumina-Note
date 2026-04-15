@@ -4,11 +4,12 @@ import { MainAIChatShell } from "./MainAIChatShell";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
+import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 describe("MainAIChatShell", () => {
   beforeEach(() => {
-    useUIStore.setState({ chatMode: "chat" });
+    useUIStore.setState({ chatMode: "agent" });
     useFileStore.setState({ vaultPath: "/tmp" });
     useAIStore.setState({ pendingInputAppends: [] });
   });
@@ -22,28 +23,36 @@ describe("MainAIChatShell", () => {
   });
 
   it("appends text into input when receiving ai-input-append event", () => {
-    useUIStore.setState({ chatMode: "chat" });
+    useUIStore.setState({ chatMode: "agent" });
     render(<MainAIChatShell />);
 
-    fireEvent(window, new CustomEvent("ai-input-append", { detail: { text: "Quoted from PDF" } }));
+    fireEvent(
+      window,
+      new CustomEvent("ai-input-append", {
+        detail: { text: "Quoted from PDF" },
+      }),
+    );
 
     const input = screen.getByRole("textbox") as HTMLTextAreaElement;
     expect(input.value).toContain("Quoted from PDF");
   });
 
   it("appends incoming ai-input-append text as a new paragraph", () => {
-    useUIStore.setState({ chatMode: "chat" });
+    useUIStore.setState({ chatMode: "agent" });
     render(<MainAIChatShell />);
 
     const input = screen.getByRole("textbox") as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: "Initial prompt" } });
-    fireEvent(window, new CustomEvent("ai-input-append", { detail: { text: "PDF Quote" } }));
+    fireEvent(
+      window,
+      new CustomEvent("ai-input-append", { detail: { text: "PDF Quote" } }),
+    );
 
     expect(input.value).toBe("Initial prompt\n\nPDF Quote");
   });
 
   it("consumes queued input appends from store on mount", () => {
-    useUIStore.setState({ chatMode: "chat" });
+    useUIStore.setState({ chatMode: "agent" });
     useAIStore.getState().enqueueInputAppend("Queued from PDF");
     render(<MainAIChatShell />);
 
@@ -53,7 +62,7 @@ describe("MainAIChatShell", () => {
   });
 
   it("renders thinking mode selector in chat composer for supported models", () => {
-    useUIStore.setState({ chatMode: "chat" });
+    useUIStore.setState({ chatMode: "agent" });
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -73,7 +82,7 @@ describe("MainAIChatShell", () => {
   });
 
   it("hides thinking mode selector in chat composer for unsupported models", () => {
-    useUIStore.setState({ chatMode: "chat" });
+    useUIStore.setState({ chatMode: "agent" });
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -90,11 +99,14 @@ describe("MainAIChatShell", () => {
   });
 
   it("renders assistant thinking as collapsed block and expands on click", () => {
-    useUIStore.setState({ chatMode: "chat" });
-    useAIStore.setState({
+    useUIStore.setState({ chatMode: "agent" });
+    useRustAgentStore.setState({
       messages: [
         { role: "user", content: "hello" },
-        { role: "assistant", content: "<thinking>step by step</thinking>\n\nfinal answer" },
+        {
+          role: "assistant",
+          content: "<thinking>step by step</thinking>\n\nfinal answer",
+        },
       ],
     });
 

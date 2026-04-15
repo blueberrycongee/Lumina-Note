@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { listAgentSkills, readAgentSkill, getDocToolsStatus, installDocTools } from "@/lib/tauri";
+import {
+  listAgentSkills,
+  readAgentSkill,
+  getDocToolsStatus,
+  installDocTools,
+} from "@/lib/tauri";
 import type { SelectedSkill, SkillInfo } from "@/types/skills";
 
 export function useSkillSearch() {
-  const chatMode = useUIStore((s) => s.chatMode);
   const vaultPath = useFileStore((s) => s.vaultPath);
   const { t } = useLocaleStore();
 
@@ -16,22 +19,9 @@ export function useSkillSearch() {
   const [showSkillMenu, setShowSkillMenu] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(false);
 
-  // Reset skills when leaving agent mode
-  useEffect(() => {
-    if (chatMode !== "agent") {
-      setSelectedSkills([]);
-      setShowSkillMenu(false);
-      setSkillQuery("");
-    }
-  }, [chatMode]);
-
-  // Load available skills (agent mode only)
+  // Load available skills
   useEffect(() => {
     let active = true;
-    if (chatMode !== "agent") {
-      setShowSkillMenu(false);
-      return;
-    }
     setSkillsLoading(true);
     listAgentSkills(vaultPath || undefined)
       .then((items) => {
@@ -50,7 +40,7 @@ export function useSkillSearch() {
     return () => {
       active = false;
     };
-  }, [chatMode, vaultPath]);
+  }, [vaultPath]);
 
   const filteredSkills = useMemo(() => {
     if (!skills.length) return [];
@@ -78,7 +68,9 @@ export function useSkillSearch() {
           try {
             const status = await getDocToolsStatus();
             if (!status.installed && status.missing.length > 0) {
-              const shouldInstall = window.confirm(t.settingsModal.docToolsPrompt);
+              const shouldInstall = window.confirm(
+                t.settingsModal.docToolsPrompt,
+              );
               if (shouldInstall) {
                 await installDocTools();
               }

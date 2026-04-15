@@ -1,13 +1,10 @@
 /**
  * 统一的会话管理 Hook
- * 
- * 从 MainAIChatShell 抽取的会话管理逻辑，供 ConversationList 等组件复用
- * 支持 Agent / Chat 两种会话类型
+ *
+ * Agent-only session management (chat mode removed)
  */
 
 import { useMemo, useCallback } from "react";
-import { useUIStore } from "@/stores/useUIStore";
-import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 
 export type SessionType = "agent" | "chat";
@@ -21,126 +18,79 @@ export interface UnifiedSession {
 }
 
 export function useConversationManager() {
-  const { chatMode, setChatMode } = useUIStore();
-
-  // Chat store
-  const {
-    sessions: chatSessions,
-    currentSessionId: chatCurrentId,
-    createSession: createChatSession,
-    deleteSession: deleteChatSession,
-    switchSession: switchChatSession,
-  } = useAIStore();
-
   // Agent store - 使用 Rust Agent
   const rustAgentStore = useRustAgentStore();
 
   const agentSessions = rustAgentStore.sessions;
   const agentCurrentId = rustAgentStore.currentSessionId;
-  const createAgentSession = rustAgentStore.createSession;
   const deleteAgentSession = rustAgentStore.deleteSession;
   const switchAgentSession = rustAgentStore.switchSession;
   const clearAgentChat = rustAgentStore.clearChat;
 
-  // 统一会话列表 - 合并所有类型，按更新时间排序
+  // 统一会话列表 — agent-only
   const allSessions = useMemo<UnifiedSession[]>(() => {
-    const agentList = agentSessions.map(s => ({
-      id: s.id,
-      title: s.title,
-      type: "agent" as const,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-    }));
-    
-    const chatList = chatSessions.map(s => ({
-      id: s.id,
-      title: s.title,
-      type: "chat" as const,
-      createdAt: s.createdAt,
-      updatedAt: s.updatedAt,
-    }));
-    
-    return [...agentList, ...chatList].sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [agentSessions, chatSessions]);
+    return agentSessions
+      .map((s) => ({
+        id: s.id,
+        title: s.title,
+        type: "agent" as const,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+      }))
+      .sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [agentSessions]);
 
   // 切换会话
-  const handleSwitchSession = useCallback((id: string, type: SessionType) => {
-    if (type === "agent") {
+  const handleSwitchSession = useCallback(
+    (id: string, _type: SessionType) => {
       switchAgentSession(id);
-      if (chatMode !== "agent") setChatMode("agent");
-    } else {
-      switchChatSession(id);
-      if (chatMode !== "chat") setChatMode("chat");
-    }
-  }, [chatMode, setChatMode, switchAgentSession, switchChatSession]);
+    },
+    [switchAgentSession],
+  );
 
   // 删除会话
-  const handleDeleteSession = useCallback((id: string, type: SessionType) => {
-    if (type === "agent") {
+  const handleDeleteSession = useCallback(
+    (id: string, _type: SessionType) => {
       deleteAgentSession(id);
-    } else {
-      deleteChatSession(id);
-    }
-  }, [deleteAgentSession, deleteChatSession]);
+    },
+    [deleteAgentSession],
+  );
 
   // 新建会话
   const handleNewConversation = useCallback(() => {
-    if (chatMode === "agent") {
-      // Rust Agent: 清空消息
-      clearAgentChat();
-    } else {
-      createChatSession();
-    }
-  }, [chatMode, createAgentSession, createChatSession, clearAgentChat]);
+    clearAgentChat();
+  }, [clearAgentChat]);
 
   // 判断是否当前会话
-  const isCurrentSession = useCallback((id: string, type: SessionType): boolean => {
-    if (type === "agent") {
-      return chatMode === "agent" && agentCurrentId === id;
-    }
-    return chatMode === "chat" && chatCurrentId === id;
-  }, [chatMode, agentCurrentId, chatCurrentId]);
+  const isCurrentSession = useCallback(
+    (id: string, _type: SessionType): boolean => {
+      return agentCurrentId === id;
+    },
+    [agentCurrentId],
+  );
 
-  // 获取当前会话 ID（按模式）
-  const currentSessionId = useMemo(() => {
-    if (chatMode === "agent") return agentCurrentId;
-    return chatCurrentId;
-  }, [chatMode, agentCurrentId, chatCurrentId]);
+  // 获取当前会话 ID
+  const currentSessionId = agentCurrentId;
 
   // 删除当前会话
   const handleDeleteCurrentSession = useCallback(() => {
     if (!currentSessionId) return;
-    
-    if (chatMode === "agent") {
-      deleteAgentSession(currentSessionId);
-    } else {
-      deleteChatSession(currentSessionId);
-    }
-  }, [chatMode, currentSessionId, deleteAgentSession, deleteChatSession]);
+    deleteAgentSession(currentSessionId);
+  }, [currentSessionId, deleteAgentSession]);
 
-  // 清空当前模式的历史（保留当前会话）
+  // 清空历史（保留当前会话）
   const handleClearHistory = useCallback(() => {
-    if (chatMode === "agent") {
-      agentSessions.forEach(s => {
-        if (s.id !== agentCurrentId) deleteAgentSession(s.id);
-      });
-    } else {
-      chatSessions.forEach(s => {
-        if (s.id !== chatCurrentId) deleteChatSession(s.id);
-      });
-    }
-  }, [
-    chatMode,
-    agentSessions, agentCurrentId, deleteAgentSession,
-    chatSessions, chatCurrentId, deleteChatSession,
-  ]);
+    agentSessions.forEach((s) => {
+      if (s.id !== agentCurrentId) deleteAgentSession(s.id);
+    });
+  }, [agentSessions, agentCurrentId, deleteAgentSession]);
 
   return {
     // 状态
-    chatMode,
+    chatMode: "agent" as const,
     allSessions,
     currentSessionId,
-    
+
     // 操作
     handleSwitchSession,
     handleDeleteSession,
@@ -148,8 +98,8 @@ export function useConversationManager() {
     handleDeleteCurrentSession,
     handleClearHistory,
     isCurrentSession,
-    
-    // 模式切换
-    setChatMode,
+
+    // 模式切换 (no-op for backwards compat)
+    setChatMode: (_mode: string) => {},
   };
 }

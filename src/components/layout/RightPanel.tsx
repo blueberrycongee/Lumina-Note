@@ -10,7 +10,6 @@ import { getFileName } from "@/lib/utils";
 import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
 import {
-  BrainCircuit,
   FileText,
   Settings,
   Trash2,
@@ -28,7 +27,6 @@ import {
 } from "lucide-react";
 import { AgentPanel } from "../chat/AgentPanel";
 import { ConversationList } from "../chat/ConversationList";
-import { ChatPanel } from "../chat/ChatPanel";
 import { useConversationManager } from "@/hooks/useConversationManager";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 import { useShallow } from "zustand/react/shallow";
@@ -565,11 +563,7 @@ export function RightPanel() {
             } ${isDraggingAI ? "cursor-grabbing" : "cursor-grab"}`}
             title={t.ai.chat}
           >
-            {chatMode === "agent" ? (
-              <Bot size={12} />
-            ) : (
-              <BrainCircuit size={12} />
-            )}
+            <Bot size={12} />
             <span className="ui-compact-text ui-compact-hide">AI</span>
           </button>
         )}
@@ -631,7 +625,7 @@ export function RightPanel() {
               {/* Header with Mode Toggle */}
               <div className="ui-compact-row p-2 border-b border-border/60 bg-background/35 flex items-center justify-between min-w-0">
                 <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                  {/* Mode Toggle */}
+                  {/* Mode Toggle — agent + codex only */}
                   <div className="right-ai-mode-toggle flex bg-background/40 border border-border/60 rounded-ui-md p-0.5 shrink-0">
                     <button
                       onClick={() => setChatMode("agent")}
@@ -648,17 +642,11 @@ export function RightPanel() {
                       </span>
                     </button>
                     <button
-                      onClick={() => setChatMode("chat")}
-                      className={`shrink-0 px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
-                        chatMode === "chat"
-                          ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      title={t.ai.chatMode}
+                      onClick={() => {}}
+                      className="shrink-0 px-2 py-1 text-xs rounded-ui-sm text-muted-foreground"
                     >
-                      <BrainCircuit size={12} />
                       <span className="right-ai-mode-label ui-compact-text">
-                        {t.ai.conversation}
+                        Agent
                       </span>
                     </button>
                   </div>
@@ -668,7 +656,7 @@ export function RightPanel() {
                       : t.settingsModal.notConfigured}
                   </span>
                 </div>
-                {(
+                {
                   <div className="flex gap-1">
                     <button
                       onClick={deleteCurrentSession}
@@ -685,7 +673,7 @@ export function RightPanel() {
                       <Settings size={14} />
                     </button>
                   </div>
-                )}
+                }
               </div>
 
               {/* Settings Panel - 全屏模式 */}
@@ -913,7 +901,6 @@ export function RightPanel() {
                       </span>
                     </label>
                   </div>
-
                 </div>
               ) : (
                 <>
@@ -923,9 +910,6 @@ export function RightPanel() {
                       <AgentPanel />
                     </div>
                   )}
-
-                  {/* Chat Mode */}
-                  {chatMode === "chat" && <ChatPanel />}
                 </>
               )}
             </div>

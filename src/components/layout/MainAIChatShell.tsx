@@ -17,13 +17,11 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
-import { parseMarkdown } from "@/services/markdown/markdown";
 import { resolve } from "@/lib/path";
 import { isIMEComposing } from "@/lib/imeUtils";
 import { createDir, saveFile, exists } from "@/lib/tauri";
 import {
   ArrowUp,
-  Bot,
   FileText,
   History,
   Quote,
@@ -42,20 +40,10 @@ import { useSkillSearch } from "./hooks/useSkillSearch";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatToolbar, ModeToggle } from "./ChatToolbar";
 import { WelcomeGreeting, WelcomeSuggestions } from "./WelcomeSection";
-import {
-  AgentMessageRenderer,
-  ThinkingCollapsible,
-} from "../chat/AgentMessageRenderer";
-import { AssistantDiagramPanels } from "../chat/AssistantDiagramPanels";
+import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
-import { UserMessageBubbleContent } from "../chat/UserMessageBubbleContent";
-import { getDiagramAttachmentFilePaths } from "../chat/diagramAttachmentUtils";
-import {
-  getImagesFromContent,
-  getTextFromContent,
-  getUserMessageDisplay,
-} from "../chat/messageContentUtils";
+import { getTextFromContent } from "../chat/messageContentUtils";
 import {
   filterMentionFiles,
   flattenFileTreeToReferences,
@@ -67,7 +55,6 @@ import { AISettingsModal } from "../ai/AISettingsModal";
 import { join as joinPath } from "@tauri-apps/api/path";
 import {
   buildAgentExportMessages,
-  buildChatExportMessages,
   buildConversationExportMarkdown,
   sanitizeExportFileName,
   type ExportMessage,
@@ -79,39 +66,6 @@ import {
   type LLMProviderType,
   type ThinkingMode,
 } from "@/services/llm";
-
-type ChatAssistantPart =
-  | { type: "text"; content: string }
-  | { type: "thinking"; content: string };
-
-function parseChatAssistantParts(content: string): ChatAssistantPart[] {
-  const parts: ChatAssistantPart[] = [];
-  const normalized = content.replace(/<\|end_of_thinking\|>/g, "");
-  const tagRegex = /<thinking>([\s\S]*?)<\/thinking>/g;
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = tagRegex.exec(normalized)) !== null) {
-    const text = normalized.slice(lastIndex, match.index);
-    if (text.trim().length > 0) {
-      parts.push({ type: "text", content: text });
-    }
-
-    const thinking = (match[1] || "").trim();
-    if (thinking.length > 0) {
-      parts.push({ type: "thinking", content: thinking });
-    }
-
-    lastIndex = tagRegex.lastIndex;
-  }
-
-  const trailing = normalized.slice(lastIndex);
-  if (trailing.trim().length > 0 || parts.length === 0) {
-    parts.push({ type: "text", content: trailing || normalized });
-  }
-
-  return parts;
-}
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
@@ -142,7 +96,6 @@ export function MainAIChatShell() {
     isCurrentSession,
     handleNewChat: _sessionNewChat,
     rustSessionId,
-    chatSessionId,
   } = useSessionManagement();
 
   const {
@@ -219,18 +172,10 @@ export function MainAIChatShell() {
     );
   }, [rustAgentMessages]);
 
-  // Chat store - 使用 selector 确保状态变化时正确重新渲染
+  // AI store — config, text selections, and input appends (chat messages no longer used)
   const {
-    messages: chatMessages,
-    isLoading: chatLoading,
-    isStreaming: chatStreaming,
-    error: chatError,
-    sendMessageStream,
-    stopStreaming,
-    checkFirstLoad: checkChatFirstLoad,
     config,
     setConfig,
-    totalTokensUsed: chatTotalTokens,
     textSelections,
     removeTextSelection,
     clearTextSelections,
@@ -238,16 +183,8 @@ export function MainAIChatShell() {
     consumeInputAppends,
   } = useAIStore(
     useShallow((state) => ({
-      messages: state.messages,
-      isLoading: state.isLoading,
-      isStreaming: state.isStreaming,
-      error: state.error,
-      sendMessageStream: state.sendMessageStream,
-      stopStreaming: state.stopStreaming,
-      checkFirstLoad: state.checkFirstLoad,
       config: state.config,
       setConfig: state.setConfig,
-      totalTokensUsed: state.totalTokensUsed,
       textSelections: state.textSelections,
       removeTextSelection: state.removeTextSelection,
       clearTextSelections: state.clearTextSelections,
@@ -308,12 +245,9 @@ export function MainAIChatShell() {
   );
 
   // 判断是否有对话历史（用于控制动画状态）
-  // Chat 模式下，流式进行中也算已开始（确保流式消息能正确显示）
   const hasStarted = isCodexMode
     ? true
-    : chatMode === "agent"
-      ? agentMessages.length > 0 || agentStatus === "error"
-      : chatMessages.length > 0 || chatStreaming || !!chatError;
+    : agentMessages.length > 0 || agentStatus === "error";
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof performance === "undefined") {
@@ -333,69 +267,26 @@ export function MainAIChatShell() {
     }
   }, [hasStarted]);
 
-  // 获取当前消息列表
-  const messages = chatMode === "agent" ? agentMessages : chatMessages;
+  // 获取当前消息列表（agent-only）
+  const messages = agentMessages;
 
   // 判断是否正在加载
-  const isLoading =
-    chatMode === "agent"
-      ? agentStatus === "running"
-      : chatLoading || chatStreaming;
-  const isAgentWaitingApproval =
-    chatMode === "agent" && agentStatus === "waiting_approval";
+  const isLoading = agentStatus === "running";
+  const isAgentWaitingApproval = agentStatus === "waiting_approval";
   const agentQueueCount = rustQueuedTasks.length;
 
-  const isConversationMode = chatMode === "chat" || chatMode === "agent";
-  const chatAssistantDiagramPathsByIndex = useMemo(() => {
-    const mapping = new Map<number, string[]>();
-    let pendingDiagramPaths: string[] = [];
-
-    chatMessages.forEach((message, index) => {
-      if (message.role === "user") {
-        const normalized = getUserMessageDisplay(
-          message.content,
-          message.attachments,
-        );
-        pendingDiagramPaths = getDiagramAttachmentFilePaths(
-          normalized.attachments,
-        );
-        return;
-      }
-
-      if (message.role === "assistant") {
-        if (pendingDiagramPaths.length > 0) {
-          mapping.set(index, pendingDiagramPaths);
-        }
-        pendingDiagramPaths = [];
-      }
-    });
-
-    return mapping;
-  }, [chatMessages]);
-
+  const isConversationMode = chatMode === "agent";
   const exportCandidates = useMemo<ExportMessage[]>(() => {
-    if (chatMode === "chat") {
-      const normalizedMessages: RawConversationMessage[] = chatMessages.map(
-        (message) => ({
-          id: (message as { id?: string }).id,
-          role: message.role as RawConversationMessage["role"],
-          content: message.content,
-        }),
-      );
-      return buildChatExportMessages(normalizedMessages);
-    }
-    if (chatMode === "agent") {
-      const normalizedMessages: RawConversationMessage[] = agentMessages.map(
-        (message) => ({
-          id: message.id,
-          role: message.role as RawConversationMessage["role"],
-          content: message.content,
-        }),
-      );
-      return buildAgentExportMessages(normalizedMessages);
-    }
-    return [];
-  }, [chatMode, chatMessages, agentMessages]);
+    if (chatMode !== "agent") return [];
+    const normalizedMessages: RawConversationMessage[] = agentMessages.map(
+      (message) => ({
+        id: message.id,
+        role: message.role as RawConversationMessage["role"],
+        content: message.content,
+      }),
+    );
+    return buildAgentExportMessages(normalizedMessages);
+  }, [chatMode, agentMessages]);
 
   const selectedExportIdSet = useMemo(
     () => new Set(selectedExportIds),
@@ -406,22 +297,11 @@ export function MainAIChatShell() {
     selectedExportIds.length === exportCandidates.length;
 
   const currentConversationTitle = useMemo(() => {
-    if (chatMode === "agent") {
-      const currentSession = allSessions.find(
-        (s) => s.type === "agent" && s.id === rustSessionId,
-      );
-      return currentSession?.title || t.ai.conversation;
-    }
-
-    if (chatMode === "chat") {
-      const currentSession = allSessions.find(
-        (s) => s.type === "chat" && s.id === chatSessionId,
-      );
-      return currentSession?.title || t.ai.conversation;
-    }
-
-    return t.ai.conversation;
-  }, [chatMode, allSessions, rustSessionId, chatSessionId, t.ai.conversation]);
+    const currentSession = allSessions.find(
+      (s) => s.type === "agent" && s.id === rustSessionId,
+    );
+    return currentSession?.title || t.ai.conversation;
+  }, [allSessions, rustSessionId, t.ai.conversation]);
 
   useEffect(() => {
     if (!isConversationMode) {
@@ -480,10 +360,10 @@ export function MainAIChatShell() {
         return;
       }
 
-      const modeName = chatMode === "agent" ? "agent" : "chat";
+      const modeName = "agent";
       const markdown = buildConversationExportMarkdown({
         title: currentConversationTitle,
-        modeLabel: `${t.ai.mode}: ${chatMode === "agent" ? t.ai.modeAgent : t.ai.modeChat}`,
+        modeLabel: `${t.ai.mode}: ${t.ai.modeAgent}`,
         messages: selectedMessages,
         roleLabels: {
           user: t.ai.exportRoleUser,
@@ -582,12 +462,7 @@ export function MainAIChatShell() {
     return () => observer.disconnect();
   }, []);
 
-  // 首次加载检查（仅 Chat 模式需要）
-  useEffect(() => {
-    if (chatMode === "chat") {
-      checkChatFirstLoad();
-    }
-  }, [chatMode, checkChatFirstLoad]);
+  // Chat mode removed — no firstLoad check needed
 
   // 点击外部关闭临时菜单
   useEffect(() => {
@@ -841,12 +716,10 @@ export function MainAIChatShell() {
       const fallbackMessage = autoSendMessageRef.current?.trim() ?? "";
       const overrideMessage = overrideInput?.trim() ?? "";
       const effectiveInput = overrideMessage || input.trim() || fallbackMessage;
-      const shouldBlockForLoading = chatMode !== "agent" && isLoading;
       if (
         (!effectiveInput &&
           referencedFiles.length === 0 &&
           textSelections.length === 0) ||
-        shouldBlockForLoading ||
         isAgentWaitingApproval
       ) {
         return;
@@ -872,36 +745,16 @@ export function MainAIChatShell() {
         performance.mark("lumina:send:processed");
       }
 
-      if (chatMode === "agent") {
-        // 使用 Rust Agent
-        await rustStartTask(fullMessage, {
-          workspace_path: vaultPath || "",
-          active_note_path: currentFile || undefined,
-          active_note_content: currentFile ? currentContent : undefined,
-          display_message: displayMessage,
-          attachments,
-          skills: selectedSkills.length > 0 ? selectedSkills : undefined,
-        });
-        setSelectedSkills([]);
-        finalizePerf();
-      } else {
-        const currentFileInfo = currentFile
-          ? {
-              path: currentFile,
-              name:
-                currentFile.split(/[/\\]/).pop()?.replace(/\.md$/, "") || "",
-              content: currentContent,
-            }
-          : undefined;
-        await sendMessageStream(
-          fullMessage,
-          currentFileInfo,
-          displayMessage,
-          undefined,
-          attachments,
-        );
-        finalizePerf();
-      }
+      await rustStartTask(fullMessage, {
+        workspace_path: vaultPath || "",
+        active_note_path: currentFile || undefined,
+        active_note_content: currentFile ? currentContent : undefined,
+        display_message: displayMessage,
+        attachments,
+        skills: selectedSkills.length > 0 ? selectedSkills : undefined,
+      });
+      setSelectedSkills([]);
+      finalizePerf();
     },
     [
       input,
@@ -915,7 +768,6 @@ export function MainAIChatShell() {
       textSelections,
       clearTextSelections,
       rustStartTask,
-      sendMessageStream,
       isOnlyWebLink,
       config,
       selectedSkills,
@@ -1021,12 +873,8 @@ export function MainAIChatShell() {
 
   // 停止生成
   const handleStop = useCallback(() => {
-    if (chatMode === "agent") {
-      agentAbort();
-    } else if (chatMode === "chat") {
-      stopStreaming();
-    }
-  }, [chatMode, agentAbort, stopStreaming]);
+    agentAbort();
+  }, [agentAbort]);
 
   const resolveCreatedFilePath = useCallback(
     (path: string): string => {
@@ -1117,7 +965,7 @@ export function MainAIChatShell() {
         onCancelExportSelection={handleCancelExportSelection}
         onNewChat={handleNewChat}
         agentTokens={rustTotalTokens}
-        chatTokens={chatTotalTokens}
+        chatTokens={0}
         renderModeToggle={(className) => <ModeToggle className={className} />}
       />
 
@@ -1223,109 +1071,17 @@ export function MainAIChatShell() {
                         }}
                       />
                     </>
-                  ) : chatMode === "agent" ? (
+                  ) : (
                     <AgentMessageRenderer
                       messages={agentMessages}
                       isRunning={agentStatus === "running"}
                       llmRequestStartTime={llmRequestStartTime}
                       onRetryTimeout={retryTimeout}
                     />
-                  ) : (
-                    /* Chat 模式：原有的消息渲染 */
-                    chatMessages.map((msg, idx) => {
-                      const isUser = msg.role === "user";
-                      const assistantDiagramPaths = isUser
-                        ? []
-                        : chatAssistantDiagramPathsByIndex.get(idx) || [];
-                      return (
-                        <motion.div
-                          key={idx}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            duration: 0.3,
-                            ease: [0.22, 1, 0.36, 1],
-                          }}
-                          className={`mb-5 flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
-                        >
-                          {!isUser && (
-                            <div className="w-7 h-7 mt-0.5 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/15 flex items-center justify-center shrink-0 shadow-sm">
-                              <Bot size={14} className="text-primary/70" />
-                            </div>
-                          )}
-                          <div
-                            className={`max-w-[80%] ${
-                              isUser
-                                ? "bg-foreground/[0.06] text-foreground rounded-2xl rounded-tr-md px-4 py-2.5 shadow-sm border border-border/30"
-                                : "text-foreground"
-                            }`}
-                          >
-                            {isUser
-                              ? (() => {
-                                  const { text: userText, attachments } =
-                                    getUserMessageDisplay(
-                                      msg.content,
-                                      msg.attachments,
-                                    );
-                                  const images = getImagesFromContent(
-                                    msg.content,
-                                  );
-                                  return (
-                                    <UserMessageBubbleContent
-                                      text={userText}
-                                      attachments={attachments}
-                                      images={images}
-                                    />
-                                  );
-                                })()
-                              : (() => {
-                                  const assistantParts =
-                                    parseChatAssistantParts(
-                                      getTextFromContent(msg.content),
-                                    );
-                                  return (
-                                    <div className="space-y-2">
-                                      {assistantDiagramPaths.length > 0 && (
-                                        <AssistantDiagramPanels
-                                          filePaths={assistantDiagramPaths}
-                                          className="mb-3"
-                                        />
-                                      )}
-                                      {assistantParts.map((part, partIdx) => {
-                                        if (part.type === "thinking") {
-                                          return (
-                                            <ThinkingCollapsible
-                                              key={`${idx}-thinking-${partIdx}`}
-                                              thinking={part.content}
-                                              t={t}
-                                            />
-                                          );
-                                        }
-
-                                        return (
-                                          <div
-                                            key={`${idx}-text-${partIdx}`}
-                                            className="prose prose-sm dark:prose-invert max-w-none leading-relaxed"
-                                            dangerouslySetInnerHTML={{
-                                              __html: parseMarkdown(
-                                                part.content,
-                                              ),
-                                            }}
-                                          />
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })()}
-                          </div>
-                        </motion.div>
-                      );
-                    })
                   )}
 
                   {/* 创建/编辑的文件链接 */}
                   {!isExportSelectionMode &&
-                    chatMode === "agent" &&
                     agentStatus !== "running" &&
                     (() => {
                       const createdFiles = extractCreatedFiles();
@@ -1362,7 +1118,6 @@ export function MainAIChatShell() {
 
                   {/* 工具审批 */}
                   {!isExportSelectionMode &&
-                    chatMode === "agent" &&
                     pendingTool &&
                     agentStatus === "waiting_approval" && (
                       <motion.div
@@ -1412,10 +1167,9 @@ export function MainAIChatShell() {
                     )}
 
                   {/* 流式输出 - Agent 和 Chat 模式统一使用 StreamingOutput 组件 */}
-                  {!isExportSelectionMode &&
-                    (chatMode === "agent" || chatMode === "chat") && (
-                      <StreamingOutput mode={chatMode} />
-                    )}
+                  {!isExportSelectionMode && chatMode === "agent" && (
+                    <StreamingOutput mode={chatMode} />
+                  )}
 
                   {/* Agent 错误提示 */}
                   {chatMode === "agent" && agentStatus === "error" && (
@@ -1431,18 +1185,6 @@ export function MainAIChatShell() {
                     </motion.div>
                   )}
 
-                  {/* Chat 错误提示 */}
-                  {chatMode === "chat" && chatError && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="flex items-start gap-2.5 text-sm text-destructive/90 px-4 py-3 bg-destructive/[0.06] border border-destructive/15 rounded-xl mb-5"
-                    >
-                      <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                      <span className="leading-relaxed">{chatError}</span>
-                    </motion.div>
-                  )}
-
                   <div ref={messagesEndRef} />
                 </motion.div>
               </div>
@@ -1451,7 +1193,6 @@ export function MainAIChatShell() {
               {!isCodexMode && (
                 <div className={`w-full shrink-0 ${hasStarted ? "pb-4" : ""}`}>
                   {!isExportSelectionMode &&
-                    chatMode === "agent" &&
                     (agentQueueCount > 0 ||
                       rustActiveTaskPreview ||
                       (llmRetryState && agentStatus === "running")) && (

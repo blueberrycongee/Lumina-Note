@@ -38,9 +38,9 @@ interface UIState {
   rightPanelTab: "chat" | "outline" | "backlinks" | "tags";
   setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags") => void;
 
-  // Chat mode (simple chat vs agent vs codex)
-  chatMode: "chat" | "agent" | "codex";
-  setChatMode: (mode: "chat" | "agent" | "codex") => void;
+  // Chat mode (agent vs codex — chat mode removed, agent-only)
+  chatMode: "agent" | "codex";
+  setChatMode: (mode: "agent" | "codex") => void;
 
   // AI Panel (docked in right panel or floating)
   aiPanelMode: AIPanelMode;
@@ -75,7 +75,7 @@ interface UIState {
   setVideoNoteUrl: (url: string | null) => void;
   openVideoNote: (url: string) => void;
   toggleVideoNote: () => void;
-  
+
   // Settings modal
   isSettingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
@@ -101,8 +101,10 @@ interface UIState {
   setProxyEnabled: (enabled: boolean) => void;
 }
 
-
-const getDefaultFloatingBallPosition = () => ({ x: window.innerWidth - 80, y: window.innerHeight - 120 });
+const getDefaultFloatingBallPosition = () => ({
+  x: window.innerWidth - 80,
+  y: window.innerHeight - 120,
+});
 
 const partializeUIState = (state: UIState) => ({
   isDarkMode: state.isDarkMode,
@@ -181,7 +183,7 @@ export const useUIStore = create<UIState>()(
       setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
 
       // Chat mode
-      chatMode: "agent",  // 默认使用 Agent 模式
+      chatMode: "agent", // 默认使用 Agent 模式
       setChatMode: (mode) => set({ chatMode: mode }),
 
       // AI Panel floating
@@ -192,8 +194,10 @@ export const useUIStore = create<UIState>()(
       setAIPanelMode: (mode) => set({ aiPanelMode: mode }),
       setFloatingBallPosition: (pos) => set({ floatingBallPosition: pos }),
       setFloatingPanelOpen: (open) => set({ floatingPanelOpen: open }),
-      toggleFloatingPanel: () => set((state) => ({ floatingPanelOpen: !state.floatingPanelOpen })),
-      setFloatingBallDragging: (dragging) => set({ isFloatingBallDragging: dragging }),
+      toggleFloatingPanel: () =>
+        set((state) => ({ floatingPanelOpen: !state.floatingPanelOpen })),
+      setFloatingBallDragging: (dragging) =>
+        set({ isFloatingBallDragging: dragging }),
 
       // Main view
       mainView: "editor",
@@ -216,8 +220,9 @@ export const useUIStore = create<UIState>()(
       setVideoNoteOpen: (open) => set({ videoNoteOpen: open }),
       setVideoNoteUrl: (url) => set({ videoNoteUrl: url }),
       openVideoNote: (url) => set({ videoNoteUrl: url, videoNoteOpen: true }),
-      toggleVideoNote: () => set((state) => ({ videoNoteOpen: !state.videoNoteOpen })),
-      
+      toggleVideoNote: () =>
+        set((state) => ({ videoNoteOpen: !state.videoNoteOpen })),
+
       // Settings modal
       isSettingsOpen: false,
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
@@ -230,11 +235,13 @@ export const useUIStore = create<UIState>()(
       diagnosticsEnabled: false,
       setDiagnosticsEnabled: (enabled) => set({ diagnosticsEnabled: enabled }),
       editorInteractionTraceEnabled: false,
-      setEditorInteractionTraceEnabled: (enabled) => set({ editorInteractionTraceEnabled: enabled }),
+      setEditorInteractionTraceEnabled: (enabled) =>
+        set({ editorInteractionTraceEnabled: enabled }),
 
       // Editor font size (10-32px)
       editorFontSize: 16,
-      setEditorFontSize: (size) => set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
+      setEditorFontSize: (size) =>
+        set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
 
       // Proxy
       proxyUrl: "",
@@ -259,6 +266,10 @@ export const useUIStore = create<UIState>()(
           applyTheme(theme, state?.isDarkMode || false);
           pluginThemeRuntime.reapply();
         }
+        // Migrate removed chat mode → agent
+        if (state && (state.chatMode as string) === "chat") {
+          state.chatMode = "agent";
+        }
         // 强制重置视频笔记状态（不应从 localStorage 恢复）
         if (state) {
           state.videoNoteOpen = false;
@@ -268,9 +279,12 @@ export const useUIStore = create<UIState>()(
           state.floatingPanelOpen = false;
           state.isFloatingBallDragging = false;
           state.floatingBallPosition = getDefaultFloatingBallPosition();
-          localStorage.setItem("lumina-ui", JSON.stringify({ state: partializeUIState(state), version: 0 }));
+          localStorage.setItem(
+            "lumina-ui",
+            JSON.stringify({ state: partializeUIState(state), version: 0 }),
+          );
         }
       },
-    }
-  )
+    },
+  ),
 );

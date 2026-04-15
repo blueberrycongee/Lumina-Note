@@ -19,7 +19,7 @@ import { getDiagramAttachmentFilePaths } from "./diagramAttachmentUtils";
 import { getUserMessageDisplay } from "./messageContentUtils";
 
 interface StreamingMessageProps {
-  /** 强制指定模式，不指定则自动从 UIStore 获取 */
+  /** 强制指定模式（kept for API compat, agent-only now） */
   mode?: "agent" | "chat";
   /** 自定义类名 */
   className?: string;

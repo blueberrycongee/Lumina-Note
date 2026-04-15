@@ -216,8 +216,8 @@ export function Editor() {
   // 当前会话标题（AI 聊天页使用）
   const currentSessionTitle = useMemo(() => {
     if (activeTab?.type !== "ai-chat") return null;
-    const sessions = chatMode === "agent" ? agentSessions : chatSessions;
-    const sessionId = chatMode === "agent" ? agentSessionId : chatSessionId;
+    const sessions = agentSessions;
+    const sessionId = agentSessionId;
     const session = sessions.find((s) => s.id === sessionId);
     return session?.title || t.common.newConversation;
   }, [
