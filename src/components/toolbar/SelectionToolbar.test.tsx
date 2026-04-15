@@ -8,7 +8,7 @@ vi.mock('@/stores/useAIStore', () => ({
 }));
 
 vi.mock('@/stores/useFileStore', () => ({
-  useFileStore: () => ({ currentFile: '/mock/note.md', openVideoNoteFromContent: vi.fn() }),
+  useFileStore: () => ({ currentFile: '/mock/note.md' }),
 }));
 
 vi.mock('@/stores/useLocaleStore', () => ({
