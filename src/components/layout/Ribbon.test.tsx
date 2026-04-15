@@ -40,8 +40,6 @@ vi.mock("@/stores/useFileStore", () => ({
     fileTree: [],
     openAIMainTab: () => undefined,
     currentFile: fileStoreState.currentFile,
-    openFlashcardTab: () => undefined,
-    openCardFlowTab: () => undefined,
     openImageManagerTab: () => undefined,
   }),
 }));

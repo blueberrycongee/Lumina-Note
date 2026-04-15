@@ -1400,25 +1400,11 @@ return exported(api, plugin);
         registerPanel,
         registerTabType,
         openRegisteredTab,
-        openVideoNote: (url?: string, title?: string) => {
-          requirePermission("workspace:tab");
-          const store = useFileStore.getState();
-          // Delegate singleton/update behavior to the store implementation.
-          store.openVideoNoteTab(url || "", title || useLocaleStore.getState().t.videoNote.title);
+        openVideoNote: (_url?: string, _title?: string) => {
+          // Video note feature has been removed
         },
-        openBrowserTab: (url?: string, title?: string) => {
-          requirePermission("workspace:tab");
-          const store = useFileStore.getState();
-          if (!url) {
-            const emptyWebpageTabIndex = store.tabs.findIndex(
-              (tab) => tab.type === "webpage" && !tab.webpageUrl,
-            );
-            if (emptyWebpageTabIndex >= 0) {
-              store.switchTab(emptyWebpageTabIndex);
-              return;
-            }
-          }
-          store.openWebpageTab(url || "", title || useLocaleStore.getState().t.views.newTab);
+        openBrowserTab: (_url?: string, _title?: string) => {
+          // Browser tab feature has been removed
         },
         mountView,
         registerShellSlot,

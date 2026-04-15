@@ -13,6 +13,7 @@ import {
   Settings,
   Sun,
   Moon,
+  Video,
   Bot,
   Globe,
   Images,
