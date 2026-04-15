@@ -47,7 +47,10 @@ export async function saveFile(path: string, content: string): Promise<void> {
 /**
  * Write binary file to disk (for images, etc.)
  */
-export async function writeBinaryFile(path: string, data: Uint8Array): Promise<void> {
+export async function writeBinaryFile(
+  path: string,
+  data: Uint8Array,
+): Promise<void> {
   return invoke("write_binary_file", { path, data: Array.from(data) });
 }
 
@@ -90,9 +93,11 @@ export type TypesettingParagraphAlign = "left" | "right" | "center" | "justify";
 
 export const isTauriAvailable = (): boolean => {
   if (typeof window === "undefined") return false;
-  const tauriInvoke = (window as typeof window & {
-    __TAURI__?: { core?: { invoke?: (...args: unknown[]) => unknown } };
-  }).__TAURI__?.core?.invoke;
+  const tauriInvoke = (
+    window as typeof window & {
+      __TAURI__?: { core?: { invoke?: (...args: unknown[]) => unknown } };
+    }
+  ).__TAURI__?.core?.invoke;
   return typeof tauriInvoke === "function";
 };
 
@@ -192,15 +197,22 @@ export async function getTypesettingLayoutText(params: {
   if (fontSize !== undefined) {
     args.fontSize = fontSize;
   }
-  return invokeTypesetting<TypesettingTextLayout>("typesetting_layout_text", args);
+  return invokeTypesetting<TypesettingTextLayout>(
+    "typesetting_layout_text",
+    args,
+  );
 }
 
 export async function getTypesettingExportPdfBase64(): Promise<string> {
   return invokeTypesetting<string>("typesetting_export_pdf_base64");
 }
 
-export async function getTypesettingRenderDocxPdfBase64(docxPath: string): Promise<string> {
-  return invokeTypesetting<string>("typesetting_render_docx_pdf_base64", { docxPath });
+export async function getTypesettingRenderDocxPdfBase64(
+  docxPath: string,
+): Promise<string> {
+  return invokeTypesetting<string>("typesetting_render_docx_pdf_base64", {
+    docxPath,
+  });
 }
 
 const buildTokens = (text: string): string[] => {
@@ -354,7 +366,7 @@ export async function deleteFile(path: string): Promise<void> {
  */
 export async function renameFile(
   oldPath: string,
-  newPath: string
+  newPath: string,
 ): Promise<void> {
   return invoke("rename_file", { oldPath, newPath });
 }
@@ -390,7 +402,7 @@ export async function openDialog(
  */
 export async function createDir(
   path: string,
-  options?: { recursive?: boolean }
+  options?: { recursive?: boolean },
 ): Promise<void> {
   if (options?.recursive) {
     const alreadyExists = await invoke<boolean>("path_exists", { path });
@@ -404,13 +416,13 @@ export async function createDir(
  */
 export async function readDir(
   path: string,
-  options?: { recursive?: boolean }
+  options?: { recursive?: boolean },
 ): Promise<FileEntry[]> {
   // Use our custom list_directory for recursive, or tauri-fs for non-recursive
   if (options?.recursive) {
     return listDirectory(path);
   }
-  
+
   const entries = await tauriReadDir(path);
   return entries.map((entry) => ({
     name: entry.name,
@@ -435,7 +447,10 @@ export async function rename(oldPath: string, newPath: string): Promise<void> {
  * Move a file to a target folder
  * Returns the new path of the moved file
  */
-export async function moveFile(sourcePath: string, targetFolder: string): Promise<string> {
+export async function moveFile(
+  sourcePath: string,
+  targetFolder: string,
+): Promise<string> {
   return invoke<string>("move_file", { source: sourcePath, targetFolder });
 }
 
@@ -443,7 +458,10 @@ export async function moveFile(sourcePath: string, targetFolder: string): Promis
  * Move a folder to a target folder
  * Returns the new path of the moved folder
  */
-export async function moveFolder(sourcePath: string, targetFolder: string): Promise<string> {
+export async function moveFolder(
+  sourcePath: string,
+  targetFolder: string,
+): Promise<string> {
   return invoke<string>("move_folder", { source: sourcePath, targetFolder });
 }
 
@@ -464,27 +482,29 @@ export async function openNewWindow(): Promise<void> {
 // ============ Agent skills ============
 
 export async function listAgentSkills(
-  workspacePath?: string
+  workspacePath?: string,
 ): Promise<SkillInfo[]> {
   return invoke("agent_list_skills", { workspace_path: workspacePath });
 }
 
 export async function readAgentSkill(
   name: string,
-  workspacePath?: string
+  workspacePath?: string,
 ): Promise<SkillDetail> {
   return invoke("agent_read_skill", { name, workspace_path: workspacePath });
 }
 
 // ============ Plugin ecosystem ============
 
-export async function listPlugins(workspacePath?: string): Promise<PluginInfo[]> {
+export async function listPlugins(
+  workspacePath?: string,
+): Promise<PluginInfo[]> {
   return invoke("plugin_list", { workspacePath });
 }
 
 export async function readPluginEntry(
   pluginId: string,
-  workspacePath?: string
+  workspacePath?: string,
 ): Promise<PluginEntry> {
   return invoke("plugin_read_entry", { pluginId, workspacePath });
 }
@@ -530,4 +550,14 @@ export async function installDocTools(): Promise<DocToolsStatus> {
  */
 export async function startFileWatcher(watchPath: string): Promise<void> {
   return invoke("start_file_watcher", { watchPath });
+}
+
+/**
+ * Lightweight pre-check for a directory before opening as vault.
+ * Returns top-level entry count + system dir detection.
+ */
+export async function estimateDirSize(
+  path: string,
+): Promise<{ topLevelCount: number; isSystemDir: boolean; warning: boolean }> {
+  return invoke("estimate_dir_size", { path });
 }

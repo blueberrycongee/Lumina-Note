@@ -1,8 +1,16 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { FileEntry, listDirectory, readFile, saveFile, createFile, createDir } from "@/lib/tauri";
-import { VideoNoteFile, parseVideoNoteMd } from '@/types/videoNote';
-import { invoke } from '@tauri-apps/api/core';
+import {
+  FileEntry,
+  listDirectory,
+  readFile,
+  saveFile,
+  createFile,
+  createDir,
+  estimateDirSize,
+} from "@/lib/tauri";
+import { VideoNoteFile, parseVideoNoteMd } from "@/types/videoNote";
+import { invoke } from "@tauri-apps/api/core";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
@@ -153,8 +161,19 @@ interface FileState {
   // Actions
   setVaultPath: (path: string) => Promise<void>;
   refreshFileTree: () => Promise<void>;
-  openFile: (path: string, options?: { addToHistory?: boolean; forceReload?: boolean; preview?: boolean }) => Promise<void>;
-  updateContent: (content: string, source?: "user" | "ai", description?: string) => void;
+  openFile: (
+    path: string,
+    options?: {
+      addToHistory?: boolean;
+      forceReload?: boolean;
+      preview?: boolean;
+    },
+  ) => Promise<void>;
+  updateContent: (
+    content: string,
+    source?: "user" | "ai",
+    description?: string,
+  ) => void;
   save: () => Promise<void>;
   closeFile: () => void;
 
@@ -174,7 +193,10 @@ interface FileState {
   // Open special tabs
   openGraphTab: () => void;
   openTypesettingPreviewTab: () => void;
-  openTypesettingDocTab: (path: string, addToHistory?: boolean) => Promise<void>;
+  openTypesettingDocTab: (
+    path: string,
+    addToHistory?: boolean,
+  ) => Promise<void>;
   openProfilePreviewTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openVideoNoteTab: (url: string, title?: string) => void;
@@ -204,18 +226,27 @@ interface FileState {
   canGoForward: () => boolean;
 
   // File sync actions
-  reloadFileIfOpen: (path: string, options?: { skipIfDirty?: boolean }) => Promise<void>;
+  reloadFileIfOpen: (
+    path: string,
+    options?: { skipIfDirty?: boolean },
+  ) => Promise<void>;
 
   // Typesetting doc helpers
   markTypesettingTabDirty: (path: string, isDirty: boolean) => void;
 
   // Move file/folder actions
   moveFileToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
-  moveFolderToFolder: (sourcePath: string, targetFolder: string) => Promise<void>;
+  moveFolderToFolder: (
+    sourcePath: string,
+    targetFolder: string,
+  ) => Promise<void>;
 
   // Workspace actions
   clearVault: () => void;
-  syncMobileWorkspace: (options?: { path?: string; force?: boolean }) => Promise<void>;
+  syncMobileWorkspace: (options?: {
+    path?: string;
+    force?: boolean;
+  }) => Promise<void>;
 }
 
 // 用户编辑的 debounce 时间（毫秒）
@@ -226,7 +257,11 @@ let lastUserEditTime = 0;
 const MAX_UNDO_HISTORY = 50;
 
 const isDocxPath = (path: string) => path.toLowerCase().endsWith(".docx");
-const DIAGRAM_FILE_SUFFIXES = [".excalidraw.json", ".diagram.json", ".drawio.json"] as const;
+const DIAGRAM_FILE_SUFFIXES = [
+  ".excalidraw.json",
+  ".diagram.json",
+  ".drawio.json",
+] as const;
 
 const isDiagramPath = (path: string) => {
   const normalized = path.toLowerCase();
@@ -239,14 +274,20 @@ const getDiagramDisplayName = (path: string) => {
   const lower = fileName.toLowerCase();
   for (const suffix of DIAGRAM_FILE_SUFFIXES) {
     if (lower.endsWith(suffix)) {
-      return fileName.slice(0, fileName.length - suffix.length) || t.diagramView.defaultSource;
+      return (
+        fileName.slice(0, fileName.length - suffix.length) ||
+        t.diagramView.defaultSource
+      );
     }
   }
   return fileName;
 };
 
 const MOBILE_WORKSPACE_SYNC_INTERVAL = 10_000;
-let lastMobileWorkspaceSync: { path: string | null; at: number } = { path: null, at: 0 };
+let lastMobileWorkspaceSync: { path: string | null; at: number } = {
+  path: null,
+  at: 0,
+};
 
 /**
  * Sync workspace path to Tauri's allowed filesystem roots.
@@ -256,7 +297,12 @@ let lastMobileWorkspaceSync: { path: string | null; at: number } = { path: null,
 export async function syncWorkspaceAccessRoots(path: string): Promise<void> {
   useWorkspaceStore.getState().registerWorkspace(path);
   const workspacePaths = Array.from(
-    new Set([path, ...useWorkspaceStore.getState().workspaces.map((workspace) => workspace.path)])
+    new Set([
+      path,
+      ...useWorkspaceStore
+        .getState()
+        .workspaces.map((workspace) => workspace.path),
+    ]),
   );
   await invoke("fs_set_allowed_roots", { roots: workspacePaths });
 }
@@ -314,6 +360,25 @@ export const useFileStore = create<FileState>()(
 
       // Set vault path and load file tree
       setVaultPath: async (path: string) => {
+        // Pre-check: warn if directory looks too large or is a system path
+        try {
+          const estimate = await estimateDirSize(path);
+          if (estimate.warning) {
+            const t = getCurrentTranslations();
+            const reason = estimate.isSystemDir
+              ? t.file.vaultSystemDirWarning
+              : t.file.vaultTooLargeWarning.replace(
+                  "{count}",
+                  String(estimate.topLevelCount),
+                );
+            // Non-blocking: user can choose to proceed
+            const proceed = window.confirm(reason);
+            if (!proceed) return;
+          }
+        } catch {
+          // Pre-check failure is non-fatal — continue with vault open
+        }
+
         try {
           await syncWorkspaceAccessRoots(path);
         } catch (error) {
@@ -403,20 +468,30 @@ export const useFileStore = create<FileState>()(
       },
 
       // Open a file
-      openFile: async (path: string, options?: { addToHistory?: boolean; forceReload?: boolean; preview?: boolean }) => {
+      openFile: async (
+        path: string,
+        options?: {
+          addToHistory?: boolean;
+          forceReload?: boolean;
+          preview?: boolean;
+        },
+      ) => {
         const addToHistory = options?.addToHistory ?? true;
         const forceReload = options?.forceReload ?? false;
         const preview = options?.preview ?? false;
 
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, navigationHistory, navigationIndex } = get();
+        const { tabs, activeTabIndex, navigationHistory, navigationIndex } =
+          get();
 
         // Normalize paths for comparison (handle Windows backslashes)
         const normalize = (p: string) => p.replace(/\\/g, "/");
         const targetPath = normalize(path);
 
         // 检查是否已经在标签页中打开（作为永久标签）
-        const existingTabIndex = tabs.findIndex(tab => normalize(tab.path) === targetPath);
+        const existingTabIndex = tabs.findIndex(
+          (tab) => normalize(tab.path) === targetPath,
+        );
         if (existingTabIndex !== -1) {
           const existingTab = tabs[existingTabIndex];
           // 已有此标签页
@@ -485,7 +560,11 @@ export const useFileStore = create<FileState>()(
         set({ isLoadingFile: true });
         try {
           const content = await readFile(path);
-          const fileName = path.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+          const fileName =
+            path
+              .split(/[/\\]/)
+              .pop()
+              ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
 
           // 创建新标签页
           const newTab: Tab = {
@@ -508,7 +587,9 @@ export const useFileStore = create<FileState>()(
 
           if (preview) {
             // 查找已有的 preview tab
-            const existingPreviewIndex = currentTabs.findIndex(tab => tab.isPreview);
+            const existingPreviewIndex = currentTabs.findIndex(
+              (tab) => tab.isPreview,
+            );
             if (existingPreviewIndex !== -1) {
               const existingPreview = currentTabs[existingPreviewIndex];
               // 防御性检查：如果 preview tab 有未保存更改，先提升它
@@ -550,7 +631,7 @@ export const useFileStore = create<FileState>()(
 
           // 更新最近文件列表
           const { recentFiles } = get();
-          let newRecentFiles = recentFiles.filter(p => p !== path);
+          let newRecentFiles = recentFiles.filter((p) => p !== path);
           newRecentFiles.push(path);
           if (newRecentFiles.length > 20) {
             newRecentFiles = newRecentFiles.slice(-20);
@@ -584,8 +665,16 @@ export const useFileStore = create<FileState>()(
 
       // 切换标签页
       switchTab: (index: number) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
-        if (index < 0 || index >= tabs.length || index === activeTabIndex) return;
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
+        if (index < 0 || index >= tabs.length || index === activeTabIndex)
+          return;
 
         // 保存当前标签页的状态
         if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
@@ -627,7 +716,14 @@ export const useFileStore = create<FileState>()(
 
       // 关闭标签页
       closeTab: async (index: number) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
         if (index < 0 || index >= tabs.length) return;
 
         const tabToClose = tabs[index];
@@ -644,19 +740,19 @@ export const useFileStore = create<FileState>()(
 
         // 如果要关闭的是当前标签页且有未保存的更改，先保存
         if (tabToClose.type !== "typesetting-doc") {
-        if (index === activeTabIndex && isDirty) {
-          await get().save();
-        } else if (tabs[index].isDirty) {
-          // 非当前标签页但有未保存更改，也保存
-          await saveFile(tabs[index].path, tabs[index].content);
-        }
+          if (index === activeTabIndex && isDirty) {
+            await get().save();
+          } else if (tabs[index].isDirty) {
+            // 非当前标签页但有未保存更改，也保存
+            await saveFile(tabs[index].path, tabs[index].content);
+          }
         }
 
         // 如果是网页标签页，关闭对应的 WebView
-        if (tabToClose.type === 'webpage') {
+        if (tabToClose.type === "webpage") {
           try {
-            await invoke('close_browser_webview', { tabId: tabToClose.id });
-            console.log('[FileStore] 关闭 WebView:', tabToClose.id);
+            await invoke("close_browser_webview", { tabId: tabToClose.id });
+            console.log("[FileStore] 关闭 WebView:", tabToClose.id);
           } catch (err) {
             reportOperationError({
               source: "FileStore.closeTab",
@@ -694,9 +790,14 @@ export const useFileStore = create<FileState>()(
           }
 
           // 先更新 tabs
-          if (index !== activeTabIndex && activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          if (
+            index !== activeTabIndex &&
+            activeTabIndex >= 0 &&
+            tabs[activeTabIndex]
+          ) {
             // 保存当前标签页状态到新的 tabs 数组
-            const currentTabNewIndex = activeTabIndex > index ? activeTabIndex - 1 : activeTabIndex;
+            const currentTabNewIndex =
+              activeTabIndex > index ? activeTabIndex - 1 : activeTabIndex;
             if (currentTabNewIndex >= 0 && newTabs[currentTabNewIndex]) {
               newTabs[currentTabNewIndex] = {
                 ...newTabs[currentTabNewIndex],
@@ -723,7 +824,7 @@ export const useFileStore = create<FileState>()(
       },
 
       // 关闭其他标签页（保留固定标签）
-      
+
       // Close other tabs (keep pinned + target)
       closeOtherTabs: async (index: number) => {
         const { tabs } = get();
@@ -748,8 +849,12 @@ export const useFileStore = create<FileState>()(
           }
         }
 
-        const remainingTabs = tabs.filter(tab => tab.isPinned || tab.id === targetTab.id);
-        const newActiveIndex = remainingTabs.findIndex(t => t.id === targetTab.id);
+        const remainingTabs = tabs.filter(
+          (tab) => tab.isPinned || tab.id === targetTab.id,
+        );
+        const newActiveIndex = remainingTabs.findIndex(
+          (t) => t.id === targetTab.id,
+        );
 
         set({
           tabs: remainingTabs,
@@ -783,7 +888,7 @@ export const useFileStore = create<FileState>()(
           }
         }
 
-        const pinnedTabs = tabs.filter(tab => tab.isPinned);
+        const pinnedTabs = tabs.filter((tab) => tab.isPinned);
 
         if (pinnedTabs.length === 0) {
           set({
@@ -815,15 +920,20 @@ export const useFileStore = create<FileState>()(
         const { tabs, currentFile } = get();
 
         // 查找并更新所有匹配的标签页
-        const updatedTabs = tabs.map(tab => {
+        const updatedTabs = tabs.map((tab) => {
           if (
-            (tab.type === "file" || tab.type === "typesetting-doc" || tab.type === "diagram") &&
+            (tab.type === "file" ||
+              tab.type === "typesetting-doc" ||
+              tab.type === "diagram") &&
             tab.path === oldPath
           ) {
             const nextName =
               tab.type === "diagram"
                 ? getDiagramDisplayName(newPath)
-                : newPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+                : newPath
+                    .split(/[/\\]/)
+                    .pop()
+                    ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
             return {
               ...tab,
               path: newPath,
@@ -852,7 +962,7 @@ export const useFileStore = create<FileState>()(
         if (toIndex < 0 || toIndex >= tabs.length) return;
 
         const movedTab = tabs[fromIndex];
-        const pinnedCount = tabs.filter(t => t.isPinned).length;
+        const pinnedCount = tabs.filter((t) => t.isPinned).length;
 
         // 固定标签只能在固定区域内移动，非固定标签不能移到固定区域
         if (movedTab.isPinned) {
@@ -897,25 +1007,27 @@ export const useFileStore = create<FileState>()(
         };
 
         // 重新排序：固定的标签移到最前面
-        const pinnedTabs = newTabs.filter(t => t.isPinned);
-        const unpinnedTabs = newTabs.filter(t => !t.isPinned);
+        const pinnedTabs = newTabs.filter((t) => t.isPinned);
+        const unpinnedTabs = newTabs.filter((t) => !t.isPinned);
         const sortedTabs = [...pinnedTabs, ...unpinnedTabs];
 
         // 找到当前活动标签在新数组中的位置
         const activeTabId = tabs[activeTabIndex]?.id;
-        const newActiveIndex = sortedTabs.findIndex(t => t.id === activeTabId);
+        const newActiveIndex = sortedTabs.findIndex(
+          (t) => t.id === activeTabId,
+        );
 
         set({
           tabs: sortedTabs,
-          activeTabIndex: newActiveIndex >= 0 ? newActiveIndex : 0
+          activeTabIndex: newActiveIndex >= 0 ? newActiveIndex : 0,
         });
       },
 
       promotePreviewTab: (tabId?: string) => {
         const { tabs } = get();
         const targetIndex = tabId
-          ? tabs.findIndex(t => t.id === tabId)
-          : tabs.findIndex(t => t.isPreview);
+          ? tabs.findIndex((t) => t.id === tabId)
+          : tabs.findIndex((t) => t.isPreview);
         if (targetIndex === -1) return;
         const tab = tabs[targetIndex];
         if (!tab.isPreview) return;
@@ -927,10 +1039,17 @@ export const useFileStore = create<FileState>()(
 
       // 打开图谱标签页
       openGraphTab: () => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 检查是否已经打开
-        const existingIndex = tabs.findIndex(tab => tab.type === "graph");
+        const existingIndex = tabs.findIndex((tab) => tab.type === "graph");
         if (existingIndex !== -1) {
           get().switchTab(existingIndex);
           return;
@@ -975,10 +1094,19 @@ export const useFileStore = create<FileState>()(
       // 打开主视图区 AI 聊天标签页
       // Typesetting preview tab (scaffold)
       openTypesettingPreviewTab: () => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // Check if already open
-        const existingIndex = tabs.findIndex(tab => tab.type === "typesetting-preview");
+        const existingIndex = tabs.findIndex(
+          (tab) => tab.type === "typesetting-preview",
+        );
         if (existingIndex !== -1) {
           get().switchTab(existingIndex);
           return;
@@ -1019,9 +1147,18 @@ export const useFileStore = create<FileState>()(
       },
 
       openProfilePreviewTab: () => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
-        const existingIndex = tabs.findIndex(tab => tab.type === "profile-preview");
+        const existingIndex = tabs.findIndex(
+          (tab) => tab.type === "profile-preview",
+        );
         if (existingIndex !== -1) {
           get().switchTab(existingIndex);
           return;
@@ -1060,11 +1197,25 @@ export const useFileStore = create<FileState>()(
         });
       },
 
-      openTypesettingDocTab: async (path: string, addToHistory: boolean = true) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack, navigationHistory, navigationIndex } = get();
+      openTypesettingDocTab: async (
+        path: string,
+        addToHistory: boolean = true,
+      ) => {
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+          navigationHistory,
+          navigationIndex,
+        } = get();
         const normalize = (p: string) => p.replace(/\\/g, "/");
         const targetPath = normalize(path);
-        const existingIndex = tabs.findIndex(tab => normalize(tab.path) === targetPath);
+        const existingIndex = tabs.findIndex(
+          (tab) => normalize(tab.path) === targetPath,
+        );
         if (existingIndex !== -1) {
           get().switchTab(existingIndex);
           return;
@@ -1083,7 +1234,11 @@ export const useFileStore = create<FileState>()(
 
         await useTypesettingDocStore.getState().openDoc(path);
 
-        const fileName = path.split(/[/\\]/).pop()?.replace(/\.docx$/i, "") || "Docx";
+        const fileName =
+          path
+            .split(/[/\\]/)
+            .pop()
+            ?.replace(/\.docx$/i, "") || "Docx";
         const newTab: Tab = {
           id: path,
           type: "typesetting-doc",
@@ -1106,9 +1261,8 @@ export const useFileStore = create<FileState>()(
           newNavIndex = newHistory.length - 1;
         }
 
-
         const { recentFiles } = get();
-        let newRecentFiles = recentFiles.filter(p => p !== path);
+        let newRecentFiles = recentFiles.filter((p) => p !== path);
         newRecentFiles.push(path);
         if (newRecentFiles.length > 20) {
           newRecentFiles = newRecentFiles.slice(-20);
@@ -1129,7 +1283,14 @@ export const useFileStore = create<FileState>()(
 
       openAIMainTab: () => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 如果已经有 ai-chat 标签页，直接切换
         const existingIndex = tabs.findIndex((tab) => tab.type === "ai-chat");
@@ -1179,7 +1340,14 @@ export const useFileStore = create<FileState>()(
       // 打开孤立图谱标签页
       openIsolatedGraphTab: (node: IsolatedNodeInfo) => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 每次都创建新标签页（允许多个孤立视图）
         const tabId = `__isolated_${node.id}_${Date.now()}__`;
@@ -1223,10 +1391,19 @@ export const useFileStore = create<FileState>()(
       // 打开视频笔记标签页（单例模式：只允许一个视频标签页）
       openVideoNoteTab: (url: string, title?: string) => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 检查是否已有视频标签页
-        const existingVideoIndex = tabs.findIndex(t => t.type === "video-note");
+        const existingVideoIndex = tabs.findIndex(
+          (t) => t.type === "video-note",
+        );
 
         if (existingVideoIndex >= 0) {
           // 已有视频标签页，更新 URL 并切换过去
@@ -1310,18 +1487,27 @@ export const useFileStore = create<FileState>()(
       // 从已分享的 Markdown 内容打开视频笔记（支持识别并加载时间戳）
       openVideoNoteFromContent: (content: string, title?: string) => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         try {
           const parsed = parseVideoNoteMd(content);
           if (!parsed) {
             // 如果不是视频笔记格式，降级为创建空视频标签（不设置数据）
-            get().openVideoNoteTab('', title);
+            get().openVideoNoteTab("", title);
             return;
           }
 
           // 单例视频标签：如果已存在则更新数据并切换
-          const existingVideoIndex = tabs.findIndex(t => t.type === 'video-note');
+          const existingVideoIndex = tabs.findIndex(
+            (t) => t.type === "video-note",
+          );
           if (existingVideoIndex >= 0) {
             const updatedTabs = [...tabs];
             if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
@@ -1337,7 +1523,10 @@ export const useFileStore = create<FileState>()(
             updatedTabs[existingVideoIndex] = {
               ...updatedTabs[existingVideoIndex],
               videoUrl: parsed.video.url,
-              name: title || parsed.video.title || `${t.videoNote.filePrefix}-${parsed.video.bvid}`,
+              name:
+                title ||
+                parsed.video.title ||
+                `${t.videoNote.filePrefix}-${parsed.video.bvid}`,
               videoNoteData: parsed,
             } as Tab;
 
@@ -1345,14 +1534,16 @@ export const useFileStore = create<FileState>()(
               tabs: updatedTabs,
               activeTabIndex: existingVideoIndex,
               currentFile: null,
-              currentContent: '',
+              currentContent: "",
               isDirty: false,
             });
             return;
           }
 
           // 创建新的 video-note 标签并附带解析后的笔记数据
-          const bvidMatch = parsed.video.bvid ? parsed.video.bvid.match(/BV[A-Za-z0-9]+/) : null;
+          const bvidMatch = parsed.video.bvid
+            ? parsed.video.bvid.match(/BV[A-Za-z0-9]+/)
+            : null;
           const bvid = bvidMatch ? bvidMatch[0] : Date.now().toString();
           const tabId = `__video_${bvid}__`;
 
@@ -1369,10 +1560,13 @@ export const useFileStore = create<FileState>()(
 
           const videoTab: Tab = {
             id: tabId,
-            type: 'video-note',
-            path: '',
-            name: title || parsed.video.title || `${t.videoNote.filePrefix}-${bvid}`,
-            content: '',
+            type: "video-note",
+            path: "",
+            name:
+              title ||
+              parsed.video.title ||
+              `${t.videoNote.filePrefix}-${bvid}`,
+            content: "",
             isDirty: false,
             undoStack: [],
             redoStack: [],
@@ -1386,7 +1580,7 @@ export const useFileStore = create<FileState>()(
             tabs: updatedTabs,
             activeTabIndex: updatedTabs.length - 1,
             currentFile: null,
-            currentContent: '',
+            currentContent: "",
             isDirty: false,
           });
         } catch (error) {
@@ -1397,16 +1591,25 @@ export const useFileStore = create<FileState>()(
             level: "warning",
           });
           // fallback
-          get().openVideoNoteTab('', title);
+          get().openVideoNoteTab("", title);
         }
       },
 
       // 打开数据库标签页
       openDatabaseTab: (dbId: string, dbName: string) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 检查是否已有此数据库的标签页
-        const existingDbIndex = tabs.findIndex(t => t.type === "database" && t.databaseId === dbId);
+        const existingDbIndex = tabs.findIndex(
+          (t) => t.type === "database" && t.databaseId === dbId,
+        );
 
         if (existingDbIndex >= 0) {
           // 已有此数据库标签页，直接切换
@@ -1474,10 +1677,19 @@ export const useFileStore = create<FileState>()(
 
       // 打开 PDF 标签页
       openPDFTab: (pdfPath: string) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 检查是否已有此 PDF 的标签页
-        const existingPdfIndex = tabs.findIndex(t => t.type === "pdf" && t.path === pdfPath);
+        const existingPdfIndex = tabs.findIndex(
+          (t) => t.type === "pdf" && t.path === pdfPath,
+        );
 
         if (existingPdfIndex >= 0) {
           // 已有此 PDF 标签页，直接切换
@@ -1545,10 +1757,17 @@ export const useFileStore = create<FileState>()(
 
       // 打开 Diagram 标签页
       openDiagramTab: (diagramPath: string) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         const existingDiagramIndex = tabs.findIndex(
-          (t) => t.type === "diagram" && t.path === diagramPath
+          (t) => t.type === "diagram" && t.path === diagramPath,
         );
 
         if (existingDiagramIndex >= 0) {
@@ -1612,7 +1831,14 @@ export const useFileStore = create<FileState>()(
       // 打开卡片流标签页
       openCardFlowTab: () => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
 
         // 检查是否已有 cardflow 标签页
         const existingIndex = tabs.findIndex((tab) => tab.type === "cardflow");
@@ -1661,10 +1887,21 @@ export const useFileStore = create<FileState>()(
 
       openImageManagerTab: () => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack } = get();
-        const imageManagerTitle = (t.views as typeof t.views & { imageManager?: string }).imageManager ?? "Image Manager";
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
+        const imageManagerTitle =
+          (t.views as typeof t.views & { imageManager?: string })
+            .imageManager ?? "Image Manager";
 
-        const existingIndex = tabs.findIndex((tab) => tab.type === "image-manager");
+        const existingIndex = tabs.findIndex(
+          (tab) => tab.type === "image-manager",
+        );
         if (existingIndex !== -1) {
           get().switchTab(existingIndex);
           return;
@@ -1707,9 +1944,18 @@ export const useFileStore = create<FileState>()(
       },
 
       openPluginViewTab: (viewType: string, title: string, html: string) => {
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack, switchTab } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+          switchTab,
+        } = get();
         const existingIndex = tabs.findIndex(
-          (tab) => tab.type === "plugin-view" && tab.pluginViewType === viewType
+          (tab) =>
+            tab.type === "plugin-view" && tab.pluginViewType === viewType,
         );
         if (existingIndex !== -1) {
           const updatedTabs = [...tabs];
@@ -1770,12 +2016,20 @@ export const useFileStore = create<FileState>()(
       // 打开网页标签页
       openWebpageTab: (url: string, title?: string) => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack, switchTab } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+          switchTab,
+        } = get();
 
         // 如果已有相同 URL 的网页标签，直接切换过去，避免重复创建
         if (url) {
           const existingIndex = tabs.findIndex(
-            (t) => t.type === "webpage" && t.webpageUrl === url
+            (t) => t.type === "webpage" && t.webpageUrl === url,
           );
           if (existingIndex !== -1) {
             // 在切换前仍然保存当前标签页状态
@@ -1850,8 +2104,8 @@ export const useFileStore = create<FileState>()(
       updateWebpageTab: (tabId: string, url?: string, title?: string) => {
         const { tabs } = get();
 
-        const updatedTabs = tabs.map(tab => {
-          if (tab.id === tabId && tab.type === 'webpage') {
+        const updatedTabs = tabs.map((tab) => {
+          if (tab.id === tabId && tab.type === "webpage") {
             return {
               ...tab,
               webpageUrl: url ?? tab.webpageUrl,
@@ -1868,10 +2122,18 @@ export const useFileStore = create<FileState>()(
       // 打开闪卡标签页
       openFlashcardTab: (deckId?: string) => {
         const t = getCurrentTranslations();
-        const { tabs, activeTabIndex, currentContent, isDirty, undoStack, redoStack, switchTab } = get();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+          switchTab,
+        } = get();
 
         // 如果已有闪卡标签页，直接切换
-        const existingIndex = tabs.findIndex(t => t.type === "flashcard");
+        const existingIndex = tabs.findIndex((t) => t.type === "flashcard");
         if (existingIndex !== -1) {
           if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
             const updatedTabs = [...tabs];
@@ -2009,7 +2271,11 @@ export const useFileStore = create<FileState>()(
       },
 
       // Update content (marks as dirty)
-      updateContent: (content: string, source: "user" | "ai" = "user", description?: string) => {
+      updateContent: (
+        content: string,
+        source: "user" | "ai" = "user",
+        description?: string,
+      ) => {
         const { currentContent, undoStack, tabs, activeTabIndex } = get();
         const now = Date.now();
 
@@ -2040,7 +2306,10 @@ export const useFileStore = create<FileState>()(
           });
         } else {
           // 用户编辑：合并短时间内的编辑
-          if (now - lastUserEditTime > USER_EDIT_DEBOUNCE || undoStack.length === 0) {
+          if (
+            now - lastUserEditTime > USER_EDIT_DEBOUNCE ||
+            undoStack.length === 0
+          ) {
             // 超过 debounce 时间，创建新撤销点
             const entry: HistoryEntry = {
               content: currentContent,
@@ -2088,7 +2357,9 @@ export const useFileStore = create<FileState>()(
 
         // 显示撤销提示
         if (lastEntry.type === "ai") {
-          console.log(`[Undo] 撤销 AI 修改: ${lastEntry.description || t.common.untitled}`);
+          console.log(
+            `[Undo] 撤销 AI 修改: ${lastEntry.description || t.common.untitled}`,
+          );
         }
       },
 
@@ -2122,7 +2393,8 @@ export const useFileStore = create<FileState>()(
 
       // Save current file
       save: async () => {
-        const { currentFile, currentContent, isDirty, tabs, activeTabIndex } = get();
+        const { currentFile, currentContent, isDirty, tabs, activeTabIndex } =
+          get();
         const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
         // Manual save promotes preview tab
@@ -2153,7 +2425,11 @@ export const useFileStore = create<FileState>()(
         set({ isSaving: true });
         try {
           await saveFile(currentFile, currentContent);
-          set({ isDirty: false, isSaving: false, lastSavedContent: currentContent });
+          set({
+            isDirty: false,
+            isSaving: false,
+            lastSavedContent: currentContent,
+          });
         } catch (error) {
           reportOperationError({
             source: "FileStore.save",
@@ -2250,7 +2526,11 @@ export const useFileStore = create<FileState>()(
           return;
         }
         const now = Date.now();
-        if (!options?.force && lastMobileWorkspaceSync.path === path && now - lastMobileWorkspaceSync.at < MOBILE_WORKSPACE_SYNC_INTERVAL) {
+        if (
+          !options?.force &&
+          lastMobileWorkspaceSync.path === path &&
+          now - lastMobileWorkspaceSync.at < MOBILE_WORKSPACE_SYNC_INTERVAL
+        ) {
           return;
         }
         try {
@@ -2280,32 +2560,41 @@ export const useFileStore = create<FileState>()(
       },
 
       // Reload file if it's currently open (for external updates like database edits)
-      reloadFileIfOpen: async (path: string, options?: { skipIfDirty?: boolean }) => {
-        const { tabs, activeTabIndex, currentFile, currentContent, isDirty } = get();
+      reloadFileIfOpen: async (
+        path: string,
+        options?: { skipIfDirty?: boolean },
+      ) => {
+        const { tabs, activeTabIndex, currentFile, currentContent, isDirty } =
+          get();
 
         // 查找该文件是否在标签页中打开
         const tabIndex = tabs.findIndex(
-          (t) => (t.type === "file" || t.type === "diagram") && t.path === path
+          (t) => (t.type === "file" || t.type === "diagram") && t.path === path,
         );
         if (tabIndex === -1) return;
 
         try {
           const skipIfDirty = options?.skipIfDirty ?? false;
           const targetTab = tabs[tabIndex];
-          const isActivePath = currentFile === path && tabIndex === activeTabIndex;
+          const isActivePath =
+            currentFile === path && tabIndex === activeTabIndex;
           const isTargetDirty = isActivePath ? isDirty : targetTab?.isDirty;
           if (skipIfDirty && isTargetDirty) {
             return;
           }
 
           const newContent = await readFile(path);
-          const currentTabContent = isActivePath ? currentContent : targetTab.content;
+          const currentTabContent = isActivePath
+            ? currentContent
+            : targetTab.content;
           if (newContent === currentTabContent) {
             return;
           }
 
           const updatedTabs = tabs.map((tab, i) =>
-            i === tabIndex ? { ...tab, content: newContent, isDirty: false } : tab
+            i === tabIndex
+              ? { ...tab, content: newContent, isDirty: false }
+              : tab,
           );
 
           // 如果是当前激活的标签页，同时更新 currentContent
@@ -2334,17 +2623,25 @@ export const useFileStore = create<FileState>()(
       moveFileToFolder: async (sourcePath: string, targetFolder: string) => {
         const t = getCurrentTranslations();
         const { tabs, currentFile, refreshFileTree, fileTree } = get();
-        
+
         try {
-          const { isImagePath } = await import("@/services/assets/imageManager");
+          const { isImagePath } =
+            await import("@/services/assets/imageManager");
 
           if (isImagePath(sourcePath)) {
-            const { executeImageMove } = await import("@/services/assets/imageOperations");
-            const preview = await executeImageMove(fileTree, [sourcePath], targetFolder);
+            const { executeImageMove } =
+              await import("@/services/assets/imageOperations");
+            const preview = await executeImageMove(
+              fileTree,
+              [sourcePath],
+              targetFolder,
+            );
             const newPath = preview.changes[0]?.to ?? sourcePath;
 
             const tabIndex = tabs.findIndex(
-              (tab) => (tab.type === "file" || tab.type === "diagram") && tab.path === sourcePath
+              (tab) =>
+                (tab.type === "file" || tab.type === "diagram") &&
+                tab.path === sourcePath,
             );
             if (tabIndex !== -1) {
               const targetTab = tabs[tabIndex];
@@ -2378,17 +2675,22 @@ export const useFileStore = create<FileState>()(
           const { moveFile } = await import("@/lib/tauri");
           const newPath = await moveFile(sourcePath, targetFolder);
           useFavoriteStore.getState().updatePath(sourcePath, newPath);
-          
+
           // Update tab path if the moved file is open
           const tabIndex = tabs.findIndex(
-            (t) => (t.type === "file" || t.type === "diagram") && t.path === sourcePath
+            (t) =>
+              (t.type === "file" || t.type === "diagram") &&
+              t.path === sourcePath,
           );
           if (tabIndex !== -1) {
             const targetTab = tabs[tabIndex];
             const newFileName =
               targetTab?.type === "diagram"
                 ? getDiagramDisplayName(newPath)
-                : newPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+                : newPath
+                    .split(/[/\\]/)
+                    .pop()
+                    ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
             const updatedTabs = tabs.map((tab, i) => {
               if (i === tabIndex) {
                 return {
@@ -2400,13 +2702,13 @@ export const useFileStore = create<FileState>()(
               }
               return tab;
             });
-            
+
             set({
               tabs: updatedTabs,
               currentFile: currentFile === sourcePath ? newPath : currentFile,
             });
           }
-          
+
           // Refresh file tree
           await refreshFileTree();
           await refreshDatabaseRowsForPath(newPath);
@@ -2425,30 +2727,40 @@ export const useFileStore = create<FileState>()(
       moveFolderToFolder: async (sourcePath: string, targetFolder: string) => {
         const t = getCurrentTranslations();
         const { tabs, currentFile, refreshFileTree } = get();
-        
+
         try {
           // Import moveFolder dynamically to avoid circular dependency
           const { moveFolder } = await import("@/lib/tauri");
           const newPath = await moveFolder(sourcePath, targetFolder);
-          useFavoriteStore.getState().updatePathsForFolderMove(sourcePath, newPath);
-          
+          useFavoriteStore
+            .getState()
+            .updatePathsForFolderMove(sourcePath, newPath);
+
           // Normalize paths for comparison
           const normalize = (p: string) => p.replace(/\\/g, "/");
           const normalizedSource = normalize(sourcePath);
           const normalizedNew = normalize(newPath);
-          
+
           // Update all tabs that are inside the moved folder
-          const updatedTabs = tabs.map(tab => {
+          const updatedTabs = tabs.map((tab) => {
             if (tab.type === "file" || tab.type === "diagram") {
               const normalizedTabPath = normalize(tab.path);
-              if (normalizedTabPath.startsWith(normalizedSource + "/") || normalizedTabPath === normalizedSource) {
+              if (
+                normalizedTabPath.startsWith(normalizedSource + "/") ||
+                normalizedTabPath === normalizedSource
+              ) {
                 // Replace the old folder path with the new one
-                const relativePath = normalizedTabPath.slice(normalizedSource.length);
+                const relativePath = normalizedTabPath.slice(
+                  normalizedSource.length,
+                );
                 const newTabPath = normalizedNew + relativePath;
                 const newFileName =
                   tab.type === "diagram"
                     ? getDiagramDisplayName(newTabPath)
-                    : newTabPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+                    : newTabPath
+                        .split(/[/\\]/)
+                        .pop()
+                        ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
                 return {
                   ...tab,
                   path: newTabPath,
@@ -2459,22 +2771,27 @@ export const useFileStore = create<FileState>()(
             }
             return tab;
           });
-          
+
           // Update currentFile if it was inside the moved folder
           let newCurrentFile = currentFile;
           if (currentFile) {
             const normalizedCurrent = normalize(currentFile);
-            if (normalizedCurrent.startsWith(normalizedSource + "/") || normalizedCurrent === normalizedSource) {
-              const relativePath = normalizedCurrent.slice(normalizedSource.length);
+            if (
+              normalizedCurrent.startsWith(normalizedSource + "/") ||
+              normalizedCurrent === normalizedSource
+            ) {
+              const relativePath = normalizedCurrent.slice(
+                normalizedSource.length,
+              );
               newCurrentFile = normalizedNew + relativePath;
             }
           }
-          
+
           set({
             tabs: updatedTabs,
             currentFile: newCurrentFile,
           });
-          
+
           // Refresh file tree
           await refreshFileTree();
           await refreshAllLoadedDatabases();
@@ -2492,7 +2809,7 @@ export const useFileStore = create<FileState>()(
     {
       name: "lumina-workspace",
       partialize: (state) => ({
-        vaultPath: state.vaultPath,  // 只持久化工作空间路径
+        vaultPath: state.vaultPath, // 只持久化工作空间路径
         recentFiles: state.recentFiles, // 持久化最近文件列表
       }),
       onRehydrateStorage: () => async (state) => {
@@ -2520,7 +2837,10 @@ export const useFileStore = create<FileState>()(
           });
         }
         try {
-          await state.syncMobileWorkspace({ path: state.vaultPath, force: true });
+          await state.syncMobileWorkspace({
+            path: state.vaultPath,
+            force: true,
+          });
         } catch (error) {
           reportOperationError({
             source: "FileStore.rehydrate",
@@ -2531,6 +2851,6 @@ export const useFileStore = create<FileState>()(
           });
         }
       },
-    }
-  )
+    },
+  ),
 );

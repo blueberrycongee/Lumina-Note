@@ -28,7 +28,7 @@ import {
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
-import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
+// import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { VideoNoteView } from "@/components/video/VideoNoteView";
 import {
@@ -585,6 +585,31 @@ function App() {
             }, 500);
           },
         );
+        // Listen for watcher degradation (EMFILE)
+        const unlistenDegraded = await listen<{
+          path: string;
+          reason: string;
+        }>("fs:watcher-degraded", (event) => {
+          console.warn(
+            "[FileWatcher] Watcher degraded for",
+            event.payload.path,
+            "reason:",
+            event.payload.reason,
+          );
+          reportOperationError({
+            source: "App.setupWatcher",
+            action: "File watcher degraded — auto-refresh disabled",
+            error: new Error(`Watcher stopped: ${event.payload.reason}`),
+            level: "warning",
+            context: { path: event.payload.path },
+          });
+        });
+
+        const origUnlisten = unlisten;
+        unlisten = () => {
+          origUnlisten?.();
+          unlistenDegraded();
+        };
       } catch (error) {
         reportOperationError({
           source: "App.setupWatcher",
