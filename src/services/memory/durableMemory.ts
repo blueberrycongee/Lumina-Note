@@ -205,7 +205,9 @@ function toFrontendSourceRef(source: BackendMemorySourceRef): MemorySourceRef {
   };
 }
 
-function toFrontendEntryVersion(version: BackendMemoryEntryVersion): MemoryEntryVersion {
+function toFrontendEntryVersion(
+  version: BackendMemoryEntryVersion,
+): MemoryEntryVersion {
   return {
     version: version.version,
     summary: version.summary,
@@ -219,7 +221,9 @@ function toFrontendEntry(entry: BackendMemoryEntry): MemoryEntry {
   return {
     id: entry.id,
     scope: entry.scope,
-    visibility: entry.visibility ?? (entry.scope === "team_shared" ? "shared" : "private"),
+    visibility:
+      entry.visibility ??
+      (entry.scope === "team_shared" ? "shared" : "private"),
     title: entry.title,
     summary: entry.summary,
     details: entry.details,
@@ -246,7 +250,9 @@ function toFrontendWikiPage(page: BackendWikiPageSummary): WikiPageSummary {
   };
 }
 
-function toFrontendMergeResult(result: BackendMemoryMergeResult): MemoryMergeResult {
+function toFrontendMergeResult(
+  result: BackendMemoryMergeResult,
+): MemoryMergeResult {
   return {
     action: result.action,
     entryId: result.entry_id ?? null,
@@ -257,7 +263,9 @@ function toFrontendMergeResult(result: BackendMemoryMergeResult): MemoryMergeRes
   };
 }
 
-function toFrontendSnapshot(snapshot: BackendDurableMemorySnapshot): DurableMemorySnapshot {
+function toFrontendSnapshot(
+  snapshot: BackendDurableMemorySnapshot,
+): DurableMemorySnapshot {
   return {
     workspacePath: snapshot.workspace_path,
     manifestPath: snapshot.manifest_path,
@@ -317,10 +325,12 @@ export async function loadDurableMemorySnapshot(
   workspacePath: string,
 ): Promise<DurableMemorySnapshot | null> {
   if (!workspacePath) return null;
-  const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
-    "agent_get_durable_memory_snapshot",
-    { workspacePath },
-  );
+  const snapshot =
+    await invokeDurableMemory<BackendDurableMemorySnapshot | null>(
+      "agent_get_durable_memory_snapshot",
+      { workspacePath },
+    );
+  if (!snapshot) return null;
   return toFrontendSnapshot(snapshot);
 }
 
@@ -399,7 +409,9 @@ export async function reverifyDurableMemoryEntry(
   return toFrontendSnapshot(snapshot);
 }
 
-export async function gcDurableMemory(workspacePath: string): Promise<DurableMemorySnapshot | null> {
+export async function gcDurableMemory(
+  workspacePath: string,
+): Promise<DurableMemorySnapshot | null> {
   if (!workspacePath) return null;
   const snapshot = await invokeDurableMemory<BackendDurableMemorySnapshot>(
     "agent_gc_durable_memory",

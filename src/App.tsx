@@ -1,4 +1,11 @@
-import { Suspense, lazy, useEffect, useCallback, useState, useRef } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useCallback,
+  useState,
+  useRef,
+} from "react";
 import { useShallow } from "zustand/react/shallow";
 import { getVersion } from "@tauri-apps/api/app";
 import { listen } from "@tauri-apps/api/event";
@@ -14,14 +21,21 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useRAGStore } from "@/stores/useRAGStore";
 import { PanelRight } from "lucide-react";
-import { CommandPalette, PaletteMode } from "@/components/search/CommandPalette";
+import {
+  CommandPalette,
+  PaletteMode,
+} from "@/components/search/CommandPalette";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
 import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { VideoNoteView } from "@/components/video/VideoNoteView";
-import { DatabaseView, CreateDatabaseDialog, DatabaseSplitView } from "@/components/database";
+import {
+  DatabaseView,
+  CreateDatabaseDialog,
+  DatabaseSplitView,
+} from "@/components/database";
 import { PDFViewer } from "@/components/pdf";
 import { BrowserView } from "@/components/browser";
 import { FlashcardView } from "@/components/flashcard";
@@ -59,7 +73,11 @@ import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHos
 import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
 import { ErrorNotifications } from "@/components/layout/ErrorNotifications";
 import { reportOperationError, reportUnhandledError } from "@/lib/reportError";
-import { initAutoUpdateCheck, initResumableUpdateListeners, useUpdateStore } from "@/stores/useUpdateStore";
+import {
+  initAutoUpdateCheck,
+  initResumableUpdateListeners,
+  useUpdateStore,
+} from "@/stores/useUpdateStore";
 import { isTauriAvailable } from "@/lib/tauri";
 import { hydrateProxyConfigOnStartup } from "@/lib/proxyStartup";
 
@@ -78,7 +96,7 @@ function EditorWithGraph() {
     useShallow((state) => ({
       tabs: state.tabs,
       activeTabIndex: state.activeTabIndex,
-    }))
+    })),
   );
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
@@ -88,7 +106,10 @@ function EditorWithGraph() {
       {activeTab?.type === "graph" ? (
         <KnowledgeGraph className="flex-1" />
       ) : activeTab?.type === "isolated-graph" && activeTab.isolatedNode ? (
-        <KnowledgeGraph className="flex-1" isolatedNode={activeTab.isolatedNode} />
+        <KnowledgeGraph
+          className="flex-1"
+          isolatedNode={activeTab.isolatedNode}
+        />
       ) : (
         <OverviewDashboard />
       )}
@@ -99,7 +120,8 @@ function EditorWithGraph() {
 // Component that shows diff view
 function DiffViewWrapper() {
   const { t } = useLocaleStore();
-  const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } = useAIStore();
+  const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } =
+    useAIStore();
   const openFile = useFileStore((state) => state.openFile);
 
   const handleAccept = useCallback(async () => {
@@ -113,7 +135,10 @@ function DiffViewWrapper() {
       clearPendingEdits();
 
       // Refresh the file in editor (forceReload = true)
-      await openFile(pendingDiff.filePath, { addToHistory: false, forceReload: true });
+      await openFile(pendingDiff.filePath, {
+        addToHistory: false,
+        forceReload: true,
+      });
 
       console.log(`✅ 已应用修改到 ${pendingDiff.fileName}`);
 
@@ -158,7 +183,9 @@ function DiffViewWrapper() {
 }
 
 function MobileWorkspaceToast() {
-  const mobileWorkspaceSync = useFileStore((state) => state.mobileWorkspaceSync);
+  const mobileWorkspaceSync = useFileStore(
+    (state) => state.mobileWorkspaceSync,
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const hideTimerRef = useRef<number | null>(null);
@@ -167,7 +194,9 @@ function MobileWorkspaceToast() {
     if (mobileWorkspaceSync.status !== "error" || !mobileWorkspaceSync.error) {
       return;
     }
-    const pathLabel = mobileWorkspaceSync.path ? ` (${mobileWorkspaceSync.path})` : "";
+    const pathLabel = mobileWorkspaceSync.path
+      ? ` (${mobileWorkspaceSync.path})`
+      : "";
     const nextMessage = `Workspace sync failed${pathLabel}: ${mobileWorkspaceSync.error}`;
     setMessage(nextMessage);
     setVisible(true);
@@ -236,7 +265,8 @@ function applyAutoButtonTooltips(root: ParentNode) {
   buttons.forEach((button) => {
     const currentTitle = button.getAttribute("title")?.trim() ?? "";
     const autoTitle = button.getAttribute(AUTO_TOOLTIP_FLAG)?.trim() ?? "";
-    const hasExplicitTitle = currentTitle.length > 0 && currentTitle !== autoTitle;
+    const hasExplicitTitle =
+      currentTitle.length > 0 && currentTitle !== autoTitle;
     if (hasExplicitTitle) {
       button.removeAttribute(AUTO_TOOLTIP_FLAG);
       return;
@@ -281,7 +311,7 @@ function App() {
       refreshFileTree: state.refreshFileTree,
       openAIMainTab: state.openAIMainTab,
       syncMobileWorkspace: state.syncMobileWorkspace,
-    }))
+    })),
   );
   const pendingDiff = useAIStore((state) => state.pendingDiff);
   const buildIndex = useNoteIndexStore((state) => state.buildIndex);
@@ -289,12 +319,16 @@ function App() {
     useShallow((state) => ({
       initialize: state.initialize,
       config: state.config,
-    }))
+    })),
   );
   const t = useLocaleStore((state) => state.t);
   const loadPlugins = usePluginStore((state) => state.loadPlugins);
-  const setAppearanceSafeMode = usePluginStore((state) => state.setAppearanceSafeMode);
-  const setCurrentUpdateVersion = useUpdateStore((state) => state.setCurrentVersion);
+  const setAppearanceSafeMode = usePluginStore(
+    (state) => state.setAppearanceSafeMode,
+  );
+  const setCurrentUpdateVersion = useUpdateStore(
+    (state) => state.setCurrentVersion,
+  );
   const mountedOpenClawWorkspacePath = useOpenClawWorkspaceStore((state) =>
     state.getMountedWorkspacePath(vaultPath),
   );
@@ -304,13 +338,17 @@ function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchRequest, setSearchRequest] = useState<GlobalSearchRequest | null>(null);
+  const [searchRequest, setSearchRequest] =
+    useState<GlobalSearchRequest | null>(null);
   const [isLoadingVault, setIsLoadingVault] = useState(false);
   const [createDbOpen, setCreateDbOpen] = useState(false);
   const [evalPanelOpen, setEvalPanelOpen] = useState(false);
   const [codexPanelOpen, setCodexPanelOpen] = useState(false);
   const [welcomePreview, setWelcomePreview] = useState(false);
-  const welcomeTapRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({ count: 0, timer: null });
+  const welcomeTapRef = useRef<{
+    count: number;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>({ count: 0, timer: null });
 
   // Global button tooltip fallback: auto-fill title for buttons that don't define one.
   useEffect(() => {
@@ -404,7 +442,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    pluginRuntime.emit("workspace:changed", { workspacePath: vaultPath ?? null });
+    pluginRuntime.emit("workspace:changed", {
+      workspacePath: vaultPath ?? null,
+    });
   }, [vaultPath]);
 
   useEffect(() => {
@@ -460,83 +500,91 @@ function App() {
 
     const setupWatcher = async () => {
       try {
-        const { getFsChangePath, handleFsChangeEvent } = await import("@/lib/fsChange");
+        const { getFsChangePath, handleFsChangeEvent } =
+          await import("@/lib/fsChange");
         const { reloadFileIfOpen } = useFileStore.getState();
-        const { reloadSecondaryIfOpen } = (await import("@/stores/useSplitStore")).useSplitStore.getState();
+        const { reloadSecondaryIfOpen } = (
+          await import("@/stores/useSplitStore")
+        ).useSplitStore.getState();
 
         // 启动后端文件监听（去重，避免重复创建 watcher 线程）
         await startFileWatcher(vaultPath);
-        if (mountedOpenClawWorkspacePath && mountedOpenClawWorkspacePath !== vaultPath && !watchedPaths.has(mountedOpenClawWorkspacePath)) {
+        if (
+          mountedOpenClawWorkspacePath &&
+          mountedOpenClawWorkspacePath !== vaultPath &&
+          !watchedPaths.has(mountedOpenClawWorkspacePath)
+        ) {
           watchedPaths.add(mountedOpenClawWorkspacePath);
           await startFileWatcher(mountedOpenClawWorkspacePath);
         }
         console.log("[FileWatcher] Started watching:", vaultPath);
 
         // 监听文件变化事件（带防抖）
-        unlisten = await listen<FsChangePayload | null>("fs:change", (event) => {
-          if (import.meta.env.DEV) {
-            console.log("[FileWatcher] File changed:", event.payload);
-          }
-
-          // 防抖：500ms 内多次变化只刷新一次
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            const changedPath = getFsChangePath(event.payload);
-            if (changedPath) {
-              const fileStore = useFileStore.getState();
-              const dirtyPaths = fileStore.tabs
-                .filter((tab) => tab.type === "file" && tab.isDirty)
-                .map((tab) => tab.path);
-              if (fileStore.currentFile && fileStore.isDirty) {
-                dirtyPaths.push(fileStore.currentFile);
-              }
-              const normalize = (path: string) => path.replace(/\\/g, "/");
-              const vaultPrefix = `${normalize(vaultPath).replace(/\/+$/, "")}/`;
-              const mountedPrefix = mountedOpenClawWorkspacePath
-                ? `${normalize(mountedOpenClawWorkspacePath).replace(/\/+$/, "")}/`
-                : null;
-              const normalizedChangedPath = normalize(changedPath);
-              useOpenClawWorkspaceStore.getState().recordExternalChange(
-                vaultPath,
-                [changedPath],
-                dirtyPaths,
-              );
-              if (
-                mountedPrefix &&
-                normalizedChangedPath.startsWith(mountedPrefix) &&
-                mountedOpenClawWorkspacePath !== vaultPath
-              ) {
-                void useOpenClawWorkspaceStore
-                  .getState()
-                  .refreshMountedFileTree(
-                    vaultPath,
-                    mountedOpenClawWorkspacePath ?? undefined,
-                  )
-                  .then((tree) =>
-                    useOpenClawWorkspaceStore
-                      .getState()
-                      .refreshAttachmentScan(
-                        vaultPath,
-                        tree,
-                        mountedOpenClawWorkspacePath ?? undefined,
-                      ),
-                  );
-              }
-              if (!normalizedChangedPath.startsWith(vaultPrefix)) {
-                handleFsChangeEvent(event.payload, (path) => {
-                  reloadFileIfOpen(path, { skipIfDirty: true });
-                  reloadSecondaryIfOpen(path, { skipIfDirty: true });
-                });
-                return;
-              }
+        unlisten = await listen<FsChangePayload | null>(
+          "fs:change",
+          (event) => {
+            if (import.meta.env.DEV) {
+              console.log("[FileWatcher] File changed:", event.payload);
             }
-            refreshFileTree();
-            handleFsChangeEvent(event.payload, (path) => {
-              reloadFileIfOpen(path, { skipIfDirty: true });
-              reloadSecondaryIfOpen(path, { skipIfDirty: true });
-            });
-          }, 500);
-        });
+
+            // 防抖：500ms 内多次变化只刷新一次
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+              const changedPath = getFsChangePath(event.payload);
+              if (changedPath) {
+                const fileStore = useFileStore.getState();
+                const dirtyPaths = fileStore.tabs
+                  .filter((tab) => tab.type === "file" && tab.isDirty)
+                  .map((tab) => tab.path);
+                if (fileStore.currentFile && fileStore.isDirty) {
+                  dirtyPaths.push(fileStore.currentFile);
+                }
+                const normalize = (path: string) => path.replace(/\\/g, "/");
+                const vaultPrefix = `${normalize(vaultPath).replace(/\/+$/, "")}/`;
+                const mountedPrefix = mountedOpenClawWorkspacePath
+                  ? `${normalize(mountedOpenClawWorkspacePath).replace(/\/+$/, "")}/`
+                  : null;
+                const normalizedChangedPath = normalize(changedPath);
+                useOpenClawWorkspaceStore
+                  .getState()
+                  .recordExternalChange(vaultPath, [changedPath], dirtyPaths);
+                if (
+                  mountedPrefix &&
+                  normalizedChangedPath.startsWith(mountedPrefix) &&
+                  mountedOpenClawWorkspacePath !== vaultPath
+                ) {
+                  void useOpenClawWorkspaceStore
+                    .getState()
+                    .refreshMountedFileTree(
+                      vaultPath,
+                      mountedOpenClawWorkspacePath ?? undefined,
+                    )
+                    .then((tree) =>
+                      useOpenClawWorkspaceStore
+                        .getState()
+                        .refreshAttachmentScan(
+                          vaultPath,
+                          tree,
+                          mountedOpenClawWorkspacePath ?? undefined,
+                        ),
+                    );
+                }
+                if (!normalizedChangedPath.startsWith(vaultPrefix)) {
+                  handleFsChangeEvent(event.payload, (path) => {
+                    reloadFileIfOpen(path, { skipIfDirty: true });
+                    reloadSecondaryIfOpen(path, { skipIfDirty: true });
+                  });
+                  return;
+                }
+              }
+              refreshFileTree();
+              handleFsChangeEvent(event.payload, (path) => {
+                reloadFileIfOpen(path, { skipIfDirty: true });
+                reloadSecondaryIfOpen(path, { skipIfDirty: true });
+              });
+            }, 500);
+          },
+        );
       } catch (error) {
         reportOperationError({
           source: "App.setupWatcher",
@@ -565,12 +613,15 @@ function App() {
 
     const setup = async () => {
       try {
-        unlisten = await listen<BrowserNewTabEventPayload>("browser:new-tab", (event) => {
-          const payload = event.payload;
-          if (!payload || !payload.url) return;
-          // 使用最新的 store 状态创建网页标签，避免依赖闭包
-          useFileStore.getState().openWebpageTab(payload.url);
-        });
+        unlisten = await listen<BrowserNewTabEventPayload>(
+          "browser:new-tab",
+          (event) => {
+            const payload = event.payload;
+            if (!payload || !payload.url) return;
+            // 使用最新的 store 状态创建网页标签，避免依赖闭包
+            useFileStore.getState().openWebpageTab(payload.url);
+          },
+        );
       } catch (error) {
         reportOperationError({
           source: "App.setupBrowserNewTabListener",
@@ -619,11 +670,12 @@ function App() {
       isSkillManagerOpen: state.isSkillManagerOpen,
       setSkillManagerOpen: state.setSkillManagerOpen,
       diagnosticsEnabled: state.diagnosticsEnabled,
-    }))
+    })),
   );
   const showMacTopChrome = useMacTopChromeEnabled();
   const showMacLeftPaneTopBar = showMacTopChrome && leftSidebarOpen;
-  const showMacRibbonTrafficLightSafeArea = showMacTopChrome && !showMacLeftPaneTopBar;
+  const showMacRibbonTrafficLightSafeArea =
+    showMacTopChrome && !showMacLeftPaneTopBar;
   const diagnosticsActive = diagnosticsEnabled || import.meta.env.DEV;
 
   // Diagnostics logging (runtime toggle)
@@ -644,7 +696,7 @@ function App() {
         event.message,
         event.filename,
         event.lineno,
-        event.colno
+        event.colno,
       );
       if (event.error) {
         console.error("[WindowErrorStack]", event.error.stack || event.error);
@@ -722,8 +774,9 @@ function App() {
         dragData.isDragging = true;
 
         // 创建拖拽指示器 - VS Code/Cursor 风格
-        dragIndicator = document.createElement('div');
-        dragIndicator.className = 'fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover/95 backdrop-blur-sm text-popover-foreground text-sm rounded-lg border border-border shadow-xl';
+        dragIndicator = document.createElement("div");
+        dragIndicator.className =
+          "fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover/95 backdrop-blur-sm text-popover-foreground text-sm rounded-lg border border-border shadow-xl";
 
         // 根据是文件还是文件夹显示不同图标
         const icon = dragData.isFolder
@@ -737,7 +790,7 @@ function App() {
 
         dragIndicator.innerHTML = `
           ${icon}
-          <span class="truncate max-w-[200px]">${dragData.fileName.replace(/\.(md|db\.json)$/i, '')}</span>
+          <span class="truncate max-w-[200px]">${dragData.fileName.replace(/\.(md|db\.json)$/i, "")}</span>
         `;
         document.body.appendChild(dragIndicator);
       }
@@ -760,17 +813,19 @@ function App() {
 
       if (dragData.isDragging) {
         // 检查是否放置在文件夹上
-        const folderTarget = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-folder-path]');
+        const folderTarget = document
+          .elementFromPoint(e.clientX, e.clientY)
+          ?.closest("[data-folder-path]");
         if (folderTarget) {
-          const targetPath = folderTarget.getAttribute('data-folder-path');
+          const targetPath = folderTarget.getAttribute("data-folder-path");
           if (targetPath && targetPath !== dragData.filePath) {
             // 触发文件夹放置事件
-            const folderDropEvent = new CustomEvent('lumina-folder-drop', {
+            const folderDropEvent = new CustomEvent("lumina-folder-drop", {
               detail: {
                 sourcePath: dragData.filePath,
                 targetFolder: targetPath,
                 isFolder: dragData.isFolder,
-              }
+              },
             });
             window.dispatchEvent(folderDropEvent);
             // 清理全局数据
@@ -782,14 +837,14 @@ function App() {
         // 文件夹不能插入链接，只触发文件的 lumina-drop
         if (!dragData.isFolder) {
           // 触发自定义事件，让编辑器和 AI 对话框处理
-          const dropEvent = new CustomEvent('lumina-drop', {
+          const dropEvent = new CustomEvent("lumina-drop", {
             detail: {
               wikiLink: dragData.wikiLink,
               filePath: dragData.filePath,
               fileName: dragData.fileName,
               x: e.clientX,
               y: e.clientY,
-            }
+            },
           });
           window.dispatchEvent(dropEvent);
         }
@@ -799,12 +854,12 @@ function App() {
       clearDragData();
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
       if (dragIndicator) dragIndicator.remove();
     };
   }, []);
@@ -934,7 +989,7 @@ function App() {
 
   // Handle resize - must be before conditional returns
   // VS Code 风格：拖动可以折叠/展开面板
-  const LEFT_MIN_WIDTH = 200;  // store 中的最小值
+  const LEFT_MIN_WIDTH = 200; // store 中的最小值
   const RIGHT_MIN_WIDTH = 280; // store 中的最小值
   const MAIN_MIN_WIDTH = 480;
   const MAIN_RESTORE_WIDTH = 520;
@@ -968,7 +1023,12 @@ function App() {
         }
       }
     },
-    [leftSidebarOpen, leftSidebarWidth, setLeftSidebarOpen, setLeftSidebarWidth]
+    [
+      leftSidebarOpen,
+      leftSidebarWidth,
+      setLeftSidebarOpen,
+      setLeftSidebarWidth,
+    ],
   );
 
   const handleRightResize = useCallback(
@@ -981,11 +1041,12 @@ function App() {
         setRightSidebarWidth(newWidth);
       }
     },
-    [rightSidebarWidth, setRightSidebarWidth, toggleRightSidebar]
+    [rightSidebarWidth, setRightSidebarWidth, toggleRightSidebar],
   );
 
   const getAvailableMainWidth = useCallback(() => {
-    const totalWidth = layoutRef.current?.getBoundingClientRect().width ?? window.innerWidth;
+    const totalWidth =
+      layoutRef.current?.getBoundingClientRect().width ?? window.innerWidth;
     const ribbonWidth = ribbonRef.current?.getBoundingClientRect().width ?? 0;
     const leftWidth = leftSidebarOpen ? leftSidebarWidth : 0;
     const rightWidth = rightSidebarOpen ? rightSidebarWidth : 0;
@@ -1021,7 +1082,10 @@ function App() {
     <div className="h-full flex flex-col bg-background ui-app-bg">
       <TitleBar />
       <PluginShellSlotHost slotId="app-top" />
-      <div ref={layoutRef} className="flex-1 flex overflow-hidden transition-colors duration-300">
+      <div
+        ref={layoutRef}
+        className="flex-1 flex overflow-hidden transition-colors duration-300"
+      >
         <div className="flex min-h-0 flex-shrink-0 flex-col">
           {showMacLeftPaneTopBar ? <MacLeftPaneTopBar /> : null}
 
@@ -1036,8 +1100,9 @@ function App() {
 
             {/* Left Sidebar (File Tree) */}
             <div
-              className={`flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${leftSidebarOpen ? "opacity-100" : "w-0 opacity-0"
-                }`}
+              className={`flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${
+                leftSidebarOpen ? "opacity-100" : "w-0 opacity-0"
+              }`}
               style={{ width: leftSidebarOpen ? leftSidebarWidth : 0 }}
             >
               <DevProfiler id="Sidebar">
@@ -1059,7 +1124,9 @@ function App() {
         {/* Main content - switches between Editor, Graph, Split, Diff, VideoNote and AI Chat based on state */}
         <main
           className={`relative flex flex-col overflow-hidden min-w-0 bg-background transition-[width,opacity] duration-200 ${
-            isMainCollapsed ? "flex-none w-0 opacity-0 pointer-events-none" : "flex-1 w-auto opacity-100"
+            isMainCollapsed
+              ? "flex-none w-0 opacity-0 pointer-events-none"
+              : "flex-1 w-auto opacity-100"
           }`}
         >
           {pendingDiff && activeTab?.type !== "ai-chat" ? (
@@ -1168,7 +1235,9 @@ function App() {
                   if (handler) {
                     void handler(data);
                   } else {
-                    console.warn(`[PluginViewPane] No handler for action "${action}" on tab type "${scopedType}"`);
+                    console.warn(
+                      `[PluginViewPane] No handler for action "${action}" on tab type "${scopedType}"`,
+                    );
                   }
                 }}
               />
@@ -1179,7 +1248,8 @@ function App() {
           ) : splitView && currentFile ? (
             // Show split editor when enabled
             <SplitEditor />
-          ) : activeTab?.type === "graph" || activeTab?.type === "isolated-graph" ? (
+          ) : activeTab?.type === "graph" ||
+            activeTab?.type === "isolated-graph" ? (
             // 图谱标签页
             <EditorWithGraph />
           ) : currentFile ? (
@@ -1217,7 +1287,14 @@ function App() {
           className={`transition-all duration-300 ease-out overflow-hidden ${
             rightSidebarOpen ? "opacity-100" : "w-0 opacity-0"
           } ${isMainCollapsed && rightSidebarOpen ? "flex-1" : "flex-shrink-0"}`}
-          style={{ width: rightSidebarOpen && !isMainCollapsed ? rightSidebarWidth : rightSidebarOpen ? undefined : 0 }}
+          style={{
+            width:
+              rightSidebarOpen && !isMainCollapsed
+                ? rightSidebarWidth
+                : rightSidebarOpen
+                  ? undefined
+                  : 0,
+          }}
         >
           <DevProfiler id="RightPanel">
             <RightPanel />
@@ -1254,8 +1331,8 @@ function App() {
         onClose={() => setSkillManagerOpen(false)}
       />
 
-      {/* AI Floating Ball */}
-      <AIFloatingBall />
+      {/* AI Floating Ball - temporarily hidden */}
+      {/* <AIFloatingBall /> */}
 
       {/* Voice Input Floating Ball - 语音输入悬浮球 */}
       <VoiceInputBall />
@@ -1308,7 +1385,9 @@ function App() {
             ref.count = 0;
             setWelcomePreview(true);
           } else {
-            ref.timer = setTimeout(() => { ref.count = 0; }, 2000);
+            ref.timer = setTimeout(() => {
+              ref.count = 0;
+            }, 2000);
           }
         }}
       />

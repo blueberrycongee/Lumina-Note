@@ -111,7 +111,9 @@ function normalizeConfig(
 }
 
 function sanitizeSessionId(sessionId: string) {
-  const sanitized = sessionId.replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-");
+  const sanitized = sessionId
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-");
   return sanitized || "default-session";
 }
 
@@ -179,7 +181,10 @@ async function invokeSessionMemory<T>(
   }
 }
 
-export function buildSessionMemoryPath(workspacePath: string, sessionId: string) {
+export function buildSessionMemoryPath(
+  workspacePath: string,
+  sessionId: string,
+) {
   return join(
     workspacePath,
     "memory",
@@ -213,7 +218,8 @@ export function shouldUpdateSessionMemory(params: {
 
   const tokenDelta = currentTokens - snapshot.tokensAtLastUpdate;
   const toolDelta = currentToolCalls - snapshot.toolCallsAtLastUpdate;
-  const messageDelta = params.messages.length - snapshot.messageCountAtLastUpdate;
+  const messageDelta =
+    params.messages.length - snapshot.messageCountAtLastUpdate;
 
   switch (params.reason) {
     case "session_switch":
@@ -221,8 +227,10 @@ export function shouldUpdateSessionMemory(params: {
     case "compact_prepare":
       return (
         messageDelta > 0 &&
-        (tokenDelta >= Math.max(400, Math.floor(config.minimumTokensBetweenUpdates / 2)) ||
-          toolDelta >= Math.max(1, Math.floor(config.toolCallsBetweenUpdates / 2)))
+        (tokenDelta >=
+          Math.max(400, Math.floor(config.minimumTokensBetweenUpdates / 2)) ||
+          toolDelta >=
+            Math.max(1, Math.floor(config.toolCallsBetweenUpdates / 2)))
       );
     case "task_stage_completed":
       return (
@@ -249,13 +257,15 @@ export async function loadSessionMemorySnapshot(
   sessionId: string,
 ): Promise<SessionMemorySnapshot | null> {
   if (!workspacePath || !sessionId) return null;
-  const snapshot = await invokeSessionMemory<BackendSessionMemorySnapshot>(
-    "agent_get_session_memory_snapshot",
-    {
-      workspacePath,
-      sessionId,
-    },
-  );
+  const snapshot =
+    await invokeSessionMemory<BackendSessionMemorySnapshot | null>(
+      "agent_get_session_memory_snapshot",
+      {
+        workspacePath,
+        sessionId,
+      },
+    );
+  if (!snapshot) return null;
   return toBackendSnapshot(snapshot);
 }
 
@@ -279,7 +289,9 @@ export async function updateSessionMemory(
       })),
       reason,
       force,
-      sessionMemoryConfig: toBackendSessionMemoryConfig(input.sessionMemoryConfig),
+      sessionMemoryConfig: toBackendSessionMemoryConfig(
+        input.sessionMemoryConfig,
+      ),
     },
   );
 
@@ -291,10 +303,13 @@ export async function resetSessionMemory(
   sessionId: string,
 ): Promise<void> {
   if (!workspacePath || !sessionId) return;
-  await invokeSessionMemory<BackendSessionMemorySnapshot>("agent_reset_session_memory", {
-    workspacePath,
-    sessionId,
-  });
+  await invokeSessionMemory<BackendSessionMemorySnapshot>(
+    "agent_reset_session_memory",
+    {
+      workspacePath,
+      sessionId,
+    },
+  );
 }
 
 export function resetSessionMemoryRuntimeState() {
