@@ -8,7 +8,7 @@
 //! - 超时检测：检测流式响应假死
 
 use crate::agent::types::*;
-use crate::mobile_gateway::emit_agent_event;
+use crate::agent::emit::emit_agent_event;
 use futures_util::StreamExt;
 use reqwest::header::HeaderMap;
 use reqwest::StatusCode;
@@ -1028,7 +1028,6 @@ impl LlmClient {
                                                     app,
                                                     AgentEvent::ReasoningDelta {
                                                         content: reasoning.clone(),
-                                                        agent: AgentType::Coordinator,
                                                     },
                                                 );
                                             }
@@ -1315,7 +1314,6 @@ impl LlmClient {
         request_id: &str,
         messages: &[Message],
         tools: Option<&[Value]>,
-        current_agent: AgentType,
     ) -> Result<String, String> {
         // 发送 LLM 请求开始事件
         let start_timestamp = SystemTime::now()
@@ -1333,7 +1331,7 @@ impl LlmClient {
 
         // 使用带重试的流式调用
         let result = self
-            .call_stream_with_retry(app, request_id, messages, tools, current_agent)
+            .call_stream_with_retry(app, request_id, messages, tools)
             .await;
 
         // 发送 LLM 请求结束事件
@@ -1354,7 +1352,6 @@ impl LlmClient {
         request_id: &str,
         messages: &[Message],
         tools: Option<&[Value]>,
-        current_agent: AgentType,
     ) -> Result<String, String> {
         let max_retries = 3;
         let base_delay = Duration::from_secs(1);
@@ -1375,7 +1372,7 @@ impl LlmClient {
             }
 
             match self
-                .call_stream_inner(app, request_id, messages, tools, current_agent.clone())
+                .call_stream_inner(app, request_id, messages, tools)
                 .await
             {
                 Ok(content) => return Ok(content),
@@ -1419,7 +1416,6 @@ impl LlmClient {
         _request_id: &str,
         messages: &[Message],
         tools: Option<&[Value]>,
-        current_agent: AgentType,
     ) -> Result<String, String> {
         let url = self.get_api_url();
         let headers = self.build_headers();
@@ -1540,7 +1536,6 @@ impl LlmClient {
                                                 app,
                                                 AgentEvent::MessageChunk {
                                                     content: content.to_string(),
-                                                    agent: current_agent.clone(),
                                                 },
                                             );
                                         }

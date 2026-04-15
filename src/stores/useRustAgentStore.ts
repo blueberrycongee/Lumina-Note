@@ -1,8 +1,9 @@
 /**
- * Rust Agent Store
- * 
- * 使用 Zustand 管理 Rust Agent 状态
- * 与 useAgentStore 接口兼容，可以无缝切换
+ * Rust Agent Store (LLM Wiki)
+ *
+ * Zustand store for managing the agent state.
+ * Simplified for the LLM Wiki transformation: no orchestration stages,
+ * no memory extraction, no RAG. The backend owns those concerns now.
  */
 
 import { create } from "zustand";
@@ -27,47 +28,26 @@ import { getRecommendedTemperature } from "@/services/llm/temperature";
 import type { MessageAttachment } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { formatUserFriendlyError } from "./aiErrorFormatting";
-import type { SelectedSkill } from "@/types/skills";
-import {
-  extractDurableMemories,
-  loadDurableMemorySnapshot,
-  type DurableMemorySnapshot,
-} from "@/services/memory/durableMemory";
-import {
-  isSessionMemoryMeaningful,
-  loadSessionMemorySnapshot,
-  resetSessionMemory,
-  type SessionMemorySnapshot,
-  type SessionMemoryUpdateReason,
-  updateSessionMemory,
-} from "@/services/memory/sessionMemory";
 
-// ============ 类型定义 ============
+// ============ Type Definitions ============
 
-export type AgentStatus = 
-  | "idle" 
-  | "running" 
-  | "waiting_approval" 
-  | "completed" 
-  | "error" 
+export type AgentStatus =
+  | "idle"
+  | "running"
+  | "waiting_approval"
+  | "completed"
+  | "error"
   | "aborted";
 
-export type AgentType = 
-  | "coordinator" 
-  | "planner" 
-  | "executor" 
-  | "editor" 
-  | "researcher" 
-  | "writer" 
-  | "organizer" 
+export type AgentType =
+  | "coordinator"
+  | "planner"
+  | "executor"
+  | "editor"
+  | "researcher"
+  | "writer"
+  | "organizer"
   | "reporter";
-
-export type AgentStage =
-  | "explore"
-  | "plan"
-  | "execute"
-  | "verify"
-  | "report";
 
 export interface Message {
   role: "user" | "assistant" | "system" | "tool";
@@ -84,91 +64,7 @@ export interface ToolCall {
   params: Record<string, unknown>;
 }
 
-export type ForgeEventType =
-  | "TextDelta"
-  | "TextFinal"
-  | "ToolStart"
-  | "ToolUpdate"
-  | "ToolResult"
-  | "PermissionAsked"
-  | "PermissionReplied"
-  | "SessionPhaseChanged";
-
-export type ForgeSessionPhase =
-  | "UserInput"
-  | "ModelThinking"
-  | "AssistantStreaming"
-  | "ToolProposed"
-  | "ToolRunning"
-  | "ToolResult"
-  | "AssistantFinalize"
-  | "Completed"
-  | "Interrupted"
-  | "Resumed";
-
-export type ForgeToolStatus = "pending" | "running" | "completed" | "error";
-
-export type ForgePermissionReply = "once" | "always" | "reject";
-
-export interface ForgePermissionRequest {
-  permission: string;
-  patterns: string[];
-  metadata?: Record<string, unknown>;
-  always?: string[];
-}
-
-export interface ForgeToolUpdateRecord {
-  type: "output_delta" | "output_preview" | "metadata" | "progress" | "custom";
-  delta?: string;
-  stream?: string | null;
-  preview?: string;
-  truncated?: boolean;
-  metadata?: Record<string, unknown>;
-  progress?: {
-    current: number;
-    total?: number | null;
-    unit?: string | null;
-    message?: string | null;
-  };
-  custom?: unknown;
-}
-
-export interface ForgeToolAttachment {
-  name: string;
-  mimeType: string;
-  size?: number;
-  reference?: string;
-}
-
-export interface ForgeToolCallState {
-  callId: string;
-  tool: string;
-  input?: unknown;
-  status: ForgeToolStatus;
-  output: string;
-  preview?: { text: string; truncated: boolean };
-  progress?: {
-    current: number;
-    total?: number | null;
-    unit?: string | null;
-    message?: string | null;
-  };
-  metadata?: Record<string, unknown>;
-  updates: ForgeToolUpdateRecord[];
-  result?: string;
-  attachments?: ForgeToolAttachment[];
-  messageId?: string;
-  sessionId?: string;
-}
-
-export interface ForgeSessionPhaseEvent {
-  sessionId: string;
-  messageId: string;
-  from: ForgeSessionPhase;
-  to: ForgeSessionPhase;
-}
-
-/// 等待审批的工具信息
+/// Pending tool waiting for user approval
 export interface PendingToolApproval {
   tool: ToolCall;
   requestId: string;
@@ -243,73 +139,12 @@ interface MobileAgentProfileOption {
   model: string;
 }
 
-// Plan 步骤状态 (Windsurf 风格)
-export type PlanStepStatus = "pending" | "in_progress" | "completed";
-
-export type VerificationVerdict = "pass" | "fail" | "partial";
-
-// Plan 结构 (Windsurf 风格)
-export interface Plan {
-  steps: {
-    id: string;
-    step: string;
-    role: AgentStage;
-    status: PlanStepStatus;
-    expected_artifacts: string[];
-  }[];
-  explanation?: string;
-}
-
-export interface ExploreFileRef {
-  file_path: string;
-  reason: string;
-}
-
-export interface ExploreContextEntry {
-  source: string;
-  file_path: string;
-  note: string;
-}
-
-export interface ExploreReport {
-  summary: string;
-  related_files: string[];
-  key_locations: ExploreFileRef[];
-  similar_patterns: ExploreFileRef[];
-  risks: string[];
-  recommended_entry_points: string[];
-  retrieved_context: ExploreContextEntry[];
-}
-
-export interface VerificationCheck {
-  label: string;
-  result: VerificationVerdict;
-  detail: string;
-}
-
-export interface VerificationCommandResult {
-  command: string;
-  description: string;
-  exit_code?: number | null;
-  ran: boolean;
-  output: string;
-}
-
-export interface VerificationReport {
-  verdict: VerificationVerdict;
-  summary: string;
-  checks: VerificationCheck[];
-  command_results: VerificationCommandResult[];
-  outstanding_risks: string[];
-}
-
 export interface TaskContext {
   workspace_path: string;
   active_note_path?: string;
   active_note_content?: string;
   file_tree?: string;
-  history?: Message[];  // 历史对话消息（多轮对话支持）
-  skills?: SelectedSkill[];
+  history?: Message[];
   mobile_session_id?: string;
   display_message?: string;
   attachments?: MessageAttachment[];
@@ -407,6 +242,29 @@ function splitMessagesForCompaction(messages: Message[]) {
   return { summaryMessage, toSummarize, tail };
 }
 
+function shouldAutoCompact(tokensTotal: number) {
+  if (tokensTotal <= 0) return false;
+  const resolvedConfig = resolveCompactionConfig();
+  const contextWindow = resolveModelContextWindow(resolvedConfig);
+  if (!contextWindow) return false;
+  return tokensTotal / contextWindow >= AUTO_COMPACT_RATIO;
+}
+
+function estimateContextTokens(messages: Message[]) {
+  let total = 0;
+  for (const msg of messages) {
+    if (!msg?.content) continue;
+    const text = String(msg.content);
+    const ascii = text.replace(/[^\x00-\x7F]/g, "");
+    const asciiTokens = Math.ceil(ascii.length / 4);
+    const nonAsciiTokens = Math.ceil((text.length - ascii.length) / 1.5);
+    total += asciiTokens + nonAsciiTokens + 4; // +4 for role/format overhead
+  }
+  return total;
+}
+
+// ============ Background / Mobile helpers ============
+
 const BACKGROUND_STREAMING_ID_PREFIX = "mobile-streaming-";
 
 function appendMobileUserMessage(
@@ -467,7 +325,7 @@ function applyBackgroundEventToSession(
       } else {
         messages = [
           ...messages,
-          { role: "assistant", content: delta, agent: "coordinator", id: streamingId },
+          { role: "assistant", content: delta, agent: "coordinator" as AgentType, id: streamingId },
         ];
       }
       return { ...session, messages, updatedAt: now };
@@ -489,7 +347,7 @@ function applyBackgroundEventToSession(
       const { tool, input } = event.data as { tool: string; input: unknown };
       messages = [
         ...messages,
-        { role: "tool", content: `🔧 ${tool}: ${JSON.stringify(input)}` },
+        { role: "tool" as const, content: `🔧 ${tool}: ${JSON.stringify(input)}` },
       ];
       return { ...session, messages, updatedAt: now };
     }
@@ -501,7 +359,7 @@ function applyBackgroundEventToSession(
           : JSON.stringify(output?.content ?? output);
       messages = [
         ...messages,
-        { role: "tool", content: `✅ ${tool}: ${content}` },
+        { role: "tool" as const, content: `✅ ${tool}: ${content}` },
       ];
       return { ...session, messages, updatedAt: now };
     }
@@ -514,7 +372,7 @@ function applyBackgroundEventToSession(
       }
       messages = [
         ...messages,
-        { role: "assistant", content: result, agent: "reporter" },
+        { role: "assistant", content: result, agent: "reporter" as AgentType },
       ];
       return { ...session, messages, updatedAt: now };
     }
@@ -535,42 +393,12 @@ function applyBackgroundEventToSession(
   }
 }
 
-function shouldAutoCompact(tokensTotal: number) {
-  if (tokensTotal <= 0) return false;
-  const resolvedConfig = resolveCompactionConfig();
-  const contextWindow = resolveModelContextWindow(resolvedConfig);
-  if (!contextWindow) return false;
-  return tokensTotal / contextWindow >= AUTO_COMPACT_RATIO;
-}
-
-function estimateTokensFromText(text: string) {
-  if (!text) return 0;
-  const ascii = text.replace(/[^\x00-\x7F]/g, "");
-  const asciiLen = ascii.length;
-  const nonAsciiLen = text.length - asciiLen;
-  const asciiTokens = Math.ceil(asciiLen / 4);
-  const nonAsciiTokens = Math.ceil(nonAsciiLen / 1.5);
-  return asciiTokens + nonAsciiTokens;
-}
-
-function estimateContextTokens(messages: Message[]) {
-  let total = 0;
-  for (const msg of messages) {
-    if (!msg?.content) continue;
-    total += estimateTokensFromText(String(msg.content));
-    total += 4; // rough role/format overhead
-  }
-  return total;
-}
-
-// ============ 任务统计 ============
+// ============ Task Stats ============
 
 export interface TaskStats {
-  // 当前任务统计
   toolCalls: number;
   toolSuccesses: number;
   toolFailures: number;
-  // 累计统计（所有会话）
   totalTasks: number;
   completedTasks: number;
   failedTasks: number;
@@ -579,118 +407,86 @@ export interface TaskStats {
   totalToolFailures: number;
 }
 
-// ============ Store 状态 ============
+// ============ Store State ============
 
 interface RustAgentState {
-  // 状态
+  // Core state
   status: AgentStatus;
   messages: Message[];
-  currentPlan: Plan | null;
-  currentStage: AgentStage | null;
-  orchestrationStages: AgentStage[];
-  orchestrationFallbackReason: string | null;
-  exploreReport: ExploreReport | null;
-  verificationReport: VerificationReport | null;
-  durableMemorySnapshot: DurableMemorySnapshot | null;
-  durableMemoryBusy: boolean;
-  sessionMemorySnapshot: SessionMemorySnapshot | null;
-  sessionMemoryBusy: boolean;
   error: string | null;
-  
-  // 意图分析结果
-  lastIntent: { type: string; route: string } | null;
-  
-  // 流式消息累积
+
+  // Streaming
   streamingContent: string;
   streamingReasoning: string;
   streamingReasoningStatus: StreamingReasoningStatus;
   streamingAgent: AgentType;
-  
-  // Token 统计
+
+  // Token tracking
   totalTokensUsed: number;
-  
-  // 任务统计
   taskStats: TaskStats;
-  
-  // 会话管理
+
+  // Session management
   sessions: RustAgentSession[];
   currentSessionId: string | null;
-  
-  // 配置
+
+  // Config
   autoApprove: boolean;
   autoCompactEnabled: boolean;
   pendingCompaction: boolean;
   isCompacting: boolean;
   lastTokenUsage: { input: number; output: number; total: number } | null;
-  
-  // 调试模式
+
+  // Debug
   debugEnabled: boolean;
   debugLogPath: string | null;
-  
-  // 工具审批（新增）
+
+  // Tool approval
   pendingTool: PendingToolApproval | null;
   queuedTasks: AgentQueuedTask[];
   activeTaskPreview: string | null;
   debugPromptStack: DebugPromptStack | null;
-  
-  // LLM 请求超时检测（新增）
+
+  // LLM request timeout detection
   llmRequestStartTime: number | null;
   llmRequestId: string | null;
   llmRetryState: LlmRetryState | null;
-  
-  // 心跳监控（新增）
+
+  // Heartbeat monitoring
   lastHeartbeat: number | null;
   connectionStatus: "connected" | "disconnected" | "unknown";
-  
-  // 操作
+
+  // Actions
   startTask: (task: string, context: TaskContext) => Promise<void>;
   abort: () => Promise<void>;
   clearChat: () => void;
   setAutoApprove: (value: boolean) => void;
   setAutoCompactEnabled: (value: boolean) => void;
-  
-  // 工具审批操作（新增）
+
+  // Tool approval actions
   approveTool: () => Promise<void>;
   rejectTool: () => Promise<void>;
   syncQueueStatus: () => Promise<void>;
-  
-  // 超时重试（新增）
+
+  // Timeout retry
   retryTimeout: () => Promise<void>;
-  
-  // 调试操作
+
+  // Debug actions
   enableDebug: (workspacePath: string) => Promise<void>;
   disableDebug: () => Promise<void>;
-  
-  // 会话操作
+
+  // Session actions
   createSession: (title?: string) => void;
   switchSession: (id: string) => void;
   deleteSession: (id: string) => void;
   renameSession: (id: string, title: string) => void;
   syncMobileSessions: () => Promise<void>;
   syncMobileOptions: () => Promise<void>;
-  
-  // 内部方法
+
+  // Internal methods
   _handleEvent: (event: AgentEventPayload) => void;
   _setupListeners: () => Promise<UnlistenFn | null>;
   _saveCurrentSession: () => void;
   _compactSession: () => Promise<void>;
-  _refreshDurableMemorySnapshot: (workspacePath?: string | null) => Promise<void>;
-  _extractDurableMemories: (options?: {
-    workspacePath?: string | null;
-    sessionId?: string | null;
-    messages?: Message[];
-    force?: boolean;
-  }) => Promise<DurableMemorySnapshot | null>;
-  _refreshSessionMemorySnapshot: (workspacePath?: string | null, sessionId?: string | null) => Promise<void>;
-  _updateSessionMemory: (
-    reason: SessionMemoryUpdateReason,
-    options?: {
-      workspacePath?: string | null;
-      sessionId?: string | null;
-      messages?: Message[];
-      force?: boolean;
-    }
-  ) => Promise<SessionMemorySnapshot | null>;
 }
 
 interface MobileSessionCommand {
@@ -737,7 +533,6 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
       getRecommendedTemperature(aiConfig.provider, actualModel),
     thinking_mode: aiConfig.thinkingMode ?? "auto",
     max_tokens: 4096,
-    // 0 means unlimited
     max_plan_iterations: 0,
     max_steps: 0,
     execution_mode: "auto",
@@ -760,26 +555,15 @@ function shouldStreamThinkingForAgent(config: AIConfig): boolean {
   );
 }
 
-// ============ Store 实现 ============
+// ============ Store Implementation ============
 
 export const useRustAgentStore = create<RustAgentState>()(
   persist(
     (set, get) => ({
-      // 初始状态
+      // Initial state
       status: "idle",
       messages: [],
-      currentPlan: null,
-      currentStage: null,
-      orchestrationStages: [],
-      orchestrationFallbackReason: null,
-      exploreReport: null,
-      verificationReport: null,
-      durableMemorySnapshot: null,
-      durableMemoryBusy: false,
-      sessionMemorySnapshot: null,
-      sessionMemoryBusy: false,
       error: null,
-      lastIntent: null,
       streamingContent: "",
       streamingReasoning: "",
       streamingReasoningStatus: "idle",
@@ -790,8 +574,7 @@ export const useRustAgentStore = create<RustAgentState>()(
       pendingCompaction: false,
       isCompacting: false,
       lastTokenUsage: null,
-      
-      // 任务统计初始状态
+
       taskStats: {
         toolCalls: 0,
         toolSuccesses: 0,
@@ -803,8 +586,7 @@ export const useRustAgentStore = create<RustAgentState>()(
         totalToolSuccesses: 0,
         totalToolFailures: 0,
       },
-      
-      // 会话管理初始状态
+
       sessions: [{
         id: "default-rust-session",
         title: getCurrentTranslations().common.newConversation,
@@ -814,166 +596,40 @@ export const useRustAgentStore = create<RustAgentState>()(
         totalTokensUsed: 0,
       }],
       currentSessionId: "default-rust-session",
-      
-      // 调试模式初始状态
+
       debugEnabled: false,
       debugLogPath: null,
-      
-      // 工具审批初始状态（新增）
+
       pendingTool: null,
       queuedTasks: [],
       activeTaskPreview: null,
       debugPromptStack: null,
-      
-      // LLM 请求超时检测初始状态（新增）
+
       llmRequestStartTime: null,
       llmRequestId: null,
       llmRetryState: null,
-      
-      // 心跳监控初始状态（新增）
+
       lastHeartbeat: null,
       connectionStatus: "unknown",
 
-      _refreshDurableMemorySnapshot: async (
-        workspacePath = resolveVaultPath(),
-      ) => {
-        if (!workspacePath) {
-          set({ durableMemorySnapshot: null, durableMemoryBusy: false });
-          return;
-        }
-        try {
-          const snapshot = await loadDurableMemorySnapshot(workspacePath);
-          if (resolveVaultPath() === workspacePath) {
-            set({ durableMemorySnapshot: snapshot, durableMemoryBusy: false });
-          }
-        } catch (error) {
-          console.warn("[RustAgent] Failed to refresh durable memory snapshot:", error);
-          if (resolveVaultPath() === workspacePath) {
-            set({ durableMemoryBusy: false });
-          }
-        }
-      },
+      // ---- Actions ----
 
-      _extractDurableMemories: async (options = {}) => {
-        const workspacePath = options.workspacePath ?? resolveVaultPath();
-        const sessionId = options.sessionId ?? get().currentSessionId;
-        const messages = options.messages ?? get().messages;
-
-        if (!workspacePath || !sessionId || messages.length === 0) {
-          return null;
-        }
-
-        if (resolveVaultPath() === workspacePath) {
-          set({ durableMemoryBusy: true });
-        }
-
-        try {
-          const agentConfig = buildAgentConfig(getAIConfig(), get().autoApprove);
-          const snapshot = await extractDurableMemories({
-            workspacePath,
-            sessionId,
-            messages,
-            config: agentConfig,
-            force: options.force,
-          });
-          if (resolveVaultPath() === workspacePath) {
-            set({ durableMemorySnapshot: snapshot, durableMemoryBusy: false });
-          }
-          return snapshot;
-        } catch (error) {
-          console.warn("[RustAgent] Durable memory extraction failed:", error);
-          if (resolveVaultPath() === workspacePath) {
-            set({ durableMemoryBusy: false });
-          }
-          return null;
-        }
-      },
-
-      _refreshSessionMemorySnapshot: async (
-        workspacePath = resolveVaultPath(),
-        sessionId = get().currentSessionId,
-      ) => {
-        if (!workspacePath || !sessionId) {
-          set({ sessionMemorySnapshot: null, sessionMemoryBusy: false });
-          return;
-        }
-        try {
-          const snapshot = await loadSessionMemorySnapshot(workspacePath, sessionId);
-          if (get().currentSessionId === sessionId) {
-            set({ sessionMemorySnapshot: snapshot, sessionMemoryBusy: false });
-          }
-        } catch (error) {
-          console.warn("[RustAgent] Failed to refresh session memory snapshot:", error);
-          if (get().currentSessionId === sessionId) {
-            set({ sessionMemoryBusy: false });
-          }
-        }
-      },
-
-      _updateSessionMemory: async (reason, options = {}) => {
-        const workspacePath = options.workspacePath ?? resolveVaultPath();
-        const sessionId = options.sessionId ?? get().currentSessionId;
-        const messages = options.messages ?? get().messages;
-
-        if (!workspacePath || !sessionId || messages.length === 0) {
-          return null;
-        }
-
-        const isCurrentSession = get().currentSessionId === sessionId;
-        if (isCurrentSession) {
-          set({ sessionMemoryBusy: true });
-        }
-
-        try {
-          const agentConfig = buildAgentConfig(getAIConfig(), get().autoApprove);
-          const snapshot = await updateSessionMemory({
-            workspacePath,
-            sessionId,
-            messages,
-            reason,
-            config: agentConfig,
-            force: options.force,
-          });
-          if (isCurrentSession && get().currentSessionId === sessionId) {
-            set({ sessionMemorySnapshot: snapshot, sessionMemoryBusy: false });
-          }
-          return snapshot;
-        } catch (error) {
-          console.warn("[RustAgent] Session memory update failed:", error);
-          if (isCurrentSession && get().currentSessionId === sessionId) {
-            set({ sessionMemoryBusy: false });
-          }
-          return null;
-        }
-      },
-
-      // 启动任务
       startTask: async (task: string, context: TaskContext) => {
         const aiConfig = getAIConfig();
         const streamingThinkingEnabled = shouldStreamThinkingForAgent(aiConfig);
-        
-        // 获取当前历史消息（发送前的消息）
+
         const currentMessages = get().messages;
-        
         const stats = get().taskStats;
         const currentStatus = get().status;
         const isBusy = currentStatus === "running" || currentStatus === "waiting_approval";
-        
-        // 先显示用户消息
+
+        // Show user message immediately
         set({
           ...(isBusy
             ? { error: null }
             : {
                 status: "running",
                 error: null,
-                currentPlan: null,
-                currentStage: null,
-                orchestrationStages: [],
-                orchestrationFallbackReason: null,
-                exploreReport: null,
-                verificationReport: null,
-                durableMemoryBusy: false,
-                lastIntent: null,
                 streamingContent: "",
                 streamingReasoning: "",
                 streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
@@ -999,15 +655,14 @@ export const useRustAgentStore = create<RustAgentState>()(
           });
           return;
         }
-        
-        // 调试：打印配置
-        console.log("[RustAgent] 当前配置:", {
+
+        console.log("[RustAgent] Config:", {
           provider: aiConfig.provider,
           model: aiConfig.model,
           hasApiKey: !!aiConfig.apiKey,
           baseUrl: aiConfig.baseUrl,
         });
-        
+
         set({
           taskStats: {
             ...stats,
@@ -1021,9 +676,9 @@ export const useRustAgentStore = create<RustAgentState>()(
             totalTasks: stats.totalTasks + 1,
           },
         });
-        
-        // 将历史消息转换为后端格式并传入
-        const historyForBackend = get().messages // 使用最新的 messages
+
+        // Build simplified context for backend
+        const historyForBackend = get().messages
           .filter(m => m.role === "user" || m.role === "assistant")
           .map(m => ({
             role: m.role,
@@ -1031,11 +686,6 @@ export const useRustAgentStore = create<RustAgentState>()(
           }));
 
         const config = buildAgentConfig(aiConfig, get().autoApprove);
-        
-        console.log("[RustAgent] 发送配置到 Rust:", {
-          ...config,
-          hasApiKey: !!config.api_key,
-        });
 
         try {
           try {
@@ -1043,7 +693,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           } catch (e) {
             console.warn("[RustAgent] Failed to sync mobile agent config:", e);
           }
-          // 将历史消息附加到 context 中传给后端
+
           const {
             display_message: _displayMessage,
             attachments: _displayAttachments,
@@ -1064,7 +714,6 @@ export const useRustAgentStore = create<RustAgentState>()(
         }
       },
 
-      // 中止任务
       abort: async () => {
         try {
           await invoke("agent_abort");
@@ -1081,27 +730,10 @@ export const useRustAgentStore = create<RustAgentState>()(
         }
       },
 
-      // 清空聊天
       clearChat: () => {
-        const workspacePath = resolveVaultPath();
-        const sessionId = get().currentSessionId;
-        if (workspacePath && sessionId) {
-          void resetSessionMemory(workspacePath, sessionId).catch((error) => {
-            console.warn("[RustAgent] Failed to reset session memory:", error);
-          });
-        }
         set({
           status: "idle",
           messages: [],
-          currentPlan: null,
-          currentStage: null,
-          orchestrationStages: [],
-          orchestrationFallbackReason: null,
-          exploreReport: null,
-          verificationReport: null,
-          durableMemoryBusy: false,
-          sessionMemorySnapshot: null,
-          sessionMemoryBusy: false,
           error: null,
           streamingContent: "",
           streamingReasoning: "",
@@ -1118,27 +750,24 @@ export const useRustAgentStore = create<RustAgentState>()(
         });
       },
 
-      // 设置自动审批
       setAutoApprove: (value: boolean) => {
         set({ autoApprove: value });
       },
 
-      // 设置自动压缩
       setAutoCompactEnabled: (value: boolean) => {
         set({
           autoCompactEnabled: value,
           pendingCompaction: value ? get().pendingCompaction : false,
         });
       },
-      
-      // 审批工具调用（新增）
+
       approveTool: async () => {
         const { pendingTool } = get();
         if (!pendingTool) {
           console.warn("[RustAgent] No pending tool to approve");
           return;
         }
-        
+
         try {
           await invoke("agent_approve_tool", {
             requestId: pendingTool.requestId,
@@ -1149,15 +778,14 @@ export const useRustAgentStore = create<RustAgentState>()(
           console.error("[RustAgent] Failed to approve tool:", e);
         }
       },
-      
-      // 拒绝工具调用（新增）
+
       rejectTool: async () => {
         const { pendingTool } = get();
         if (!pendingTool) {
           console.warn("[RustAgent] No pending tool to reject");
           return;
         }
-        
+
         try {
           await invoke("agent_approve_tool", {
             requestId: pendingTool.requestId,
@@ -1194,50 +822,33 @@ export const useRustAgentStore = create<RustAgentState>()(
           console.warn("[RustAgent] Failed to sync queue status:", e);
         }
       },
-      
-      // 超时重试（新增）
+
       retryTimeout: async () => {
-        // TODO: 实现超时重试逻辑
-        // 目前 Rust 端还没有实现重试机制
         console.log("[RustAgent] Retry timeout - not implemented yet");
       },
-      
-      // 启用调试模式
+
       enableDebug: async (workspacePath: string) => {
         try {
           const logPath = await invoke<string>("agent_enable_debug", { workspacePath });
           set({ debugEnabled: true, debugLogPath: logPath });
-          console.log("[RustAgent] 调试模式已启用，日志文件:", logPath);
         } catch (e) {
-          console.error("[RustAgent] 启用调试模式失败:", e);
-        }
-      },
-      
-      // 禁用调试模式
-      disableDebug: async () => {
-        try {
-          await invoke("agent_disable_debug");
-          const logPath = get().debugLogPath;
-          set({ debugEnabled: false, debugLogPath: null });
-          console.log("[RustAgent] 调试模式已禁用，日志文件:", logPath);
-        } catch (e) {
-          console.error("[RustAgent] 禁用调试模式失败:", e);
+          console.error("[RustAgent] Failed to enable debug:", e);
         }
       },
 
-      // 创建新会话
+      disableDebug: async () => {
+        try {
+          await invoke("agent_disable_debug");
+          set({ debugEnabled: false, debugLogPath: null });
+        } catch (e) {
+          console.error("[RustAgent] Failed to disable debug:", e);
+        }
+      },
+
+      // ---- Session Management ----
+
       createSession: (title?: string) => {
         const t = getCurrentTranslations();
-        const previousState = get();
-        const workspacePath = resolveVaultPath();
-        if (workspacePath && previousState.currentSessionId && previousState.messages.length > 0) {
-          void previousState._updateSessionMemory("session_switch", {
-            workspacePath,
-            sessionId: previousState.currentSessionId,
-            messages: previousState.messages,
-          });
-        }
-        // 先保存当前会话，再基于最新 sessions 追加一个全新会话
         get()._saveCurrentSession();
         const sessions = get().sessions;
 
@@ -1258,16 +869,6 @@ export const useRustAgentStore = create<RustAgentState>()(
           totalTokensUsed: 0,
           status: "idle",
           error: null,
-          currentPlan: null,
-          currentStage: null,
-          orchestrationStages: [],
-          orchestrationFallbackReason: null,
-          exploreReport: null,
-          verificationReport: null,
-          durableMemoryBusy: false,
-          sessionMemorySnapshot: null,
-          sessionMemoryBusy: false,
-          lastIntent: null,
           streamingContent: "",
           streamingReasoning: "",
           streamingReasoningStatus: "idle",
@@ -1276,22 +877,9 @@ export const useRustAgentStore = create<RustAgentState>()(
           lastTokenUsage: null,
         });
         void get().syncMobileSessions();
-        void get()._refreshDurableMemorySnapshot(resolveVaultPath());
-        void get()._refreshSessionMemorySnapshot(resolveVaultPath(), id);
       },
 
-      // 切换会话
       switchSession: (id: string) => {
-        const previousState = get();
-        const workspacePath = resolveVaultPath();
-        if (workspacePath && previousState.currentSessionId && previousState.messages.length > 0) {
-          void previousState._updateSessionMemory("session_switch", {
-            workspacePath,
-            sessionId: previousState.currentSessionId,
-            messages: previousState.messages,
-          });
-        }
-        // 保存当前会话，再切换到目标会话（使用最新 sessions）
         get()._saveCurrentSession();
         const sessions = get().sessions;
         const session = sessions.find(s => s.id === id);
@@ -1304,16 +892,6 @@ export const useRustAgentStore = create<RustAgentState>()(
           totalTokensUsed: session.totalTokensUsed,
           status: "idle",
           error: null,
-          currentPlan: null,
-          currentStage: null,
-          orchestrationStages: [],
-          orchestrationFallbackReason: null,
-          exploreReport: null,
-          verificationReport: null,
-          durableMemoryBusy: false,
-          sessionMemorySnapshot: null,
-          sessionMemoryBusy: false,
-          lastIntent: null,
           streamingContent: "",
           streamingReasoning: "",
           streamingReasoningStatus: "idle",
@@ -1321,16 +899,12 @@ export const useRustAgentStore = create<RustAgentState>()(
           isCompacting: false,
           lastTokenUsage: null,
         });
-        void get()._refreshDurableMemorySnapshot(resolveVaultPath());
-        void get()._refreshSessionMemorySnapshot(resolveVaultPath(), id);
       },
 
-      // 删除会话
       deleteSession: (id: string) => {
         const state = get();
         const newSessions = state.sessions.filter(s => s.id !== id);
-        
-        // 如果删除的是当前会话，切换到第一个会话或创建新会话
+
         if (state.currentSessionId === id) {
           if (newSessions.length > 0) {
             const firstSession = newSessions[0];
@@ -1339,15 +913,6 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: firstSession.id,
               messages: firstSession.messages,
               totalTokensUsed: firstSession.totalTokensUsed,
-              currentPlan: null,
-              currentStage: null,
-              orchestrationStages: [],
-              orchestrationFallbackReason: null,
-              exploreReport: null,
-              verificationReport: null,
-              durableMemoryBusy: false,
-              sessionMemorySnapshot: null,
-              sessionMemoryBusy: false,
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
               pendingCompaction: false,
@@ -1355,7 +920,6 @@ export const useRustAgentStore = create<RustAgentState>()(
               lastTokenUsage: null,
             });
           } else {
-            // 没有会话了，创建一个新的
             const newSession: RustAgentSession = {
               id: `rust-session-${Date.now()}`,
               title: getCurrentTranslations().common.newConversation,
@@ -1369,15 +933,6 @@ export const useRustAgentStore = create<RustAgentState>()(
               currentSessionId: newSession.id,
               messages: [],
               totalTokensUsed: 0,
-              currentPlan: null,
-              currentStage: null,
-              orchestrationStages: [],
-              orchestrationFallbackReason: null,
-              exploreReport: null,
-              verificationReport: null,
-              durableMemoryBusy: false,
-              sessionMemorySnapshot: null,
-              sessionMemoryBusy: false,
               streamingReasoning: "",
               streamingReasoningStatus: "idle",
               pendingCompaction: false,
@@ -1389,12 +944,8 @@ export const useRustAgentStore = create<RustAgentState>()(
           set({ sessions: newSessions });
         }
         void get().syncMobileSessions();
-        const nextSessionId = useRustAgentStore.getState().currentSessionId;
-        void get()._refreshDurableMemorySnapshot(resolveVaultPath());
-        void get()._refreshSessionMemorySnapshot(resolveVaultPath(), nextSessionId);
       },
 
-      // 重命名会话
       renameSession: (id: string, title: string) => {
         set(state => ({
           sessions: state.sessions.map(s =>
@@ -1404,7 +955,6 @@ export const useRustAgentStore = create<RustAgentState>()(
         void get().syncMobileSessions();
       },
 
-      // 同步会话到移动端
       syncMobileSessions: async () => {
         void get().syncMobileOptions();
         const vaultPath = resolveVaultPath();
@@ -1486,7 +1036,8 @@ export const useRustAgentStore = create<RustAgentState>()(
         }
       },
 
-      // 保存当前会话
+      // ---- Internal Methods ----
+
       _saveCurrentSession: () => {
         const t = getCurrentTranslations();
         set((state) => {
@@ -1511,7 +1062,6 @@ export const useRustAgentStore = create<RustAgentState>()(
         void get().syncMobileSessions();
       },
 
-      // 自动压缩上下文
       _compactSession: async () => {
         const { autoCompactEnabled, pendingCompaction, isCompacting, currentSessionId, messages } = get();
         if (!autoCompactEnabled || !pendingCompaction || isCompacting) return;
@@ -1519,20 +1069,10 @@ export const useRustAgentStore = create<RustAgentState>()(
         const snapshotSessionId = currentSessionId;
         const snapshotMessages = messages;
         const snapshotLength = snapshotMessages.length;
-        const workspacePath = resolveVaultPath();
 
         set({ isCompacting: true });
 
         try {
-          const sessionMemory =
-            workspacePath && snapshotSessionId
-              ? await get()._updateSessionMemory("compact_prepare", {
-                  workspacePath,
-                  sessionId: snapshotSessionId,
-                  messages: snapshotMessages,
-                })
-              : null;
-
           const { summaryMessage, toSummarize, tail } = splitMessagesForCompaction(snapshotMessages);
           if (toSummarize.length === 0) {
             set((state) => (
@@ -1544,11 +1084,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           }
 
           const summarySeed = summaryMessage ? [summaryMessage, ...toSummarize] : toSummarize;
-          const memoryPrefix =
-            sessionMemory && isSessionMemoryMeaningful(sessionMemory.content)
-              ? `[Session Memory]\n${sessionMemory.content}\n\n`
-              : "";
-          const summarySource = `${memoryPrefix}[Conversation To Compact]\n${formatMessagesForSummary(summarySeed)}`;
+          const summarySource = formatMessagesForSummary(summarySeed);
           if (!summarySource.trim()) {
             set((state) => (
               state.currentSessionId === snapshotSessionId
@@ -1627,29 +1163,27 @@ export const useRustAgentStore = create<RustAgentState>()(
         }
       },
 
-      // 处理事件
+      // ---- Event Handler ----
+
       _handleEvent: (event: AgentEventPayload) => {
         const state = get();
         const eventSessionId = event.session_id;
+
+        // Route background-session events to the correct session
         if (eventSessionId && eventSessionId !== state.currentSessionId) {
           set((current) => {
             const index = current.sessions.findIndex(s => s.id === eventSessionId);
-            if (index === -1) {
-              return current;
-            }
+            if (index === -1) return current;
             const session = current.sessions[index];
             const updatedSession = applyBackgroundEventToSession(session, event, eventSessionId);
-            if (updatedSession === session) {
-              return current;
-            }
+            if (updatedSession === session) return current;
             const nextSessions = [...current.sessions];
             nextSessions[index] = updatedSession;
-            return {
-              sessions: nextSessions,
-            };
+            return { sessions: nextSessions };
           });
           return;
         }
+
         const composeAssistantContent = (reasoning: string, content: string) => {
           const trimmedReasoning = reasoning.trim();
           const trimmedContent = content.trim();
@@ -1659,6 +1193,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           }
           return `<thinking>\n${trimmedReasoning}\n</thinking>\n\n${content}`;
         };
+
         const flushStreamingToMessages = () => {
           const mergedContent = composeAssistantContent(
             state.streamingReasoning,
@@ -1679,7 +1214,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             flushed: true,
           };
         };
-        
+
         switch (event.type) {
           case "run_started": {
             const aiConfig = getAIConfig();
@@ -1714,23 +1249,6 @@ export const useRustAgentStore = create<RustAgentState>()(
               llmRequestId: null,
               llmRetryState: null,
             });
-            {
-              const workspacePath = resolveVaultPath();
-              const sessionId = get().currentSessionId;
-              const latestMessages = get().messages;
-              if (workspacePath && sessionId && latestMessages.length > 0) {
-                void get()._updateSessionMemory("task_stage_completed", {
-                  workspacePath,
-                  sessionId,
-                  messages: latestMessages,
-                });
-                void get()._extractDurableMemories({
-                  workspacePath,
-                  sessionId,
-                  messages: latestMessages,
-                });
-              }
-            }
             void get()._compactSession();
             break;
           }
@@ -1973,21 +1491,6 @@ export const useRustAgentStore = create<RustAgentState>()(
             break;
           }
 
-          case "orchestration_updated": {
-            const data = event.data as {
-              stage?: AgentStage;
-              stages?: AgentStage[];
-              fallback_reason?: string | null;
-            };
-            set({
-              currentStage: data?.stage ?? null,
-              orchestrationStages: Array.isArray(data?.stages) ? data.stages : [],
-              orchestrationFallbackReason:
-                typeof data?.fallback_reason === "string" ? data.fallback_reason : null,
-            });
-            break;
-          }
-
           case "step_finish": {
             const { tokens } = event.data as { tokens?: { input?: number; output?: number } };
             const inputTokens = tokens?.input ?? 0;
@@ -2013,9 +1516,7 @@ export const useRustAgentStore = create<RustAgentState>()(
 
           case "status_change": {
             const { status } = event.data as { status: AgentStatus };
-            // 只更新状态，不添加消息（消息由 complete 事件处理）
-            // 清空流式内容防止重复
-            set({ 
+            set({
               status,
               streamingContent: "",
               streamingReasoning: "",
@@ -2026,10 +1527,7 @@ export const useRustAgentStore = create<RustAgentState>()(
 
           case "message_chunk": {
             const { content, agent } = event.data as { content: string; agent: AgentType };
-            
-            console.log("[RustAgent] message_chunk:", { content, agent, currentLen: state.streamingContent.length });
-            
-            // 如果 agent 变了且有之前的内容，先保存之前的内容
+
             if (state.streamingContent && state.streamingContent.trim() && state.streamingAgent !== agent) {
               set({
                 messages: [
@@ -2049,7 +1547,6 @@ export const useRustAgentStore = create<RustAgentState>()(
                 streamingAgent: agent,
               });
             } else {
-              // 直接累积内容
               set({
                 streamingContent: state.streamingContent + content,
                 streamingReasoningStatus: (() => {
@@ -2060,33 +1557,6 @@ export const useRustAgentStore = create<RustAgentState>()(
                 })(),
                 streamingAgent: agent,
               });
-            }
-            break;
-          }
-
-          case "intent_analysis": {
-            const { intent, route, message } = event.data as { 
-              intent: string; route: string; message: string 
-            };
-            // 检查是否已经有相同的意图分析消息（防止重复）
-            const hasIntentMsg = state.messages.some(m => 
-              m.content?.includes('🎯 意图分析') && m.agent === "coordinator"
-            );
-            if (!hasIntentMsg) {
-              set({
-                lastIntent: { type: intent, route },
-                messages: [
-                  ...state.messages,
-                  {
-                    role: "assistant",
-                    content: message,
-                    agent: "coordinator",
-                  },
-                ],
-              });
-            } else {
-              // 只更新意图，不添加重复消息
-              set({ lastIntent: { type: intent, route } });
             }
             break;
           }
@@ -2115,60 +1585,21 @@ export const useRustAgentStore = create<RustAgentState>()(
             break;
           }
 
-          case "plan_updated": {
-            // Windsurf 风格：每次接收完整的 plan
-            const { plan } = event.data as { plan: Plan };
-            console.log("[RustAgent] plan_updated:", plan);
-            set({ currentPlan: plan });
-            break;
-          }
-
-          case "explore_updated": {
-            const { report } = event.data as { report: ExploreReport };
-            set({ exploreReport: report });
-            break;
-          }
-
-          case "verification_updated": {
-            const { report } = event.data as { report: VerificationReport };
-            set({ verificationReport: report });
-            break;
-          }
-
-          case "token_usage": {
-            const { total_tokens } = event.data as { 
-              prompt_tokens: number; 
-              completion_tokens: number; 
-              total_tokens: number;
-            };
-            set({ totalTokensUsed: state.totalTokensUsed + total_tokens });
-            break;
-          }
-
           case "complete": {
             const { result } = event.data as { result: string };
             const stats = state.taskStats;
-            console.log("[RustAgent] complete event:", { result: result?.slice(0, 100), hasResult: !!result });
             if (result && result.trim()) {
-              // 检查最后一条消息是否完全相同（避免完全重复）
               const lastMsg = state.messages[state.messages.length - 1];
-              const isDuplicate = lastMsg && 
-                lastMsg.role === "assistant" && 
+              const isDuplicate = lastMsg &&
+                lastMsg.role === "assistant" &&
                 lastMsg.content === result;
-              
-              console.log("[RustAgent] complete check:", { 
-                lastMsgContent: lastMsg?.content?.slice(0, 50), 
-                isDuplicate,
-                messagesCount: state.messages.length 
-              });
-              
+
               if (!isDuplicate) {
-                const newMessages = [
-                  ...state.messages,
-                  { role: "assistant" as const, content: result, agent: "reporter" as AgentType },
-                ];
                 set({
-                  messages: newMessages,
+                  messages: [
+                    ...state.messages,
+                    { role: "assistant" as const, content: result, agent: "reporter" as AgentType },
+                  ],
                   streamingContent: "",
                   streamingReasoning: "",
                   streamingReasoningStatus: "idle",
@@ -2177,13 +1608,10 @@ export const useRustAgentStore = create<RustAgentState>()(
                     completedTasks: stats.completedTasks + 1,
                   },
                 });
-                // 保存到会话
                 get()._saveCurrentSession();
-                console.log("[RustAgent] Added complete message");
                 void get()._compactSession();
               } else {
-                // 只清空流式内容，但仍然计入完成
-                set({ 
+                set({
                   streamingContent: "",
                   streamingReasoning: "",
                   streamingReasoningStatus: "idle",
@@ -2192,9 +1620,7 @@ export const useRustAgentStore = create<RustAgentState>()(
                     completedTasks: stats.completedTasks + 1,
                   },
                 });
-                // 仍然保存会话
                 get()._saveCurrentSession();
-                console.log("[RustAgent] Skipped duplicate message");
                 void get()._compactSession();
               }
             }
@@ -2217,14 +1643,12 @@ export const useRustAgentStore = create<RustAgentState>()(
             });
             break;
           }
-          
-          // 新增：等待工具审批事件
+
           case "waiting_approval": {
-            const { tool, request_id } = event.data as { 
-              tool: ToolCall; 
+            const { tool, request_id } = event.data as {
+              tool: ToolCall;
               request_id: string;
             };
-            console.log("[RustAgent] waiting_approval:", { tool, request_id });
             set({
               status: "waiting_approval",
               pendingTool: {
@@ -2234,11 +1658,10 @@ export const useRustAgentStore = create<RustAgentState>()(
             });
             break;
           }
-          
-          // 新增：LLM 请求开始事件
+
           case "llm_request_start": {
-            const { request_id, timestamp } = event.data as { 
-              request_id: string; 
+            const { request_id, timestamp } = event.data as {
+              request_id: string;
               timestamp: number;
             };
             set({
@@ -2248,8 +1671,7 @@ export const useRustAgentStore = create<RustAgentState>()(
             });
             break;
           }
-          
-          // 新增：LLM 请求结束事件
+
           case "llm_request_end": {
             set({
               llmRequestStartTime: null,
@@ -2282,21 +1704,38 @@ export const useRustAgentStore = create<RustAgentState>()(
             });
             break;
           }
-          
-          // 新增：心跳事件（用于连接状态监控）
+
+          case "token_usage": {
+            const { total_tokens } = event.data as {
+              prompt_tokens: number;
+              completion_tokens: number;
+              total_tokens: number;
+            };
+            set({ totalTokensUsed: state.totalTokensUsed + total_tokens });
+            break;
+          }
+
           case "heartbeat": {
             const { timestamp } = event.data as { timestamp: number };
             set({
               lastHeartbeat: timestamp,
               connectionStatus: "connected",
             });
-            console.log("[RustAgent] heartbeat received:", timestamp);
             break;
           }
+
+          // Orchestration events are now no-ops (backend owns these)
+          case "orchestration_updated":
+          case "plan_updated":
+          case "explore_updated":
+          case "verification_updated":
+          case "intent_analysis":
+            break;
         }
       },
 
-      // 设置监听器
+      // ---- Listeners ----
+
       _setupListeners: async () => {
         try {
           const unlistenAgent = await listen<AgentEventPayload>(
@@ -2403,7 +1842,6 @@ export const useRustAgentStore = create<RustAgentState>()(
                 error: null,
                 source: payload.source ?? "mobile-workspace-updated",
               });
-              console.log("[MobileGateway] Workspace synced:", payload.path);
             }
           );
           let lastVaultPath: string | null = useFileStore.getState().vaultPath;
@@ -2441,7 +1879,6 @@ export const useRustAgentStore = create<RustAgentState>()(
         autoCompactEnabled: state.autoCompactEnabled,
         sessions: state.sessions,
         currentSessionId: state.currentSessionId,
-        // 持久化累计统计
         taskStats: {
           totalTasks: state.taskStats.totalTasks,
           completedTasks: state.taskStats.completedTasks,
@@ -2449,7 +1886,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           totalToolCalls: state.taskStats.totalToolCalls,
           totalToolSuccesses: state.taskStats.totalToolSuccesses,
           totalToolFailures: state.taskStats.totalToolFailures,
-          // 当前任务统计不持久化
+          // Per-task stats are not persisted
           toolCalls: 0,
           toolSuccesses: 0,
           toolFailures: 0,
@@ -2459,31 +1896,27 @@ export const useRustAgentStore = create<RustAgentState>()(
   )
 );
 
-// ============ 初始化监听器 ============
+// ============ Listener Initialization ============
 
 let unlistenFn: UnlistenFn | null = null;
 let isInitializing = false;
 
 export async function initRustAgentListeners() {
-  // 防止重复初始化
   if (isInitializing) {
     console.log("[RustAgent] Already initializing, skipping...");
     return;
   }
-  
+
   isInitializing = true;
-  
+
   try {
     if (unlistenFn) {
-      console.log("[RustAgent] Cleaning up old listener");
       unlistenFn();
       unlistenFn = null;
     }
     unlistenFn = await useRustAgentStore.getState()._setupListeners();
     await useRustAgentStore.getState().syncQueueStatus();
     await useRustAgentStore.getState().syncMobileSessions();
-    await useRustAgentStore.getState()._refreshDurableMemorySnapshot();
-    await useRustAgentStore.getState()._refreshSessionMemorySnapshot();
     console.log("[RustAgent] Listener initialized");
   } finally {
     isInitializing = false;
@@ -2496,5 +1929,3 @@ export function cleanupRustAgentListeners() {
     unlistenFn = null;
   }
 }
-
-// ============ 统计计算 ============

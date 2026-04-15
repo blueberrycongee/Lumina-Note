@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { useBrowserStore } from "@/stores/useBrowserStore";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { PluginSection } from "@/components/settings/PluginSection";
@@ -14,16 +13,7 @@ interface InstalledPluginsModalProps {
 
 export function InstalledPluginsModal({ isOpen, onClose }: InstalledPluginsModalProps) {
   const { t } = useLocaleStore();
-  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const pluginSettingSections = usePluginUiStore((state) => state.settingSections);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    hideAllWebViews();
-    return () => {
-      showAllWebViews();
-    };
-  }, [hideAllWebViews, isOpen, showAllWebViews]);
 
   useEffect(() => {
     if (!isOpen) return;

@@ -3,18 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UpdateModal } from "./UpdateModal";
 
-const { hideAllWebViewsMock, showAllWebViewsMock } = vi.hoisted(() => ({
-  hideAllWebViewsMock: vi.fn(),
-  showAllWebViewsMock: vi.fn(),
-}));
-
-vi.mock("@/stores/useBrowserStore", () => ({
-  useBrowserStore: () => ({
-    hideAllWebViews: hideAllWebViewsMock,
-    showAllWebViews: showAllWebViewsMock,
-  }),
-}));
-
 vi.mock("@/stores/useLocaleStore", () => ({
   useLocaleStore: () => ({
     t: {
@@ -33,31 +21,14 @@ vi.mock("../settings/UpdateChecker", () => ({
 }));
 
 describe("UpdateModal", () => {
-  beforeEach(() => {
-    hideAllWebViewsMock.mockClear();
-    showAllWebViewsMock.mockClear();
-  });
-
-  it("renders the dedicated update workflow and toggles webviews with modal visibility", () => {
+  it("renders the dedicated update workflow", () => {
     const { rerender } = render(<UpdateModal isOpen onClose={() => undefined} />);
 
     expect(screen.getByTestId("update-modal")).toBeInTheDocument();
     expect(screen.getByText("UpdateChecker")).toBeInTheDocument();
-    expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
 
     rerender(<UpdateModal isOpen={false} onClose={() => undefined} />);
 
     expect(screen.queryByTestId("update-modal")).not.toBeInTheDocument();
-    expect(showAllWebViewsMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("releases hidden webviews if the modal unmounts while still open", () => {
-    const { unmount } = render(<UpdateModal isOpen onClose={() => undefined} />);
-
-    expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
-
-    unmount();
-
-    expect(showAllWebViewsMock).toHaveBeenCalledTimes(1);
   });
 });

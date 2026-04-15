@@ -1,7 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
-import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import { FileEntry, readFile } from "@/lib/tauri";
@@ -53,17 +52,6 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
   
   const { fileTree, openFile, vaultPath } = useFileStore();
   const openClawMountedTree = useOpenClawWorkspaceStore((state) => state.getMountedFileTree(vaultPath));
-  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
-
-  // 弹窗打开时隐藏 WebView，关闭时恢复
-  useEffect(() => {
-    if (isOpen) {
-      hideAllWebViews();
-    } else {
-      showAllWebViews();
-    }
-  }, [isOpen, hideAllWebViews, showAllWebViews]);
-
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {

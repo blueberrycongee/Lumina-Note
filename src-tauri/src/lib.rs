@@ -9,13 +9,11 @@ pub mod forge_runtime;
 mod fs;
 mod llm;
 pub mod mcp;
-pub mod mobile_gateway;
 mod node_runtime;
 pub mod proxy;
 pub mod secure_store;
 mod typesetting;
 mod update_manager;
-mod vector_db;
 
 #[cfg(target_os = "macos")]
 pub mod traffic_lights;
@@ -26,21 +24,14 @@ pub use fs::*;
 pub use llm::*;
 pub use typesetting::*;
 
-// Re-export vector_db items explicitly to avoid shadowing
-pub use vector_db::{
-    check_file_needs_reindex, clear_vector_index, delete_file_vectors, delete_vectors,
-    get_vector_index_status, init_vector_db, search_vector_chunks, upsert_vector_chunks,
-    IndexStatus, SearchResult, VectorChunk,
-};
-
 // Re-export agent commands
 pub use agent::{
-    agent_abort, agent_approve_tool, agent_continue_with_answer, agent_delete_durable_memory_entry,
-    agent_disable_debug, agent_enable_debug, agent_extract_durable_memories,
-    agent_gc_durable_memory, agent_get_debug_log_path, agent_get_durable_memory_snapshot,
-    agent_get_queue_status, agent_get_session_memory_snapshot, agent_get_status,
-    agent_is_debug_enabled, agent_reset_session_memory, agent_reverify_durable_memory_entry,
-    agent_start_task, agent_update_session_memory, agent_upsert_durable_memory_entry, AgentState,
+    agent_abort, agent_approve_tool, agent_continue_with_answer,
+    agent_disable_debug, agent_enable_debug,
+    agent_get_debug_log_path,
+    agent_get_queue_status, agent_get_status,
+    agent_is_debug_enabled,
+    agent_start_task, vault_initialize, vault_load_index, vault_run_lint, AgentState,
 };
 
 // Re-export MCP commands

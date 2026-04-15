@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { MainAIChatShell } from "./MainAIChatShell";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useCodexPanelDockStore } from "@/stores/useCodexPanelDock";
 import { useAIStore } from "@/stores/useAIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
@@ -11,25 +10,15 @@ describe("MainAIChatShell", () => {
   beforeEach(() => {
     useUIStore.setState({ chatMode: "chat" });
     useFileStore.setState({ vaultPath: "/tmp" });
-    useCodexPanelDockStore.setState({ targets: {} });
     useAIStore.setState({ pendingInputAppends: [] });
   });
 
-  it("renders Codex slot and hides chat input when in codex mode", () => {
+  it("hides chat input when in codex mode", () => {
     useUIStore.setState({ chatMode: "codex" });
 
-    const { container, queryByRole } = render(<MainAIChatShell />);
+    const { queryByRole } = render(<MainAIChatShell />);
 
-    expect(container.querySelector('[data-codex-slot="main"]')).toBeTruthy();
     expect(queryByRole("textbox")).toBeNull();
-  });
-
-  it("does not render Codex slot in chat mode", () => {
-    useUIStore.setState({ chatMode: "chat" });
-
-    const { container } = render(<MainAIChatShell />);
-
-    expect(container.querySelector('[data-codex-slot="main"]')).toBeNull();
   });
 
   it("appends text into input when receiving ai-input-append event", () => {

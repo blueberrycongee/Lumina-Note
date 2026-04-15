@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { readFile, saveFile } from "@/lib/tauri";
-import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { reportOperationError } from "@/lib/reportError";
 
@@ -101,14 +100,6 @@ export const useSplitStore = create<SplitState>((set, get) => ({
     try {
       await saveFile(secondaryFile, secondaryContent);
       set({ secondaryIsDirty: false });
-      
-      // 检查是否属于某个数据库，如果是则刷新数据库
-      const { frontmatter, hasFrontmatter } = parseFrontmatter(secondaryContent);
-      if (hasFrontmatter && frontmatter.db) {
-        // 动态导入以避免循环依赖
-        const { useDatabaseStore } = await import("./useDatabaseStore");
-        useDatabaseStore.getState().refreshRows(frontmatter.db as string);
-      }
     } catch (error) {
       reportOperationError({
         source: "SplitStore.saveSecondary",

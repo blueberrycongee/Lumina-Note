@@ -13,12 +13,8 @@ import {
   Settings,
   Sun,
   Moon,
-  Video,
-  Database,
   Bot,
   Globe,
-  Brain,
-  LayoutGrid,
   Images,
   Star,
   Download,
@@ -71,8 +67,6 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
     fileTree,
     openAIMainTab,
     currentFile,
-    openFlashcardTab,
-    openCardFlowTab,
     openImageManagerTab,
   } = useFileStore();
   const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
@@ -327,20 +321,6 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             <FileText size={18} />
           </button>
 
-          {/* Card Flow */}
-          <button
-            onClick={openCardFlowTab}
-            className={cn(
-              "w-8 h-8 ui-icon-btn",
-              activeSection === "cardflow"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
-            )}
-            title={t.ribbon.cardView}
-          >
-            <LayoutGrid size={18} />
-          </button>
-
           <button
             onClick={openImageManagerTab}
             className={cn(
@@ -366,34 +346,6 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             title={t.graph.title}
           >
             <Network size={18} />
-          </button>
-
-          {/* Database */}
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-create-database"))}
-            className={cn(
-              "w-8 h-8 ui-icon-btn",
-              activeSection === "database"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
-            )}
-            title={t.ribbon.database}
-          >
-            <Database size={18} />
-          </button>
-
-          {/* Flashcard */}
-          <button
-            onClick={() => openFlashcardTab()}
-            className={cn(
-              "w-8 h-8 ui-icon-btn",
-              activeSection === "flashcard"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
-            )}
-            title={t.ribbon.flashcardReview}
-          >
-            <Brain size={18} />
           </button>
 
           {/* Plugins */}

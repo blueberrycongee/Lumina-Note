@@ -3392,7 +3392,6 @@ export const CodeMirrorEditor = forwardRef<
   const transitionSequenceRef = useRef(0);
 
   const {
-    openVideoNoteTab,
     openPDFTab,
     fileTree,
     openFile,
@@ -3400,7 +3399,6 @@ export const CodeMirrorEditor = forwardRef<
     currentFile,
   } = useFileStore(
     useShallow((state) => ({
-      openVideoNoteTab: state.openVideoNoteTab,
       openPDFTab: state.openPDFTab,
       fileTree: state.fileTree,
       openFile: state.openFile,
@@ -4226,13 +4224,7 @@ export const CodeMirrorEditor = forwardRef<
       }
 
       if ((e.ctrlKey || e.metaKey) && link) {
-        const h = link.getAttribute("href")!;
-        if (h.includes("bilibili") || h.includes("b23.tv")) {
-          e.preventDefault();
-          e.stopPropagation();
-          openVideoNoteTab(h);
-          return;
-        }
+        // Link click handling (ctrl/cmd+click)
       }
     };
 

@@ -6,14 +6,11 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
-import { useMemoryStore } from "@/stores/useMemoryStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { reverifyDurableMemoryEntry } from "@/services/memory/durableMemory";
 import { ChatInput } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
 import { PlanCard } from "./PlanCard";
-import { MemoryReviewPanel } from "@/components/memory/MemoryReviewPanel";
 import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
@@ -32,16 +29,12 @@ import {
   RefreshCw,
   Bug,
   FileText,
-  BookOpen,
   Layers3,
 } from "lucide-react";
 
 export function AgentPanel() {
   const { t } = useLocaleStore();
   const [input, setInput] = useState("");
-  const [memoryExpanded, setMemoryExpanded] = useState(true);
-  const [reverifyBusyId, setReverifyBusyId] = useState<string | null>(null);
-  const [memoryError, setMemoryError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isRecording, interimText, toggleRecording } = useSpeechToText((text: string) => {
     setInput((prev) => (prev ? prev + " " + text : text));
@@ -49,12 +42,9 @@ export function AgentPanel() {
 
   // 使用 Rust Agent store
   const rustStore = useRustAgentStore();
-  const hydrateMemory = useMemoryStore((state) => state.hydrateFromSnapshot);
-  
+
   // 选择实际使用的 store 数据
   const status = rustStore.status;
-  const durableMemorySnapshot = rustStore.durableMemorySnapshot;
-  const durableMemoryBusy = rustStore.durableMemoryBusy;
   const exploreReport = rustStore.exploreReport;
   const verificationReport = rustStore.verificationReport;
   const orchestrationStages = rustStore.orchestrationStages;
@@ -112,14 +102,6 @@ export function AgentPanel() {
   };
 
   const vaultPath = useFileStore((state) => state.vaultPath);
-
-  const staleEntries = (durableMemorySnapshot?.staleEntryIds ?? [])
-    .map((id) => durableMemorySnapshot?.entries.find((entry) => entry.id === id))
-    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-
-  useEffect(() => {
-    hydrateMemory(durableMemorySnapshot);
-  }, [durableMemorySnapshot, hydrateMemory]);
 
   // 滚动到底部
   useEffect(() => {
@@ -329,123 +311,6 @@ export function AgentPanel() {
               </div>
             )}
           </div>
-        )}
-
-        {(durableMemoryBusy || durableMemorySnapshot) && (
-          <>
-            <MemoryReviewPanel
-              workspacePath={vaultPath || null}
-              snapshot={durableMemorySnapshot}
-              sessionSnapshot={rustStore.sessionMemorySnapshot}
-              onSnapshotChanged={(nextSnapshot) => {
-                if (nextSnapshot) {
-                  hydrateMemory(nextSnapshot);
-                  rustStore._refreshDurableMemorySnapshot(vaultPath);
-                }
-              }}
-            />
-
-            <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
-              <button
-                onClick={() => setMemoryExpanded((prev) => !prev)}
-                className="w-full flex items-center justify-between gap-2 text-xs"
-                title={memoryExpanded ? "收起 Memory Wiki 面板" : "展开 Memory Wiki 面板"}
-              >
-                <span className="font-medium flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Memory Wiki
-                </span>
-                <span className="text-muted-foreground">
-                  {durableMemorySnapshot
-                    ? `${durableMemorySnapshot.entries.length} entries · ${durableMemorySnapshot.wikiPages.length} pages`
-                    : "loading..."}
-                </span>
-              </button>
-
-              {memoryExpanded && durableMemorySnapshot && (
-                <div className="mt-2 space-y-2">
-                  <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                    {[
-                      ["我是谁", "me"],
-                      ["我的项目", "projects"],
-                      ["我的人物关系", "people"],
-                      ["我的工作模式", "routines"],
-                    ].map(([label, id]) => {
-                      const page = durableMemorySnapshot.wikiPages.find((item) => item.id === id);
-                      return (
-                        <button
-                          key={id}
-                          onClick={() => page && void useFileStore.getState().openFile(page.path)}
-                          className="rounded border border-border/60 px-2 py-1 text-left text-muted-foreground hover:bg-accent hover:text-foreground"
-                          disabled={!page}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {durableMemorySnapshot.wikiPages.map((page) => (
-                      <button
-                        key={page.id}
-                        onClick={() => void useFileStore.getState().openFile(page.path)}
-                        className="rounded-full border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent"
-                        title={`打开 Wiki 页面：${page.title}（${page.path}）`}
-                      >
-                        {page.title}
-                        {page.staleEntryCount > 0 ? ` (${page.staleEntryCount} stale)` : ""}
-                      </button>
-                    ))}
-                  </div>
-
-                  {staleEntries.length > 0 ? (
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] text-warning">Stale memories: {staleEntries.length}</p>
-                      {staleEntries.slice(0, 5).map((entry) => (
-                        <div key={entry.id} className="flex items-center justify-between gap-2 text-xs bg-background/60 border border-border/50 rounded px-2 py-1">
-                          <div className="min-w-0">
-                            <p className="truncate text-foreground">{entry.title}</p>
-                            <p className="truncate text-muted-foreground">{entry.scope}</p>
-                          </div>
-                          <button
-                            onClick={async () => {
-                              if (!vaultPath || reverifyBusyId) return;
-                              setMemoryError(null);
-                              setReverifyBusyId(entry.id);
-                              try {
-                                await reverifyDurableMemoryEntry(vaultPath, entry.id);
-                                await rustStore._refreshDurableMemorySnapshot(vaultPath);
-                              } catch (error) {
-                                setMemoryError(error instanceof Error ? error.message : String(error));
-                              } finally {
-                                setReverifyBusyId(null);
-                              }
-                            }}
-                            disabled={!vaultPath || reverifyBusyId !== null}
-                            className="shrink-0 rounded border border-border/60 px-2 py-0.5 text-[10px] text-foreground hover:bg-accent disabled:opacity-60"
-                            title={
-                              reverifyBusyId === entry.id
-                                ? `正在重验证：${entry.title}`
-                                : `重验证这条记忆并刷新 last verified 时间：${entry.title}`
-                            }
-                          >
-                            {reverifyBusyId === entry.id ? "Reverifying..." : "Reverify"}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">No stale memories detected.</p>
-                  )}
-
-                  {memoryError && (
-                    <p className="text-[11px] text-destructive">{memoryError}</p>
-                  )}
-                </div>
-              )}
-            </div>
-          </>
         )}
 
         {/* 消息列表 - 使用 AgentMessageRenderer 组件 */}

@@ -9,14 +9,12 @@ import {
   createDir,
   estimateDirSize,
 } from "@/lib/tauri";
-import { VideoNoteFile, parseVideoNoteMd } from "@/types/videoNote";
 import { invoke } from "@tauri-apps/api/core";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useTypesettingDocStore } from "@/stores/useTypesettingDocStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
-import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { reportOperationError } from "@/lib/reportError";
 
 // 历史记录条目
@@ -35,13 +33,8 @@ export type TabType =
   | "isolated-graph"
   | "typesetting-preview"
   | "typesetting-doc"
-  | "video-note"
-  | "database"
   | "pdf"
   | "ai-chat"
-  | "webpage"
-  | "flashcard"
-  | "cardflow"
   | "image-manager"
   | "profile-preview"
   | "plugin-view";
@@ -67,12 +60,6 @@ export interface Tab {
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
   isolatedNode?: IsolatedNodeInfo; // 孤立视图的目标节点
-  videoUrl?: string; // 视频笔记的 URL
-  videoNoteData?: VideoNoteFile; // 从分享或内容打开时传入的笔记数据
-  databaseId?: string; // 数据库 ID
-  webpageUrl?: string; // 网页 URL
-  webpageTitle?: string; // 网页标题
-  flashcardDeckId?: string; // 闪卡牌组 ID
   pluginViewType?: string; // 插件视图类型
   pluginViewHtml?: string; // 插件视图 HTML
 }
@@ -85,43 +72,6 @@ type MobileWorkspaceSyncStatus = {
   error: string | null;
   source: string | null;
 };
-
-async function refreshDatabaseRowsForPath(path: string): Promise<void> {
-  if (!path.toLowerCase().endsWith(".md")) return;
-  try {
-    const content = await readFile(path);
-    const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
-    const dbId = hasFrontmatter ? frontmatter.db : null;
-    if (!dbId) return;
-    const { useDatabaseStore } = await import("./useDatabaseStore");
-    await useDatabaseStore.getState().refreshRows(String(dbId));
-  } catch (error) {
-    reportOperationError({
-      source: "FileStore.refreshDatabaseRowsForPath",
-      action: "Refresh linked database rows",
-      error,
-      level: "warning",
-      context: { path },
-    });
-  }
-}
-
-async function refreshAllLoadedDatabases(): Promise<void> {
-  try {
-    const { useDatabaseStore } = await import("./useDatabaseStore");
-    const dbIds = Object.keys(useDatabaseStore.getState().databases);
-    for (const dbId of dbIds) {
-      await useDatabaseStore.getState().refreshRows(dbId);
-    }
-  } catch (error) {
-    reportOperationError({
-      source: "FileStore.refreshAllLoadedDatabases",
-      action: "Refresh loaded databases",
-      error,
-      level: "warning",
-    });
-  }
-}
 
 interface FileState {
   // Vault
@@ -199,16 +149,9 @@ interface FileState {
   ) => Promise<void>;
   openProfilePreviewTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
-  openVideoNoteTab: (url: string, title?: string) => void;
-  openVideoNoteFromContent: (content: string, title?: string) => void;
-  openDatabaseTab: (dbId: string, dbName: string) => void;
   openPDFTab: (pdfPath: string) => void;
   openDiagramTab: (diagramPath: string) => void;
   openAIMainTab: () => void;
-  openWebpageTab: (url: string, title?: string) => void;
-  updateWebpageTab: (tabId: string, url?: string, title?: string) => void;
-  openFlashcardTab: (deckId?: string) => void;
-  openCardFlowTab: () => void;
   openImageManagerTab: () => void;
   openPluginViewTab: (viewType: string, title: string, html: string) => void;
 
@@ -1388,293 +1331,6 @@ export const useFileStore = create<FileState>()(
         });
       },
 
-      // 打开视频笔记标签页（单例模式：只允许一个视频标签页）
-      openVideoNoteTab: (url: string, title?: string) => {
-        const t = getCurrentTranslations();
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-        } = get();
-
-        // 检查是否已有视频标签页
-        const existingVideoIndex = tabs.findIndex(
-          (t) => t.type === "video-note",
-        );
-
-        if (existingVideoIndex >= 0) {
-          // 已有视频标签页，更新 URL 并切换过去
-          const updatedTabs = [...tabs];
-
-          // 保存当前标签页状态
-          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-            updatedTabs[activeTabIndex] = {
-              ...updatedTabs[activeTabIndex],
-              content: currentContent,
-              isDirty,
-              undoStack,
-              redoStack,
-            };
-          }
-
-          // 提取 BV 号
-          const bvidMatch = url.match(/BV[A-Za-z0-9]+/);
-          const bvid = bvidMatch ? bvidMatch[0] : "";
-
-          // 更新视频标签页
-          const defaultName = `${t.videoNote.title} - ${bvid}`;
-          updatedTabs[existingVideoIndex] = {
-            ...updatedTabs[existingVideoIndex],
-            videoUrl: url,
-            name: title || defaultName,
-          };
-
-          set({
-            tabs: updatedTabs,
-            activeTabIndex: existingVideoIndex,
-            currentFile: null,
-            currentContent: "",
-            isDirty: false,
-          });
-          return;
-        }
-
-        // 没有视频标签页，创建新的
-        const bvidMatch = url.match(/BV[A-Za-z0-9]+/);
-        const bvid = bvidMatch ? bvidMatch[0] : Date.now().toString();
-        const tabId = `__video_${bvid}__`;
-        const defaultName = `${t.videoNote.title} - ${bvid}`;
-
-        // 保存当前标签页状态
-        let updatedTabs = [...tabs];
-        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-          updatedTabs[activeTabIndex] = {
-            ...updatedTabs[activeTabIndex],
-            content: currentContent,
-            isDirty,
-            undoStack,
-            redoStack,
-          };
-        }
-
-        // 创建视频笔记标签页
-        const videoTab: Tab = {
-          id: tabId,
-          type: "video-note",
-          path: "",
-          name: title || defaultName,
-          content: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-          videoUrl: url,
-        };
-
-        updatedTabs.push(videoTab);
-
-        set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
-          currentFile: null,
-          currentContent: "",
-          isDirty: false,
-        });
-      },
-
-      // 从已分享的 Markdown 内容打开视频笔记（支持识别并加载时间戳）
-      openVideoNoteFromContent: (content: string, title?: string) => {
-        const t = getCurrentTranslations();
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-        } = get();
-
-        try {
-          const parsed = parseVideoNoteMd(content);
-          if (!parsed) {
-            // 如果不是视频笔记格式，降级为创建空视频标签（不设置数据）
-            get().openVideoNoteTab("", title);
-            return;
-          }
-
-          // 单例视频标签：如果已存在则更新数据并切换
-          const existingVideoIndex = tabs.findIndex(
-            (t) => t.type === "video-note",
-          );
-          if (existingVideoIndex >= 0) {
-            const updatedTabs = [...tabs];
-            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-              updatedTabs[activeTabIndex] = {
-                ...updatedTabs[activeTabIndex],
-                content: currentContent,
-                isDirty,
-                undoStack,
-                redoStack,
-              };
-            }
-
-            updatedTabs[existingVideoIndex] = {
-              ...updatedTabs[existingVideoIndex],
-              videoUrl: parsed.video.url,
-              name:
-                title ||
-                parsed.video.title ||
-                `${t.videoNote.filePrefix}-${parsed.video.bvid}`,
-              videoNoteData: parsed,
-            } as Tab;
-
-            set({
-              tabs: updatedTabs,
-              activeTabIndex: existingVideoIndex,
-              currentFile: null,
-              currentContent: "",
-              isDirty: false,
-            });
-            return;
-          }
-
-          // 创建新的 video-note 标签并附带解析后的笔记数据
-          const bvidMatch = parsed.video.bvid
-            ? parsed.video.bvid.match(/BV[A-Za-z0-9]+/)
-            : null;
-          const bvid = bvidMatch ? bvidMatch[0] : Date.now().toString();
-          const tabId = `__video_${bvid}__`;
-
-          let updatedTabs = [...tabs];
-          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-            updatedTabs[activeTabIndex] = {
-              ...updatedTabs[activeTabIndex],
-              content: currentContent,
-              isDirty,
-              undoStack,
-              redoStack,
-            };
-          }
-
-          const videoTab: Tab = {
-            id: tabId,
-            type: "video-note",
-            path: "",
-            name:
-              title ||
-              parsed.video.title ||
-              `${t.videoNote.filePrefix}-${bvid}`,
-            content: "",
-            isDirty: false,
-            undoStack: [],
-            redoStack: [],
-            videoUrl: parsed.video.url,
-            videoNoteData: parsed,
-          };
-
-          updatedTabs.push(videoTab);
-
-          set({
-            tabs: updatedTabs,
-            activeTabIndex: updatedTabs.length - 1,
-            currentFile: null,
-            currentContent: "",
-            isDirty: false,
-          });
-        } catch (error) {
-          reportOperationError({
-            source: "FileStore.openVideoNoteFromContent",
-            action: "Open video note from content",
-            error,
-            level: "warning",
-          });
-          // fallback
-          get().openVideoNoteTab("", title);
-        }
-      },
-
-      // 打开数据库标签页
-      openDatabaseTab: (dbId: string, dbName: string) => {
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-        } = get();
-
-        // 检查是否已有此数据库的标签页
-        const existingDbIndex = tabs.findIndex(
-          (t) => t.type === "database" && t.databaseId === dbId,
-        );
-
-        if (existingDbIndex >= 0) {
-          // 已有此数据库标签页，直接切换
-          let updatedTabs = [...tabs];
-
-          // 保存当前标签页状态
-          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-            updatedTabs[activeTabIndex] = {
-              ...updatedTabs[activeTabIndex],
-              content: currentContent,
-              isDirty,
-              undoStack,
-              redoStack,
-            };
-          }
-
-          set({
-            tabs: updatedTabs,
-            activeTabIndex: existingDbIndex,
-            currentFile: null,
-            currentContent: "",
-            isDirty: false,
-          });
-          return;
-        }
-
-        // 创建新数据库标签页
-        const tabId = `__database_${dbId}__`;
-
-        // 保存当前标签页状态
-        let updatedTabs = [...tabs];
-        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-          updatedTabs[activeTabIndex] = {
-            ...updatedTabs[activeTabIndex],
-            content: currentContent,
-            isDirty,
-            undoStack,
-            redoStack,
-          };
-        }
-
-        // 创建数据库标签页
-        const dbTab: Tab = {
-          id: tabId,
-          type: "database",
-          path: "",
-          name: dbName,
-          content: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-          databaseId: dbId,
-        };
-
-        updatedTabs.push(dbTab);
-
-        set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
-          currentFile: null,
-          currentContent: "",
-          isDirty: false,
-        });
-      },
-
       // 打开 PDF 标签页
       openPDFTab: (pdfPath: string) => {
         const {
@@ -1828,63 +1484,6 @@ export const useFileStore = create<FileState>()(
         });
       },
 
-      // 打开卡片流标签页
-      openCardFlowTab: () => {
-        const t = getCurrentTranslations();
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-        } = get();
-
-        // 检查是否已有 cardflow 标签页
-        const existingIndex = tabs.findIndex((tab) => tab.type === "cardflow");
-        if (existingIndex !== -1) {
-          get().switchTab(existingIndex);
-          return;
-        }
-
-        // 保存当前标签页状态
-        let updatedTabs = [...tabs];
-        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-          updatedTabs[activeTabIndex] = {
-            ...updatedTabs[activeTabIndex],
-            content: currentContent,
-            isDirty,
-            undoStack,
-            redoStack,
-          };
-        }
-
-        // 创建卡片流标签页
-        const cardFlowTab: Tab = {
-          id: "__card_flow__",
-          type: "cardflow",
-          path: "",
-          name: t.views.cardView,
-          content: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-        };
-
-        updatedTabs.push(cardFlowTab);
-
-        set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
-          currentFile: null,
-          currentContent: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-          lastSavedContent: "",
-        });
-      },
-
       openImageManagerTab: () => {
         const t = getCurrentTranslations();
         const {
@@ -2004,187 +1603,6 @@ export const useFileStore = create<FileState>()(
         };
 
         updatedTabs.push(pluginTab);
-        set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
-          currentFile: null,
-          currentContent: "",
-          isDirty: false,
-        });
-      },
-
-      // 打开网页标签页
-      openWebpageTab: (url: string, title?: string) => {
-        const t = getCurrentTranslations();
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-          switchTab,
-        } = get();
-
-        // 如果已有相同 URL 的网页标签，直接切换过去，避免重复创建
-        if (url) {
-          const existingIndex = tabs.findIndex(
-            (t) => t.type === "webpage" && t.webpageUrl === url,
-          );
-          if (existingIndex !== -1) {
-            // 在切换前仍然保存当前标签页状态
-            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-              const updatedTabs = [...tabs];
-              updatedTabs[activeTabIndex] = {
-                ...updatedTabs[activeTabIndex],
-                content: currentContent,
-                isDirty,
-                undoStack,
-                redoStack,
-              };
-              set({ tabs: updatedTabs });
-            }
-            switchTab(existingIndex);
-            return;
-          }
-        }
-
-        // 生成唯一 ID
-        const tabId = `__webpage_${Date.now()}__`;
-
-        // 保存当前标签页状态
-        let updatedTabs = [...tabs];
-        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-          updatedTabs[activeTabIndex] = {
-            ...updatedTabs[activeTabIndex],
-            content: currentContent,
-            isDirty,
-            undoStack,
-            redoStack,
-          };
-        }
-
-        // 尝试从 URL 提取域名作为默认标题
-        let defaultTitle = title || t.views.newTab;
-        if (!title && url) {
-          try {
-            const urlObj = new URL(url);
-            defaultTitle = urlObj.hostname;
-          } catch {
-            // 无效 URL，使用默认标题
-          }
-        }
-
-        // 创建网页标签页
-        const webpageTab: Tab = {
-          id: tabId,
-          type: "webpage",
-          path: "",
-          name: defaultTitle,
-          content: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-          webpageUrl: url,
-          webpageTitle: defaultTitle,
-        };
-
-        updatedTabs.push(webpageTab);
-
-        set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
-          currentFile: null,
-          currentContent: "",
-          isDirty: false,
-        });
-      },
-
-      // 更新网页标签页信息
-      updateWebpageTab: (tabId: string, url?: string, title?: string) => {
-        const { tabs } = get();
-
-        const updatedTabs = tabs.map((tab) => {
-          if (tab.id === tabId && tab.type === "webpage") {
-            return {
-              ...tab,
-              webpageUrl: url ?? tab.webpageUrl,
-              webpageTitle: title ?? tab.webpageTitle,
-              name: title ?? tab.name,
-            };
-          }
-          return tab;
-        });
-
-        set({ tabs: updatedTabs });
-      },
-
-      // 打开闪卡标签页
-      openFlashcardTab: (deckId?: string) => {
-        const t = getCurrentTranslations();
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-          switchTab,
-        } = get();
-
-        // 如果已有闪卡标签页，直接切换
-        const existingIndex = tabs.findIndex((t) => t.type === "flashcard");
-        if (existingIndex !== -1) {
-          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-            const updatedTabs = [...tabs];
-            updatedTabs[activeTabIndex] = {
-              ...updatedTabs[activeTabIndex],
-              content: currentContent,
-              isDirty,
-              undoStack,
-              redoStack,
-            };
-            // 更新牌组 ID
-            updatedTabs[existingIndex] = {
-              ...updatedTabs[existingIndex],
-              flashcardDeckId: deckId,
-            };
-            set({ tabs: updatedTabs });
-          }
-          switchTab(existingIndex);
-          return;
-        }
-
-        // 生成唯一 ID
-        const tabId = `__flashcard_${Date.now()}__`;
-
-        // 保存当前标签页状态
-        let updatedTabs = [...tabs];
-        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-          updatedTabs[activeTabIndex] = {
-            ...updatedTabs[activeTabIndex],
-            content: currentContent,
-            isDirty,
-            undoStack,
-            redoStack,
-          };
-        }
-
-        // 创建闪卡标签页
-        const flashcardTab: Tab = {
-          id: tabId,
-          type: "flashcard",
-          path: "",
-          name: t.views.flashcardReview,
-          content: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-          flashcardDeckId: deckId,
-        };
-
-        updatedTabs.push(flashcardTab);
-
         set({
           tabs: updatedTabs,
           activeTabIndex: updatedTabs.length - 1,
@@ -2711,7 +2129,6 @@ export const useFileStore = create<FileState>()(
 
           // Refresh file tree
           await refreshFileTree();
-          await refreshDatabaseRowsForPath(newPath);
         } catch (error) {
           reportOperationError({
             source: "FileStore.moveFileToFolder",
@@ -2794,7 +2211,6 @@ export const useFileStore = create<FileState>()(
 
           // Refresh file tree
           await refreshFileTree();
-          await refreshAllLoadedDatabases();
         } catch (error) {
           reportOperationError({
             source: "FileStore.moveFolderToFolder",

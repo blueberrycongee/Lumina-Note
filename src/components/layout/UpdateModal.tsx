@@ -1,8 +1,6 @@
-import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
-import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { UpdateChecker } from "../settings/UpdateChecker";
 
@@ -13,17 +11,6 @@ interface UpdateModalProps {
 
 export function UpdateModal({ isOpen, onClose }: UpdateModalProps) {
   const { t } = useLocaleStore();
-  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    void hideAllWebViews();
-
-    return () => {
-      void showAllWebViews();
-    };
-  }, [hideAllWebViews, isOpen, showAllWebViews]);
 
   if (!isOpen) return null;
 

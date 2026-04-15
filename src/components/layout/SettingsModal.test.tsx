@@ -4,12 +4,8 @@ import { SettingsModal } from "./SettingsModal";
 
 const {
   getVersionMock,
-  hideAllWebViewsMock,
-  showAllWebViewsMock,
 } = vi.hoisted(() => ({
   getVersionMock: vi.fn(async () => "1.2.3"),
-  hideAllWebViewsMock: vi.fn(),
-  showAllWebViewsMock: vi.fn(),
 }));
 
 vi.mock("@tauri-apps/api/app", () => ({
@@ -46,13 +42,6 @@ vi.mock("@/stores/useAIStore", () => ({
     config: {
       model: "gpt-5.4",
     },
-  }),
-}));
-
-vi.mock("@/stores/useBrowserStore", () => ({
-  useBrowserStore: () => ({
-    hideAllWebViews: hideAllWebViewsMock,
-    showAllWebViews: showAllWebViewsMock,
   }),
 }));
 
@@ -159,8 +148,6 @@ describe("SettingsModal", () => {
 
   beforeEach(() => {
     getVersionMock.mockClear();
-    hideAllWebViewsMock.mockClear();
-    showAllWebViewsMock.mockClear();
     onOpenUpdateModal.mockClear();
   });
 
@@ -177,18 +164,5 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByTestId("settings-open-update-modal"));
 
     expect(onOpenUpdateModal).toHaveBeenCalledTimes(1);
-    expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("releases hidden webviews if the modal unmounts while still open", () => {
-    const { unmount } = render(
-      <SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />,
-    );
-
-    expect(hideAllWebViewsMock).toHaveBeenCalledTimes(1);
-
-    unmount();
-
-    expect(showAllWebViewsMock).toHaveBeenCalledTimes(1);
   });
 });

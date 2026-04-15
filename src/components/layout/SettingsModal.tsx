@@ -9,7 +9,6 @@ import { createPortal } from "react-dom";
 import { getVersion } from "@tauri-apps/api/app";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { OFFICIAL_THEMES, Theme } from "@/config/themes";
@@ -38,24 +37,12 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
   const { t } = useLocaleStore();
   const { themeId, setThemeId, editorMode, setEditorMode, editorFontSize, setEditorFontSize } = useUIStore();
   const { config } = useAIStore();
-  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const { vaultPath, fileTree } = useFileStore();
 
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [editingTheme, setEditingTheme] = useState<Theme | undefined>();
   const [userThemes, setUserThemes] = useState<Theme[]>([]);
   const [appVersion, setAppVersion] = useState<string>("");
-
-  // 弹窗打开时隐藏 WebView，关闭时恢复
-  useEffect(() => {
-    if (!isOpen) return;
-
-    void hideAllWebViews();
-
-    return () => {
-      void showAllWebViews();
-    };
-  }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   // 加载用户主题
   useEffect(() => {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { useBrowserStore } from "@/stores/useBrowserStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { usePublishStore } from "@/stores/usePublishStore";
 import { useProfileStore } from "@/stores/useProfileStore";
@@ -75,21 +74,11 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     isDarkMode,
   } = useUIStore();
 
-  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const publishConfig = usePublishStore((state) => state.config);
   const profileConfig = useProfileStore((state) => state.config);
   
   // Check if graph tab is open
   const isGraphOpen = tabs.some(tab => tab.type === "graph");
-
-  // 弹窗打开时隐藏 WebView，关闭时恢复
-  useEffect(() => {
-    if (isOpen) {
-      hideAllWebViews();
-    } else {
-      showAllWebViews();
-    }
-  }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   // Focus input when opened
   useEffect(() => {

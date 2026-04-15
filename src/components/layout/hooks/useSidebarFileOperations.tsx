@@ -15,9 +15,7 @@ import {
   openDialog,
   openNewWindow,
   saveFile,
-  readFile,
 } from "@/lib/tauri";
-import { parseFrontmatter } from "@/services/markdown/frontmatter";
 import { invoke } from "@tauri-apps/api/core";
 import { reportOperationError } from "@/lib/reportError";
 import { FolderOpen, AppWindow, Shapes, Star, StarOff } from "lucide-react";
@@ -55,7 +53,6 @@ export function useSidebarFileOperations() {
     openFile,
     refreshFileTree,
     closeFile,
-    openDatabaseTab,
     openPDFTab,
     openDiagramTab,
     promotePreviewTab,
@@ -69,7 +66,6 @@ export function useSidebarFileOperations() {
       openFile: state.openFile,
       refreshFileTree: state.refreshFileTree,
       closeFile: state.closeFile,
-      openDatabaseTab: state.openDatabaseTab,
       openPDFTab: state.openPDFTab,
       openDiagramTab: state.openDiagramTab,
       promotePreviewTab: state.promotePreviewTab,
@@ -315,24 +311,10 @@ export function useSidebarFileOperations() {
           if (!currentSelectedPath) return newPath;
           return replaceFolderPrefix(currentSelectedPath);
         });
-        const databaseStoreModule = await import("@/stores/useDatabaseStore");
-        const dbIds = Object.keys(databaseStoreModule.useDatabaseStore.getState().databases);
-        for (const dbId of dbIds) {
-          await databaseStoreModule.useDatabaseStore.getState().refreshRows(dbId);
-        }
       } else {
         await refreshFileTree();
         const { updateTabPath } = useFileStore.getState();
         updateTabPath(renamingPath, newPath);
-
-        if (isMarkdownFile) {
-          const content = await readFile(newPath);
-          const { frontmatter, hasFrontmatter } = parseFrontmatter(content);
-          if (hasFrontmatter && frontmatter.db) {
-            const databaseStoreModule = await import("@/stores/useDatabaseStore");
-            await databaseStoreModule.useDatabaseStore.getState().refreshRows(String(frontmatter.db));
-          }
-        }
       }
     } catch (error) {
       reportOperationError({
@@ -632,10 +614,7 @@ export function useSidebarFileOperations() {
       setSelectedPath(entry.path);
       if (!entry.is_dir) {
         const name = entry.name.toLowerCase();
-        if (name.endsWith(".db.json")) {
-          const dbId = entry.name.replace(".db.json", "");
-          openDatabaseTab(dbId, dbId);
-        } else if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json")) {
+        if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json")) {
           openDiagramTab(entry.path);
         } else if (name.endsWith(".pdf")) {
           if (splitView && activePane === "secondary") {
@@ -652,14 +631,14 @@ export function useSidebarFileOperations() {
         }
       }
     },
-    [openFile, openDatabaseTab, openPDFTab, openDiagramTab, splitView, activePane, openSecondaryFile, openSecondaryPdf],
+    [openFile, openPDFTab, openDiagramTab, splitView, activePane, openSecondaryFile, openSecondaryPdf],
   );
 
   const handlePermanentOpen = useCallback(
     (entry: FileEntry) => {
       if (entry.is_dir) return;
       const name = entry.name.toLowerCase();
-      if (name.endsWith(".db.json") || name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json") || name.endsWith(".pdf")) {
+      if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json") || name.endsWith(".pdf")) {
         return;
       }
       if (splitView && activePane === "secondary") return;

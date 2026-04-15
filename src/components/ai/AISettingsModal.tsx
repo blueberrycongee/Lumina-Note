@@ -2,8 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
-import { useRAGStore } from "@/stores/useRAGStore";
-import { useBrowserStore } from "@/stores/useBrowserStore";
 import {
   FOLLOW_MAIN_MODEL,
   PROVIDER_REGISTRY,
@@ -13,7 +11,7 @@ import {
   createProvider,
 } from "@/services/llm";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
-import { Settings, Tag, Loader2, Check, X, Zap } from "lucide-react";
+import { Settings, Loader2, Check, X, Zap } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 
@@ -58,16 +56,6 @@ function getRouteSelectValue(
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { config, setConfig } = useAIStore();
   const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useRustAgentStore();
-  const {
-    config: ragConfig,
-    setConfig: setRAGConfig,
-    isIndexing: ragIsIndexing,
-    indexStatus,
-    rebuildIndex,
-    cancelIndex,
-    lastError: ragError,
-  } = useRAGStore();
-  const { hideAllWebViews, showAllWebViews } = useBrowserStore();
   const { t } = useLocaleStore();
   const errorMessages = t.aiSettings.errors as Record<string, string>;
   const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);
@@ -167,15 +155,6 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   useEffect(() => {
     setTestResult({ status: "idle" });
   }, [config.provider, config.apiKey, config.model, config.baseUrl]);
-
-  // 弹窗打开时隐藏 WebView，关闭时恢复
-  useEffect(() => {
-    if (isOpen) {
-      hideAllWebViews();
-    } else {
-      showAllWebViews();
-    }
-  }, [isOpen, hideAllWebViews, showAllWebViews]);
 
   if (!isOpen) return null;
 
@@ -553,293 +532,6 @@ export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
                 <span className="text-[10px] text-muted-foreground">{t.aiSettings.autoCompactHint}</span>
               </div>
             </label>
-          </div>
-
-          {/* RAG 设置（完整，与 RightPanel 同步） */}
-          <div className="space-y-2 pt-3 border-t border-border/60">
-            <div className="flex items-center justify-between text-xs font-medium text-foreground">
-              <span className="flex items-center gap-1">
-                <Tag size={12} />
-                {t.aiSettings.semanticSearch}
-              </span>
-              <label className="flex items-center gap-1 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ragConfig.enabled}
-                  onChange={(e) => setRAGConfig({ enabled: e.target.checked })}
-                  className="w-3 h-3"
-                />
-                <span className="text-xs text-muted-foreground">{t.aiSettings.enable}</span>
-              </label>
-            </div>
-
-            {ragConfig.enabled && (
-              <>
-                {/* RAG 当前状态 + 操作按钮 */}
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-muted-foreground">
-                    {ragIsIndexing
-                      ? `${t.aiSettings.indexing}${
-                          typeof indexStatus?.progress === "number"
-                            ? `: ${Math.round(indexStatus.progress * 100)}%`
-                            : "..."
-                        }`
-                      : indexStatus
-                        ? t.aiSettings.indexed.replace('{count}', String(indexStatus.totalChunks ?? 0))
-                        : t.aiSettings.notIndexed}
-                  </span>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={rebuildIndex}
-                      disabled={ragIsIndexing}
-                      className="px-2 py-1 rounded border border-border/60 text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={t.aiSettings.rebuildIndex}
-                    >
-                      {t.aiSettings.rebuildIndex}
-                    </button>
-                    {ragIsIndexing && (
-                      <button
-                        type="button"
-                        onClick={cancelIndex}
-                        className="px-2 py-1 rounded border border-destructive/60 text-xs text-destructive hover:bg-destructive/10"
-                        title={t.aiSettings.cancelIndex}
-                      >
-                        {t.aiSettings.cancelIndex}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.embeddingService}</label>
-                  <select
-                    value={ragConfig.embeddingProvider}
-                    onChange={(e) => {
-                      const provider = e.target.value as "openai" | "ollama";
-                      const defaultModels: Record<string, string> = {
-                        openai: "text-embedding-3-small",
-                        ollama: "nomic-embed-text",
-                      };
-                      setRAGConfig({
-                        embeddingProvider: provider,
-                        embeddingModel: defaultModels[provider],
-                      });
-                    }}
-                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                  >
-                    <option value="openai">OpenAI</option>
-                    <option value="ollama">{t.aiSettings.ollamaLocalLabel}</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">
-                    {t.aiSettings.embeddingApiKey}
-                    {ragConfig.embeddingProvider === "ollama" && (
-                      <span className="text-muted-foreground/60 ml-1">({t.aiSettings.apiKeyOptional})</span>
-                    )}
-                  </label>
-                  <input
-                    type="password"
-                    value={ragConfig.embeddingApiKey || ""}
-                    onChange={(e) => setRAGConfig({ embeddingApiKey: e.target.value })}
-                    placeholder={
-                      ragConfig.embeddingProvider === "openai" ? "sk-..." : "http://localhost:11434"
-                    }
-                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.embeddingBaseUrl}</label>
-                  <input
-                    type="text"
-                    value={ragConfig.embeddingBaseUrl || ""}
-                    onChange={(e) => setRAGConfig({ embeddingBaseUrl: e.target.value })}
-                    placeholder={
-                      ragConfig.embeddingProvider === "openai"
-                        ? "https://api.openai.com/v1"
-                        : "http://localhost:11434"
-                    }
-                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.embeddingModel}</label>
-                  <input
-                    type="text"
-                    value={ragConfig.embeddingModel}
-                    onChange={(e) => setRAGConfig({ embeddingModel: e.target.value })}
-                    placeholder="Qwen/Qwen3-Embedding-8B"
-                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-muted-foreground block mb-1">
-                    {t.aiSettings.vectorDimensions}
-                    <span className="text-muted-foreground/60 ml-1">({t.aiSettings.apiKeyOptional})</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={ragConfig.embeddingDimensions || ""}
-                    onChange={(e) =>
-                      setRAGConfig({
-                        embeddingDimensions: e.target.value ? parseInt(e.target.value) : undefined,
-                      })
-                    }
-                    placeholder={t.aiSettings.dimensionsHint}
-                    className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                  />
-                </div>
-
-                {/* Reranker Settings */}
-                <div className="border-t border-border/60 pt-3 mt-2">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium">{t.aiSettings.reranker}</span>
-                    <label className="flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        checked={ragConfig.rerankerEnabled || false}
-                        onChange={(e) => setRAGConfig({ rerankerEnabled: e.target.checked })}
-                        className="w-3 h-3"
-                      />
-                      <span className="text-xs text-muted-foreground">{t.aiSettings.enable}</span>
-                    </label>
-                  </div>
-
-                  {ragConfig.rerankerEnabled && (
-                    <div className="space-y-2">
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.rerankerBaseUrl}</label>
-                        <input
-                          type="text"
-                          value={ragConfig.rerankerBaseUrl || ""}
-                          onChange={(e) => setRAGConfig({ rerankerBaseUrl: e.target.value })}
-                          placeholder="https://api.siliconflow.cn/v1"
-                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.rerankerApiKey}</label>
-                        <input
-                          type="password"
-                          value={ragConfig.rerankerApiKey || ""}
-                          onChange={(e) => setRAGConfig({ rerankerApiKey: e.target.value })}
-                          placeholder="sk-..."
-                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.rerankerModel}</label>
-                        <input
-                          type="text"
-                          value={ragConfig.rerankerModel || ""}
-                          onChange={(e) => setRAGConfig({ rerankerModel: e.target.value })}
-                          placeholder="BAAI/bge-reranker-v2-m3"
-                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.topN}</label>
-                        <input
-                          type="number"
-                          value={ragConfig.rerankerTopN || 5}
-                          onChange={(e) =>
-                            setRAGConfig({ rerankerTopN: parseInt(e.target.value) || 5 })
-                          }
-                          min={1}
-                          max={20}
-                          className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Index Status */}
-                <div className="bg-muted/50 rounded p-2 space-y-2 mt-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{t.aiSettings.indexStatus}</span>
-                    {ragIsIndexing ? (
-                      <span className="text-warning flex items-center gap-1">
-                        <Loader2 size={10} className="animate-spin" />
-                        {t.aiSettings.indexing}
-                      </span>
-                    ) : indexStatus?.initialized ? (
-                      <span className="text-success flex items-center gap-1"><Check size={12} /> {t.aiSettings.indexReady}</span>
-                    ) : (
-                      <span className="text-muted-foreground">{t.aiSettings.notInitialized}</span>
-                    )}
-                  </div>
-
-                  {ragIsIndexing && indexStatus?.progress && typeof indexStatus.progress !== "number" && (
-                    <div className="space-y-1">
-                      <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-primary h-full transition-all duration-300"
-                          style={{
-                            width: `${Math.round(
-                              (indexStatus.progress.current /
-                                Math.max(indexStatus.progress.total, 1)) * 100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                      <div className="text-xs text-muted-foreground flex justify-between">
-                        <span>
-                          {t.aiSettings.filesProgress
-                            .replace('{current}', String(indexStatus.progress.current))
-                            .replace('{total}', String(indexStatus.progress.total))}
-                        </span>
-                        <span>
-                          {Math.round(
-                            (indexStatus.progress.current /
-                              Math.max(indexStatus.progress.total, 1)) * 100
-                          )}%
-                        </span>
-                      </div>
-                      {indexStatus.progress.currentFile && (
-                        <div
-                          className="text-xs text-muted-foreground truncate"
-                          title={indexStatus.progress.currentFile}
-                        >
-                          {t.aiSettings.processing.replace('{file}', indexStatus.progress.currentFile.split(/[/\\\\]/).pop() || '')}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!ragIsIndexing && indexStatus && (
-                    <div className="text-xs text-muted-foreground">
-                      {t.aiSettings.indexSummary
-                        .replace('{files}', String(indexStatus.totalFiles))
-                        .replace('{chunks}', String(indexStatus.totalChunks))}
-                    </div>
-                  )}
-
-                  {ragError && (
-                    <div className="text-xs text-destructive">
-                      {ragError}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={() => rebuildIndex()}
-                    disabled={ragIsIndexing || (ragConfig.embeddingProvider === 'openai' && !ragConfig.embeddingApiKey)}
-                    className="w-full text-xs py-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    title={t.aiSettings.rebuildIndex}
-                  >
-                    {ragIsIndexing ? t.aiSettings.indexing : t.aiSettings.rebuildIndex}
-                  </button>
-                </div>
-              </>
-            )}
           </div>
 
         </div>

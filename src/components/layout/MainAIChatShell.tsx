@@ -14,8 +14,6 @@ import {
   initRustAgentListeners,
 } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { useRAGStore } from "@/stores/useRAGStore";
-
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
@@ -67,7 +65,6 @@ import {
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
-import { CodexPanelSlot } from "@/components/codex/CodexPanelSlot";
 import { join as joinPath } from "@tauri-apps/api/path";
 import {
   buildAgentExportMessages,
@@ -270,8 +267,6 @@ export function MainAIChatShell() {
     effectiveModelForThinking,
   );
   const displayThinkingMode = normalizeThinkingMode(config.thinkingMode);
-
-  useRAGStore();
 
   // Wrap session hooks with local state side effects
   const handleSwitchSession = useCallback(
@@ -864,19 +859,6 @@ export function MainAIChatShell() {
 
       // 检查是否仅仅是一个网页链接
       const webLink = isOnlyWebLink(effectiveInput);
-      if (
-        webLink &&
-        referencedFiles.length === 0 &&
-        textSelections.length === 0
-      ) {
-        // 直接打开网页链接
-        const { openWebpageTab } = useFileStore.getState();
-        openWebpageTab(webLink);
-        setInput("");
-        autoSendMessageRef.current = null;
-        return;
-      }
-
       const message = effectiveInput;
       setInput("");
       autoSendMessageRef.current = null;
@@ -1161,14 +1143,8 @@ export function MainAIChatShell() {
         {/* 主要内容区域 - 始终居中 */}
         <main className="h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0">
           {isCodexMode ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-              <div className="flex-1 flex overflow-hidden min-h-0">
-                <CodexPanelSlot
-                  slot="main"
-                  renderMode="iframe"
-                  className="flex-1 h-full w-full"
-                />
-              </div>
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm">
+              Codex mode is not available
             </div>
           ) : (
             <>

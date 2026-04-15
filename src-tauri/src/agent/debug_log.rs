@@ -156,19 +156,6 @@ pub fn log_task(task: &str) {
     log_code("", task);
 }
 
-/// 记录 Skills
-pub fn log_skills(skills: &[crate::agent::types::SkillContext]) {
-    if skills.is_empty() {
-        return;
-    }
-    log_separator("Skills");
-    let names: Vec<String> = skills
-        .iter()
-        .map(|s| s.title.as_deref().unwrap_or(&s.name).to_string())
-        .collect();
-    log_kv("已启用", &names.join(", "));
-}
-
 /// 记录意图分析
 pub fn log_intent(intent_type: &str, route: &str, reason: &str) {
     log_separator("意图分析");

@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
-import { useRAGStore } from "@/stores/useRAGStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, setDragData } from "@/lib/dragState";
 import type { FileEntry } from "@/lib/tauri";
@@ -13,7 +12,6 @@ import {
   File,
   Folder,
   FolderOpen,
-  Database,
   Image,
   FileText,
   Shapes,
@@ -23,8 +21,6 @@ import {
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { useShallow } from "zustand/react/shallow";
-import { OrgSwitcher } from "../team/OrgSwitcher";
-import { useOrgStore } from "@/stores/useOrgStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
 import {
@@ -55,13 +51,6 @@ export function Sidebar() {
     })),
   );
   const {
-    config: ragConfig,
-    isIndexing: ragIsIndexing,
-    indexStatus,
-    rebuildIndex,
-    cancelIndex,
-  } = useRAGStore();
-  const {
     favorites,
     manualOrder,
     favoriteSortMode,
@@ -85,40 +74,27 @@ export function Sidebar() {
     [getFavorites, favoriteSortMode, favorites, manualOrder],
   );
 
-  const { currentOrgId, projects, currentProjectId, switchProject } =
-    useOrgStore(
-      useShallow((state) => ({
-        currentOrgId: state.currentOrgId,
-        projects: state.projects,
-        currentProjectId: state.currentProjectId,
-        switchProject: state.switchProject,
-      })),
-    );
-
   const authStatus = useCloudSyncStore((s) => s.authStatus);
-  const cloudSession = useCloudSyncStore((s) => s.session);
-  const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
   const rehydrateToken = useCloudSyncStore((s) => s.rehydrateToken);
-  const setOrgConnection = useOrgStore((s) => s.setConnection);
   const setNotificationConnection = useNotificationStore(
     (s) => s.setConnection,
   );
+  const cloudSession = useCloudSyncStore((s) => s.session);
+  const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
   // Restore token from OS keychain on app startup
   useEffect(() => {
     rehydrateToken();
   }, [rehydrateToken]);
 
-  // Bridge CloudSync auth session to OrgStore and NotificationStore so API calls have credentials
+  // Bridge CloudSync auth session to NotificationStore so API calls have credentials
   useEffect(() => {
     if (authStatus === "authenticated" && cloudSession?.token && cloudBaseUrl) {
-      setOrgConnection(cloudBaseUrl, cloudSession.token);
       setNotificationConnection(cloudBaseUrl, cloudSession.token);
     }
   }, [
     authStatus,
     cloudSession?.token,
     cloudBaseUrl,
-    setOrgConnection,
     setNotificationConnection,
   ]);
 
@@ -312,35 +288,6 @@ export function Sidebar() {
           vaultPath={vaultPath}
           onQuickNote={handleQuickNote}
         />
-
-        {/* Team Organization Section (visible only when authenticated) */}
-        {authStatus === "authenticated" && (
-          <div className="px-2">
-            <OrgSwitcher />
-            {currentOrgId && projects.length > 0 && (
-              <div className="mt-2">
-                <div className="px-2 py-1 text-xs font-medium text-zinc-500 uppercase tracking-wider">
-                  {t.team.projects}
-                </div>
-                {projects.map((proj) => (
-                  <button
-                    key={proj.id}
-                    className={cn(
-                      "w-full text-left px-2 py-1.5 text-sm rounded-md truncate",
-                      "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-                      currentProjectId === proj.id &&
-                        "bg-zinc-100 dark:bg-zinc-800 font-medium",
-                    )}
-                    onClick={() => switchProject(proj.id)}
-                    title={proj.description || proj.name}
-                  >
-                    {proj.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* OpenClaw */}
         {vaultPath && (
@@ -1025,7 +972,7 @@ function FileTreeItem({
   const getFileIcon = () => {
     const name = entry.name.toLowerCase();
     if (name.endsWith(".db.json")) {
-      return <Database className="w-4 h-4 text-indigo-500 shrink-0" />;
+      return <File className="w-4 h-4 text-indigo-500 shrink-0" />;
     }
     if (
       name.endsWith(".excalidraw.json") ||

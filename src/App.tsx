@@ -19,7 +19,6 @@ import { SplitEditor } from "@/components/layout/SplitEditor";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
-import { useRAGStore } from "@/stores/useRAGStore";
 import { PanelRight } from "lucide-react";
 import {
   CommandPalette,
@@ -30,16 +29,7 @@ import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
 // import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
-import { VideoNoteView } from "@/components/video/VideoNoteView";
-import {
-  DatabaseView,
-  CreateDatabaseDialog,
-  DatabaseSplitView,
-} from "@/components/database";
 import { PDFViewer } from "@/components/pdf";
-import { BrowserView } from "@/components/browser";
-import { FlashcardView } from "@/components/flashcard";
-import { CardFlowView } from "@/components/cardflow/CardFlowView";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
 import { TypesettingPreviewPane } from "@/components/typesetting/TypesettingPreviewPane";
 import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
@@ -54,9 +44,6 @@ import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
 import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
 import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
-import { AgentEvalPanel } from "@/tests/agent-eval/AgentEvalPanel";
-import { CodexVscodeHostPanel } from "@/components/debug/CodexVscodeHostPanel";
-import { CodexPanelHost } from "@/components/codex/CodexPanelHost";
 import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import { ProfilePreview } from "@/components/profile/ProfilePreview";
@@ -182,66 +169,12 @@ function DiffViewWrapper() {
   );
 }
 
-function MobileWorkspaceToast() {
-  const mobileWorkspaceSync = useFileStore(
-    (state) => state.mobileWorkspaceSync,
-  );
-  const [message, setMessage] = useState<string | null>(null);
-  const [visible, setVisible] = useState(false);
-  const hideTimerRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (mobileWorkspaceSync.status !== "error" || !mobileWorkspaceSync.error) {
-      return;
-    }
-    const pathLabel = mobileWorkspaceSync.path
-      ? ` (${mobileWorkspaceSync.path})`
-      : "";
-    const nextMessage = `Workspace sync failed${pathLabel}: ${mobileWorkspaceSync.error}`;
-    setMessage(nextMessage);
-    setVisible(true);
-    if (hideTimerRef.current) {
-      window.clearTimeout(hideTimerRef.current);
-    }
-    hideTimerRef.current = window.setTimeout(() => {
-      setVisible(false);
-    }, 6000);
-    return () => {
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current);
-      }
-    };
-  }, [
-    mobileWorkspaceSync.status,
-    mobileWorkspaceSync.error,
-    mobileWorkspaceSync.path,
-    mobileWorkspaceSync.lastInvokeAt,
-  ]);
-
-  if (!visible || !message) {
-    return null;
-  }
-
-  return (
-    <div className="fixed bottom-4 right-4 z-[200] max-w-sm rounded-lg border border-red-500/30 bg-background/90 px-3 py-2 text-xs text-red-500 shadow-lg">
-      {message}
-    </div>
-  );
-}
-
-interface BrowserNewTabEventPayload {
-  parent_tab_id: string;
-  url: string;
-}
-
 interface GlobalSearchRequest {
   query?: string;
   pathPrefixes?: string[];
   scopeLabel?: string;
 }
 
-// 避免在 React 严格模式和 HMR 下重复注册浏览器新标签事件监听
-let browserNewTabListenerRegistered = false;
 const watchedPaths = new Set<string>();
 const AUTO_TOOLTIP_FLAG = "data-lumina-auto-tooltip";
 
@@ -297,7 +230,6 @@ function App() {
     fileTree,
     refreshFileTree,
     openAIMainTab,
-    syncMobileWorkspace,
   } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
@@ -310,17 +242,10 @@ function App() {
       fileTree: state.fileTree,
       refreshFileTree: state.refreshFileTree,
       openAIMainTab: state.openAIMainTab,
-      syncMobileWorkspace: state.syncMobileWorkspace,
     })),
   );
   const pendingDiff = useAIStore((state) => state.pendingDiff);
   const buildIndex = useNoteIndexStore((state) => state.buildIndex);
-  const { initialize: initializeRAG, config: ragConfig } = useRAGStore(
-    useShallow((state) => ({
-      initialize: state.initialize,
-      config: state.config,
-    })),
-  );
   const t = useLocaleStore((state) => state.t);
   const loadPlugins = usePluginStore((state) => state.loadPlugins);
   const setAppearanceSafeMode = usePluginStore(
@@ -341,9 +266,6 @@ function App() {
   const [searchRequest, setSearchRequest] =
     useState<GlobalSearchRequest | null>(null);
   const [isLoadingVault, setIsLoadingVault] = useState(false);
-  const [createDbOpen, setCreateDbOpen] = useState(false);
-  const [evalPanelOpen, setEvalPanelOpen] = useState(false);
-  const [codexPanelOpen, setCodexPanelOpen] = useState(false);
   const [welcomePreview, setWelcomePreview] = useState(false);
   const welcomeTapRef = useRef<{
     count: number;
@@ -485,12 +407,6 @@ function App() {
     };
   }, [setAppearanceSafeMode, vaultPath]);
 
-  // 兼容兜底：确保移动端网关拿到当前 workspace
-  useEffect(() => {
-    if (!vaultPath) return;
-    syncMobileWorkspace({ path: vaultPath, force: true });
-  }, [vaultPath, syncMobileWorkspace]);
-
   // 启动文件监听器，自动刷新文件树
   useEffect(() => {
     if (!vaultPath) return;
@@ -628,44 +544,6 @@ function App() {
       if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [vaultPath, mountedOpenClawWorkspacePath, refreshFileTree]);
-
-  // 监听后端触发的浏览器新标签事件（window.open）
-  useEffect(() => {
-    if (browserNewTabListenerRegistered) return;
-    browserNewTabListenerRegistered = true;
-
-    let unlisten: (() => void) | null = null;
-
-    const setup = async () => {
-      try {
-        unlisten = await listen<BrowserNewTabEventPayload>(
-          "browser:new-tab",
-          (event) => {
-            const payload = event.payload;
-            if (!payload || !payload.url) return;
-            // 使用最新的 store 状态创建网页标签，避免依赖闭包
-            useFileStore.getState().openWebpageTab(payload.url);
-          },
-        );
-      } catch (error) {
-        reportOperationError({
-          source: "App.setupBrowserNewTabListener",
-          action: "Register browser new-tab listener",
-          error,
-          level: "warning",
-        });
-      }
-    };
-
-    setup();
-
-    return () => {
-      if (unlisten) {
-        unlisten();
-      }
-      browserNewTabListenerRegistered = false;
-    };
-  }, []);
   const {
     leftSidebarOpen,
     rightSidebarOpen,
@@ -767,21 +645,6 @@ function App() {
       buildIndex(fileTree);
     }
   }, [fileTree, buildIndex]);
-
-  // Initialize RAG system when vault is opened (if enabled and configured)
-  useEffect(() => {
-    if (vaultPath && ragConfig.enabled && ragConfig.embeddingApiKey) {
-      initializeRAG(vaultPath).catch((error) => {
-        reportOperationError({
-          source: "App.initializeRAG",
-          action: "Initialize RAG index",
-          error,
-          level: "warning",
-          context: { vaultPath },
-        });
-      });
-    }
-  }, [vaultPath, ragConfig.enabled, ragConfig.embeddingApiKey, initializeRAG]);
 
   // 全局鼠标拖拽处理：模拟从文件树拖拽文件创建双链
   useEffect(() => {
@@ -934,35 +797,7 @@ function App() {
         return;
       }
 
-      // Ctrl+Shift+E: Agent Eval Panel (Dev only)
-      if (import.meta.env.DEV && isCtrl && e.shiftKey && e.key === "E") {
-        e.preventDefault();
-        setEvalPanelOpen(true);
-        return;
-      }
-
-      // Ctrl+Shift+C: Codex VS Code extension host (Dev only)
-      if (import.meta.env.DEV && isCtrl && e.shiftKey && e.key === "C") {
-        e.preventDefault();
-        setCodexPanelOpen(true);
-        return;
-      }
-
       if (pluginRuntime.handleHotkey(e)) {
-        return;
-      }
-
-      // Esc: Close eval panel
-      if (e.key === "Escape" && evalPanelOpen) {
-        e.preventDefault();
-        setEvalPanelOpen(false);
-        return;
-      }
-
-      // Esc: Close codex panel
-      if (e.key === "Escape" && codexPanelOpen) {
-        e.preventDefault();
-        setCodexPanelOpen(false);
         return;
       }
     };
@@ -971,7 +806,7 @@ function App() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [save, vaultPath, createNewFile, evalPanelOpen, codexPanelOpen]);
+  }, [save, vaultPath, createNewFile]);
 
   // Open folder dialog
   const handleOpenVault = useCallback(async () => {
@@ -999,16 +834,13 @@ function App() {
       setSearchOpen(true);
     };
     const onOpenCommandPalette = () => setPaletteOpen(true);
-    const onOpenCreateDb = () => setCreateDbOpen(true);
     window.addEventListener("open-vault", onOpenVault);
     window.addEventListener("open-global-search", onOpenSearch);
     window.addEventListener("open-command-palette", onOpenCommandPalette);
-    window.addEventListener("open-create-database", onOpenCreateDb);
     return () => {
       window.removeEventListener("open-vault", onOpenVault);
       window.removeEventListener("open-global-search", onOpenSearch);
       window.removeEventListener("open-command-palette", onOpenCommandPalette);
-      window.removeEventListener("open-create-database", onOpenCreateDb);
     };
   }, [handleOpenVault, setPaletteOpen, setSearchOpen]);
 
@@ -1146,7 +978,7 @@ function App() {
           />
         </div>
 
-        {/* Main content - switches between Editor, Graph, Split, Diff, VideoNote and AI Chat based on state */}
+        {/* Main content - switches between Editor, Graph, Split, Diff and AI Chat based on state */}
         <main
           className={`relative flex flex-col overflow-hidden min-w-0 bg-background transition-[width,opacity] duration-200 ${
             isMainCollapsed
@@ -1157,38 +989,6 @@ function App() {
           {pendingDiff && activeTab?.type !== "ai-chat" ? (
             // Show diff view when there's a pending AI edit (non chat context)
             <DiffViewWrapper />
-          ) : activeTab?.type === "database" && activeTab.databaseId ? (
-            // 数据库标签页（支持分栏）
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              {splitView ? (
-                // 数据库 + 分栏：左边数据库，右边笔记
-                <DatabaseSplitView dbId={activeTab.databaseId} />
-              ) : (
-                // 纯数据库
-                <DatabaseView dbId={activeTab.databaseId} className="flex-1" />
-              )}
-            </div>
-          ) : activeTab?.type === "video-note" ? (
-            // 视频笔记标签页
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <VideoNoteView
-                initialUrl={activeTab.videoUrl}
-                initialNoteFile={activeTab.videoNoteData}
-                isActive={true}
-              />
-            </div>
-          ) : activeTab?.type === "webpage" ? (
-            // 网页浏览器标签页
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <BrowserView
-                tabId={activeTab.id}
-                initialUrl={activeTab.webpageUrl}
-                isActive={true}
-              />
-            </div>
           ) : activeTab?.type === "pdf" && activeTab.path ? (
             // PDF 标签页
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
@@ -1222,18 +1022,6 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <TypesettingPreviewPane />
-            </div>
-          ) : activeTab?.type === "flashcard" ? (
-            // 闪卡复习标签页
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <FlashcardView deckId={activeTab.flashcardDeckId} />
-            </div>
-          ) : activeTab?.type === "cardflow" ? (
-            // 卡片流视图
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <CardFlowView />
             </div>
           ) : activeTab?.type === "image-manager" ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
@@ -1327,8 +1115,6 @@ function App() {
         </div>
       </div>
 
-      <CodexPanelHost />
-
       {/* Command Palette */}
       <CommandPalette
         isOpen={paletteOpen}
@@ -1344,12 +1130,6 @@ function App() {
         request={searchRequest}
       />
 
-      {/* Create Database Dialog */}
-      <CreateDatabaseDialog
-        isOpen={createDbOpen}
-        onClose={() => setCreateDbOpen(false)}
-      />
-
       {/* Skill Manager */}
       <SkillManagerModal
         isOpen={isSkillManagerOpen}
@@ -1361,38 +1141,6 @@ function App() {
 
       {/* Voice Input Floating Ball - 语音输入悬浮球 */}
       <VoiceInputBall />
-
-      {/* Agent Eval Panel (Dev only) */}
-      {import.meta.env.DEV && evalPanelOpen && (
-        <div className="fixed inset-0 z-[100] bg-background">
-          <div className="absolute top-2 right-2 z-10">
-            <button
-              onClick={() => setEvalPanelOpen(false)}
-              className="px-4 py-2 bg-muted rounded hover:bg-muted/80"
-              title={`${t.common.close} Agent Eval 面板`}
-            >
-              ✕ {t.common.close} (Esc)
-            </button>
-          </div>
-          <AgentEvalPanel />
-        </div>
-      )}
-
-      {/* Codex VS Code extension host panel (Dev only) */}
-      {import.meta.env.DEV && codexPanelOpen && (
-        <div className="fixed inset-0 z-[100] bg-background">
-          <div className="hidden">
-            <button
-              onClick={() => setCodexPanelOpen(false)}
-              className="px-4 py-2 bg-muted rounded hover:bg-muted/80"
-              title={`${t.common.close} Codex Host 面板`}
-            >
-              ✕ {t.common.close} (Esc)
-            </button>
-          </div>
-          <CodexVscodeHostPanel onClose={() => setCodexPanelOpen(false)} />
-        </div>
-      )}
 
       {/* Hidden welcome preview: tap top-right corner 5 times to activate */}
       {welcomePreview && (
@@ -1421,7 +1169,6 @@ function App() {
       <PluginShellSlotHost slotId="app-bottom" />
       <PluginContextMenuHost />
       <ErrorNotifications />
-      <MobileWorkspaceToast />
       <PluginPanelDock />
     </div>
   );

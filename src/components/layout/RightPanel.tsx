@@ -4,7 +4,6 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
-import { useRAGStore } from "@/stores/useRAGStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData } from "@/lib/dragState";
 import { getFileName } from "@/lib/utils";
@@ -23,7 +22,6 @@ import {
   ArrowUpRight,
   ChevronRight,
   Bot,
-  Code2,
   Search,
   Lightbulb,
   Sparkles,
@@ -32,7 +30,6 @@ import { AgentPanel } from "../chat/AgentPanel";
 import { ConversationList } from "../chat/ConversationList";
 import { ChatPanel } from "../chat/ChatPanel";
 import { useConversationManager } from "@/hooks/useConversationManager";
-import { CodexPanelSlot } from "@/components/codex/CodexPanelSlot";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 import { useShallow } from "zustand/react/shallow";
 
@@ -396,15 +393,6 @@ export function RightPanel() {
     effectiveModelForTemp,
   );
   const displayTemperature = config.temperature ?? recommendedTemperature;
-  const {
-    config: ragConfig,
-    setConfig: setRAGConfig,
-    isIndexing: ragIsIndexing,
-    indexStatus,
-    rebuildIndex,
-    cancelIndex,
-    lastError: ragError,
-  } = useRAGStore();
   // 使用 Rust Agent store
   const rustAgentStore = useRustAgentStore();
 
@@ -579,8 +567,6 @@ export function RightPanel() {
           >
             {chatMode === "agent" ? (
               <Bot size={12} />
-            ) : chatMode === "codex" ? (
-              <Code2 size={12} />
             ) : (
               <BrainCircuit size={12} />
             )}
@@ -638,7 +624,7 @@ export function RightPanel() {
         !isMainAIActive && (
           <div className="flex-1 flex overflow-hidden">
             {/* 可折叠的对话列表侧栏 */}
-            {chatMode !== "codex" && <ConversationList />}
+            {<ConversationList />}
 
             {/* 右侧主内容区 */}
             <div className="flex-1 flex flex-col overflow-hidden">
@@ -675,30 +661,14 @@ export function RightPanel() {
                         {t.ai.conversation}
                       </span>
                     </button>
-                    <button
-                      onClick={() => setChatMode("codex")}
-                      className={`shrink-0 px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
-                        chatMode === "codex"
-                          ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      title="Codex"
-                    >
-                      <Code2 size={12} />
-                      <span className="right-ai-mode-label ui-compact-text">
-                        Codex
-                      </span>
-                    </button>
                   </div>
-                  {chatMode !== "codex" && (
-                    <span className="right-ai-status text-xs text-muted-foreground whitespace-nowrap ui-compact-text">
-                      {config.apiKey
-                        ? "Configured"
-                        : t.settingsModal.notConfigured}
-                    </span>
-                  )}
+                  <span className="right-ai-status text-xs text-muted-foreground whitespace-nowrap ui-compact-text">
+                    {config.apiKey
+                      ? "Configured"
+                      : t.settingsModal.notConfigured}
+                  </span>
                 </div>
-                {chatMode !== "codex" && (
+                {(
                   <div className="flex gap-1">
                     <button
                       onClick={deleteCurrentSession}
@@ -719,7 +689,7 @@ export function RightPanel() {
               </div>
 
               {/* Settings Panel - 全屏模式 */}
-              {showSettings && chatMode !== "codex" ? (
+              {showSettings ? (
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {/* 返回按钮 */}
                   <div className="flex items-center justify-between mb-2">
@@ -944,381 +914,7 @@ export function RightPanel() {
                     </label>
                   </div>
 
-                  {/* RAG Settings */}
-                  <div className="space-y-2 pt-3 border-t border-border/60">
-                    <div className="text-xs font-medium text-foreground flex items-center justify-between">
-                      <span className="flex items-center gap-1.5">
-                        <Search size={12} /> {t.settingsPanel.semanticSearch}
-                      </span>
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={ragConfig.enabled}
-                          onChange={(e) =>
-                            setRAGConfig({ enabled: e.target.checked })
-                          }
-                          className="w-3 h-3"
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {t.settingsPanel.enable}
-                        </span>
-                      </label>
-                    </div>
-
-                    {ragConfig.enabled && (
-                      <>
-                        {/* RAG 当前状态 + 操作按钮 */}
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="text-muted-foreground">
-                            {ragIsIndexing
-                              ? `${t.rag.indexing} ${
-                                  typeof indexStatus?.progress === "number"
-                                    ? `${Math.round(indexStatus.progress * 100)}%`
-                                    : ""
-                                }`
-                              : indexStatus
-                                ? `${t.rag.indexed}: ${indexStatus.totalChunks ?? 0} ${t.rag.chunks}`
-                                : t.rag.notBuilt}
-                          </span>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={rebuildIndex}
-                              disabled={ragIsIndexing}
-                              className="px-2 py-1 rounded border border-border/60 text-xs hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {t.rag.rebuildIndex}
-                            </button>
-                            {ragIsIndexing && (
-                              <button
-                                type="button"
-                                onClick={cancelIndex}
-                                className="px-2 py-1 rounded border border-destructive/60 text-xs text-destructive hover:bg-destructive/10"
-                              >
-                                {t.rag.cancelIndex}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">
-                            {t.settingsPanel.embeddingService}
-                          </label>
-                          <select
-                            value={ragConfig.embeddingProvider}
-                            onChange={(e) => {
-                              const provider = e.target.value as
-                                | "openai"
-                                | "ollama";
-                              const defaultModels: Record<string, string> = {
-                                openai: "text-embedding-3-small",
-                                ollama: "nomic-embed-text",
-                              };
-                              setRAGConfig({
-                                embeddingProvider: provider,
-                                embeddingModel: defaultModels[provider],
-                              });
-                            }}
-                            className="ui-input h-9 text-xs"
-                          >
-                            <option value="openai">OpenAI</option>
-                            <option value="ollama">Ollama (Local)</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">
-                            Embedding API Key
-                            {ragConfig.embeddingProvider === "ollama" && (
-                              <span className="text-muted-foreground/60 ml-1">
-                                ({t.settingsPanel.apiKeyOptional})
-                              </span>
-                            )}
-                          </label>
-                          <input
-                            type="password"
-                            value={ragConfig.embeddingApiKey || ""}
-                            onChange={(e) =>
-                              setRAGConfig({ embeddingApiKey: e.target.value })
-                            }
-                            placeholder={
-                              ragConfig.embeddingProvider === "openai"
-                                ? "sk-..."
-                                : "http://localhost:11434"
-                            }
-                            className="ui-input h-9 text-xs"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">
-                            {t.settingsPanel.embeddingBaseUrl}
-                          </label>
-                          <input
-                            type="text"
-                            value={ragConfig.embeddingBaseUrl || ""}
-                            onChange={(e) =>
-                              setRAGConfig({ embeddingBaseUrl: e.target.value })
-                            }
-                            placeholder={
-                              ragConfig.embeddingProvider === "openai"
-                                ? "https://api.openai.com/v1"
-                                : "http://localhost:11434"
-                            }
-                            className="ui-input h-9 text-xs"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">
-                            {t.settingsPanel.embeddingModel}
-                          </label>
-                          <input
-                            type="text"
-                            value={ragConfig.embeddingModel}
-                            onChange={(e) =>
-                              setRAGConfig({ embeddingModel: e.target.value })
-                            }
-                            placeholder="Qwen/Qwen3-Embedding-8B"
-                            className="ui-input h-9 text-xs"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-xs text-muted-foreground block mb-1">
-                            {t.aiSettings.vectorDimensions}
-                            <span className="text-muted-foreground/60 ml-1">
-                              ({t.settingsPanel.apiKeyOptional})
-                            </span>
-                          </label>
-                          <input
-                            type="number"
-                            value={ragConfig.embeddingDimensions || ""}
-                            onChange={(e) =>
-                              setRAGConfig({
-                                embeddingDimensions: e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined,
-                              })
-                            }
-                            placeholder={t.aiSettings.dimensionsHint}
-                            className="ui-input h-9 text-xs"
-                          />
-                        </div>
-
-                        {/* Reranker Settings */}
-                        <div className="border-t border-border/60 pt-3 mt-2">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium">
-                              {t.aiSettings.reranker}
-                            </span>
-                            <label className="flex items-center gap-1">
-                              <input
-                                type="checkbox"
-                                checked={ragConfig.rerankerEnabled || false}
-                                onChange={(e) =>
-                                  setRAGConfig({
-                                    rerankerEnabled: e.target.checked,
-                                  })
-                                }
-                                className="w-3 h-3"
-                              />
-                              <span className="text-xs text-muted-foreground">
-                                {t.settingsPanel.enable}
-                              </span>
-                            </label>
-                          </div>
-
-                          {ragConfig.rerankerEnabled && (
-                            <div className="space-y-2">
-                              <div>
-                                <label className="text-xs text-muted-foreground block mb-1">
-                                  {t.aiSettings.rerankerBaseUrl}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={ragConfig.rerankerBaseUrl || ""}
-                                  onChange={(e) =>
-                                    setRAGConfig({
-                                      rerankerBaseUrl: e.target.value,
-                                    })
-                                  }
-                                  placeholder="https://api.siliconflow.cn/v1"
-                                  className="ui-input h-9 text-xs"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-muted-foreground block mb-1">
-                                  {t.aiSettings.rerankerApiKey}
-                                </label>
-                                <input
-                                  type="password"
-                                  value={ragConfig.rerankerApiKey || ""}
-                                  onChange={(e) =>
-                                    setRAGConfig({
-                                      rerankerApiKey: e.target.value,
-                                    })
-                                  }
-                                  placeholder="sk-..."
-                                  className="ui-input h-9 text-xs"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-muted-foreground block mb-1">
-                                  {t.aiSettings.rerankerModel}
-                                </label>
-                                <input
-                                  type="text"
-                                  value={ragConfig.rerankerModel || ""}
-                                  onChange={(e) =>
-                                    setRAGConfig({
-                                      rerankerModel: e.target.value,
-                                    })
-                                  }
-                                  placeholder="BAAI/bge-reranker-v2-m3"
-                                  className="ui-input h-9 text-xs"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="text-xs text-muted-foreground block mb-1">
-                                  {t.aiSettings.topN}
-                                </label>
-                                <input
-                                  type="number"
-                                  value={ragConfig.rerankerTopN || 5}
-                                  onChange={(e) =>
-                                    setRAGConfig({
-                                      rerankerTopN:
-                                        parseInt(e.target.value) || 5,
-                                    })
-                                  }
-                                  min={1}
-                                  max={20}
-                                  className="ui-input h-9 text-xs"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Index Status */}
-                        <div className="bg-muted/50 rounded p-2 space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              {t.aiSettings.indexStatus}
-                            </span>
-                            {ragIsIndexing ? (
-                              <span className="text-warning flex items-center gap-1">
-                                <Loader2 size={10} className="animate-spin" />
-                                {t.aiSettings.indexing}
-                              </span>
-                            ) : indexStatus?.initialized ? (
-                              <span className="text-success">
-                                ✓ {t.aiSettings.indexReady}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">
-                                {t.aiSettings.notInitialized}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* 索引进度条 */}
-                          {ragIsIndexing && indexStatus?.progress && (
-                            <div className="space-y-1">
-                              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                <div
-                                  className="bg-primary h-full transition-all duration-300"
-                                  style={{
-                                    width: `${Math.round((indexStatus.progress.current / Math.max(indexStatus.progress.total, 1)) * 100)}%`,
-                                  }}
-                                />
-                              </div>
-                              <div className="text-xs text-muted-foreground flex justify-between">
-                                <span>
-                                  {t.aiSettings.filesProgress
-                                    .replace(
-                                      "{current}",
-                                      String(indexStatus.progress.current),
-                                    )
-                                    .replace(
-                                      "{total}",
-                                      String(indexStatus.progress.total),
-                                    )}
-                                </span>
-                                <span>
-                                  {Math.round(
-                                    (indexStatus.progress.current /
-                                      Math.max(indexStatus.progress.total, 1)) *
-                                      100,
-                                  )}
-                                  %
-                                </span>
-                              </div>
-                              {indexStatus.progress.currentFile && (
-                                <div
-                                  className="text-xs text-muted-foreground truncate"
-                                  title={indexStatus.progress.currentFile}
-                                >
-                                  {t.aiSettings.processing.replace(
-                                    "{file}",
-                                    indexStatus.progress.currentFile
-                                      .split(/[/\\\\]/)
-                                      .pop() || "",
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {!ragIsIndexing && indexStatus && (
-                            <div className="text-xs text-muted-foreground">
-                              {t.aiSettings.indexSummary
-                                .replace(
-                                  "{files}",
-                                  String(indexStatus.totalFiles),
-                                )
-                                .replace(
-                                  "{chunks}",
-                                  String(indexStatus.totalChunks),
-                                )}
-                            </div>
-                          )}
-
-                          {ragError && (
-                            <div className="text-xs text-destructive">
-                              {ragError}
-                            </div>
-                          )}
-
-                          <button
-                            onClick={() => rebuildIndex()}
-                            disabled={
-                              ragIsIndexing ||
-                              (ragConfig.embeddingProvider === "openai" &&
-                                !ragConfig.embeddingApiKey)
-                            }
-                            className="w-full text-xs py-1 px-2 bg-primary/10 hover:bg-primary/20 text-primary rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {ragIsIndexing
-                              ? t.aiSettings.indexing
-                              : t.aiSettings.rebuildIndex}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
                 </div>
-              ) : chatMode === "codex" ? (
-                <CodexPanelSlot
-                  slot="side"
-                  renderMode="native"
-                  className="flex-1 h-full w-full"
-                />
               ) : (
                 <>
                   {/* Agent Mode */}

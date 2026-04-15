@@ -6,8 +6,6 @@
 
 mod agent;
 mod cloud_relay;
-mod codex_extension;
-mod codex_vscode_host;
 mod commands;
 mod diagnostics;
 mod doc_tools;
@@ -16,7 +14,6 @@ mod forge_runtime;
 mod fs;
 mod llm;
 mod mcp;
-mod mobile_gateway;
 mod node_runtime;
 mod plugins;
 mod proxy;
@@ -25,7 +22,6 @@ mod secure_store;
 mod traffic_lights;
 mod typesetting;
 mod update_manager;
-mod vector_db;
 mod webdav;
 
 use std::env;
@@ -86,15 +82,6 @@ fn main() {
             commands::browser_webview_freeze,
             commands::browser_webview_unfreeze,
             commands::browser_webview_exists,
-            // Vector DB commands
-            vector_db::init_vector_db,
-            vector_db::upsert_vector_chunks,
-            vector_db::search_vector_chunks,
-            vector_db::delete_file_vectors,
-            vector_db::delete_vectors,
-            vector_db::get_vector_index_status,
-            vector_db::check_file_needs_reindex,
-            vector_db::clear_vector_index,
             // LLM HTTP client
             llm::llm_fetch,
             llm::llm_fetch_stream,
@@ -130,17 +117,10 @@ fn main() {
             agent::agent_get_status,
             agent::agent_get_queue_status,
             agent::agent_continue_with_answer,
-            agent::agent_list_skills,
-            agent::agent_read_skill,
-            agent::agent_get_durable_memory_snapshot,
-            agent::agent_extract_durable_memories,
-            agent::agent_gc_durable_memory,
-            agent::agent_upsert_durable_memory_entry,
-            agent::agent_delete_durable_memory_entry,
-            agent::agent_reverify_durable_memory_entry,
-            agent::agent_get_session_memory_snapshot,
-            agent::agent_update_session_memory,
-            agent::agent_reset_session_memory,
+            // Vault commands
+            agent::vault_initialize,
+            agent::vault_load_index,
+            agent::vault_run_lint,
             // Agent debug commands
             agent::agent_enable_debug,
             agent::agent_disable_debug,
@@ -155,30 +135,9 @@ fn main() {
             mcp::mcp_reload,
             mcp::mcp_test_tool,
             mcp::mcp_shutdown,
-            // VS Code extension host (Codex POC)
-            codex_vscode_host::codex_vscode_host_start,
-            codex_vscode_host::codex_vscode_host_stop,
-            codex_vscode_host::codex_webview_exists,
-            codex_vscode_host::create_codex_webview,
-            codex_vscode_host::update_codex_webview_bounds,
-            codex_vscode_host::set_codex_webview_visible,
-            codex_vscode_host::navigate_codex_webview,
-            codex_vscode_host::close_codex_webview,
-            // Codex extension management (Marketplace install)
-            codex_extension::codex_extension_get_status,
-            codex_extension::codex_extension_install_latest,
-            codex_extension::codex_extension_install_vsix,
             // Doc tools pack commands
             doc_tools::doc_tools_get_status,
             doc_tools::doc_tools_install_latest,
-            // Mobile Gateway commands
-            mobile_gateway::mobile_get_status,
-            mobile_gateway::mobile_start_server,
-            mobile_gateway::mobile_stop_server,
-            mobile_gateway::mobile_set_workspace,
-            mobile_gateway::mobile_set_agent_config,
-            mobile_gateway::mobile_sync_sessions,
-            mobile_gateway::mobile_sync_options,
             // Cloud Relay commands
             cloud_relay::cloud_relay_set_config,
             cloud_relay::cloud_relay_get_config,
@@ -201,22 +160,12 @@ fn main() {
         ])
         .manage(webdav::commands::WebDAVState::new())
         .manage(agent::AgentState::new())
-        .manage(codex_vscode_host::CodexVscodeHostState::default())
-        .manage(mobile_gateway::MobileGatewayState::new())
         .manage(cloud_relay::CloudRelayState::new())
         .manage(update_manager::UpdateManagerState::default())
         .manage(commands::ChildWebviewBoundsState::default())
         .manage(proxy::ProxyState::new())
         .setup(|app| {
-            if let Err(err) = mobile_gateway::hydrate_state(&app.handle()) {
-                eprintln!("[MobileGateway] Failed to hydrate state: {}", err);
-            }
             doc_tools::ensure_doc_tools_env(&app.handle());
-            if env::var_os("LUMINA_SKILLS_DIR").is_none() {
-                if let Some(root) = agent::skills::builtin_skills_root(&app.handle()) {
-                    env::set_var("LUMINA_SKILLS_DIR", root);
-                }
-            }
             let window = app.get_webview_window("main").unwrap();
 
             #[cfg(target_os = "macos")]

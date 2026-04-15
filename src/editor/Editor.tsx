@@ -6,7 +6,6 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
-import { useOrgStore } from "@/stores/useOrgStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
 import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce, getFileName } from "@/lib/utils";
@@ -75,7 +74,6 @@ export function Editor() {
     redo,
     canUndo,
     canRedo,
-    openVideoNoteFromContent,
   } = useFileStore(
     useShallow((state) => ({
       tabs: state.tabs,
@@ -95,7 +93,6 @@ export function Editor() {
       redo: state.redo,
       canUndo: state.canUndo,
       canRedo: state.canRedo,
-      openVideoNoteFromContent: state.openVideoNoteFromContent,
     })),
   );
 
@@ -119,8 +116,6 @@ export function Editor() {
   const serverBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
   const cloudToken = useCloudSyncStore((s) => s.session?.token ?? "");
   const cloudEmail = useCloudSyncStore((s) => s.email);
-  const currentOrgId = useOrgStore((s) => s.currentOrgId);
-  const currentProjectId = useOrgStore((s) => s.currentProjectId);
 
   const [collabConnection, setCollabConnection] =
     useState<CollabConnection | null>(null);
@@ -128,8 +123,6 @@ export function Editor() {
   useEffect(() => {
     if (
       authStatus !== "authenticated" ||
-      !currentOrgId ||
-      !currentProjectId ||
       !currentFile ||
       !serverBaseUrl ||
       !cloudToken
@@ -145,7 +138,7 @@ export function Editor() {
         const docId = await resolveDocId(
           serverBaseUrl,
           cloudToken,
-          currentProjectId,
+          /* projectId */ "",
           currentFile,
         );
         if (destroyed) return;
@@ -163,7 +156,7 @@ export function Editor() {
         }
         setCollabConnection(conn);
       } catch {
-        // Collab is best-effort — editor works without it
+        // Collab is best-effort -- editor works without it
       }
     })();
 
@@ -176,8 +169,6 @@ export function Editor() {
     };
   }, [
     authStatus,
-    currentOrgId,
-    currentProjectId,
     currentFile,
     serverBaseUrl,
     cloudToken,
@@ -442,18 +433,6 @@ export function Editor() {
     return () => window.removeEventListener("blur", handleBlur);
   }, [isDirty, save, activeTab?.type]);
 
-  // 打开文件时自动检测是否是视频笔记 Markdown，给出提示
-  // 注意：必须在 early return 之前，否则违反 React Hooks 规则
-  const isVideoNoteFile = useMemo(() => {
-    if (!currentContent) return false;
-    // 简单检测 frontmatter 中是否包含 video_bvid 字段
-    // 或正文中包含 "# 视频笔记" 标题
-    const hasFrontmatterBvid =
-      /---[\s\S]*?video_bvid:\s*BV[\w-]+[\s\S]*?---/.test(currentContent);
-    const hasVideoNoteHeading = /# \s*视频笔记/.test(currentContent);
-    return hasFrontmatterBvid || hasVideoNoteHeading;
-  }, [currentContent]);
-
   if (isLoadingFile) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -619,23 +598,6 @@ export function Editor() {
               );
             }}
           />
-
-          {isVideoNoteFile && (
-            <div className="max-w-4xl mx-auto px-8 mb-0 mt-4 flex items-center justify-between py-2 bg-blue-500/5 border border-blue-500/30 rounded-md text-xs text-blue-700 dark:text-blue-300">
-              <span className="px-3">{t.editor.videoNoteDetected}</span>
-              <button
-                onClick={() =>
-                  openVideoNoteFromContent(
-                    currentContent,
-                    getFileName(currentFile || "VideoNote"),
-                  )
-                }
-                className="ml-3 mr-3 px-2 py-1 rounded bg-blue-500 text-white hover:bg-blue-600 text-xs font-medium"
-              >
-                {t.editor.openAsVideoNote}
-              </button>
-            </div>
-          )}
 
           {/* CodeMirror editor — cm-scroller is the sole scroll container */}
           <CodeMirrorEditor
