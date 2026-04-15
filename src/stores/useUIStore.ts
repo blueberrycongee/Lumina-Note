@@ -38,9 +38,9 @@ interface UIState {
   rightPanelTab: "chat" | "outline" | "backlinks" | "tags";
   setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags") => void;
 
-  // Chat mode (agent vs codex — chat mode removed, agent-only)
-  chatMode: "agent" | "codex";
-  setChatMode: (mode: "agent" | "codex") => void;
+  // Chat mode — agent-only (codex moved to plugin system)
+  chatMode: "agent";
+  setChatMode: (mode: "agent") => void;
 
   // AI Panel (docked in right panel or floating)
   aiPanelMode: AIPanelMode;
@@ -266,8 +266,12 @@ export const useUIStore = create<UIState>()(
           applyTheme(theme, state?.isDarkMode || false);
           pluginThemeRuntime.reapply();
         }
-        // Migrate removed chat mode → agent
-        if (state && (state.chatMode as string) === "chat") {
+        // Migrate removed chat/codex modes → agent
+        if (
+          state &&
+          ((state.chatMode as string) === "chat" ||
+            (state.chatMode as string) === "codex")
+        ) {
           state.chatMode = "agent";
         }
         // 强制重置视频笔记状态（不应从 localStorage 恢复）

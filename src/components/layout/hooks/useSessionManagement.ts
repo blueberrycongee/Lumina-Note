@@ -1,6 +1,5 @@
 import { useMemo, useCallback } from "react";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
-import { useUIStore } from "@/stores/useUIStore";
 
 export function formatSessionTime(timestamp: number): string {
   const date = new Date(timestamp);
@@ -16,8 +15,6 @@ export function formatSessionTime(timestamp: number): string {
 }
 
 export function useSessionManagement() {
-  const chatMode = useUIStore((s) => s.chatMode);
-
   const {
     sessions: rustSessions,
     currentSessionId: rustSessionId,
@@ -51,15 +48,14 @@ export function useSessionManagement() {
 
   const isCurrentSession = useCallback(
     (id: string, _type: "agent" | "chat") => {
-      return chatMode === "agent" && rustSessionId === id;
+      return rustSessionId === id;
     },
-    [chatMode, rustSessionId],
+    [rustSessionId],
   );
 
   const handleNewChat = useCallback(() => {
-    if (chatMode === "codex") return;
     rustClearChat();
-  }, [chatMode, rustClearChat]);
+  }, [rustClearChat]);
 
   return {
     allSessions,

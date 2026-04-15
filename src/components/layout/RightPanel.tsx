@@ -625,30 +625,11 @@ export function RightPanel() {
               {/* Header with Mode Toggle */}
               <div className="ui-compact-row p-2 border-b border-border/60 bg-background/35 flex items-center justify-between min-w-0">
                 <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-                  {/* Mode Toggle — agent + codex only */}
-                  <div className="right-ai-mode-toggle flex bg-background/40 border border-border/60 rounded-ui-md p-0.5 shrink-0">
-                    <button
-                      onClick={() => setChatMode("agent")}
-                      className={`shrink-0 px-2 py-1 text-xs rounded-ui-sm transition-colors flex items-center gap-1 whitespace-nowrap ${
-                        chatMode === "agent"
-                          ? "bg-background/65 text-foreground shadow-ui-card border border-border/60"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
-                      title={t.ai.agentMode}
-                    >
-                      <Bot size={12} />
-                      <span className="right-ai-mode-label ui-compact-text">
-                        Agent
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {}}
-                      className="shrink-0 px-2 py-1 text-xs rounded-ui-sm text-muted-foreground"
-                    >
-                      <span className="right-ai-mode-label ui-compact-text">
-                        Agent
-                      </span>
-                    </button>
+                  <div className="flex items-center gap-1 px-2 py-1 text-xs">
+                    <Bot size={12} />
+                    <span className="right-ai-mode-label ui-compact-text">
+                      Agent
+                    </span>
                   </div>
                   <span className="right-ai-status text-xs text-muted-foreground whitespace-nowrap ui-compact-text">
                     {config.apiKey
@@ -656,24 +637,22 @@ export function RightPanel() {
                       : t.settingsModal.notConfigured}
                   </span>
                 </div>
-                {
-                  <div className="flex gap-1">
-                    <button
-                      onClick={deleteCurrentSession}
-                      className="w-7 h-7 ui-icon-btn"
-                      title={t.conversationList.deleteConversation}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => setShowSettings(!showSettings)}
-                      className="w-7 h-7 ui-icon-btn"
-                      title={t.common.settings}
-                    >
-                      <Settings size={14} />
-                    </button>
-                  </div>
-                }
+                <div className="flex gap-1">
+                  <button
+                    onClick={deleteCurrentSession}
+                    className="w-7 h-7 ui-icon-btn"
+                    title={t.conversationList.deleteConversation}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className="w-7 h-7 ui-icon-btn"
+                    title={t.common.settings}
+                  >
+                    <Settings size={14} />
+                  </button>
+                </div>
               </div>
 
               {/* Settings Panel - 全屏模式 */}
@@ -903,14 +882,9 @@ export function RightPanel() {
                   </div>
                 </div>
               ) : (
-                <>
-                  {/* Agent Mode */}
-                  {chatMode === "agent" && (
-                    <div className="flex-1 overflow-hidden">
-                      <AgentPanel />
-                    </div>
-                  )}
-                </>
+                <div className="flex-1 overflow-hidden">
+                  <AgentPanel />
+                </div>
               )}
             </div>
           </div>

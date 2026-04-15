@@ -14,16 +14,12 @@ describe("MainAIChatShell", () => {
     useAIStore.setState({ pendingInputAppends: [] });
   });
 
-  it("hides chat input when in codex mode", () => {
-    useUIStore.setState({ chatMode: "codex" });
-
-    const { queryByRole } = render(<MainAIChatShell />);
-
-    expect(queryByRole("textbox")).toBeNull();
+  it("renders textarea in agent mode", () => {
+    render(<MainAIChatShell />);
+    expect(screen.getByRole("textbox")).toBeTruthy();
   });
 
   it("appends text into input when receiving ai-input-append event", () => {
-    useUIStore.setState({ chatMode: "agent" });
     render(<MainAIChatShell />);
 
     fireEvent(
@@ -38,7 +34,6 @@ describe("MainAIChatShell", () => {
   });
 
   it("appends incoming ai-input-append text as a new paragraph", () => {
-    useUIStore.setState({ chatMode: "agent" });
     render(<MainAIChatShell />);
 
     const input = screen.getByRole("textbox") as HTMLTextAreaElement;
@@ -52,7 +47,6 @@ describe("MainAIChatShell", () => {
   });
 
   it("consumes queued input appends from store on mount", () => {
-    useUIStore.setState({ chatMode: "agent" });
     useAIStore.getState().enqueueInputAppend("Queued from PDF");
     render(<MainAIChatShell />);
 
@@ -61,8 +55,7 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 
-  it("renders thinking mode selector in chat composer for supported models", () => {
-    useUIStore.setState({ chatMode: "agent" });
+  it("renders thinking mode selector for supported models", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -81,8 +74,7 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().config.thinkingMode).toBe("instant");
   });
 
-  it("hides thinking mode selector in chat composer for unsupported models", () => {
-    useUIStore.setState({ chatMode: "agent" });
+  it("hides thinking mode selector for unsupported models", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -99,7 +91,6 @@ describe("MainAIChatShell", () => {
   });
 
   it("renders assistant thinking as collapsed block and expands on click", () => {
-    useUIStore.setState({ chatMode: "agent" });
     useRustAgentStore.setState({
       messages: [
         { role: "user", content: "hello" },
