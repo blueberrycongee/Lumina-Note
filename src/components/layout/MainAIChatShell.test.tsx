@@ -55,7 +55,7 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 
-  it("renders thinking mode selector for supported models", () => {
+  it("renders thinking mode selector in plus menu for supported models", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -67,6 +67,12 @@ describe("MainAIChatShell", () => {
 
     render(<MainAIChatShell />);
 
+    // Thinking mode is inside the "+" menu — click to open
+    const plusBtn = screen
+      .getAllByRole("button")
+      .find((b) => b.getAttribute("title") === "More" || b.textContent === "");
+    if (plusBtn) fireEvent.click(plusBtn);
+
     const { t } = useLocaleStore.getState();
     expect(screen.getByText(t.aiSettings.thinkingMode)).toBeTruthy();
     const selector = screen.getByRole("combobox");
@@ -74,7 +80,7 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().config.thinkingMode).toBe("instant");
   });
 
-  it("hides thinking mode selector for unsupported models", () => {
+  it("hides thinking mode in plus menu for unsupported models", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -85,6 +91,12 @@ describe("MainAIChatShell", () => {
     }));
 
     render(<MainAIChatShell />);
+
+    // Open plus menu
+    const plusBtn = screen
+      .getAllByRole("button")
+      .find((b) => b.getAttribute("title") === "More" || b.textContent === "");
+    if (plusBtn) fireEvent.click(plusBtn);
 
     const { t } = useLocaleStore.getState();
     expect(screen.queryByText(t.aiSettings.thinkingMode)).toBeNull();

@@ -24,6 +24,8 @@ import {
   ArrowUp,
   FileText,
   History,
+  Plus,
+  Paperclip,
   Quote,
   Sparkles,
   X,
@@ -34,6 +36,7 @@ import {
   Check,
   Settings,
   Bug,
+  Lightbulb,
 } from "lucide-react";
 import { useSessionManagement } from "./hooks/useSessionManagement";
 import { useSkillSearch } from "./hooks/useSkillSearch";
@@ -75,6 +78,7 @@ export function MainAIChatShell() {
   const isCodexMode = false;
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
   const [showMention, setShowMention] = useState(false);
@@ -472,6 +476,9 @@ export function MainAIChatShell() {
         !target.closest("textarea")
       ) {
         setShowMention(false);
+      }
+      if (!target.closest("[data-plus-menu]")) {
+        setShowPlusMenu(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1177,463 +1184,446 @@ export function MainAIChatShell() {
           </div>
 
           {/* 输入框容器 */}
-            <div className={`w-full shrink-0 ${hasStarted ? "pb-4" : ""}`}>
-              {!isExportSelectionMode &&
-                (agentQueueCount > 0 ||
-                  rustActiveTaskPreview ||
-                  (llmRetryState && agentStatus === "running")) && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.25,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    className="w-full max-w-3xl mx-auto px-4 mb-2"
-                  >
-                    <div className="bg-foreground/[0.03] backdrop-blur-sm border border-border/40 rounded-2xl p-3">
-                      <div className="flex items-center justify-between gap-3 mb-2">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                          <History className="w-4 h-4 text-muted-foreground" />
-                          <span>{t.ai.agentQueueTitle}</span>
-                        </div>
-                        <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                          {t.ai.agentQueuePending.replace(
-                            "{count}",
-                            String(agentQueueCount),
-                          )}
-                        </span>
-                      </div>
-                      {rustActiveTaskPreview && (
-                        <p className="text-xs text-muted-foreground mb-2">
-                          {t.ai.agentQueueCurrent}:{" "}
-                          <span className="text-foreground">
-                            {rustActiveTaskPreview}
-                          </span>
-                        </p>
-                      )}
-                      {agentQueueCount > 0 && (
-                        <div className="space-y-1">
-                          {rustQueuedTasks.slice(0, 3).map((item) => (
-                            <div
-                              key={item.id}
-                              className="text-xs text-muted-foreground truncate"
-                            >
-                              #{item.position} {item.task}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {isAgentWaitingApproval && (
-                        <p className="text-xs text-warning mt-2">
-                          {t.ai.agentQueueWaitingApprovalHint}
-                        </p>
-                      )}
-                      {llmRetryState && agentStatus === "running" && (
-                        <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs text-warning">
-                          <p className="font-medium">
-                            {t.ai.agentRetryTitle}{" "}
-                            {t.ai.agentRetryAttempt
-                              .replace(
-                                "{attempt}",
-                                String(llmRetryState.attempt),
-                              )
-                              .replace(
-                                "{max}",
-                                String(llmRetryState.maxRetries),
-                              )}
-                          </p>
-                          <p className="mt-0.5 text-warning/90">
-                            {t.ai.agentRetryReason}: {llmRetryState.reason}
-                          </p>
-                          <p className="mt-0.5">
-                            {t.ai.agentRetryIn.replace(
-                              "{seconds}",
-                              String(retrySecondsLeft ?? 0),
-                            )}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              <motion.div
-                className="w-full max-w-3xl mx-auto px-4"
-                initial={false}
-                animate={
-                  reduceMotion
-                    ? { opacity: 1, y: 0, scale: 1 }
-                    : {
-                        opacity: 1,
-                        y: hasStarted ? 0 : 10,
-                        scale: hasStarted ? 1 : 1.01,
-                      }
-                }
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
-                }
-              >
+          <div className={`w-full shrink-0 ${hasStarted ? "pb-4" : ""}`}>
+            {!isExportSelectionMode &&
+              (agentQueueCount > 0 ||
+                rustActiveTaskPreview ||
+                (llmRetryState && agentStatus === "running")) && (
                 <motion.div
-                  className={`bg-background/80 backdrop-blur-xl rounded-[20px] border border-border/40 transition-shadow duration-300 ${
-                    hasStarted
-                      ? "shadow-md shadow-black/[0.04]"
-                      : "shadow-xl shadow-black/[0.08]"
-                  }`}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.25,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="w-full max-w-3xl mx-auto px-4 mb-2"
                 >
-                  {/* 输入文本区域 */}
-                  <div className="p-4 pb-2 relative">
-                    {chatMode === "agent" && showSkillMenu && (
-                      <div
-                        data-skill-menu
-                        className="absolute left-4 right-4 bottom-full mb-2 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
-                      >
-                        <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border/40 flex items-center justify-between">
-                          <span>{t.ai.skillsTitle}</span>
-                          {skillsLoading && (
-                            <span className="text-[10px]">
-                              {t.ai.skillsLoading}
-                            </span>
-                          )}
-                        </div>
-                        <div className="max-h-56 overflow-y-auto">
-                          {filteredSkills.length === 0 ? (
-                            <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                              {t.ai.skillsEmpty}
-                            </div>
-                          ) : (
-                            filteredSkills.map((skill) => (
-                              <button
-                                key={`${skill.source ?? "skill"}:${skill.name}`}
-                                onClick={() => handleSelectSkill(skill)}
-                                className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
-                              >
-                                <div className="font-medium text-foreground">
-                                  {skill.title}
-                                </div>
-                                <div className="text-xs text-muted-foreground truncate">
-                                  {skill.description || skill.name}
-                                </div>
-                              </button>
-                            ))
-                          )}
-                        </div>
+                  <div className="bg-foreground/[0.03] backdrop-blur-sm border border-border/40 rounded-2xl p-3">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2 text-sm font-medium">
+                        <History className="w-4 h-4 text-muted-foreground" />
+                        <span>{t.ai.agentQueueTitle}</span>
                       </div>
-                    )}
-                    {showMention && (
-                      <div
-                        ref={mentionRef}
-                        data-mention-menu
-                        className="absolute left-4 w-72 bottom-full mb-2 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
-                      >
-                        <div className="max-h-56 overflow-y-auto">
-                          {filteredMentionFiles.length === 0 ? (
-                            <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                              {t.ai.noFilesFound}
-                            </div>
-                          ) : (
-                            filteredMentionFiles.map((file, index) => (
-                              <button
-                                key={file.path}
-                                data-selected={index === mentionIndex}
-                                onClick={() => handleSelectMention(file)}
-                                className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors ${
-                                  index === mentionIndex ? "bg-accent" : ""
-                                }`}
-                              >
-                                <FileText
-                                  size={14}
-                                  className="text-slate-500 shrink-0"
-                                />
-                                <span className="truncate">{file.name}</span>
-                              </button>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={(e) =>
-                        handleInputChange(
-                          e.target.value,
-                          e.target.selectionStart,
-                        )
-                      }
-                      onKeyDown={handleKeyDown}
-                      placeholder={
-                        chatMode === "agent"
-                          ? t.ai.agentInputPlaceholder
-                          : t.ai.chatInputPlaceholder
-                      }
-                      className="w-full resize-none outline-none text-foreground placeholder:text-muted-foreground placeholder:whitespace-nowrap placeholder:overflow-hidden placeholder:text-ellipsis min-h-[40px] max-h-[200px] bg-transparent text-base leading-relaxed"
-                      rows={1}
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* 已选中的 skills */}
-                  {chatMode === "agent" && selectedSkills.length > 0 && (
-                    <div className="px-4 pt-1 flex flex-wrap gap-1">
-                      {selectedSkills.map((skill) => (
-                        <div
-                          key={`selected-${skill.name}`}
-                          className="flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-700 rounded-md text-xs"
-                        >
-                          <span className="font-medium">{skill.title}</span>
-                          <button
-                            onClick={() =>
-                              setSelectedSkills((prev) =>
-                                prev.filter((s) => s.name !== skill.name),
-                              )
-                            }
-                            className="hover:bg-emerald-500/20 rounded p-0.5"
-                          >
-                            <X size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 已引用的文件标签 */}
-                  {referencedFiles.length > 0 && (
-                    <div className="px-4 pt-2 flex flex-wrap gap-1">
-                      {referencedFiles.map((file) => (
-                        <div
-                          key={file.path}
-                          className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs"
-                        >
-                          <FileText size={12} />
-                          <span className="max-w-[120px] truncate">
-                            {file.name}
-                          </span>
-                          <button
-                            onClick={() =>
-                              setReferencedFiles((files) =>
-                                files.filter((f) => f.path !== file.path),
-                              )
-                            }
-                            className="hover:bg-primary/20 rounded p-0.5"
-                          >
-                            <X size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {textSelections.length > 0 && (
-                    <div className="px-4 pt-2 flex flex-wrap gap-1">
-                      {textSelections.map((selection) => (
-                        <div
-                          key={selection.id}
-                          className="flex items-center gap-1 px-2 py-1 bg-accent text-accent-foreground rounded-md text-xs max-w-[280px]"
-                          title={selection.text}
-                        >
-                          <Quote size={12} className="shrink-0" />
-                          <span className="truncate">
-                            {selection.summary || selection.text.slice(0, 36)}
-                          </span>
-                          <span className="text-muted-foreground shrink-0">
-                            ({selection.locator || selection.source})
-                          </span>
-                          <button
-                            onClick={() => removeTextSelection(selection.id)}
-                            className="hover:bg-accent/80 rounded p-0.5 shrink-0"
-                          >
-                            <X size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* 底部工具栏 */}
-                  <div className="ai-toolbar-row px-4 pb-3 pt-1 flex items-center justify-between">
-                    <div className="ai-toolbar-left flex items-center gap-2 min-w-0 overflow-hidden">
-                      {/* 设置按钮 */}
-                      <button
-                        onClick={() => setShowSettings(true)}
-                        className="ml-1 flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        title={t.ai.aiChatSettings}
-                      >
-                        <Settings size={14} />
-                      </button>
-
-                      {/* Skills 管理入口 */}
-                      <button
-                        onClick={() => setSkillManagerOpen(true)}
-                        className="ml-1 flex items-center justify-center p-1.5 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                        title={t.ai.skillsManagerTitle}
-                      >
-                        <Sparkles size={14} />
-                      </button>
-
-                      {/* 调试模式按钮：仅在 Agent 模式下显示（开发模式） */}
-                      {import.meta.env.DEV && chatMode === "agent" && (
-                        <button
-                          onClick={() => {
-                            if (debugEnabled) {
-                              disableDebug();
-                            } else {
-                              enableDebug(vaultPath || ".");
-                            }
-                          }}
-                          className={`ml-1 flex items-center justify-center p-1.5 rounded-md transition-colors ${
-                            debugEnabled
-                              ? "text-warning bg-warning/10"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                          }`}
-                          title={
-                            debugEnabled
-                              ? t.ai.debugEnabled.replace(
-                                  "{path}",
-                                  debugLogPath || "",
-                                )
-                              : t.ai.debugEnable
-                          }
-                        >
-                          <Bug size={14} />
-                        </button>
-                      )}
-
-                      {/* 语音识别中间结果 */}
-                      {interimText && (
-                        <span className="text-xs text-muted-foreground italic animate-pulse truncate max-w-[200px]">
-                          {interimText}...
-                        </span>
-                      )}
-                    </div>
-
-                    {/* 右侧按钮组 */}
-                    <div className="flex items-center gap-1">
-                      {/* 麦克风按钮 */}
-                      <button
-                        onClick={toggleRecording}
-                        className={`p-2 rounded-full transition-all duration-200 ${
-                          isRecording
-                            ? "bg-destructive/20 text-destructive"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        }`}
-                        title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
-                      >
-                        {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
-                      </button>
-
-                      {/* 发送/停止按钮 */}
-                      {(() => {
-                        const hasPayload = Boolean(
-                          input.trim() ||
-                          referencedFiles.length > 0 ||
-                          textSelections.length > 0,
-                        );
-                        const queueSend =
-                          chatMode === "agent" &&
-                          agentStatus === "running" &&
-                          hasPayload;
-                        const stopCurrent = isLoading && !queueSend;
-                        const disabled =
-                          isAgentWaitingApproval ||
-                          (!hasPayload && !stopCurrent);
-                        return (
-                          <button
-                            onClick={() => {
-                              if (queueSend) {
-                                void handleSend();
-                                return;
-                              }
-                              if (stopCurrent) {
-                                handleStop();
-                                return;
-                              }
-                              void handleSend();
-                            }}
-                            disabled={disabled}
-                            title={
-                              queueSend
-                                ? t.ai.sendToQueue
-                                : stopCurrent
-                                  ? t.ai.stop
-                                  : t.ai.send
-                            }
-                            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                              stopCurrent
-                                ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                : hasPayload
-                                  ? "bg-foreground text-background hover:opacity-80 shadow-md"
-                                  : "bg-muted text-muted-foreground cursor-not-allowed"
-                            }`}
-                          >
-                            {stopCurrent ? (
-                              <Square size={12} fill="currentColor" />
-                            ) : (
-                              <ArrowUp size={16} strokeWidth={3} />
-                            )}
-                          </button>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* 底部提示/思考模式栏（统一区域） */}
-                  <div className="bg-foreground/[0.02] border-t border-border/30 rounded-b-[20px] px-4 py-2 text-xs text-muted-foreground">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      {supportsThinkingMode && (
-                        <div className="flex items-center gap-2 shrink-0">
-                          <label className="text-xs text-muted-foreground whitespace-nowrap">
-                            {t.aiSettings.thinkingMode}
-                          </label>
-                          <select
-                            value={displayThinkingMode}
-                            onChange={(e) =>
-                              setConfig({
-                                thinkingMode: e.target.value as ThinkingMode,
-                              })
-                            }
-                            className="h-7 min-w-[108px] text-xs px-2 rounded-lg border border-border/30 bg-background/80"
-                          >
-                            <option value="auto">
-                              {t.aiSettings.thinkingModeAuto}
-                            </option>
-                            <option value="thinking">
-                              {t.aiSettings.thinkingModeThinking}
-                            </option>
-                            <option value="instant">
-                              {t.aiSettings.thinkingModeInstant}
-                            </option>
-                          </select>
-                        </div>
-                      )}
-                      <span className="min-w-0 flex-1 text-right">
-                        {hasStarted
-                          ? t.ai.aiGeneratedWarning
-                          : t.ai.getRealtimeContent}
+                      <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                        {t.ai.agentQueuePending.replace(
+                          "{count}",
+                          String(agentQueueCount),
+                        )}
                       </span>
                     </div>
+                    {rustActiveTaskPreview && (
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {t.ai.agentQueueCurrent}:{" "}
+                        <span className="text-foreground">
+                          {rustActiveTaskPreview}
+                        </span>
+                      </p>
+                    )}
+                    {agentQueueCount > 0 && (
+                      <div className="space-y-1">
+                        {rustQueuedTasks.slice(0, 3).map((item) => (
+                          <div
+                            key={item.id}
+                            className="text-xs text-muted-foreground truncate"
+                          >
+                            #{item.position} {item.task}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {isAgentWaitingApproval && (
+                      <p className="text-xs text-warning mt-2">
+                        {t.ai.agentQueueWaitingApprovalHint}
+                      </p>
+                    )}
+                    {llmRetryState && agentStatus === "running" && (
+                      <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs text-warning">
+                        <p className="font-medium">
+                          {t.ai.agentRetryTitle}{" "}
+                          {t.ai.agentRetryAttempt
+                            .replace("{attempt}", String(llmRetryState.attempt))
+                            .replace("{max}", String(llmRetryState.maxRetries))}
+                        </p>
+                        <p className="mt-0.5 text-warning/90">
+                          {t.ai.agentRetryReason}: {llmRetryState.reason}
+                        </p>
+                        <p className="mt-0.5">
+                          {t.ai.agentRetryIn.replace(
+                            "{seconds}",
+                            String(retrySecondsLeft ?? 0),
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </div>
-
-                  {/* AI 对话设置面板：使用悬浮窗口 */}
-                  <AISettingsModal
-                    isOpen={showSettings}
-                    onClose={() => setShowSettings(false)}
-                  />
                 </motion.div>
-              </motion.div>
-            </div>
-          )}
+              )}
+            <motion.div
+              className="w-full max-w-3xl mx-auto px-4"
+              initial={false}
+              animate={
+                reduceMotion
+                  ? { opacity: 1, y: 0, scale: 1 }
+                  : {
+                      opacity: 1,
+                      y: hasStarted ? 0 : 10,
+                      scale: hasStarted ? 1 : 1.01,
+                    }
+              }
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { duration: 0.4, ease: [0.22, 1, 0.36, 1] }
+              }
+            >
+              {/* Tags area — above the pill, only when non-empty */}
+              {(selectedSkills.length > 0 ||
+                referencedFiles.length > 0 ||
+                textSelections.length > 0) && (
+                <div className="max-w-3xl mx-auto w-full mb-2 flex flex-wrap gap-1 px-2">
+                  {selectedSkills.map((skill) => (
+                    <div
+                      key={`selected-${skill.name}`}
+                      className="flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs"
+                    >
+                      <Sparkles size={11} className="shrink-0" />
+                      <span className="font-medium">{skill.title}</span>
+                      <button
+                        onClick={() =>
+                          setSelectedSkills((prev) =>
+                            prev.filter((s) => s.name !== skill.name),
+                          )
+                        }
+                        className="hover:bg-emerald-500/20 rounded-full p-0.5"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  {referencedFiles.map((file) => (
+                    <div
+                      key={file.path}
+                      className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs"
+                    >
+                      <FileText size={11} className="shrink-0" />
+                      <span className="max-w-[120px] truncate">
+                        {file.name}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setReferencedFiles((files) =>
+                            files.filter((f) => f.path !== file.path),
+                          )
+                        }
+                        className="hover:bg-primary/20 rounded-full p-0.5"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  {textSelections.map((selection) => (
+                    <div
+                      key={selection.id}
+                      className="flex items-center gap-1 px-2 py-1 bg-accent text-accent-foreground rounded-full text-xs max-w-[280px]"
+                      title={selection.text}
+                    >
+                      <Quote size={11} className="shrink-0" />
+                      <span className="truncate">
+                        {selection.summary || selection.text.slice(0, 36)}
+                      </span>
+                      <button
+                        onClick={() => removeTextSelection(selection.id)}
+                        className="hover:bg-accent/80 rounded-full p-0.5 shrink-0"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-          {!isCodexMode && (
-            <WelcomeSuggestions
-              hasStarted={hasStarted}
-              onSetInput={setInput}
-              currentFile={currentFile}
-              recentFiles={recentFiles}
-              fileTree={fileTree}
-            />
-          )}
+              {/* Pill-shaped input bar */}
+              <div
+                className={`relative bg-background/80 backdrop-blur-xl border border-border/50 transition-all duration-300 ${
+                  input.includes("\n") || input.length > 80
+                    ? "rounded-3xl"
+                    : "rounded-full"
+                } ${
+                  hasStarted
+                    ? "shadow-md shadow-black/[0.04]"
+                    : "shadow-xl shadow-black/[0.08]"
+                }`}
+              >
+                {/* Popover menus — skill menu */}
+                {showSkillMenu && (
+                  <div
+                    data-skill-menu
+                    className="absolute left-12 right-12 bottom-full mb-2 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
+                  >
+                    <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border/40 flex items-center justify-between">
+                      <span>{t.ai.skillsTitle}</span>
+                      {skillsLoading && (
+                        <span className="text-[10px]">
+                          {t.ai.skillsLoading}
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-56 overflow-y-auto">
+                      {filteredSkills.length === 0 ? (
+                        <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                          {t.ai.skillsEmpty}
+                        </div>
+                      ) : (
+                        filteredSkills.map((skill) => (
+                          <button
+                            key={`${skill.source ?? "skill"}:${skill.name}`}
+                            onClick={() => handleSelectSkill(skill)}
+                            className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
+                          >
+                            <div className="font-medium text-foreground">
+                              {skill.title}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {skill.description || skill.name}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Popover menus — mention menu */}
+                {showMention && (
+                  <div
+                    ref={mentionRef}
+                    data-mention-menu
+                    className="absolute left-12 w-72 bottom-full mb-2 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
+                  >
+                    <div className="max-h-56 overflow-y-auto">
+                      {filteredMentionFiles.length === 0 ? (
+                        <div className="px-3 py-3 text-xs text-muted-foreground text-center">
+                          {t.ai.noFilesFound}
+                        </div>
+                      ) : (
+                        filteredMentionFiles.map((file, index) => (
+                          <button
+                            key={file.path}
+                            data-selected={index === mentionIndex}
+                            onClick={() => handleSelectMention(file)}
+                            className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors ${
+                              index === mentionIndex ? "bg-accent" : ""
+                            }`}
+                          >
+                            <FileText
+                              size={14}
+                              className="text-slate-500 shrink-0"
+                            />
+                            <span className="truncate">{file.name}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* "+" popover menu */}
+                {showPlusMenu && (
+                  <div
+                    data-plus-menu
+                    className="absolute left-2 bottom-full mb-2 w-56 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
+                  >
+                    <button
+                      onClick={() => {
+                        textareaRef.current?.focus();
+                        handleInputChange(input + "@", input.length + 1);
+                        setShowPlusMenu(false);
+                      }}
+                      className="w-full px-3 py-2.5 text-sm text-left hover:bg-accent transition-colors flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Paperclip
+                          size={16}
+                          className="text-muted-foreground"
+                        />
+                        {t.ai.referenceFile || "Reference file"}
+                      </span>
+                      <kbd className="text-[11px] text-muted-foreground">@</kbd>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSkillManagerOpen(true);
+                        setShowPlusMenu(false);
+                      }}
+                      className="w-full px-3 py-2.5 text-sm text-left hover:bg-accent transition-colors flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <Sparkles size={16} className="text-muted-foreground" />
+                        Skills
+                      </span>
+                      <kbd className="text-[11px] text-muted-foreground">/</kbd>
+                    </button>
+                    <div className="border-t border-border/30 my-0.5" />
+                    {supportsThinkingMode && (
+                      <div className="px-3 py-2 flex items-center justify-between">
+                        <span className="flex items-center gap-2.5 text-sm">
+                          <Lightbulb
+                            size={16}
+                            className="text-muted-foreground"
+                          />
+                          {t.aiSettings.thinkingMode}
+                        </span>
+                        <select
+                          value={displayThinkingMode}
+                          onChange={(e) =>
+                            setConfig({
+                              thinkingMode: e.target.value as ThinkingMode,
+                            })
+                          }
+                          className="h-6 text-xs px-1.5 rounded-md border border-border/30 bg-background/80"
+                        >
+                          <option value="auto">
+                            {t.aiSettings.thinkingModeAuto}
+                          </option>
+                          <option value="thinking">
+                            {t.aiSettings.thinkingModeThinking}
+                          </option>
+                          <option value="instant">
+                            {t.aiSettings.thinkingModeInstant}
+                          </option>
+                        </select>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => {
+                        setShowSettings(true);
+                        setShowPlusMenu(false);
+                      }}
+                      className="w-full px-3 py-2.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2.5"
+                    >
+                      <Settings size={16} className="text-muted-foreground" />
+                      {t.ai.aiChatSettings}
+                    </button>
+                  </div>
+                )}
+
+                {/* Pill inner layout: (+) | textarea | mic send */}
+                <div className="flex items-end gap-1 px-2 py-2">
+                  {/* "+" button */}
+                  <button
+                    onClick={() => setShowPlusMenu(!showPlusMenu)}
+                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+                      showPlusMenu
+                        ? "bg-foreground/10 text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                    title={t.ai.moreOptions || "More"}
+                  >
+                    <Plus size={18} />
+                  </button>
+
+                  {/* Textarea */}
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) =>
+                      handleInputChange(e.target.value, e.target.selectionStart)
+                    }
+                    onKeyDown={handleKeyDown}
+                    placeholder={t.ai.agentInputPlaceholder}
+                    className="flex-1 resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[32px] max-h-[200px] bg-transparent text-sm leading-relaxed py-1"
+                    rows={1}
+                    autoFocus
+                  />
+
+                  {/* Mic button */}
+                  <button
+                    onClick={toggleRecording}
+                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
+                      isRecording
+                        ? "bg-destructive/20 text-destructive"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                    title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
+                  >
+                    {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                  </button>
+
+                  {/* Send / Stop button */}
+                  {(() => {
+                    const hasPayload = Boolean(
+                      input.trim() ||
+                      referencedFiles.length > 0 ||
+                      textSelections.length > 0,
+                    );
+                    const queueSend = agentStatus === "running" && hasPayload;
+                    const stopCurrent = isLoading && !queueSend;
+                    const disabled =
+                      isAgentWaitingApproval || (!hasPayload && !stopCurrent);
+                    return (
+                      <button
+                        onClick={() => {
+                          if (queueSend) {
+                            void handleSend();
+                            return;
+                          }
+                          if (stopCurrent) {
+                            handleStop();
+                            return;
+                          }
+                          void handleSend();
+                        }}
+                        disabled={disabled}
+                        title={
+                          queueSend
+                            ? t.ai.sendToQueue
+                            : stopCurrent
+                              ? t.ai.stop
+                              : t.ai.send
+                        }
+                        className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
+                          stopCurrent
+                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            : hasPayload
+                              ? "bg-foreground text-background hover:opacity-80 shadow-md"
+                              : "bg-muted text-muted-foreground cursor-not-allowed"
+                        }`}
+                      >
+                        {stopCurrent ? (
+                          <Square size={12} fill="currentColor" />
+                        ) : (
+                          <ArrowUp size={16} strokeWidth={3} />
+                        )}
+                      </button>
+                    );
+                  })()}
+                </div>
+
+                {/* Interim speech text */}
+                {interimText && (
+                  <div className="px-12 pb-2">
+                    <span className="text-xs text-muted-foreground italic animate-pulse truncate">
+                      {interimText}...
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* AI settings modal */}
+              <AISettingsModal
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+              />
+            </motion.div>
+          </div>
+
+          <WelcomeSuggestions
+            hasStarted={hasStarted}
+            onSetInput={setInput}
+            currentFile={currentFile}
+            recentFiles={recentFiles}
+            fileTree={fileTree}
+          />
         </main>
 
         {/* 调试按钮（开发模式） */}
