@@ -90,7 +90,7 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                   <button
                     onClick={() => setThemeId(theme.id)}
                     className="w-full text-left"
-                    title={`应用主题：${theme.name}`}
+                    title={t.settingsModal.applyTheme.replace('{name}', theme.name)}
                   >
                     <div className="flex gap-1 mb-2">
                       <div
@@ -146,7 +146,7 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                   ? "ring-2 ring-primary bg-primary/10"
                   : "bg-background/60 hover:bg-muted/50"
               }`}
-              title={`应用主题：${(t.settingsModal.themes as any)?.[theme.id]?.name || theme.name}`}
+              title={t.settingsModal.applyTheme.replace('{name}', (t.settingsModal.themes as any)?.[theme.id]?.name || theme.name)}
             >
               <div className="flex gap-1 mb-2">
                 <div

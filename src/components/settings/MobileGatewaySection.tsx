@@ -121,7 +121,7 @@ export function MobileGatewaySection() {
 
   const handleSyncWorkspace = async () => {
     if (!vaultPath) {
-      setError("Workspace path not set");
+      setError(t.settingsModal.mobileWorkspacePathNotSet);
       return;
     }
     try {
@@ -237,19 +237,19 @@ export function MobileGatewaySection() {
                   {t.settingsModal.mobileGatewaySyncNow}
                 </button>
               </div>
-              <div className="rounded-lg border border-border bg-background/70 p-2 text-[10px] text-foreground/70 space-y-1">
-                <div>Workspace sync: {mobileWorkspaceSync?.status ?? "unknown"}</div>
+              <div className="text-[10px] text-foreground/70 space-y-1">
+                <div>{t.settingsModal.mobileWorkspaceSyncStatus}: {mobileWorkspaceSync?.status ?? t.settingsModal.mobileWorkspaceSyncUnknown}</div>
                 {mobileWorkspaceSync?.path && (
-                  <div className="break-all">Path: {mobileWorkspaceSync.path}</div>
+                  <div className="break-all">{t.settingsModal.mobileWorkspaceSyncPath}: {mobileWorkspaceSync.path}</div>
                 )}
                 {mobileWorkspaceSync?.lastInvokeAt && (
-                  <div>Last invoke: {formatTime(mobileWorkspaceSync.lastInvokeAt)}</div>
+                  <div>{t.settingsModal.mobileWorkspaceSyncLastInvoke}: {formatTime(mobileWorkspaceSync.lastInvokeAt)}</div>
                 )}
                 {mobileWorkspaceSync?.lastConfirmedAt && (
-                  <div>Last confirmed: {formatTime(mobileWorkspaceSync.lastConfirmedAt)}</div>
+                  <div>{t.settingsModal.mobileWorkspaceSyncLastConfirmed}: {formatTime(mobileWorkspaceSync.lastConfirmedAt)}</div>
                 )}
                 {mobileWorkspaceSync?.error && (
-                  <div className="text-destructive">Error: {mobileWorkspaceSync.error}</div>
+                  <div className="text-destructive">{t.settingsModal.mobileWorkspaceSyncError}: {mobileWorkspaceSync.error}</div>
                 )}
               </div>
             </>

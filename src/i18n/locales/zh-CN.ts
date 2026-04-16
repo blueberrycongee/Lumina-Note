@@ -1417,6 +1417,14 @@ export default {
     cloudUploaded: "已上传",
     cloudDownloaded: "已下载",
     cloudErrorsOccurred: "个错误",
+    mobileWorkspacePathNotSet: "工作区路径未设置",
+    mobileWorkspaceSyncStatus: "工作区同步",
+    mobileWorkspaceSyncPath: "路径",
+    mobileWorkspaceSyncLastInvoke: "上次调用",
+    mobileWorkspaceSyncLastConfirmed: "上次确认",
+    mobileWorkspaceSyncError: "错误",
+    mobileWorkspaceSyncUnknown: "未知",
+    applyTheme: "应用主题：{name}",
   },
 
   updateChecker: {

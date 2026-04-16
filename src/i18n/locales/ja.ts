@@ -1334,6 +1334,14 @@ export default {
     cloudUploaded: "アップロード済み",
     cloudDownloaded: "ダウンロード済み",
     cloudErrorsOccurred: "件のエラー",
+    mobileWorkspacePathNotSet: "ワークスペースパスが未設定です",
+    mobileWorkspaceSyncStatus: "ワークスペース同期",
+    mobileWorkspaceSyncPath: "パス",
+    mobileWorkspaceSyncLastInvoke: "最終呼び出し",
+    mobileWorkspaceSyncLastConfirmed: "最終確認",
+    mobileWorkspaceSyncError: "エラー",
+    mobileWorkspaceSyncUnknown: "不明",
+    applyTheme: "テーマを適用：{name}",
   },
 
   updateChecker: {

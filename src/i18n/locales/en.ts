@@ -1443,6 +1443,14 @@ export default {
     cloudUploaded: "uploaded",
     cloudDownloaded: "downloaded",
     cloudErrorsOccurred: "errors occurred",
+    mobileWorkspacePathNotSet: "Workspace path not set",
+    mobileWorkspaceSyncStatus: "Workspace sync",
+    mobileWorkspaceSyncPath: "Path",
+    mobileWorkspaceSyncLastInvoke: "Last invoke",
+    mobileWorkspaceSyncLastConfirmed: "Last confirmed",
+    mobileWorkspaceSyncError: "Error",
+    mobileWorkspaceSyncUnknown: "unknown",
+    applyTheme: "Apply theme: {name}",
   },
 
   updateChecker: {
