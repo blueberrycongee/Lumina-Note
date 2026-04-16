@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useWebDAVStore, useSyncStatusText } from '@/stores/useWebDAVStore';
 import { useFileStore } from '@/stores/useFileStore';
 import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
+import { useLocaleStore } from '@/stores/useLocaleStore';
 import {
   AlertCircle,
   Check,
@@ -24,6 +25,7 @@ interface WebDAVSettingsProps {
 }
 
 export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
+  const { t } = useLocaleStore();
   const { vaultPath } = useFileStore();
   const {
     config,
@@ -157,7 +159,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
   };
 
   const formatTime = (timestamp: number | null) => {
-    if (!timestamp) return 'Never';
+    if (!timestamp) return t.settingsModal.cloudNeverSynced;
     return new Date(timestamp).toLocaleString();
   };
 
@@ -180,10 +182,10 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Cloud Sync
+            {t.settingsModal.cloudSyncTitle}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
-            Sign in once, pick a workspace, then sync through the derived WebDAV endpoint.
+            {t.settingsModal.cloudSyncDesc}
           </p>
         </div>
         <span
@@ -208,9 +210,9 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-sm font-medium text-foreground">Cloud Account</h4>
+            <h4 className="text-sm font-medium text-foreground">{t.settingsModal.cloudAccount}</h4>
             <p className="text-xs text-muted-foreground mt-1">
-              Register or log in to bind the current vault to a hosted workspace.
+              {t.settingsModal.cloudAccountDesc}
             </p>
           </div>
           {hasSession && (
@@ -220,14 +222,14 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
               className={`${buttonClass} bg-muted hover:bg-muted/80 inline-flex items-center gap-2`}
             >
               <LogOut size={14} />
-              Logout
+              {t.settingsModal.cloudLogout}
             </button>
           )}
         </div>
 
         <div className="space-y-1.5">
           <label htmlFor="cloud-server" className="text-xs text-muted-foreground">
-            Cloud server
+            {t.settingsModal.cloudServer}
           </label>
           <input
             id="cloud-server"
@@ -242,7 +244,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label htmlFor="cloud-email" className="text-xs text-muted-foreground">
-              Email
+              {t.settingsModal.cloudEmail}
             </label>
             <input
               id="cloud-email"
@@ -255,7 +257,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           </div>
           <div className="space-y-1.5">
             <label htmlFor="cloud-password" className="text-xs text-muted-foreground">
-              Password
+              {t.settingsModal.cloudPassword}
             </label>
             <div className="relative">
               <input
@@ -268,7 +270,6 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
               />
               <button
                 type="button"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
               >
@@ -290,7 +291,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             className={`${buttonClass} bg-muted hover:bg-muted/80 inline-flex items-center gap-2`}
           >
             {isLoading && authStatus === 'authenticating' ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
-            Register
+            {t.settingsModal.cloudRegister}
           </button>
           <button
             type="button"
@@ -299,34 +300,33 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             className={`${buttonClass} bg-primary/80 hover:bg-primary text-primary-foreground inline-flex items-center gap-2`}
           >
             {isLoading && authStatus === 'authenticating' ? <Loader2 size={14} className="animate-spin" /> : <LogIn size={14} />}
-            Login
+            {t.settingsModal.cloudLogin}
           </button>
         </div>
       </div>
 
       <div className="space-y-4">
         <div>
-          <h4 className="text-sm font-medium text-foreground">Workspace Binding</h4>
+          <h4 className="text-sm font-medium text-foreground">{t.settingsModal.cloudWorkspaceBinding}</h4>
           <p className="text-xs text-muted-foreground mt-1">
-            Choose the cloud workspace that should back the current vault.
+            {t.settingsModal.cloudWorkspaceBindingDesc}
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
           <div className="space-y-1.5">
             <label htmlFor="cloud-workspace" className="text-xs text-muted-foreground">
-              Cloud workspace
+              {t.settingsModal.cloudWorkspace}
             </label>
             <select
               id="cloud-workspace"
-              aria-label="Cloud workspace"
               value={currentWorkspaceId}
               onChange={(event) => selectWorkspace(event.target.value)}
               disabled={!hasSession || workspaces.length === 0}
               className={`${inputClass} disabled:opacity-60`}
             >
-              {!hasSession && <option value="">Sign in first</option>}
-              {hasSession && workspaces.length === 0 && <option value="">No workspace yet</option>}
+              {!hasSession && <option value="">{t.settingsModal.cloudSignInFirst}</option>}
+              {hasSession && workspaces.length === 0 && <option value="">{t.settingsModal.cloudNoWorkspace}</option>}
               {workspaces.map((workspace) => (
                 <option key={workspace.id} value={workspace.id}>
                   {workspace.name}
@@ -336,7 +336,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           </div>
           <div className="space-y-1.5">
             <label htmlFor="new-cloud-workspace" className="text-xs text-muted-foreground">
-              Create workspace
+              {t.settingsModal.cloudCreateWorkspace}
             </label>
             <div className="flex gap-2">
               <input
@@ -344,7 +344,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
                 type="text"
                 value={newWorkspaceName}
                 onChange={(event) => setNewWorkspaceName(event.target.value)}
-                placeholder="Workspace name"
+                placeholder={t.settingsModal.cloudWorkspaceNamePlaceholder}
                 className={inputClass}
                 disabled={!hasSession}
               />
@@ -355,7 +355,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
                 className={`${buttonClass} bg-muted hover:bg-muted/80 inline-flex items-center gap-2 whitespace-nowrap`}
               >
                 {isCreatingWorkspace ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                Create
+                {t.settingsModal.cloudCreate}
               </button>
             </div>
           </div>
@@ -364,13 +364,13 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="space-y-1.5">
             <label htmlFor="derived-dav-url" className="text-xs text-muted-foreground">
-              Derived WebDAV URL
+              {t.settingsModal.cloudDerivedWebDAVUrl}
             </label>
             <input id="derived-dav-url" type="text" value={config.server_url} readOnly disabled className={inputClass} />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="derived-remote-path" className="text-xs text-muted-foreground">
-              Derived remote path
+              {t.settingsModal.cloudDerivedRemotePath}
             </label>
             <input id="derived-remote-path" type="text" value={config.remote_base_path} readOnly disabled className={inputClass} />
           </div>
@@ -378,7 +378,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
 
         {currentWorkspaceName && (
           <p className="text-xs text-muted-foreground">
-            Current binding: <span className="text-foreground">{currentWorkspaceName}</span>
+            {t.settingsModal.cloudCurrentBinding}: <span className="text-foreground">{currentWorkspaceName}</span>
           </p>
         )}
       </div>
@@ -386,8 +386,8 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between py-2">
           <div>
-            <p className="text-sm font-medium">Auto Sync</p>
-            <p className="text-xs text-muted-foreground">Sync every {syncIntervalSecs / 60} minutes</p>
+            <p className="text-sm font-medium">{t.settingsModal.cloudAutoSync}</p>
+            <p className="text-xs text-muted-foreground">{t.settingsModal.cloudSyncInterval.replace('{minutes}', String(syncIntervalSecs / 60))}</p>
           </div>
           <button
             type="button"
@@ -411,7 +411,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             ) : isConnected ? (
               <Check size={14} className="text-success mr-2 inline" />
             ) : null}
-            Test Connection
+            {t.settingsModal.cloudTestConnection}
           </button>
 
           <button
@@ -419,7 +419,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             disabled={!isConnected || isSyncing || !canManageSync}
             className={`${buttonClass} bg-muted hover:bg-muted/80`}
           >
-            Preview Sync
+            {t.settingsModal.cloudPreviewSync}
           </button>
 
           <button
@@ -432,7 +432,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             ) : (
               <RefreshCw size={14} className="mr-2 inline" />
             )}
-            Sync Now
+            {t.settingsModal.cloudSyncNow}
           </button>
         </div>
       </div>
@@ -440,7 +440,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       {showPlan && pendingSyncPlan && (
         <div className="space-y-3 p-3 rounded-lg border border-border/60">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium">Sync Plan</h4>
+            <h4 className="text-sm font-medium">{t.settingsModal.cloudSyncPlan}</h4>
             <button onClick={() => setShowPlan(false)} className="p-1 hover:bg-muted rounded">
               <X size={14} />
             </button>
@@ -449,16 +449,16 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           <div className="flex gap-4 text-xs">
             <span className="flex items-center gap-1">
               <Upload size={12} className="text-info" />
-              {pendingSyncPlan.upload_count} to upload
+              {pendingSyncPlan.upload_count} {t.settingsModal.cloudToUpload}
             </span>
             <span className="flex items-center gap-1">
               <Download size={12} className="text-success" />
-              {pendingSyncPlan.download_count} to download
+              {pendingSyncPlan.download_count} {t.settingsModal.cloudToDownload}
             </span>
             {pendingSyncPlan.conflict_count > 0 && (
               <span className="flex items-center gap-1 text-warning">
                 <AlertCircle size={12} />
-                {pendingSyncPlan.conflict_count} conflicts
+                {pendingSyncPlan.conflict_count} {t.settingsModal.cloudConflicts}
               </span>
             )}
           </div>
@@ -466,7 +466,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           {pendingSyncPlan.items.length > 0 && (
             <div className="max-h-40 overflow-y-auto space-y-1">
               {pendingSyncPlan.items.slice(0, 20).map((item, index) => (
-                <div key={`${item.path}-${index}`} className="flex items-center gap-2 text-xs py-1 px-2 rounded bg-white/5">
+                <div key={`${item.path}-${index}`} className="flex items-center gap-2 text-xs py-1 px-2 rounded bg-muted/30">
                   {item.action === 'Upload' && <Upload size={10} className="text-info" />}
                   {item.action === 'Download' && <Download size={10} className="text-success" />}
                   {item.action === 'DeleteRemote' && <Trash2 size={10} className="text-destructive" />}
@@ -486,7 +486,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
 
           {pendingSyncPlan.conflict_count > 0 && (
             <div className="rounded-lg border border-warning/20 bg-warning/10 p-3 text-xs text-warning">
-              Conflicts stay pending and are skipped during execution. Review the highlighted entries before trusting the sync result.
+              {t.settingsModal.cloudConflictWarning}
             </div>
           )}
 
@@ -500,19 +500,19 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             ) : (
               <Check size={14} className="mr-2 inline" />
             )}
-            Execute Sync
+            {t.settingsModal.cloudExecuteSync}
           </button>
         </div>
       )}
 
       {lastSyncResult && (
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>Last sync: {formatTime(lastSyncTime)}</p>
+          <p>{t.settingsModal.cloudLastSync}: {formatTime(lastSyncTime)}</p>
           <p>
-            {lastSyncResult.uploaded} uploaded, {lastSyncResult.downloaded} downloaded
-            {lastSyncResult.conflicts > 0 && `, ${lastSyncResult.conflicts} conflicts`}
+            {lastSyncResult.uploaded} {t.settingsModal.cloudUploaded}, {lastSyncResult.downloaded} {t.settingsModal.cloudDownloaded}
+            {lastSyncResult.conflicts > 0 && `, ${lastSyncResult.conflicts} ${t.settingsModal.cloudConflicts}`}
           </p>
-          {lastSyncResult.errors.length > 0 && <p className="text-destructive">{lastSyncResult.errors.length} errors occurred</p>}
+          {lastSyncResult.errors.length > 0 && <p className="text-destructive">{lastSyncResult.errors.length} {t.settingsModal.cloudErrorsOccurred}</p>}
         </div>
       )}
     </div>
