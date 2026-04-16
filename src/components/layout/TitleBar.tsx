@@ -10,7 +10,6 @@ import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { platform } from "@tauri-apps/plugin-os";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { NotificationBell } from "../team/NotificationBell";
 
 const isMacByNavigator = (): boolean =>
   typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
@@ -91,7 +90,10 @@ export function TitleBar() {
   }, [getWindowSafe, tauriRuntime]);
 
   const withWindow = useCallback(
-    async (action: (appWindow: Window) => Promise<void>, errorMessage: string) => {
+    async (
+      action: (appWindow: Window) => Promise<void>,
+      errorMessage: string,
+    ) => {
       const appWindow = getWindowSafe();
       if (!appWindow) return;
       try {
@@ -121,11 +123,17 @@ export function TitleBar() {
   };
 
   const handleMinimize = async () => {
-    await withWindow((appWindow) => appWindow.minimize(), "Failed to minimize:");
+    await withWindow(
+      (appWindow) => appWindow.minimize(),
+      "Failed to minimize:",
+    );
   };
 
   const handleMaximize = async () => {
-    await withWindow((appWindow) => appWindow.toggleMaximize(), "Failed to toggle maximize:");
+    await withWindow(
+      (appWindow) => appWindow.toggleMaximize(),
+      "Failed to toggle maximize:",
+    );
   };
 
   const handleClose = async () => {
@@ -152,8 +160,11 @@ export function TitleBar() {
             Lumina Note
           </span>
         </div>
-        <div className="w-20 flex items-center justify-end pr-2" data-tauri-drag-region="false">
-          <NotificationBell />
+        <div
+          className="w-20 flex items-center justify-end pr-2"
+          data-tauri-drag-region="false"
+        >
+          {/* notifications removed */}
         </div>
       </div>
     );
@@ -169,7 +180,11 @@ export function TitleBar() {
     >
       {/* 左侧：应用图标和标题 */}
       <div className="flex items-center gap-2 px-3">
-        <img src="/lumina.png" alt="Logo" className="w-4 h-4 pointer-events-none" />
+        <img
+          src="/lumina.png"
+          alt="Logo"
+          className="w-4 h-4 pointer-events-none"
+        />
         <span className="text-[11px] text-muted-foreground font-medium tracking-[0.2em] uppercase pointer-events-none">
           Lumina Note
         </span>
@@ -185,7 +200,7 @@ export function TitleBar() {
         onDoubleClick={(e) => e.stopPropagation()}
         data-tauri-drag-region="false"
       >
-        <NotificationBell />
+        {/* notifications removed */}
         <div className="flex items-center h-full">
           {/* 最小化 */}
           <button
@@ -215,7 +230,10 @@ export function TitleBar() {
             className="h-full px-4 hover:bg-destructive/20 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)]"
             title={t.titleBar.close}
           >
-            <X size={14} className="text-muted-foreground hover:text-destructive" />
+            <X
+              size={14}
+              className="text-muted-foreground hover:text-destructive"
+            />
           </button>
         </div>
       </div>

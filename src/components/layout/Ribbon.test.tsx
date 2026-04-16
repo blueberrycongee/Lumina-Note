@@ -85,7 +85,9 @@ vi.mock("@/stores/useLocaleStore", () => ({
 }));
 
 vi.mock("@/stores/usePluginStore", () => ({
-  usePluginStore: (selector: (state: { isRibbonItemEnabled: () => boolean }) => unknown) =>
+  usePluginStore: (
+    selector: (state: { isRibbonItemEnabled: () => boolean }) => unknown,
+  ) =>
     selector({
       isRibbonItemEnabled: () => true,
     }),
@@ -99,31 +101,9 @@ vi.mock("@/stores/usePluginUiStore", () => ({
 }));
 
 vi.mock("@/stores/useUpdateStore", () => ({
-  useUpdateStore: (selector: (state: typeof updateStoreState) => unknown) => selector(updateStoreState),
+  useUpdateStore: (selector: (state: typeof updateStoreState) => unknown) =>
+    selector(updateStoreState),
   hasActionableTerminalInstallPhase: () => false,
-}));
-
-vi.mock("@/stores/useCloudSyncStore", () => ({
-  useCloudSyncStore: (selector: (state: { authStatus: string; session: null }) => unknown) =>
-    selector({ authStatus: "anonymous", session: null }),
-}));
-
-vi.mock("@/components/team/TeamAuthModal", () => ({
-  TeamAuthModal: ({ onClose }: { onClose: () => void }) => (
-    <div>
-      <div>Auth Modal</div>
-      <button onClick={onClose}>Close Auth</button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/team/AccountPopover", () => ({
-  AccountPopover: ({ onClose }: { onClose: () => void }) => (
-    <div>
-      <div>Account Popover</div>
-      <button onClick={onClose}>Close Account</button>
-    </div>
-  ),
 }));
 
 vi.mock("@tauri-apps/plugin-shell", () => ({
@@ -136,9 +116,9 @@ vi.mock("@/lib/tauri", () => ({
 }));
 
 vi.mock("@/components/plugins/InstalledPluginsModal", () => ({
-  InstalledPluginsModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Plugins Modal</div> : null),
+  InstalledPluginsModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div>Plugins Modal</div> : null,
 }));
-
 
 vi.mock("./SettingsModal", () => ({
   SettingsModal: ({
@@ -160,7 +140,8 @@ vi.mock("./SettingsModal", () => ({
 }));
 
 vi.mock("./UpdateModal", () => ({
-  UpdateModal: ({ isOpen }: { isOpen: boolean }) => (isOpen ? <div>Update Modal</div> : null),
+  UpdateModal: ({ isOpen }: { isOpen: boolean }) =>
+    isOpen ? <div>Update Modal</div> : null,
 }));
 
 describe("Ribbon", () => {
@@ -173,17 +154,25 @@ describe("Ribbon", () => {
   it("does not render a macOS traffic-light safe area by default", () => {
     render(<Ribbon />);
 
-    expect(screen.queryByTestId("mac-ribbon-traffic-lights-safe-area")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("mac-ribbon-traffic-lights-safe-area"),
+    ).not.toBeInTheDocument();
   });
 
   it("renders a dedicated macOS traffic-light safe area when requested", () => {
     const { container } = render(<Ribbon showMacTrafficLightSafeArea />);
 
-    expect(screen.getByTestId("mac-ribbon-traffic-lights-safe-area")).toHaveAttribute("data-tauri-drag-region", "true");
-    expect(screen.getByTestId("mac-ribbon-traffic-lights-safe-area")).toHaveClass("border-b");
+    expect(
+      screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
+    ).toHaveAttribute("data-tauri-drag-region", "true");
+    expect(
+      screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
+    ).toHaveClass("border-b");
     expect(container.firstElementChild).not.toHaveClass("border-r");
     expect(screen.getByTestId("ribbon-content")).toHaveClass("border-r");
-    expect(screen.getByRole("button", { name: "Global Search" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Global Search" }),
+    ).toBeInTheDocument();
   });
 
   it("removes extra top padding when left macOS top chrome already owns the top row", () => {
@@ -196,20 +185,27 @@ describe("Ribbon", () => {
   it("keeps the macOS safe area free of the vertical divider when collapsed", () => {
     render(<Ribbon showMacTrafficLightSafeArea />);
 
-    expect(screen.getByTestId("mac-ribbon-traffic-lights-safe-area")).not.toHaveClass("border-r");
-    expect(screen.getByTestId("mac-ribbon-traffic-lights-safe-area")).toHaveClass("shadow-[0_1px_0_hsl(var(--border)/0.5)]");
-    expect(screen.getByTestId("ribbon-content")).not.toHaveClass("shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)]");
+    expect(
+      screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
+    ).not.toHaveClass("border-r");
+    expect(
+      screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
+    ).toHaveClass("shadow-[0_1px_0_hsl(var(--border)/0.5)]");
+    expect(screen.getByTestId("ribbon-content")).not.toHaveClass(
+      "shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)]",
+    );
   });
 
   it("renders in StrictMode without triggering a zustand selector loop", () => {
-
     render(
       <StrictMode>
         <Ribbon />
       </StrictMode>,
     );
 
-    expect(screen.getByRole("button", { name: /Software Update/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Software Update/ }),
+    ).toBeInTheDocument();
   });
 
   it("opens the dedicated update modal directly from the ribbon button", () => {
@@ -236,11 +232,15 @@ describe("Ribbon", () => {
   it("renders the image manager ribbon entry", () => {
     render(<Ribbon />);
 
-    expect(screen.getByRole("button", { name: "Image Manager" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Image Manager" }),
+    ).toBeInTheDocument();
   });
 
   it("uses the stronger active-state emphasis for the current section", () => {
-    fileStoreState.tabs = [{ id: "tab-1", name: "Daily Note.md", type: "file" }];
+    fileStoreState.tabs = [
+      { id: "tab-1", name: "Daily Note.md", type: "file" },
+    ];
     fileStoreState.activeTabIndex = 0;
     fileStoreState.currentFile = "/vault/Daily Note.md";
 

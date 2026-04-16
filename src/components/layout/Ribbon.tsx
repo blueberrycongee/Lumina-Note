@@ -22,7 +22,6 @@ import {
   Loader2,
   RefreshCw,
   RotateCcw,
-  UserCircle,
 } from "lucide-react";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 
@@ -30,34 +29,35 @@ import { cn } from "@/lib/utils";
 import { exists, isTauriAvailable } from "@/lib/tauri";
 import { SettingsModal } from "./SettingsModal";
 import { UpdateModal } from "./UpdateModal";
-import { type PluginRibbonItem, usePluginUiStore } from "@/stores/usePluginUiStore";
+import {
+  type PluginRibbonItem,
+  usePluginUiStore,
+} from "@/stores/usePluginUiStore";
 import { InstalledPluginsModal } from "@/components/plugins/InstalledPluginsModal";
 import { useUpdateStore } from "@/stores/useUpdateStore";
 import { getRibbonUpdateState } from "./ribbonUpdateState";
-import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
-import { TeamAuthModal } from "@/components/team/TeamAuthModal";
-import { AccountPopover } from "@/components/team/AccountPopover";
 
 interface RibbonProps {
   showMacTrafficLightSafeArea?: boolean;
   flushTopSpacing?: boolean;
 }
 
-export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = false }: RibbonProps) {
+export function Ribbon({
+  showMacTrafficLightSafeArea = false,
+  flushTopSpacing = false,
+}: RibbonProps) {
   const REPO_URL = "https://github.com/blueberrycongee/Lumina-Note";
   const [showSettings, setShowSettings] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [showPlugins, setShowPlugins] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showAccountPopover, setShowAccountPopover] = useState(false);
-  const authStatus = useCloudSyncStore((s) => s.authStatus);
-  const userEmail = useCloudSyncStore((s) => s.session?.user?.email);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const closeUpdateModal = useCallback(() => setShowUpdateModal(false), []);
   const closePlugins = useCallback(() => setShowPlugins(false), []);
   const { t } = useLocaleStore();
   const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
-  const isRibbonItemEnabled = usePluginStore((state) => state.isRibbonItemEnabled);
+  const isRibbonItemEnabled = usePluginStore(
+    (state) => state.isRibbonItemEnabled,
+  );
   const {
     tabs,
     activeTabIndex,
@@ -71,7 +71,13 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
     openImageManagerTab,
   } = useFileStore();
   const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
-  const { availableUpdate, hasUnreadUpdate, installTelemetry, currentVersion, isChecking } = useUpdateStore(
+  const {
+    availableUpdate,
+    hasUnreadUpdate,
+    installTelemetry,
+    currentVersion,
+    isChecking,
+  } = useUpdateStore(
     useShallow((state) => ({
       availableUpdate: state.availableUpdate,
       hasUnreadUpdate: state.hasUnreadUpdate,
@@ -81,7 +87,8 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
     })),
   );
   const imageManagerTitle =
-    (t.ribbon as typeof t.ribbon & { imageManager?: string }).imageManager ?? "Image Manager";
+    (t.ribbon as typeof t.ribbon & { imageManager?: string }).imageManager ??
+    "Image Manager";
 
   // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -102,7 +109,10 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
   let activeSection: RibbonSection = "none";
   if (activeTab?.type === "ai-chat") {
     activeSection = "ai";
-  } else if (activeTab?.type === "graph" || activeTab?.type === "isolated-graph") {
+  } else if (
+    activeTab?.type === "graph" ||
+    activeTab?.type === "isolated-graph"
+  ) {
     activeSection = "graph";
   } else if (activeTab?.type === "video-note") {
     activeSection = "video";
@@ -123,7 +133,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
 
   // Find first file tab to switch to
   const handleSwitchToFiles = async () => {
-    const fileTabIndex = tabs.findIndex(tab => tab.type === "file");
+    const fileTabIndex = tabs.findIndex((tab) => tab.type === "file");
     if (fileTabIndex !== -1) {
       switchTab(fileTabIndex);
       return;
@@ -181,7 +191,10 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
   const isPluginRibbonItemActive = useCallback(
     (item: PluginRibbonItem) => {
       if (!activeTab?.type) return false;
-      return Array.isArray(item.activeWhenTabTypes) && item.activeWhenTabTypes.includes(activeTab.type);
+      return (
+        Array.isArray(item.activeWhenTabTypes) &&
+        item.activeWhenTabTypes.includes(activeTab.type)
+      );
     },
     [activeTab?.type],
   );
@@ -196,7 +209,11 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
     .filter(
       (item) =>
         item.section === "top" &&
-        isRibbonItemEnabled(item.pluginId, item.itemId, item.defaultEnabled ?? true),
+        isRibbonItemEnabled(
+          item.pluginId,
+          item.itemId,
+          item.defaultEnabled ?? true,
+        ),
     )
     .sort((a, b) => a.order - b.order);
 
@@ -204,7 +221,11 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
     .filter(
       (item) =>
         item.section === "bottom" &&
-        isRibbonItemEnabled(item.pluginId, item.itemId, item.defaultEnabled ?? true),
+        isRibbonItemEnabled(
+          item.pluginId,
+          item.itemId,
+          item.defaultEnabled ?? true,
+        ),
     )
     .sort((a, b) => a.order - b.order);
 
@@ -228,36 +249,52 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             : t.updateChecker.descDownloading
         : updateRibbonState === "available"
           ? availableUpdate
-            ? t.updateChecker.descAvailable.replace("{version}", availableUpdate.version)
+            ? t.updateChecker.descAvailable.replace(
+                "{version}",
+                availableUpdate.version,
+              )
             : t.updateChecker.descIdle
           : updateRibbonState === "cancelled"
             ? t.updateChecker.descCancelled
-          : updateRibbonState === "error"
-            ? t.updateChecker.descError
-            : updateRibbonState === "checking"
-              ? t.ribbon.softwareUpdateChecking
-              : updatesSupported
-                ? t.updateChecker.descIdle
-                : t.updateChecker.descUnsupported;
+            : updateRibbonState === "error"
+              ? t.updateChecker.descError
+              : updateRibbonState === "checking"
+                ? t.ribbon.softwareUpdateChecking
+                : updatesSupported
+                  ? t.updateChecker.descIdle
+                  : t.updateChecker.descUnsupported;
   const updateTitle = `${t.updateChecker.title} · ${updateTitleDetail}`;
   const updateButtonClassName = cn(
     "relative w-8 h-8 ui-icon-btn",
-    updateRibbonState === "available" && "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15",
-    updateRibbonState === "in-progress" && "text-primary border border-primary/30 bg-primary/10 hover:bg-primary/15",
-    updateRibbonState === "ready" && "text-success border border-success/35 bg-success/10 hover:bg-success/15 hover:text-success",
-    updateRibbonState === "cancelled" && "text-warning border border-warning/30 bg-warning/10 hover:bg-warning/15",
-    updateRibbonState === "error" && "text-warning border border-warning/30 bg-warning/10 hover:bg-warning/15",
+    updateRibbonState === "available" &&
+      "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15",
+    updateRibbonState === "in-progress" &&
+      "text-primary border border-primary/30 bg-primary/10 hover:bg-primary/15",
+    updateRibbonState === "ready" &&
+      "text-success border border-success/35 bg-success/10 hover:bg-success/15 hover:text-success",
+    updateRibbonState === "cancelled" &&
+      "text-warning border border-warning/30 bg-warning/10 hover:bg-warning/15",
+    updateRibbonState === "error" &&
+      "text-warning border border-warning/30 bg-warning/10 hover:bg-warning/15",
   );
-  const showUpdateDot = updateRibbonState === "available" || updateRibbonState === "ready";
-  const updateDotClassName = updateRibbonState === "ready" ? "bg-success" : "bg-primary";
+  const showUpdateDot =
+    updateRibbonState === "available" || updateRibbonState === "ready";
+  const updateDotClassName =
+    updateRibbonState === "ready" ? "bg-success" : "bg-primary";
 
   const renderUpdateIcon = () => {
     if (updateRibbonState === "available") return <Download size={18} />;
-    if (updateRibbonState === "in-progress") return <Loader2 size={18} className="animate-spin" />;
+    if (updateRibbonState === "in-progress")
+      return <Loader2 size={18} className="animate-spin" />;
     if (updateRibbonState === "ready") return <RotateCcw size={18} />;
     if (updateRibbonState === "cancelled") return <AlertCircle size={18} />;
     if (updateRibbonState === "error") return <AlertCircle size={18} />;
-    return <RefreshCw size={18} className={updateRibbonState === "checking" ? "animate-spin" : ""} />;
+    return (
+      <RefreshCw
+        size={18}
+        className={updateRibbonState === "checking" ? "animate-spin" : ""}
+      />
+    );
   };
 
   return (
@@ -284,7 +321,9 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
         <div className="flex flex-col items-center gap-0.5">
           {/* Search */}
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-global-search"))}
+            onClick={() =>
+              window.dispatchEvent(new CustomEvent("open-global-search"))
+            }
             className="w-8 h-8 ui-icon-btn"
             title={t.ribbon.globalSearch}
           >
@@ -301,7 +340,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
               "w-8 h-8 ui-icon-btn",
               activeSection === "ai"
                 ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
+                : "",
             )}
             title={t.ribbon.aiChatMain}
           >
@@ -315,7 +354,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
               "w-8 h-8 ui-icon-btn",
               activeSection === "file"
                 ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
+                : "",
             )}
             title={t.ribbon.fileEditor}
           >
@@ -328,7 +367,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
               "w-8 h-8 ui-icon-btn",
               activeSection === "image-manager"
                 ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
+                : "",
             )}
             title={imageManagerTitle}
           >
@@ -342,7 +381,7 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
               "w-8 h-8 ui-icon-btn",
               activeSection === "graph"
                 ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                : ""
+                : "",
             )}
             title={t.graph.title}
           >
@@ -359,20 +398,20 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
           </button>
 
           {topPluginRibbonItems.map((item) => (
-              <button
-                key={`${item.pluginId}:${item.itemId}`}
-                onClick={() => item.run()}
-                className={cn(
-                  "w-8 h-8 ui-icon-btn text-xs",
-                  isPluginRibbonItemActive(item)
-                    ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                    : ""
-                )}
-                title={item.title}
-              >
-                {renderPluginRibbonIcon(item)}
-              </button>
-            ))}
+            <button
+              key={`${item.pluginId}:${item.itemId}`}
+              onClick={() => item.run()}
+              className={cn(
+                "w-8 h-8 ui-icon-btn text-xs",
+                isPluginRibbonItemActive(item)
+                  ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                  : "",
+              )}
+              title={item.title}
+            >
+              {renderPluginRibbonIcon(item)}
+            </button>
+          ))}
         </div>
 
         {/* Spacer */}
@@ -390,7 +429,10 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
             {showUpdateDot && (
               <span
                 aria-hidden="true"
-                className={cn("absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full", updateDotClassName)}
+                className={cn(
+                  "absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full",
+                  updateDotClassName,
+                )}
               />
             )}
           </button>
@@ -408,20 +450,20 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
           </button>
 
           {bottomPluginRibbonItems.map((item) => (
-              <button
-                key={`${item.pluginId}:${item.itemId}`}
-                onClick={() => item.run()}
-                className={cn(
-                  "w-8 h-8 ui-icon-btn text-xs",
-                  isPluginRibbonItemActive(item)
-                    ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
-                    : ""
-                )}
-                title={item.title}
-              >
-                {renderPluginRibbonIcon(item)}
-              </button>
-            ))}
+            <button
+              key={`${item.pluginId}:${item.itemId}`}
+              onClick={() => item.run()}
+              className={cn(
+                "w-8 h-8 ui-icon-btn text-xs",
+                isPluginRibbonItemActive(item)
+                  ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                  : "",
+              )}
+              title={item.title}
+            >
+              {renderPluginRibbonIcon(item)}
+            </button>
+          ))}
 
           {/* Theme toggle */}
           <button
@@ -431,31 +473,6 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-
-          {/* Account */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                if (authStatus === 'authenticated') {
-                  setShowAccountPopover((v) => !v);
-                } else {
-                  setShowAuthModal(true);
-                }
-              }}
-              className={cn(
-                "w-8 h-8 ui-icon-btn",
-                authStatus === 'authenticated'
-                  ? "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15"
-                  : "",
-              )}
-              title={authStatus === 'authenticated' ? (userEmail ?? t.auth.signIn) : t.auth.signIn}
-            >
-              <UserCircle size={18} />
-            </button>
-            {showAccountPopover && authStatus === 'authenticated' && (
-              <AccountPopover onClose={() => setShowAccountPopover(false)} />
-            )}
-          </div>
 
           {/* Settings */}
           <button
@@ -476,12 +493,6 @@ export function Ribbon({ showMacTrafficLightSafeArea = false, flushTopSpacing = 
       />
       <UpdateModal isOpen={showUpdateModal} onClose={closeUpdateModal} />
       <InstalledPluginsModal isOpen={showPlugins} onClose={closePlugins} />
-      {showAuthModal && (
-        <TeamAuthModal
-          onClose={() => setShowAuthModal(false)}
-          onAuthenticated={() => setShowAuthModal(false)}
-        />
-      )}
     </div>
   );
 }
