@@ -3,6 +3,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import { useUIStore } from "@/stores/useUIStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDebugLogPath } from "@/lib/debugLogger";
 import { reportOperationError } from "@/lib/reportError";
 
@@ -14,6 +15,7 @@ type EditorTraceWindow = Window & {
 };
 
 export function DiagnosticsSection() {
+  const { t } = useLocaleStore();
   const diagnosticsEnabled = useUIStore((s) => s.diagnosticsEnabled);
   const setDiagnosticsEnabled = useUIStore((s) => s.setDiagnosticsEnabled);
   const editorInteractionTraceEnabled = useUIStore((s) => s.editorInteractionTraceEnabled);
@@ -22,7 +24,6 @@ export function DiagnosticsSection() {
   const [logPath, setLogPath] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [traceBusy, setTraceBusy] = useState(false);
-  const title = "Diagnostics";
 
   useEffect(() => {
     if (!diagnosticsEnabled) return;
@@ -42,7 +43,7 @@ export function DiagnosticsSection() {
     try {
       setBusy(true);
       const destination = await save({
-        title: "Export Diagnostics",
+        title: t.settingsModal.diagnosticsExportDialogTitle,
         defaultPath: `lumina-diagnostics-${new Date().toISOString().replace(/[:.]/g, "-")}.log`,
         filters: [{ name: "Log", extensions: ["log", "txt"] }],
       });
@@ -78,10 +79,10 @@ export function DiagnosticsSection() {
       const traceApi = (window as EditorTraceWindow).__luminaEditorTrace;
       const data = traceApi?.getData?.();
       if (!data) {
-        throw new Error("Interaction trace is unavailable. Open a note editor and reproduce the issue first.");
+        throw new Error(t.settingsModal.diagnosticsTraceUnavailable);
       }
       const destination = await save({
-        title: "Export Interaction Trace",
+        title: t.settingsModal.diagnosticsExportTraceDialogTitle,
         defaultPath: `lumina-editor-trace-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
         filters: [{ name: "JSON", extensions: ["json"] }],
       });
@@ -101,18 +102,18 @@ export function DiagnosticsSection() {
   return (
     <section className="space-y-4">
       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-        {title}
+        {t.settingsModal.diagnosticsTitle}
       </h3>
 
       <div className="flex items-center justify-between py-2 gap-4">
         <div className="min-w-0">
-          <p className="font-medium">Collect diagnostics logs</p>
+          <p className="font-medium">{t.settingsModal.diagnosticsCollectLogs}</p>
           <p className="text-sm text-muted-foreground">
-            When enabled, Lumina writes console logs and crash events to a local file to help debugging.
+            {t.settingsModal.diagnosticsCollectLogsDesc}
           </p>
           {diagnosticsEnabled && (
             <p className="text-xs text-muted-foreground truncate mt-1" title={logPath}>
-              Log folder: {logPath || "(loading...)"}
+              {t.settingsModal.diagnosticsLogFolder}: {logPath || `(${t.settingsModal.diagnosticsLoading})`}
             </p>
           )}
         </div>
@@ -126,16 +127,15 @@ export function DiagnosticsSection() {
               : "bg-background/60 border-border hover:bg-muted"
           }`}
         >
-          {diagnosticsEnabled ? "On" : "Off"}
+          {diagnosticsEnabled ? t.settingsModal.diagnosticsOn : t.settingsModal.diagnosticsOff}
         </button>
       </div>
 
       <div className="flex items-center justify-between py-2 gap-4">
         <div className="min-w-0">
-          <p className="font-medium">Record editor interaction trace</p>
+          <p className="font-medium">{t.settingsModal.diagnosticsEditorTrace}</p>
           <p className="text-sm text-muted-foreground">
-            When enabled, Lumina starts a fresh in-memory trace for editor mode switches, scroll moves,
-            focus changes, clicks, and selection sync so you can export one repro as JSON.
+            {t.settingsModal.diagnosticsEditorTraceDesc}
           </p>
         </div>
         <button
@@ -148,7 +148,7 @@ export function DiagnosticsSection() {
               : "bg-background/60 border-border hover:bg-muted"
           }`}
         >
-          {editorInteractionTraceEnabled ? "Recording" : "Off"}
+          {editorInteractionTraceEnabled ? t.settingsModal.diagnosticsRecording : t.settingsModal.diagnosticsOff}
         </button>
       </div>
 
@@ -159,7 +159,7 @@ export function DiagnosticsSection() {
           disabled={!diagnosticsEnabled || busy}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {busy ? "Exporting..." : "Export Diagnostics"}
+          {busy ? t.settingsModal.diagnosticsExporting : t.settingsModal.diagnosticsExport}
         </button>
         <button
           type="button"
@@ -168,7 +168,7 @@ export function DiagnosticsSection() {
           disabled={!editorInteractionTraceEnabled || traceBusy}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Clear Interaction Trace
+          {t.settingsModal.diagnosticsClearTrace}
         </button>
         <button
           type="button"
@@ -177,7 +177,7 @@ export function DiagnosticsSection() {
           disabled={!editorInteractionTraceEnabled || traceBusy}
           className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {traceBusy ? "Exporting..." : "Export Interaction Trace"}
+          {traceBusy ? t.settingsModal.diagnosticsExporting : t.settingsModal.diagnosticsExportTrace}
         </button>
       </div>
     </section>
