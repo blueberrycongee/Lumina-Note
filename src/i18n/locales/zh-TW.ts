@@ -1249,6 +1249,14 @@ export default {
     about: "關於",
     appDescription: "本地優先的 AI 驅動筆記應用",
     confirmDeleteTheme: '確定刪除主題 "{name}" 嗎？',
+    tabs: {
+      general: "一般",
+      ai: "AI",
+      sync: "同步",
+      network: "網路",
+      publish: "發佈",
+      system: "系統",
+    },
   },
 
   updateChecker: {

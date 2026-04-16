@@ -1355,6 +1355,14 @@ export default {
     about: "关于",
     appDescription: "本地优先的 AI 驱动笔记应用",
     confirmDeleteTheme: '确定删除主题 "{name}" 吗？',
+    tabs: {
+      general: "通用",
+      ai: "AI",
+      sync: "同步",
+      network: "网络",
+      publish: "发布",
+      system: "系统",
+    },
   },
 
   updateChecker: {

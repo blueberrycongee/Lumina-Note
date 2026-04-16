@@ -1381,6 +1381,14 @@ export default {
     about: "About",
     appDescription: "Local-first AI-powered note-taking app",
     confirmDeleteTheme: 'Delete theme "{name}"?',
+    tabs: {
+      general: "General",
+      ai: "AI",
+      sync: "Sync",
+      network: "Network",
+      publish: "Publish",
+      system: "System",
+    },
   },
 
   updateChecker: {

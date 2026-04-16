@@ -1272,6 +1272,14 @@ export default {
     about: "このアプリについて",
     appDescription: "ローカルファーストの AI 駆動ノートアプリ",
     confirmDeleteTheme: 'テーマ "{name}" を削除しますか？',
+    tabs: {
+      general: "一般",
+      ai: "AI",
+      sync: "同期",
+      network: "ネットワーク",
+      publish: "公開",
+      system: "システム",
+    },
   },
 
   updateChecker: {
