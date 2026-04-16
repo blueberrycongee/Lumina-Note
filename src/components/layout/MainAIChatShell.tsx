@@ -984,7 +984,9 @@ export function MainAIChatShell() {
         </AnimatePresence>
 
         {/* 主要内容区域 - 始终居中 */}
-        <main className="h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0">
+        <main
+          className={`h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0 ${!hasStarted ? "justify-center" : ""}`}
+        >
           <WelcomeGreeting hasStarted={hasStarted} />
 
           {/* 消息列表区域 (对话模式) */}
