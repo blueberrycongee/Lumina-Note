@@ -1139,8 +1139,8 @@ function App() {
       {/* AI Floating Ball - temporarily hidden */}
       {/* <AIFloatingBall /> */}
 
-      {/* Voice Input Floating Ball - 语音输入悬浮球 */}
-      <VoiceInputBall />
+      {/* Voice Input Floating Ball - 暂时隐藏，后续移入系统级入口 */}
+      {/* <VoiceInputBall /> */}
 
       {/* Hidden welcome preview: tap top-right corner 5 times to activate */}
       {welcomePreview && (
