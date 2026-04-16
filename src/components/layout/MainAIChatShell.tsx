@@ -1627,6 +1627,7 @@ export function MainAIChatShell() {
             recentFiles={recentFiles}
             fileTree={fileTree}
           />
+          {!hasStarted && <div className="flex-[2]" />}
         </main>
 
         {/* 调试按钮（开发模式） */}
