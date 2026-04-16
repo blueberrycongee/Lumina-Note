@@ -21,7 +21,6 @@ import {
   ArrowUpRight,
   ChevronRight,
   Bot,
-  Search,
   Lightbulb,
   Sparkles,
 } from "lucide-react";
@@ -29,33 +28,8 @@ import { AgentPanel } from "../chat/AgentPanel";
 import { ConversationList } from "../chat/ConversationList";
 import { useConversationManager } from "@/hooks/useConversationManager";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
+import { extractMarkdownHeadings } from "@/services/markdown/headings";
 import { useShallow } from "zustand/react/shallow";
-
-// Heading item in outline
-interface HeadingItem {
-  level: number;
-  text: string;
-  line: number;
-}
-
-// Parse markdown content for headings
-function parseHeadings(content: string): HeadingItem[] {
-  const lines = content.split("\n");
-  const headings: HeadingItem[] = [];
-
-  lines.forEach((line, index) => {
-    const match = line.match(/^(#{1,6})\s+(.+)$/);
-    if (match) {
-      headings.push({
-        level: match[1].length,
-        text: match[2].trim(),
-        line: index + 1,
-      });
-    }
-  });
-
-  return headings;
-}
 
 function formatModelOptionLabel(model: {
   name: string;
@@ -258,7 +232,7 @@ function OutlineView() {
   );
 
   const headings = useMemo(
-    () => parseHeadings(currentContent),
+    () => extractMarkdownHeadings(currentContent),
     [currentContent],
   );
 
@@ -275,12 +249,15 @@ function OutlineView() {
   }, []);
 
   // Scroll to heading (broadcast event)
-  const scrollToHeading = useCallback((line: number, text: string) => {
-    // Dispatch custom event for editor to scroll to
-    window.dispatchEvent(
-      new CustomEvent("outline-scroll-to", { detail: { line, text } }),
-    );
-  }, []);
+  const scrollToHeading = useCallback(
+    (line: number, text: string, pos: number) => {
+      // Dispatch custom event for editor to scroll to
+      window.dispatchEvent(
+        new CustomEvent("outline-scroll-to", { detail: { line, text, pos } }),
+      );
+    },
+    [],
+  );
 
   if (!currentFile) {
     return (
@@ -336,15 +313,17 @@ function OutlineView() {
 
       {/* Headings list */}
       <div className="flex-1 overflow-y-auto py-2">
-        {headings.map((heading, idx) => {
+        {headings.map((heading) => {
           if (!expandedLevels.has(heading.level)) return null;
 
           const indent = (heading.level - minLevel) * 12;
 
           return (
             <button
-              key={idx}
-              onClick={() => scrollToHeading(heading.line, heading.text)}
+              key={heading.from}
+              onClick={() =>
+                scrollToHeading(heading.line, heading.text, heading.from)
+              }
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors flex items-center gap-2 group"
               style={{ paddingLeft: 12 + indent }}
             >
@@ -366,7 +345,6 @@ export function RightPanel() {
     rightPanelTab,
     setRightPanelTab,
     chatMode,
-    setChatMode,
     aiPanelMode,
     setAIPanelMode,
     setFloatingBallPosition,

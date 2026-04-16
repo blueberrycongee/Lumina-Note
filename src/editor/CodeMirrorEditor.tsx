@@ -85,6 +85,7 @@ const readOnlyCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const pluginExtensionsCompartment = new Compartment();
 const fontSizeCompartment = new Compartment();
+const EXTERNAL_JUMP_Y_MARGIN_PX = 24;
 
 // ============ 2. 全局状态 ============
 // mouseSelectingField 和 setMouseSelecting 从 codemirror-live-markdown 导入
@@ -104,6 +105,12 @@ export interface CodeMirrorEditorRef {
   syncSelectionToViewport: () => void;
   getScrollDOM: () => HTMLElement | null;
 }
+
+type ExternalJumpDetail = {
+  line?: number;
+  pos?: number;
+  text?: string;
+};
 
 // ============ 3. 样式定义 (动画与布局核心) ============
 
@@ -1719,6 +1726,13 @@ function selectAllDebugEnabled() {
 
 function clampNumber(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
+}
+
+function createJumpScrollEffect(pos: number) {
+  return EditorView.scrollIntoView(pos, {
+    y: "start",
+    yMargin: EXTERNAL_JUMP_Y_MARGIN_PX,
+  });
 }
 
 type ModeCategory = "view" | "edit";
@@ -3599,6 +3613,32 @@ export const CodeMirrorEditor = forwardRef<
     [markTransitionTrace],
   );
 
+  const scrollToDocumentPosition = useCallback(
+    (rawPos: number, source: string, payload: Record<string, unknown> = {}) => {
+      const view = viewRef.current;
+      if (!view) return;
+      const targetPos = clampNumber(
+        Math.floor(rawPos),
+        0,
+        view.state.doc.length,
+      );
+      cancelPendingModeTransitionRestore(source, {
+        targetPos,
+        ...payload,
+      });
+      markTransitionTrace("external-scroll-request", {
+        source,
+        mode: effectiveModeRef.current,
+        targetPos,
+        ...payload,
+      });
+      view.dispatch({
+        effects: createJumpScrollEffect(targetPos),
+      });
+    },
+    [cancelPendingModeTransitionRestore, markTransitionTrace],
+  );
+
   useImperativeHandle(
     ref,
     () => ({
@@ -3615,11 +3655,8 @@ export const CodeMirrorEditor = forwardRef<
           viewRef.current.state.doc.lines,
         );
         viewRef.current.dispatch({
-          effects: EditorView.scrollIntoView(
+          effects: createJumpScrollEffect(
             viewRef.current.state.doc.line(target).from,
-            {
-              y: "start",
-            },
           ),
         });
       },
@@ -4379,6 +4416,52 @@ export const CodeMirrorEditor = forwardRef<
       isExternalChange.current = false;
     }
   }, [content]);
+
+  useEffect(() => {
+    const handleExternalJump = (
+      source: "outline-scroll-to" | "search-jump-to",
+      event: Event,
+    ) => {
+      const view = viewRef.current;
+      if (!view) return;
+
+      const detail = (event as CustomEvent<ExternalJumpDetail>).detail;
+      if (!detail) return;
+
+      if (typeof detail.pos === "number" && Number.isFinite(detail.pos)) {
+        scrollToDocumentPosition(detail.pos, source, {
+          line: detail.line ?? null,
+          text: detail.text ?? "",
+        });
+        return;
+      }
+
+      if (typeof detail.line === "number" && Number.isFinite(detail.line)) {
+        const targetLine = clampNumber(
+          Math.floor(detail.line),
+          1,
+          view.state.doc.lines,
+        );
+        scrollToDocumentPosition(view.state.doc.line(targetLine).from, source, {
+          line: targetLine,
+          text: detail.text ?? "",
+        });
+      }
+    };
+
+    const onOutlineScroll = (event: Event) =>
+      handleExternalJump("outline-scroll-to", event);
+    const onSearchJump = (event: Event) =>
+      handleExternalJump("search-jump-to", event);
+
+    window.addEventListener("outline-scroll-to", onOutlineScroll);
+    window.addEventListener("search-jump-to", onSearchJump);
+
+    return () => {
+      window.removeEventListener("outline-scroll-to", onOutlineScroll);
+      window.removeEventListener("search-jump-to", onSearchJump);
+    };
+  }, [scrollToDocumentPosition]);
 
   useEffect(() => {
     const onVoiceInt = (e: any) =>
