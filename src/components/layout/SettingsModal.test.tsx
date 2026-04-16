@@ -41,7 +41,19 @@ vi.mock("@/stores/useAIStore", () => ({
   useAIStore: () => ({
     config: {
       model: "gpt-5.4",
+      provider: "openai",
+      apiKey: "",
     },
+    setConfig: () => undefined,
+  }),
+}));
+
+vi.mock("@/stores/useRustAgentStore", () => ({
+  useRustAgentStore: () => ({
+    autoApprove: false,
+    setAutoApprove: () => undefined,
+    autoCompactEnabled: false,
+    setAutoCompactEnabled: () => undefined,
   }),
 }));
 
@@ -62,6 +74,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
       common: {
         edit: "Edit",
         delete: "Delete",
+        close: "Close",
       },
       settings: {
         language: "Language",
@@ -94,13 +107,82 @@ vi.mock("@/stores/useLocaleStore", () => ({
         about: "About",
         appDescription: "Local-first AI note app",
         confirmDeleteTheme: 'Delete theme "{name}"?',
+        tabs: {
+          general: "General",
+          ai: "AI",
+          sync: "Sync",
+          network: "Network",
+          publish: "Publish",
+          system: "System",
+        },
+      },
+      aiSettings: {
+        title: "AI Settings",
+        mainModel: "Main Model",
+        provider: "Provider",
+        apiKey: "API Key",
+        apiKeyOptional: "optional",
+        localModelNoKey: "Local model",
+        model: "Model",
+        customModelId: "Custom Model ID",
+        customModelHint: "Enter model ID",
+        baseUrl: "Base URL",
+        baseUrlOptional: "optional",
+        temperature: "Temperature",
+        dynamicRouting: "Dynamic Routing",
+        routingDescription: "Route description",
+        chatModel: "Chat Model",
+        chatModelDesc: "For simple tasks",
+        complexTaskModel: "Complex Task Model",
+        complexTaskModelDesc: "For complex tasks",
+        followMainModel: "Follow Main Model",
+        agentSettings: "Agent Settings",
+        autoApproveTools: "Auto approve",
+        noManualConfirm: "no manual confirm",
+        autoCompactContext: "Auto compact",
+        autoCompactHint: "hint",
+        testButton: "Test",
+        testing: "Testing...",
+        testSuccess: "Success",
+        testSuccessShort: "OK",
+        testSuccessDetail: "Connection works",
+        testFailed: "Failed",
+        testResponseEmpty: "Empty response",
+        close: "Close",
+        routingRulesDesc: "Rules",
+        chatTask: "Chat",
+        searchTask: "Search",
+        complexTaskExamples: "Complex",
+        errors: {},
       },
     },
   }),
 }));
 
+vi.mock("@/services/llm", () => ({
+  FOLLOW_MAIN_MODEL: "__follow_main__",
+  PROVIDER_REGISTRY: {
+    openai: {
+      label: "OpenAI",
+      description: "OpenAI API",
+      models: [{ id: "gpt-5.4", name: "GPT-5.4" }],
+    },
+  },
+  getResolvedModelForPurpose: () => "gpt-5.4",
+  hasPurposeModelOverride: () => false,
+  createProvider: () => ({ call: async () => ({ content: "OK" }) }),
+}));
+
+vi.mock("@/services/llm/temperature", () => ({
+  getRecommendedTemperature: () => 0.7,
+}));
+
 vi.mock("../ai/ThemeEditor", () => ({
   ThemeEditor: () => null,
+}));
+
+vi.mock("../ai/ThinkingModelIcon", () => ({
+  ThinkingModelIcon: () => null,
 }));
 
 vi.mock("../settings/WebDAVSettings", () => ({
@@ -139,6 +221,14 @@ vi.mock("../settings/DiagnosticsSection", () => ({
   DiagnosticsSection: () => <div>Diagnostics</div>,
 }));
 
+vi.mock("../settings/OpenClawWorkspaceSection", () => ({
+  OpenClawWorkspaceSection: () => <div>OpenClaw</div>,
+}));
+
+vi.mock("../settings/ProxySection", () => ({
+  ProxySection: () => <div>Proxy</div>,
+}));
+
 describe("SettingsModal", () => {
   const onOpenUpdateModal = vi.fn();
 
@@ -151,18 +241,63 @@ describe("SettingsModal", () => {
     onOpenUpdateModal.mockClear();
   });
 
-  it("renders a lightweight update entry and opens the dedicated update modal", async () => {
+  it("renders tabbed navigation with 6 tabs", () => {
     render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
 
+    expect(screen.getByText("General")).toBeInTheDocument();
+    expect(screen.getByText("AI")).toBeInTheDocument();
+    expect(screen.getByText("Sync")).toBeInTheDocument();
+    expect(screen.getByText("Network")).toBeInTheDocument();
+    expect(screen.getByText("Publish")).toBeInTheDocument();
+    expect(screen.getByText("System")).toBeInTheDocument();
+  });
+
+  it("defaults to general tab showing theme and editor", () => {
+    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+
+    expect(screen.getByText("Theme")).toBeInTheDocument();
+    expect(screen.getByText("Editor")).toBeInTheDocument();
+  });
+
+  it("switches to system tab and shows update section", async () => {
+    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+
+    fireEvent.click(screen.getByText("System"));
+
     const updateSection = await screen.findByTestId("settings-section-update");
-    expect(screen.queryByText("UpdateChecker")).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(updateSection).toHaveTextContent("Version 1.2.3");
     });
 
     fireEvent.click(screen.getByTestId("settings-open-update-modal"));
-
     expect(onOpenUpdateModal).toHaveBeenCalledTimes(1);
+  });
+
+  it("switches to sync tab and shows WebDAV", () => {
+    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+
+    fireEvent.click(screen.getByText("Sync"));
+
+    expect(screen.getByText("WebDAV")).toBeInTheDocument();
+    expect(screen.getByText("MobileGateway")).toBeInTheDocument();
+  });
+
+  it("switches to network tab and shows proxy", () => {
+    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+
+    fireEvent.click(screen.getByText("Network"));
+
+    expect(screen.getByText("Proxy")).toBeInTheDocument();
+    expect(screen.getByText("CloudRelay")).toBeInTheDocument();
+  });
+
+  it("switches to publish tab and shows publish section", () => {
+    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+
+    fireEvent.click(screen.getByText("Publish"));
+
+    expect(screen.getByText("PublishSettings")).toBeInTheDocument();
+    expect(screen.getByText("ProfileSettings")).toBeInTheDocument();
   });
 });
