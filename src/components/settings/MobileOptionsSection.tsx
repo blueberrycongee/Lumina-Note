@@ -38,10 +38,10 @@ export function MobileOptionsSection() {
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
+    <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-foreground/90">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t.settingsModal.mobileOptionsTitle}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Link2, Copy, Power } from "lucide-react";
+import { Copy, Power } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
@@ -139,11 +139,10 @@ export function MobileGatewaySection() {
   const isRunning = Boolean(status?.running);
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
+    <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-foreground/90 flex items-center gap-2">
-            <Link2 size={14} />
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t.settingsModal.mobileGatewayTitle}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">

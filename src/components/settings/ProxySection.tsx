@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Globe, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { reportOperationError } from "@/lib/reportError";
@@ -61,10 +61,9 @@ export function ProxySection() {
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
+    <section className="space-y-4">
       <div>
-        <h3 className="text-sm font-medium text-foreground/90 flex items-center gap-2">
-          <Globe size={14} />
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           {t.settingsModal.proxyTitle}
         </h3>
         <p className="text-xs text-muted-foreground mt-1">

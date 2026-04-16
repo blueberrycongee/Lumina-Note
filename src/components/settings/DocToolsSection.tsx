@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, RefreshCw, PackageCheck, PackageX } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDocToolsStatus, installDocTools, type DocToolsStatus } from "@/lib/tauri";
 import { reportOperationError } from "@/lib/reportError";
@@ -55,11 +55,10 @@ export function DocToolsSection() {
   const isInstalled = Boolean(status?.installed);
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
+    <section className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-medium text-foreground/90 flex items-center gap-2">
-            {isInstalled ? <PackageCheck size={14} /> : <PackageX size={14} />}
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {t.settingsModal.docToolsTitle}
           </h3>
           <p className="text-xs text-muted-foreground mt-1">

@@ -222,7 +222,7 @@ export function OpenClawWorkspaceSection() {
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-background/60 p-4">
+    <section className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">

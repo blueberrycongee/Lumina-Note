@@ -57,9 +57,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
       case "sync":
         return (
           <>
-            <section className="rounded-xl overflow-hidden border border-border/60 bg-background/60">
-              <WebDAVSettings compact />
-            </section>
+            <WebDAVSettings compact />
             <MobileGatewaySection />
             <MobileOptionsSection />
           </>
