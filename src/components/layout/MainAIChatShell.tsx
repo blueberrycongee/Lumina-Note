@@ -1365,8 +1365,8 @@ export function MainAIChatShell() {
                     : "rounded-full"
                 } ${
                   hasStarted
-                    ? "shadow-md shadow-black/[0.04]"
-                    : "shadow-xl shadow-black/[0.08]"
+                    ? "shadow-sm shadow-black/[0.03]"
+                    : "shadow-md shadow-black/[0.05]"
                 }`}
               >
                 {/* Popover menus — skill menu */}
