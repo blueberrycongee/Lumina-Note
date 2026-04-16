@@ -94,6 +94,18 @@ export function MainAIChatShell() {
   const autoSendMessageRef = useRef<string | null>(null);
   const reduceMotion = useReducedMotion();
 
+  // Auto-resize textarea to fit content
+  const autoResizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  useLayoutEffect(() => {
+    autoResizeTextarea();
+  }, [input, autoResizeTextarea]);
+
   // Extracted hooks
   const {
     allSessions,
@@ -1534,7 +1546,7 @@ export function MainAIChatShell() {
                     }
                     onKeyDown={handleKeyDown}
                     placeholder={t.ai.agentInputPlaceholder}
-                    className="flex-1 resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[32px] max-h-[200px] bg-transparent text-sm leading-relaxed py-1 overflow-y-auto scrollbar-hide"
+                    className="flex-1 resize-none outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] bg-transparent text-sm leading-relaxed py-1 overflow-y-auto scrollbar-hide"
                     rows={1}
                     autoFocus
                   />
