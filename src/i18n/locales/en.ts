@@ -350,8 +350,6 @@ export default {
     skillsManagerSourceUnknown: "Unknown",
     quoteFrom: "Quote from",
     welcomeTitle: "Hi, I'm Lumina",
-    welcomeSubtitle:
-      "I can help you manage notes, organize ideas, and search your knowledge.",
     polishText: "Polish Text",
     polishTextDesc: "Chat: Optimize expression",
     summarizeNote: "Summarize Note",

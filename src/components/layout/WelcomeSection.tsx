@@ -380,9 +380,6 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
           <h1 className="text-3xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
             {t.ai.welcomeTitle}
           </h1>
-          <p className="text-muted-foreground text-sm whitespace-nowrap overflow-hidden text-ellipsis">
-            {t.ai.welcomeSubtitle}
-          </p>
         </motion.div>
       )}
     </AnimatePresence>

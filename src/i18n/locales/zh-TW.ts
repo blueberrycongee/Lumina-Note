@@ -346,7 +346,6 @@ export default {
     skillsManagerSourceUnknown: "未知",
     quoteFrom: "引用自",
     welcomeTitle: "你好，我是 Lumina",
-    welcomeSubtitle: "我可以幫你管理筆記、整理想法、搜尋知識...",
     polishText: "潤色文字",
     polishTextDesc: "Chat: 優化表達",
     summarizeNote: "總結筆記",

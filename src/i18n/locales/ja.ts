@@ -348,7 +348,6 @@ export default {
     skillsManagerSourceUnknown: "不明",
     quoteFrom: "引用元",
     welcomeTitle: "こんにちは、Lumina です",
-    welcomeSubtitle: "ノート管理、アイデア整理、知識検索のお手伝いをします...",
     polishText: "文章を磨く",
     polishTextDesc: "Chat: 表現を最適化",
     summarizeNote: "ノートを要約",
