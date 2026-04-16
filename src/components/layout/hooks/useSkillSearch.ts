@@ -26,7 +26,7 @@ export function useSkillSearch() {
     listAgentSkills(vaultPath || undefined)
       .then((items) => {
         if (!active) return;
-        setSkills(items);
+        setSkills(Array.isArray(items) ? items : []);
       })
       .catch((err) => {
         if (!active) return;
@@ -43,7 +43,7 @@ export function useSkillSearch() {
   }, [vaultPath]);
 
   const filteredSkills = useMemo(() => {
-    if (!skills.length) return [];
+    if (!skills?.length) return [];
     const q = skillQuery.trim().toLowerCase();
     if (!q) return skills.slice(0, 8);
     return skills
