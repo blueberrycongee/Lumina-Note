@@ -7,8 +7,8 @@
 //! - 指数退避重试：网络错误时自动重试
 //! - 超时检测：检测流式响应假死
 
-use crate::agent::types::*;
 use crate::agent::emit::emit_agent_event;
+use crate::agent::types::*;
 use futures_util::StreamExt;
 use reqwest::header::HeaderMap;
 use reqwest::StatusCode;

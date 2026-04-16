@@ -37,9 +37,10 @@ pub async fn clip_url(input: &ImportInput) -> Result<ImportResult, String> {
     let markdown = html2md::parse_html(&html);
 
     // Extract title from HTML
-    let title = input.title.clone().unwrap_or_else(|| {
-        extract_html_title(&html).unwrap_or_else(|| slug_from_url(url))
-    });
+    let title = input
+        .title
+        .clone()
+        .unwrap_or_else(|| extract_html_title(&html).unwrap_or_else(|| slug_from_url(url)));
 
     // Build frontmatter
     let date = Utc::now().format("%Y-%m-%d").to_string();
@@ -50,8 +51,7 @@ pub async fn clip_url(input: &ImportInput) -> Result<ImportResult, String> {
 
     // Ensure directory exists
     if let Some(parent) = full_path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| format!("Failed to create directory: {e}"))?;
+        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {e}"))?;
     }
 
     // Build file content
@@ -60,7 +60,12 @@ pub async fn clip_url(input: &ImportInput) -> Result<ImportResult, String> {
     } else {
         format!(
             "\ntags:\n{}",
-            input.tags.iter().map(|t| format!("  - {t}")).collect::<Vec<_>>().join("\n")
+            input
+                .tags
+                .iter()
+                .map(|t| format!("  - {t}"))
+                .collect::<Vec<_>>()
+                .join("\n")
         )
     };
 
@@ -68,8 +73,7 @@ pub async fn clip_url(input: &ImportInput) -> Result<ImportResult, String> {
         "---\ntitle: \"{title}\"\ntype: article\nurl: \"{url}\"\ndate: {date}\nconfidence: medium{tags_str}\n---\n\n# {title}\n\n> Source: {url}\n\n{markdown}\n"
     );
 
-    fs::write(&full_path, &content)
-        .map_err(|e| format!("Failed to write file: {e}"))?;
+    fs::write(&full_path, &content).map_err(|e| format!("Failed to write file: {e}"))?;
 
     Ok(ImportResult {
         file_path: relative_path,

@@ -138,13 +138,7 @@ pub fn initialize_vault(workspace_path: &str) -> Result<VaultConfig, String> {
     let config = VaultConfig::new(workspace_path);
 
     // Raw layer sub-directories
-    let raw_subdirs = [
-        "articles",
-        "papers",
-        "bookmarks",
-        "transcripts",
-        "notes",
-    ];
+    let raw_subdirs = ["articles", "papers", "bookmarks", "transcripts", "notes"];
     for sub in &raw_subdirs {
         let dir = config.raw_path().join(sub);
         std::fs::create_dir_all(&dir)
@@ -282,9 +276,8 @@ pub fn build_wiki_system_prompt(workspace_path: &str) -> String {
 
     let mut prompt = String::with_capacity(4096);
 
-    prompt.push_str(
-        "You are a wiki-aware knowledge agent operating inside a three-layer vault.\n\n",
-    );
+    prompt
+        .push_str("You are a wiki-aware knowledge agent operating inside a three-layer vault.\n\n");
 
     // Layer overview
     prompt.push_str("## Vault Layers\n\n");
@@ -329,9 +322,7 @@ pub fn build_wiki_system_prompt(workspace_path: &str) -> String {
         "1. When the user adds raw material, ingest it: read the source, distill key concepts, \
          and create or update wiki pages.\n",
     );
-    prompt.push_str(
-        "2. Always update `wiki/index.md` after adding or removing pages.\n",
-    );
+    prompt.push_str("2. Always update `wiki/index.md` after adding or removing pages.\n");
     prompt.push_str(
         "3. Use [[wikilinks]] (e.g., `[[concepts/machine-learning]]`) to interlink related pages.\n",
     );
@@ -341,9 +332,7 @@ pub fn build_wiki_system_prompt(workspace_path: &str) -> String {
     prompt.push_str(
         "5. When answering questions, ground your response in wiki pages and cite raw sources.\n",
     );
-    prompt.push_str(
-        "6. Prefer updating existing pages over creating duplicates.\n",
-    );
+    prompt.push_str("6. Prefer updating existing pages over creating duplicates.\n");
 
     prompt
 }
@@ -364,17 +353,11 @@ pub fn run_structural_lint(workspace_path: &str) -> LintReport {
     // Map: relative path (no ext) -> absolute path
     let mut page_abs: HashMap<String, PathBuf> = HashMap::new();
 
-    for entry in WalkDir::new(&wiki_root)
-        .into_iter()
-        .filter_map(|e| e.ok())
-    {
+    for entry in WalkDir::new(&wiki_root).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
         if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
             if let Ok(rel) = path.strip_prefix(&wiki_root) {
-                let key = rel
-                    .with_extension("")
-                    .to_string_lossy()
-                    .replace('\\', "/");
+                let key = rel.with_extension("").to_string_lossy().replace('\\', "/");
                 all_pages.insert(key.clone());
                 page_abs.insert(key, path.to_path_buf());
             }
@@ -627,7 +610,9 @@ mod tests {
         std::fs::write(&concept, "# Orphan\n\nA lonely page.\n").unwrap();
 
         let report = run_structural_lint(root);
-        assert!(report.orphaned_pages.contains(&"concepts/orphan".to_string()));
+        assert!(report
+            .orphaned_pages
+            .contains(&"concepts/orphan".to_string()));
     }
 
     #[test]

@@ -4,11 +4,11 @@ pub mod commands;
 pub mod debug_log;
 pub mod emit;
 pub mod forge_loop;
+pub mod importers;
 pub mod llm_client;
 pub mod orchestrator;
 pub mod types;
 pub mod vault;
-pub mod importers;
 
 #[allow(unused_imports)]
 pub use commands::*;

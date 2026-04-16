@@ -4,13 +4,13 @@
 //!
 //! 使用 Forge LoopNode 构建和执行 Agent 循环
 
+use crate::agent::emit::emit_agent_event;
 use crate::agent::forge_loop::{
     build_runtime_with_client, run_forge_loop, ForgeRunResult, ForgeRuntime, TauriEventSink,
 };
 use crate::agent::orchestrator::build_initial_graph_state;
 use crate::agent::types::*;
 use crate::agent::vault;
-use crate::agent::emit::emit_agent_event;
 use crate::forge_runtime::permissions::{
     default_ruleset, PermissionRule, PermissionSession as LocalPermissionSession,
 };
@@ -185,12 +185,7 @@ async fn execute_task_inner(
         dbg::log_task(&task);
     }
 
-    let (messages, prompt_stack) = build_initial_messages(
-        &app,
-        &task,
-        &context,
-        &config.provider,
-    );
+    let (messages, prompt_stack) = build_initial_messages(&app, &task, &context, &config.provider);
     emit_agent_event(
         &app,
         AgentEvent::PromptStack {
@@ -201,12 +196,7 @@ async fn execute_task_inner(
             workspace_agent: prompt_stack.workspace_agent.clone(),
         },
     );
-    let initial_state = build_initial_graph_state(
-        messages,
-        task.clone(),
-        context,
-        &config,
-    );
+    let initial_state = build_initial_graph_state(messages, task.clone(), context, &config);
 
     sync_graph_state(state, &initial_state).await;
     emit_queue_updated(&app, state).await;
@@ -611,8 +601,7 @@ pub async fn vault_initialize(workspace_path: String) -> Result<(), String> {
 pub async fn vault_load_index(workspace_path: String) -> Result<String, String> {
     let config = vault::load_vault_config(&workspace_path)?;
     let index_path = config.index_path();
-    std::fs::read_to_string(&index_path)
-        .map_err(|e| format!("Failed to read vault index: {}", e))
+    std::fs::read_to_string(&index_path).map_err(|e| format!("Failed to read vault index: {}", e))
 }
 
 /// 运行 vault 结构化检查

@@ -3,8 +3,8 @@
 //! Each importer takes content from an external source and saves it as
 //! a markdown file in the raw/ directory with appropriate frontmatter.
 
-pub mod web_clipper;
 pub mod bookmark;
+pub mod web_clipper;
 
 use serde::{Deserialize, Serialize};
 

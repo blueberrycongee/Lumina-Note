@@ -12,8 +12,8 @@ use std::path::Path;
 /// Creates one markdown file per top-level folder in raw/bookmarks/.
 pub fn import_bookmarks(input: &ImportInput) -> Result<Vec<ImportResult>, String> {
     let file_path = Path::new(&input.source);
-    let html = fs::read_to_string(file_path)
-        .map_err(|e| format!("Failed to read bookmark file: {e}"))?;
+    let html =
+        fs::read_to_string(file_path).map_err(|e| format!("Failed to read bookmark file: {e}"))?;
 
     let bookmarks = parse_bookmarks(&html);
     let date = Utc::now().format("%Y-%m-%d").to_string();
@@ -27,7 +27,10 @@ pub fn import_bookmarks(input: &ImportInput) -> Result<Vec<ImportResult>, String
     let mut folders: std::collections::HashMap<String, Vec<Bookmark>> =
         std::collections::HashMap::new();
     for bm in bookmarks {
-        let folder = bm.folder.clone().unwrap_or_else(|| "uncategorized".to_string());
+        let folder = bm
+            .folder
+            .clone()
+            .unwrap_or_else(|| "uncategorized".to_string());
         folders.entry(folder).or_default().push(bm);
     }
 
