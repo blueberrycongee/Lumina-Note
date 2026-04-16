@@ -5,8 +5,6 @@ import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
 import {
   AlertCircle,
   Check,
-  Cloud,
-  CloudOff,
   Download,
   Eye,
   EyeOff,
@@ -165,7 +163,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
 
   const inputClass = `
     w-full px-3 py-2 rounded-lg text-sm
-    bg-white/5 border border-white/10
+    bg-background/60 border border-border/60
     focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
     placeholder:text-muted-foreground/50
     transition-all
@@ -180,20 +178,13 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
   return (
     <div className={compact ? 'space-y-4' : 'space-y-6 p-6'}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {isConnected ? (
-            <Cloud size={20} className="text-success" />
-          ) : (
-            <CloudOff size={20} className="text-muted-foreground" />
-          )}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Cloud Sync
-            </h3>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              Sign in once, pick a workspace, then sync through the derived WebDAV endpoint.
-            </p>
-          </div>
+        <div>
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Cloud Sync
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Sign in once, pick a workspace, then sync through the derived WebDAV endpoint.
+          </p>
         </div>
         <span
           className={`text-xs px-2 py-1 rounded-full ${
@@ -214,7 +205,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
         </div>
       )}
 
-      <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-sm font-medium text-foreground">Cloud Account</h4>
@@ -226,7 +217,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             <button
               type="button"
               onClick={logout}
-              className={`${buttonClass} bg-white/10 hover:bg-white/20 inline-flex items-center gap-2`}
+              className={`${buttonClass} bg-muted hover:bg-muted/80 inline-flex items-center gap-2`}
             >
               <LogOut size={14} />
               Logout
@@ -279,7 +270,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
                 type="button"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
               >
                 {showPassword ? (
                   <EyeOff size={14} className="text-muted-foreground" />
@@ -296,7 +287,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             type="button"
             onClick={() => handleAuth('register')}
             disabled={isLoading || !serverBaseUrl || !email || !password}
-            className={`${buttonClass} bg-white/10 hover:bg-white/20 inline-flex items-center gap-2`}
+            className={`${buttonClass} bg-muted hover:bg-muted/80 inline-flex items-center gap-2`}
           >
             {isLoading && authStatus === 'authenticating' ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
             Register
@@ -313,7 +304,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
         </div>
       </div>
 
-      <div className="space-y-4 p-4 rounded-lg bg-white/5 border border-white/10">
+      <div className="space-y-4">
         <div>
           <h4 className="text-sm font-medium text-foreground">Workspace Binding</h4>
           <p className="text-xs text-muted-foreground mt-1">
@@ -361,7 +352,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
                 type="button"
                 onClick={handleCreateWorkspace}
                 disabled={!hasSession || !newWorkspaceName.trim() || isCreatingWorkspace}
-                className={`${buttonClass} bg-white/10 hover:bg-white/20 inline-flex items-center gap-2 whitespace-nowrap`}
+                className={`${buttonClass} bg-muted hover:bg-muted/80 inline-flex items-center gap-2 whitespace-nowrap`}
               >
                 {isCreatingWorkspace ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
                 Create
@@ -393,7 +384,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+        <div className="flex items-center justify-between py-2">
           <div>
             <p className="text-sm font-medium">Auto Sync</p>
             <p className="text-xs text-muted-foreground">Sync every {syncIntervalSecs / 60} minutes</p>
@@ -401,7 +392,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           <button
             type="button"
             onClick={() => setSyncPreferences({ autoSync: !autoSync })}
-            className={`relative w-11 h-6 rounded-full transition-colors ${autoSync ? 'bg-primary' : 'bg-white/20'}`}
+            className={`relative w-11 h-6 rounded-full transition-colors ${autoSync ? 'bg-primary' : 'bg-muted/60'}`}
           >
             <div
               className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${autoSync ? 'left-6' : 'left-1'}`}
@@ -413,7 +404,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           <button
             onClick={handleTestConnection}
             disabled={isTesting || !config.server_url}
-            className={`${buttonClass} bg-white/10 hover:bg-white/20`}
+            className={`${buttonClass} bg-muted hover:bg-muted/80`}
           >
             {isTesting ? (
               <Loader2 size={14} className="animate-spin mr-2 inline" />
@@ -426,7 +417,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
           <button
             onClick={handlePreviewSync}
             disabled={!isConnected || isSyncing || !canManageSync}
-            className={`${buttonClass} bg-white/10 hover:bg-white/20`}
+            className={`${buttonClass} bg-muted hover:bg-muted/80`}
           >
             Preview Sync
           </button>
@@ -447,10 +438,10 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       </div>
 
       {showPlan && pendingSyncPlan && (
-        <div className="space-y-3 p-4 rounded-lg bg-white/5 border border-white/10">
+        <div className="space-y-3 p-3 rounded-lg border border-border/60">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">Sync Plan</h4>
-            <button onClick={() => setShowPlan(false)} className="p-1 hover:bg-white/10 rounded">
+            <button onClick={() => setShowPlan(false)} className="p-1 hover:bg-muted rounded">
               <X size={14} />
             </button>
           </div>
@@ -515,7 +506,7 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
       )}
 
       {lastSyncResult && (
-        <div className="text-xs text-muted-foreground space-y-1 p-3 rounded-lg bg-white/5">
+        <div className="text-xs text-muted-foreground space-y-1">
           <p>Last sync: {formatTime(lastSyncTime)}</p>
           <p>
             {lastSyncResult.uploaded} uploaded, {lastSyncResult.downloaded} downloaded
