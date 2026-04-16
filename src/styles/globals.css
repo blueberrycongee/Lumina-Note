@@ -4,6 +4,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 桌面应用：UI 文字默认不可选中 */
+body {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 内容区域恢复可选 */
+.cm-editor,
+.prose,
+.ProseMirror,
+pre,
+code,
+textarea,
+input,
+[contenteditable="true"],
+.select-text {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 /* 拖动调整大小时禁用过渡动画 */
 body.resizing * {
   transition: none !important;
