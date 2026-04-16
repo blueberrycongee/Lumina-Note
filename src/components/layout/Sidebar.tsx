@@ -21,7 +21,6 @@ import {
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { useShallow } from "zustand/react/shallow";
-import { useNotificationStore } from "@/stores/useNotificationStore";
 import { SIDEBAR_SURFACE_CLASSNAME } from "./sidebarSurface";
 import {
   useSidebarFileOperations,
@@ -74,29 +73,11 @@ export function Sidebar() {
     [getFavorites, favoriteSortMode, favorites, manualOrder],
   );
 
-  const authStatus = useCloudSyncStore((s) => s.authStatus);
   const rehydrateToken = useCloudSyncStore((s) => s.rehydrateToken);
-  const setNotificationConnection = useNotificationStore(
-    (s) => s.setConnection,
-  );
-  const cloudSession = useCloudSyncStore((s) => s.session);
-  const cloudBaseUrl = useCloudSyncStore((s) => s.serverBaseUrl);
   // Restore token from OS keychain on app startup
   useEffect(() => {
     rehydrateToken();
   }, [rehydrateToken]);
-
-  // Bridge CloudSync auth session to NotificationStore so API calls have credentials
-  useEffect(() => {
-    if (authStatus === "authenticated" && cloudSession?.token && cloudBaseUrl) {
-      setNotificationConnection(cloudBaseUrl, cloudSession.token);
-    }
-  }, [
-    authStatus,
-    cloudSession?.token,
-    cloudBaseUrl,
-    setNotificationConnection,
-  ]);
 
   const ops = useSidebarFileOperations();
   const {

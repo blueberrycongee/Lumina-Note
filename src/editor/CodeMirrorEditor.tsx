@@ -55,8 +55,6 @@ import {
   PLUGIN_EDITOR_SELECTION_EVENT,
   pluginEditorRuntime,
 } from "@/services/plugins/editorRuntime";
-import { yCollab } from "y-codemirror.next";
-import type { CollabConnection } from "@/services/team/collabProvider";
 import {
   checkUpdateAction,
   collapseOnSelectionFacet,
@@ -87,7 +85,6 @@ const readOnlyCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const pluginExtensionsCompartment = new Compartment();
 const fontSizeCompartment = new Compartment();
-const collabCompartment = new Compartment();
 
 // ============ 2. 全局状态 ============
 // mouseSelectingField 和 setMouseSelecting 从 codemirror-live-markdown 导入
@@ -99,7 +96,6 @@ interface CodeMirrorEditorProps {
   viewMode?: ViewMode;
   livePreview?: boolean;
   filePath?: string | null;
-  collabConnection?: CollabConnection | null;
 }
 
 export interface CodeMirrorEditorRef {
@@ -3364,15 +3360,7 @@ export const CodeMirrorEditor = forwardRef<
   CodeMirrorEditorRef,
   CodeMirrorEditorProps
 >(function CodeMirrorEditor(
-  {
-    content,
-    onChange,
-    className = "",
-    viewMode,
-    livePreview,
-    filePath = null,
-    collabConnection = null,
-  },
+  { content, onChange, className = "", viewMode, livePreview, filePath = null },
   ref,
 ) {
   const { t } = useLocaleStore();
@@ -3391,21 +3379,16 @@ export const CodeMirrorEditor = forwardRef<
     useRef<PendingModeTransitionRestore | null>(null);
   const transitionSequenceRef = useRef(0);
 
-  const {
-    openPDFTab,
-    fileTree,
-    openFile,
-    vaultPath,
-    currentFile,
-  } = useFileStore(
-    useShallow((state) => ({
-      openPDFTab: state.openPDFTab,
-      fileTree: state.fileTree,
-      openFile: state.openFile,
-      vaultPath: state.vaultPath,
-      currentFile: state.currentFile,
-    })),
-  );
+  const { openPDFTab, fileTree, openFile, vaultPath, currentFile } =
+    useFileStore(
+      useShallow((state) => ({
+        openPDFTab: state.openPDFTab,
+        fileTree: state.fileTree,
+        openFile: state.openFile,
+        vaultPath: state.vaultPath,
+        currentFile: state.currentFile,
+      })),
+    );
   const { openSecondaryPdf } = useSplitStore();
   const { setSplitView, editorFontSize, editorInteractionTraceEnabled } =
     useUIStore();
@@ -3668,11 +3651,6 @@ export const CodeMirrorEditor = forwardRef<
         EditorView.lineWrapping,
         drawSelection(),
         fontSizeCompartment.of(createEditorTheme(editorFontSize)),
-        collabCompartment.of(
-          collabConnection
-            ? yCollab(collabConnection.ytext, collabConnection.awareness)
-            : [],
-        ),
         mouseSelectingField,
         selectionStatePlugin,
         wikiLinkStateField,
@@ -4385,18 +4363,6 @@ export const CodeMirrorEditor = forwardRef<
       ),
     });
   }, [editorFontSize]);
-
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    view.dispatch({
-      effects: collabCompartment.reconfigure(
-        collabConnection
-          ? yCollab(collabConnection.ytext, collabConnection.awareness)
-          : [],
-      ),
-    });
-  }, [collabConnection]);
 
   useEffect(() => {
     const view = viewRef.current;
