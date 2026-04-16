@@ -15,11 +15,49 @@ import { useUIStore } from "@/stores/useUIStore";
 import type { FileEntry } from "@/lib/tauri";
 
 const WELCOME_EMOJIS = [
-  "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
-  "😊", "😍", "🤩", "😘", "😗", "😋", "😜", "🤪", "😝", "🤑",
-  "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏",
-  "😒", "🙄", "😬", "😌", "😔", "😪", "🤤", "😴", "🥳", "🤠",
-  "🧐", "🤓", "😎",
+  "😀",
+  "😃",
+  "😄",
+  "😁",
+  "😆",
+  "😅",
+  "🤣",
+  "😂",
+  "🙂",
+  "🙃",
+  "😊",
+  "😍",
+  "🤩",
+  "😘",
+  "😗",
+  "😋",
+  "😜",
+  "🤪",
+  "😝",
+  "🤑",
+  "🤗",
+  "🤭",
+  "🤫",
+  "🤔",
+  "🤐",
+  "🤨",
+  "😐",
+  "😑",
+  "😶",
+  "😏",
+  "😒",
+  "🙄",
+  "😬",
+  "😌",
+  "😔",
+  "😪",
+  "🤤",
+  "😴",
+  "🥳",
+  "🤠",
+  "🧐",
+  "🤓",
+  "😎",
 ];
 
 // ── Types ──
@@ -48,7 +86,9 @@ function extractName(filePath: string): string {
   return name.replace(/\.md$/, "") || name;
 }
 
-function collectFiles(fileTree: FileEntry[]): { path: string; modified_at?: number | null }[] {
+function collectFiles(
+  fileTree: FileEntry[],
+): { path: string; modified_at?: number | null }[] {
   const result: { path: string; modified_at?: number | null }[] = [];
   const walk = (entries: FileEntry[]) => {
     for (const entry of entries) {
@@ -74,12 +114,14 @@ function scoreFiles(
   const scored: ScoredFile[] = treeFiles.map((f) => {
     const recentIdx = recentSet.get(f.path);
     // Recency: higher score for more recently accessed files (0-1)
-    const recencyScore = recentIdx !== undefined
-      ? 1 - recentIdx / Math.max(recentFiles.length, 1)
-      : 0;
+    const recencyScore =
+      recentIdx !== undefined
+        ? 1 - recentIdx / Math.max(recentFiles.length, 1)
+        : 0;
     // Freshness: higher score for recently modified files (exponential decay over 7 days)
-    const age = f.modified_at ? (now - f.modified_at) : Infinity;
-    const freshnessScore = age === Infinity ? 0 : Math.exp(-age / (7 * 24 * 60 * 60 * 1000));
+    const age = f.modified_at ? now - f.modified_at : Infinity;
+    const freshnessScore =
+      age === Infinity ? 0 : Math.exp(-age / (7 * 24 * 60 * 60 * 1000));
 
     return {
       path: f.path,
@@ -138,23 +180,71 @@ function buildFileAction(
   const fill = (tpl: string) => tpl.replace("{noteName}", file.name);
   switch (type) {
     case "polish":
-      return { icon: ACTION_ICONS.polish, label: t.ai.polishText, desc: file.name, mode: "chat", prompt: fill(p.polishText) };
+      return {
+        icon: ACTION_ICONS.polish,
+        label: t.ai.polishText,
+        desc: file.name,
+        mode: "chat",
+        prompt: fill(p.polishText),
+      };
     case "summarize":
-      return { icon: ACTION_ICONS.summarize, label: t.ai.summarizeNote, desc: file.name, mode: "chat", prompt: fill(p.summarizeNote) };
+      return {
+        icon: ACTION_ICONS.summarize,
+        label: t.ai.summarizeNote,
+        desc: file.name,
+        mode: "chat",
+        prompt: fill(p.summarizeNote),
+      };
     case "write":
-      return { icon: ACTION_ICONS.write, label: t.ai.writeArticle, desc: file.name, mode: "agent", prompt: fill(p.writeArticle) };
+      return {
+        icon: ACTION_ICONS.write,
+        label: t.ai.writeArticle,
+        desc: file.name,
+        mode: "agent",
+        prompt: fill(p.writeArticle),
+      };
     case "study":
-      return { icon: ACTION_ICONS.study, label: t.ai.studyNotes, desc: file.name, mode: "agent", prompt: fill(p.studyNotes) };
+      return {
+        icon: ACTION_ICONS.study,
+        label: t.ai.studyNotes,
+        desc: file.name,
+        mode: "agent",
+        prompt: fill(p.studyNotes),
+      };
   }
 }
 
 function buildGenericActions(t: Translations): QuickAction[] {
   const p = t.ai.quickPrompts;
   return [
-    { icon: GENERIC_ICONS.brainstorm, label: t.ai.polishText, desc: t.ai.polishTextDesc, mode: "chat", prompt: p.polishTextGeneric },
-    { icon: GENERIC_ICONS.chat, label: t.ai.summarizeNote, desc: t.ai.summarizeNoteDesc, mode: "chat", prompt: p.summarizeNoteGeneric },
-    { icon: GENERIC_ICONS.write, label: t.ai.writeArticle, desc: t.ai.writeArticleDesc, mode: "agent", prompt: p.writeArticleGeneric },
-    { icon: GENERIC_ICONS.learn, label: t.ai.studyNotes, desc: t.ai.studyNotesDesc, mode: "agent", prompt: p.studyNotesGeneric },
+    {
+      icon: GENERIC_ICONS.brainstorm,
+      label: t.ai.polishText,
+      desc: t.ai.polishTextDesc,
+      mode: "chat",
+      prompt: p.polishTextGeneric,
+    },
+    {
+      icon: GENERIC_ICONS.chat,
+      label: t.ai.summarizeNote,
+      desc: t.ai.summarizeNoteDesc,
+      mode: "chat",
+      prompt: p.summarizeNoteGeneric,
+    },
+    {
+      icon: GENERIC_ICONS.write,
+      label: t.ai.writeArticle,
+      desc: t.ai.writeArticleDesc,
+      mode: "agent",
+      prompt: p.writeArticleGeneric,
+    },
+    {
+      icon: GENERIC_ICONS.learn,
+      label: t.ai.studyNotes,
+      desc: t.ai.studyNotesDesc,
+      mode: "agent",
+      prompt: p.studyNotesGeneric,
+    },
   ];
 }
 
@@ -166,7 +256,11 @@ function buildCurrentFileAction(
   const name = extractName(currentFile);
   // Randomly pick one action type for the current file
   const type = ACTION_TYPES[Math.floor(Math.random() * ACTION_TYPES.length)];
-  return buildFileAction(type, { path: currentFile, name, recencyScore: 1, freshnessScore: 1 }, t);
+  return buildFileAction(
+    type,
+    { path: currentFile, name, recencyScore: 1, freshnessScore: 1 },
+    t,
+  );
 }
 
 function recommendActions(
@@ -243,7 +337,9 @@ function SuggestionCard({
         <Icon size={18} />
       </div>
       <span className="text-sm font-medium text-foreground">{title}</span>
-      <span className="text-xs text-muted-foreground truncate w-full">{desc}</span>
+      <span className="text-xs text-muted-foreground truncate w-full">
+        {desc}
+      </span>
     </motion.button>
   );
 }
@@ -260,8 +356,8 @@ interface WelcomeSectionProps {
 export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
   const { t } = useLocaleStore();
 
-  const [welcomeEmoji] = useState(() =>
-    WELCOME_EMOJIS[Math.floor(Math.random() * WELCOME_EMOJIS.length)],
+  const [welcomeEmoji] = useState(
+    () => WELCOME_EMOJIS[Math.floor(Math.random() * WELCOME_EMOJIS.length)],
   );
 
   return (
@@ -271,7 +367,12 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
           className="text-center mt-10 md:mt-12 mb-8 space-y-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20, scale: 0.9, transition: { duration: 0.3 } }}
+          exit={{
+            opacity: 0,
+            y: -20,
+            scale: 0.9,
+            transition: { duration: 0.3 },
+          }}
         >
           <div className="w-20 h-20 bg-background rounded-full mx-auto shadow-sm border border-border flex items-center justify-center">
             <span className="text-4xl">{welcomeEmoji}</span>
@@ -319,11 +420,13 @@ export function WelcomeSuggestions({
           className="w-full max-w-3xl mx-auto px-4 mt-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0, transition: { delay: 0.1 } }}
-          exit={{ opacity: 0, y: 50, pointerEvents: "none", transition: { duration: 0.2 } }}
+          exit={{
+            opacity: 0,
+            y: 50,
+            pointerEvents: "none",
+            transition: { duration: 0.2 },
+          }}
         >
-          <div className="mb-4 px-1">
-            <span className="text-xs font-medium text-muted-foreground">{t.ai.startTask}</span>
-          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {actions.map((action, idx) => (
               <SuggestionCard
@@ -342,7 +445,13 @@ export function WelcomeSuggestions({
 }
 
 /** Combined component (for backward compat). */
-export function WelcomeSection({ hasStarted, onSetInput, currentFile, recentFiles, fileTree }: WelcomeSectionProps) {
+export function WelcomeSection({
+  hasStarted,
+  onSetInput,
+  currentFile,
+  recentFiles,
+  fileTree,
+}: WelcomeSectionProps) {
   return (
     <>
       <WelcomeGreeting hasStarted={hasStarted} />

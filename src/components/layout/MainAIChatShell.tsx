@@ -1531,7 +1531,7 @@ export function MainAIChatShell() {
                     }
                     onKeyDown={handleKeyDown}
                     placeholder={t.ai.agentInputPlaceholder}
-                    className="flex-1 resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[32px] max-h-[200px] bg-transparent text-sm leading-relaxed py-1"
+                    className="flex-1 resize-none outline-none text-foreground placeholder:text-muted-foreground min-h-[32px] max-h-[200px] bg-transparent text-sm leading-relaxed py-1 overflow-y-auto scrollbar-hide"
                     rows={1}
                     autoFocus
                   />

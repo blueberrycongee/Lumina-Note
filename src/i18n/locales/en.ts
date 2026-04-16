@@ -319,7 +319,6 @@ export default {
     regenerate: "Regenerate",
     errorRetry: "Something went wrong. Try again.",
     welcomeAgent: "I am Lumina Agent. Tell me what you want to get done.",
-    startTask: "Describe the task to get started",
     needApproval: "Approval needed",
     sendToQueue: "Queue",
     agentQueueTitle: "Task queue",

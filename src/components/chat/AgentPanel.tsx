@@ -1,6 +1,6 @@
 /**
  * Agent 面板组件
- * 
+ *
  * 提供与 Agent 交互的聊天界面
  */
 
@@ -12,7 +12,10 @@ import { ChatInput } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
 import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
-import { processMessageWithFiles, type ReferencedFile } from "@/hooks/useChatSend";
+import {
+  processMessageWithFiles,
+  type ReferencedFile,
+} from "@/hooks/useChatSend";
 import type { AttachedImage, QuoteReference } from "@/types/chat";
 import type { MessageAttachment } from "@/services/llm";
 import {
@@ -34,9 +37,11 @@ export function AgentPanel() {
   const { t } = useLocaleStore();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { isRecording, interimText, toggleRecording } = useSpeechToText((text: string) => {
-    setInput((prev) => (prev ? prev + " " + text : text));
-  });
+  const { isRecording, interimText, toggleRecording } = useSpeechToText(
+    (text: string) => {
+      setInput((prev) => (prev ? prev + " " + text : text));
+    },
+  );
 
   // 使用 Rust Agent store
   const rustStore = useRustAgentStore();
@@ -44,13 +49,13 @@ export function AgentPanel() {
   // 选择实际使用的 store 数据
   const status = rustStore.status;
   // 转换 Rust Agent 消息格式（tool role -> assistant）
-  const messages = rustStore.messages.map(m => ({
+  const messages = rustStore.messages.map((m) => ({
     ...m,
-    role: m.role === "tool" ? "assistant" as const : m.role,
+    role: m.role === "tool" ? ("assistant" as const) : m.role,
   }));
   const clearChat = rustStore.clearChat;
   const abort = rustStore.abort;
-  
+
   // 工具审批功能
   const pendingTool = rustStore.pendingTool?.tool;
   const approve = rustStore.approveTool;
@@ -75,7 +80,7 @@ export function AgentPanel() {
     llmRetryState && status === "running"
       ? Math.max(0, Math.ceil((llmRetryState.nextRetryAt - retryNow) / 1000))
       : null;
-  
+
   // startTask
   const startTask = async (
     message: string,
@@ -85,7 +90,7 @@ export function AgentPanel() {
       activeNoteContent?: string;
       displayMessage?: string;
       attachments?: MessageAttachment[];
-    }
+    },
   ) => {
     await rustStore.startTask(message, {
       workspace_path: context.workspacePath,
@@ -100,7 +105,10 @@ export function AgentPanel() {
 
   // 滚动到底部
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+    });
   }, [messages]);
 
   // 发送消息（支持引用文件）
@@ -110,13 +118,20 @@ export function AgentPanel() {
     _images?: AttachedImage[],
     quotedSelections: QuoteReference[] = [],
   ) => {
-    if ((!message.trim() && referencedFiles.length === 0 && quotedSelections.length === 0) || isWaitingApproval) return;
+    if (
+      (!message.trim() &&
+        referencedFiles.length === 0 &&
+        quotedSelections.length === 0) ||
+      isWaitingApproval
+    )
+      return;
 
     setInput("");
     const { currentFile, currentContent } = useFileStore.getState();
 
     // 使用共享函数处理消息和文件
-    const { displayMessage, fullMessage, attachments } = await processMessageWithFiles(message, referencedFiles, quotedSelections);
+    const { displayMessage, fullMessage, attachments } =
+      await processMessageWithFiles(message, referencedFiles, quotedSelections);
 
     await startTask(fullMessage, {
       workspacePath: vaultPath || "",
@@ -148,11 +163,13 @@ export function AgentPanel() {
                   }
                 }}
                 className={`p-1.5 rounded hover:bg-muted ${
-                  rustStore.debugEnabled 
+                  rustStore.debugEnabled
                     ? "text-warning bg-warning/10"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
-                title={rustStore.debugEnabled ? t.ai.debugDisable : t.ai.debugEnable}
+                title={
+                  rustStore.debugEnabled ? t.ai.debugDisable : t.ai.debugEnable
+                }
               >
                 <Bug className="w-4 h-4" />
               </button>
@@ -166,7 +183,10 @@ export function AgentPanel() {
                     }
                   }}
                   className="p-1.5 rounded hover:bg-muted text-warning"
-                  title={t.ai.debugLog.replace('{path}', rustStore.debugLogPath)}
+                  title={t.ai.debugLog.replace(
+                    "{path}",
+                    rustStore.debugLogPath,
+                  )}
                 >
                   <FileText className="w-4 h-4" />
                 </button>
@@ -190,25 +210,33 @@ export function AgentPanel() {
         {messages.length === 0 && (
           <div className="text-sm text-muted-foreground leading-relaxed">
             <p>{t.ai.welcomeAgent}</p>
-            <p className="mt-2 text-xs opacity-70">{t.ai.startTask}</p>
           </div>
         )}
 
-        {(queuedTasks.length > 0 || activeTaskPreview || (llmRetryState && status === "running")) && (
+        {(queuedTasks.length > 0 ||
+          activeTaskPreview ||
+          (llmRetryState && status === "running")) && (
           <div className="bg-muted/40 border border-border/60 rounded-lg p-3">
             <div className="flex items-center justify-between gap-2 text-xs">
               <span className="font-medium">{t.ai.agentQueueTitle}</span>
               <span className="text-muted-foreground">
-                {t.ai.agentQueuePending.replace('{count}', String(queuedTasks.length))}
+                {t.ai.agentQueuePending.replace(
+                  "{count}",
+                  String(queuedTasks.length),
+                )}
               </span>
             </div>
             {activeTaskPreview && (
               <p className="mt-1 text-xs text-muted-foreground">
-                {t.ai.agentQueueCurrent}: <span className="text-foreground">{activeTaskPreview}</span>
+                {t.ai.agentQueueCurrent}:{" "}
+                <span className="text-foreground">{activeTaskPreview}</span>
               </p>
             )}
             {queuedTasks.slice(0, 3).map((item) => (
-              <div key={item.id} className="mt-1 text-xs text-muted-foreground truncate">
+              <div
+                key={item.id}
+                className="mt-1 text-xs text-muted-foreground truncate"
+              >
                 #{item.position} {item.task}
               </div>
             ))}
@@ -220,17 +248,19 @@ export function AgentPanel() {
             {llmRetryState && status === "running" && (
               <div className="mt-2 rounded-md border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs text-warning">
                 <p className="font-medium">
-                  {t.ai.agentRetryTitle}
-                  {" "}
+                  {t.ai.agentRetryTitle}{" "}
                   {t.ai.agentRetryAttempt
-                    .replace('{attempt}', String(llmRetryState.attempt))
-                    .replace('{max}', String(llmRetryState.maxRetries))}
+                    .replace("{attempt}", String(llmRetryState.attempt))
+                    .replace("{max}", String(llmRetryState.maxRetries))}
                 </p>
                 <p className="mt-0.5 text-warning/90">
                   {t.ai.agentRetryReason}: {llmRetryState.reason}
                 </p>
                 <p className="mt-0.5">
-                  {t.ai.agentRetryIn.replace('{seconds}', String(retrySecondsLeft ?? 0))}
+                  {t.ai.agentRetryIn.replace(
+                    "{seconds}",
+                    String(retrySecondsLeft ?? 0),
+                  )}
                 </p>
               </div>
             )}
@@ -264,9 +294,12 @@ export function AgentPanel() {
             <p>{rustStore.error || t.ai.errorRetry}</p>
             <button
               onClick={() => {
-                const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
+                const lastUserMsg = [...messages]
+                  .reverse()
+                  .find((m) => m.role === "user");
                 if (lastUserMsg && vaultPath) {
-                  const { currentFile, currentContent } = useFileStore.getState();
+                  const { currentFile, currentContent } =
+                    useFileStore.getState();
                   startTask(lastUserMsg.rawContent || lastUserMsg.content, {
                     workspacePath: vaultPath,
                     activeNote: currentFile || undefined,
@@ -284,31 +317,37 @@ export function AgentPanel() {
         )}
 
         {/* Retry 按钮 - 只在有消息且不在运行时显示 */}
-        {messages.length > 0 && messages.some(m => m.role === "assistant") && status !== "running" && status !== "waiting_approval" && (
-          <div className="flex justify-end">
-            <button
-              onClick={() => {
-                // 重新发送最后一条用户消息
-                const lastUserMsg = [...messages].reverse().find(m => m.role === "user");
-                if (lastUserMsg && vaultPath) {
-                  const { currentFile, currentContent } = useFileStore.getState();
-                  startTask(lastUserMsg.rawContent || lastUserMsg.content, {
-                    workspacePath: vaultPath,
-                    activeNote: currentFile || undefined,
-                    activeNoteContent: currentContent || undefined,
-                    displayMessage: lastUserMsg.content,
-                    attachments: lastUserMsg.attachments,
-                  });
-                }
-              }}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-              title={t.ai.regenerate}
-            >
-              <RefreshCw size={12} />
-              {t.ai.regenerate}
-            </button>
-          </div>
-        )}
+        {messages.length > 0 &&
+          messages.some((m) => m.role === "assistant") &&
+          status !== "running" &&
+          status !== "waiting_approval" && (
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  // 重新发送最后一条用户消息
+                  const lastUserMsg = [...messages]
+                    .reverse()
+                    .find((m) => m.role === "user");
+                  if (lastUserMsg && vaultPath) {
+                    const { currentFile, currentContent } =
+                      useFileStore.getState();
+                    startTask(lastUserMsg.rawContent || lastUserMsg.content, {
+                      workspacePath: vaultPath,
+                      activeNote: currentFile || undefined,
+                      activeNoteContent: currentContent || undefined,
+                      displayMessage: lastUserMsg.content,
+                      attachments: lastUserMsg.attachments,
+                    });
+                  }
+                }}
+                className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+                title={t.ai.regenerate}
+              >
+                <RefreshCw size={12} />
+                {t.ai.regenerate}
+              </button>
+            </div>
+          )}
 
         <div ref={messagesEndRef} />
       </div>
@@ -335,22 +374,29 @@ export function AgentPanel() {
             </div>
             {/* 流式显示中间识别结果 */}
             <div className="flex-1 truncate text-sm text-foreground/70 italic">
-              {interimText && <span className="animate-pulse">{interimText}...</span>}
+              {interimText && (
+                <span className="animate-pulse">{interimText}...</span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={toggleRecording}
-                className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${isRecording
+                className={`p-1.5 rounded-md border flex items-center justify-center transition-colors relative ${
+                  isRecording
                     ? "bg-destructive/20 border-destructive text-destructive"
                     : "bg-background border-border/60 text-muted-foreground hover:bg-accent"
-                  }`}
+                }`}
                 title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
               >
                 {isRecording && (
                   <span className="absolute inset-0 rounded-md animate-ping bg-destructive/30" />
                 )}
-                {isRecording ? <MicOff size={14} className="relative z-10" /> : <Mic size={14} />}
+                {isRecording ? (
+                  <MicOff size={14} className="relative z-10" />
+                ) : (
+                  <Mic size={14} />
+                )}
               </button>
               <button
                 onClick={() => {
@@ -361,12 +407,21 @@ export function AgentPanel() {
                   }
                   void handleSendWithFiles(input, []);
                 }}
-                disabled={isWaitingApproval || (!input.trim() && status !== "running")}
-                className={`${status === "running" && !input.trim()
+                disabled={
+                  isWaitingApproval || (!input.trim() && status !== "running")
+                }
+                className={`${
+                  status === "running" && !input.trim()
                     ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                     : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                  } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
-                title={status === "running" && !input.trim() ? t.ai.stop : (status === "running" ? t.ai.sendToQueue : t.ai.send)}
+                } disabled:opacity-50 rounded p-1.5 transition-colors flex items-center justify-center`}
+                title={
+                  status === "running" && !input.trim()
+                    ? t.ai.stop
+                    : status === "running"
+                      ? t.ai.sendToQueue
+                      : t.ai.send
+                }
               >
                 {status === "running" && !input.trim() ? (
                   <Square size={14} fill="currentColor" />
@@ -404,7 +459,8 @@ function ToolApproval({
       </div>
       <div className="text-sm text-foreground mb-3">
         <p className="mb-1">
-          {t.ai.tool}: <code className="px-1 py-0.5 bg-muted rounded">{toolName}</code>
+          {t.ai.tool}:{" "}
+          <code className="px-1 py-0.5 bg-muted rounded">{toolName}</code>
         </p>
         <pre className="mt-2 p-2 bg-muted rounded text-xs overflow-x-auto">
           {JSON.stringify(params, null, 2)}

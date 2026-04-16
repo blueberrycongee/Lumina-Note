@@ -318,7 +318,6 @@ export default {
     regenerate: "再生成",
     errorRetry: "エラーが発生しました、再試行してください",
     welcomeAgent: "私は Lumina Agent です。完了したいタスクを教えてください。",
-    startTask: "タスク指示を入力して開始",
     needApproval: "承認が必要",
     sendToQueue: "キューに追加",
     agentQueueTitle: "タスクキュー",

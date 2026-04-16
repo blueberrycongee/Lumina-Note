@@ -317,7 +317,6 @@ export default {
     regenerate: "重新生成",
     errorRetry: "發生錯誤，請重試",
     welcomeAgent: "我是 Lumina Agent，告訴我你想完成的任務。",
-    startTask: "輸入任務指令開始",
     needApproval: "需要審批",
     sendToQueue: "加入佇列",
     agentQueueTitle: "任務佇列",
