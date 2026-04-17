@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-17
+
+本次更新是一次跨度较大的方向性演进：产品从综合笔记工具收敛为以「LLM Wiki + Agent 工作流」为核心的知识库桌面应用，桌面容器开始从 Tauri 扩展到 Electron，Agent 侧引入了分层的长期记忆管线。由于移除了相当多的既有模块，请在升级前阅读「破坏性变更」。
+
+### 破坏性变更
+- 产品定位调整为 LLM Wiki 知识库：移除数据库视图、看板、日历、抽认卡、任务、团队协同编辑、深度研究、RAG 检索、Codex 等功能模块以及相关 store、服务与路由
+- AI 交互模型收敛为 Agent-only：移除 Chat 模式与 Codex 模式、下线 ModeToggle 切换入口，Agent 面板成为统一入口
+- 侧边栏与 Ribbon 精简：移除已废弃模块的入口、插件中对上述模块的引用，以及 RAG 状态栏
+- 深度研究（Deep Research）流程及其 orchestration stage / PlanCard 已全量移除
+
+### 新功能
+- **Electron 迁移 Phase 1**：引入 Electron 打包脚手架、preload 桥、工作区相关 IPC 通道与更新检查管线，为后续跨平台发布打基础（Tauri 链路保持可用）
+- **分层持久记忆管线**：Session → Durable → Layered 分层记忆，支持按用途选择性加载、手动编辑 API，以及 Memory Wiki 站点入口
+- **编排式 Agent 框架**：引入多 Agent 工作流与状态编排骨架，Agent 面板支持记忆治理与审计
+- 大纲视图条目现可直接跳转到对应 Markdown 标题
+- 全局按钮补齐 tooltip，并新增 `audit:button-tooltips` 审计脚本
+
+### 改进
+- **设置页全面重写**：改为 Tab 布局，抽取 General / System / AI / WebDAV / Diagnostics / MobileGateway 等独立 Section，统一头部样式并去除外层边框
+- **设置项国际化**：WebDAVSettings、DiagnosticsSection、MobileGateway 状态、GeneralSection 标题等完成 zh-CN / zh-TW / en / ja 四语适配
+- **输入框重设计**：聊天输入框改为 ChatGPT 风格胶囊样式，`+` 菜单聚合附件/工具入口；减轻阴影强度、隐藏默认滚动条、支持多行自适应高度
+- **欢迎页布局**：问候文案置顶、输入区垂直居中，全屏模式下间距调整为 1:2；移除冗余副标题
+- **桌面体验**：全局禁用 UI 文本选择高亮，更贴近原生应用观感；消息气泡与 Chat Shell 视觉打磨
+- **文件系统健壮性**：`listDirRecursive` 增加过滤与错误处理，chokidar watcher 增加 ignore 规则和异常兜底，Vault 路径预检查 + EMFILE 降级
+
+### 修复
+- 修复 `useSkillSearch` 对空 skills 数组未防御导致的崩溃
+- 修复更新检查首次失败后缺乏重试的问题
+- 清理 LLM Wiki 转型后残留的大量无效导入（team、codex、PlanCard、orchestration、RAG 等）
+- 临时隐藏 VoiceInputBall 浮球，避免遮挡主界面操作
+- 修复 Electron 下 preload shim 未正确加载导致的 Tauri 桥不可用问题
+- 修复工作区创建/切换流程所需的 Electron IPC handler 缺失
+
+### 依赖与构建
+- Cargo：升级 `rustls-webpki` 至 0.103.12；修复 src-tauri 依赖解析问题；src-tauri 与 server 统一通过 `cargo fmt` / CI `rustfmt` 校验
+- 前端工具链：对齐 Electron 与 Vite 版本，使用已发布的 `codemirror-live-markdown` 包；修复 electron 打包产物忽略规则
+
+### 测试
+- 同步 SettingsModal Tab 化后的测试断言
+- 修复 WebDAVSettings 本地化后仍使用英文字面量查询的单测回归
+- AIStore 测试补充 `buildConfigOverrideForPurpose` mock 并稳定化 apiKey
+
 ## [1.0.17] - 2026-03-17
 
 ### 新功能
