@@ -54,9 +54,9 @@ describe('WebDAVSettings cloud sync flow', () => {
   it('shows cloud auth actions before the user signs in', () => {
     render(<WebDAVSettings compact />);
 
-    expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Cloud server')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '注册' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '登录' })).toBeInTheDocument();
+    expect(screen.getByLabelText('云服务器')).toBeInTheDocument();
   });
 
   it('switches the selected cloud workspace and updates the derived sync path', () => {
@@ -101,7 +101,7 @@ describe('WebDAVSettings cloud sync flow', () => {
 
     render(<WebDAVSettings compact />);
 
-    fireEvent.change(screen.getByLabelText('Cloud workspace'), { target: { value: 'workspace-2' } });
+    fireEvent.change(screen.getByLabelText('云工作区'), { target: { value: 'workspace-2' } });
 
     expect(useCloudSyncStore.getState().session?.currentWorkspaceId).toBe('workspace-2');
     expect(useWebDAVStore.getState().config.remote_base_path).toBe('/workspace-2');
