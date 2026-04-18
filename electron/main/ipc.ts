@@ -15,6 +15,7 @@ import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
 import type { SkillLoader } from './agent/skills/loader.js'
 import type { McpManager } from './agent/mcp/manager.js'
 import type { WikiSettingsStore } from './wiki/settings-store.js'
+import type { WikiManager } from './wiki/manager.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
@@ -72,6 +73,7 @@ export interface IpcHandlersOptions {
   skillLoader?: SkillLoader
   mcpManager?: McpManager
   wikiSettings?: WikiSettingsStore
+  wikiManager?: WikiManager
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
@@ -83,6 +85,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     skillLoader,
     mcpManager,
     wikiSettings,
+    wikiManager,
   } = options
 
   // All invoke() calls from renderer land here
@@ -117,6 +120,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
           skillLoader,
           mcpManager,
           wikiSettings,
+          wikiManager,
         },
         cmd,
         args,

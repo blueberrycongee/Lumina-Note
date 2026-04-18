@@ -22,6 +22,7 @@ import { registerShellTool } from './agent/tools/shell.js'
 import { ToolRegistry } from './agent/tool-registry.js'
 import type { ProviderInterface } from './agent/types.js'
 import { WikiSettingsStore } from './wiki/settings-store.js'
+import { WikiManager } from './wiki/manager.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null
@@ -154,6 +155,10 @@ app.whenReady().then(() => {
   })
   const skillLoader = new SkillLoader()
   const wikiSettings = new WikiSettingsStore({ baseDir: app.getPath('userData') })
+  const wikiManager = new WikiManager({
+    settings: wikiSettings,
+    providerSelector,
+  })
   registerIpcHandlers({
     getMainWindow,
     agentRuntime,
@@ -162,6 +167,7 @@ app.whenReady().then(() => {
     skillLoader,
     mcpManager,
     wikiSettings,
+    wikiManager,
   })
   buildMenu()
   createWindow()

@@ -25,6 +25,7 @@ import type {
   ApproveToolRequest,
   StartTaskRequest,
 } from './types.js'
+import type { WikiManager } from '../wiki/manager.js'
 import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
 
 /**
@@ -70,6 +71,7 @@ export interface AgentDispatchContext {
   skillLoader?: SkillLoader
   mcpManager?: McpManager
   wikiSettings?: WikiSettingsStore
+  wikiManager?: WikiManager
 }
 
 export function isAgentCommand(cmd: string): boolean {
@@ -86,7 +88,15 @@ export async function dispatchAgentCommand(
   cmd: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const { runtime, debugLog, providerSettings, skillLoader, mcpManager, wikiSettings } = ctx
+  const {
+    runtime,
+    debugLog,
+    providerSettings,
+    skillLoader,
+    mcpManager,
+    wikiSettings,
+    wikiManager,
+  } = ctx
   switch (cmd) {
     case 'agent_start_task': {
       const payload = args as unknown as StartTaskRequest
@@ -364,6 +374,50 @@ export async function dispatchAgentCommand(
     case 'wiki_reset_settings': {
       if (!wikiSettings) return null
       return wikiSettings.reset()
+    }
+
+    // Wiki manager — Phase 6.5
+    case 'wiki_bind': {
+      if (!wikiManager) return null
+      const { vault_path } = args as { vault_path?: string }
+      if (!vault_path) {
+        throw new Error('wiki_bind: missing vault_path')
+      }
+      await wikiManager.bind(vault_path)
+      await wikiManager.start()
+      return null
+    }
+    case 'wiki_rebuild': {
+      if (!wikiManager) return { ok: false, error: 'wiki manager not configured' }
+      try {
+        const count = await wikiManager.rebuild()
+        return { ok: true, marked: count }
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
+    }
+    case 'wiki_synthesize_note': {
+      if (!wikiManager) return { ok: false, error: 'wiki manager not configured' }
+      const { rel_path } = args as { rel_path?: string }
+      if (!rel_path) {
+        return { ok: false, error: 'wiki_synthesize_note: missing rel_path' }
+      }
+      try {
+        return await wikiManager.synthesizeNote(rel_path)
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
+    }
+    case 'wiki_stop': {
+      if (!wikiManager) return null
+      await wikiManager.stop()
+      return null
     }
 
     default:
