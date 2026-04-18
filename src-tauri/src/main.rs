@@ -4,13 +4,11 @@
 )]
 #![allow(dead_code)]
 
-mod agent;
 mod cloud_relay;
 mod commands;
 mod diagnostics;
 mod doc_tools;
 mod error;
-mod forge_runtime;
 mod fs;
 mod llm;
 mod mcp;
@@ -80,22 +78,6 @@ fn main() {
             webdav::commands::webdav_execute_sync,
             webdav::commands::webdav_quick_sync,
             webdav::commands::webdav_scan_local,
-            // Agent commands
-            agent::agent_start_task,
-            agent::agent_abort,
-            agent::agent_approve_tool,
-            agent::agent_get_status,
-            agent::agent_get_queue_status,
-            agent::agent_continue_with_answer,
-            // Vault commands
-            agent::vault_initialize,
-            agent::vault_load_index,
-            agent::vault_run_lint,
-            // Agent debug commands
-            agent::agent_enable_debug,
-            agent::agent_disable_debug,
-            agent::agent_is_debug_enabled,
-            agent::agent_get_debug_log_path,
             // MCP commands
             mcp::mcp_init,
             mcp::mcp_list_servers,
@@ -129,7 +111,6 @@ fn main() {
             update_manager::update_clear_resumable_cache,
         ])
         .manage(webdav::commands::WebDAVState::new())
-        .manage(agent::AgentState::new())
         .manage(cloud_relay::CloudRelayState::new())
         .manage(update_manager::UpdateManagerState::default())
         .manage(proxy::ProxyState::new())

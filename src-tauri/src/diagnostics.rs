@@ -99,14 +99,5 @@ pub async fn export_diagnostics(app: AppHandle, destination: String) -> Result<(
         writeln!(out).map_err(|e| format!("Failed to write diagnostics: {}", e))?;
     }
 
-    // If agent debug logging is enabled, include its file path (content may include sensitive data).
-    if crate::agent::debug_log::is_debug_enabled() {
-        if let Some(path) = crate::agent::debug_log::get_debug_file_path() {
-            writeln!(out, "\nagent debug log: {:?}\n", path)
-                .map_err(|e| format!("Failed to write diagnostics: {}", e))?;
-            let _ = write_file_tail(&mut out, &path, 2 * 1024 * 1024);
-        }
-    }
-
     Ok(())
 }

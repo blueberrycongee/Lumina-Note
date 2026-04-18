@@ -32,7 +32,6 @@ trash = "5"
 base64 = "0.22"
 regex = "1.12"
 globset = "0.4"
-forge = { git = "https://github.com/blueberrycongee/forge", rev = "ad07eb7d885d399fce7f7da4d53bd8a7714cc907" }
 
 # RAG / Vector Storage
 rusqlite = { version = "0.32", features = ["bundled"] }

@@ -30,7 +30,6 @@
     "test:agent-eval:basic": "npx ts-node --esm tests/agent-eval/runner.ts --category=basic",
     "test:agent-eval:complex": "npx ts-node --esm tests/agent-eval/runner.ts --category=complex",
     "audit:button-tooltips": "node scripts/audit_button_tooltips.mjs",
-    "verify:forge-runtime": "bash scripts/check-forge-runtime.sh",
     "bench": "vitest bench",
     "bench:run": "vitest bench --run"
   },
