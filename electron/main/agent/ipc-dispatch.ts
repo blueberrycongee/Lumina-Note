@@ -19,9 +19,46 @@ import type {
 import { testProviderConnection } from './providers/test-connection.js'
 import type { AgentRuntime } from './runtime.js'
 import type {
+  ApprovalDecision,
   ApproveToolRequest,
   StartTaskRequest,
 } from './types.js'
+
+/**
+ * 解析 agent_approve_tool 的入参,兼容新旧 schema:
+ *   - 新: { tool_call_id, decision: 'approve'|'reject', reason? }
+ *   - 旧 Rust 时代: { requestId | request_id, approved: boolean }
+ * 旧 store 仍在用 requestId/approved,Phase 5 会改 UI;在那之前两种都接受。
+ */
+function parseApproveToolArgs(args: Record<string, unknown>): {
+  toolCallId: string
+  decision: ApprovalDecision
+  reason?: string
+} | null {
+  const newShape = args as Partial<ApproveToolRequest>
+  if (typeof newShape.tool_call_id === 'string' && newShape.decision) {
+    return {
+      toolCallId: newShape.tool_call_id,
+      decision: newShape.decision,
+      reason: newShape.reason,
+    }
+  }
+  const legacy = args as {
+    requestId?: string
+    request_id?: string
+    approved?: boolean
+    reason?: string
+  }
+  const id = legacy.requestId ?? legacy.request_id
+  if (typeof id === 'string' && typeof legacy.approved === 'boolean') {
+    return {
+      toolCallId: id,
+      decision: legacy.approved ? 'approve' : 'reject',
+      reason: legacy.reason,
+    }
+  }
+  return null
+}
 
 export interface AgentDispatchContext {
   runtime: AgentRuntime
@@ -49,8 +86,13 @@ export async function dispatchAgentCommand(
       return null
 
     case 'agent_approve_tool': {
-      const payload = args as unknown as ApproveToolRequest
-      runtime.approveTool(payload.tool_call_id, payload.decision, payload.reason)
+      const parsed = parseApproveToolArgs(args)
+      if (!parsed) {
+        throw new Error(
+          'agent_approve_tool: expected { tool_call_id, decision } or legacy { requestId, approved }',
+        )
+      }
+      runtime.approveTool(parsed.toolCallId, parsed.decision, parsed.reason)
       return null
     }
     case 'agent_continue_with_answer': {
