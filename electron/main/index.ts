@@ -2,6 +2,8 @@ import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc.js'
 import { stopAllWatchers } from './handlers/watcher.js'
+import { AgentEventBus } from './agent/event-bus.js'
+import { AgentRuntime } from './agent/runtime.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null
@@ -69,7 +71,9 @@ function buildMenu() {
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  registerIpcHandlers(getMainWindow)
+  const agentEventBus = new AgentEventBus(getMainWindow)
+  const agentRuntime = new AgentRuntime({ eventBus: agentEventBus })
+  registerIpcHandlers({ getMainWindow, agentRuntime })
   buildMenu()
   createWindow()
 

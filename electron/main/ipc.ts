@@ -10,6 +10,8 @@ import { platformHandlers } from './handlers/platform.js'
 import { storeHandlers } from './handlers/store.js'
 import { handleLlmFetch, handleLlmFetchStream } from './handlers/http.js'
 import { startFileWatcher } from './handlers/watcher.js'
+import type { AgentRuntime } from './agent/runtime.js'
+import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
 function notImplemented(cmd: string) {
@@ -24,10 +26,9 @@ const miscStubs: Record<string, () => unknown> = {
   export_diagnostics: () => null,
 }
 
-// ── Agent / Skills stubs ────────────────────────────────────────────────────
-const agentStubs: Record<string, () => unknown> = {
-  agent_list_skills: () => [],
-  agent_read_skill: () => ({ name: '', content: '', path: '' }),
+// ── Skills / Plugins stubs ──────────────────────────────────────────────────
+// agent_*/vault_* 走 agent/ipc-dispatch.ts,不在这里
+const skillPluginStubs: Record<string, () => unknown> = {
   plugin_list: () => [],
   plugin_read_entry: () => null,
   plugin_get_workspace_dir: () => '',
@@ -59,7 +60,14 @@ const eventStubs: Record<string, () => unknown> = {
   'plugin:event|emit': () => null,
 }
 
-export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
+export interface IpcHandlersOptions {
+  getMainWindow: () => BrowserWindow | null
+  agentRuntime: AgentRuntime
+}
+
+export function registerIpcHandlers(options: IpcHandlersOptions): void {
+  const { getMainWindow, agentRuntime } = options
+
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? getMainWindow()
@@ -98,8 +106,11 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
     // ── Misc stubs ───────────────────────────────────────────────────────
     if (cmd in miscStubs) return miscStubs[cmd]()
 
-    // ── Agent / Skills stubs ─────────────────────────────────────────────
-    if (cmd in agentStubs) return agentStubs[cmd]()
+    // ── Agent / Vault (TS runtime) ──────────────────────────────────────
+    if (isAgentCommand(cmd)) return dispatchAgentCommand(agentRuntime, cmd, args)
+
+    // ── Skills / Plugins stubs ───────────────────────────────────────────
+    if (cmd in skillPluginStubs) return skillPluginStubs[cmd]()
 
     // ── Typesetting stubs ────────────────────────────────────────────────
     if (cmd in typesettingStubs) return typesettingStubs[cmd]()
