@@ -3,7 +3,7 @@
  *
  * 工作方式:
  *   - 起一个独立的 AgentRuntime + 独立 ToolRegistry,只注册 fs_read/fs_write/
- *     fs_list/fs_grep/fs_stat,把 allowedRoots 限死在 vaultPath。
+ *     list_dir/fs_grep/fs_stat,把 allowedRoots 限死在 vaultPath。
  *     **不注册 shell**:wiki 合成不能跑命令。
  *   - 用 AutoApprovalGate,FS 工具自动放行(跑在后台,无 UI 介入)。
  *   - 喂一个 system prompt 让 agent:阅读源 note → 浏览 wiki/ → 决定哪个 wiki
@@ -49,7 +49,7 @@ const SYSTEM_PROMPT = `You are the Lumina Wiki Synthesizer. Your job: keep vault
 
 You will be told the path of one source note that just changed. Steps you should follow:
   1. Use fs_read to read the source note. Distill the key claims, definitions, and links worth surfacing in the wiki.
-  2. Use fs_list and fs_grep on vault/wiki/ to discover existing wiki entries. Prefer extending an existing entry over creating a new one.
+  2. Use list_dir and fs_grep on vault/wiki/ to discover existing wiki entries. Prefer extending an existing entry over creating a new one.
   3. Use fs_write to update or create wiki/*.md files. Each wiki file should:
      - Have a short YAML frontmatter with title, source_paths (the relative paths of the source notes contributing), updated_at (ISO timestamp).
      - Cite source notes inline with [[wiki link]] style references back to the original notes.

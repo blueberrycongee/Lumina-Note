@@ -113,7 +113,7 @@ describe('WikiSynthesizer', () => {
     const names = toolDefsSeenByAgent.map((t) => t.name)
     expect(names).not.toContain('shell')
     expect(names).toEqual(
-      expect.arrayContaining(['fs_read', 'fs_write', 'fs_list', 'fs_grep', 'fs_stat']),
+      expect.arrayContaining(['fs_read', 'fs_write', 'list_dir', 'fs_grep', 'fs_stat']),
     )
   })
 

@@ -85,30 +85,60 @@ describe('fs_write', () => {
   })
 })
 
-describe('fs_list', () => {
-  it('lists directory non-recursively by default', async () => {
+describe('list_dir', () => {
+  it('returns header + alpha-sorted entries with 2-space indent per depth', async () => {
     fs.writeFileSync(path.join(root, 'a.txt'), '')
     fs.mkdirSync(path.join(root, 'sub'))
     fs.writeFileSync(path.join(root, 'sub', 'b.txt'), '')
     const tool = makeListTool()
-    const out = JSON.parse(await tool.execute({ path: root }, neverAbort)) as Array<{
-      name: string
-      type: string
-    }>
-    const names = out.map((e) => e.name).sort()
-    expect(names).toEqual(['a.txt', 'sub'])
+    const out = await tool.execute({ dir_path: root }, neverAbort)
+    const lines = out.split('\n')
+    expect(lines[0]).toBe(`Absolute path: ${root}`)
+    expect(lines.slice(1)).toEqual(['a.txt', 'sub/', '  b.txt'])
   })
 
-  it('walks recursively when recursive=true', async () => {
-    fs.writeFileSync(path.join(root, 'a.txt'), '')
-    fs.mkdirSync(path.join(root, 'sub'))
-    fs.writeFileSync(path.join(root, 'sub', 'b.txt'), '')
+  it('defaults depth=2 but respects an explicit depth value', async () => {
+    fs.mkdirSync(path.join(root, 'l1', 'l2', 'l3'), { recursive: true })
+    fs.writeFileSync(path.join(root, 'l1', 'l2', 'l3', 'deep.txt'), '')
     const tool = makeListTool()
-    const out = JSON.parse(
-      await tool.execute({ path: root, recursive: true }, neverAbort),
-    ) as Array<{ name: string; path: string }>
-    const files = out.filter((e) => e.name.endsWith('.txt')).map((e) => e.path).sort()
-    expect(files).toEqual(['a.txt', path.join('sub', 'b.txt')])
+
+    // depth=1 → only top-level
+    const shallow = await tool.execute({ dir_path: root, depth: 1 }, neverAbort)
+    expect(shallow).not.toContain('l2')
+
+    // depth=3 reaches deep.txt
+    const deep = await tool.execute({ dir_path: root, depth: 4 }, neverAbort)
+    expect(deep).toContain('deep.txt')
+  })
+
+  it('applies 1-indexed offset + limit and emits "More than N entries found" when truncated', async () => {
+    for (const name of ['a', 'b', 'c', 'd', 'e']) {
+      fs.writeFileSync(path.join(root, `${name}.txt`), '')
+    }
+    const tool = makeListTool()
+    const out = await tool.execute(
+      { dir_path: root, offset: 2, limit: 2 },
+      neverAbort,
+    )
+    const lines = out.split('\n')
+    expect(lines[0]).toBe(`Absolute path: ${root}`)
+    expect(lines.slice(1, 3)).toEqual(['b.txt', 'c.txt'])
+    expect(lines[lines.length - 1]).toBe('More than 2 entries found')
+  })
+
+  it('throws when offset exceeds entry count', async () => {
+    fs.writeFileSync(path.join(root, 'only.txt'), '')
+    const tool = makeListTool()
+    await expect(
+      tool.execute({ dir_path: root, offset: 5 }, neverAbort),
+    ).rejects.toThrow(/offset exceeds directory entry count/)
+  })
+
+  it('requires dir_path to be absolute', async () => {
+    const tool = makeListTool()
+    await expect(
+      tool.execute({ dir_path: 'relative/sub' }, neverAbort),
+    ).rejects.toThrow(/absolute path/)
   })
 
   it('skips node_modules and .git but allows .lumina', async () => {
@@ -119,13 +149,10 @@ describe('fs_list', () => {
     fs.mkdirSync(path.join(root, '.lumina'))
     fs.writeFileSync(path.join(root, '.lumina', 'state.json'), '{}')
     const tool = makeListTool()
-    const out = JSON.parse(
-      await tool.execute({ path: root, recursive: true }, neverAbort),
-    ) as Array<{ name: string; path: string }>
-    const names = out.map((e) => e.path)
-    expect(names.some((n) => n.startsWith('.lumina'))).toBe(true)
-    expect(names.some((n) => n.includes('node_modules'))).toBe(false)
-    expect(names.some((n) => n.startsWith('.git'))).toBe(false)
+    const out = await tool.execute({ dir_path: root, depth: 3 }, neverAbort)
+    expect(out).toContain('.lumina/')
+    expect(out).not.toContain('node_modules')
+    expect(out).not.toContain('.git')
   })
 })
 
@@ -196,6 +223,6 @@ describe('registerFsTools', () => {
     const reg = new ToolRegistry()
     registerFsTools(reg)
     const names = reg.definitions().map((d) => d.name).sort()
-    expect(names).toEqual(['fs_grep', 'fs_list', 'fs_read', 'fs_stat', 'fs_write'])
+    expect(names).toEqual(['fs_grep', 'fs_read', 'fs_stat', 'fs_write', 'list_dir'])
   })
 })

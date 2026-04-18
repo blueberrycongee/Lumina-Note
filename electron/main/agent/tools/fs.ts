@@ -36,7 +36,6 @@ export interface FsToolsOptions {
 
 const DEFAULT_READ_MAX_BYTES = 2 * 1024 * 1024
 const DEFAULT_GREP_MAX_MATCHES = 200
-const DEFAULT_LIST_MAX_DEPTH = 4
 
 const IGNORED_DIR_NAMES = new Set([
   'node_modules',
@@ -140,93 +139,109 @@ export function makeWriteTool(options: FsToolsOptions = {}): Tool {
   }
 }
 
-// ── list ─────────────────────────────────────────────────────────────────
+// ── list_dir ────────────────────────────────────────────────────────────
+// Shape matches OpenAI Codex's list_dir tool:
+//   { dir_path, offset (1-indexed, default 1), limit (default 25),
+//     depth (default 2, ≥ 1) }
+// Returns a text block: "Absolute path: {dir_path}\n" + indented entries
+// (2 spaces per level, trailing "/" for directories), with a
+// "More than {capped_limit} entries found" sentinel when truncated.
+
+const LIST_DEFAULT_OFFSET = 1
+const LIST_DEFAULT_LIMIT = 25
+const LIST_DEFAULT_DEPTH = 2
+const INDENT_SPACES = 2
 
 const listSchema = z.object({
-  path: z.string().min(1, 'path required'),
-  recursive: z.boolean().optional(),
-  max_depth: z.number().int().positive().optional(),
+  dir_path: z.string().min(1, 'dir_path required'),
+  offset: z.number().int().positive().optional(),
+  limit: z.number().int().positive().optional(),
+  depth: z.number().int().positive().optional(),
 })
 
 interface ListEntry {
+  /** Relative path from dir_path, used for sorting and indent depth. */
+  relativePath: string
+  /** Final path segment, appended to the indent. */
   name: string
-  path: string
-  type: 'file' | 'dir'
-  size?: number
+  isDir: boolean
 }
 
-async function walkDir(
+async function collectEntries(
   rootAbs: string,
-  currentAbs: string,
-  currentDepth: number,
-  maxDepth: number,
-  out: ListEntry[],
+  relPrefix: string,
+  depth: number,
   signal: AbortSignal,
+  out: ListEntry[],
 ): Promise<void> {
   if (signal.aborted) return
-  const entries = await fs.readdir(currentAbs, { withFileTypes: true })
+  if (depth === 0) return
+  const currentAbs = relPrefix ? path.join(rootAbs, relPrefix) : rootAbs
+  let entries
+  try {
+    entries = await fs.readdir(currentAbs, { withFileTypes: true })
+  } catch {
+    return
+  }
   for (const entry of entries) {
     if (isHidden(entry.name)) continue
     if (entry.isDirectory() && IGNORED_DIR_NAMES.has(entry.name)) continue
-    const abs = path.join(currentAbs, entry.name)
-    const rel = path.relative(rootAbs, abs)
-    if (entry.isDirectory()) {
-      out.push({ name: entry.name, path: rel, type: 'dir' })
-      if (currentDepth + 1 < maxDepth) {
-        await walkDir(rootAbs, abs, currentDepth + 1, maxDepth, out, signal)
-      }
-    } else if (entry.isFile()) {
-      let size: number | undefined
-      try {
-        const st = await fs.stat(abs)
-        size = st.size
-      } catch {
-        // ignore
-      }
-      out.push({ name: entry.name, path: rel, type: 'file', size })
+    const childRel = relPrefix ? `${relPrefix}/${entry.name}` : entry.name
+    const isDir = entry.isDirectory()
+    out.push({ relativePath: childRel, name: entry.name, isDir })
+    if (isDir) {
+      await collectEntries(rootAbs, childRel, depth - 1, signal, out)
     }
   }
 }
 
+const LIST_DIR_DESCRIPTION =
+  'Lists entries in a local directory with 1-indexed entry numbers and simple type labels. Subdirectory entries are indented by 2 spaces per level; directories end with "/". offset/limit/depth are all 1-indexed defaults. Hidden dirs (except .lumina) and node_modules / target / out / dist / .git are skipped.'
+
 export function makeListTool(options: FsToolsOptions = {}): Tool {
-  const defaultMaxDepth = options.listDefaultMaxDepth ?? DEFAULT_LIST_MAX_DEPTH
+  const defaultDepth = options.listDefaultMaxDepth ?? LIST_DEFAULT_DEPTH
   return {
-    name: 'fs_list',
-    description:
-      'List directory entries. Set recursive=true to walk subdirectories (up to max_depth, default 4). Hidden dirs (except .lumina) and node_modules/target/out/dist/.git are skipped.',
+    name: 'list_dir',
+    description: LIST_DIR_DESCRIPTION,
     input_schema: z.toJSONSchema(listSchema) as Record<string, unknown>,
     async execute(input, signal) {
       const parsed = listSchema.parse(input)
-      assertAllowedPath(options.allowedRoots, parsed.path)
-      const recursive = parsed.recursive ?? false
-      const maxDepth = parsed.max_depth ?? defaultMaxDepth
+      const offset = parsed.offset ?? LIST_DEFAULT_OFFSET
+      const limit = parsed.limit ?? LIST_DEFAULT_LIMIT
+      const depth = parsed.depth ?? defaultDepth
 
-      const rootAbs = path.resolve(parsed.path)
-      const out: ListEntry[] = []
-      if (recursive) {
-        await walkDir(rootAbs, rootAbs, 0, maxDepth, out, signal)
-      } else {
-        const entries = await fs.readdir(rootAbs, { withFileTypes: true })
-        for (const entry of entries) {
-          if (isHidden(entry.name)) continue
-          if (entry.isDirectory()) {
-            out.push({ name: entry.name, path: entry.name, type: 'dir' })
-          } else if (entry.isFile()) {
-            try {
-              const st = await fs.stat(path.join(rootAbs, entry.name))
-              out.push({
-                name: entry.name,
-                path: entry.name,
-                type: 'file',
-                size: st.size,
-              })
-            } catch {
-              out.push({ name: entry.name, path: entry.name, type: 'file' })
-            }
-          }
-        }
+      if (!path.isAbsolute(parsed.dir_path)) {
+        throw new Error('dir_path must be an absolute path')
       }
-      return JSON.stringify(out, null, 2)
+      assertAllowedPath(options.allowedRoots, parsed.dir_path)
+      if (signal.aborted) throw new Error('aborted')
+
+      const rootAbs = path.resolve(parsed.dir_path)
+      const entries: ListEntry[] = []
+      await collectEntries(rootAbs, '', depth, signal, entries)
+
+      entries.sort((a, b) => (a.relativePath < b.relativePath ? -1 : a.relativePath > b.relativePath ? 1 : 0))
+
+      const output: string[] = [`Absolute path: ${rootAbs}`]
+      if (entries.length === 0) return output.join('\n')
+
+      const startIndex = offset - 1
+      if (startIndex >= entries.length) {
+        throw new Error('offset exceeds directory entry count')
+      }
+      const remaining = entries.length - startIndex
+      const cappedLimit = Math.min(limit, remaining)
+      const endIndex = startIndex + cappedLimit
+      const selected = entries.slice(startIndex, endIndex)
+      for (const entry of selected) {
+        const depthLevel = entry.relativePath.split('/').length - 1
+        const indent = ' '.repeat(depthLevel * INDENT_SPACES)
+        output.push(`${indent}${entry.name}${entry.isDir ? '/' : ''}`)
+      }
+      if (endIndex < entries.length) {
+        output.push(`More than ${cappedLimit} entries found`)
+      }
+      return output.join('\n')
     },
   }
 }
