@@ -1,10 +1,9 @@
-import type { TauriInternals } from "./core";
+// Replacement for @tauri-apps/api/event in the Electron renderer.
+// Routes listen()/UnlistenFn through preload's __TAURI_INTERNALS__.listen.
+// once/emit were never imported by the renderer — dropped along with the
+// rest of the Tauri-only surface.
 
-export type EventCallback<T> = (event: {
-  event: string;
-  id: number;
-  payload: T;
-}) => void;
+import type { TauriInternals } from "./core";
 
 export type UnlistenFn = () => void;
 
@@ -16,7 +15,7 @@ declare global {
 
 function getEventsBridge() {
   const internals = window.__TAURI_INTERNALS__;
-  if (!internals?.listen || !internals?.emit || !internals?.once) {
+  if (!internals?.listen) {
     throw new Error("Tauri event bridge unavailable in Electron renderer");
   }
   return internals;
@@ -24,18 +23,7 @@ function getEventsBridge() {
 
 export async function listen<T>(
   event: string,
-  handler: EventCallback<T>,
+  handler: (event: { event: string; id: number; payload: T }) => void,
 ): Promise<UnlistenFn> {
-  return getEventsBridge().listen!(event, handler as EventCallback<unknown>);
-}
-
-export async function once<T>(
-  event: string,
-  handler: EventCallback<T>,
-): Promise<UnlistenFn> {
-  return getEventsBridge().once!(event, handler as EventCallback<unknown>);
-}
-
-export async function emit(event: string, payload?: unknown): Promise<void> {
-  await getEventsBridge().emit!(event, payload);
+  return getEventsBridge().listen!(event, handler as (e: { event: string; id: number; payload: unknown }) => void);
 }
