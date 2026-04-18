@@ -26,7 +26,7 @@ import {
   saveFile,
   writeBinaryFile,
   writeFile,
-} from './tauri';
+} from './host';
 
 describe('tauri IO wrappers', () => {
   beforeEach(() => {

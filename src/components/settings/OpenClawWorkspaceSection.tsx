@@ -13,7 +13,7 @@ import {
   type OpenClawWorkspaceSnapshot,
 } from "@/services/openclaw/workspace";
 import { join } from "@/lib/path";
-import { exists } from "@/lib/tauri";
+import { exists } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { resolveMountedOpenClawWorkspacePath } from "./openClawWorkspaceSectionModel";
 

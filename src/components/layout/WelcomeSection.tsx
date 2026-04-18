@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 
 const WELCOME_EMOJIS = [
   "😀",

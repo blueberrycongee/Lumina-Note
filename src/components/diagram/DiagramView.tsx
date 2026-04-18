@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageSquareQuote, RotateCcw, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFsChangePath, type FsChangePayload } from "@/lib/fsChange";
-import { readFile, saveFile } from "@/lib/tauri";
+import { readFile, saveFile } from "@/lib/host";
 import { useAIStore } from "@/stores/useAIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";

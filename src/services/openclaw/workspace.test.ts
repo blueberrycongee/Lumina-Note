@@ -7,7 +7,7 @@ const createDirMock = vi.hoisted(() =>
 const saveFileMock = vi.hoisted(() => vi.fn<(path: string, content: string) => Promise<void>>());
 const homeDirMock = vi.hoisted(() => vi.fn<() => Promise<string>>());
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   exists: existsMock,
   createDir: createDirMock,
   saveFile: saveFileMock,

@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock Tauri
-vi.mock('@/lib/tauri', () => ({
+vi.mock('@/lib/host', () => ({
   readFile: vi.fn(),
   saveFile: vi.fn(),
 }));
@@ -15,7 +15,7 @@ vi.mock('@/services/markdown/frontmatter', () => ({
 }));
 
 import { useSplitStore } from './useSplitStore';
-import { readFile, saveFile } from '@/lib/tauri';
+import { readFile, saveFile } from '@/lib/host';
 
 describe('useSplitStore', () => {
   beforeEach(() => {

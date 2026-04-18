@@ -6,7 +6,7 @@ import {
   scaffoldWorkspaceThemePlugin,
   scaffoldWorkspaceUiOverhaulPlugin,
   getWorkspacePluginDir,
-} from "@/lib/tauri";
+} from "@/lib/host";
 import type { PluginInfo, PluginRuntimeStatus } from "@/types/plugins";
 import { pluginRuntime } from "@/services/plugins/runtime";
 import { pluginStyleRuntime } from "@/services/plugins/styleRuntime";

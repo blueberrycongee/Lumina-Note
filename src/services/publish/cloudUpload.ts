@@ -8,9 +8,9 @@
 
 import { invoke } from '@tauri-apps/api/core';
 import { tauriFetchJson } from '@/lib/tauriFetch';
-import { readFile, readDir } from '@/lib/tauri';
+import { readFile, readDir } from '@/lib/host';
 import type { WebDAVConfig } from '@/services/webdav/types';
-import type { FileEntry } from '@/lib/tauri';
+import type { FileEntry } from '@/lib/host';
 
 // ---------------------------------------------------------------------------
 // Types

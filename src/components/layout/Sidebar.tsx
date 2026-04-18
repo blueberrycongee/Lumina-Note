@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, setDragData } from "@/lib/dragState";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { cn, getFileName } from "@/lib/utils";
 import { ContextMenu } from "../toolbar/ContextMenu";
 import {

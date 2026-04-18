@@ -19,7 +19,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
 import { resolve } from "@/lib/path";
 import { isIMEComposing } from "@/lib/imeUtils";
-import { createDir, saveFile, exists } from "@/lib/tauri";
+import { createDir, saveFile, exists } from "@/lib/host";
 import {
   ArrowUp,
   FileText,

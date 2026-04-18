@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { showInExplorer } from "@/lib/tauri";
+import { showInExplorer } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { useLocaleStore, getCurrentTranslations } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
@@ -38,7 +38,7 @@ import {
   previewImageMove,
   previewImageRename,
 } from "@/services/assets/imageOperations";
-import { readFile } from "@/lib/tauri";
+import { readFile } from "@/lib/host";
 import {
   type ImageManagerSortBy,
   type ImageManagerStatusFilter,

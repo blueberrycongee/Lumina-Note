@@ -11,7 +11,7 @@ vi.mock("@/services/openclaw/workspace", () => ({
   inspectOpenClawWorkspaceTree: inspectTreeMock,
 }));
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   listDirectory: listDirectoryMock,
 }));
 

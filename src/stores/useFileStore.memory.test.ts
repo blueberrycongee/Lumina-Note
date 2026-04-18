@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/lib/tauri', () => ({
+vi.mock('@/lib/host', () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
   readFile: vi.fn((path: string) => Promise.resolve(`# ${path}\n\nMock content for ${path}`)),
   saveFile: vi.fn((path: string, content: string) => Promise.resolve({ path, content })),

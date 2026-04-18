@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const moveFile = vi.hoisted(() => vi.fn());
 const executeImageMove = vi.hoisted(() => vi.fn());
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
   readFile: vi.fn((path: string) => Promise.resolve(path)),
   saveFile: vi.fn((path: string, content: string) => Promise.resolve({ path, content })),

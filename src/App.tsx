@@ -35,7 +35,7 @@ import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
-import { openDialog, saveFile, startFileWatcher } from "@/lib/tauri";
+import { openDialog, saveFile, startFileWatcher } from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
@@ -61,7 +61,7 @@ import {
   initResumableUpdateListeners,
   useUpdateStore,
 } from "@/stores/useUpdateStore";
-import { isTauriAvailable } from "@/lib/tauri";
+import { isTauriAvailable } from "@/lib/host";
 import { hydrateProxyConfigOnStartup } from "@/lib/proxyStartup";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).

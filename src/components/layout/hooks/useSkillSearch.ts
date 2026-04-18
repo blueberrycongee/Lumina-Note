@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFileStore } from "@/stores/useFileStore";
-import { listAgentSkills, readAgentSkill } from "@/lib/tauri";
+import { listAgentSkills, readAgentSkill } from "@/lib/host";
 import type { SelectedSkill, SkillInfo } from "@/types/skills";
 
 export function useSkillSearch() {

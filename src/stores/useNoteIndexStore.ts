@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { FileEntry, readFile } from "@/lib/tauri";
+import { FileEntry, readFile } from "@/lib/host";
 
 // Extract [[wikilinks]] from content
 export function extractWikiLinks(content: string): string[] {

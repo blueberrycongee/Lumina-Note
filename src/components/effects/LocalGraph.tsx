@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { extractWikiLinks } from "./KnowledgeGraph";
-import { readFile } from "@/lib/tauri";
+import { readFile } from "@/lib/host";
 import { useShallow } from "zustand/react/shallow";
 
 interface LocalNode {

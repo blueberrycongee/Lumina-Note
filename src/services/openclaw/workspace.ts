@@ -1,7 +1,7 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { join } from "@/lib/path";
-import { createDir, exists, saveFile } from "@/lib/tauri";
-import type { FileEntry } from "@/lib/tauri";
+import { createDir, exists, saveFile } from "@/lib/host";
+import type { FileEntry } from "@/lib/host";
 
 export const OPENCLAW_REQUIRED_ROOT_FILES = ["AGENTS.md", "SOUL.md", "USER.md"] as const;
 export const OPENCLAW_OPTIONAL_ROOT_FILES = [

@@ -4,12 +4,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Tauri readFile
-vi.mock('@/lib/tauri', () => ({
+vi.mock('@/lib/host', () => ({
   readFile: vi.fn(),
 }));
 
 import { processMessageWithFiles, type ReferencedFile } from './useChatSend';
-import { readFile } from '@/lib/tauri';
+import { readFile } from '@/lib/host';
 import type { QuoteReference } from '@/types/chat';
 
 describe('processMessageWithFiles', () => {

@@ -40,9 +40,9 @@ export default defineConfig({
       alias: {
         '@': path.resolve(__dirname, './src'),
         '@lumina/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
-        '@tauri-apps/api/app': path.resolve(__dirname, './src/electron-shims/tauri/app.ts'),
-        '@tauri-apps/api/core': path.resolve(__dirname, './src/electron-shims/tauri/core.ts'),
-        '@tauri-apps/api/event': path.resolve(__dirname, './src/electron-shims/tauri/event.ts'),
+        '@tauri-apps/api/app': path.resolve(__dirname, './src/lib/hostBridge.ts'),
+        '@tauri-apps/api/core': path.resolve(__dirname, './src/lib/hostBridge.ts'),
+        '@tauri-apps/api/event': path.resolve(__dirname, './src/lib/hostBridge.ts'),
       },
     },
     server: {

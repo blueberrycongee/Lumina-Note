@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 
 import {
   LARGE_IMAGE_THRESHOLD_BYTES,

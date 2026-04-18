@@ -66,7 +66,7 @@ vi.mock("@/stores/useFileStore", () => ({
   ),
 }));
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   readFile: vi.fn(async () => "![Hero](../assets/hero.png)"),
   readBinaryFileBase64: vi.fn(async () => "AAAA"),
   showInExplorer: async () => undefined,

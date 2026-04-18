@@ -11,7 +11,7 @@ const invokeMock = vi.hoisted(() =>
 );
 const registerWorkspaceMock = vi.hoisted(() => vi.fn<(path: string) => void>());
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   exists: existsMock,
   readFile: readFileMock,
   saveFile: saveFileMock,

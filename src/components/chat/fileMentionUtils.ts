@@ -1,4 +1,4 @@
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import type { ReferencedFile } from "@/hooks/useChatSend";
 
 export function flattenFileTreeToReferences(

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useFavoriteStore } from "./useFavoriteStore";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 
 const makeFileTree = (paths: string[]): FileEntry[] => {
   const toEntry = (path: string): FileEntry => ({

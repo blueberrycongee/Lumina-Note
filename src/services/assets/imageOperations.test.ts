@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { useFileStore } from "@/stores/useFileStore";
 
 import {

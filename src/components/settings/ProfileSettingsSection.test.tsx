@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { ProfileSettingsSection } from "./ProfileSettingsSection";
 

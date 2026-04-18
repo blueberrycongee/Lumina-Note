@@ -1,14 +1,13 @@
-// Replacement for @tauri-apps/api/core in the Electron renderer.
-// Vite alias rewrites every `import ... from "@tauri-apps/api/core"` in the
-// renderer to this file, so commands flow through preload's
-// __TAURI_INTERNALS__.invoke into electron/main/ipc.ts.
-//
-// The renderer itself only uses { invoke, isTauri }. The Channel / Resource /
-// transformCallback exports exist solely because some @tauri-apps/plugin-*
-// packages we still ship import them at module load — keeping them as minimal
-// stubs lets those modules link without dragging in the full Tauri runtime.
-// Plugin code paths we removed (PluginListener, addPluginListener,
-// checkPermissions, etc.) had no main-side handlers and have been dropped.
+/**
+ * Low-level IPC bridge. Vite aliases `@tauri-apps/api/core|event|app` to this
+ * file so the `@tauri-apps/plugin-*` packages (which internally import
+ * `{ invoke, Channel, Resource }` from `@tauri-apps/api/core`) transparently
+ * route through the Electron preload.
+ *
+ * App-level helpers (readFile, createDir, listPlugins, ...) live in
+ * `src/lib/host.ts`, which itself imports `invoke` from `@tauri-apps/api/core`
+ * so existing `vi.mock('@tauri-apps/api/core', ...)` tests continue to work.
+ */
 
 export const SERIALIZE_TO_IPC_FN = "__TAURI_TO_IPC_KEY__";
 
@@ -34,29 +33,27 @@ declare global {
   interface Window {
     __TAURI_INTERNALS__?: TauriInternals;
     __TAURI__?: {
-      core?: {
-        invoke?: TauriInternals["invoke"];
-      };
+      core?: { invoke?: TauriInternals["invoke"] };
     };
   }
 }
 
 function getInternals(): TauriInternals | undefined {
-  return window.__TAURI_INTERNALS__;
+  return typeof window !== "undefined" ? window.__TAURI_INTERNALS__ : undefined;
 }
 
 function getInvoke() {
-  const invokeFn =
-    getInternals()?.invoke ?? window.__TAURI__?.core?.invoke;
-
-  if (typeof invokeFn !== "function") {
-    throw new Error("Tauri invoke bridge unavailable in Electron renderer");
+  const fn =
+    getInternals()?.invoke ??
+    (typeof window !== "undefined" ? window.__TAURI__?.core?.invoke : undefined);
+  if (typeof fn !== "function") {
+    throw new Error("Host invoke bridge unavailable");
   }
-
-  return invokeFn;
+  return fn;
 }
 
 export function isTauri(): boolean {
+  if (typeof window === "undefined") return false;
   return (
     typeof getInternals()?.invoke === "function" ||
     typeof window.__TAURI__?.core?.invoke === "function"
@@ -71,8 +68,6 @@ export async function invoke<T = unknown>(
   return getInvoke()(cmd, args, options) as Promise<T>;
 }
 
-// ── Stubs kept for @tauri-apps/plugin-* link compatibility ─────────────────
-
 export function transformCallback<T = unknown>(
   callback?: (response: T) => void,
   once = false,
@@ -81,8 +76,6 @@ export function transformCallback<T = unknown>(
   if (typeof transform === "function") {
     return transform((response: unknown) => callback?.(response as T), once);
   }
-  // Fallback: no native bridge — return a stable id; plugins that depend on
-  // real callback wiring will fail at invoke time, not at module load.
   return -1;
 }
 
@@ -129,3 +122,29 @@ export class Resource {
     await invoke("plugin:resources|close", { rid: this.#rid }).catch(() => {});
   }
 }
+
+// ── Event bridge ───────────────────────────────────────────────────────────
+
+export type UnlistenFn = () => void;
+
+export async function listen<T>(
+  event: string,
+  handler: (event: { event: string; id: number; payload: T }) => void,
+): Promise<UnlistenFn> {
+  const bridge = getInternals();
+  if (!bridge?.listen) {
+    throw new Error("Host event bridge unavailable");
+  }
+  return bridge.listen!(
+    event,
+    handler as (e: { event: string; id: number; payload: unknown }) => void,
+  );
+}
+
+// ── App metadata ───────────────────────────────────────────────────────────
+
+export async function getVersion(): Promise<string> {
+  return invoke<string>("get_version");
+}
+
+export const isTauriAvailable = isTauri;

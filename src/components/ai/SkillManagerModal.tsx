@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles, RefreshCcw, X } from "lucide-react";
-import { listAgentSkills } from "@/lib/tauri";
+import { listAgentSkills } from "@/lib/host";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import type { SkillInfo } from "@/types/skills";

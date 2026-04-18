@@ -5,7 +5,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
 
-import { createDir } from "./tauri";
+import { createDir } from "./host";
 
 const mockedInvoke = vi.mocked(invoke);
 

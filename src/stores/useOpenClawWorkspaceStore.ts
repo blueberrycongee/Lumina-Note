@@ -7,7 +7,7 @@ import {
   inspectOpenClawWorkspaceTree,
   type OpenClawWorkspaceSnapshot,
 } from "@/services/openclaw/workspace";
-import { listDirectory, type FileEntry } from "@/lib/tauri";
+import { listDirectory, type FileEntry } from "@/lib/host";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import type { OpenClawConflictState, OpenClawWorkspaceAttachment } from "@/types/openclaw";
 

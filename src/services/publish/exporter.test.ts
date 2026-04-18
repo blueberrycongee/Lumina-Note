@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { publishSite } from "./exporter";
 import { buildAssetOutputName } from "./assets";
 
@@ -9,7 +9,7 @@ const saveFileMock = vi.fn();
 const writeBinaryFileMock = vi.fn();
 const readBinaryFileBase64Mock = vi.fn();
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   readFile: (path: string) => readFileMock(path),
   createDir: (path: string, options?: { recursive?: boolean }) => createDirMock(path, options),
   saveFile: (path: string, content: string) => saveFileMock(path, content),

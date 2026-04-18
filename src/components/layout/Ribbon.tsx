@@ -24,7 +24,7 @@ import {
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 
 import { cn } from "@/lib/utils";
-import { exists, isTauriAvailable } from "@/lib/tauri";
+import { exists, isTauriAvailable } from "@/lib/host";
 import { SettingsModal } from "./SettingsModal";
 import { UpdateModal } from "./UpdateModal";
 import {

@@ -1,5 +1,5 @@
-import type { FileEntry } from "@/lib/tauri";
-import { createDir, exists, readFile, renameFile, saveFile } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
+import { createDir, exists, readFile, renameFile, saveFile } from "@/lib/host";
 import { basename, dirname, extname } from "@/lib/path";
 import { useFileStore } from "@/stores/useFileStore";
 

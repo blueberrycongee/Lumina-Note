@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { getFileName } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/useLocaleStore";

@@ -422,7 +422,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     processEntries(fileTree, null, 0);
 
     // 读取文件内容，提取双链
-    const { readFile } = await import("@/lib/tauri");
+    const { readFile } = await import("@/lib/host");
 
     // 限制并发读取数量，避免阻塞 RPC 通道
     const BATCH_SIZE = 10;

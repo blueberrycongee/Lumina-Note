@@ -12,7 +12,7 @@ import {
   setAIConfig,
   getAIConfig,
 } from "@/services/ai/ai";
-import { readFile } from "@/lib/tauri";
+import { readFile } from "@/lib/host";
 import {
   callLLMStream,
   buildConfigOverrideForPurpose,

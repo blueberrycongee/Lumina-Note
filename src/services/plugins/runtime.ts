@@ -7,7 +7,7 @@ import {
   readPluginEntry,
   renameFile,
   saveFile,
-} from "@/lib/tauri";
+} from "@/lib/host";
 import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";

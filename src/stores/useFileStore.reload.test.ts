@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
   readFile: vi.fn(),
   saveFile: vi.fn(),
@@ -8,7 +8,7 @@ vi.mock("@/lib/tauri", () => ({
   createDir: vi.fn((path: string, options?: { recursive?: boolean }) => Promise.resolve({ path, options })),
 }));
 
-import { readFile } from "@/lib/tauri";
+import { readFile } from "@/lib/host";
 import { useFileStore } from "./useFileStore";
 
 describe("useFileStore reloadFileIfOpen", () => {

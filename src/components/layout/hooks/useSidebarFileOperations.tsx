@@ -15,7 +15,7 @@ import {
   openDialog,
   openNewWindow,
   saveFile,
-} from "@/lib/tauri";
+} from "@/lib/host";
 import { invoke } from "@tauri-apps/api/core";
 import { reportOperationError } from "@/lib/reportError";
 import { FolderOpen, AppWindow, Shapes, Star, StarOff } from "lucide-react";

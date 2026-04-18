@@ -6,7 +6,7 @@ import { usePublishStore } from "@/stores/usePublishStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { publishSite } from "@/services/publish/exporter";
 import { pluginRuntime } from "@/services/plugins/runtime";
-import { FileEntry } from "@/lib/tauri";
+import { FileEntry } from "@/lib/host";
 import { cn, getFileName } from "@/lib/utils";
 import {
   Search,

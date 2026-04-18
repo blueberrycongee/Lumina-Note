@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
-import { FileEntry, readFile } from "@/lib/tauri";
+import { FileEntry, readFile } from "@/lib/host";
 import type { FsChangePayload } from "@/lib/fsChange";
 import { cn, getFileName } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";

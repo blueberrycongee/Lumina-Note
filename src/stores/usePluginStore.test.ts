@@ -4,7 +4,7 @@ import type { PluginInfo } from "@/types/plugins";
 const listPluginsMock = vi.hoisted(() => vi.fn<() => Promise<PluginInfo[]>>());
 const syncMock = vi.hoisted(() => vi.fn<() => Promise<unknown>>());
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   listPlugins: listPluginsMock,
   scaffoldWorkspaceExamplePlugin: async () => undefined,
   scaffoldWorkspaceThemePlugin: async () => undefined,

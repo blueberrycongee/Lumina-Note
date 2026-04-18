@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { Cloud, Copy, Check, Loader2 } from "lucide-react";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useProfileStore } from "@/stores/useProfileStore";
 import { usePublishStore } from "@/stores/usePublishStore";

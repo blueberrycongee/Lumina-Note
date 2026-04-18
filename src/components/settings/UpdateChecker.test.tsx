@@ -7,7 +7,7 @@ vi.mock("@tauri-apps/plugin-process", () => ({
   relaunch: vi.fn(),
 }));
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   isTauriAvailable: () => false,
 }));
 

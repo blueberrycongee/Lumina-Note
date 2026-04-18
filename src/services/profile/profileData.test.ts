@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import type { ProfileConfig } from "@/types/profile";
 import { buildProfileData } from "./profileData";
 
 const readFileMock = vi.fn();
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   readFile: (path: string) => readFileMock(path),
 }));
 

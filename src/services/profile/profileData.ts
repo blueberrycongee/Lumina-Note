@@ -1,5 +1,5 @@
-import type { FileEntry } from "@/lib/tauri";
-import { readFile } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
+import { readFile } from "@/lib/host";
 import { parseFrontmatter, getTitleFromPath } from "@/services/markdown/frontmatter";
 import { extractTags } from "@/stores/useNoteIndexStore";
 import type { ProfileConfig, ProfileNoteMeta, ProfilePageData, ProfileTagSummary } from "@/types/profile";

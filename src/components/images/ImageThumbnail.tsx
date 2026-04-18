@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { readBinaryFileBase64 } from "@/lib/tauri";
+import { readBinaryFileBase64 } from "@/lib/host";
 import { cn } from "@/lib/utils";
 
 type CachedPreview = {

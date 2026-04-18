@@ -16,7 +16,7 @@ import { ensureOpenClawTodayMemoryNote } from "@/services/openclaw/workspace";
 import { readOpenClawCronJobs, type OpenClawCronJob } from "@/services/openclaw/cron";
 import { pluginRuntime } from "@/services/plugins/runtime";
 import { reportOperationError } from "@/lib/reportError";
-import type { FileEntry } from "@/lib/tauri";
+import type { FileEntry } from "@/lib/host";
 import { useErrorStore } from "@/stores/useErrorStore";
 
 interface MountedWorkspaceTreeItemProps {

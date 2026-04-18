@@ -10,7 +10,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { reportOperationError } from "@/lib/reportError";
 import { retryWithExponentialBackoff } from "@/lib/retry";
-import { isTauriAvailable } from "@/lib/tauri";
+import { isTauriAvailable } from "@/lib/host";
 
 export const UPDATE_CHECK_TIMEOUT_MS = 15_000;
 const UPDATE_CHECK_MAX_ATTEMPTS = 3;

@@ -3,7 +3,7 @@ import { usePluginStore, categorizePlugin, type PluginCategory } from "@/stores/
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { showInExplorer } from "@/lib/tauri";
+import { showInExplorer } from "@/lib/host";
 
 const SOURCE_ORDER = ["global", "workspace", "user", "builtin"];
 

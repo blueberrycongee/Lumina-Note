@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { readFile, saveFile } from "@/lib/tauri";
+import { readFile, saveFile } from "@/lib/host";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { reportOperationError } from "@/lib/reportError";
 

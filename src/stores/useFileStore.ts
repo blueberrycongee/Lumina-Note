@@ -8,7 +8,7 @@ import {
   createFile,
   createDir,
   estimateDirSize,
-} from "@/lib/tauri";
+} from "@/lib/host";
 import { invoke } from "@tauri-apps/api/core";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
@@ -1845,7 +1845,7 @@ export const useFileStore = create<FileState>()(
           }
 
           // Import moveFile dynamically to avoid circular dependency
-          const { moveFile } = await import("@/lib/tauri");
+          const { moveFile } = await import("@/lib/host");
           const newPath = await moveFile(sourcePath, targetFolder);
           useFavoriteStore.getState().updatePath(sourcePath, newPath);
 
@@ -1902,7 +1902,7 @@ export const useFileStore = create<FileState>()(
 
         try {
           // Import moveFolder dynamically to avoid circular dependency
-          const { moveFolder } = await import("@/lib/tauri");
+          const { moveFolder } = await import("@/lib/host");
           const newPath = await moveFolder(sourcePath, targetFolder);
           useFavoriteStore
             .getState()

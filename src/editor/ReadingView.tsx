@@ -5,7 +5,7 @@ import { useSplitStore } from "@/stores/useSplitStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { parseLuminaLink } from "@/services/pdf/annotations";
-import { readBinaryFileBase64 } from "@/lib/tauri";
+import { readBinaryFileBase64 } from "@/lib/host";
 import { getImageMimeType, resolveEditorImagePath } from "@/services/assets/editorImages";
 import mermaid from "mermaid";
 import { useShallow } from "zustand/react/shallow";

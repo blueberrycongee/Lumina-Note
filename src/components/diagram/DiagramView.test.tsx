@@ -6,8 +6,8 @@ import { DiagramView } from "./DiagramView";
 const readFileMock = vi.fn();
 const saveFileMock = vi.fn();
 
-vi.mock("@/lib/tauri", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/tauri")>("@/lib/tauri");
+vi.mock("@/lib/host", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
   return {
     ...actual,
     readFile: (...args: unknown[]) => readFileMock(...args),

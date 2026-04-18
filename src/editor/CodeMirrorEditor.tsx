@@ -12,7 +12,7 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useShallow } from "zustand/react/shallow";
 import { parseLuminaLink } from "@/services/pdf/annotations";
-import { createDir, writeBinaryFile, readBinaryFileBase64 } from "@/lib/tauri";
+import { createDir, writeBinaryFile, readBinaryFileBase64 } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import {
   buildPastedImageTarget,

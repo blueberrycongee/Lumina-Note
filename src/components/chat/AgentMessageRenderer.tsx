@@ -16,7 +16,7 @@ import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
 import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { saveFile } from "@/lib/tauri";
+import { saveFile } from "@/lib/host";
 import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
 import { AssistantDiagramPanels } from "./AssistantDiagramPanels";
 import { getDiagramAttachmentFilePaths } from "./diagramAttachmentUtils";

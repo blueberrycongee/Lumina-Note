@@ -4,7 +4,7 @@
  */
 
 import { useCallback } from "react";
-import { readFile } from "@/lib/tauri";
+import { readFile } from "@/lib/host";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { reportOperationError } from "@/lib/reportError";
 import type { MessageAttachment } from "@/services/llm";

@@ -3,7 +3,7 @@
  */
 
 import { create } from 'zustand';
-import { readFile, writeFile } from '@/lib/tauri';
+import { readFile, writeFile } from '@/lib/host';
 import type { 
   Annotation, 
   AnnotationFile, 

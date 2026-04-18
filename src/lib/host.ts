@@ -1,3 +1,11 @@
+/**
+ * Host facade — the renderer's single entry point for talking to the main
+ * process. Replaces `src/lib/tauri.ts`. Low-level invoke/listen/Channel/
+ * Resource live in `src/lib/hostBridge.ts`; this file imports them via the
+ * aliased `@tauri-apps/api/core` specifier so existing
+ * `vi.mock('@tauri-apps/api/core', ...)` tests keep working.
+ */
+
 import { invoke } from "@tauri-apps/api/core";
 import type { SkillDetail, SkillInfo } from "@/types/skills";
 import type { PluginEntry, PluginInfo } from "@/types/plugins";
@@ -6,11 +14,29 @@ import {
   rename as tauriRename,
 } from "@tauri-apps/plugin-fs";
 
+// Re-export bridge primitives so call sites that imported from
+// `@/lib/tauri` (isTauriAvailable, getVersion, listen, Channel, Resource, ...)
+// keep a single `@/lib/host` entry point.
+export {
+  invoke,
+  isTauri,
+  isTauriAvailable,
+  listen,
+  getVersion,
+  transformCallback,
+  Channel,
+  Resource,
+  SERIALIZE_TO_IPC_FN,
+} from "./hostBridge";
+export type { InvokeArgs, TauriInternals, UnlistenFn } from "./hostBridge";
+
+// ── File system helpers (formerly src/lib/tauri.ts) ───────────────────────
+
 export interface FileEntry {
   name: string;
   path: string;
   is_dir: boolean;
-  isDirectory?: boolean; // Alias
+  isDirectory?: boolean;
   size?: number | null;
   modified_at?: number | null;
   created_at?: number | null;
@@ -30,23 +56,14 @@ export type OpenDialogOptions = {
   title?: string;
 };
 
-/**
- * Read file content from disk
- */
 export async function readFile(path: string): Promise<string> {
   return invoke<string>("read_file", { path });
 }
 
-/**
- * Save file content to disk
- */
 export async function saveFile(path: string, content: string): Promise<void> {
   return invoke("save_file", { path, content });
 }
 
-/**
- * Write binary file to disk (for images, etc.)
- */
 export async function writeBinaryFile(
   path: string,
   data: Uint8Array,
@@ -54,47 +71,22 @@ export async function writeBinaryFile(
   return invoke("write_binary_file", { path, data: Array.from(data) });
 }
 
-/**
- * Read binary file and return as base64 string
- */
 export async function readBinaryFileBase64(path: string): Promise<string> {
   return invoke<string>("read_binary_file_base64", { path });
 }
 
-export const isTauriAvailable = (): boolean => {
-  if (typeof window === "undefined") return false;
-  const tauriInvoke = (
-    window as typeof window & {
-      __TAURI__?: { core?: { invoke?: (...args: unknown[]) => unknown } };
-    }
-  ).__TAURI__?.core?.invoke;
-  return typeof tauriInvoke === "function";
-};
-
-/**
- * List directory contents (recursive, .md files only)
- */
 export async function listDirectory(path: string): Promise<FileEntry[]> {
   return invoke<FileEntry[]>("list_directory", { path });
 }
 
-/**
- * Create a new file
- */
 export async function createFile(path: string): Promise<void> {
   return invoke("create_file", { path });
 }
 
-/**
- * Delete a file or directory
- */
 export async function deleteFile(path: string): Promise<void> {
   return invoke("delete_file", { path });
 }
 
-/**
- * Rename/move a file
- */
 export async function renameFile(
   oldPath: string,
   newPath: string,
@@ -102,18 +94,10 @@ export async function renameFile(
   return invoke("rename_file", { oldPath, newPath });
 }
 
-// ============ Additional exports for Agent system ============
-
-/**
- * Write content to a file (alias for saveFile)
- */
 export async function writeFile(path: string, content: string): Promise<void> {
   return saveFile(path, content);
 }
 
-/**
- * Check if a file or directory exists
- */
 export async function exists(path: string): Promise<boolean> {
   return invoke<boolean>("path_exists", { path });
 }
@@ -124,13 +108,6 @@ export async function openDialog(
   return invoke<string | string[] | null>("plugin:dialog|open", { options });
 }
 
-/**
- * Create a directory.
- *
- * The underlying Rust `create_new_dir` rejects already-existing paths.
- * When `recursive` is true we mirror `mkdir -p` semantics: silently
- * succeed if the directory already exists.
- */
 export async function createDir(
   path: string,
   options?: { recursive?: boolean },
@@ -142,14 +119,10 @@ export async function createDir(
   return invoke("create_dir", { path });
 }
 
-/**
- * Read directory contents
- */
 export async function readDir(
   path: string,
   options?: { recursive?: boolean },
 ): Promise<FileEntry[]> {
-  // Use our custom list_directory for recursive, or tauri-fs for non-recursive
   if (options?.recursive) {
     return listDirectory(path);
   }
@@ -167,17 +140,10 @@ export async function readDir(
   }));
 }
 
-/**
- * Rename/move a file or directory
- */
 export async function rename(oldPath: string, newPath: string): Promise<void> {
   return tauriRename(oldPath, newPath);
 }
 
-/**
- * Move a file to a target folder
- * Returns the new path of the moved file
- */
 export async function moveFile(
   sourcePath: string,
   targetFolder: string,
@@ -185,10 +151,6 @@ export async function moveFile(
   return invoke<string>("move_file", { source: sourcePath, targetFolder });
 }
 
-/**
- * Move a folder to a target folder
- * Returns the new path of the moved folder
- */
 export async function moveFolder(
   sourcePath: string,
   targetFolder: string,
@@ -196,21 +158,15 @@ export async function moveFolder(
   return invoke<string>("move_folder", { source: sourcePath, targetFolder });
 }
 
-/**
- * Show file/folder in the system file explorer.
- */
 export async function showInExplorer(path: string): Promise<void> {
   return invoke("show_in_explorer", { path });
 }
 
-/**
- * Open a new window
- */
 export async function openNewWindow(): Promise<void> {
   return invoke("open_new_window");
 }
 
-// ============ Agent skills ============
+// ── Agent skills ──────────────────────────────────────────────────────────
 
 export async function listAgentSkills(
   workspacePath?: string,
@@ -225,7 +181,7 @@ export async function readAgentSkill(
   return invoke("agent_read_skill", { name, workspace_path: workspacePath });
 }
 
-// ============ Plugin ecosystem ============
+// ── Plugin ecosystem ──────────────────────────────────────────────────────
 
 export async function listPlugins(
   workspacePath?: string,
@@ -256,18 +212,12 @@ export async function scaffoldWorkspaceUiOverhaulPlugin(): Promise<string> {
   return invoke("plugin_scaffold_ui_overhaul");
 }
 
-/**
- * Start file system watcher for a directory
- * Emits "fs:change" events when files are created, modified, or deleted
- */
+// ── Misc ──────────────────────────────────────────────────────────────────
+
 export async function startFileWatcher(watchPath: string): Promise<void> {
   return invoke("start_file_watcher", { watchPath });
 }
 
-/**
- * Lightweight pre-check for a directory before opening as vault.
- * Returns top-level entry count + system dir detection.
- */
 export async function estimateDirSize(
   path: string,
 ): Promise<{ topLevelCount: number; isSystemDir: boolean; warning: boolean }> {

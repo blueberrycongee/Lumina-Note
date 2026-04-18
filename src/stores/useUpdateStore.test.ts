@@ -19,7 +19,7 @@ vi.mock("@tauri-apps/api/event", () => ({
   listen: listenMock,
 }));
 
-vi.mock("@/lib/tauri", () => ({
+vi.mock("@/lib/host", () => ({
   isTauriAvailable: isTauriAvailableMock,
 }));
 
