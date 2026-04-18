@@ -18,6 +18,7 @@ import type {
 } from './providers/settings-store.js'
 import { testProviderConnection } from './providers/test-connection.js'
 import type { AgentRuntime } from './runtime.js'
+import type { McpManager } from './mcp/manager.js'
 import type { SkillLoader } from './skills/loader.js'
 import type {
   ApprovalDecision,
@@ -66,6 +67,7 @@ export interface AgentDispatchContext {
   debugLog?: DebugLog
   providerSettings?: ProviderSettingsStore
   skillLoader?: SkillLoader
+  mcpManager?: McpManager
 }
 
 export function isAgentCommand(cmd: string): boolean {

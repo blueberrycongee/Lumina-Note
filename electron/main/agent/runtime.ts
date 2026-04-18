@@ -46,6 +46,11 @@ export interface AgentRuntimeOptions {
   memoryStore?: MemoryStore
   maxTurns?: number
   systemPrompt?: string
+  /**
+   * 每次 start 之前调用,可用来刷新 ToolRegistry(例如同步 MCP 工具)。
+   * 失败不阻断,只记日志。
+   */
+  beforeStart?: () => Promise<void> | void
 }
 
 const DEFAULT_MAX_TURNS = 25
@@ -63,6 +68,16 @@ export class AgentRuntime {
   async start(task: string, context: TaskContext): Promise<SessionId> {
     if (this.current && this.current.status === 'running') {
       throw new Error('Agent is already running')
+    }
+    if (this.options.beforeStart) {
+      try {
+        await this.options.beforeStart()
+      } catch (err) {
+        this.options.debugLog?.log(
+          'agent.beforeStart.error',
+          { error: err instanceof Error ? err.message : String(err) },
+        )
+      }
     }
     const session = new Session(createSessionId(), context)
     this.current = session

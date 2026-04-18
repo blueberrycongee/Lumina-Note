@@ -13,6 +13,7 @@ import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
 import type { SkillLoader } from './agent/skills/loader.js'
+import type { McpManager } from './agent/mcp/manager.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
@@ -68,10 +69,18 @@ export interface IpcHandlersOptions {
   debugLog?: DebugLog
   providerSettings?: ProviderSettingsStore
   skillLoader?: SkillLoader
+  mcpManager?: McpManager
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
-  const { getMainWindow, agentRuntime, debugLog, providerSettings, skillLoader } = options
+  const {
+    getMainWindow,
+    agentRuntime,
+    debugLog,
+    providerSettings,
+    skillLoader,
+    mcpManager,
+  } = options
 
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
@@ -98,7 +107,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
     if (isAgentCommand(cmd)) {
       return dispatchAgentCommand(
-        { runtime: agentRuntime, debugLog, providerSettings, skillLoader },
+        { runtime: agentRuntime, debugLog, providerSettings, skillLoader, mcpManager },
         cmd,
         args,
       )

@@ -15,6 +15,11 @@ import {
 } from './agent/providers/settings-store.js'
 import { AgentRuntime } from './agent/runtime.js'
 import { SkillLoader } from './agent/skills/loader.js'
+import { McpManager } from './agent/mcp/manager.js'
+import { refreshMcpTools } from './agent/mcp/tools.js'
+import { registerFsTools } from './agent/tools/fs.js'
+import { registerShellTool } from './agent/tools/shell.js'
+import { ToolRegistry } from './agent/tool-registry.js'
 import type { ProviderInterface } from './agent/types.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -124,12 +129,27 @@ app.whenReady().then(() => {
     }
   }
 
+  const toolRegistry = new ToolRegistry()
+  registerFsTools(toolRegistry)
+  registerShellTool(toolRegistry)
+
+  const mcpManager = new McpManager({ baseDir: app.getPath('userData') })
+  void mcpManager.init().catch((err) => {
+    console.error('[main] mcp init failed', err)
+  })
+
   const agentRuntime = new AgentRuntime({
     eventBus: agentEventBus,
     approvalGate,
     debugLog,
     memoryStore,
     providerSelector,
+    toolRegistry,
+    beforeStart: async () => {
+      await refreshMcpTools(toolRegistry, mcpManager).catch((err) => {
+        console.error('[main] mcp tool refresh failed', err)
+      })
+    },
   })
   const skillLoader = new SkillLoader()
   registerIpcHandlers({
@@ -138,6 +158,7 @@ app.whenReady().then(() => {
     debugLog,
     providerSettings,
     skillLoader,
+    mcpManager,
   })
   buildMenu()
   createWindow()
