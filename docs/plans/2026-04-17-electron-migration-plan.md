@@ -229,7 +229,7 @@ AND wikiAgent.enabled === true       (用户没关掉)
 - **6.3** WikiSynthesizer：特殊 system prompt 的 agent，允许 FS 工具自主浏览 `vault/wiki/`，产出 `vault/wiki/*.md` 修改
 - **6.4** Settings → Wiki 面板：启用开关 / 静默期 / 冷却期 / 排除 glob
 - **6.5** 命令：`Rebuild wiki` / 单文件 `Synthesize to wiki` / 停止合成
-- **6.6** 前端 viewer：沿用现有 Wiki 入口，展示产物 + 跳转源文档
+- **6.6** 前端 viewer：沿用现有 Wiki 入口,展示产物 + 跳转源文档。Wiki 产物落 `vault/wiki/*.md`,frontmatter 有 `title` / `page_type` / `summary` / `source_paths`(每个 source_path 是源 note 相对路径,viewer 可以 click-through)。`vault_load_index` IPC 扫这些文件返回 `WikiIndex`(useVaultStore 期待的 shape);`vault_run_lint` 当前返回零 issue 占位,真正 lint 留后续
 
 ### Phase 7 — 搬剩下的 Tauri 命令到 Node
 

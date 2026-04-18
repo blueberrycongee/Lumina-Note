@@ -27,6 +27,7 @@ import type {
 } from './types.js'
 import type { WikiManager } from '../wiki/manager.js'
 import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
+import { loadWikiIndex } from '../wiki/index-loader.js'
 
 /**
  * 解析 agent_approve_tool 的入参,兼容新旧 schema:
@@ -241,16 +242,46 @@ export async function dispatchAgentCommand(
     }
 
     // Vault — Phase 6 接入 wiki/vault 管理
-    case 'vault_initialize':
-      return null
-    case 'vault_load_index':
-      return ''
-    case 'vault_run_lint':
-      return {
-        total_files: 0,
-        lint_issues: [] as unknown[],
-        coverage_ratio: 0,
+    case 'vault_initialize': {
+      // 副作用: 把当前 vault 绑给 wiki manager,这样 wiki_* 命令立刻可用
+      if (wikiManager) {
+        const { workspacePath, workspace_path } = args as {
+          workspacePath?: string
+          workspace_path?: string
+        }
+        const vaultPath = workspacePath ?? workspace_path
+        if (typeof vaultPath === 'string' && vaultPath.length > 0) {
+          await wikiManager.bind(vaultPath).catch(() => undefined)
+          await wikiManager.start().catch(() => undefined)
+        }
       }
+      return null
+    }
+    case 'vault_load_index': {
+      const { workspacePath, workspace_path } = args as {
+        workspacePath?: string
+        workspace_path?: string
+      }
+      const vaultPath = workspacePath ?? workspace_path
+      if (typeof vaultPath !== 'string' || vaultPath.length === 0) {
+        return { pages: [], last_updated: 0 }
+      }
+      try {
+        return await loadWikiIndex(vaultPath)
+      } catch {
+        return { pages: [], last_updated: 0 }
+      }
+    }
+    case 'vault_run_lint': {
+      // Phase 6.6 占位:返回前端 LintReport 形状的空报告(实际 lint 实现留给后续)
+      return {
+        checked_pages: 0,
+        broken_links: [] as unknown[],
+        orphaned_pages: [] as string[],
+        stale_pages: [] as string[],
+        overall_health: 1,
+      }
+    }
 
     // MCP — Phase 4.4 server 管理
     case 'mcp_list_servers': {
