@@ -14,7 +14,6 @@
     "generate-latest": "ts-node scripts/generate_latest_json.ts",
     "build": "electron-vite build",
     "build:vite": "tsc && vite build",
-    "pretauri": "node scripts/sync_version.mjs",
     "preview": "electron-vite preview",
     "release:prepare": "node scripts/release_prepare.mjs",
     "pack": "electron-builder --dir",
@@ -22,7 +21,6 @@
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",
     "dist:linux": "electron-builder --linux",
-    "tauri": "tauri",
     "server:dev": "cd server && cargo run",
     "server:test": "cd server && cargo test",
     "test": "vitest",
@@ -116,7 +114,6 @@
     }
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@types/katex": "^0.16.7",
