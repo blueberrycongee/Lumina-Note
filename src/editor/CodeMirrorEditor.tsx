@@ -59,6 +59,7 @@ import {
   checkUpdateAction,
   collapseOnSelectionFacet,
   tableField,
+  tableEditorField,
   tableEditorPlugin,
   mouseSelectingField,
   setMouseSelecting,
@@ -3423,6 +3424,14 @@ function buildBlockWidgetAtomicRanges(state: EditorState): DecorationSet {
     state.field(horizontalRuleStateField, false),
     ranges,
   );
+  // Tables: both the reading-mode widget (tableField) and the live-mode
+  // editable table (tableEditorField) should be treated as atomic. When
+  // a drag crosses into a table, CM selection snaps to the table's
+  // outer boundary and tableRowSelectionPlugin takes over the visual
+  // inside — rows highlight individually instead of the default
+  // selection rectangle clipping through cells.
+  collectBlockWidgetRanges(state.field(tableField, false), ranges);
+  collectBlockWidgetRanges(state.field(tableEditorField, false), ranges);
   if (ranges.length === 0) return Decoration.none;
   return Decoration.set(
     ranges.sort((a, b) => a.from - b.from),
@@ -3495,15 +3504,26 @@ const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
 //
 // The default CM drawSelection paints a blocky rectangle that spans
 // whatever text positions the mouse has crossed — inside a table that
-// looks wrong: the rectangle clips across cells and leaves half-rows
-// selected, which visually has nothing to do with the row the user is
+// looks wrong because the rectangle clips across cells and leaves
+// half-rows covered, which doesn't visually match any row the user is
 // trying to reach.
 //
-// This plugin watches mouse drags that cross table rows and tags each
-// row the drag has swept across with `.cm-table-row-selected`. Same-row
-// drags (e.g. selecting text inside a single cell) get left alone so the
-// browser's native contenteditable text selection still works. The
-// highlight clears on the next mousedown or on mouseup.
+// This plugin watches left-button drags anywhere in the editor. While
+// the button is held, it computes the drag's current Y extent
+// [minY, maxY] from (mousedown, mousemove) and tags every table row
+// whose bounding rect intersects that extent with
+// `.cm-table-row-selected`. Same-row drags that never leave the start
+// row's Y-band are left alone so the browser's native contenteditable
+// text selection inside a cell still works.
+//
+// Because this tracks Y range rather than DOM-adjacency, a drag that
+// starts in a paragraph above and ends halfway down a table picks up
+// exactly the table rows it visually covers. The paragraph portion
+// above the table keeps CM's normal selection rectangle; the table
+// portion gets row highlights. Tables are also registered in
+// `EditorView.atomicRanges`, so CM's selection snaps at the table's
+// outer boundary and doesn't bleed a rectangle into the middle of the
+// table while the mouse is inside it.
 const TABLE_SELECTOR = ".cm-table-editor, .cm-table-widget";
 
 const tableRowSelectionPlugin = ViewPlugin.fromClass(
@@ -3512,9 +3532,10 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     private readonly onMouseDown: (e: MouseEvent) => void;
     private readonly onMouseMove: (e: MouseEvent) => void;
     private readonly onMouseUp: () => void;
-    private table: HTMLElement | null = null;
-    private startRow: HTMLTableRowElement | null = null;
-    private inRowMode = false;
+    private dragStartY: number | null = null;
+    // Tables that have highlighted rows during the current drag — so we
+    // can clear them between frames without scanning the whole document.
+    private touchedTables = new Set<HTMLElement>();
 
     constructor(view: EditorView) {
       this.view = view;
@@ -3533,76 +3554,82 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         "mouseup",
         this.onMouseUp,
       );
-      this.clearHighlights();
+      this.clearAll();
     }
 
     private handleMouseDown(e: MouseEvent) {
-      this.clearHighlights();
-      this.inRowMode = false;
-      this.startRow = null;
-      this.table = null;
+      this.clearAll();
+      this.dragStartY = null;
       if (e.button !== 0) return;
-      const target = e.target;
-      if (!(target instanceof Element)) return;
-      const row = target.closest("tr");
-      if (!row) return;
-      const tableEl = row.closest(TABLE_SELECTOR);
-      if (!(tableEl instanceof HTMLElement)) return;
-      this.table = tableEl;
-      this.startRow = row as HTMLTableRowElement;
+      this.dragStartY = e.clientY;
     }
 
     private handleMouseMove(e: MouseEvent) {
-      if (!this.startRow || !this.table) return;
-      if ((e.buttons & 1) === 0) return; // primary button no longer held
-      const currentRow = this.rowAtPoint(e.clientY);
-      if (!currentRow) return;
-      if (currentRow === this.startRow && !this.inRowMode) return;
-      // crossed a row boundary — enter row-selection mode
-      this.inRowMode = true;
-      this.highlightBetween(this.startRow, currentRow);
+      if (this.dragStartY == null) return;
+      if ((e.buttons & 1) === 0) {
+        this.dragStartY = null;
+        return;
+      }
+      const minY = Math.min(this.dragStartY, e.clientY);
+      const maxY = Math.max(this.dragStartY, e.clientY);
+      // A zero-height drag is just a click in progress — don't highlight
+      // anything yet.
+      if (maxY - minY < 2) return;
+      this.highlightRowsInRange(minY, maxY);
     }
 
     private handleMouseUp() {
-      // Leave the highlight in place until the user clicks again, so
-      // they can copy / inspect the visually selected rows. The next
-      // mousedown clears it via handleMouseDown → clearHighlights.
-      this.startRow = null;
-      this.inRowMode = false;
+      // Leave the highlight in place until the user clicks again so they
+      // can still copy / inspect. The next mousedown clears via
+      // clearAll().
+      this.dragStartY = null;
     }
 
-    private rowAtPoint(clientY: number): HTMLTableRowElement | null {
-      if (!this.table) return null;
-      const rows = this.table.querySelectorAll<HTMLTableRowElement>("tr");
-      for (const row of rows) {
-        const rect = row.getBoundingClientRect();
-        if (clientY >= rect.top && clientY <= rect.bottom) return row;
-      }
-      return null;
-    }
-
-    private highlightBetween(
-      startRow: HTMLTableRowElement,
-      endRow: HTMLTableRowElement,
-    ) {
-      if (!this.table) return;
-      const rows = Array.from(
-        this.table.querySelectorAll<HTMLTableRowElement>("tr"),
+    private highlightRowsInRange(minY: number, maxY: number) {
+      const nextTables = new Set<HTMLElement>();
+      const tables = this.view.dom.querySelectorAll<HTMLElement>(
+        TABLE_SELECTOR,
       );
-      const startIdx = rows.indexOf(startRow);
-      const endIdx = rows.indexOf(endRow);
-      if (startIdx < 0 || endIdx < 0) return;
-      const lo = Math.min(startIdx, endIdx);
-      const hi = Math.max(startIdx, endIdx);
-      this.clearHighlights();
-      for (let i = lo; i <= hi; i++) {
-        rows[i].classList.add("cm-table-row-selected");
-      }
+      tables.forEach((table) => {
+        const rect = table.getBoundingClientRect();
+        // Skip tables that couldn't possibly intersect the drag Y range.
+        if (rect.bottom < minY || rect.top > maxY) return;
+        let tableTouched = false;
+        table
+          .querySelectorAll<HTMLTableRowElement>("tr")
+          .forEach((row) => {
+            const r = row.getBoundingClientRect();
+            if (r.bottom >= minY && r.top <= maxY) {
+              row.classList.add("cm-table-row-selected");
+              tableTouched = true;
+            } else {
+              row.classList.remove("cm-table-row-selected");
+            }
+          });
+        if (tableTouched) nextTables.add(table);
+      });
+      // Tables that used to have highlights but no longer intersect the
+      // drag — clear them.
+      this.touchedTables.forEach((table) => {
+        if (!nextTables.has(table)) {
+          table
+            .querySelectorAll(".cm-table-row-selected")
+            .forEach((el) => el.classList.remove("cm-table-row-selected"));
+        }
+      });
+      this.touchedTables = nextTables;
     }
 
-    private clearHighlights() {
-      if (!this.table) return;
-      this.table
+    private clearAll() {
+      this.touchedTables.forEach((table) => {
+        table
+          .querySelectorAll(".cm-table-row-selected")
+          .forEach((el) => el.classList.remove("cm-table-row-selected"));
+      });
+      this.touchedTables.clear();
+      // Defensive: also sweep the view.dom in case a table was reflowed
+      // out of the touched set between frames.
+      this.view.dom
         .querySelectorAll(".cm-table-row-selected")
         .forEach((el) => el.classList.remove("cm-table-row-selected"));
     }
