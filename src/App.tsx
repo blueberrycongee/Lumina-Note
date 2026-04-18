@@ -39,7 +39,6 @@ import { openDialog, saveFile, startFileWatcher } from "@/lib/tauri";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
-import { VoiceInputBall } from "@/components/ai/VoiceInputBall";
 import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
 import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";

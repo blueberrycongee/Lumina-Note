@@ -10,7 +10,7 @@ interface CitationCardProps {
  * Renders a citation to a wiki page as a clickable card.
  * When clicked, opens the referenced wiki page in the editor.
  */
-export function CitationCard({ pagePath, section, quote }: CitationCardProps) {
+export function CitationCard({ pagePath, section }: CitationCardProps) {
   const openFile = useFileStore((s) => s.openFile);
 
   const handleClick = () => {

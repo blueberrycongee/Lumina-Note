@@ -21,7 +21,6 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
   const { popover, closePopover, addAnnotation } = usePDFAnnotationStore();
   const { currentPage, currentFile: currentPdfFile } = usePDFStore();
   const { t } = useLocaleStore();
-  const chatMode = useUIStore((state) => state.chatMode);
   const setRightPanelTab = useUIStore((state) => state.setRightPanelTab);
   const setRightSidebarOpen = useUIStore((state) => state.setRightSidebarOpen);
   const setFloatingPanelOpen = useUIStore((state) => state.setFloatingPanelOpen);
@@ -97,31 +96,24 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
 
     const pdfName = currentPdfFile?.split(/[/\\]/).pop() || "PDF";
     const locator = `P${currentPage}`;
-    const citationText = `> ${pdfName} (${locator})\n> ${text.split('\n').join('\n> ')}`;
     setRightSidebarOpen(true);
     setRightPanelTab('chat');
     setFloatingPanelOpen(true);
-    if (chatMode === 'codex') {
-      navigator.clipboard.writeText(citationText).catch((err) => {
-        console.warn('Failed to copy PDF selection for Codex:', err);
-      });
-    } else {
-      useAIStore.getState().addTextSelection({
-        text,
-        source: pdfName,
-        sourcePath: currentPdfFile || undefined,
-        summary: text.replace(/\s+/g, " ").slice(0, 72),
-        locator,
-        range: {
-          kind: "pdf",
-          page: currentPage,
-          rectCount: popover.position?.rects.length,
-        },
-      });
-    }
+    useAIStore.getState().addTextSelection({
+      text,
+      source: pdfName,
+      sourcePath: currentPdfFile || undefined,
+      summary: text.replace(/\s+/g, " ").slice(0, 72),
+      locator,
+      range: {
+        kind: "pdf",
+        page: currentPage,
+        rectCount: popover.position?.rects.length,
+      },
+    });
     closePopover();
     window.getSelection()?.removeAllRanges();
-  }, [popover.selectedText, popover.position, currentPage, currentPdfFile, chatMode, setRightSidebarOpen, setRightPanelTab, setFloatingPanelOpen, closePopover]);
+  }, [popover.selectedText, popover.position, currentPage, currentPdfFile, setRightSidebarOpen, setRightPanelTab, setFloatingPanelOpen, closePopover]);
   
   if (!popover.isOpen) return null;
   

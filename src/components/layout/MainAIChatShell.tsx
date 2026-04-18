@@ -35,7 +35,6 @@ import {
   AlertCircle,
   Check,
   Settings,
-  Bug,
   Lightbulb,
 } from "lucide-react";
 import { useSessionManagement } from "./hooks/useSessionManagement";
@@ -135,10 +134,6 @@ export function MainAIChatShell() {
     totalTokensUsed: rustTotalTokens,
     startTask: rustStartTask,
     abort: agentAbort,
-    debugEnabled,
-    debugLogPath,
-    enableDebug,
-    disableDebug,
     pendingTool: rustPendingTool,
     approveTool: approve,
     rejectTool: reject,
@@ -222,13 +217,12 @@ export function MainAIChatShell() {
   );
 
   const handleNewChat = useCallback(() => {
-    if (chatMode === "codex") return;
     setIsExportSelectionMode(false);
     setSelectedExportIds([]);
     setSelectedSkills([]);
     _sessionNewChat();
     setShowHistory(false);
-  }, [chatMode, _sessionNewChat, setSelectedSkills]);
+  }, [_sessionNewChat, setSelectedSkills]);
 
   const {
     vaultPath,
@@ -566,35 +560,6 @@ export function MainAIChatShell() {
     textareaRef.current?.focus();
   }, [pendingInputAppends, consumeInputAppends]);
 
-  // 检测输入是否仅仅是一个网页链接
-  const isOnlyWebLink = useCallback((text: string): string | null => {
-    const trimmed = text.trim();
-    if (!trimmed) return null;
-
-    // 检查是否包含空格（多个单词则不是链接）
-    if (trimmed.includes(" ")) return null;
-
-    let url = trimmed;
-
-    // 情况1: 已经是完整的 URL (http:// 或 https://)
-    if (/^https?:\/\//.test(url)) {
-      return url;
-    }
-
-    // 情况2: www. 开头
-    if (/^www\./.test(url)) {
-      return "https://" + url;
-    }
-
-    // 情况3: 域名格式 (例如 baidu.com, google.com, example.co.uk)
-    // 支持带路径的 URL (例如 baidu.com/search?q=test)
-    if (/^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+/.test(url)) {
-      return "https://" + url;
-    }
-
-    return null;
-  }, []);
-
   const allFiles = useMemo(
     () => flattenFileTreeToReferences(fileTree),
     [fileTree],
@@ -725,9 +690,6 @@ export function MainAIChatShell() {
       if (isExportSelectionMode) {
         return;
       }
-      if (chatMode === "codex") {
-        return;
-      }
       const fallbackMessage = autoSendMessageRef.current?.trim() ?? "";
       const overrideMessage = overrideInput?.trim() ?? "";
       const effectiveInput = overrideMessage || input.trim() || fallbackMessage;
@@ -740,8 +702,6 @@ export function MainAIChatShell() {
         return;
       }
 
-      // 检查是否仅仅是一个网页链接
-      const webLink = isOnlyWebLink(effectiveInput);
       const message = effectiveInput;
       setInput("");
       autoSendMessageRef.current = null;
@@ -766,14 +726,12 @@ export function MainAIChatShell() {
         active_note_content: currentFile ? currentContent : undefined,
         display_message: displayMessage,
         attachments,
-        skills: selectedSkills.length > 0 ? selectedSkills : undefined,
       });
       setSelectedSkills([]);
       finalizePerf();
     },
     [
       input,
-      chatMode,
       isLoading,
       isAgentWaitingApproval,
       vaultPath,
@@ -783,7 +741,6 @@ export function MainAIChatShell() {
       textSelections,
       clearTextSelections,
       rustStartTask,
-      isOnlyWebLink,
       config,
       selectedSkills,
       isExportSelectionMode,
@@ -807,9 +764,6 @@ export function MainAIChatShell() {
     if (!autoSendEnabled || autoSendRef.current) {
       return;
     }
-    if (chatMode === "codex") {
-      return;
-    }
     autoSendRef.current = true;
     handleNewChat();
     autoSendMessageRef.current = t.ai.performanceDebugMessage;
@@ -817,7 +771,7 @@ export function MainAIChatShell() {
     setTimeout(() => {
       handleSendRef.current(t.ai.performanceDebugMessage);
     }, 200);
-  }, [chatMode, handleNewChat, t]);
+  }, [handleNewChat, t]);
 
   // 键盘事件
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -1461,7 +1415,7 @@ export function MainAIChatShell() {
                           size={16}
                           className="text-muted-foreground"
                         />
-                        {t.ai.referenceFile || "Reference file"}
+                        {"Reference file"}
                       </span>
                       <kbd className="text-[11px] text-muted-foreground">@</kbd>
                     </button>
@@ -1532,7 +1486,7 @@ export function MainAIChatShell() {
                         ? "bg-foreground/10 text-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
-                    title={t.ai.moreOptions || "More"}
+                    title={"More"}
                   >
                     <Plus size={18} />
                   </button>

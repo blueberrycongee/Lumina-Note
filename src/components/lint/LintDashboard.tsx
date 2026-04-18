@@ -1,6 +1,5 @@
 import { useVaultStore, type LintReport } from "@/stores/useVaultStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useLocaleStore } from "@/stores/useLocaleStore";
 
 function HealthBar({ value }: { value: number }) {
   const pct = Math.round(value * 100);

@@ -10,7 +10,6 @@ import {
 } from "@/lib/tauri";
 import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import {
   readOpenClawCronJobs,

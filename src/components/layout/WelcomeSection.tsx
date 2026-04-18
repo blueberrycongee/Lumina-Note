@@ -66,7 +66,7 @@ interface QuickAction {
   icon: React.ElementType;
   label: string;
   desc: string;
-  mode: "chat" | "agent";
+  mode: "agent";
   prompt: string;
 }
 
@@ -184,7 +184,7 @@ function buildFileAction(
         icon: ACTION_ICONS.polish,
         label: t.ai.polishText,
         desc: file.name,
-        mode: "chat",
+        mode: "agent",
         prompt: fill(p.polishText),
       };
     case "summarize":
@@ -192,7 +192,7 @@ function buildFileAction(
         icon: ACTION_ICONS.summarize,
         label: t.ai.summarizeNote,
         desc: file.name,
-        mode: "chat",
+        mode: "agent",
         prompt: fill(p.summarizeNote),
       };
     case "write":
@@ -221,14 +221,14 @@ function buildGenericActions(t: Translations): QuickAction[] {
       icon: GENERIC_ICONS.brainstorm,
       label: t.ai.polishText,
       desc: t.ai.polishTextDesc,
-      mode: "chat",
+      mode: "agent",
       prompt: p.polishTextGeneric,
     },
     {
       icon: GENERIC_ICONS.chat,
       label: t.ai.summarizeNote,
       desc: t.ai.summarizeNoteDesc,
-      mode: "chat",
+      mode: "agent",
       prompt: p.summarizeNoteGeneric,
     },
     {

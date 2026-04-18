@@ -424,7 +424,6 @@ export const useFileStore = create<FileState>()(
           (tab) => normalize(tab.path) === targetPath,
         );
         if (existingTabIndex !== -1) {
-          const existingTab = tabs[existingTabIndex];
           // 已有此标签页
           if (forceReload) {
             // 强制重新加载内容（Agent 编辑后使用）
