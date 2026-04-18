@@ -3769,28 +3769,27 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       const bodyRows = Array.from(
         tableEl.querySelectorAll<HTMLTableRowElement>("tbody > tr"),
       );
-      const sortedRows = rows
-        .map((r) => ({
-          row: r,
-          order: r === headerRow ? -1 : bodyRows.indexOf(r),
-        }))
-        .filter((r) => r.order >= -1)
-        .sort((a, b) => a.order - b.order);
+
+      // Body row indices the user actually highlighted, sorted
+      // top-to-bottom. The header + separator are always prepended so
+      // the clipboard fragment parses as a valid markdown table no
+      // matter which direction the drag went. Without this, a
+      // bottom-up drag that stopped before reaching the header would
+      // emit headerless body rows that paste as plain text — visibly
+      // diverging from the top-down case where the header is swept
+      // naturally as the topmost row.
+      const bodyOrders = rows
+        .filter((r) => r !== headerRow)
+        .map((r) => bodyRows.indexOf(r))
+        .filter((i) => i >= 0)
+        .sort((a, b) => a - b);
 
       const lines: string[] = [];
-      for (const { row, order } of sortedRows) {
-        if (row === headerRow) {
-          lines.push(sourceLines[0]);
-          // Include the separator so the clipboard fragment still
-          // parses as a valid markdown table if header is part of the
-          // copy.
-          if (sourceLines[1] !== undefined) lines.push(sourceLines[1]);
-        } else {
-          const mdIdx = 2 + order;
-          if (sourceLines[mdIdx] !== undefined) {
-            lines.push(sourceLines[mdIdx]);
-          }
-        }
+      if (sourceLines[0] !== undefined) lines.push(sourceLines[0]);
+      if (sourceLines[1] !== undefined) lines.push(sourceLines[1]);
+      for (const order of bodyOrders) {
+        const mdIdx = 2 + order;
+        if (sourceLines[mdIdx] !== undefined) lines.push(sourceLines[mdIdx]);
       }
       return lines.join("\n");
     }
