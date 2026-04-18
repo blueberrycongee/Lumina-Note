@@ -1545,12 +1545,14 @@ function shouldShowMermaidSource(
   if (isDragging) return false;
   return state.selection.ranges.some((range) => {
     if (range.from === range.to) {
-      // Caret inside code block should reveal source for direct editing.
+      // Caret inside the block reveals source for direct editing.
       return range.from > from && range.from < to;
     }
-    // Only expand when the selected range is fully inside the code block.
-    // This avoids cross-boundary selection (e.g. selecting a heading near a block)
-    // from unexpectedly expanding the block.
+    // For ranges, reveal only when the whole selection is inside the
+    // block. Ranges that cross the block's outer edge keep it as a
+    // widget: `EditorView.atomicRanges` will have snapped the selection
+    // to the widget boundary, and `blockWidgetSelectionSyncPlugin` shows
+    // the "selected" ring on the widget itself.
     return range.from >= from && range.to <= to;
   });
 }
@@ -2939,10 +2941,15 @@ function shouldShowCalloutSource(
   if (!shouldCollapse) return false;
   const isDragging = state.field(mouseSelectingField, false);
   if (isDragging) return false;
-  // Only switch to source when cursor (collapsed selection) is inside callout.
-  // Drag selections that cross over the callout keep it in widget mode,
-  // drawSelection() paints over the widget
-  // without triggering a DOM rebuild.
+  // Only reveal source when the caret (collapsed selection) is inside the
+  // callout. Range selections that cross the callout keep it in widget
+  // mode on purpose — `EditorView.atomicRanges` snaps those selections to
+  // the widget's outer boundary, and `blockWidgetSelectionSyncPlugin` tags
+  // the widget DOM with `.cm-block-widget-selected` so the UI still shows
+  // "the whole callout is selected" via a primary-colored ring. That is
+  // the intentional difference from math/image/hr, which use the
+  // permissive `shouldShowSource` so text-like widgets reveal for inline
+  // editing on any intersection.
   return state.selection.ranges.some(
     (range) =>
       range.from === range.to && range.from >= from && range.from <= to,
