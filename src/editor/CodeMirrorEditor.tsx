@@ -3532,6 +3532,7 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     private readonly onMouseDown: (e: MouseEvent) => void;
     private readonly onMouseMove: (e: MouseEvent) => void;
     private readonly onMouseUp: () => void;
+    private readonly onCopy: (e: ClipboardEvent) => void;
     private dragStartY: number | null = null;
     // Tables that have highlighted rows during the current drag — so we
     // can clear them between frames without scanning the whole document.
@@ -3542,9 +3543,14 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       this.onMouseDown = (e) => this.handleMouseDown(e);
       this.onMouseMove = (e) => this.handleMouseMove(e);
       this.onMouseUp = () => this.handleMouseUp();
+      this.onCopy = (e) => this.handleCopy(e);
       view.dom.addEventListener("mousedown", this.onMouseDown);
       view.dom.addEventListener("mousemove", this.onMouseMove);
       view.dom.ownerDocument.addEventListener("mouseup", this.onMouseUp);
+      // Hook copy at document level so it fires even when focus is on a
+      // contenteditable cell inside the table widget (native selection
+      // lives there, not on .cm-content).
+      view.dom.ownerDocument.addEventListener("copy", this.onCopy, true);
     }
 
     destroy() {
@@ -3553,6 +3559,11 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       this.view.dom.ownerDocument.removeEventListener(
         "mouseup",
         this.onMouseUp,
+      );
+      this.view.dom.ownerDocument.removeEventListener(
+        "copy",
+        this.onCopy,
+        true,
       );
       this.clearAll();
     }
@@ -3632,6 +3643,105 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       this.view.dom
         .querySelectorAll(".cm-table-row-selected")
         .forEach((el) => el.classList.remove("cm-table-row-selected"));
+    }
+
+    // ── Copy: emit the source markdown for the highlighted rows ───
+    private handleCopy(e: ClipboardEvent) {
+      // Only intervene when this editor has highlighted rows. Leave
+      // regular copy behavior alone for paragraphs, code blocks, etc.
+      const highlightedRows = this.view.dom.querySelectorAll<HTMLTableRowElement>(
+        ".cm-table-row-selected",
+      );
+      if (highlightedRows.length === 0) return;
+
+      const markdown = this.buildMarkdownForHighlightedRows(
+        Array.from(highlightedRows),
+      );
+      if (!markdown) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.clipboardData) {
+        e.clipboardData.setData("text/plain", markdown);
+      }
+    }
+
+    private buildMarkdownForHighlightedRows(
+      rows: HTMLTableRowElement[],
+    ): string {
+      // Group highlighted rows by their containing table so each group
+      // can be mapped back to its own source-markdown range.
+      const byTable = new Map<HTMLElement, HTMLTableRowElement[]>();
+      for (const row of rows) {
+        const tableEl = row.closest<HTMLElement>(TABLE_SELECTOR);
+        if (!tableEl) continue;
+        if (!byTable.has(tableEl)) byTable.set(tableEl, []);
+        byTable.get(tableEl)!.push(row);
+      }
+
+      const parts: string[] = [];
+      byTable.forEach((tableRows, tableEl) => {
+        const sourceLines = this.resolveTableSourceLines(tableEl);
+        if (!sourceLines) return;
+        const headerRow = tableEl.querySelector<HTMLTableRowElement>(
+          "thead > tr",
+        );
+        const bodyRows = Array.from(
+          tableEl.querySelectorAll<HTMLTableRowElement>("tbody > tr"),
+        );
+        const sortedRows = tableRows
+          .map((r) => ({
+            row: r,
+            // Sort key: header first, then body rows in DOM order.
+            order:
+              r === headerRow ? -1 : bodyRows.indexOf(r),
+          }))
+          .filter((r) => r.order !== undefined)
+          .sort((a, b) => a.order - b.order);
+        const lines: string[] = [];
+        for (const { row, order } of sortedRows) {
+          if (row === headerRow) {
+            // Header row → markdown line 0, plus separator on line 1
+            // so the clipboard fragment is still a valid markdown table.
+            lines.push(sourceLines[0]);
+            if (sourceLines[1] !== undefined) lines.push(sourceLines[1]);
+          } else {
+            const mdIdx = 2 + order;
+            if (sourceLines[mdIdx] !== undefined) {
+              lines.push(sourceLines[mdIdx]);
+            }
+          }
+        }
+        if (lines.length > 0) parts.push(lines.join("\n"));
+      });
+      return parts.join("\n\n");
+    }
+
+    // Resolve a table DOM element to the source markdown lines that
+    // produced it. We don't have a direct API for this, so we anchor via
+    // view.posAtDOM(tableEl) — which returns the widget's doc position —
+    // and then walk forward while lines still start with `|`.
+    private resolveTableSourceLines(tableEl: HTMLElement): string[] | null {
+      let pos: number;
+      try {
+        pos = this.view.posAtDOM(tableEl);
+      } catch {
+        return null;
+      }
+      if (pos < 0) return null;
+      const doc = this.view.state.doc;
+      if (pos > doc.length) return null;
+      const firstLine = doc.lineAt(pos);
+      if (!firstLine.text.trimStart().startsWith("|")) return null;
+      const collected: string[] = [firstLine.text];
+      let lineNum = firstLine.number;
+      while (lineNum < doc.lines) {
+        const nextLine = doc.line(lineNum + 1);
+        if (!nextLine.text.trimStart().startsWith("|")) break;
+        collected.push(nextLine.text);
+        lineNum++;
+      }
+      return collected;
     }
   },
 );
