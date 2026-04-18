@@ -583,11 +583,16 @@ const createEditorTheme = (fontSize: number) =>
     },
 
     // Horizontal Rule styles
+    // Keep the rule painted at the vertical center of its own cm-line.
+    // No margin — CM wraps block widgets in a cm-line whose height is
+    // determined by the widget itself, and an hr margin would inflate
+    // that cm-line, capturing clicks intended for the heading below.
     ".cm-hr": {
       border: "none",
       borderTop: "1px solid hsl(var(--border))",
-      margin: "1rem 0",
+      margin: "0",
       display: "block",
+      width: "100%",
     },
     ".cm-hr-source": { color: "hsl(var(--muted-foreground))", opacity: 0.6 },
   });
@@ -967,10 +972,13 @@ class HorizontalRuleWidget extends WidgetType {
     return true;
   }
   toDOM() {
+    // NOTE: do NOT set a vertical margin on the <hr> itself. CM wraps
+    // block widgets in their own .cm-line, and an hr margin inflates
+    // that line's height, which silently swallows clicks that the user
+    // meant for the adjacent cm-line (e.g. a `# heading` right below).
+    // Vertical breathing room comes from the cm-line's own line-height.
     const hr = document.createElement("hr");
     hr.className = "cm-hr";
-    hr.style.cssText =
-      "border:none;border-top:1px solid hsl(var(--border));margin:1rem 0;";
     return hr;
   }
   ignoreEvent() {
