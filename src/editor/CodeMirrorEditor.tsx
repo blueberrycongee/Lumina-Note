@@ -207,6 +207,28 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-table-row-selected > th, .cm-table-row-selected > td": {
       backgroundColor: "hsl(var(--primary) / 0.14) !important",
     },
+    // While a row drag is active, hide the browser-native ::selection
+    // visual inside the table widget. Without this, a bottom-up drag
+    // (mousedown below the table, mouse moving up) leaves the DOM
+    // Selection's anchor in the paragraph below and the focus snapped
+    // to the table's start — but the DOM range crosses every
+    // contenteditable cell in between, so browsers paint the native
+    // text-selection background on top of our row highlights. The
+    // top-down case happens to put the focus _after_ the table widget,
+    // so cells aren't part of the painted range. Suppressing the cell
+    // ::selection only while we're managing rows makes both directions
+    // visually identical and still leaves intra-cell text selection
+    // working when no row drag is in progress.
+    "&.cm-table-rows-dragging .cm-table-editor *::selection, &.cm-table-rows-dragging .cm-table-widget *::selection":
+      {
+        backgroundColor: "transparent !important",
+        color: "inherit !important",
+      },
+    "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
+      {
+        userSelect: "none",
+        WebkitUserSelect: "none",
+      },
 
     // === 动画核心样式 ===
 
@@ -3586,7 +3608,32 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       // A zero-height drag is just a click in progress — don't highlight
       // anything yet.
       if (maxY - minY < 2) return;
+      // If both endpoints sit inside the same table row, leave native
+      // cell text selection alone — the user is selecting text within
+      // a single cell, not picking rows.
+      const startRow = this.rowAtY(this.dragStartY);
+      const endRow = this.rowAtY(e.clientY);
+      if (startRow !== null && startRow === endRow) {
+        this.clearAll();
+        return;
+      }
       this.highlightRowsInRange(minY, maxY);
+    }
+
+    private rowAtY(y: number): HTMLTableRowElement | null {
+      const tables = this.view.dom.querySelectorAll<HTMLElement>(
+        TABLE_SELECTOR,
+      );
+      for (const table of Array.from(tables)) {
+        const rect = table.getBoundingClientRect();
+        if (y < rect.top || y > rect.bottom) continue;
+        const rows = table.querySelectorAll<HTMLTableRowElement>("tr");
+        for (const row of Array.from(rows)) {
+          const r = row.getBoundingClientRect();
+          if (y >= r.top && y <= r.bottom) return row;
+        }
+      }
+      return null;
     }
 
     private handleMouseUp() {
@@ -3629,6 +3676,14 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         }
       });
       this.touchedTables = nextTables;
+      // Tag the view while any rows are highlighted so the CSS rule can
+      // hide the browser-native ::selection painted on cells the DOM
+      // range crossed (see the .cm-table-rows-dragging block in the
+      // theme above).
+      this.view.dom.classList.toggle(
+        "cm-table-rows-dragging",
+        nextTables.size > 0,
+      );
     }
 
     private clearAll() {
@@ -3638,6 +3693,7 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
           .forEach((el) => el.classList.remove("cm-table-row-selected"));
       });
       this.touchedTables.clear();
+      this.view.dom.classList.remove("cm-table-rows-dragging");
       // Defensive: also sweep the view.dom in case a table was reflowed
       // out of the touched set between frames.
       this.view.dom
