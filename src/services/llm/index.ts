@@ -34,6 +34,31 @@ export type {
 } from "./types";
 
 export { PROVIDER_REGISTRY } from "./types";
+
+// 新的纯数据 provider metadata(Phase 2.3) — 用于 UI 展示,不绑实现
+export type {
+  ProviderId as AgentProviderId,
+  ProviderMeta as AgentProviderMeta,
+  ModelMeta as AgentModelMeta,
+  OpenAICompatiblePreset,
+} from "./providers/metadata";
+export {
+  PROVIDER_METADATA,
+  OPENAI_COMPATIBLE_PRESETS,
+  listProviderMetadata,
+  getProviderMetadata,
+  findModel,
+} from "./providers/metadata";
+
+// OpenAI Compatible 通配通道辅助 (Phase 2.6)
+export type { OpenAiCompatibleSettings } from "./providers/openai-compatible";
+export {
+  listOpenAiCompatiblePresets,
+  getOpenAiCompatiblePreset,
+  buildOpenAiCompatibleSettingsFromPreset,
+  buildCustomOpenAiCompatibleSettings,
+} from "./providers/openai-compatible";
+
 export {
   buildConfigOverrideForPurpose,
   FOLLOW_MAIN_MODEL,
