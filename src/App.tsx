@@ -19,7 +19,6 @@ import { SplitEditor } from "@/components/layout/SplitEditor";
 import { useFileStore } from "@/stores/useFileStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
-import { PanelRight } from "lucide-react";
 import {
   CommandPalette,
   PaletteMode,
@@ -1015,7 +1014,11 @@ function App() {
           )}
         </main>
 
-        {/* Right Resize Handle + Collapse Button */}
+        {/* Right Resize Handle */}
+        {/* When the right panel is collapsed there's no expand affordance
+            here on purpose — open it via the command palette
+            (⌘K → "Toggle Right Sidebar"), or let callers like the PDF
+            viewer / diagram view auto-open it when they need to. */}
         <div className="relative flex-shrink-0 h-full z-20 before:absolute before:inset-x-0 before:top-0 before:h-11 before:border-b before:border-border/60 before:pointer-events-none">
           {rightSidebarOpen && (
             <ResizeHandle
@@ -1023,16 +1026,6 @@ function App() {
               onResize={handleRightResize}
               onDoubleClick={toggleRightSidebar}
             />
-          )}
-          {/* Right Collapse Button - 只在面板收起时显示 */}
-          {!rightSidebarOpen && (
-            <button
-              onClick={toggleRightSidebar}
-              className="absolute top-1/2 -translate-y-1/2 z-10 right-1 w-7 h-7 bg-background/55 backdrop-blur-md border border-border/60 shadow-ui-card ui-icon-btn"
-              title={t.layout.expandRightPanel}
-            >
-              <PanelRight className="w-4 h-4 text-muted-foreground" />
-            </button>
           )}
         </div>
 
