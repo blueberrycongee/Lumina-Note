@@ -3,6 +3,7 @@ import path from 'path'
 import { registerIpcHandlers } from './ipc.js'
 import { stopAllWatchers } from './handlers/watcher.js'
 import { AgentEventBus } from './agent/event-bus.js'
+import { IpcApprovalGate } from './agent/approval-gate.js'
 import { AgentRuntime } from './agent/runtime.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -72,7 +73,11 @@ function buildMenu() {
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   const agentEventBus = new AgentEventBus(getMainWindow)
-  const agentRuntime = new AgentRuntime({ eventBus: agentEventBus })
+  const approvalGate = new IpcApprovalGate()
+  const agentRuntime = new AgentRuntime({
+    eventBus: agentEventBus,
+    approvalGate,
+  })
   registerIpcHandlers({ getMainWindow, agentRuntime })
   buildMenu()
   createWindow()
