@@ -22,7 +22,7 @@ jobs:
       - name: Check changelog exists for this version
         run: npx ts-node scripts/parse_changelog.ts check "${{ github.ref_name }}"
 
-  release:
+  build:
     needs: check-changelog
     permissions:
       contents: write
@@ -30,15 +30,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
-            rust_target: 'aarch64-apple-darwin'
-          - platform: 'macos-15-intel'
-            args: '--target x86_64-apple-darwin'
-            rust_target: 'x86_64-apple-darwin'
-          - platform: 'windows-latest'
-            args: ''
-            rust_target: ''
+          - platform: macos-latest
+            script: dist:mac
+          - platform: windows-latest
+            script: dist:win
+          - platform: ubuntu-latest
+            script: dist:linux
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -50,67 +47,20 @@ jobs:
           node-version: lts/*
           cache: 'npm'
 
-      - name: Install Rust stable (with target)
-        if: matrix.rust_target != ''
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          targets: ${{ matrix.rust_target }}
-
-      - name: Install Rust stable
-        if: matrix.rust_target == ''
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Build the app
-        uses: tauri-apps/tauri-action@v0.6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Lumina Note ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download and install this version.'
-          releaseDraft: false
-          prerelease: false
-          tauriScript: npm run tauri
-          args: ${{ matrix.args }}
-
-  updater:
-    needs: release
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-
-      - name: Setup Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Download signatures from release assets
-        run: gh release download "${{ github.ref_name }}" --repo "${{ github.repository }}" --pattern "*.sig" --dir .
+      - name: Build renderer + main
+        run: npm run build
+
+      - name: Package + publish via electron-builder
+        run: npm run ${{ matrix.script }} -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate latest.json
-        run: npm run generate-latest
-
-      - name: Upload latest.json to Release
-        run: gh release upload "${{ github.ref_name }}" latest.json --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
