@@ -274,14 +274,13 @@ export function useSidebarFileOperations() {
         const updatedTabs = tabs.map((tab) => {
           if (
             tab.type === "file" ||
-            tab.type === "typesetting-doc" ||
             tab.type === "diagram" ||
             tab.type === "pdf"
           ) {
             const nextPath = replaceFolderPrefix(tab.path);
             if (nextPath !== tab.path) {
               const nextName =
-                tab.type === "file" || tab.type === "typesetting-doc"
+                tab.type === "file"
                   ? nextPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || tab.name
                   : tab.name;
               const nextId =

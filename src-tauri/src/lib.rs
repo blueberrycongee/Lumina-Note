@@ -12,7 +12,6 @@ pub mod mcp;
 mod node_runtime;
 pub mod proxy;
 pub mod secure_store;
-mod typesetting;
 mod update_manager;
 
 #[cfg(target_os = "macos")]
@@ -22,7 +21,6 @@ pub use commands::*;
 pub use error::*;
 pub use fs::*;
 pub use llm::*;
-pub use typesetting::*;
 
 // Re-export agent commands
 pub use agent::{

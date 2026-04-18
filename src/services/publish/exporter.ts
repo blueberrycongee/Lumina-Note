@@ -1,6 +1,6 @@
 import type { FileEntry } from "@/lib/tauri";
 import { createDir, saveFile, writeBinaryFile, readBinaryFileBase64 } from "@/lib/tauri";
-import { decodeBase64ToBytes } from "@/typesetting/base64";
+import { decodeBase64ToBytes } from "@/lib/base64";
 import { dirname, join } from "@/lib/path";
 import type { ProfileConfig } from "@/types/profile";
 import { getDefaultPublishOutputDir } from "./config";

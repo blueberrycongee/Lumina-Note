@@ -55,13 +55,12 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const { 
-    fileTree, 
-    openFile, 
+  const {
+    fileTree,
+    openFile,
     createNewFile,
     vaultPath,
     openGraphTab,
-    openTypesettingPreviewTab,
     openProfilePreviewTab,
     tabs,
     clearVault,
@@ -173,16 +172,6 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       },
     },
     {
-      id: "typesetting-preview",
-      label: "Typesetting Preview",
-      description: "Open the paged typesetting preview (placeholder)",
-      icon: <FileText size={16} />,
-      action: () => {
-        onClose();
-        openTypesettingPreviewTab();
-      },
-    },
-    {
       id: "profile-preview",
       label: t.commandPalette.openProfilePreview,
       description: t.commandPalette.openProfilePreviewDesc,
@@ -267,7 +256,6 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     openGraphTab,
     isGraphOpen,
     vaultPath,
-    openTypesettingPreviewTab,
     openProfilePreviewTab,
     publishConfig,
     profileConfig,

@@ -20,7 +20,6 @@ mod proxy;
 mod secure_store;
 #[cfg(target_os = "macos")]
 mod traffic_lights;
-mod typesetting;
 mod update_manager;
 mod webdav;
 
@@ -65,11 +64,6 @@ fn main() {
             commands::fill_danmaku_prefix,
             commands::setup_danmaku_autofill,
             commands::start_file_watcher,
-            commands::typesetting_preview_page_mm,
-            commands::typesetting_fixture_font_path,
-            commands::typesetting_export_pdf_base64,
-            commands::typesetting_render_docx_pdf_base64,
-            commands::typesetting_layout_text,
             // Browser WebView commands
             commands::create_browser_webview,
             commands::update_browser_webview_bounds,

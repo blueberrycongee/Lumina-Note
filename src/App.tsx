@@ -31,9 +31,6 @@ import { DiffView } from "@/components/effects/DiffView";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
-import { TypesettingPreviewPane } from "@/components/typesetting/TypesettingPreviewPane";
-import { TypesettingDocumentPane } from "@/components/typesetting/TypesettingDocumentPane";
-import { TypesettingExportHarness } from "@/components/typesetting/TypesettingExportHarness";
 import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -70,8 +67,6 @@ import { hydrateProxyConfigOnStartup } from "@/lib/proxyStartup";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
-const IS_TYPESETTING_HARNESS =
-  new URLSearchParams(window.location.search).get("typesettingHarness") === "1";
 const DiagramView = lazy(async () => {
   const mod = await import("@/components/diagram/DiagramView");
   return { default: mod.DiagramView };
@@ -216,9 +211,6 @@ function applyAutoButtonTooltips(root: ParentNode) {
 }
 
 function App() {
-  if (IS_TYPESETTING_HARNESS) {
-    return <TypesettingExportHarness />;
-  }
   const {
     vaultPath,
     setVaultPath,
@@ -1012,16 +1004,6 @@ function App() {
                   className="flex-1"
                 />
               </Suspense>
-            </div>
-          ) : activeTab?.type === "typesetting-doc" && activeTab.path ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <TypesettingDocumentPane path={activeTab.path} />
-            </div>
-          ) : activeTab?.type === "typesetting-preview" ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <TypesettingPreviewPane />
             </div>
           ) : activeTab?.type === "image-manager" ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
