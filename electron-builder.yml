@@ -1,8 +1,15 @@
 appId: com.luminanote.app
 productName: Lumina Note
 
-# Phase 8.1: targets mac universal, win x64, linux AppImage.
-# Publishing (GitHub Releases + signing secrets) is wired in Phase 8.2.
+# Targets: mac universal (dmg+zip), win x64 (nsis), linux AppImage.
+# Publishing goes through GitHub Releases; electron-updater reads the
+# `latest.yml` / `latest-mac.yml` artifacts this produces.
+
+publish:
+  provider: github
+  owner: blueberrycongee
+  repo: Lumina-Note
+  releaseType: release
 
 directories:
   buildResources: build-resources
