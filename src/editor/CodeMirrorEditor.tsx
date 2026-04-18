@@ -181,11 +181,12 @@ const createEditorTheme = (fontSize: number) =>
     // blockWidgetSelectionSyncPlugin toggles whenever the selection fully
     // contains the widget. Together they give a crisp, predictable visual
     // instead of a ballooning translucent rectangle.
-    ".cm-math-block, .mermaid-container, .cm-image-widget": {
-      backgroundColor: "hsl(var(--background))",
-      position: "relative",
-      borderRadius: "6px",
-    },
+    ".cm-math-block, .mermaid-container, .cm-image-widget, .cm-table-editor, .cm-table-widget":
+      {
+        backgroundColor: "hsl(var(--background))",
+        position: "relative",
+        borderRadius: "6px",
+      },
     ".callout": {
       position: "relative",
       borderRadius: "6px",
@@ -193,6 +194,17 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-block-widget-selected": {
       boxShadow: "0 0 0 2px hsl(var(--primary) / 0.55)",
       transition: "box-shadow 0.12s ease",
+    },
+
+    // ── Table: row-by-row drag highlighting ─────────────────────────
+    // Dragging vertically across a table rows' should light up whole
+    // rows rather than showing CM's blocky default rectangle. A row is
+    // tagged `.cm-table-row-selected` by tableRowSelectionPlugin when
+    // the drag passes through it; CSS below paints the highlight on
+    // both the <tr> and its cells so it survives cell-level background
+    // rules coming from the library.
+    ".cm-table-row-selected > th, .cm-table-row-selected > td": {
+      backgroundColor: "hsl(var(--primary) / 0.14) !important",
     },
 
     // === 动画核心样式 ===
@@ -3479,6 +3491,124 @@ const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
   },
 );
 
+// ── Table: vertical-drag row highlighting ───────────────────────────
+//
+// The default CM drawSelection paints a blocky rectangle that spans
+// whatever text positions the mouse has crossed — inside a table that
+// looks wrong: the rectangle clips across cells and leaves half-rows
+// selected, which visually has nothing to do with the row the user is
+// trying to reach.
+//
+// This plugin watches mouse drags that cross table rows and tags each
+// row the drag has swept across with `.cm-table-row-selected`. Same-row
+// drags (e.g. selecting text inside a single cell) get left alone so the
+// browser's native contenteditable text selection still works. The
+// highlight clears on the next mousedown or on mouseup.
+const TABLE_SELECTOR = ".cm-table-editor, .cm-table-widget";
+
+const tableRowSelectionPlugin = ViewPlugin.fromClass(
+  class {
+    private readonly view: EditorView;
+    private readonly onMouseDown: (e: MouseEvent) => void;
+    private readonly onMouseMove: (e: MouseEvent) => void;
+    private readonly onMouseUp: () => void;
+    private table: HTMLElement | null = null;
+    private startRow: HTMLTableRowElement | null = null;
+    private inRowMode = false;
+
+    constructor(view: EditorView) {
+      this.view = view;
+      this.onMouseDown = (e) => this.handleMouseDown(e);
+      this.onMouseMove = (e) => this.handleMouseMove(e);
+      this.onMouseUp = () => this.handleMouseUp();
+      view.dom.addEventListener("mousedown", this.onMouseDown);
+      view.dom.addEventListener("mousemove", this.onMouseMove);
+      view.dom.ownerDocument.addEventListener("mouseup", this.onMouseUp);
+    }
+
+    destroy() {
+      this.view.dom.removeEventListener("mousedown", this.onMouseDown);
+      this.view.dom.removeEventListener("mousemove", this.onMouseMove);
+      this.view.dom.ownerDocument.removeEventListener(
+        "mouseup",
+        this.onMouseUp,
+      );
+      this.clearHighlights();
+    }
+
+    private handleMouseDown(e: MouseEvent) {
+      this.clearHighlights();
+      this.inRowMode = false;
+      this.startRow = null;
+      this.table = null;
+      if (e.button !== 0) return;
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const row = target.closest("tr");
+      if (!row) return;
+      const tableEl = row.closest(TABLE_SELECTOR);
+      if (!(tableEl instanceof HTMLElement)) return;
+      this.table = tableEl;
+      this.startRow = row as HTMLTableRowElement;
+    }
+
+    private handleMouseMove(e: MouseEvent) {
+      if (!this.startRow || !this.table) return;
+      if ((e.buttons & 1) === 0) return; // primary button no longer held
+      const currentRow = this.rowAtPoint(e.clientY);
+      if (!currentRow) return;
+      if (currentRow === this.startRow && !this.inRowMode) return;
+      // crossed a row boundary — enter row-selection mode
+      this.inRowMode = true;
+      this.highlightBetween(this.startRow, currentRow);
+    }
+
+    private handleMouseUp() {
+      // Leave the highlight in place until the user clicks again, so
+      // they can copy / inspect the visually selected rows. The next
+      // mousedown clears it via handleMouseDown → clearHighlights.
+      this.startRow = null;
+      this.inRowMode = false;
+    }
+
+    private rowAtPoint(clientY: number): HTMLTableRowElement | null {
+      if (!this.table) return null;
+      const rows = this.table.querySelectorAll<HTMLTableRowElement>("tr");
+      for (const row of rows) {
+        const rect = row.getBoundingClientRect();
+        if (clientY >= rect.top && clientY <= rect.bottom) return row;
+      }
+      return null;
+    }
+
+    private highlightBetween(
+      startRow: HTMLTableRowElement,
+      endRow: HTMLTableRowElement,
+    ) {
+      if (!this.table) return;
+      const rows = Array.from(
+        this.table.querySelectorAll<HTMLTableRowElement>("tr"),
+      );
+      const startIdx = rows.indexOf(startRow);
+      const endIdx = rows.indexOf(endRow);
+      if (startIdx < 0 || endIdx < 0) return;
+      const lo = Math.min(startIdx, endIdx);
+      const hi = Math.max(startIdx, endIdx);
+      this.clearHighlights();
+      for (let i = lo; i <= hi; i++) {
+        rows[i].classList.add("cm-table-row-selected");
+      }
+    }
+
+    private clearHighlights() {
+      if (!this.table) return;
+      this.table
+        .querySelectorAll(".cm-table-row-selected")
+        .forEach((el) => el.classList.remove("cm-table-row-selected"));
+    }
+  },
+);
+
 const readingModePlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -3911,6 +4041,7 @@ export const CodeMirrorEditor = forwardRef<
         drawSelection(),
         blockWidgetAtomicRanges,
         blockWidgetSelectionSyncPlugin,
+        tableRowSelectionPlugin,
         fontSizeCompartment.of(createEditorTheme(editorFontSize)),
         mouseSelectingField,
         selectionStatePlugin,
