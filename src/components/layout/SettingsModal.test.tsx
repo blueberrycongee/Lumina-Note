@@ -209,10 +209,6 @@ vi.mock("../settings/MobileGatewaySection", () => ({
   MobileGatewaySection: () => <div>MobileGateway</div>,
 }));
 
-vi.mock("../settings/CloudRelaySection", () => ({
-  CloudRelaySection: () => <div>CloudRelay</div>,
-}));
-
 vi.mock("../settings/MobileOptionsSection", () => ({
   MobileOptionsSection: () => <div>MobileOptions</div>,
 }));
@@ -289,7 +285,6 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByText("Network"));
 
     expect(screen.getByText("Proxy")).toBeInTheDocument();
-    expect(screen.getByText("CloudRelay")).toBeInTheDocument();
   });
 
   it("switches to publish tab and shows publish section", () => {

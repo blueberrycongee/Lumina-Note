@@ -15,7 +15,6 @@ import { WebDAVSettings } from "../settings/WebDAVSettings";
 import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
 import { PublishSettingsSection } from "../settings/PublishSettingsSection";
 import { MobileGatewaySection } from "../settings/MobileGatewaySection";
-import { CloudRelaySection } from "../settings/CloudRelaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { OpenClawWorkspaceSection } from "../settings/OpenClawWorkspaceSection";
 import { ProxySection } from "../settings/ProxySection";
@@ -66,7 +65,6 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
         return (
           <>
             <ProxySection />
-            <CloudRelaySection />
             <OpenClawWorkspaceSection />
           </>
         );
