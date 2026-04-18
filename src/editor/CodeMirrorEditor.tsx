@@ -367,7 +367,16 @@ const createEditorTheme = (fontSize: number) =>
       boxShadow: "var(--lumina-codeblock-shadow)",
       backdropFilter: "blur(6px)",
     },
+    // Code-block cm-lines: pull the line in by 16px on each side so the
+    // painted border (drawn at the cm-line's outer edges) lines up with
+    // the text column's outer edge — regular text sits at cm-line's 16px
+    // padding, while the code-block border was at cm-line's edge 0 /
+    // 760, i.e. 16px overshoot in both directions. Matching the margin
+    // puts the whole box inside the same 728px text-column lane, so no
+    // block widget looks "wider than where selection can go" anymore.
     ".cm-lumina-codeblock-open": {
+      marginLeft: "16px",
+      marginRight: "16px",
       paddingLeft: "14px !important",
       paddingRight: "78px !important",
       paddingTop: "8px !important",
@@ -382,6 +391,8 @@ const createEditorTheme = (fontSize: number) =>
       backdropFilter: "blur(6px)",
     },
     ".cm-lumina-codeblock-content-line": {
+      marginLeft: "16px",
+      marginRight: "16px",
       backgroundColor: "var(--lumina-codeblock-bg)",
       color: "hsl(var(--foreground) / 0.96)",
       fontFamily: "'JetBrains Mono', monospace",
@@ -392,6 +403,8 @@ const createEditorTheme = (fontSize: number) =>
         "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
     ".cm-lumina-codeblock-close": {
+      marginLeft: "16px",
+      marginRight: "16px",
       paddingLeft: "14px !important",
       paddingRight: "14px !important",
       paddingTop: "2px !important",
