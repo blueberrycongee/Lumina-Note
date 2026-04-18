@@ -28,7 +28,6 @@ import {
 } from "./hooks/useSidebarFileOperations";
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarQuickActions } from "./SidebarQuickActions";
-import { OpenClawSection } from "./OpenClawSection";
 
 interface ContextMenuState {
   x: number;
@@ -269,18 +268,6 @@ export function Sidebar() {
           vaultPath={vaultPath}
           onQuickNote={handleQuickNote}
         />
-
-        {/* OpenClaw */}
-        {vaultPath && (
-          <OpenClawSection
-            vaultPath={vaultPath}
-            currentFile={currentFile}
-            openFile={openFile}
-            focusTreePath={focusTreePath}
-            expandedMountedPaths={expandedMountedPaths}
-            toggleMountedExpanded={toggleMountedExpanded}
-          />
-        )}
 
         {/* Favorites */}
         <div className="px-2">

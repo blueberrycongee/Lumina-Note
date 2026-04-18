@@ -16,7 +16,6 @@ import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
 import { PublishSettingsSection } from "../settings/PublishSettingsSection";
 import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
-import { OpenClawWorkspaceSection } from "../settings/OpenClawWorkspaceSection";
 import { ProxySection } from "../settings/ProxySection";
 
 type TabId = "general" | "ai" | "sync" | "network" | "publish" | "system";
@@ -65,7 +64,6 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
         return (
           <>
             <ProxySection />
-            <OpenClawWorkspaceSection />
           </>
         );
       case "publish":

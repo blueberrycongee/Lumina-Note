@@ -2,7 +2,6 @@ import { listen } from "@/lib/host";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import { FileEntry, readFile } from "@/lib/host";
 import type { FsChangePayload } from "@/lib/fsChange";
 import { cn, getFileName } from "@/lib/utils";
@@ -50,8 +49,7 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
 
   const getCacheKey = useCallback((path: string) => path.replace(/\\/g, "/"), []);
   
-  const { fileTree, openFile, vaultPath } = useFileStore();
-  const openClawMountedTree = useOpenClawWorkspaceStore((state) => state.getMountedFileTree(vaultPath));
+  const { fileTree, openFile } = useFileStore();
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {
@@ -79,9 +77,8 @@ export function GlobalSearch({ isOpen, onClose, request }: GlobalSearchProps) {
       }
     };
     flatten(fileTree);
-    flatten(openClawMountedTree);
     return Array.from(files.values());
-  }, [fileTree, openClawMountedTree]);
+  }, [fileTree]);
 
   // Keep cache in sync with active file set when tree changes.
   useEffect(() => {

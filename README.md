@@ -97,7 +97,6 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - WebDAV sync
 - Flashcard review
 - 15 themes
-- External OpenClaw workspace attachment with memory/plan/artifact affordances, filtered views, and bridge notes
 
 <h3 align="center">Plugin ecosystem (Developer Preview)</h3>
 
@@ -124,7 +123,6 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - English: `docs/user-flow.md`
 - 简体中文: `docs/user-flow.zh-CN.md`
 - 日本語: `docs/user-flow.ja.md`
-- OpenClaw workspace integration: `docs/openclaw-workspace-integration.md`
 
 <h3 align="center">Self-hosted relay (cross-network mobile access)</h3>
 

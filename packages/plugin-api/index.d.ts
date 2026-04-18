@@ -14,7 +14,6 @@ export type LuminaPluginPermission =
   | "workspace:*"
   | "workspace:read"
   | "workspace:open"
-  | "workspace:integrations"
   | "workspace:panel"
   | "workspace:tab"
   | "editor:*"
@@ -62,55 +61,6 @@ export interface LuminaPluginManifestV1 {
     light?: Record<string, string>;
     dark?: Record<string, string>;
   };
-}
-
-export interface OpenClawWorkspaceSnapshot {
-  workspacePath: string;
-  status: "detected" | "not-detected" | "error";
-  checkedAt: number;
-  matchedRequiredFiles: string[];
-  matchedOptionalFiles: string[];
-  matchedDirectories: string[];
-  missingRequiredFiles: string[];
-  memoryDirectoryPath: string | null;
-  todayMemoryPath: string;
-  artifactDirectoryPaths: string[];
-  planDirectoryPaths: string[];
-  recentMemoryPaths: string[];
-  planFilePaths: string[];
-  artifactFilePaths: string[];
-  artifactFileCount: number;
-  bridgeNotePaths: string[];
-  editablePriorityFiles: string[];
-  indexingScope: "shared-workspace";
-  gatewayEnabled: boolean;
-  error: string | null;
-}
-
-export interface OpenClawGatewaySettings {
-  enabled: boolean;
-  endpoint: string | null;
-}
-
-export interface OpenClawConflictState {
-  workspacePath: string;
-  status: "idle" | "warning";
-  files: string[];
-  lastDetectedAt: string | null;
-  message: string | null;
-}
-
-export interface OpenClawWorkspaceAttachment {
-  kind: "openclaw";
-  hostWorkspacePath: string;
-  workspacePath: string;
-  status: "attached" | "unavailable";
-  attachedAt: string;
-  lastValidatedAt: string | null;
-  detectedFiles: string[];
-  detectedFolders: string[];
-  gateway: OpenClawGatewaySettings;
-  unavailableReason?: string | null;
 }
 
 export interface LuminaPluginApi {
@@ -212,26 +162,10 @@ export interface LuminaPluginApi {
   };
   workspace: {
     getPath: () => string | null;
-    getOpenClawWorkspacePath: () => string | null;
     getActiveFile: () => string | null;
     openFile: (path: string) => Promise<void>;
     readFile: (path: string) => Promise<string>;
     writeFile: (path: string, content: string) => Promise<void>;
-    getOpenClawAttachment: () => OpenClawWorkspaceAttachment | null;
-    attachOpenClawWorkspace: (input?: {
-      workspacePath?: string;
-      gateway?: Partial<OpenClawWorkspaceAttachment["gateway"]>;
-    }) => Promise<OpenClawWorkspaceAttachment>;
-    refreshOpenClawWorkspace: () => Promise<OpenClawWorkspaceAttachment | null>;
-    updateOpenClawGateway: (
-      gateway: Partial<OpenClawWorkspaceAttachment["gateway"]>,
-    ) => OpenClawWorkspaceAttachment | null;
-    getOpenClawConflictState: () => OpenClawConflictState | null;
-    listOpenClawWorkspaceFiles: () => Promise<string[]>;
-    openOpenClawWorkspaceFile: (path: string) => Promise<void>;
-    readOpenClawWorkspaceFile: (path: string) => Promise<string>;
-    writeOpenClawWorkspaceFile: (path: string, content: string) => Promise<void>;
-    detachOpenClawWorkspace: () => void;
     registerPanel: (input: { id: string; title: string; html: string }) => () => void;
     registerTabType: (input: {
       type: string;

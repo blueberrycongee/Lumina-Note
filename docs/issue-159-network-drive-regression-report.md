@@ -266,8 +266,8 @@ mod tests {
 - **ee2a53f** (2026-02-14): "fix(database): normalize paths and surface actionable create errors" - 路径规范化修复
 - **342acee** (2026-03-06): "fix: restore workspace fs roots during rehydrate" - PR #160 初始提交
 - **b3939d8** (2026-03-06): "fix: restore workspace fs roots during rehydrate (#160)" - PR #160 合并提交
-- **0c9c540** (2026-03-12): "docs(openclaw): align external mount guidance" - OpenClaw 外部挂载文档
-- **2da1a24** (2026-03-12): "feat(openclaw): mount external workspace into current vault" - OpenClaw 挂载功能
+- **0c9c540** (2026-03-12): 外部工作区挂载文档
+- **2da1a24** (2026-03-12): 外部工作区挂载功能
 
 ### 前端相关文件
 - **错误处理**: `src/components/database/actionErrors.ts`
@@ -275,7 +275,6 @@ mod tests {
 - **测试用例**: `src/__tests__/useFileStore.rehydrateFsRoots.test.ts` - PR #160 添加的 rehydrate 测试
 
 ### 相关文档
-- **OpenClaw 集成**: [`docs/openclaw-workspace-integration.md`](docs/openclaw-workspace-integration.md)
 - **错误处理**: [`docs/issue-159-network-drive-regression-report.md`](docs/issue-159-network-drive-regression-report.md)（本文档）
 
 ---
@@ -291,8 +290,8 @@ mod tests {
 | 2026-02-14 | 624145f | 添加 `path_exists_in_allowed_roots()` 函数 | 🟢 功能增强 |
 | 2026-02-14 | ee2a53f | 规范化路径处理错误 | 🟢 改进错误处理 |
 | 2026-03-06 | b3939d8 | **PR #160**: 添加 `syncWorkspaceAccessRoots()` 和 rehydrate 恢复 | 🟢 修复 rehydrate 问题 |
-| 2026-03-12 | 2da1a24 | OpenClaw 外部工作区挂载功能 | 🟡 增加使用场景 |
-| 2026-03-12 | 645e593 | 自动发现系统级 OpenClaw 工作区 | 🟡 更多网络路径使用 |
+| 2026-03-12 | 2da1a24 | 外部工作区挂载功能 | 🟡 增加使用场景 |
+| 2026-03-12 | 645e593 | 自动发现系统级共享工作区 | 🟡 更多网络路径使用 |
 | 2026-03-12 | c046182 | 自动检测工作区并修复设置 UI | 🟢 改进用户体验 |
 | 2026-03-11 | f0a658f | 添加图片资源索引原语 | ⚪ 无关修改 |
 | 2026-03-14 | - | **用户报告 Issue #159** | 🔴 问题暴露 |
@@ -366,15 +365,15 @@ async function syncWorkspaceAccessRoots(path: string): Promise<void> {
 
 #### 第四阶段：问题暴露（2026-03-12）
 
-**提交**: 2da1a24, 645e593 (OpenClaw 功能)
+**提交**: 2da1a24, 645e593（外部工作区功能）
 
 **新增使用场景**:
-1. **外部工作区挂载**: 用户可以将 `~/.openclaw/workspace` 挂载到当前文件库
-2. **自动发现系统级工作区**: 自动探测 `~/.openclaw/workspace` 并注册
+1. **外部工作区挂载**: 用户可以将系统级共享工作区挂载到当前文件库
+2. **自动发现系统级工作区**: 自动探测系统级共享工作区并注册
 
 **为什么问题暴露**:
-- OpenClaw 工作区通常位于**非标准路径**（如网络驱动器、外部卷）
-- 用户尝试挂载位于网络驱动器上的 OpenClaw 工作区
+- 这类共享工作区通常位于**非标准路径**（如网络驱动器、外部卷）
+- 用户尝试挂载位于网络驱动器上的共享工作区
 - `ensure_allowed_path()` 拒绝访问 → 报错 "Path not permitted"
 
 #### 第五阶段：问题报告与修复（2026-03-14）
@@ -417,8 +416,8 @@ if cfg!(target_os = "linux") {
 2. **测试覆盖不足**: 缺少跨平台文件系统路径的集成测试
 3. **渐进式暴露**: 
    - v0.x: 用户少，网络路径使用场景少
-   - v1.0.1-v1.0.12: OpenClaw 功能未发布，问题被掩盖
-   - v1.0.13: OpenClaw 功能发布 → 网络路径使用频率增加 → 问题暴露
+   - v1.0.1-v1.0.12: 外部工作区功能未发布，问题被掩盖
+   - v1.0.13: 外部工作区功能发布 → 网络路径使用频率增加 → 问题暴露
 
 ### 8.4 教训与反思
 
@@ -469,11 +468,11 @@ if cfg!(target_os = "linux") {
 - 如果用户通过其他方式（如命令行、插件、直接文件操作）访问网络路径，仍然会失败
 - `default_allowed_roots()` 本身仍然不包含网络驱动器路径，导致**首次访问**时必然失败
 
-### OpenClaw 外部工作区的影响
+### 外部工作区挂载功能的影响
 
-**2026-03-12** 的提交 0c9c540 和 2da1a24 引入了 OpenClaw 外部工作区挂载功能：
-- 用户可以将外部 OpenClaw 工作区挂载到 Lumina
-- OpenClaw 工作区**经常位于网络驱动器或外部卷**上
+**2026-03-12** 的提交 0c9c540 和 2da1a24 引入了外部工作区挂载功能：
+- 用户可以将外部共享工作区挂载到 Lumina
+- 这类共享工作区**经常位于网络驱动器或外部卷**上
 - 这增加了用户访问网络路径的频率，暴露了 `default_allowed_roots()` 的设计缺陷
 
 ### 为什么这是一个回归错误
@@ -482,7 +481,7 @@ if cfg!(target_os = "linux") {
 
 1. **d2923ea (2026-02-05)** 引入安全机制时，只考虑了本地标准目录
 2. **PR #160 (2026-03-06)** 部分修复了 rehydrate 场景，但未解决根本问题
-3. **OpenClaw 功能 (2026-03-12)** 增加了网络路径使用频率，问题暴露
+3. **外部工作区功能 (2026-03-12)** 增加了网络路径使用频率，问题暴露
 4. **Issue #159 (2026-03-14)** 用户正式报告问题
 
 **根本原因**: `default_allowed_roots()` 的设计假设过于狭隘，未考虑跨平台网络挂载点的多样性

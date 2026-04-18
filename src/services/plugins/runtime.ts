@@ -10,15 +10,6 @@ import {
 } from "@/lib/host";
 import { useCommandStore } from "@/stores/useCommandStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
-import {
-  readOpenClawCronJobs,
-  writeOpenClawCronJobs,
-  createCronJob,
-  updateCronJob,
-  deleteCronJob,
-  type OpenClawCronJob,
-} from "@/services/openclaw/cron";
 import { usePluginUiStore } from "@/stores/usePluginUiStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { pluginThemeRuntime, type ThemeMode } from "@/services/plugins/themeRuntime";
@@ -26,7 +17,6 @@ import { pluginStyleRuntime, type PluginStyleLayer } from "@/services/plugins/st
 import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
 import { pluginEditorRuntime } from "@/services/plugins/editorRuntime";
 import type { PluginInfo, PluginPermission, PluginRuntimeStatus } from "@/types/plugins";
-import type { OpenClawConflictState, OpenClawWorkspaceAttachment } from "@/types/openclaw";
 
 type PluginHostEvent = "app:ready" | "workspace:changed" | "active-file:changed";
 
@@ -185,33 +175,10 @@ interface LuminaPluginApi {
   };
   workspace: {
     getPath: () => string | null;
-    getOpenClawWorkspacePath: () => string | null;
     getActiveFile: () => string | null;
     openFile: (path: string) => Promise<void>;
     readFile: (path: string) => Promise<string>;
     writeFile: (path: string, content: string) => Promise<void>;
-    getOpenClawAttachment: () => OpenClawWorkspaceAttachment | null;
-    attachOpenClawWorkspace: (input?: {
-      workspacePath?: string;
-      gateway?: Partial<OpenClawWorkspaceAttachment["gateway"]>;
-    }) => Promise<OpenClawWorkspaceAttachment>;
-    refreshOpenClawWorkspace: () => Promise<OpenClawWorkspaceAttachment | null>;
-    updateOpenClawGateway: (
-      gateway: Partial<OpenClawWorkspaceAttachment["gateway"]>,
-    ) => OpenClawWorkspaceAttachment | null;
-    getOpenClawConflictState: () => OpenClawConflictState | null;
-    listOpenClawWorkspaceFiles: () => Promise<string[]>;
-    openOpenClawWorkspaceFile: (path: string) => Promise<void>;
-    readOpenClawWorkspaceFile: (path: string) => Promise<string>;
-    writeOpenClawWorkspaceFile: (path: string, content: string) => Promise<void>;
-    detachOpenClawWorkspace: () => void;
-    listOpenClawCronJobs: () => Promise<OpenClawCronJob[]>;
-    createOpenClawCronJob: (input: Omit<OpenClawCronJob, "jobId">) => Promise<OpenClawCronJob[]>;
-    updateOpenClawCronJob: (
-      jobId: string,
-      updates: Partial<OpenClawCronJob>,
-    ) => Promise<OpenClawCronJob[]>;
-    deleteOpenClawCronJob: (jobId: string) => Promise<OpenClawCronJob[]>;
     registerPanel: (input: { id: string; title: string; html: string }) => () => void;
     registerTabType: (input: {
       type: string;
@@ -931,26 +898,6 @@ return exported(api, plugin);
     };
 
     const resolvePluginPath = (path: string) => resolveWorkspacePath(path);
-    const resolveOpenClawWorkspacePath = (path: string) => {
-      if (!workspacePath) {
-        throw new Error("No workspace is currently open");
-      }
-      const attachment = useOpenClawWorkspaceStore.getState().getAttachment(workspacePath);
-      if (!attachment) {
-        throw new Error("No OpenClaw workspace is attached to the current workspace");
-      }
-      const normalizedWorkspace = normalize(attachment.workspacePath.replace(/\\/g, "/"));
-      const workspacePrefix = normalizedWorkspace.endsWith("/")
-        ? normalizedWorkspace
-        : `${normalizedWorkspace}/`;
-      const candidate = isAbsolute(path)
-        ? normalize(path.replace(/\\/g, "/"))
-        : normalize(join(normalizedWorkspace, path));
-      if (candidate !== normalizedWorkspace && !candidate.startsWith(workspacePrefix)) {
-        throw new Error(`Path is outside OpenClaw workspace: ${path}`);
-      }
-      return candidate;
-    };
 
     const registerPanel = (panel: { id: string; title: string; html: string }) => {
       requirePermission("workspace:panel");
@@ -1256,10 +1203,6 @@ return exported(api, plugin);
       },
       workspace: {
         getPath: () => workspacePath || null,
-        getOpenClawWorkspacePath: () =>
-          workspacePath
-            ? useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath)
-            : null,
         getActiveFile: () => useFileStore.getState().currentFile,
         openFile: async (path: string) => {
           requirePermission("workspace:open");
@@ -1272,129 +1215,6 @@ return exported(api, plugin);
         writeFile: async (path: string, content: string) => {
           requirePermission("vault:write");
           return saveFile(resolvePluginPath(path), content);
-        },
-        getOpenClawAttachment: () => {
-          requirePermission("workspace:integrations");
-          return useOpenClawWorkspaceStore.getState().getAttachment(workspacePath);
-        },
-        attachOpenClawWorkspace: async (input?: {
-          gateway?: Partial<OpenClawWorkspaceAttachment["gateway"]>;
-        }) => {
-          requirePermission("workspace:integrations");
-          if (!workspacePath) {
-            throw new Error("No workspace is currently open");
-          }
-          const store = useOpenClawWorkspaceStore.getState();
-          return store.attachWorkspace({
-            hostWorkspacePath: workspacePath,
-            workspacePath,
-            gateway: input?.gateway,
-          });
-        },
-        refreshOpenClawWorkspace: async () => {
-          requirePermission("workspace:integrations");
-          if (!workspacePath) {
-            throw new Error("No workspace is currently open");
-          }
-          const store = useOpenClawWorkspaceStore.getState();
-          const targetWorkspacePath = store.getMountedWorkspacePath(workspacePath) ?? workspacePath;
-          await store.refreshWorkspace(workspacePath, { workspacePath: targetWorkspacePath });
-          const fileTree = await store.refreshMountedFileTree(workspacePath, targetWorkspacePath);
-          store.refreshAttachmentScan(workspacePath, fileTree, targetWorkspacePath);
-          return store.getAttachment(workspacePath);
-        },
-        updateOpenClawGateway: (gateway: Partial<OpenClawWorkspaceAttachment["gateway"]>) => {
-          requirePermission("workspace:integrations");
-          if (!workspacePath) {
-            throw new Error("No workspace is currently open");
-          }
-          return useOpenClawWorkspaceStore.getState().updateGateway(workspacePath, gateway);
-        },
-        getOpenClawConflictState: () => {
-          requirePermission("workspace:integrations");
-          return useOpenClawWorkspaceStore.getState().getConflictState(workspacePath);
-        },
-        listOpenClawWorkspaceFiles: async () => {
-          requirePermission("workspace:integrations");
-          if (!workspacePath) {
-            throw new Error("No workspace is currently open");
-          }
-          const store = useOpenClawWorkspaceStore.getState();
-          let tree = store.getMountedFileTree(workspacePath);
-          if (tree.length === 0) {
-            tree = await store.refreshMountedFileTree(workspacePath);
-          }
-          const files: string[] = [];
-          const collect = (entries: typeof tree) => {
-            for (const entry of entries) {
-              if (entry.is_dir) {
-                if (Array.isArray(entry.children)) {
-                  collect(entry.children);
-                }
-                continue;
-              }
-              files.push(entry.path);
-            }
-          };
-          collect(tree);
-          return files;
-        },
-        openOpenClawWorkspaceFile: async (path: string) => {
-          requirePermission("workspace:integrations");
-          await useFileStore.getState().openFile(resolveOpenClawWorkspacePath(path));
-        },
-        readOpenClawWorkspaceFile: async (path: string) => {
-          requirePermission("workspace:integrations");
-          return readFile(resolveOpenClawWorkspacePath(path));
-        },
-        writeOpenClawWorkspaceFile: async (path: string, content: string) => {
-          requirePermission("workspace:integrations");
-          return saveFile(resolveOpenClawWorkspacePath(path), content);
-        },
-        detachOpenClawWorkspace: () => {
-          requirePermission("workspace:integrations");
-          if (!workspacePath) {
-            throw new Error("No workspace is currently open");
-          }
-          useOpenClawWorkspaceStore.getState().detachWorkspace(workspacePath);
-        },
-        listOpenClawCronJobs: async (): Promise<OpenClawCronJob[]> => {
-          requirePermission("workspace:integrations");
-          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
-          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
-          return readOpenClawCronJobs(ocPath);
-        },
-        createOpenClawCronJob: async (
-          input: Omit<OpenClawCronJob, "jobId">,
-        ): Promise<OpenClawCronJob[]> => {
-          requirePermission("workspace:integrations");
-          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
-          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
-          const jobs = await readOpenClawCronJobs(ocPath);
-          const next = createCronJob(jobs, input);
-          await writeOpenClawCronJobs(ocPath, next);
-          return next;
-        },
-        updateOpenClawCronJob: async (
-          jobId: string,
-          updates: Partial<OpenClawCronJob>,
-        ): Promise<OpenClawCronJob[]> => {
-          requirePermission("workspace:integrations");
-          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
-          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
-          const jobs = await readOpenClawCronJobs(ocPath);
-          const next = updateCronJob(jobs, jobId, updates);
-          await writeOpenClawCronJobs(ocPath, next);
-          return next;
-        },
-        deleteOpenClawCronJob: async (jobId: string): Promise<OpenClawCronJob[]> => {
-          requirePermission("workspace:integrations");
-          const ocPath = useOpenClawWorkspaceStore.getState().getMountedWorkspacePath(workspacePath);
-          if (!ocPath) throw new Error("No OpenClaw workspace is attached");
-          const jobs = await readOpenClawCronJobs(ocPath);
-          const next = deleteCronJob(jobs, jobId);
-          await writeOpenClawCronJobs(ocPath, next);
-          return next;
         },
         registerPanel,
         registerTabType,

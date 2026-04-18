@@ -12,7 +12,6 @@ import {
 import { invoke } from "@/lib/host";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
-import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { reportOperationError } from "@/lib/reportError";
 
@@ -358,8 +357,6 @@ export const useFileStore = create<FileState>()(
           }
           const tree = await listDirectory(path);
           set({ fileTree: tree, isLoadingTree: false });
-          const openClawStore = useOpenClawWorkspaceStore.getState();
-          await openClawStore.refreshWorkspace(path, { fileTree: tree });
           await get().syncMobileWorkspace({ path, force: true });
         } catch (error) {
           reportOperationError({
@@ -368,7 +365,6 @@ export const useFileStore = create<FileState>()(
             error,
             context: { path },
           });
-          useOpenClawWorkspaceStore.getState().markUnavailable(path);
           set({ isLoadingTree: false });
         }
       },
@@ -382,8 +378,6 @@ export const useFileStore = create<FileState>()(
         try {
           const tree = await listDirectory(vaultPath);
           set({ fileTree: tree, isLoadingTree: false });
-          const openClawStore = useOpenClawWorkspaceStore.getState();
-          await openClawStore.refreshWorkspace(vaultPath, { fileTree: tree });
           useFavoriteStore.getState().pruneMissing(tree);
           void get().syncMobileWorkspace();
         } catch (error) {
@@ -393,7 +387,6 @@ export const useFileStore = create<FileState>()(
             error,
             context: { vaultPath },
           });
-          useOpenClawWorkspaceStore.getState().markUnavailable(vaultPath);
           set({ isLoadingTree: false });
         }
       },

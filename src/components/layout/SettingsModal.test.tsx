@@ -214,10 +214,6 @@ vi.mock("../settings/DiagnosticsSection", () => ({
   DiagnosticsSection: () => <div>Diagnostics</div>,
 }));
 
-vi.mock("../settings/OpenClawWorkspaceSection", () => ({
-  OpenClawWorkspaceSection: () => <div>OpenClaw</div>,
-}));
-
 vi.mock("../settings/ProxySection", () => ({
   ProxySection: () => <div>Proxy</div>,
 }));

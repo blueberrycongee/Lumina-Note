@@ -46,7 +46,6 @@ import { ProfilePreview } from "@/components/profile/ProfilePreview";
 import { DevProfiler } from "@/perf/DevProfiler";
 import type { FsChangePayload } from "@/lib/fsChange";
 import { usePluginStore } from "@/stores/usePluginStore";
-import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";
 import { pluginRuntime } from "@/services/plugins/runtime";
 import { applyTheme, getThemeById } from "@/config/themePlugin";
 import { PluginViewPane } from "@/components/plugins/PluginViewPane";
@@ -169,7 +168,6 @@ interface GlobalSearchRequest {
   scopeLabel?: string;
 }
 
-const watchedPaths = new Set<string>();
 const AUTO_TOOLTIP_FLAG = "data-lumina-auto-tooltip";
 
 function inferButtonTooltip(button: HTMLButtonElement): string {
@@ -244,9 +242,6 @@ function App() {
   );
   const setCurrentUpdateVersion = useUpdateStore(
     (state) => state.setCurrentVersion,
-  );
-  const mountedOpenClawWorkspacePath = useOpenClawWorkspaceStore((state) =>
-    state.getMountedWorkspacePath(vaultPath),
   );
 
   // Get active tab
@@ -416,14 +411,6 @@ function App() {
 
         // 启动后端文件监听（去重，避免重复创建 watcher 线程）
         await startFileWatcher(vaultPath);
-        if (
-          mountedOpenClawWorkspacePath &&
-          mountedOpenClawWorkspacePath !== vaultPath &&
-          !watchedPaths.has(mountedOpenClawWorkspacePath)
-        ) {
-          watchedPaths.add(mountedOpenClawWorkspacePath);
-          await startFileWatcher(mountedOpenClawWorkspacePath);
-        }
         console.log("[FileWatcher] Started watching:", vaultPath);
 
         // 监听文件变化事件（带防抖）
@@ -448,34 +435,7 @@ function App() {
                 }
                 const normalize = (path: string) => path.replace(/\\/g, "/");
                 const vaultPrefix = `${normalize(vaultPath).replace(/\/+$/, "")}/`;
-                const mountedPrefix = mountedOpenClawWorkspacePath
-                  ? `${normalize(mountedOpenClawWorkspacePath).replace(/\/+$/, "")}/`
-                  : null;
                 const normalizedChangedPath = normalize(changedPath);
-                useOpenClawWorkspaceStore
-                  .getState()
-                  .recordExternalChange(vaultPath, [changedPath], dirtyPaths);
-                if (
-                  mountedPrefix &&
-                  normalizedChangedPath.startsWith(mountedPrefix) &&
-                  mountedOpenClawWorkspacePath !== vaultPath
-                ) {
-                  void useOpenClawWorkspaceStore
-                    .getState()
-                    .refreshMountedFileTree(
-                      vaultPath,
-                      mountedOpenClawWorkspacePath ?? undefined,
-                    )
-                    .then((tree) =>
-                      useOpenClawWorkspaceStore
-                        .getState()
-                        .refreshAttachmentScan(
-                          vaultPath,
-                          tree,
-                          mountedOpenClawWorkspacePath ?? undefined,
-                        ),
-                    );
-                }
                 if (!normalizedChangedPath.startsWith(vaultPrefix)) {
                   handleFsChangeEvent(event.payload, (path) => {
                     reloadFileIfOpen(path, { skipIfDirty: true });
@@ -534,7 +494,7 @@ function App() {
       if (unlisten) unlisten();
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [vaultPath, mountedOpenClawWorkspacePath, refreshFileTree]);
+  }, [vaultPath, refreshFileTree]);
   const {
     leftSidebarOpen,
     rightSidebarOpen,

@@ -8,8 +8,8 @@ Status: Approved, ready for implementation
 `SettingsModal.tsx` (411 lines) currently renders 15 sections stacked in a single
 vertical scroll container at 600px wide. There is no category navigation,
 so the user has to scroll past everything from Theme → Editor → Publish →
-Profile → AI → DocTools → MobileGateway → MobileOptions → OpenClaw →
-CloudRelay → Proxy → WebDAV → Update → Diagnostics → About to find a
+Profile → AI → DocTools → MobileGateway → MobileOptions → CloudRelay →
+Proxy → WebDAV → Update → Diagnostics → About to find a
 specific setting.
 
 Additional issues:
@@ -51,7 +51,7 @@ sections, do not touch business logic, do not change i18n strings.
 | `general`   | 通用          | `Settings`   | Theme, Language, Editor mode, Font size |
 | `ai`        | AI            | `Bot`        | AI Settings (extracted from AISettingsModal) |
 | `sync`      | 同步          | `RefreshCw`  | WebDAV, Mobile Gateway, Mobile Options |
-| `network`   | 网络          | `Globe`      | Proxy, Cloud Relay, OpenClaw Workspace |
+| `network`   | 网络          | `Globe`      | Proxy, Cloud Relay |
 | `publish`   | 发布          | `Upload`     | Publish, Profile |
 | `system`    | 系统          | `Info`       | Update, DocTools, Diagnostics, About |
 
@@ -100,7 +100,7 @@ upfront.
 
 - `useUIStore`, `useAIStore`, `useFileStore`, `useLocaleStore` usage.
 - All child section components: `PublishSettingsSection`,
-  `WebDAVSettings`, `OpenClawWorkspaceSection`, etc. are untouched.
+  `WebDAVSettings`, etc. are untouched.
 - i18n strings for existing settings.
 - Settings persistence / effect chains.
 - The close-on-backdrop behavior.
@@ -122,7 +122,7 @@ upfront.
 - No visual redesign of individual sections.
 - No business-logic changes.
 - No splitting of oversized sections like `WebDAVSettings` or
-  `OpenClawWorkspaceSection`.
+  other large existing sections.
 - No i18n string rewording.
 
 ## Success criteria
