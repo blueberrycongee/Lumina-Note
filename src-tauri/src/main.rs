@@ -10,7 +10,6 @@ mod diagnostics;
 mod doc_tools;
 mod error;
 mod fs;
-mod mcp;
 mod node_runtime;
 mod plugins;
 mod proxy;
@@ -71,15 +70,6 @@ fn main() {
             webdav::commands::webdav_execute_sync,
             webdav::commands::webdav_quick_sync,
             webdav::commands::webdav_scan_local,
-            // MCP commands
-            mcp::mcp_init,
-            mcp::mcp_list_servers,
-            mcp::mcp_start_server,
-            mcp::mcp_stop_server,
-            mcp::mcp_list_tools,
-            mcp::mcp_reload,
-            mcp::mcp_test_tool,
-            mcp::mcp_shutdown,
             // Doc tools pack commands
             doc_tools::doc_tools_get_status,
             doc_tools::doc_tools_install_latest,
