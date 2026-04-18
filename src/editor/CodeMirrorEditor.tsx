@@ -151,6 +151,31 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "rgba(191, 219, 254, 0.35) !important",
     },
 
+    // ── Block widget selection hygiene ──────────────────────────────
+    // Block-level replace widgets (math block / mermaid / callout / image /
+    // horizontal rule) are made atomic via `EditorView.atomicRanges`, so
+    // cursor motion and drag-select snap to their outer boundary. The CM
+    // selection layer still paints the blue rectangle BEHIND each widget,
+    // so transparent widgets would leak it through. Give each block widget
+    // a solid background matching the editor's, and render an explicit
+    // "I am selected" ring via the `.cm-block-widget-selected` class that
+    // blockWidgetSelectionSyncPlugin toggles whenever the selection fully
+    // contains the widget. Together they give a crisp, predictable visual
+    // instead of a ballooning translucent rectangle.
+    ".cm-math-block, .mermaid-container, .cm-image-widget, .cm-hr": {
+      backgroundColor: "hsl(var(--background))",
+      position: "relative",
+      borderRadius: "6px",
+    },
+    ".callout": {
+      position: "relative",
+      borderRadius: "6px",
+    },
+    ".cm-block-widget-selected": {
+      boxShadow: "0 0 0 2px hsl(var(--primary) / 0.55)",
+      transition: "box-shadow 0.12s ease",
+    },
+
     // === 动画核心样式 ===
 
     // 1. 悬挂标记 (Headings) - 绝对定位到左侧，不占用正文空间
@@ -3257,6 +3282,129 @@ function buildHorizontalRuleDecorations(state: EditorState): DecorationSet {
   return Decoration.set(decorations);
 }
 
+// ============ Block widget atomic ranges + selection sync ============
+//
+// In live/reading modes we render a handful of block-level replace widgets
+// (math, mermaid, callout, horizontal-rule, image). Each one occupies a
+// whole [from, to] document range but its DOM box can be much taller than
+// a normal line. CodeMirror's default `drawSelection()` computes the
+// selection rectangle from `coordsAtPos(from)` → `coordsAtPos(to)`, which
+// for a block widget resolves to the widget's full bounding box. Without
+// any extra handling, that causes two classic UX bugs:
+//
+//   1. Drag-selecting _into_ a block widget puts the cursor at some offset
+//      inside the widget's range. The selection rectangle balloons to the
+//      full widget height — the "oversized selection" anomaly the legacy
+//      telemetry at `inspectSelectionVisualAnomaly` is looking for.
+//   2. Even with a correct boundary-aligned selection, the blue rectangle
+//      is painted _behind_ the widget DOM. Widgets with transparent
+//      backgrounds (math, mermaid, hr) leak that rectangle through.
+//
+// The canonical CM 6 fix is `EditorView.atomicRanges`: the editor treats
+// each block widget as a single indivisible step, so cursor motion and
+// drag-select snap to its outer boundary. Combined with the CSS below
+// (solid widget background + a `.cm-block-widget-selected` ring painted
+// on the widget when selection fully contains it), the selection UX
+// becomes: rectangles stop at the widget's outer edge, and the widget
+// shows its own "I am selected" ring instead of bleeding through.
+
+interface BlockWidgetSpec {
+  widget?: unknown;
+  block?: boolean;
+}
+
+function collectBlockWidgetRanges(
+  set: DecorationSet | undefined,
+  out: Range<Decoration>[],
+): void {
+  if (!set) return;
+  const cursor = set.iter();
+  while (cursor.value) {
+    const spec = cursor.value.spec as BlockWidgetSpec;
+    if (spec && spec.block === true && spec.widget) {
+      out.push(cursor.value.range(cursor.from, cursor.to));
+    }
+    cursor.next();
+  }
+}
+
+function buildBlockWidgetAtomicRanges(state: EditorState): DecorationSet {
+  const ranges: Range<Decoration>[] = [];
+  collectBlockWidgetRanges(state.field(mathStateField, false), ranges);
+  collectBlockWidgetRanges(state.field(mermaidStateField, false), ranges);
+  collectBlockWidgetRanges(state.field(calloutStateField, false), ranges);
+  collectBlockWidgetRanges(
+    state.field(horizontalRuleStateField, false),
+    ranges,
+  );
+  if (ranges.length === 0) return Decoration.none;
+  return Decoration.set(
+    ranges.sort((a, b) => a.from - b.from),
+    true,
+  );
+}
+
+const blockWidgetAtomicRanges = EditorView.atomicRanges.of((view) =>
+  buildBlockWidgetAtomicRanges(view.state),
+);
+
+const BLOCK_WIDGET_DOM_SELECTOR =
+  ".cm-math-block, .mermaid-container, .callout, .cm-image-widget, .cm-hr";
+
+// When the selection fully contains a block widget's range, tag that
+// widget's DOM with `.cm-block-widget-selected` so its own CSS can paint
+// the "I am selected" state. On selection change we clear the flag from
+// any previously-marked widget and re-apply to widgets that are still
+// contained. No decoration rebuild — the class toggle is all we need.
+const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      this.sync(view);
+    }
+    update(update: ViewUpdate) {
+      if (
+        !update.selectionSet &&
+        !update.docChanged &&
+        !update.viewportChanged
+      )
+        return;
+      this.sync(update.view);
+    }
+    sync(view: EditorView) {
+      const previouslySelected = view.contentDOM.querySelectorAll(
+        ".cm-block-widget-selected",
+      );
+      previouslySelected.forEach((el) =>
+        el.classList.remove("cm-block-widget-selected"),
+      );
+      const main = view.state.selection.main;
+      if (main.from === main.to) return;
+      const tag = (from: number, to: number) => {
+        if (main.from > from || main.to < to) return;
+        const atPos = view.domAtPos(from).node;
+        const el =
+          atPos instanceof Element
+            ? atPos.closest(BLOCK_WIDGET_DOM_SELECTOR)
+            : atPos.parentElement?.closest(BLOCK_WIDGET_DOM_SELECTOR) ?? null;
+        el?.classList.add("cm-block-widget-selected");
+      };
+      const walk = (set: DecorationSet | undefined) => {
+        if (!set) return;
+        const cur = set.iter();
+        while (cur.value) {
+          const spec = cur.value.spec as BlockWidgetSpec;
+          if (spec?.block === true && spec?.widget) tag(cur.from, cur.to);
+          cur.next();
+        }
+      };
+      walk(view.state.field(mathStateField, false));
+      walk(view.state.field(mermaidStateField, false));
+      walk(view.state.field(calloutStateField, false));
+      walk(view.state.field(horizontalRuleStateField, false));
+    }
+  },
+);
+
 const readingModePlugin = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -3687,6 +3835,8 @@ export const CodeMirrorEditor = forwardRef<
         markdown({ base: markdownLanguage, extensions: [Table] }),
         EditorView.lineWrapping,
         drawSelection(),
+        blockWidgetAtomicRanges,
+        blockWidgetSelectionSyncPlugin,
         fontSizeCompartment.of(createEditorTheme(editorFontSize)),
         mouseSelectingField,
         selectionStatePlugin,
