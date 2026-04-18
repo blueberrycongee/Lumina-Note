@@ -8,7 +8,6 @@ import { ipcMain, BrowserWindow } from 'electron'
 import { fsHandlers } from './handlers/fs.js'
 import { platformHandlers } from './handlers/platform.js'
 import { storeHandlers } from './handlers/store.js'
-import { handleLlmFetch, handleLlmFetchStream } from './handlers/http.js'
 import { startFileWatcher } from './handlers/watcher.js'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
@@ -73,22 +72,6 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? getMainWindow()
-
-    // ── LLM HTTP ────────────────────────────────────────────────────────
-    if (cmd === 'llm_fetch') {
-      return handleLlmFetch(args.request as Parameters<typeof handleLlmFetch>[0])
-    }
-    if (cmd === 'llm_fetch_stream') {
-      if (win) {
-        // Fire-and-forget; streaming events sent back via __tauri_event__
-        handleLlmFetchStream(
-          args.requestId as string,
-          args.request as Parameters<typeof handleLlmFetchStream>[1],
-          win,
-        ).catch(console.error)
-      }
-      return null
-    }
 
     // ── File watcher ────────────────────────────────────────────────────
     if (cmd === 'start_file_watcher') {

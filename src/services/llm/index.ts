@@ -1,8 +1,14 @@
 /**
- * LLM Service 统一入口
+ * LLM Service 公共出口。
+ *
+ * Phase 2.5 后,所有 LLM 调用都通过 Electron main 的 agent runtime(AI SDK) 完成。
+ * 这里只保留:
+ * - 共享的数据类型(Message / Intent / ThinkingMode / ...)
+ * - PROVIDER_REGISTRY metadata(用于 UI 展示模型下拉,不绑实现)
+ * - thinking / temperature / routing 辅助工具
+ * - callLLM / callLLMStream — 遗留 API,Phase 5 前端重接 agent runtime 时会替换成真实路径
  */
 
-// 类型导出
 export type {
   Message,
   MessageContent,
@@ -27,7 +33,6 @@ export type {
   ThinkingMode,
 } from "./types";
 
-// Provider 注册表
 export { PROVIDER_REGISTRY } from "./types";
 export {
   buildConfigOverrideForPurpose,
@@ -35,31 +40,7 @@ export {
   getResolvedModelForPurpose,
   hasPurposeModelOverride,
 } from "./routing";
-
-// 配置管理
 export { getLLMConfig, setLLMConfig, resetLLMConfig } from "./config";
-
-// Providers
-export {
-  AnthropicProvider,
-  OpenAIProvider,
-  GeminiProvider,
-  MoonshotProvider,
-  DeepSeekProvider,
-  ZAIProvider,
-  GroqProvider,
-  OpenRouterProvider,
-  OllamaProvider,
-} from "./providers";
-
-// ============ 统一调用接口 ============
-
-import type { Message, LLMOptions, LLMResponse, LLMStream, LLMConfig } from "./types";
-import { getLLMConfig } from "./config";
-import { createProvider } from "./factory";
-import { getCurrentTranslations } from "@/stores/useLocaleStore";
-
-export { createProvider } from "./factory";
 export {
   normalizeThinkingMode,
   getThinkingCapability,
@@ -68,88 +49,44 @@ export {
   getThinkingRequestBodyPatch,
 } from "./thinking";
 
+import type {
+  LLMConfig,
+  LLMOptions,
+  LLMResponse,
+  LLMStream,
+  Message,
+} from "./types";
+
+const REMOVED_MESSAGE =
+  "LLM provider layer removed in Phase 2.5. Use the agent runtime (Electron main) via IPC instead.";
+
 /**
- * 调用 LLM (统一入口)
- * 包含重试机制，应对 HTTP/2 协议错误等临时性网络问题
+ * Stub — 老 callLLM API 已被 TS agent + AI SDK 替代。保留签名让现有 callers 编译通过;
+ * 运行时若被调用会直接抛,Phase 5 会重新布线前端。
  */
 export async function callLLM(
-  messages: Message[],
-  options?: LLMOptions,
-  configOverride?: Partial<LLMConfig>
+  _messages: Message[],
+  _options?: LLMOptions,
+  _configOverride?: Partial<LLMConfig>,
 ): Promise<LLMResponse> {
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 1000;
-  let lastError: Error | null = null;
-
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const provider = createProvider(configOverride);
-      const config = getLLMConfig();
-      const finalOptions = options?.useDefaultTemperature
-        ? { ...options }
-        : {
-            ...options,
-            temperature: options?.temperature ?? config.temperature,
-          };
-      const response = await provider.call(messages, finalOptions);
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-
-      const isRetryable =
-        lastError.message.includes("Failed to fetch") ||
-        lastError.message.includes("HTTP2") ||
-        lastError.message.includes("network") ||
-        lastError.message.includes("ECONNRESET");
-
-      if (isRetryable && attempt < MAX_RETRIES) {
-        console.warn(`[LLM] 请求失败 (尝试 ${attempt}/${MAX_RETRIES})，${RETRY_DELAY}ms 后重试...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        continue;
-      }
-
-      throw lastError;
-    }
-  }
-
-  const t = getCurrentTranslations();
-  throw lastError || new Error(t.common.unknownError);
+  throw new Error(REMOVED_MESSAGE);
 }
 
 /**
- * 流式调用 LLM (统一入口)
- * 返回 AsyncGenerator，逐块 yield 内容
+ * Stub — 同上。
  */
 export async function* callLLMStream(
-  messages: Message[],
-  options?: LLMOptions,
-  configOverride?: Partial<LLMConfig>
+  _messages: Message[],
+  _options?: LLMOptions,
+  _configOverride?: Partial<LLMConfig>,
 ): LLMStream {
-  const provider = createProvider(configOverride);
-  const config = getLLMConfig();
-  const finalOptions = options?.useDefaultTemperature
-    ? { ...options }
-    : {
-        ...options,
-        temperature: options?.temperature ?? config.temperature,
-      };
+  throw new Error(REMOVED_MESSAGE);
+}
 
-  // 检查 Provider 是否支持流式
-  if (!provider.stream) {
-    // 降级：不支持流式的 Provider 一次性返回
-    const response = await provider.call(messages, finalOptions);
-    yield { type: "text", text: response.content };
-    if (response.usage) {
-      yield {
-        type: "usage",
-        inputTokens: response.usage.promptTokens,
-        outputTokens: response.usage.completionTokens,
-        totalTokens: response.usage.totalTokens,
-      };
-    }
-    return;
-  }
+// createProvider 老 API: 直接抛错。唯一一个前端 caller (AISettingsModal) 的 test connection
+// 功能会在 Phase 2.8 提供替代 IPC 路径。保留 LLMProvider 返回类型让调用点编译通过。
+import type { LLMProvider } from "./types";
 
-  // 使用 Provider 的流式方法
-  yield* provider.stream(messages, finalOptions);
+export function createProvider(_configOverride?: Partial<LLMConfig>): LLMProvider {
+  throw new Error(REMOVED_MESSAGE);
 }

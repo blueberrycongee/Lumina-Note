@@ -10,7 +10,6 @@ mod diagnostics;
 mod doc_tools;
 mod error;
 mod fs;
-mod llm;
 mod mcp;
 mod node_runtime;
 mod plugins;
@@ -50,12 +49,6 @@ fn main() {
             commands::show_in_explorer,
             commands::open_new_window,
             commands::start_file_watcher,
-            // LLM HTTP client
-            llm::llm_fetch,
-            llm::llm_fetch_stream,
-            // Debug logging
-            llm::append_debug_log,
-            llm::get_debug_log_path,
             diagnostics::export_diagnostics,
             // Plugin ecosystem commands
             plugins::plugin_list,

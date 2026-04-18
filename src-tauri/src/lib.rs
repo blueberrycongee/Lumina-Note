@@ -5,7 +5,6 @@ mod commands;
 mod doc_tools;
 mod error;
 mod fs;
-mod llm;
 pub mod mcp;
 mod node_runtime;
 pub mod proxy;
@@ -18,7 +17,6 @@ pub mod traffic_lights;
 pub use commands::*;
 pub use error::*;
 pub use fs::*;
-pub use llm::*;
 
 // Re-export MCP commands
 pub use mcp::{
