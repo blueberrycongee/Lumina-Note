@@ -10,12 +10,13 @@
  */
 
 import type { DebugLog } from './debug-log.js'
-import type { ProviderId } from './providers/registry.js'
+import type { ProviderId, ProviderSettings } from './providers/registry.js'
 import { hasProvider } from './providers/registry.js'
 import type {
   ProviderPersistedSettings,
   ProviderSettingsStore,
 } from './providers/settings-store.js'
+import { testProviderConnection } from './providers/test-connection.js'
 import type { AgentRuntime } from './runtime.js'
 import type {
   ApproveToolRequest,
@@ -138,6 +139,22 @@ export async function dispatchAgentCommand(
       if (!provider_id || !hasProvider(provider_id)) return false
       const key = await providerSettings.getProviderApiKey(provider_id as ProviderId)
       return typeof key === 'string' && key.length > 0
+    }
+
+    case 'agent_test_provider': {
+      const { provider_id, model_id, settings } = args as {
+        provider_id?: string
+        model_id?: string
+        settings?: ProviderSettings
+      }
+      if (!provider_id || !hasProvider(provider_id)) {
+        return { success: false, error: `Unknown provider: ${provider_id ?? 'null'}` }
+      }
+      return testProviderConnection(
+        provider_id as ProviderId,
+        model_id ?? '',
+        settings ?? {},
+      )
     }
 
     // Skills — Phase 3.4 接入 SkillLoader
