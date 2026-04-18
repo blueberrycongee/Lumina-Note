@@ -68,6 +68,7 @@
     "clsx": "^2.1.1",
     "codemirror-live-markdown": "0.5.1-alpha.1",
     "diff": "^8.0.3",
+    "electron-updater": "^6.8.3",
     "fflate": "^0.8.2",
     "framer-motion": "^12.23.25",
     "gantt-task-react": "^0.3.9",

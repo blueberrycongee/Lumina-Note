@@ -51,9 +51,6 @@ export const platformHandlers: Record<string, (args: Record<string, unknown>, wi
   async 'plugin:process|relaunch'() { app.relaunch(); app.exit(0) },
   async 'plugin:process|exit'({ exitCode }) { app.exit((exitCode as number) ?? 0) },
 
-  // ── @tauri-apps/plugin-updater (stub) ──────────────────────────────────
-  async 'plugin:updater|check'() { return null },
-
   // ── @tauri-apps/plugin-clipboard (stub) ────────────────────────────────
   async 'plugin:clipboard-manager|read_text'() { return '' },
   async 'plugin:clipboard-manager|write_text'() {},

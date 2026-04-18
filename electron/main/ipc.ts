@@ -12,7 +12,9 @@ import { storeHandlers } from './handlers/store.js'
 import { startFileWatcher } from './handlers/watcher.js'
 import { createWebDAVHandlers } from './handlers/webdav.js'
 import { createProxyHandlers } from './handlers/proxy.js'
+import { createUpdaterHandlers } from './handlers/updater.js'
 import { session } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
@@ -103,6 +105,17 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     },
   })
 
+  const updaterHandlers = createUpdaterHandlers({
+    autoUpdater: autoUpdater as unknown as Parameters<typeof createUpdaterHandlers>[0]['autoUpdater'],
+    sendEvent: (eventName, payload) => {
+      const win = getMainWindow()
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('__tauri_event__', eventName, payload)
+      }
+    },
+    getCacheDir: () => path.join(app.getPath('userData'), 'pending-updates'),
+  })
+
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? getMainWindow()
@@ -127,6 +140,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
     // ── Proxy ───────────────────────────────────────────────────────────
     if (cmd in proxyHandlers) return proxyHandlers[cmd](args)
+
+    // ── Updater ─────────────────────────────────────────────────────────
+    if (cmd in updaterHandlers) return updaterHandlers[cmd](args)
 
     // ── Misc stubs ───────────────────────────────────────────────────────
     if (cmd in miscStubs) return miscStubs[cmd]()
