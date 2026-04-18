@@ -362,7 +362,6 @@ export const useAgentEvalStore = create<EvalState & EvalActions>((set, get) => {
               active_note_path: null,
               active_note_content: null,
               file_tree: fileTree,  // 提供目录结构上下文
-              rag_results: [],
               resolved_links: [],
               history: [],
             },
