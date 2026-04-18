@@ -181,7 +181,7 @@ const createEditorTheme = (fontSize: number) =>
     // blockWidgetSelectionSyncPlugin toggles whenever the selection fully
     // contains the widget. Together they give a crisp, predictable visual
     // instead of a ballooning translucent rectangle.
-    ".cm-math-block, .mermaid-container, .cm-image-widget, .cm-hr": {
+    ".cm-math-block, .mermaid-container, .cm-image-widget": {
       backgroundColor: "hsl(var(--background))",
       position: "relative",
       borderRadius: "6px",
@@ -601,17 +601,33 @@ const createEditorTheme = (fontSize: number) =>
       cursor: "pointer",
     },
 
-    // Horizontal Rule styles
-    // Keep the rule painted at the vertical center of its own cm-line.
-    // No margin — CM wraps block widgets in a cm-line whose height is
-    // determined by the widget itself, and an hr margin would inflate
-    // that cm-line, capturing clicks intended for the heading below.
-    ".cm-hr": {
-      border: "none",
-      borderTop: "1px solid hsl(var(--border))",
-      margin: "0",
+    // Horizontal Rule
+    //
+    // Structure: a 28px flex click-zone whose visible rule is a short
+    // decorative line (the ::before pseudo). This keeps the rule's
+    // visual weight in the same ballpark as typical selection rectangles
+    // and gives the user a generous hit target. No vertical margin —
+    // extra breathing room inflates the cm-line and would silently
+    // capture clicks meant for the heading below.
+    ".cm-hr-container": {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      height: "28px",
+      cursor: "text",
+      position: "relative",
+      borderRadius: "6px",
+      // Solid background so .cm-block-widget-selected ring has something
+      // to sit on and the selection rectangle behind doesn't leak through.
+      backgroundColor: "hsl(var(--background))",
+    },
+    ".cm-hr-container::before": {
+      content: '""',
       display: "block",
-      width: "100%",
+      width: "40%",
+      maxWidth: "160px",
+      height: "1px",
+      backgroundColor: "hsl(var(--border))",
     },
     ".cm-hr-source": { color: "hsl(var(--muted-foreground))", opacity: 0.6 },
   });
@@ -991,17 +1007,28 @@ class HorizontalRuleWidget extends WidgetType {
     return true;
   }
   toDOM() {
-    // NOTE: do NOT set a vertical margin on the <hr> itself. CM wraps
-    // block widgets in their own .cm-line, and an hr margin inflates
-    // that line's height, which silently swallows clicks that the user
-    // meant for the adjacent cm-line (e.g. a `# heading` right below).
-    // Vertical breathing room comes from the cm-line's own line-height.
-    const hr = document.createElement("hr");
-    hr.className = "cm-hr";
-    return hr;
+    // Two design decisions bundled here:
+    //
+    // 1. The visible rule is a short decorative line (rendered via
+    //    ::before) centered in a 28px click zone, not an <hr> stretched
+    //    edge-to-edge. A full-column rule looks visually heavier than
+    //    the surrounding text's selection rectangles, which is the
+    //    "too wide, doesn't match the selection" complaint.
+    // 2. The whole 28px container is a single flex cell the user can
+    //    click anywhere inside to reveal source. A bare 1px <hr> is
+    //    nearly impossible to hit; turning the container into the hit
+    //    target (combined with `ignoreEvent: false` so CM actually
+    //    processes the click) fixes that without touching cursor logic.
+    const container = document.createElement("div");
+    container.className = "cm-hr-container";
+    return container;
   }
   ignoreEvent() {
-    return true;
+    // Let CodeMirror process clicks on this widget. atomicRanges snaps
+    // the selection to the widget boundary, then `shouldShowSource`
+    // returns true for the now-touching range, so the rule flips back
+    // to editable `---` source.
+    return false;
   }
 }
 
@@ -3383,7 +3410,7 @@ const blockWidgetAtomicRanges = EditorView.atomicRanges.of((view) =>
 );
 
 const BLOCK_WIDGET_DOM_SELECTOR =
-  ".cm-math-block, .mermaid-container, .callout, .cm-image-widget, .cm-hr";
+  ".cm-math-block, .mermaid-container, .callout, .cm-image-widget, .cm-hr-container";
 
 // When the selection fully contains a block widget's range, tag that
 // widget's DOM with `.cm-block-widget-selected` so its own CSS can paint
