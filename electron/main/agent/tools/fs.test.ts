@@ -29,19 +29,30 @@ afterEach(() => {
 })
 
 describe('fs_read', () => {
-  it('reads full content', async () => {
+  it('reads full content with L{n}: prefix on each line', async () => {
     const p = path.join(root, 'a.txt')
     fs.writeFileSync(p, 'hello\nworld\n!')
     const tool = makeReadTool()
     const out = await tool.execute({ path: p }, neverAbort)
-    expect(out).toBe('hello\nworld\n!')
+    expect(out).toBe('L1: hello\nL2: world\nL3: !')
   })
 
-  it('supports offset + limit for line paging', async () => {
+  it('uses 1-indexed offset + limit for line paging', async () => {
     const p = path.join(root, 'a.txt')
     fs.writeFileSync(p, ['l1', 'l2', 'l3', 'l4', 'l5'].join('\n'))
     const tool = makeReadTool()
-    expect(await tool.execute({ path: p, offset: 1, limit: 2 }, neverAbort)).toBe('l2\nl3')
+    expect(await tool.execute({ path: p, offset: 2, limit: 2 }, neverAbort)).toBe(
+      'L2: l2\nL3: l3',
+    )
+  })
+
+  it('throws when offset exceeds file length', async () => {
+    const p = path.join(root, 'a.txt')
+    fs.writeFileSync(p, 'only')
+    const tool = makeReadTool()
+    await expect(tool.execute({ path: p, offset: 5, limit: 1 }, neverAbort)).rejects.toThrow(
+      /offset exceeds file length/,
+    )
   })
 
   it('rejects files larger than readMaxBytes', async () => {

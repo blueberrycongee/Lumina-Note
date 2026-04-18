@@ -74,18 +74,20 @@ function assertAllowedPath(rootsOrUndef: string[] | undefined, targetPath: strin
 
 const readSchema = z.object({
   path: z.string().min(1, 'path required'),
-  /** 从第 offset 行开始(0-indexed) */
-  offset: z.number().int().nonnegative().optional(),
+  /** 起始行号(1-indexed,对齐 Codex 的 read_file) */
+  offset: z.number().int().positive().optional(),
   /** 最多返回 limit 行 */
   limit: z.number().int().positive().optional(),
 })
+
+const READ_DESCRIPTION =
+  'Read a UTF-8 text file. Returns each line prefixed with "L{n}: " (1-indexed) so later apply_patch calls can reference exact line numbers. offset (1-indexed) + limit let you page large files.'
 
 export function makeReadTool(options: FsToolsOptions = {}): Tool {
   const maxBytes = options.readMaxBytes ?? DEFAULT_READ_MAX_BYTES
   return {
     name: 'fs_read',
-    description:
-      'Read a UTF-8 text file. Supports optional line range via offset + limit (0-indexed).',
+    description: READ_DESCRIPTION,
     input_schema: z.toJSONSchema(readSchema) as Record<string, unknown>,
     async execute(input, signal) {
       const { path: targetPath, offset, limit } = readSchema.parse(input)
@@ -98,11 +100,18 @@ export function makeReadTool(options: FsToolsOptions = {}): Tool {
         )
       }
       const content = await fs.readFile(targetPath, 'utf-8')
-      if (offset === undefined && limit === undefined) return content
       const lines = content.split('\n')
-      const start = offset ?? 0
-      const end = limit !== undefined ? start + limit : lines.length
-      return lines.slice(start, end).join('\n')
+      const totalLines = lines.length
+      const startIndex = (offset ?? 1) - 1
+      if (startIndex >= totalLines) {
+        throw new Error('offset exceeds file length')
+      }
+      const endIndex = limit !== undefined ? Math.min(startIndex + limit, totalLines) : totalLines
+      const out: string[] = []
+      for (let i = startIndex; i < endIndex; i++) {
+        out.push(`L${i + 1}: ${lines[i]}`)
+      }
+      return out.join('\n')
     },
   }
 }
