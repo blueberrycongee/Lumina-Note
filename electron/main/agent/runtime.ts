@@ -47,10 +47,11 @@ export interface AgentRuntimeOptions {
   maxTurns?: number
   systemPrompt?: string
   /**
-   * 每次 start 之前调用,可用来刷新 ToolRegistry(例如同步 MCP 工具)。
+   * 每次 start 之前调用,可用来刷新 ToolRegistry(例如同步 MCP 工具)或把
+   * 当前 task 的 workspace_path 暴露给 apply_patch 之类需要 rootDir 的工具。
    * 失败不阻断,只记日志。
    */
-  beforeStart?: () => Promise<void> | void
+  beforeStart?: (context: TaskContext) => Promise<void> | void
 }
 
 const DEFAULT_MAX_TURNS = 25
@@ -71,7 +72,7 @@ export class AgentRuntime {
     }
     if (this.options.beforeStart) {
       try {
-        await this.options.beforeStart()
+        await this.options.beforeStart(context)
       } catch (err) {
         this.options.debugLog?.log(
           'agent.beforeStart.error',

@@ -19,6 +19,7 @@ import { McpManager } from './agent/mcp/manager.js'
 import { refreshMcpTools } from './agent/mcp/tools.js'
 import { registerFsTools } from './agent/tools/fs.js'
 import { registerShellTool } from './agent/tools/shell.js'
+import { registerApplyPatchTool } from './agent/tools/apply-patch.js'
 import { ToolRegistry } from './agent/tool-registry.js'
 import type { ProviderInterface } from './agent/types.js'
 import { WikiSettingsStore } from './wiki/settings-store.js'
@@ -134,6 +135,9 @@ app.whenReady().then(() => {
   const toolRegistry = new ToolRegistry()
   registerFsTools(toolRegistry)
   registerShellTool(toolRegistry)
+  // apply_patch needs the active vault path; beforeStart below keeps it fresh.
+  let currentVaultPath: string | null = null
+  registerApplyPatchTool(toolRegistry, { rootDir: () => currentVaultPath })
 
   const mcpManager = new McpManager({ baseDir: app.getPath('userData') })
   void mcpManager.init().catch((err) => {
@@ -147,7 +151,8 @@ app.whenReady().then(() => {
     memoryStore,
     providerSelector,
     toolRegistry,
-    beforeStart: async () => {
+    beforeStart: async (context) => {
+      currentVaultPath = context.workspace_path ?? null
       await refreshMcpTools(toolRegistry, mcpManager).catch((err) => {
         console.error('[main] mcp tool refresh failed', err)
       })

@@ -21,6 +21,7 @@ import { AutoApprovalGate } from '../agent/approval-gate.js'
 import { AgentRuntime } from '../agent/runtime.js'
 import { ToolRegistry } from '../agent/tool-registry.js'
 import { registerFsTools } from '../agent/tools/fs.js'
+import { registerApplyPatchTool } from '../agent/tools/apply-patch.js'
 import type { ProviderInterface, TaskContext } from '../agent/types.js'
 
 import { hashContent, WikiState } from './state.js'
@@ -50,7 +51,7 @@ const SYSTEM_PROMPT = `You are the Lumina Wiki Synthesizer. Your job: keep vault
 You will be told the path of one source note that just changed. Steps you should follow:
   1. Use fs_read to read the source note. Distill the key claims, definitions, and links worth surfacing in the wiki.
   2. Use list_dir and fs_grep on vault/wiki/ to discover existing wiki entries. Prefer extending an existing entry over creating a new one.
-  3. Use fs_write to update or create wiki/*.md files. Each wiki file should:
+  3. Use apply_patch to update existing wiki entries (Update File + hunks) or create new ones (Add File). Fall back to fs_write only if apply_patch is not a good fit. Each wiki file should:
      - Have a short YAML frontmatter with title, source_paths (the relative paths of the source notes contributing), updated_at (ISO timestamp).
      - Cite source notes inline with [[wiki link]] style references back to the original notes.
      - Stay concise — the wiki is a synthesis layer, not a copy of the note.
@@ -93,6 +94,7 @@ export class WikiSynthesizer {
     const eventBus = new SilentEventBus()
     const toolRegistry = new ToolRegistry()
     registerFsTools(toolRegistry, { allowedRoots: [this.opts.vaultPath] })
+    registerApplyPatchTool(toolRegistry, { rootDir: this.opts.vaultPath })
     const runtime = new AgentRuntime({
       eventBus,
       provider: this.opts.provider,
