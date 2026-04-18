@@ -3958,9 +3958,11 @@ export const CodeMirrorEditor = forwardRef<
     const clearDragState = () => {
       if (dragSelectionActive) {
         dragSelectionActive = false;
-        requestAnimationFrame(() => {
-          view.dispatch({ effects: setMouseSelecting.of(false) });
-        });
+        // Clear the mouseSelecting flag synchronously in the same task as
+        // the native mouseup — one frame later and decorations unfreeze
+        // _after_ the final selection lands, so the text underneath the
+        // selection visibly shifts a char as markdown markers reappear.
+        view.dispatch({ effects: setMouseSelecting.of(false) });
       }
       mouseDownActive = false;
     };
