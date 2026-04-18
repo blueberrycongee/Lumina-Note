@@ -189,10 +189,6 @@ vi.mock("../settings/WebDAVSettings", () => ({
   WebDAVSettings: () => <div>WebDAV</div>,
 }));
 
-vi.mock("../settings/DocToolsSection", () => ({
-  DocToolsSection: () => <div>DocTools</div>,
-}));
-
 vi.mock("./LanguageSwitcher", () => ({
   LanguageSwitcher: () => <div>LanguageSwitcher</div>,
 }));

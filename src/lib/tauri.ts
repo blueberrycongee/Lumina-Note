@@ -256,25 +256,6 @@ export async function scaffoldWorkspaceUiOverhaulPlugin(): Promise<string> {
   return invoke("plugin_scaffold_ui_overhaul");
 }
 
-// ============ Doc tools ============
-
-export interface DocToolsStatus {
-  installed: boolean;
-  version?: string;
-  rootDir?: string;
-  binDir?: string;
-  tools: Record<string, { available: boolean; path?: string; source?: string }>;
-  missing: string[];
-}
-
-export async function getDocToolsStatus(): Promise<DocToolsStatus> {
-  return invoke("doc_tools_get_status");
-}
-
-export async function installDocTools(): Promise<DocToolsStatus> {
-  return invoke("doc_tools_install_latest");
-}
-
 /**
  * Start file system watcher for a directory
  * Emits "fs:change" events when files are created, modified, or deleted

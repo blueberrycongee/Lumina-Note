@@ -32,13 +32,6 @@ function notImplemented(cmd: string) {
   return null
 }
 
-// ── DocTools stubs (Phase 7.7 will decide keep/delete) ─────────────────────
-// plugin_*/agent_*/vault_* 走对应 handler,不在这里
-const skillPluginStubs: Record<string, () => unknown> = {
-  doc_tools_get_status: () => ({ installed: false, version: null, rootDir: null, binDir: null, tools: {}, missing: [] }),
-  doc_tools_install_latest: () => { throw new Error('doc tools not available in Electron build yet') },
-}
-
 // ── Typesetting stubs ───────────────────────────────────────────────────────
 const typesettingStubs: Record<string, () => unknown> = {
   typesetting_preview_page_mm: () => { throw new Error('typesetting sidecar not yet configured') },
@@ -172,9 +165,6 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
         args,
       )
     }
-
-    // ── Skills / Plugins stubs ───────────────────────────────────────────
-    if (cmd in skillPluginStubs) return skillPluginStubs[cmd]()
 
     // ── Typesetting stubs ────────────────────────────────────────────────
     if (cmd in typesettingStubs) return typesettingStubs[cmd]()

@@ -1,17 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useFileStore } from "@/stores/useFileStore";
-import { useLocaleStore } from "@/stores/useLocaleStore";
-import {
-  listAgentSkills,
-  readAgentSkill,
-  getDocToolsStatus,
-  installDocTools,
-} from "@/lib/tauri";
+import { listAgentSkills, readAgentSkill } from "@/lib/tauri";
 import type { SelectedSkill, SkillInfo } from "@/types/skills";
 
 export function useSkillSearch() {
   const vaultPath = useFileStore((s) => s.vaultPath);
-  const { t } = useLocaleStore();
 
   const [skills, setSkills] = useState<SkillInfo[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([]);
@@ -64,21 +57,6 @@ export function useSkillSearch() {
         return true; // already selected, just close menu
       }
       try {
-        if (skill.name === "docx") {
-          try {
-            const status = await getDocToolsStatus();
-            if (!status.installed && status.missing.length > 0) {
-              const shouldInstall = window.confirm(
-                t.settingsModal.docToolsPrompt,
-              );
-              if (shouldInstall) {
-                await installDocTools();
-              }
-            }
-          } catch (err) {
-            console.warn("[DocTools] Failed to check/install doc tools:", err);
-          }
-        }
         const detail = await readAgentSkill(skill.name, vaultPath || undefined);
         const nextSkill: SelectedSkill = {
           name: detail.info.name,
@@ -96,7 +74,7 @@ export function useSkillSearch() {
       }
       return false;
     },
-    [selectedSkills, vaultPath, t],
+    [selectedSkills, vaultPath],
   );
 
   return {

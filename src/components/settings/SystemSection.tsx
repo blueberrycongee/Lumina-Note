@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { DocToolsSection } from "./DocToolsSection";
 import { DiagnosticsSection } from "./DiagnosticsSection";
 
 interface SystemSectionProps {
@@ -43,7 +42,6 @@ export function SystemSection({ onOpenUpdateModal }: SystemSectionProps) {
         </div>
       </section>
 
-      <DocToolsSection />
       <DiagnosticsSection />
 
       {/* 关于 */}
