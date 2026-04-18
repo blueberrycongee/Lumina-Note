@@ -4,11 +4,13 @@
  * a value that is sent back to the renderer as the invoke() result.
  */
 
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, app } from 'electron'
+import path from 'node:path'
 import { fsHandlers } from './handlers/fs.js'
 import { platformHandlers } from './handlers/platform.js'
 import { storeHandlers } from './handlers/store.js'
 import { startFileWatcher } from './handlers/watcher.js'
+import { createWebDAVHandlers } from './handlers/webdav.js'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
@@ -88,6 +90,10 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     wikiManager,
   } = options
 
+  const webdavHandlers = createWebDAVHandlers({
+    configPath: path.join(app.getPath('userData'), 'lumina-webdav-config.json'),
+  })
+
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? getMainWindow()
@@ -106,6 +112,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
     // ── Store ────────────────────────────────────────────────────────────
     if (cmd in storeHandlers) return storeHandlers[cmd](args)
+
+    // ── WebDAV ──────────────────────────────────────────────────────────
+    if (cmd in webdavHandlers) return webdavHandlers[cmd](args)
 
     // ── Misc stubs ───────────────────────────────────────────────────────
     if (cmd in miscStubs) return miscStubs[cmd]()

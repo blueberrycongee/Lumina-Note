@@ -88,6 +88,7 @@
     "react-pdf": "^10.2.0",
     "tailwind-merge": "^2.5.4",
     "turndown": "^7.2.0",
+    "webdav": "^5.9.0",
     "y-codemirror.next": "^0.3.5",
     "y-protocols": "^1.0.7",
     "y-websocket": "^3.0.0",

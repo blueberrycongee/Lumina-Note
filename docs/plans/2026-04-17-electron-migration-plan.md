@@ -233,7 +233,7 @@ AND wikiAgent.enabled === true       (用户没关掉)
 
 ### Phase 7 — 搬剩下的 Tauri 命令到 Node
 
-- **7.1** WebDAV：用 `webdav` npm 包重写 14 个 `webdav_*` 命令
+- **7.1** WebDAV:用 `webdav` npm 包重写 4 个前端实际调用的命令(`set_config` / `upload` / `create_dir` / `delete`),其余 10 个的 sync planning 在前端从未被引用,只保留 read/scan 的薄实现 + 计划占位 stub。Rust src-tauri/webdav 模块 Phase 8 删除时一起清
 - **7.2** Proxy：`set_proxy_config` / `get_proxy_config` / `test_proxy_connection` → `session.setProxy`
 - **7.3** Updater：4 个 `update_*` 命令 → `electron-updater`
 - **7.4** Diagnostics：`export_diagnostics` → Node fs 打包系统信息 + 日志
