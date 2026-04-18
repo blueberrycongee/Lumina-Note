@@ -26,9 +26,6 @@
     "test:e2e:webkit": "WEBKIT_E2E=1 vitest --run src/__tests__/codemirrorSelectAll.webkit.e2e.test.ts",
     "test:repro:flashcard": "vitest --run src/stores/useFlashcardStore.repro.test.ts src/components/flashcard/FlashcardView.repro.test.tsx src/components/flashcard/FlashcardReview.repro.test.tsx src/services/markdown/frontmatter.flashcard.repro.test.ts src/__tests__/flashcardIntentContract.repro.test.ts src/__tests__/flashcardRouterPrompt.repro.test.ts",
     "test:repro:flashcard:e2e": "FLASHCARD_E2E=1 vitest --run src/__tests__/flashcardReview.chromium.e2e.test.ts",
-    "test:agent-eval": "npx ts-node --esm tests/agent-eval/runner.ts",
-    "test:agent-eval:basic": "npx ts-node --esm tests/agent-eval/runner.ts --category=basic",
-    "test:agent-eval:complex": "npx ts-node --esm tests/agent-eval/runner.ts --category=complex",
     "audit:button-tooltips": "node scripts/audit_button_tooltips.mjs",
     "bench": "vitest bench",
     "bench:run": "vitest bench --run"

@@ -219,7 +219,7 @@ AND wikiAgent.enabled === true       (用户没关掉)
 
 - **5.1** `useRustAgentStore` 的 invoke 调用走新的 IPC channel（preload 层把 `agent_*` / `vault_*` / `mcp_*` 等字符串路由到新 runtime）
 - **5.2** 移除 `src/electron-shims/tauri/` 里不再需要的桥接
-- **5.3** `test:agent-eval` / `test:agent-eval:basic` / `test:agent-eval:complex` 全跑绿
+- **5.3** Agent eval 套件:CLI runner (`tests/agent-eval/runner.ts`) 从未存在,三个 npm script 是死配置;直接删除 script。`src/tests/agent-eval/AgentEvalPanel.tsx` 是应用内 dev 面板,不属于 CI,Phase 5 UI 改造时再决定保留/重写
 - **5.4** 所有 agent 相关单元测试改成 mock Provider（fake `streamText` 返回预设事件流）
 
 ### Phase 6 — LLM Wiki 合成器
