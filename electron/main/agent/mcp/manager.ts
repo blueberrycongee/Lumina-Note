@@ -177,7 +177,13 @@ export class McpManager extends EventEmitter {
   }
 
   async restartServer(id: string): Promise<void> {
+    const entry = this.requireEntry(id)
+    const config = entry.config
     await this.stopServer(id)
+    // Rebuild the entry — both stdio and InMemory transports cannot be reused
+    // after close(), so the client + transport need to be recreated to reconnect.
+    const newEntry = this.buildEntry(config)
+    this.entries.set(id, newEntry)
     await this.startServer(id)
   }
 

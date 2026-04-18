@@ -71,7 +71,7 @@ export interface AgentDispatchContext {
 }
 
 export function isAgentCommand(cmd: string): boolean {
-  return cmd.startsWith('agent_') || cmd.startsWith('vault_')
+  return cmd.startsWith('agent_') || cmd.startsWith('vault_') || cmd.startsWith('mcp_')
 }
 
 export async function dispatchAgentCommand(
@@ -79,7 +79,7 @@ export async function dispatchAgentCommand(
   cmd: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const { runtime, debugLog, providerSettings, skillLoader } = ctx
+  const { runtime, debugLog, providerSettings, skillLoader, mcpManager } = ctx
   switch (cmd) {
     case 'agent_start_task': {
       const payload = args as unknown as StartTaskRequest
@@ -234,6 +234,115 @@ export async function dispatchAgentCommand(
         lint_issues: [] as unknown[],
         coverage_ratio: 0,
       }
+
+    // MCP — Phase 4.4 server 管理
+    case 'mcp_list_servers': {
+      if (!mcpManager) return []
+      return mcpManager.listServers()
+    }
+    case 'mcp_get_server_status': {
+      if (!mcpManager) return null
+      const { id } = args as { id?: string }
+      if (!id) return null
+      return mcpManager.getServer(id)
+    }
+    case 'mcp_add_server': {
+      if (!mcpManager) {
+        throw new Error('mcp_add_server: McpManager not configured')
+      }
+      const { config } = args as {
+        config?: Parameters<McpManager['addServer']>[0]
+      }
+      if (!config?.id) {
+        throw new Error('mcp_add_server: missing config.id')
+      }
+      return mcpManager.addServer(config)
+    }
+    case 'mcp_update_server': {
+      if (!mcpManager) {
+        throw new Error('mcp_update_server: McpManager not configured')
+      }
+      const { id, patch } = args as {
+        id?: string
+        patch?: Parameters<McpManager['updateServer']>[1]
+      }
+      if (!id || !patch) {
+        throw new Error('mcp_update_server: missing id or patch')
+      }
+      return mcpManager.updateServer(id, patch)
+    }
+    case 'mcp_remove_server': {
+      if (!mcpManager) return null
+      const { id } = args as { id?: string }
+      if (!id) return null
+      await mcpManager.removeServer(id)
+      return null
+    }
+    case 'mcp_start_server': {
+      if (!mcpManager) return null
+      const { id } = args as { id?: string }
+      if (!id) return null
+      try {
+        await mcpManager.startServer(id)
+        return mcpManager.getServer(id)
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
+    }
+    case 'mcp_stop_server': {
+      if (!mcpManager) return null
+      const { id } = args as { id?: string }
+      if (!id) return null
+      await mcpManager.stopServer(id)
+      return mcpManager.getServer(id)
+    }
+    case 'mcp_restart_server': {
+      if (!mcpManager) return null
+      const { id } = args as { id?: string }
+      if (!id) return null
+      try {
+        await mcpManager.restartServer(id)
+        return mcpManager.getServer(id)
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
+    }
+    case 'mcp_list_tools': {
+      if (!mcpManager) return []
+      return mcpManager.listAllTools()
+    }
+    case 'mcp_test_tool': {
+      if (!mcpManager) {
+        throw new Error('mcp_test_tool: McpManager not configured')
+      }
+      const { name, arguments: toolArgs } = args as {
+        name?: string
+        arguments?: Record<string, unknown>
+      }
+      if (!name) throw new Error('mcp_test_tool: missing name')
+      try {
+        const result = await mcpManager.callTool(name, toolArgs ?? {})
+        return { ok: true, result }
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
+    }
+    case 'mcp_get_server_logs': {
+      if (!mcpManager) return []
+      const { id } = args as { id?: string }
+      if (!id) return []
+      const info = mcpManager.getServer(id)
+      return info?.recentStderr ?? []
+    }
 
     default:
       console.warn(`[agent:ipc-dispatch] unhandled command: ${cmd}`)
