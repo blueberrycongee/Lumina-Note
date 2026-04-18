@@ -1,18 +1,22 @@
 /**
- * Shell 工具 — agent 可执行 shell 命令。
+ * Shell 工具 — agent 执行 shell 命令。
+ *
+ * 工具形状对齐 OpenAI Codex `shell` 工具:
+ *   - `command` 是 argv 数组(`string[]`),直接交给 `child_process.spawn(argv[0], argv.slice(1))`,
+ *     不经 `/bin/sh -c`,从协议层面规避 shell injection。
+ *   - 如果真要调用 shell(管道/重定向/变量),模型应显式写出 `["bash", "-lc", "<script>"]`
+ *     或 Windows 上 `["powershell.exe", "-Command", "<script>"]`。
+ *   - `workdir`(对齐 Codex)+ `timeout_ms`(对齐 Codex)+ 额外 `env`(方便测试注入环境变量)。
  *
  * 默认 requires_approval = true。用户端 ApprovalGate 可以配置 allowlist 免审批
- * (前缀或简易 glob,例如 "npm run *"、"git status");当命令匹配 allowlist 时,
- * 外部 gate 可以自动放行(此工具本身仍然声明需要审批,免审逻辑由 gate 负责)。
+ * (前缀或简易 glob,例如 "npm run *"、"git status");当 argv 拼成的命令行匹配
+ * allowlist 时,外部 gate 可以自动放行(此工具本身仍然声明需要审批)。
  *
- * execute 使用 child_process.spawn('sh', ['-c', cmd]),捕获 stdout/stderr/exit_code,
- * 返回 JSON 字符串。支持:
+ * execute 返回 `{ stdout, stderr, exit_code }` 的 JSON 字符串。
  *   - AbortSignal 终止(SIGTERM → 500ms 后 SIGKILL)
  *   - timeout_ms(默认 60_000)
- *   - cwd、env 参数
- *
- * exit_code 非 0 不抛错,作为正常 tool 结果返回(agent 自己判断);
- * 超时 / abort / spawn 失败才会抛 Error。
+ *   - exit_code 非 0 不抛错,作为正常 tool 结果返回(agent 自己判断)
+ *   - 超时 / abort / spawn 失败才会抛 Error
  */
 
 import { spawn } from 'node:child_process'
@@ -32,11 +36,18 @@ export interface ShellToolOptions {
 const DEFAULT_TIMEOUT_MS = 60_000
 
 const shellSchema = z.object({
-  command: z.string().min(1, 'command required'),
-  cwd: z.string().optional(),
-  env: z.record(z.string(), z.string()).optional(),
+  command: z
+    .array(z.string())
+    .min(1, 'command must contain at least one argument (the program name)'),
+  workdir: z.string().optional(),
   timeout_ms: z.number().int().positive().optional(),
+  env: z.record(z.string(), z.string()).optional(),
 })
+
+const SHELL_DESCRIPTION = `Runs a shell command and returns its output.
+- The arguments to \`shell\` will be passed to execvp(). Most terminal commands should be prefixed with ["bash", "-lc"].
+- Always set the \`workdir\` param when using the shell function. Do not use \`cd\` unless absolutely necessary.
+Returns { stdout, stderr, exit_code } as JSON. Non-zero exit codes are returned as results (not errors); timeouts and aborts throw.`
 
 export interface ShellExecResult {
   stdout: string
@@ -44,15 +55,29 @@ export interface ShellExecResult {
   exit_code: number
 }
 
+/** 把 argv 拼成一条可读命令行,供 allowlist 匹配和错误消息使用。 */
+export function formatArgvForDisplay(argv: readonly string[]): string {
+  return argv
+    .map((arg) => {
+      if (arg === '') return '""'
+      if (/^[A-Za-z0-9_\-./=:,@+]+$/.test(arg)) return arg
+      return `"${arg.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+    })
+    .join(' ')
+}
+
 /**
  * 判断命令是否命中 allowlist。
- * 模式支持:
+ * 模式支持(匹配对象是 argv 拼接后的命令行字符串):
  *   - 精确前缀: "git status" 匹配 "git status ..."
  *   - 简易 glob: "npm run *"、"git log --*"(* 匹配任意非空字符,? 匹配单字符)
  */
-export function isShellCommandAllowed(command: string, allowlist: string[] | undefined): boolean {
+export function isShellCommandAllowed(
+  command: string | readonly string[],
+  allowlist: string[] | undefined,
+): boolean {
   if (!allowlist || allowlist.length === 0) return false
-  const cmd = command.trim()
+  const cmd = Array.isArray(command) ? formatArgvForDisplay(command) : String(command).trim()
   for (const pattern of allowlist) {
     const p = pattern.trim()
     if (!p) continue
@@ -73,7 +98,7 @@ export function isShellCommandAllowed(command: string, allowlist: string[] | und
 }
 
 export async function execShellCommand(
-  command: string,
+  argv: readonly string[],
   opts: {
     cwd?: string
     env?: Record<string, string>
@@ -81,14 +106,18 @@ export async function execShellCommand(
     signal?: AbortSignal
   } = {},
 ): Promise<ShellExecResult> {
+  if (argv.length === 0) {
+    throw new Error('shell: command must contain at least one argument')
+  }
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const display = formatArgvForDisplay(argv)
   return new Promise<ShellExecResult>((resolve, reject) => {
     let settled = false
     const mergedEnv: NodeJS.ProcessEnv | undefined = opts.env
       ? { ...process.env, ...opts.env }
       : undefined
-    const child = spawn(command, {
-      shell: true,
+    const child = spawn(argv[0], argv.slice(1), {
+      shell: false,
       cwd: opts.cwd,
       env: mergedEnv,
     })
@@ -102,9 +131,9 @@ export async function execShellCommand(
       stderr += chunk.toString('utf-8')
     })
 
-    const killTree = (signal: NodeJS.Signals) => {
+    const killTree = (sig: NodeJS.Signals) => {
       try {
-        child.kill(signal)
+        child.kill(sig)
       } catch {
         // ignore
       }
@@ -115,7 +144,7 @@ export async function execShellCommand(
       settled = true
       killTree('SIGTERM')
       setTimeout(() => killTree('SIGKILL'), 500)
-      reject(new Error(`shell command timed out after ${timeoutMs}ms: ${command}`))
+      reject(new Error(`shell command timed out after ${timeoutMs}ms: ${display}`))
     }, timeoutMs)
 
     const onAbort = () => {
@@ -156,15 +185,14 @@ export async function execShellCommand(
 export function makeShellTool(options: ShellToolOptions = {}): Tool {
   const defaultTimeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
   return {
-    name: 'shell_exec',
-    description:
-      'Execute a shell command. Returns { stdout, stderr, exit_code } as JSON. Non-zero exit codes are returned as results (not errors); timeouts and aborts throw.',
+    name: 'shell',
+    description: SHELL_DESCRIPTION,
     input_schema: z.toJSONSchema(shellSchema) as Record<string, unknown>,
     requires_approval: true,
     async execute(input, signal) {
       const parsed = shellSchema.parse(input)
       const result = await execShellCommand(parsed.command, {
-        cwd: parsed.cwd ?? options.cwd,
+        cwd: parsed.workdir ?? options.cwd,
         env: parsed.env,
         timeoutMs: parsed.timeout_ms ?? defaultTimeout,
         signal,

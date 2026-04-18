@@ -111,7 +111,7 @@ describe('WikiSynthesizer', () => {
     const syn = new WikiSynthesizer({ vaultPath: vault, state, provider })
     await syn.synthesizeNote('a.md')
     const names = toolDefsSeenByAgent.map((t) => t.name)
-    expect(names).not.toContain('shell_exec')
+    expect(names).not.toContain('shell')
     expect(names).toEqual(
       expect.arrayContaining(['fs_read', 'fs_write', 'fs_list', 'fs_grep', 'fs_stat']),
     )
