@@ -9,7 +9,7 @@ import {
   createDir,
   estimateDirSize,
 } from "@/lib/host";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/host";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useOpenClawWorkspaceStore } from "@/stores/useOpenClawWorkspaceStore";

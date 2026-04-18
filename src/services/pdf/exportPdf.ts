@@ -1,6 +1,6 @@
 import { parseMarkdown } from "@/services/markdown/markdown";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeFile } from "@tauri-apps/plugin-fs";
+import { saveDialog as save } from "@/lib/host";
+import { writeBinaryFile as writeFile } from "@/lib/host";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { getCurrentLocale, getCurrentTranslations } from "@/stores/useLocaleStore";

@@ -4,8 +4,8 @@
  */
 
 import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
-import { listen, UnlistenFn } from '@tauri-apps/api/event';
+import { invoke } from '@/lib/host';
+import { listen, UnlistenFn } from '@/lib/host';
 import { TestCase, allTestCases } from './testCases';
 import { useAIStore } from '@/stores/useAIStore';
 import { 

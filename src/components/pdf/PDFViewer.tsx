@@ -13,7 +13,7 @@ import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight, ListTree, Loader2, FileText } from 'lucide-react';
 import { useLocaleStore } from '@/stores/useLocaleStore';
-import { readFile, stat } from "@tauri-apps/plugin-fs";
+import { readBinaryFile as readFile, fsStat as stat } from "@/lib/host";
 
 interface PDFViewerProps {
   filePath: string;

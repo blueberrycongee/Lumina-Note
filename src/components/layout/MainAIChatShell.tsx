@@ -54,7 +54,7 @@ import {
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
-import { join as joinPath } from "@tauri-apps/api/path";
+import { join as joinPath } from "@/lib/host";
 import {
   buildAgentExportMessages,
   buildConversationExportMarkdown,

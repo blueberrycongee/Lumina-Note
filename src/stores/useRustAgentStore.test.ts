@@ -13,11 +13,8 @@ const getAIConfigMock = vi.hoisted(() => vi.fn(() => ({
 })));
 
 // Mock dependencies before importing the store
-vi.mock('@tauri-apps/api/event', () => ({
+vi.mock('@/lib/host', () => ({
   listen: vi.fn(() => Promise.resolve(() => {})),
-}));
-
-vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
 }));
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { relaunch } from "@tauri-apps/plugin-process";
+import { relaunch } from "@/lib/host";
 import { Loader2, RefreshCw, Download, RotateCcw, CheckCircle2, AlertCircle, SkipForward } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import {

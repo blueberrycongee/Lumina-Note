@@ -1,6 +1,6 @@
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { openDialog as open } from "@/lib/host";
 import { useShallow } from "zustand/react/shallow";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";

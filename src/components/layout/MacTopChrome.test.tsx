@@ -7,19 +7,14 @@ const tauriMocks = vi.hoisted(() => ({
   platform: vi.fn(() => "linux"),
 }));
 
-vi.mock("@tauri-apps/api/core", async () => {
-  const actual = await vi.importActual<typeof import("@tauri-apps/api/core")>(
-    "@tauri-apps/api/core",
-  );
+vi.mock("@/lib/host", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
   return {
     ...actual,
     isTauri: tauriMocks.isTauri,
+    platform: tauriMocks.platform,
   };
 });
-
-vi.mock("@tauri-apps/plugin-os", () => ({
-  platform: tauriMocks.platform,
-}));
 
 describe("MacTopChrome", () => {
   beforeEach(() => {

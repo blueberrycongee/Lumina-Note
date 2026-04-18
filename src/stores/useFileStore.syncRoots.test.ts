@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/host";
 import { syncWorkspaceAccessRoots } from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 
 // Mock Tauri invoke
-vi.mock("@tauri-apps/api/core", () => ({
+vi.mock("@/lib/host", () => ({
   invoke: vi.fn(),
 }));
 

@@ -16,9 +16,6 @@ vi.mock("@/lib/host", () => ({
   readFile: readFileMock,
   saveFile: saveFileMock,
   createDir: createDirMock,
-}));
-
-vi.mock("@tauri-apps/api/core", () => ({
   invoke: invokeMock,
 }));
 

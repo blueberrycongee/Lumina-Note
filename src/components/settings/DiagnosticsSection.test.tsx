@@ -9,17 +9,15 @@ const invokeMock = vi.fn();
 const getDebugLogPathMock = vi.fn();
 const reportOperationErrorMock = vi.fn();
 
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-  save: (...args: unknown[]) => saveMock(...args),
-}));
-
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  writeTextFile: (...args: unknown[]) => writeTextFileMock(...args),
-}));
-
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: (...args: unknown[]) => invokeMock(...args),
-}));
+vi.mock('@/lib/host', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/host')>('@/lib/host');
+  return {
+    ...actual,
+    saveDialog: (...args: unknown[]) => saveMock(...args),
+    writeTextFile: (...args: unknown[]) => writeTextFileMock(...args),
+    invoke: (...args: unknown[]) => invokeMock(...args),
+  };
+});
 
 vi.mock('@/lib/debugLogger', () => ({
   getDebugLogPath: (...args: unknown[]) => getDebugLogPathMock(...args),

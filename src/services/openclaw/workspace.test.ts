@@ -11,9 +11,6 @@ vi.mock("@/lib/host", () => ({
   exists: existsMock,
   createDir: createDirMock,
   saveFile: saveFileMock,
-}));
-
-vi.mock("@tauri-apps/api/path", () => ({
   homeDir: homeDirMock,
 }));
 

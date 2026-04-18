@@ -40,9 +40,6 @@ export default defineConfig({
       alias: {
         '@': path.resolve(__dirname, './src'),
         '@lumina/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
-        '@tauri-apps/api/app': path.resolve(__dirname, './src/lib/hostBridge.ts'),
-        '@tauri-apps/api/core': path.resolve(__dirname, './src/lib/hostBridge.ts'),
-        '@tauri-apps/api/event': path.resolve(__dirname, './src/lib/hostBridge.ts'),
       },
     },
     server: {
@@ -50,7 +47,7 @@ export default defineConfig({
       strictPort: true,
       host: '0.0.0.0',
       watch: {
-        ignored: ['**/src-tauri/**', '**/electron/**'],
+        ignored: ['**/electron/**'],
       },
     },
     plugins: [react()],

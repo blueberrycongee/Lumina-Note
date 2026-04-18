@@ -1,12 +1,7 @@
 /**
- * Low-level IPC bridge. Vite aliases `@tauri-apps/api/core|event|app` to this
- * file so the `@tauri-apps/plugin-*` packages (which internally import
- * `{ invoke, Channel, Resource }` from `@tauri-apps/api/core`) transparently
- * route through the Electron preload.
- *
- * App-level helpers (readFile, createDir, listPlugins, ...) live in
- * `src/lib/host.ts`, which itself imports `invoke` from `@tauri-apps/api/core`
- * so existing `vi.mock('@tauri-apps/api/core', ...)` tests continue to work.
+ * Low-level IPC bridge. Exposes `invoke`, `listen`, `Channel`, `Resource`,
+ * `transformCallback`, and `isTauri` to `src/lib/host.ts`, which re-exports
+ * them to the rest of the renderer.
  */
 
 export const SERIALIZE_TO_IPC_FN = "__TAURI_TO_IPC_KEY__";

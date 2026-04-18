@@ -2,7 +2,7 @@
  * Debug Logger - 收集前端日志到文件
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/host";
 
 // 日志缓冲区
 const logBuffer: string[] = [];

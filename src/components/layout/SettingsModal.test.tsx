@@ -8,9 +8,10 @@ const {
   getVersionMock: vi.fn(async () => "1.2.3"),
 }));
 
-vi.mock("@tauri-apps/api/app", () => ({
-  getVersion: getVersionMock,
-}));
+vi.mock("@/lib/host", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
+  return { ...actual, getVersion: getVersionMock };
+});
 
 vi.mock("@/config/themes", () => ({
   OFFICIAL_THEMES: [],

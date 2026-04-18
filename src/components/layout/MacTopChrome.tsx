@@ -1,5 +1,4 @@
-import { isTauri } from "@tauri-apps/api/core";
-import { platform } from "@tauri-apps/plugin-os";
+import { isTauri, platform } from "@/lib/host";
 import { useEffect, useState, type ReactNode } from "react";
 
 const isMacByNavigator = (): boolean =>
@@ -17,17 +16,17 @@ export function useMacTopChromeEnabled(): boolean {
       return;
     }
 
-    const syncPlatform = () => {
+    const syncPlatform = async () => {
       try {
-        const os = platform();
-        if (!disposed) setEnabled(os === "macos");
+        const os = await platform();
+        if (!disposed) setEnabled(os === "darwin");
       } catch (error) {
         console.warn("Failed to detect platform for MacTopChrome:", error);
         if (!disposed) setEnabled(isMacByNavigator());
       }
     };
 
-    syncPlatform();
+    void syncPlatform();
     return () => {
       disposed = true;
     };

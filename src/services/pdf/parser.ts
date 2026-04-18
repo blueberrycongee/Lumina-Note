@@ -5,8 +5,8 @@
 
 import type { ParseRequest, ParseResponse, CacheEntry } from "./types";
 import type { PDFStructure, ParseBackend } from "@/types/pdf";
-import { isTauri } from "@tauri-apps/api/core";
-import { stat } from "@tauri-apps/plugin-fs";
+import { isTauri } from "@/lib/host";
+import { fsStat as stat } from "@/lib/host";
 
 // 缓存管理
 class ParseCache {

@@ -1,4 +1,4 @@
-import { homeDir } from "@tauri-apps/api/path";
+import { homeDir } from "@/lib/host";
 import { join } from "@/lib/path";
 import { createDir, exists, saveFile } from "@/lib/host";
 import type { FileEntry } from "@/lib/host";

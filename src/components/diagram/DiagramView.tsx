@@ -2,7 +2,7 @@ import "@excalidraw/excalidraw/index.css";
 import { CaptureUpdateAction, Excalidraw, restore, serializeAsJSON } from "@excalidraw/excalidraw";
 import type { ExcalidrawImperativeAPI, ExcalidrawInitialDataState } from "@excalidraw/excalidraw/types";
 import type { OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
-import { listen } from "@tauri-apps/api/event";
+import { listen } from "@/lib/host";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, MessageSquareQuote, RotateCcw, Save } from "lucide-react";
 import { cn } from "@/lib/utils";

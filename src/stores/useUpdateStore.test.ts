@@ -7,20 +7,11 @@ const { checkMock, invokeMock, listenMock, isTauriAvailableMock } = vi.hoisted((
   isTauriAvailableMock: vi.fn(),
 }));
 
-vi.mock("@tauri-apps/plugin-updater", () => ({
-  check: checkMock,
-}));
-
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: invokeMock,
-}));
-
-vi.mock("@tauri-apps/api/event", () => ({
-  listen: listenMock,
-}));
-
 vi.mock("@/lib/host", () => ({
+  invoke: invokeMock,
+  listen: listenMock,
   isTauriAvailable: isTauriAvailableMock,
+  check: checkMock,
 }));
 
 import {

@@ -7,8 +7,8 @@ import {
   useRef,
 } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { getVersion } from "@tauri-apps/api/app";
-import { listen } from "@tauri-apps/api/event";
+import { getVersion } from "@/lib/host";
+import { listen } from "@/lib/host";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
 import { ResizeHandle } from "@/components/toolbar/ResizeHandle";

@@ -9,8 +9,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createLegacyKeyJSONStorage } from "@/lib/persistStorage";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
+import { listen, UnlistenFn } from "@/lib/host";
+import { invoke } from "@/lib/host";
 import { getAIConfig, type AIConfig } from "@/services/ai/ai";
 import { useFileStore } from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";

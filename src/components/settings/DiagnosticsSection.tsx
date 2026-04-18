@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { invoke } from "@tauri-apps/api/core";
+import { saveDialog as save } from "@/lib/host";
+import { writeTextFile } from "@/lib/host";
+import { invoke } from "@/lib/host";
 import { useUIStore } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDebugLogPath } from "@/lib/debugLogger";

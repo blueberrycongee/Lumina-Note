@@ -3,7 +3,7 @@
  * 封装 Tauri 命令调用，提供类型安全的 API
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@/lib/host';
 import type {
   WebDAVConfig,
   RemoteEntry,

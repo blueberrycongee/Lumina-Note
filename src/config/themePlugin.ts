@@ -9,7 +9,7 @@
 
 import { Theme, ThemeColors, applyTheme, OFFICIAL_THEMES } from './themes';
 import { getCurrentTranslations } from '@/stores/useLocaleStore';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@/lib/host';
 
 // 用户主题存储目录（相对于 vault）
 const USER_THEMES_DIR = '.lumina/themes';

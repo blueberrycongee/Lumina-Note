@@ -1,7 +1,7 @@
 import { join } from "@/lib/path";
 import { createDir, exists, readFile, saveFile } from "@/lib/host";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/host";
 
 // ---------------------------------------------------------------------------
 // Types

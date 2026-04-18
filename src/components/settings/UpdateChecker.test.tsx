@@ -3,12 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpdateChecker } from "./UpdateChecker";
 import { useUpdateStore } from "@/stores/useUpdateStore";
 
-vi.mock("@tauri-apps/plugin-process", () => ({
-  relaunch: vi.fn(),
-}));
-
 vi.mock("@/lib/host", () => ({
   isTauriAvailable: () => false,
+  relaunch: vi.fn(),
 }));
 
 type Deferred<T> = {

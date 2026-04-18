@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/host";
 
 // Types matching Rust vault.rs
 export type VaultLayer = "raw" | "wiki" | "schema";

@@ -21,7 +21,7 @@ vi.mock("@/stores/useUIStore", () => ({
 }));
 
 const mockInvoke = vi.fn();
-vi.mock("@tauri-apps/api/core", () => ({
+vi.mock("@/lib/host", () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
 }));
 

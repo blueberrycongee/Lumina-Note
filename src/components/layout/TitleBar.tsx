@@ -4,11 +4,9 @@
  * Mac 上使用原生透明标题栏，只显示拖拽区域
  */
 
-import { isTauri } from "@tauri-apps/api/core";
-import { getCurrentWindow, type Window } from "@tauri-apps/api/window";
 import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { platform } from "@tauri-apps/plugin-os";
+import { isTauri, getCurrentWindow, platform, type Window } from "@/lib/host";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 const isMacByNavigator = (): boolean =>
@@ -35,15 +33,15 @@ export function TitleBar() {
     let disposed = false;
     let unlistenFn: (() => void) | null = null;
 
-    const checkPlatform = () => {
+    const checkPlatform = async () => {
       if (!tauriRuntime) {
         setIsMac(isMacByNavigator());
         return;
       }
       try {
-        const os = platform();
+        const os = await platform();
         if (!disposed) {
-          setIsMac(os === "macos");
+          setIsMac(os === "darwin");
         }
       } catch (e) {
         console.warn("Failed to detect platform:", e);
@@ -66,7 +64,7 @@ export function TitleBar() {
     };
 
     const setup = async () => {
-      checkPlatform();
+      await checkPlatform();
       const appWindow = getWindowSafe();
       await checkMaximized(appWindow);
 

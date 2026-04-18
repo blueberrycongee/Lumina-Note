@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { invoke } from '@tauri-apps/api/core';
-import { readDir as pluginReadDir, rename as pluginRename } from '@tauri-apps/plugin-fs';
+import { invoke } from './hostBridge';
 
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn(),
-}));
-
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  readDir: vi.fn(),
-  rename: vi.fn(),
-}));
+vi.mock('./hostBridge', async () => {
+  const actual = await vi.importActual<typeof import('./hostBridge')>('./hostBridge');
+  return { ...actual, invoke: vi.fn() };
+});
 
 import {
   createFile,
@@ -28,11 +23,9 @@ import {
   writeFile,
 } from './host';
 
-describe('tauri IO wrappers', () => {
+describe('host IO wrappers', () => {
   beforeEach(() => {
     vi.mocked(invoke).mockReset();
-    vi.mocked(pluginReadDir).mockReset();
-    vi.mocked(pluginRename).mockReset();
   });
 
   it('routes readFile through invoke', async () => {
@@ -93,15 +86,15 @@ describe('tauri IO wrappers', () => {
     expect(invoke).toHaveBeenNthCalledWith(7, 'move_folder', { source: '/vault/folder', targetFolder: '/vault/archive' });
   });
 
-  it('uses plugin-fs readDir for non-recursive directory reads', async () => {
-    vi.mocked(pluginReadDir).mockResolvedValueOnce([
+  it('routes non-recursive readDir through plugin:fs|read_dir', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce([
       { name: 'note.md', isDirectory: false },
       { name: 'assets', isDirectory: true },
-    ] as never);
+    ]);
 
     const entries = await readDir('/vault');
 
-    expect(pluginReadDir).toHaveBeenCalledWith('/vault');
+    expect(invoke).toHaveBeenCalledWith('plugin:fs|read_dir', { path: '/vault' });
     expect(entries).toEqual([
       expect.objectContaining({ name: 'note.md', path: '/vault/note.md', is_dir: false }),
       expect.objectContaining({ name: 'assets', path: '/vault/assets', is_dir: true }),
@@ -113,15 +106,17 @@ describe('tauri IO wrappers', () => {
 
     await readDir('/vault', { recursive: true });
 
-    expect(pluginReadDir).not.toHaveBeenCalled();
     expect(invoke).toHaveBeenCalledWith('list_directory', { path: '/vault' });
   });
 
-  it('routes rename through plugin-fs', async () => {
-    vi.mocked(pluginRename).mockResolvedValueOnce(undefined as never);
+  it('routes rename through plugin:fs|rename', async () => {
+    vi.mocked(invoke).mockResolvedValueOnce(undefined);
 
     await rename('/vault/old.md', '/vault/new.md');
 
-    expect(pluginRename).toHaveBeenCalledWith('/vault/old.md', '/vault/new.md');
+    expect(invoke).toHaveBeenCalledWith('plugin:fs|rename', {
+      from: '/vault/old.md',
+      to: '/vault/new.md',
+    });
   });
 });

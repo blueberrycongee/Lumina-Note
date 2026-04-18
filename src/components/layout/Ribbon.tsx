@@ -21,7 +21,7 @@ import {
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
-import { open as openExternal } from "@tauri-apps/plugin-shell";
+import { openExternal } from "@/lib/host";
 
 import { cn } from "@/lib/utils";
 import { exists, isTauriAvailable } from "@/lib/host";

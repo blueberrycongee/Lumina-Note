@@ -5,9 +5,10 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { check, Update } from "@tauri-apps/plugin-updater";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { check } from "@/lib/host";
+import type { Update } from "@/lib/host";
+import { invoke } from "@/lib/host";
+import { listen, UnlistenFn } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { retryWithExponentialBackoff } from "@/lib/retry";
 import { isTauriAvailable } from "@/lib/host";

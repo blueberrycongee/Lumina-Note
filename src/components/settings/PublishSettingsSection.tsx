@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { open as openExternal } from "@tauri-apps/plugin-shell";
+import { openDialog } from "@/lib/host";
+import { openExternal } from "@/lib/host";
 import { Cloud, Copy, Check, Loader2 } from "lucide-react";
 import type { FileEntry } from "@/lib/host";
 import { useLocaleStore } from "@/stores/useLocaleStore";

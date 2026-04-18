@@ -13,9 +13,6 @@ vi.mock("@/services/openclaw/workspace", () => ({
 
 vi.mock("@/lib/host", () => ({
   listDirectory: listDirectoryMock,
-}));
-
-vi.mock("@tauri-apps/api/core", () => ({
   invoke: invokeMock,
 }));
 

@@ -106,13 +106,10 @@ vi.mock("@/stores/useUpdateStore", () => ({
   hasActionableTerminalInstallPhase: () => false,
 }));
 
-vi.mock("@tauri-apps/plugin-shell", () => ({
-  open: async () => undefined,
-}));
-
 vi.mock("@/lib/host", () => ({
   exists: async () => false,
   isTauriAvailable: () => true,
+  openExternal: async () => undefined,
 }));
 
 vi.mock("@/components/plugins/InstalledPluginsModal", () => ({

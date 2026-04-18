@@ -6,7 +6,7 @@
  * publish lifecycle (status / confirm / unpublish).
  */
 
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '@/lib/host';
 import { tauriFetchJson } from '@/lib/tauriFetch';
 import { readFile, readDir } from '@/lib/host';
 import type { WebDAVConfig } from '@/services/webdav/types';

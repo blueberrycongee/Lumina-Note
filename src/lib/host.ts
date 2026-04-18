@@ -1,18 +1,13 @@
 /**
  * Host facade — the renderer's single entry point for talking to the main
- * process. Replaces `src/lib/tauri.ts`. Low-level invoke/listen/Channel/
- * Resource live in `src/lib/hostBridge.ts`; this file imports them via the
- * aliased `@tauri-apps/api/core` specifier so existing
- * `vi.mock('@tauri-apps/api/core', ...)` tests keep working.
+ * process. Low-level invoke/listen/Channel/Resource live in
+ * `src/lib/hostBridge.ts`, which is the alias target for the last
+ * `@tauri-apps/*` identifiers that transitive code still references.
  */
 
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./hostBridge";
 import type { SkillDetail, SkillInfo } from "@/types/skills";
 import type { PluginEntry, PluginInfo } from "@/types/plugins";
-import {
-  readDir as tauriReadDir,
-  rename as tauriRename,
-} from "@tauri-apps/plugin-fs";
 
 // Re-export bridge primitives so call sites that imported from
 // `@/lib/tauri` (isTauriAvailable, getVersion, listen, Channel, Resource, ...)
@@ -127,7 +122,10 @@ export async function readDir(
     return listDirectory(path);
   }
 
-  const entries = await tauriReadDir(path);
+  const entries = await invoke<Array<{ name: string; isDirectory: boolean }>>(
+    "plugin:fs|read_dir",
+    { path },
+  );
   return entries.map((entry) => ({
     name: entry.name,
     path: `${path}/${entry.name}`,
@@ -141,7 +139,151 @@ export async function readDir(
 }
 
 export async function rename(oldPath: string, newPath: string): Promise<void> {
-  return tauriRename(oldPath, newPath);
+  return invoke("plugin:fs|rename", { from: oldPath, to: newPath });
+}
+
+// ── plugin-fs-compatible helpers (binary/text IO + stat) ──────────────────
+export interface FileStat {
+  size: number;
+  mtime: Date | null;
+  atime: Date | null;
+  birthtime: Date | null;
+  isFile: boolean;
+  isDirectory: boolean;
+  isSymlink: boolean;
+}
+
+export async function readBinaryFile(path: string): Promise<Uint8Array> {
+  const raw = await invoke<number[] | Uint8Array>("plugin:fs|read_file", { path });
+  return raw instanceof Uint8Array ? raw : new Uint8Array(raw);
+}
+
+export async function writeTextFile(
+  path: string,
+  contents: string,
+): Promise<void> {
+  return invoke("plugin:fs|write_text_file", { path, contents });
+}
+
+export async function fsStat(path: string): Promise<FileStat> {
+  const raw = await invoke<{
+    size: number;
+    mtime: string | number | null;
+    atime: string | number | null;
+    birthtime: string | number | null;
+    isFile: boolean;
+    isDirectory: boolean;
+    isSymlink: boolean;
+  }>("plugin:fs|stat", { path });
+  const toDate = (v: string | number | null): Date | null => {
+    if (v == null) return null;
+    const d = typeof v === "number" ? new Date(v) : new Date(v);
+    return Number.isFinite(d.getTime()) ? d : null;
+  };
+  return {
+    size: raw.size,
+    mtime: toDate(raw.mtime),
+    atime: toDate(raw.atime),
+    birthtime: toDate(raw.birthtime),
+    isFile: raw.isFile,
+    isDirectory: raw.isDirectory,
+    isSymlink: raw.isSymlink,
+  };
+}
+
+// ── plugin-dialog save ────────────────────────────────────────────────────
+export type SaveDialogOptions = {
+  filters?: DialogFilter[];
+  defaultPath?: string;
+  title?: string;
+};
+
+export async function saveDialog(
+  options: SaveDialogOptions = {},
+): Promise<string | null> {
+  return invoke<string | null>("plugin:dialog|save", { options });
+}
+
+// ── plugin-os ─────────────────────────────────────────────────────────────
+export async function platform(): Promise<NodeJS.Platform> {
+  return invoke<NodeJS.Platform>("plugin:os|platform");
+}
+
+// ── plugin-process ────────────────────────────────────────────────────────
+export async function relaunch(): Promise<void> {
+  return invoke("plugin:process|relaunch");
+}
+
+// ── plugin-shell ──────────────────────────────────────────────────────────
+export async function openExternal(url: string): Promise<void> {
+  return invoke("plugin:shell|open", { path: url });
+}
+
+// ── plugin-updater ────────────────────────────────────────────────────────
+export interface UpdateCheckResult {
+  available: boolean;
+  version: string;
+  body: string | null;
+  date: string | null;
+  /**
+   * Legacy Tauri handle; only populated when running under Tauri. Electron
+   * drives installs through the resumable IPCs (`startResumableInstall`) so
+   * this function is never called at runtime on Electron.
+   */
+  downloadAndInstall: (
+    onEvent?: (e: {
+      event: string;
+      data?: { contentLength?: number; chunkLength?: number };
+    }) => void,
+    options?: { timeout?: number },
+  ) => Promise<void>;
+}
+export type Update = UpdateCheckResult;
+
+// ── Window controls ──────────────────────────────────────────────────────
+// Stubs that match @tauri-apps/api/window's surface. All consumers gate
+// their usage with isTauri(), which returns false in the Electron renderer,
+// so these methods are never actually executed today. They exist purely to
+// keep imports resolvable without pulling @tauri-apps/api as a dep.
+export interface HostWindow {
+  isMaximized(): Promise<boolean>;
+  onResized(cb: () => void): Promise<() => void>;
+  startDragging(): Promise<void>;
+  minimize(): Promise<void>;
+  toggleMaximize(): Promise<void>;
+  close(): Promise<void>;
+}
+export type Window = HostWindow;
+
+export function getCurrentWindow(): HostWindow {
+  return {
+    async isMaximized() { return false; },
+    async onResized() { return () => {}; },
+    async startDragging() { /* no-op */ },
+    async minimize() { /* no-op */ },
+    async toggleMaximize() { /* no-op */ },
+    async close() { /* no-op */ },
+  };
+}
+
+export async function check(
+  _options?: { timeout?: number },
+): Promise<Update | null> {
+  const result = await invoke<
+    | { available: boolean; version: string; body: string | null; date: string | null }
+    | null
+  >("plugin:updater|check");
+  if (!result) return null;
+  return {
+    ...result,
+    available: result.available ?? true,
+    async downloadAndInstall() {
+      // Legacy Tauri fallback — no-op on Electron. Resumable IPCs handle installs.
+      throw new Error(
+        "downloadAndInstall is not available on Electron; use startResumableInstall instead.",
+      );
+    },
+  };
 }
 
 export async function moveFile(
@@ -216,6 +358,19 @@ export async function scaffoldWorkspaceUiOverhaulPlugin(): Promise<string> {
 
 export async function startFileWatcher(watchPath: string): Promise<void> {
   return invoke("start_file_watcher", { watchPath });
+}
+
+// ── plugin:path helpers (formerly @tauri-apps/api/path) ────────────────────
+export async function homeDir(): Promise<string> {
+  return invoke<string>("plugin:path|home_dir");
+}
+
+export async function tempDir(): Promise<string> {
+  return invoke<string>("plugin:path|temp_dir");
+}
+
+export async function join(...parts: string[]): Promise<string> {
+  return invoke<string>("plugin:path|join", { parts });
 }
 
 export async function estimateDirSize(

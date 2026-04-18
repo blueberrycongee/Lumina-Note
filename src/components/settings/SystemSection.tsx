@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getVersion } from "@tauri-apps/api/app";
+import { getVersion } from "@/lib/host";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { DiagnosticsSection } from "./DiagnosticsSection";
 

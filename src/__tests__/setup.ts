@@ -84,9 +84,19 @@ if (typeof window !== "undefined") {
   };
 }
 
-// Mock Tauri API - 智能 Mock，根据命令名返回模拟数据
-vi.mock('@tauri-apps/api/core', () => ({
-  invoke: vi.fn((cmd: string, args?: unknown) => {
+// Mock low-level host bridge so BOTH @/lib/host re-exports AND the internal
+// calls inside @/lib/host's helpers (which import invoke from ./hostBridge)
+// route through the same mock.
+vi.mock('@/lib/hostBridge', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/hostBridge')>(
+    '@/lib/hostBridge',
+  );
+  return {
+    ...actual,
+    isTauriAvailable: vi.fn(() => false),
+    isTauri: vi.fn(() => false),
+    listen: vi.fn(() => Promise.resolve(() => {})),
+    invoke: vi.fn((cmd: string, args?: unknown) => {
     // 根据命令名返回模拟数据
     const mockResponses: Record<string, unknown> = {
       // 文件操作
@@ -117,50 +127,17 @@ vi.mock('@tauri-apps/api/core', () => ({
     if (response !== undefined) {
       return Promise.resolve(response);
     }
-    
+
     // 默认返回 null
     console.log(`[Mock invoke] 未处理的命令: ${cmd}`, args);
     return Promise.resolve(null);
-  }),
-  isTauri: vi.fn(() => false),
-}));
-
-vi.mock('@tauri-apps/api/event', () => ({
-  listen: vi.fn(() => Promise.resolve(() => {})),
-  emit: vi.fn(),
-}));
-
-vi.mock('@tauri-apps/plugin-fs', () => ({
-  readTextFile: vi.fn(),
-  writeTextFile: vi.fn(),
-  writeFile: vi.fn(),
-  mkdir: vi.fn(),
-  exists: vi.fn(),
-  readDir: vi.fn(),
-  remove: vi.fn(),
-  rename: vi.fn(),
-  stat: vi.fn(),
-}));
-
-vi.mock('@tauri-apps/plugin-dialog', () => ({
-  open: vi.fn(),
-  save: vi.fn(),
-  message: vi.fn(),
-  confirm: vi.fn(),
-}));
-
-vi.mock('@tauri-apps/plugin-shell', () => ({
-  open: vi.fn(),
-}));
+    }),
+  };
+});
 
 // pdfjs-dist depends on browser-only APIs (e.g. DOMMatrix) that jsdom doesn't provide.
 // Components import this module for side-effects; no-op it for unit tests.
 vi.mock('@/pdfWorker', () => ({}));
-
-vi.mock('@tauri-apps/api/path', () => ({
-  join: vi.fn((...parts: string[]) => Promise.resolve(parts.join("\\"))),
-  tempDir: vi.fn(() => Promise.resolve("C:\\Temp")),
-}));
 
 // Global test utilities
 class MockResizeObserver {

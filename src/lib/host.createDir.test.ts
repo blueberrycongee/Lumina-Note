@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "./hostBridge";
 
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn(),
-}));
+vi.mock("./hostBridge", async () => {
+  const actual = await vi.importActual<typeof import("./hostBridge")>("./hostBridge");
+  return { ...actual, invoke: vi.fn() };
+});
 
 import { createDir } from "./host";
 

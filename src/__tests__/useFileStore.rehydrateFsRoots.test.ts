@@ -64,7 +64,7 @@ describe("useFileStore rehydrate runtime fs roots", () => {
       const callOrder: string[] = [];
       let rootsSynced = false;
 
-      const { invoke } = await import("@tauri-apps/api/core");
+      const { invoke } = await import("@/lib/hostBridge");
       vi.mocked(invoke).mockImplementation(async (cmd: string, args?: unknown) => {
         callOrder.push(cmd);
 

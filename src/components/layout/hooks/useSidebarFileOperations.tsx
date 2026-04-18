@@ -16,7 +16,7 @@ import {
   openNewWindow,
   saveFile,
 } from "@/lib/host";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { FolderOpen, AppWindow, Shapes, Star, StarOff } from "lucide-react";
 import type { MenuItem } from "../../toolbar/ContextMenu";

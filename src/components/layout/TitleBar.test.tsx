@@ -19,23 +19,15 @@ const tauriMocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@tauri-apps/api/core", async () => {
-  const actual = await vi.importActual<typeof import("@tauri-apps/api/core")>(
-    "@tauri-apps/api/core",
-  );
+vi.mock("@/lib/host", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
   return {
     ...actual,
     isTauri: tauriMocks.isTauri,
+    getCurrentWindow: tauriMocks.getCurrentWindow,
+    platform: tauriMocks.platform,
   };
 });
-
-vi.mock("@tauri-apps/api/window", () => ({
-  getCurrentWindow: tauriMocks.getCurrentWindow,
-}));
-
-vi.mock("@tauri-apps/plugin-os", () => ({
-  platform: tauriMocks.platform,
-}));
 
 describe("TitleBar", () => {
   beforeEach(() => {
@@ -73,7 +65,7 @@ describe("TitleBar", () => {
 
   it("renders no web title bar chrome on macOS tauri windows", async () => {
     tauriMocks.isTauri.mockReturnValue(true);
-    tauriMocks.platform.mockReturnValue("macos");
+    tauriMocks.platform.mockReturnValue("darwin");
 
     const { container } = render(<TitleBar />);
 
