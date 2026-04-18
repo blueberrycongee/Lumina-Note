@@ -78,6 +78,8 @@ CLAUDE.md
 skills/
 !src-tauri/resources/skills/
 !src-tauri/resources/skills/**
+!electron/main/agent/skills/
+!electron/main/agent/skills/**
 tmp.txt
 .plan-loop/
 scripts/plan-loop*.ps1

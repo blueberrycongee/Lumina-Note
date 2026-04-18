@@ -12,6 +12,7 @@ import { startFileWatcher } from './handlers/watcher.js'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
+import type { SkillLoader } from './agent/skills/loader.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
@@ -66,10 +67,11 @@ export interface IpcHandlersOptions {
   agentRuntime: AgentRuntime
   debugLog?: DebugLog
   providerSettings?: ProviderSettingsStore
+  skillLoader?: SkillLoader
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
-  const { getMainWindow, agentRuntime, debugLog, providerSettings } = options
+  const { getMainWindow, agentRuntime, debugLog, providerSettings, skillLoader } = options
 
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
@@ -96,7 +98,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
     if (isAgentCommand(cmd)) {
       return dispatchAgentCommand(
-        { runtime: agentRuntime, debugLog, providerSettings },
+        { runtime: agentRuntime, debugLog, providerSettings, skillLoader },
         cmd,
         args,
       )

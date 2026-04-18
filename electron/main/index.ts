@@ -14,6 +14,7 @@ import {
   type SecretStore,
 } from './agent/providers/settings-store.js'
 import { AgentRuntime } from './agent/runtime.js'
+import { SkillLoader } from './agent/skills/loader.js'
 import type { ProviderInterface } from './agent/types.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -130,11 +131,13 @@ app.whenReady().then(() => {
     memoryStore,
     providerSelector,
   })
+  const skillLoader = new SkillLoader()
   registerIpcHandlers({
     getMainWindow,
     agentRuntime,
     debugLog,
     providerSettings,
+    skillLoader,
   })
   buildMenu()
   createWindow()

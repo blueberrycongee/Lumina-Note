@@ -18,6 +18,7 @@ import type {
 } from './providers/settings-store.js'
 import { testProviderConnection } from './providers/test-connection.js'
 import type { AgentRuntime } from './runtime.js'
+import type { SkillLoader } from './skills/loader.js'
 import type {
   ApprovalDecision,
   ApproveToolRequest,
@@ -64,6 +65,7 @@ export interface AgentDispatchContext {
   runtime: AgentRuntime
   debugLog?: DebugLog
   providerSettings?: ProviderSettingsStore
+  skillLoader?: SkillLoader
 }
 
 export function isAgentCommand(cmd: string): boolean {
@@ -75,7 +77,7 @@ export async function dispatchAgentCommand(
   cmd: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const { runtime, debugLog, providerSettings } = ctx
+  const { runtime, debugLog, providerSettings, skillLoader } = ctx
   switch (cmd) {
     case 'agent_start_task': {
       const payload = args as unknown as StartTaskRequest
@@ -199,11 +201,25 @@ export async function dispatchAgentCommand(
       )
     }
 
-    // Skills — Phase 3.4 接入 SkillLoader
-    case 'agent_list_skills':
-      return []
-    case 'agent_read_skill':
-      return { name: '', content: '', path: '' }
+    // Skills — Phase 3.4 SkillLoader
+    case 'agent_list_skills': {
+      if (!skillLoader) return []
+      const { workspace_path } = args as { workspace_path?: string }
+      if (!workspace_path) return []
+      return skillLoader.listSkills(workspace_path)
+    }
+    case 'agent_read_skill': {
+      if (!skillLoader) return null
+      const { name, workspace_path } = args as {
+        name?: string
+        workspace_path?: string
+      }
+      if (!name || !workspace_path) return null
+      const detail = await skillLoader.readSkill(workspace_path, name)
+      if (!detail) return null
+      // Renderer expects SkillDetail = { info, prompt, markdown }
+      return detail
+    }
 
     // Vault — Phase 6 接入 wiki/vault 管理
     case 'vault_initialize':
