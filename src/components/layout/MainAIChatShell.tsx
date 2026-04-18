@@ -93,10 +93,20 @@ export function MainAIChatShell() {
   const autoSendMessageRef = useRef<string | null>(null);
   const reduceMotion = useReducedMotion();
 
-  // Auto-resize textarea to fit content
+  // Auto-resize textarea to fit content.
+  //
+  // Only pin a height when the textarea actually has text. An empty textarea
+  // falls back to its CSS `rows={1}` resting height so a placeholder that
+  // wrapped during initial layout (container width not yet stable, fallback
+  // font not yet swapped to the final one) can't leak into a pinned height
+  // that the user then sees as a "giant chunky input box" on cold start.
   const autoResizeTextarea = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
+    if (el.value.length === 0) {
+      el.style.height = "";
+      return;
+    }
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, []);
@@ -104,6 +114,34 @@ export function MainAIChatShell() {
   useLayoutEffect(() => {
     autoResizeTextarea();
   }, [input, autoResizeTextarea]);
+
+  // Re-measure after fonts finish loading (first paint's fallback font has
+  // different metrics) and whenever the textarea's width changes (sidebar
+  // toggles, window resize, or the welcome-section spacer settling in).
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+
+    let rafId: number | null = null;
+    const scheduleResize = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        autoResizeTextarea();
+      });
+    };
+
+    const ro = new ResizeObserver(scheduleResize);
+    ro.observe(el);
+
+    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts;
+    fonts?.ready?.then(scheduleResize).catch(() => undefined);
+
+    return () => {
+      ro.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [autoResizeTextarea]);
 
   // Extracted hooks
   const {
