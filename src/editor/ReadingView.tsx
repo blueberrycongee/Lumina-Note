@@ -201,7 +201,10 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
   return (
     <div
       ref={containerRef}
-      className={`reading-view prose prose-neutral dark:prose-invert max-w-none ${className}`}
+      // Match the live/source editor's centered 760px text column so the
+      // reading-mode layout doesn't visibly shift when the user toggles
+      // modes, and stays identical as sidebars collapse/expand.
+      className={`reading-view prose prose-neutral dark:prose-invert max-w-[760px] mx-auto ${className}`}
       dangerouslySetInnerHTML={{ __html: html }}
       onClick={handleClick}
     />

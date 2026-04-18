@@ -129,11 +129,30 @@ const createEditorTheme = (fontSize: number) =>
         "0 0 0 1px hsl(var(--border) / 0.08), 0 10px 24px -18px hsl(var(--foreground) / 0.28)",
     },
     ".cm-codeblock-widget pre": { fontSize: `${Math.max(10, fontSize - 2)}px` },
+
+    // Keep the text column at a stable, readable width no matter what the
+    // main-area width is. When a sidebar collapses the editor's main pane
+    // jumps in width, but the text column stays at 760px and floats into
+    // the middle of whatever pane it's in, so line wrapping and selection
+    // shape stay identical across the three common layouts (both panes
+    // open / left collapsed / right collapsed). Only the empty space to
+    // either side of the text changes.
+    //
+    // 760px ≈ 80 characters at 14px — the upper end of the typographically
+    // recommended 60–80 char reading width, with headroom for CJK text
+    // (which is denser per line).
+    //
+    // margin: 0 auto (instead of justify-content on the scroller) means
+    // if gutters get added later, they still sit at the left edge and the
+    // content floats toward the center on its own.
     ".cm-content": {
       fontFamily:
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       padding: "16px 0",
       caretColor: "hsl(var(--foreground))",
+      maxWidth: "760px",
+      marginLeft: "auto",
+      marginRight: "auto",
     },
     ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
     ".cm-line": {
