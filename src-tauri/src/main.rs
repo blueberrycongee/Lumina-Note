@@ -51,10 +51,6 @@ fn main() {
             commands::move_folder,
             commands::show_in_explorer,
             commands::open_new_window,
-            commands::get_bilibili_cid,
-            commands::get_bilibili_danmaku,
-            commands::fill_danmaku_prefix,
-            commands::setup_danmaku_autofill,
             commands::start_file_watcher,
             // LLM HTTP client
             llm::llm_fetch,

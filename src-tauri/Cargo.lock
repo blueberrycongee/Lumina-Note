@@ -2223,7 +2223,6 @@ dependencies = [
  "bincode",
  "block2",
  "chrono",
- "flate2",
  "forge",
  "futures-util",
  "globset",
