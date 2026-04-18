@@ -14,6 +14,7 @@ import { createWebDAVHandlers } from './handlers/webdav.js'
 import { createProxyHandlers } from './handlers/proxy.js'
 import { createUpdaterHandlers } from './handlers/updater.js'
 import { createDiagnosticsHandlers } from './handlers/diagnostics.js'
+import { createPluginsHandlers } from './handlers/plugins.js'
 import { session } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { AgentRuntime } from './agent/runtime.js'
@@ -31,15 +32,9 @@ function notImplemented(cmd: string) {
   return null
 }
 
-// ── Skills / Plugins stubs ──────────────────────────────────────────────────
-// agent_*/vault_* 走 agent/ipc-dispatch.ts,不在这里
+// ── DocTools stubs (Phase 7.7 will decide keep/delete) ─────────────────────
+// plugin_*/agent_*/vault_* 走对应 handler,不在这里
 const skillPluginStubs: Record<string, () => unknown> = {
-  plugin_list: () => [],
-  plugin_read_entry: () => null,
-  plugin_get_workspace_dir: () => '',
-  plugin_scaffold_example: () => '',
-  plugin_scaffold_theme: () => '',
-  plugin_scaffold_ui_overhaul: () => '',
   doc_tools_get_status: () => ({ installed: false, version: null, rootDir: null, binDir: null, tools: {}, missing: [] }),
   doc_tools_install_latest: () => { throw new Error('doc tools not available in Electron build yet') },
 }
@@ -101,6 +96,14 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     },
   })
 
+  const pluginsHandlers = createPluginsHandlers({
+    userPluginsDir: path.join(app.getPath('userData'), 'plugins'),
+    fallbackPluginsDir: path.join(app.getPath('userData'), 'global-plugins'),
+    builtinPluginsDir: process.resourcesPath
+      ? path.join(process.resourcesPath, 'plugins')
+      : null,
+  })
+
   const diagnosticsHandlers = createDiagnosticsHandlers({
     getAppInfo: () => ({
       version: app.getVersion(),
@@ -149,6 +152,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
     // ── Diagnostics ─────────────────────────────────────────────────────
     if (cmd in diagnosticsHandlers) return diagnosticsHandlers[cmd](args)
+
+    // ── Plugins ─────────────────────────────────────────────────────────
+    if (cmd in pluginsHandlers) return pluginsHandlers[cmd](args)
 
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
     if (isAgentCommand(cmd)) {
