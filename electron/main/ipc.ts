@@ -11,6 +11,8 @@ import { platformHandlers } from './handlers/platform.js'
 import { storeHandlers } from './handlers/store.js'
 import { startFileWatcher } from './handlers/watcher.js'
 import { createWebDAVHandlers } from './handlers/webdav.js'
+import { createProxyHandlers } from './handlers/proxy.js'
+import { session } from 'electron'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
@@ -26,10 +28,8 @@ function notImplemented(cmd: string) {
   return null
 }
 
-// ── Proxy / diagnostics stubs ───────────────────────────────────────────────
+// ── Diagnostics stub (Phase 7.4 will replace this with a real handler) ─────
 const miscStubs: Record<string, () => unknown> = {
-  set_proxy_config: () => null,
-  test_proxy_connection: () => ({ success: true, latency_ms: 0 }),
   export_diagnostics: () => null,
 }
 
@@ -94,6 +94,15 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     configPath: path.join(app.getPath('userData'), 'lumina-webdav-config.json'),
   })
 
+  const proxyHandlers = createProxyHandlers({
+    configPath: path.join(app.getPath('userData'), 'lumina-proxy.json'),
+    session: {
+      async setProxy(rules) {
+        await session.defaultSession.setProxy(rules)
+      },
+    },
+  })
+
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? getMainWindow()
@@ -115,6 +124,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
     // ── WebDAV ──────────────────────────────────────────────────────────
     if (cmd in webdavHandlers) return webdavHandlers[cmd](args)
+
+    // ── Proxy ───────────────────────────────────────────────────────────
+    if (cmd in proxyHandlers) return proxyHandlers[cmd](args)
 
     // ── Misc stubs ───────────────────────────────────────────────────────
     if (cmd in miscStubs) return miscStubs[cmd]()
