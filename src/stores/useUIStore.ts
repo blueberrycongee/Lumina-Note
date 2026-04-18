@@ -68,14 +68,6 @@ interface UIState {
   setSplitView: (open: boolean) => void;
   setSplitDirection: (dir: "horizontal" | "vertical") => void;
 
-  // Video note view
-  videoNoteOpen: boolean;
-  videoNoteUrl: string | null;
-  setVideoNoteOpen: (open: boolean) => void;
-  setVideoNoteUrl: (url: string | null) => void;
-  openVideoNote: (url: string) => void;
-  toggleVideoNote: () => void;
-
   // Settings modal
   isSettingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
@@ -214,15 +206,6 @@ export const useUIStore = create<UIState>()(
       setSplitView: (open) => set({ splitView: open }),
       setSplitDirection: (dir) => set({ splitDirection: dir }),
 
-      // Video note
-      videoNoteOpen: false,
-      videoNoteUrl: null,
-      setVideoNoteOpen: (open) => set({ videoNoteOpen: open }),
-      setVideoNoteUrl: (url) => set({ videoNoteUrl: url }),
-      openVideoNote: (url) => set({ videoNoteUrl: url, videoNoteOpen: true }),
-      toggleVideoNote: () =>
-        set((state) => ({ videoNoteOpen: !state.videoNoteOpen })),
-
       // Settings modal
       isSettingsOpen: false,
       setSettingsOpen: (open) => set({ isSettingsOpen: open }),
@@ -274,10 +257,7 @@ export const useUIStore = create<UIState>()(
         ) {
           state.chatMode = "agent";
         }
-        // 强制重置视频笔记状态（不应从 localStorage 恢复）
         if (state) {
-          state.videoNoteOpen = false;
-          state.videoNoteUrl = null;
           state.isSettingsOpen = false;
           state.isSkillManagerOpen = false;
           state.floatingPanelOpen = false;

@@ -50,32 +50,12 @@ fn main() {
             commands::move_file,
             commands::move_folder,
             commands::show_in_explorer,
-            commands::open_video_window,
-            commands::close_video_window,
-            commands::get_video_time,
-            commands::sync_video_time,
-            commands::create_embedded_webview,
-            commands::update_webview_bounds,
-            commands::close_embedded_webview,
             commands::open_new_window,
             commands::get_bilibili_cid,
             commands::get_bilibili_danmaku,
-            commands::seek_video_time,
             commands::fill_danmaku_prefix,
             commands::setup_danmaku_autofill,
             commands::start_file_watcher,
-            // Browser WebView commands
-            commands::create_browser_webview,
-            commands::update_browser_webview_bounds,
-            commands::close_browser_webview,
-            commands::navigate_browser_webview,
-            commands::browser_webview_go_back,
-            commands::browser_webview_go_forward,
-            commands::browser_webview_reload,
-            commands::set_browser_webview_visible,
-            commands::browser_webview_freeze,
-            commands::browser_webview_unfreeze,
-            commands::browser_webview_exists,
             // LLM HTTP client
             llm::llm_fetch,
             llm::llm_fetch_stream,
@@ -156,7 +136,6 @@ fn main() {
         .manage(agent::AgentState::new())
         .manage(cloud_relay::CloudRelayState::new())
         .manage(update_manager::UpdateManagerState::default())
-        .manage(commands::ChildWebviewBoundsState::default())
         .manage(proxy::ProxyState::new())
         .setup(|app| {
             doc_tools::ensure_doc_tools_env(&app.handle());

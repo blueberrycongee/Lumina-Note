@@ -130,14 +130,4 @@ describe("TabBar", () => {
 
     expect(container.querySelector("svg.lucide-file-text")?.getAttribute("class")).toContain("text-primary/50");
   });
-
-  it("uses the stronger indigo database icon color for database tabs", () => {
-    fileStoreState.tabs = [
-      { id: "tab-3", name: "Projects.db.json", type: "database", isPinned: false, isDirty: false },
-    ];
-
-    const { container } = render(<TabBar />);
-
-    expect(container.querySelector("svg.lucide-database")?.getAttribute("class")).toContain("text-indigo-500");
-  });
 });

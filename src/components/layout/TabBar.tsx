@@ -2,7 +2,7 @@ import { useCallback, useState, useRef } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { X, FileText, Network, Video, Database, Globe, Brain, Pin, User, Puzzle, Shapes, Images } from "lucide-react";
+import { X, FileText, Network, Pin, User, Puzzle, Shapes, Images } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
@@ -62,22 +62,14 @@ function TabItem({
     >
       {tab.type === "graph" || tab.type === "isolated-graph" ? (
         <Network size={12} className="shrink-0 text-primary" />
-      ) : tab.type === "video-note" ? (
-        <Video size={12} className="shrink-0 text-red-500" />
-      ) : tab.type === "database" ? (
-        <Database size={12} className="shrink-0 text-indigo-500" />
       ) : tab.type === "pdf" ? (
         <FileText size={12} className="shrink-0 text-red-500" />
       ) : tab.type === "diagram" ? (
         <Shapes size={12} className="shrink-0 text-cyan-500" />
-      ) : tab.type === "webpage" ? (
-        <Globe size={12} className="shrink-0 text-blue-500" />
       ) : tab.type === "profile-preview" ? (
         <User size={12} className="shrink-0 text-emerald-500" />
       ) : tab.type === "plugin-view" ? (
         <Puzzle size={12} className="shrink-0 text-cyan-500" />
-      ) : tab.type === "flashcard" ? (
-        <Brain size={12} className="shrink-0 text-purple-500" />
       ) : tab.type === "image-manager" ? (
         <Images size={12} className="shrink-0 text-emerald-500" />
       ) : (
@@ -156,34 +148,6 @@ export function TabBar() {
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
       const tab = tabs[index];
-      // 如果关闭的是视频标签页，同时关闭 WebView
-      if (tab?.type === "video-note") {
-        void import('@tauri-apps/api/core').then(({ invoke }) => {
-          void invoke('close_embedded_webview').catch((error) => {
-            reportOperationError({
-              source: "TabBar.handleClose",
-              action: "Close embedded video webview",
-              error,
-              level: "warning",
-              context: { tabId: tab.id },
-            });
-          });
-        });
-      }
-      // 如果关闭的是网页标签页，同时关闭浏览器 WebView
-      if (tab?.type === "webpage") {
-        void import('@tauri-apps/api/core').then(({ invoke }) => {
-          void invoke('close_browser_webview', { tabId: tab.id }).catch((error) => {
-            reportOperationError({
-              source: "TabBar.handleClose",
-              action: "Close browser webview for tab",
-              error,
-              level: "warning",
-              context: { tabId: tab.id },
-            });
-          });
-        });
-      }
       void closeTab(index).catch((error) => {
         reportOperationError({
           source: "TabBar.handleClose",

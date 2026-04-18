@@ -656,22 +656,6 @@ export const useFileStore = create<FileState>()(
           await saveFile(tabs[index].path, tabs[index].content);
         }
 
-        // 如果是网页标签页，关闭对应的 WebView
-        if (tabToClose.type === "webpage") {
-          try {
-            await invoke("close_browser_webview", { tabId: tabToClose.id });
-            console.log("[FileStore] 关闭 WebView:", tabToClose.id);
-          } catch (err) {
-            reportOperationError({
-              source: "FileStore.closeTab",
-              action: "Close browser webview",
-              error: err,
-              level: "warning",
-              context: { tabId: tabToClose.id },
-            });
-          }
-        }
-
         const newTabs = tabs.filter((_, i) => i !== index);
 
         if (newTabs.length === 0) {

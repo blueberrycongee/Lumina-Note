@@ -13,9 +13,7 @@ import {
   Settings,
   Sun,
   Moon,
-  Video,
   Bot,
-  Globe,
   Images,
   Star,
   Download,
@@ -94,17 +92,7 @@ export function Ribbon({
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
   // 归一化当前主视图所属的功能区，方便扩展
-  type RibbonSection =
-    | "ai"
-    | "file"
-    | "graph"
-    | "video"
-    | "database"
-    | "browser"
-    | "flashcard"
-    | "cardflow"
-    | "image-manager"
-    | "none";
+  type RibbonSection = "ai" | "file" | "graph" | "image-manager" | "none";
 
   let activeSection: RibbonSection = "none";
   if (activeTab?.type === "ai-chat") {
@@ -114,16 +102,6 @@ export function Ribbon({
     activeTab?.type === "isolated-graph"
   ) {
     activeSection = "graph";
-  } else if (activeTab?.type === "video-note") {
-    activeSection = "video";
-  } else if (activeTab?.type === "database") {
-    activeSection = "database";
-  } else if (activeTab?.type === "webpage") {
-    activeSection = "browser";
-  } else if (activeTab?.type === "flashcard") {
-    activeSection = "flashcard";
-  } else if (activeTab?.type === "cardflow") {
-    activeSection = "cardflow";
   } else if (activeTab?.type === "image-manager") {
     activeSection = "image-manager";
   } else if (activeTab?.type === "file" || currentFile) {
@@ -200,8 +178,6 @@ export function Ribbon({
   );
 
   const renderPluginRibbonIcon = (item: PluginRibbonItem) => {
-    if (item.iconName === "video") return <Video size={18} />;
-    if (item.iconName === "browser") return <Globe size={18} />;
     return <span>{item.icon || "◎"}</span>;
   };
 

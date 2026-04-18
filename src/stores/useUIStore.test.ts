@@ -85,15 +85,12 @@ describe("useUIStore", () => {
     useUIStore.getState().setFloatingPanelOpen(true);
     useUIStore.getState().setFloatingBallDragging(true);
     useUIStore.getState().setFloatingBallPosition({ x: 120, y: 340 });
-    useUIStore.getState().openVideoNote("https://example.com/video");
 
     const persisted = parsePersistedState("lumina-ui");
     expect(persisted.isSettingsOpen).toBeUndefined();
     expect(persisted.floatingPanelOpen).toBeUndefined();
     expect(persisted.isFloatingBallDragging).toBeUndefined();
     expect(persisted.floatingBallPosition).toBeUndefined();
-    expect(persisted.videoNoteOpen).toBeUndefined();
-    expect(persisted.videoNoteUrl).toBeUndefined();
   });
 
   it("migrates legacy neurone-ui storage into lumina-ui", async () => {
