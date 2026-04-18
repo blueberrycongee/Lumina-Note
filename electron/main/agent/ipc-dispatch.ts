@@ -25,6 +25,7 @@ import type {
   ApproveToolRequest,
   StartTaskRequest,
 } from './types.js'
+import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
 
 /**
  * 解析 agent_approve_tool 的入参,兼容新旧 schema:
@@ -68,10 +69,16 @@ export interface AgentDispatchContext {
   providerSettings?: ProviderSettingsStore
   skillLoader?: SkillLoader
   mcpManager?: McpManager
+  wikiSettings?: WikiSettingsStore
 }
 
 export function isAgentCommand(cmd: string): boolean {
-  return cmd.startsWith('agent_') || cmd.startsWith('vault_') || cmd.startsWith('mcp_')
+  return (
+    cmd.startsWith('agent_') ||
+    cmd.startsWith('vault_') ||
+    cmd.startsWith('mcp_') ||
+    cmd.startsWith('wiki_')
+  )
 }
 
 export async function dispatchAgentCommand(
@@ -79,7 +86,7 @@ export async function dispatchAgentCommand(
   cmd: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
-  const { runtime, debugLog, providerSettings, skillLoader, mcpManager } = ctx
+  const { runtime, debugLog, providerSettings, skillLoader, mcpManager, wikiSettings } = ctx
   switch (cmd) {
     case 'agent_start_task': {
       const payload = args as unknown as StartTaskRequest
@@ -342,6 +349,21 @@ export async function dispatchAgentCommand(
       if (!id) return []
       const info = mcpManager.getServer(id)
       return info?.recentStderr ?? []
+    }
+
+    // Wiki settings — Phase 6.4
+    case 'wiki_get_settings': {
+      if (!wikiSettings) return null
+      return wikiSettings.get()
+    }
+    case 'wiki_set_settings': {
+      if (!wikiSettings) return null
+      const { settings } = args as { settings?: Partial<WikiSettings> }
+      return wikiSettings.set(settings ?? {})
+    }
+    case 'wiki_reset_settings': {
+      if (!wikiSettings) return null
+      return wikiSettings.reset()
     }
 
     default:

@@ -21,6 +21,7 @@ import { registerFsTools } from './agent/tools/fs.js'
 import { registerShellTool } from './agent/tools/shell.js'
 import { ToolRegistry } from './agent/tool-registry.js'
 import type { ProviderInterface } from './agent/types.js'
+import { WikiSettingsStore } from './wiki/settings-store.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null
@@ -152,6 +153,7 @@ app.whenReady().then(() => {
     },
   })
   const skillLoader = new SkillLoader()
+  const wikiSettings = new WikiSettingsStore({ baseDir: app.getPath('userData') })
   registerIpcHandlers({
     getMainWindow,
     agentRuntime,
@@ -159,6 +161,7 @@ app.whenReady().then(() => {
     providerSettings,
     skillLoader,
     mcpManager,
+    wikiSettings,
   })
   buildMenu()
   createWindow()

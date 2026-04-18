@@ -14,6 +14,7 @@ import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
 import type { SkillLoader } from './agent/skills/loader.js'
 import type { McpManager } from './agent/mcp/manager.js'
+import type { WikiSettingsStore } from './wiki/settings-store.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
@@ -70,6 +71,7 @@ export interface IpcHandlersOptions {
   providerSettings?: ProviderSettingsStore
   skillLoader?: SkillLoader
   mcpManager?: McpManager
+  wikiSettings?: WikiSettingsStore
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
@@ -80,6 +82,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     providerSettings,
     skillLoader,
     mcpManager,
+    wikiSettings,
   } = options
 
   // All invoke() calls from renderer land here
@@ -107,7 +110,14 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
     if (isAgentCommand(cmd)) {
       return dispatchAgentCommand(
-        { runtime: agentRuntime, debugLog, providerSettings, skillLoader, mcpManager },
+        {
+          runtime: agentRuntime,
+          debugLog,
+          providerSettings,
+          skillLoader,
+          mcpManager,
+          wikiSettings,
+        },
         cmd,
         args,
       )
