@@ -1,0 +1,53 @@
+appId: com.luminanote.app
+productName: Lumina Note
+
+# Phase 8.1: targets mac universal, win x64, linux AppImage.
+# Publishing (GitHub Releases + signing secrets) is wired in Phase 8.2.
+
+directories:
+  buildResources: build-resources
+  output: release
+
+files:
+  - out/**/*
+  - package.json
+
+extraResources:
+  - from: src-tauri/resources/plugins
+    to: plugins
+    filter: ['**/*']
+  - from: src-tauri/resources/skills
+    to: skills
+    filter: ['**/*']
+
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [universal]
+    - target: zip
+      arch: [universal]
+  icon: build-resources/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build-resources/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  icon: build-resources/icon.png
+  category: Office
