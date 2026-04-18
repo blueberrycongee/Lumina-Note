@@ -13,6 +13,7 @@ import { startFileWatcher } from './handlers/watcher.js'
 import { createWebDAVHandlers } from './handlers/webdav.js'
 import { createProxyHandlers } from './handlers/proxy.js'
 import { createUpdaterHandlers } from './handlers/updater.js'
+import { createDiagnosticsHandlers } from './handlers/diagnostics.js'
 import { session } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { AgentRuntime } from './agent/runtime.js'
@@ -28,11 +29,6 @@ import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 function notImplemented(cmd: string) {
   console.warn(`[ipc] unimplemented command: ${cmd}`)
   return null
-}
-
-// ── Diagnostics stub (Phase 7.4 will replace this with a real handler) ─────
-const miscStubs: Record<string, () => unknown> = {
-  export_diagnostics: () => null,
 }
 
 // ── Skills / Plugins stubs ──────────────────────────────────────────────────
@@ -105,6 +101,13 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     },
   })
 
+  const diagnosticsHandlers = createDiagnosticsHandlers({
+    getAppInfo: () => ({
+      version: app.getVersion(),
+      logsDir: app.getPath('logs'),
+    }),
+  })
+
   const updaterHandlers = createUpdaterHandlers({
     autoUpdater: autoUpdater as unknown as Parameters<typeof createUpdaterHandlers>[0]['autoUpdater'],
     sendEvent: (eventName, payload) => {
@@ -144,8 +147,8 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     // ── Updater ─────────────────────────────────────────────────────────
     if (cmd in updaterHandlers) return updaterHandlers[cmd](args)
 
-    // ── Misc stubs ───────────────────────────────────────────────────────
-    if (cmd in miscStubs) return miscStubs[cmd]()
+    // ── Diagnostics ─────────────────────────────────────────────────────
+    if (cmd in diagnosticsHandlers) return diagnosticsHandlers[cmd](args)
 
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
     if (isAgentCommand(cmd)) {
