@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="src-tauri/icons/128x128.png" alt="Lumina Note Logo" width="120" height="120" />
+<img src="build-resources/icon.png" alt="Lumina Note Logo" width="120" height="120" />
 
 # Lumina Note
 
@@ -10,7 +10,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
-[![Tauri](https://img.shields.io/badge/Tauri-v2-24C8DB?style=flat-square&logo=tauri&logoColor=white)](https://tauri.app/)
+[![Tauri](https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white)](https://tauri.app/)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/blueberrycongee/Lumina-Note/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/blueberrycongee/Lumina-Note/actions/workflows/ci.yml)
 [![Security Audit](https://img.shields.io/github/actions/workflow/status/blueberrycongee/Lumina-Note/security-audit.yml?branch=main&style=flat-square&label=Security%20Audit)](https://github.com/blueberrycongee/Lumina-Note/actions/workflows/security-audit.yml)
@@ -136,20 +136,20 @@
 요구 사항:
 
 - Node.js 20+ (권장 20.11.1)
-- Rust 1.70+
+- 
 
 ```bash
 git clone https://github.com/blueberrycongee/Lumina-Note.git
 cd Lumina-Note
 npm install
-npm run tauri dev
+npm run dev
 ```
 
 ---
 
 <h2 align="center">기술 스택</h2>
 
-- 프레임워크: Tauri v2 (Rust + WebView)
+- 프레임워크: Electron 41 (Chromium + Node.js in the main process)
 - 프론트엔드: React 18, TypeScript, Tailwind CSS
 - 에디터: CodeMirror 6
 - 상태 관리: Zustand

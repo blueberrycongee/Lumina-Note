@@ -9,7 +9,7 @@ This document describes the recommended release workflow for Lumina Note.
 Add a new version section to `CHANGELOG.md`:
 
 ```markdown
-## [0.4.15] - 2025-03-02
+## [2.0.0] - 2026-04-18
 
 ### 新功能
 - 功能描述
@@ -25,7 +25,7 @@ Tip: Run `git log --oneline` to review recent changes.
 
 ## 2) Prepare the version
 
-Use the release helper to keep versions and Cargo.lock in sync:
+Use the release helper to bump `package.json`:
 
 ```sh
 npm run release:prepare -- patch
@@ -34,53 +34,57 @@ npm run release:prepare -- minor
 # or
 npm run release:prepare -- major
 # or set an explicit version
-npm run release:prepare -- --version 0.4.14
+npm run release:prepare -- --version 2.0.1
 ```
 
 What it does:
 - Updates `package.json` version (no git tag created).
-- Syncs Tauri config/version via `scripts/sync_version.mjs`.
-- Regenerates `src-tauri/Cargo.lock`.
+- Echoes the version via `scripts/sync_version.mjs` (kept as a hook; the Rust sidecar is gone in v2, so it's now a no-op).
 
 ## 3) Sanity checks (recommended)
 
 ```sh
+npm run test:run
 npm run build
-npm run tauri build
+npm run pack         # unpacked app under release/
 ```
 
 Notes:
-- The updater bundle requires signing. Set `TAURI_SIGNING_PRIVATE_KEY` (and
-  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if needed) when building for release.
+- Code signing + notarization are driven by electron-builder through GitHub
+  Actions secrets (`APPLE_ID`, `APPLE_ID_PASSWORD`, `APPLE_TEAM_ID`,
+  `CSC_LINK`, `CSC_KEY_PASSWORD`, `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`).
+  See `docs/electron-signing-and-updates.md` for details.
 
 ## 4) Commit the bump
 
 ```sh
-git add CHANGELOG.md package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+git add CHANGELOG.md package.json package-lock.json
 
-git commit -m "chore(release): bump version to 0.4.14"
+git commit -m "chore(release): bump version to 2.0.0"
 ```
 
 ## 5) Tag and push
 
 ```sh
-git tag -a v0.4.14 -m "v0.4.14"
+git tag -a v2.0.0 -m "v2.0.0"
 
 git push origin main
-git push origin v0.4.14
+git push origin v2.0.0
 ```
 
-Pushing the tag triggers the release workflow in CI.
+Pushing the tag triggers `.github/workflows/release.yml`. The workflow runs
+`npm run dist:<mac|win|linux>` with `--publish always`, which uploads
+installers plus `latest.yml` / `latest-mac.yml` to the GitHub release so
+`electron-updater` can pick them up.
 
 ## 6) Artifacts naming (local builds)
 
-If you need locally named artifacts with version + timestamp, rename the
-outputs after `npm run tauri build`. Typical output locations:
-- `src-tauri/target/release/bundle/macos/*.app`
-- `src-tauri/target/release/bundle/dmg/*.dmg`
+`npm run dist:<os>` writes installers to `release/`. Rename them if you need
+versioned local copies; CI uploads them directly to the release page.
 
 ## Troubleshooting
 
-- If CI fails on type errors, run `npm run build` locally and fix the reported
-  files before tagging.
-- If the updater bundle fails, check signing env vars.
+- If CI fails on type errors, run `npx tsc --noEmit` locally.
+- If signing fails, double-check the GitHub Actions secrets listed above.
+- If `electron-updater` can't find a feed, verify that the release contains
+  both the installer and the matching `latest*.yml`.
