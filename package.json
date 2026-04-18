@@ -11,7 +11,6 @@
     "dev:vite": "vite",
     "dev:cloud": "sh -c 'trap \"kill 0\" EXIT; npm run server:dev & npm run dev:vite'",
     "bundle-node": "node scripts/bundle_node.mjs",
-    "generate-latest": "ts-node scripts/generate_latest_json.ts",
     "build": "electron-vite build",
     "build:vite": "tsc && vite build",
     "preview": "electron-vite preview",

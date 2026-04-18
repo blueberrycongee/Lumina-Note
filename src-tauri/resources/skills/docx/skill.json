@@ -1,7 +1,0 @@
-{
-  "name": "docx",
-  "title": "DOCX",
-  "description": "Create, edit, and analyze .docx documents with tracked changes and comments support.",
-  "version": "1.0.0",
-  "tags": ["docx", "word", "document", "ooxml"]
-}

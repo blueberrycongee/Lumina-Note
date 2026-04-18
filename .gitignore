@@ -13,12 +13,8 @@ mobile/ios/build/
 gradle-*/
 scripts/run-ios-sim.sh
 
-# Tauri build
-src-tauri/target/
-src-tauri/gen/
-src-tauri/build.log
-src-tauri/resources/node/node
-src-tauri/resources/node/node.exe
+# Electron packaging
+release/
 
 # IDE
 .vscode/

@@ -1,8 +1,0 @@
-{
-  "name": "summarize-note",
-  "title": "Summarize Note",
-  "description": "Summarize the provided content into clear bullet points.",
-  "version": "1.0.0",
-  "tags": ["summary", "notes"],
-  "prompt": "You are a concise summarizer. Summarize the user's content into 5-10 bullet points, ordered by importance. Preserve key terms and names. Use the user's language."
-}

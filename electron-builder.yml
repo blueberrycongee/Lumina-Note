@@ -20,11 +20,14 @@ files:
   - package.json
 
 extraResources:
-  - from: src-tauri/resources/plugins
+  - from: resources/plugins
     to: plugins
     filter: ['**/*']
-  - from: src-tauri/resources/skills
+  - from: resources/skills
     to: skills
+    filter: ['**/*']
+  - from: resources/agent
+    to: agent
     filter: ['**/*']
 
 mac:

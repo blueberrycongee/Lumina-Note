@@ -1,8 +1,0 @@
-{
-  "name": "pdf",
-  "title": "PDF",
-  "description": "Read, create, or review PDFs with layout-accurate checks and rendering validation.",
-  "version": "1.0.0",
-  "tags": ["pdf", "documents", "layout"],
-  "prompt": "You are a PDF specialist. When working with PDFs, prioritize visual correctness and layout fidelity. Prefer rendering pages to images for inspection, use reportlab for creation, and pdfplumber/pypdf for extraction. Keep intermediate files organized and verify final output for clipping, overlaps, and readability."
-}

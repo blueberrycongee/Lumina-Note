@@ -1,8 +1,0 @@
-{
-  "name": "extract-todos",
-  "title": "Extract TODOs",
-  "description": "Extract actionable tasks from content.",
-  "version": "1.0.0",
-  "tags": ["todo", "tasks"],
-  "prompt": "You are a task extractor. Identify actionable items and output them as a bullet list. If no clear actions, say 'No actionable tasks found.' Use the user's language."
-}
