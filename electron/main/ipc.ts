@@ -11,6 +11,7 @@ import { storeHandlers } from './handlers/store.js'
 import { startFileWatcher } from './handlers/watcher.js'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
+import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
@@ -64,10 +65,11 @@ export interface IpcHandlersOptions {
   getMainWindow: () => BrowserWindow | null
   agentRuntime: AgentRuntime
   debugLog?: DebugLog
+  providerSettings?: ProviderSettingsStore
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
-  const { getMainWindow, agentRuntime, debugLog } = options
+  const { getMainWindow, agentRuntime, debugLog, providerSettings } = options
 
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
@@ -93,7 +95,11 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
     if (isAgentCommand(cmd)) {
-      return dispatchAgentCommand({ runtime: agentRuntime, debugLog }, cmd, args)
+      return dispatchAgentCommand(
+        { runtime: agentRuntime, debugLog, providerSettings },
+        cmd,
+        args,
+      )
     }
 
     // ── Skills / Plugins stubs ───────────────────────────────────────────

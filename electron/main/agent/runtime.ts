@@ -36,7 +36,10 @@ import type {
 
 export interface AgentRuntimeOptions {
   eventBus: AgentEventBus
+  /** 静态 provider — 主要用于测试;生产路径用 providerSelector */
   provider?: ProviderInterface
+  /** 运行时解析 provider(从 settings store 读 active provider + secure store 取 apiKey) */
+  providerSelector?: () => Promise<ProviderInterface | null> | ProviderInterface | null
   toolRegistry?: ToolRegistry
   approvalGate?: ApprovalGate
   debugLog?: DebugLog
@@ -78,9 +81,22 @@ export class AgentRuntime {
     }
     session.messages.push({ role: 'user', content: task })
 
-    if (!this.options.provider) {
+    let provider: ProviderInterface | null | undefined = this.options.provider
+    if (!provider && this.options.providerSelector) {
+      try {
+        provider = await this.options.providerSelector()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        this.setStatus(session, 'error')
+        this.emitError(session, `Provider selection failed: ${message}`)
+        this.emitFinish(session, 'error', message)
+        this.options.memoryStore?.endSession()
+        return session.id
+      }
+    }
+    if (!provider) {
       this.setStatus(session, 'error')
-      this.emitError(session, 'Provider not configured (Phase 2 pending)')
+      this.emitError(session, 'Provider not configured (set active provider + apiKey in Settings)')
       this.emitFinish(session, 'error', 'Provider not configured')
       this.options.memoryStore?.endSession()
       return session.id
@@ -88,7 +104,7 @@ export class AgentRuntime {
 
     this.setStatus(session, 'running')
     try {
-      await this.runLoop(session)
+      await this.runLoop(session, provider)
     } catch (err) {
       if (session.signal.aborted) {
         this.setStatus(session, 'aborted')
@@ -135,8 +151,7 @@ export class AgentRuntime {
     this.options.debugLog?.log(`agent.${event.type}`, event, session.id)
   }
 
-  private async runLoop(session: Session): Promise<void> {
-    const provider = this.options.provider!
+  private async runLoop(session: Session, provider: ProviderInterface): Promise<void> {
     const maxTurns = this.options.maxTurns ?? DEFAULT_MAX_TURNS
 
     while (!session.signal.aborted) {

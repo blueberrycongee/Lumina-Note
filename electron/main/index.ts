@@ -1,12 +1,20 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc.js'
+import { storeHandlers } from './handlers/store.js'
 import { stopAllWatchers } from './handlers/watcher.js'
 import { AgentEventBus } from './agent/event-bus.js'
 import { IpcApprovalGate } from './agent/approval-gate.js'
 import { DebugLog } from './agent/debug-log.js'
 import { MemoryStore } from './agent/memory-store.js'
+import { AiSdkProvider } from './agent/providers/ai-sdk-provider.js'
+import { createLanguageModel, getProvider } from './agent/providers/registry.js'
+import {
+  ProviderSettingsStore,
+  type SecretStore,
+} from './agent/providers/settings-store.js'
 import { AgentRuntime } from './agent/runtime.js'
+import type { ProviderInterface } from './agent/types.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null
@@ -73,18 +81,61 @@ function buildMenu() {
 }
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
+// storeHandlers 是 secure_store_{get,set,delete} 的具体实现,SettingsStore
+// 只需要一层适配(纯 promise 接口)。
+const secretStore: SecretStore = {
+  async get(key: string): Promise<string | null> {
+    const value = await storeHandlers.secure_store_get({ key })
+    return typeof value === 'string' ? value : null
+  },
+  async set(key: string, value: string): Promise<void> {
+    await storeHandlers.secure_store_set({ key, value })
+  },
+  async delete(key: string): Promise<void> {
+    await storeHandlers.secure_store_delete({ key })
+  },
+}
+
 app.whenReady().then(() => {
   const agentEventBus = new AgentEventBus(getMainWindow)
   const approvalGate = new IpcApprovalGate()
   const debugLog = new DebugLog({ baseDir: app.getPath('logs') })
   const memoryStore = new MemoryStore()
+  const providerSettings = new ProviderSettingsStore({
+    baseDir: app.getPath('userData'),
+    secretStore,
+  })
+
+  const providerSelector = async (): Promise<ProviderInterface | null> => {
+    const activeId = providerSettings.getActiveProvider()
+    if (!activeId) return null
+    const entry = getProvider(activeId)
+    if (!entry) return null
+    const settings = await providerSettings.resolveSettings(activeId)
+    const modelId = providerSettings.getProviderSettings(activeId).modelId
+    if (!modelId) return null
+    try {
+      const model = createLanguageModel(activeId, settings, modelId)
+      return new AiSdkProvider({ model })
+    } catch (err) {
+      console.error('[main] provider selection failed', err)
+      return null
+    }
+  }
+
   const agentRuntime = new AgentRuntime({
     eventBus: agentEventBus,
     approvalGate,
     debugLog,
     memoryStore,
+    providerSelector,
   })
-  registerIpcHandlers({ getMainWindow, agentRuntime, debugLog })
+  registerIpcHandlers({
+    getMainWindow,
+    agentRuntime,
+    debugLog,
+    providerSettings,
+  })
   buildMenu()
   createWindow()
 
