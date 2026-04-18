@@ -17,6 +17,7 @@ import type { AgentEventBus } from './event-bus.js'
 import type { ApprovalGate } from './approval-gate.js'
 import { AutoApprovalGate } from './approval-gate.js'
 import type { DebugLog } from './debug-log.js'
+import type { MemoryStore } from './memory-store.js'
 import type { ToolRegistry } from './tool-registry.js'
 import { createSessionId, Session } from './session.js'
 import type {
@@ -39,6 +40,7 @@ export interface AgentRuntimeOptions {
   toolRegistry?: ToolRegistry
   approvalGate?: ApprovalGate
   debugLog?: DebugLog
+  memoryStore?: MemoryStore
   maxTurns?: number
   systemPrompt?: string
 }
@@ -62,6 +64,14 @@ export class AgentRuntime {
     const session = new Session(createSessionId(), context)
     this.current = session
     this.options.debugLog?.log('session.start', { task, context }, session.id)
+    // 若提供了 vault 根目录,持久化 turn log 到 vault/.lumina/sessions/
+    if (context.workspace_path) {
+      this.options.memoryStore?.startSession(session.id, context.workspace_path)
+    }
+    this.options.memoryStore?.appendTurn({
+      kind: 'user.message',
+      payload: { task },
+    })
 
     if (this.options.systemPrompt) {
       session.messages.push({ role: 'system', content: this.options.systemPrompt })
@@ -72,6 +82,7 @@ export class AgentRuntime {
       this.setStatus(session, 'error')
       this.emitError(session, 'Provider not configured (Phase 2 pending)')
       this.emitFinish(session, 'error', 'Provider not configured')
+      this.options.memoryStore?.endSession()
       return session.id
     }
 
@@ -88,6 +99,9 @@ export class AgentRuntime {
         this.emitError(session, message)
         this.emitFinish(session, 'error', message)
       }
+    } finally {
+      // 成功 / 失败 / abort 都要收尾 JSONL
+      this.options.memoryStore?.endSession()
     }
     return session.id
   }
@@ -162,6 +176,14 @@ export class AgentRuntime {
         turnResult.toolCalls,
       )
       session.messages.push({ role: 'assistant', content: assistantContent })
+      this.options.memoryStore?.appendTurn({
+        kind: 'assistant.turn',
+        payload: {
+          turn: session.turn,
+          content: assistantContent,
+          usage: session.totalUsage,
+        },
+      })
 
       if (turnResult.toolCalls.length === 0) {
         this.setStatus(session, 'completed')
@@ -176,6 +198,10 @@ export class AgentRuntime {
         return
       }
       session.messages.push({ role: 'user', content: toolResults })
+      this.options.memoryStore?.appendTurn({
+        kind: 'tool.results',
+        payload: { turn: session.turn, results: toolResults },
+      })
     }
 
     this.setStatus(session, 'aborted')

@@ -5,6 +5,7 @@ import { stopAllWatchers } from './handlers/watcher.js'
 import { AgentEventBus } from './agent/event-bus.js'
 import { IpcApprovalGate } from './agent/approval-gate.js'
 import { DebugLog } from './agent/debug-log.js'
+import { MemoryStore } from './agent/memory-store.js'
 import { AgentRuntime } from './agent/runtime.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -76,10 +77,12 @@ app.whenReady().then(() => {
   const agentEventBus = new AgentEventBus(getMainWindow)
   const approvalGate = new IpcApprovalGate()
   const debugLog = new DebugLog({ baseDir: app.getPath('logs') })
+  const memoryStore = new MemoryStore()
   const agentRuntime = new AgentRuntime({
     eventBus: agentEventBus,
     approvalGate,
     debugLog,
+    memoryStore,
   })
   registerIpcHandlers({ getMainWindow, agentRuntime, debugLog })
   buildMenu()
