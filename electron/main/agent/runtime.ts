@@ -16,9 +16,11 @@
 import type { AgentEventBus } from './event-bus.js'
 import type { ApprovalGate } from './approval-gate.js'
 import { AutoApprovalGate } from './approval-gate.js'
+import type { DebugLog } from './debug-log.js'
 import type { ToolRegistry } from './tool-registry.js'
 import { createSessionId, Session } from './session.js'
 import type {
+  AgentEvent,
   ApprovalDecision,
   ContentBlock,
   ProviderChunk,
@@ -36,6 +38,7 @@ export interface AgentRuntimeOptions {
   provider?: ProviderInterface
   toolRegistry?: ToolRegistry
   approvalGate?: ApprovalGate
+  debugLog?: DebugLog
   maxTurns?: number
   systemPrompt?: string
 }
@@ -58,6 +61,7 @@ export class AgentRuntime {
     }
     const session = new Session(createSessionId(), context)
     this.current = session
+    this.options.debugLog?.log('session.start', { task, context }, session.id)
 
     if (this.options.systemPrompt) {
       session.messages.push({ role: 'system', content: this.options.systemPrompt })
@@ -111,6 +115,12 @@ export class AgentRuntime {
 
   // ── private ───────────────────────────────────────────────────────────
 
+  private emitEvent(session: Session, event: AgentEvent): void {
+    this.options.eventBus.emit(event)
+    // Write a debug log mirror; we derive kind from event.type
+    this.options.debugLog?.log(`agent.${event.type}`, event, session.id)
+  }
+
   private async runLoop(session: Session): Promise<void> {
     const provider = this.options.provider!
     const maxTurns = this.options.maxTurns ?? DEFAULT_MAX_TURNS
@@ -126,6 +136,11 @@ export class AgentRuntime {
         return
       }
       session.turn += 1
+      this.options.debugLog?.log(
+        'turn.start',
+        { turn: session.turn, messages: session.messages.length },
+        session.id,
+      )
 
       const toolDefs = this.options.toolRegistry?.definitions() ?? []
       const stream = provider.stream(
@@ -181,7 +196,7 @@ export class AgentRuntime {
         case 'text':
           if (chunk.text) {
             text += chunk.text
-            this.options.eventBus.emit({
+            this.emitEvent(session, {
               type: 'text_delta',
               session_id: session.id,
               text: chunk.text,
@@ -191,7 +206,7 @@ export class AgentRuntime {
         case 'tool_call':
           if (chunk.tool_call) {
             toolCalls.push(chunk.tool_call)
-            this.options.eventBus.emit({
+            this.emitEvent(session, {
               type: 'tool_call_start',
               session_id: session.id,
               tool_call: chunk.tool_call,
@@ -201,7 +216,7 @@ export class AgentRuntime {
         case 'usage':
           if (chunk.usage) {
             session.accumulateUsage(chunk.usage)
-            this.options.eventBus.emit({
+            this.emitEvent(session, {
               type: 'usage',
               session_id: session.id,
               usage: chunk.usage,
@@ -247,7 +262,7 @@ export class AgentRuntime {
       if (session.signal.aborted) break
 
       this.setStatus(session, 'waiting_approval')
-      this.options.eventBus.emit({
+      this.emitEvent(session, {
         type: 'approval_requested',
         session_id: session.id,
         tool_call: toolCall,
@@ -259,7 +274,7 @@ export class AgentRuntime {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         results.push(this.toolErrorResult(toolCall.id, message))
-        this.options.eventBus.emit({
+        this.emitEvent(session, {
           type: 'tool_call_end',
           session_id: session.id,
           tool_call_id: toolCall.id,
@@ -273,7 +288,7 @@ export class AgentRuntime {
       if (approval.decision !== 'approve') {
         const msg = approval.reason ?? 'User rejected tool call'
         results.push(this.toolErrorResult(toolCall.id, msg))
-        this.options.eventBus.emit({
+        this.emitEvent(session, {
           type: 'tool_call_end',
           session_id: session.id,
           tool_call_id: toolCall.id,
@@ -287,7 +302,7 @@ export class AgentRuntime {
       if (!tool) {
         const msg = `Unknown tool: ${toolCall.name}`
         results.push(this.toolErrorResult(toolCall.id, msg))
-        this.options.eventBus.emit({
+        this.emitEvent(session, {
           type: 'tool_call_end',
           session_id: session.id,
           tool_call_id: toolCall.id,
@@ -303,7 +318,7 @@ export class AgentRuntime {
           tool_use_id: toolCall.id,
           content: result,
         })
-        this.options.eventBus.emit({
+        this.emitEvent(session, {
           type: 'tool_call_end',
           session_id: session.id,
           tool_call_id: toolCall.id,
@@ -312,7 +327,7 @@ export class AgentRuntime {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         results.push(this.toolErrorResult(toolCall.id, message))
-        this.options.eventBus.emit({
+        this.emitEvent(session, {
           type: 'tool_call_end',
           session_id: session.id,
           tool_call_id: toolCall.id,
@@ -334,7 +349,7 @@ export class AgentRuntime {
 
   private setStatus(session: Session, status: RunStatus): void {
     session.status = status
-    this.options.eventBus.emit({
+    this.emitEvent(session, {
       type: 'status',
       session_id: session.id,
       status,
@@ -342,7 +357,7 @@ export class AgentRuntime {
   }
 
   private emitError(session: Session, message: string): void {
-    this.options.eventBus.emit({
+    this.emitEvent(session, {
       type: 'error',
       session_id: session.id,
       error: message,
@@ -354,7 +369,7 @@ export class AgentRuntime {
     reason: 'done' | 'aborted' | 'error' | 'max_turns',
     message?: string,
   ): void {
-    this.options.eventBus.emit({
+    this.emitEvent(session, {
       type: 'finish',
       session_id: session.id,
       reason,

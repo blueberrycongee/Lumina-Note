@@ -9,21 +9,28 @@
  * 前端行为与 Phase 0.4/0.4b 之后一致(runtime no-op)。后续 1.3/1.4/1.5/1.6 逐步填实。
  */
 
+import type { DebugLog } from './debug-log.js'
 import type { AgentRuntime } from './runtime.js'
 import type {
   ApproveToolRequest,
   StartTaskRequest,
 } from './types.js'
 
+export interface AgentDispatchContext {
+  runtime: AgentRuntime
+  debugLog?: DebugLog
+}
+
 export function isAgentCommand(cmd: string): boolean {
   return cmd.startsWith('agent_') || cmd.startsWith('vault_')
 }
 
 export async function dispatchAgentCommand(
-  runtime: AgentRuntime,
+  ctx: AgentDispatchContext,
   cmd: string,
   args: Record<string, unknown>,
 ): Promise<unknown> {
+  const { runtime, debugLog } = ctx
   switch (cmd) {
     case 'agent_start_task': {
       const payload = args as unknown as StartTaskRequest
@@ -53,14 +60,21 @@ export async function dispatchAgentCommand(
         queued: [] as unknown[],
       }
 
-    // Debug logging — Phase 1.5 接入 DebugLog
-    case 'agent_enable_debug':
-    case 'agent_disable_debug':
+    // Debug logging
+    case 'agent_enable_debug': {
+      if (!debugLog) return null
+      const workspacePath =
+        typeof args.workspace_path === 'string' ? args.workspace_path : undefined
+      return debugLog.enable({ workspacePath })
+    }
+    case 'agent_disable_debug': {
+      debugLog?.disable()
       return null
+    }
     case 'agent_is_debug_enabled':
-      return false
+      return debugLog?.isEnabled() ?? false
     case 'agent_get_debug_log_path':
-      return null
+      return debugLog?.getFilePath() ?? null
 
     // Skills — Phase 3.4 接入 SkillLoader
     case 'agent_list_skills':

@@ -11,6 +11,7 @@ import { storeHandlers } from './handlers/store.js'
 import { handleLlmFetch, handleLlmFetchStream } from './handlers/http.js'
 import { startFileWatcher } from './handlers/watcher.js'
 import type { AgentRuntime } from './agent/runtime.js'
+import type { DebugLog } from './agent/debug-log.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
 
 // Stub response for unimplemented commands
@@ -63,10 +64,11 @@ const eventStubs: Record<string, () => unknown> = {
 export interface IpcHandlersOptions {
   getMainWindow: () => BrowserWindow | null
   agentRuntime: AgentRuntime
+  debugLog?: DebugLog
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
-  const { getMainWindow, agentRuntime } = options
+  const { getMainWindow, agentRuntime, debugLog } = options
 
   // All invoke() calls from renderer land here
   ipcMain.handle('tauri-invoke', async (event, cmd: string, args: Record<string, unknown> = {}) => {
@@ -107,7 +109,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     if (cmd in miscStubs) return miscStubs[cmd]()
 
     // ── Agent / Vault (TS runtime) ──────────────────────────────────────
-    if (isAgentCommand(cmd)) return dispatchAgentCommand(agentRuntime, cmd, args)
+    if (isAgentCommand(cmd)) {
+      return dispatchAgentCommand({ runtime: agentRuntime, debugLog }, cmd, args)
+    }
 
     // ── Skills / Plugins stubs ───────────────────────────────────────────
     if (cmd in skillPluginStubs) return skillPluginStubs[cmd]()
