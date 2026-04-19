@@ -21,7 +21,6 @@ import {
 } from "@/services/assets/editorImages";
 import {
   EditorState,
-  EditorSelection,
   StateField,
   StateEffect,
   Compartment,
@@ -3560,10 +3559,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     // Tables that have highlighted rows during the current drag — so we
     // can clear them between frames without scanning the whole document.
     private touchedTables = new Set<HTMLElement>();
-    // Re-entry guard so the selection-normalization dispatch we fire
-    // from highlightRowsInRange doesn't trigger ourselves recursively
-    // through some downstream selection observer.
-    private normalizingSelection = false;
 
     constructor(view: EditorView) {
       this.view = view;
@@ -3689,72 +3684,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         "cm-table-rows-dragging",
         nextTables.size > 0,
       );
-      if (nextTables.size > 0) {
-        this.normalizeBottomUpHeadAroundTouchedTables();
-      }
-    }
-
-    // Bottom-up drags ([anchor below table] mouse moving up into the
-    // table) cause CM's atomicRanges to snap the selection's `from` to
-    // the table's outer top boundary. coordsAtPos for that boundary
-    // returns the trailing edge of the line ABOVE the table, so
-    // drawSelection paints a redundant sliver rectangle on that line
-    // and the cursor blinks there. Top-down drags don't trip this
-    // because the `to` snap lands cleanly at the start of the line
-    // BELOW the table (a 0-width paint).
-    //
-    // Push the head past the bottom of the table to a clean line start
-    // outside the atomic range. The selection then visually covers the
-    // anchor-side paragraph only; the rows inside the table remain
-    // visually represented by our row highlights, and the copy logic
-    // (which uses both CM's selection slices and our row highlights)
-    // still produces the correct clipboard text.
-    private normalizeBottomUpHeadAroundTouchedTables() {
-      if (this.normalizingSelection) return;
-      const sel = this.view.state.selection.main;
-      if (sel.from === sel.to) return;
-      if (sel.head >= sel.anchor) return;
-
-      const doc = this.view.state.doc;
-      let cleanHead = sel.head;
-
-      for (const tableEl of this.touchedTables) {
-        const sourceLines = this.resolveTableSourceLines(tableEl);
-        if (!sourceLines) continue;
-        const range = this.resolveTableSourceRange(tableEl, sourceLines);
-        if (!range) continue;
-        // Snap-window check: atomic clip(bias=-1) on a position inside
-        // the table lands at this table's outer top boundary, which
-        // sits somewhere in the line right above the table. Only
-        // intervene when head is in that narrow window. A head further
-        // up the doc means the user really did drag into content
-        // above; leave it alone.
-        const firstTableLine = doc.lineAt(range.from);
-        const lineAboveStart =
-          firstTableLine.number > 1
-            ? doc.line(firstTableLine.number - 1).from
-            : 0;
-        if (sel.head < lineAboveStart || sel.head > range.from) continue;
-        // Push past the bottom of the table to range.to (the boundary
-        // position — strictly outside the atomic range, so atomicRanges
-        // won't re-snap us). buildCopyText still produces the right
-        // text because slice(range.to, anchor) starts at the newline
-        // between the table and the line below, preserving the
-        // separator that joins rows to the trailing paragraph.
-        const target = range.to;
-        if (target >= sel.anchor) continue;
-        if (target > cleanHead) cleanHead = target;
-      }
-
-      if (cleanHead === sel.head) return;
-      this.normalizingSelection = true;
-      try {
-        this.view.dispatch({
-          selection: EditorSelection.range(sel.anchor, cleanHead),
-        });
-      } finally {
-        this.normalizingSelection = false;
-      }
     }
 
     private clearAll() {
