@@ -3580,16 +3580,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       view.dom.ownerDocument.addEventListener("copy", this.onCopy, true);
     }
 
-    // Runs after every state change (including the selection update CM
-    // dispatches in response to a mouse drag). This is the right place
-    // to read the post-snap selection — our own mousemove handler
-    // fires too early.
-    update(update: ViewUpdate) {
-      if (!update.selectionSet) return;
-      if (this.touchedTables.size === 0) return;
-      this.normalizeBottomUpHeadAroundTouchedTables();
-    }
-
     destroy() {
       this.view.dom.removeEventListener("mousedown", this.onMouseDown);
       this.view.dom.removeEventListener("mousemove", this.onMouseMove);
@@ -3699,13 +3689,9 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         "cm-table-rows-dragging",
         nextTables.size > 0,
       );
-      // Note: we used to call the head normalization here, but our
-      // mousemove fires BEFORE CM's MouseSelection extension updates
-      // the editor's selection. Reading state.selection.main at this
-      // point gives the pre-drag (collapsed) selection, so the
-      // normalization always early-returned. The actual normalization
-      // is now done in `update()` below, which runs AFTER CM has
-      // applied the new selection.
+      if (nextTables.size > 0) {
+        this.normalizeBottomUpHeadAroundTouchedTables();
+      }
     }
 
     // Bottom-up drags ([anchor below table] mouse moving up into the
