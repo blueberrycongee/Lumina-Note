@@ -16,7 +16,7 @@ import { createUpdaterHandlers } from './handlers/updater.js'
 import { createDiagnosticsHandlers } from './handlers/diagnostics.js'
 import { createPluginsHandlers } from './handlers/plugins.js'
 import { session } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import electronUpdater from 'electron-updater'
 import type { AgentRuntime } from './agent/runtime.js'
 import type { DebugLog } from './agent/debug-log.js'
 import type { ProviderSettingsStore } from './agent/providers/settings-store.js'
@@ -25,6 +25,8 @@ import type { McpManager } from './agent/mcp/manager.js'
 import type { WikiSettingsStore } from './wiki/settings-store.js'
 import type { WikiManager } from './wiki/manager.js'
 import { dispatchAgentCommand, isAgentCommand } from './agent/ipc-dispatch.js'
+
+const { autoUpdater } = electronUpdater
 
 // Stub response for unimplemented commands
 function notImplemented(cmd: string) {
