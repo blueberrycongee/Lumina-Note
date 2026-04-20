@@ -919,14 +919,21 @@ function App() {
 
             {/* Left Sidebar (File Tree) */}
             <div
-              className={`flex-shrink-0 transition-all duration-300 ease-out overflow-hidden ${
-                leftSidebarOpen ? "opacity-100" : "w-0 opacity-0"
+              data-side="left"
+              data-open={leftSidebarOpen ? "true" : "false"}
+              className={`app-sidebar-shell flex-shrink-0 ${
+                leftSidebarOpen ? "opacity-100" : "opacity-0"
               }`}
               style={{ width: leftSidebarOpen ? leftSidebarWidth : 0 }}
             >
-              <DevProfiler id="Sidebar">
-                <Sidebar />
-              </DevProfiler>
+              <div
+                className="app-sidebar-inner"
+                style={{ width: leftSidebarWidth }}
+              >
+                <DevProfiler id="Sidebar">
+                  <Sidebar />
+                </DevProfiler>
+              </div>
             </div>
           </div>
         </div>
@@ -1043,9 +1050,11 @@ function App() {
 
         {/* Right Sidebar */}
         <div
-          className={`transition-all duration-300 ease-out overflow-hidden ${
-            rightSidebarOpen ? "opacity-100" : "w-0 opacity-0"
-          } ${isMainCollapsed && rightSidebarOpen ? "flex-1" : "flex-shrink-0"}`}
+          data-side="right"
+          data-open={rightSidebarOpen ? "true" : "false"}
+          className={`app-sidebar-shell ${
+            rightSidebarOpen ? "opacity-100" : "opacity-0"
+          } ${isMainCollapsed && rightSidebarOpen ? "min-w-0 flex-1" : "flex-shrink-0"}`}
           style={{
             width:
               rightSidebarOpen && !isMainCollapsed
@@ -1055,9 +1064,19 @@ function App() {
                   : 0,
           }}
         >
-          <DevProfiler id="RightPanel">
-            <RightPanel />
-          </DevProfiler>
+          <div
+            className="app-sidebar-inner"
+            style={{
+              width:
+                isMainCollapsed && rightSidebarOpen
+                  ? "100%"
+                  : rightSidebarWidth,
+            }}
+          >
+            <DevProfiler id="RightPanel">
+              <RightPanel />
+            </DevProfiler>
+          </div>
         </div>
       </div>
 
