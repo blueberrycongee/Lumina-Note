@@ -28,11 +28,10 @@ const fadeUpVariants: Variants = {
 };
 
 const logoVariants: Variants = {
-  hidden: { opacity: 0, y: 16, scale: 0.92 },
+  hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: { duration: 0.35, ease: [0.2, 0.8, 0.2, 1] },
   },
 };
@@ -54,22 +53,6 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
       <TitleBar />
 
       <div className="relative flex-1 ui-app-bg overflow-hidden flex flex-col">
-        {/* Ambient glow backgrounds */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 60% 50% at 50% 40%, hsl(var(--primary) / 0.08), transparent 70%)",
-          }}
-        />
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 40% 40% at 60% 60%, hsl(var(--primary) / 0.05), transparent 70%)",
-          }}
-        />
-
         {showMacWindowInset ? (
           <div
             className="flex items-center justify-end px-4 py-2"
@@ -93,18 +76,11 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
             className="flex flex-col items-center gap-6 max-w-lg"
           >
             {/* Logo */}
-            <motion.div variants={logoVariants} className="relative">
-              <div
-                className="absolute -inset-4 rounded-full blur-xl opacity-50"
-                style={{
-                  background:
-                    "radial-gradient(circle, hsl(var(--primary) / 0.3), transparent 70%)",
-                }}
-              />
+            <motion.div variants={logoVariants}>
               <img
                 src={logoUrl}
                 alt="Lumina Note"
-                className="relative w-20 h-20"
+                className="w-20 h-20"
               />
             </motion.div>
 
@@ -135,7 +111,7 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
                   key={titleKey}
                   className="flex flex-col items-center gap-1.5 text-center"
                 >
-                  <div className="w-10 h-10 rounded-ui-md border border-border bg-background/60 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-ui-md bg-accent flex items-center justify-center">
                     <Icon className="w-5 h-5 text-primary" />
                   </div>
                   <span className="text-sm font-medium text-foreground">

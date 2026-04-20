@@ -71,7 +71,7 @@ import {
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
-  const { setSkillManagerOpen } = useUIStore();
+  const { setSkillManagerOpen, toggleLeftSidebar, toggleRightSidebar } = useUIStore();
   // chatMode is always "agent" now (codex moved to plugin system)
   const chatMode = "agent" as const;
   const isCodexMode = false;
@@ -969,6 +969,9 @@ export function MainAIChatShell() {
         onStartExportSelection={handleStartExportSelection}
         onCancelExportSelection={handleCancelExportSelection}
         onNewChat={handleNewChat}
+        onToggleLeftSidebar={toggleLeftSidebar}
+        onToggleRightSidebar={toggleRightSidebar}
+        title={currentConversationTitle}
       />
 
       <div className="flex-1 relative overflow-hidden">

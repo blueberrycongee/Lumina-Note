@@ -242,16 +242,11 @@ export function Ribbon({
   const updateTitle = `${t.updateChecker.title} · ${updateTitleDetail}`;
   const updateButtonClassName = cn(
     "relative w-8 h-8 ui-icon-btn",
-    updateRibbonState === "available" &&
-      "text-primary border border-primary/25 bg-primary/10 hover:bg-primary/15",
-    updateRibbonState === "in-progress" &&
-      "text-primary border border-primary/30 bg-primary/10 hover:bg-primary/15",
-    updateRibbonState === "ready" &&
-      "text-success border border-success/35 bg-success/10 hover:bg-success/15 hover:text-success",
-    updateRibbonState === "cancelled" &&
-      "text-warning border border-warning/30 bg-warning/10 hover:bg-warning/15",
-    updateRibbonState === "error" &&
-      "text-warning border border-warning/30 bg-warning/10 hover:bg-warning/15",
+    updateRibbonState === "available" && "text-primary",
+    updateRibbonState === "in-progress" && "text-primary",
+    updateRibbonState === "ready" && "text-success",
+    updateRibbonState === "cancelled" && "text-warning",
+    updateRibbonState === "error" && "text-warning",
   );
   const showUpdateDot =
     updateRibbonState === "available" || updateRibbonState === "ready";
@@ -276,12 +271,12 @@ export function Ribbon({
   return (
     <div
       className={cn(
-        "w-11 h-full bg-background/55 backdrop-blur-md flex flex-col items-center",
+        "w-11 h-full bg-background flex flex-col items-center",
       )}
     >
       {showMacTrafficLightSafeArea ? (
         <div
-          className="h-11 w-full shrink-0 border-b border-border/60 shadow-[0_1px_0_hsl(var(--border)/0.5)]"
+          className="h-11 w-full shrink-0 border-b border-border"
           data-tauri-drag-region
           data-testid="mac-ribbon-traffic-lights-safe-area"
         />
@@ -289,7 +284,7 @@ export function Ribbon({
       <div
         data-testid="ribbon-content"
         className={cn(
-          "w-full min-h-0 flex-1 border-r border-border/60 flex flex-col items-center pb-2 gap-0.5",
+          "w-full min-h-0 flex-1 border-r border-border flex flex-col items-center pb-2 gap-0.5",
           showMacTrafficLightSafeArea || flushTopSpacing ? "pt-0" : "pt-2",
         )}
       >
@@ -315,7 +310,7 @@ export function Ribbon({
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "ai"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={t.ribbon.aiChatMain}
@@ -329,7 +324,7 @@ export function Ribbon({
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "file"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={t.ribbon.fileEditor}
@@ -342,7 +337,7 @@ export function Ribbon({
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "image-manager"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={imageManagerTitle}
@@ -356,7 +351,7 @@ export function Ribbon({
             className={cn(
               "w-8 h-8 ui-icon-btn",
               activeSection === "graph"
-                ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={t.graph.title}
@@ -380,7 +375,7 @@ export function Ribbon({
               className={cn(
                 "w-8 h-8 ui-icon-btn text-xs",
                 isPluginRibbonItemActive(item)
-                  ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                  ? "bg-primary/10 text-primary"
                   : "",
               )}
               title={item.title}
@@ -432,7 +427,7 @@ export function Ribbon({
               className={cn(
                 "w-8 h-8 ui-icon-btn text-xs",
                 isPluginRibbonItemActive(item)
-                  ? "bg-primary/15 text-primary border border-primary/30 hover:bg-primary/20"
+                  ? "bg-primary/10 text-primary"
                   : "",
               )}
               title={item.title}

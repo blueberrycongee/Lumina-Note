@@ -185,9 +185,9 @@ describe("Ribbon", () => {
     expect(
       screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
     ).not.toHaveClass("border-r");
-    expect(
-      screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
-    ).toHaveClass("shadow-[0_1px_0_hsl(var(--border)/0.5)]");
+    expect(screen.getByTestId("mac-ribbon-traffic-lights-safe-area")).not.toHaveClass(
+      "shadow-[0_1px_0_hsl(var(--border)/0.5)]",
+    );
     expect(screen.getByTestId("ribbon-content")).not.toHaveClass(
       "shadow-[inset_-1px_0_0_hsl(var(--border)/0.6)]",
     );
@@ -244,11 +244,8 @@ describe("Ribbon", () => {
     render(<Ribbon />);
 
     expect(screen.getByRole("button", { name: "Files" })).toHaveClass(
-      "bg-primary/15",
+      "bg-primary/10",
       "text-primary",
-      "border",
-      "border-primary/30",
-      "hover:bg-primary/20",
     );
   });
 });

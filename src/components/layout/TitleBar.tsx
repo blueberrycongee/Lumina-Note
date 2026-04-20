@@ -156,7 +156,7 @@ export function TitleBar() {
         <div className="w-20" />
         {/* 中间：应用标题 */}
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[11px] text-muted-foreground font-medium tracking-[0.2em] uppercase pointer-events-none">
+          <span className="text-[11px] text-muted-foreground font-medium pointer-events-none">
             Lumina Note
           </span>
         </div>
@@ -173,7 +173,7 @@ export function TitleBar() {
   // Windows/Linux 使用自定义标题栏
   return (
     <div
-      className="h-8 flex items-center justify-between bg-background/60 backdrop-blur-md border-b border-border/60 shadow-[0_1px_0_hsl(var(--border)/0.5)] select-none"
+      className="h-8 flex items-center justify-between bg-background border-b border-border select-none"
       onMouseDown={handleDragStart}
       onDoubleClick={handleDoubleClick}
       data-tauri-drag-region
@@ -185,7 +185,7 @@ export function TitleBar() {
           alt="Logo"
           className="w-4 h-4 pointer-events-none"
         />
-        <span className="text-[11px] text-muted-foreground font-medium tracking-[0.2em] uppercase pointer-events-none">
+        <span className="text-[11px] text-muted-foreground font-medium pointer-events-none">
           Lumina Note
         </span>
       </div>
@@ -205,7 +205,7 @@ export function TitleBar() {
           {/* 最小化 */}
           <button
             onClick={handleMinimize}
-            className="h-full px-4 hover:bg-accent/60 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)]"
+            className="h-full px-4 hover:bg-accent transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
             title={t.titleBar.minimize}
           >
             <Minus size={14} className="text-muted-foreground" />
@@ -214,7 +214,7 @@ export function TitleBar() {
           {/* 最大化/还原 */}
           <button
             onClick={handleMaximize}
-            className="h-full px-4 hover:bg-accent/60 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)]"
+            className="h-full px-4 hover:bg-accent transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
             title={isMaximized ? t.titleBar.restore : t.titleBar.maximize}
           >
             {isMaximized ? (
@@ -227,7 +227,7 @@ export function TitleBar() {
           {/* 关闭 */}
           <button
             onClick={handleClose}
-            className="h-full px-4 hover:bg-destructive/20 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_hsl(var(--primary)/0.45),0_0_0_4px_hsl(var(--primary)/0.18)]"
+            className="h-full px-4 hover:bg-destructive/15 transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
             title={t.titleBar.close}
           >
             <X

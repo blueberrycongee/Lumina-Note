@@ -54,9 +54,9 @@ export default {
       },
       boxShadow: {
         "ui-card":
-          "0 1px 0 hsl(var(--foreground) / 0.06), 0 10px 24px -18px hsl(var(--foreground) / 0.45)",
+          "0 1px 3px hsl(var(--foreground) / 0.06)",
         "ui-float":
-          "0 0 0 1px hsl(var(--border) / 0.8), 0 18px 40px -20px hsl(var(--foreground) / 0.6)",
+          "0 4px 20px -4px hsl(var(--foreground) / 0.12)",
       },
       animation: {
         "fade-in": "fadeIn 0.2s ease-out",

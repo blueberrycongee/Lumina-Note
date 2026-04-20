@@ -260,7 +260,7 @@ export function Sidebar() {
       />
 
       {/* Toolbar Zone */}
-      <div className="flex flex-col gap-3 py-2 border-b border-border/60">
+      <div className="flex flex-col gap-3 py-2 border-b border-border">
         {/* Quick Actions */}
         <SidebarQuickActions
           vaultPath={vaultPath}
@@ -269,7 +269,7 @@ export function Sidebar() {
 
         {/* Favorites */}
         <div className="px-2">
-          <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm bg-amber-500/5 px-2 py-1">
+          <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm px-2 py-1">
             <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
               <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
               {t.favorites.title}
@@ -278,10 +278,10 @@ export function Sidebar() {
               <button
                 onClick={() => setFavoriteSortMode("manual")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "manual"
-                    ? "bg-accent text-foreground border-border"
-                    : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
                 title={t.favorites.sortManual}
               >
@@ -290,10 +290,10 @@ export function Sidebar() {
               <button
                 onClick={() => setFavoriteSortMode("recentAdded")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentAdded"
-                    ? "bg-accent text-foreground border-border"
-                    : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
                 title={t.favorites.sortRecentAdded}
               >
@@ -302,10 +302,10 @@ export function Sidebar() {
               <button
                 onClick={() => setFavoriteSortMode("recentOpened")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded border transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentOpened"
-                    ? "bg-accent text-foreground border-border"
-                    : "text-muted-foreground border-transparent hover:border-border hover:text-foreground",
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
                 title={t.favorites.sortRecentOpened}
               >
@@ -325,8 +325,8 @@ export function Sidebar() {
                   className={cn(
                     "group flex items-center gap-2 px-2 py-1 rounded-ui-md text-xs",
                     currentFile === entry.path
-                      ? "bg-accent text-foreground"
-                      : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <button
@@ -346,7 +346,7 @@ export function Sidebar() {
                           e.stopPropagation();
                           moveFavorite(index, index - 1);
                         }}
-                        className="p-0.5 rounded-ui-sm hover:bg-accent/60"
+                        className="p-0.5 rounded-ui-sm hover:bg-accent"
                         title={t.favorites.moveUp}
                         disabled={index === 0}
                       >
@@ -357,7 +357,7 @@ export function Sidebar() {
                           e.stopPropagation();
                           moveFavorite(index, index + 1);
                         }}
-                        className="p-0.5 rounded-ui-sm hover:bg-accent/60"
+                        className="p-0.5 rounded-ui-sm hover:bg-accent"
                         title={t.favorites.moveDown}
                         disabled={index === favoriteEntries.length - 1}
                       >
@@ -370,7 +370,7 @@ export function Sidebar() {
                       e.stopPropagation();
                       toggleFavorite(entry.path);
                     }}
-                    className="p-0.5 rounded-ui-sm hover:bg-accent/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-0.5 rounded-ui-sm hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity"
                     title={t.favorites.remove}
                   >
                     <StarOff className="w-3 h-3" />
@@ -384,7 +384,7 @@ export function Sidebar() {
 
       {/* Vault Name - root drop zone */}
       {renamingPath === vaultPath ? (
-        <div className="bg-background/35 px-2 py-1.5">
+        <div className="px-2 py-1.5">
           <input
             type="text"
             value={renameValue}
@@ -428,10 +428,10 @@ export function Sidebar() {
           }}
           onMouseLeave={() => setIsRootDragOver(false)}
           className={cn(
-            "cursor-pointer select-none px-3 py-2 text-sm font-medium truncate bg-background/35 transition-colors hover:bg-background/45",
-            isRootDragOver && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
+            "cursor-pointer select-none px-3 py-2 text-sm font-medium truncate transition-colors",
+            isRootDragOver && "bg-primary/10",
             selectedPath === vaultPath &&
-              "bg-primary/10 ring-1 ring-primary/30 ring-inset text-primary",
+              "bg-primary/10 text-primary",
           )}
         >
           {vaultPath?.split(/[/\\]/).pop() || "Notes"}
@@ -443,7 +443,6 @@ export function Sidebar() {
         className={cn(
           "sidebar-file-tree-scroll flex-1 overflow-auto py-2 pr-1",
           isFileTreeScrollActive && "is-scroll-active",
-          selectedPath === vaultPath && "ring-1 ring-primary/20 ring-inset",
         )}
         onScroll={markFileTreeScrollActive}
         onClick={handleTreeBackgroundClick}
@@ -553,7 +552,7 @@ function CreateInputRow({
       {type === "folder" ? (
         <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
       ) : type === "diagram" ? (
-        <Shapes className="w-4 h-4 text-cyan-500 shrink-0" />
+        <Shapes className="w-4 h-4 text-muted-foreground shrink-0" />
       ) : (
         <File className="w-4 h-4 text-muted-foreground shrink-0" />
       )}
@@ -577,7 +576,7 @@ function CreateInputRow({
             ? t.file.folderNamePlaceholder
             : t.file.fileNamePlaceholder
         }
-        className="flex-1 ui-input h-6 px-1.5 border-transparent bg-transparent focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/30"
+        className="flex-1 ui-input h-6 px-1.5"
       />
       {type === "file" && (
         <span className="text-muted-foreground text-sm">.md</span>
@@ -772,8 +771,8 @@ function FileTreeItem({
           onMouseLeave={handleMouseLeave}
           className={cn(
             "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-sm cursor-pointer select-none rounded-ui-sm",
-            isSelected ? "bg-accent/70 text-foreground" : "hover:bg-accent/50",
-            isDragOver && "bg-primary/15 ring-1 ring-primary/40 ring-inset",
+            isSelected ? "bg-primary/10 text-primary" : "hover:bg-accent",
+            isDragOver && "bg-primary/10",
           )}
           style={{ paddingLeft }}
         >
@@ -783,9 +782,9 @@ function FileTreeItem({
             <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           )}
           {isExpanded ? (
-            <FolderOpen className="w-4 h-4 text-amber-500/80 shrink-0 pointer-events-none" />
+            <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           ) : (
-            <Folder className="w-4 h-4 text-amber-500/70 shrink-0 pointer-events-none" />
+            <Folder className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           )}
           <span className="truncate pointer-events-none">{entry.name}</span>
         </div>
@@ -858,17 +857,17 @@ function FileTreeItem({
   const getFileIcon = () => {
     const name = entry.name.toLowerCase();
     if (name.endsWith(".db.json")) {
-      return <File className="w-4 h-4 text-indigo-500 shrink-0" />;
+      return <File className="w-4 h-4 text-muted-foreground shrink-0" />;
     }
     if (
       name.endsWith(".excalidraw.json") ||
       name.endsWith(".diagram.json") ||
       name.endsWith(".drawio.json")
     ) {
-      return <Shapes className="w-4 h-4 text-cyan-500 shrink-0" />;
+      return <Shapes className="w-4 h-4 text-muted-foreground shrink-0" />;
     }
     if (name.endsWith(".pdf")) {
-      return <FileText className="w-4 h-4 text-red-500 shrink-0" />;
+      return <FileText className="w-4 h-4 text-muted-foreground shrink-0" />;
     }
     if (
       name.endsWith(".png") ||
@@ -877,9 +876,9 @@ function FileTreeItem({
       name.endsWith(".gif") ||
       name.endsWith(".webp")
     ) {
-      return <Image className="w-4 h-4 text-green-500 shrink-0" />;
+      return <Image className="w-4 h-4 text-muted-foreground shrink-0" />;
     }
-    return <File className="w-4 h-4 text-primary/50 shrink-0" />;
+    return <File className="w-4 h-4 text-muted-foreground shrink-0" />;
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -905,10 +904,10 @@ function FileTreeItem({
       onDoubleClick={() => onPermanentOpen(entry)}
       onContextMenu={(e) => onContextMenu(e, entry)}
       className={cn(
-        "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-sm cursor-grab select-none rounded-ui-sm border border-transparent",
+        "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-sm cursor-grab select-none rounded-ui-sm",
         showActive
-          ? "bg-accent/70 text-foreground font-medium border-border/45"
-          : "text-muted-foreground hover:bg-accent/45 hover:text-foreground",
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
       style={{ paddingLeft: paddingLeft + 20 }}
     >

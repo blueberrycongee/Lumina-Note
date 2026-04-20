@@ -7,7 +7,7 @@ export function MacLeftPaneTopBar() {
   const toggleLeftSidebar = useUIStore((state) => state.toggleLeftSidebar);
 
   return (
-    <div className="flex h-11 items-stretch border-b border-r border-border/60 bg-background/55 backdrop-blur-md shadow-[0_1px_0_hsl(var(--border)/0.5)]">
+    <div className="flex h-11 items-stretch border-b border-r border-border bg-background">
       <div
         className="h-full w-[72px] shrink-0"
         data-tauri-drag-region

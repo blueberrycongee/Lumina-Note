@@ -3,8 +3,6 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { useAIStore } from "@/stores/useAIStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
 import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce, getFileName } from "@/lib/utils";
@@ -96,14 +94,7 @@ export function Editor() {
     editorMode,
     setEditorMode,
     toggleSplitView,
-    chatMode,
   } = useUIStore();
-
-  // 获取当前会话标题
-  const { sessions: chatSessions, currentSessionId: chatSessionId } =
-    useAIStore();
-  const { sessions: agentSessions, currentSessionId: agentSessionId } =
-    useRustAgentStore();
 
   const editorRef = useRef<CodeMirrorEditorRef>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -142,22 +133,6 @@ export function Editor() {
       return !prev;
     });
   }, []);
-
-  // 当前会话标题（AI 聊天页使用）
-  const currentSessionTitle = useMemo(() => {
-    if (activeTab?.type !== "ai-chat") return null;
-    const sessions = agentSessions;
-    const sessionId = agentSessionId;
-    const session = sessions.find((s) => s.id === sessionId);
-    return session?.title || t.common.newConversation;
-  }, [
-    activeTab?.type,
-    chatMode,
-    agentSessions,
-    chatSessions,
-    agentSessionId,
-    chatSessionId,
-  ]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -376,114 +351,109 @@ export function Editor() {
       {/* Tab Bar */}
       <TabBar />
 
-      {/* Top Navigation Bar */}
-      <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border/60 shrink-0">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
-          <button
-            onClick={toggleLeftSidebar}
-            className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground shrink-0"
-            title={t.sidebar.toggleSidebar}
-          >
-            <Sidebar size={16} />
-          </button>
-
-          {/* Navigation buttons */}
-          <div className="flex items-center gap-0.5 shrink-0">
+      {/* Top Navigation Bar — 非 AI 聊天模式下显示 */}
+      {activeTab?.type !== "ai-chat" && (
+        <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
             <button
-              onClick={goBack}
-              disabled={!canGoBack()}
-              className={cn(
-                "p-1 rounded transition-colors",
-                canGoBack()
-                  ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                  : "text-muted-foreground/30 cursor-not-allowed",
-              )}
-              title={t.editor.goBackShortcut}
+              onClick={toggleLeftSidebar}
+              className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground shrink-0"
+              title={t.sidebar.toggleSidebar}
             >
-              <ChevronLeft size={16} />
+              <Sidebar size={16} />
             </button>
-            <button
-              onClick={goForward}
-              disabled={!canGoForward()}
-              className={cn(
-                "p-1 rounded transition-colors",
-                canGoForward()
-                  ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                  : "text-muted-foreground/30 cursor-not-allowed",
-              )}
-              title={t.editor.goForwardShortcut}
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
 
-          <span className="text-muted-foreground/50 shrink-0">/</span>
-          <span className="text-foreground font-medium truncate">
-            {activeTab?.type === "ai-chat"
-              ? currentSessionTitle
-              : currentFile
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={goBack}
+                disabled={!canGoBack()}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  canGoBack()
+                    ? "hover:bg-accent text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground/30 cursor-not-allowed",
+                )}
+                title={t.editor.goBackShortcut}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={goForward}
+                disabled={!canGoForward()}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  canGoForward()
+                    ? "hover:bg-accent text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground/30 cursor-not-allowed",
+                )}
+                title={t.editor.goForwardShortcut}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <span className="text-muted-foreground/50 shrink-0">/</span>
+            <span className="text-foreground font-medium truncate">
+              {currentFile
                 ? getFileName(currentFile)
                 : t.common.untitled}
-          </span>
-          {isDirty && activeTab?.type !== "ai-chat" && (
-            <span
-              className="w-2 h-2 rounded-full bg-orange-400 shrink-0"
-              title={t.common.unsavedChanges}
-            />
-          )}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {/* 只在非 AI 聊天页显示编辑器工具栏 */}
-          {activeTab?.type !== "ai-chat" && (
-            <>
-              {/* Mode Switcher — single button cycling live → reading → source */}
-              <button
-                onClick={() => {
-                  const order: EditorMode[] = ["live", "reading", "source"];
-                  const next =
-                    order[(order.indexOf(editorMode) + 1) % order.length];
-                  handleModeChange(next);
-                }}
-                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-                title={modeLabels[editorMode]}
-              >
-                {modeIcons[editorMode]}
-              </button>
+            </span>
+            {isDirty && (
+              <span
+                className="w-2 h-2 rounded-full bg-orange-400 shrink-0"
+                title={t.common.unsavedChanges}
+              />
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mode Switcher — single button cycling live → reading → source */}
+            <button
+              onClick={() => {
+                const order: EditorMode[] = ["live", "reading", "source"];
+                const next =
+                  order[(order.indexOf(editorMode) + 1) % order.length];
+                handleModeChange(next);
+              }}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={modeLabels[editorMode]}
+            >
+              {modeIcons[editorMode]}
+            </button>
 
-              <span className="ui-compact-hide text-xs text-muted-foreground">
-                {isSaving
-                  ? t.editor.saving
-                  : isDirty
-                    ? t.editor.edited
-                    : t.common.saved}
-              </span>
-              <button
-                onClick={toggleSplitView}
-                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-                title={t.editor.splitView}
-              >
-                <Columns size={16} />
-              </button>
-              <button
-                onClick={() =>
-                  exportToPdf(currentContent, getExportFileName(currentFile))
-                }
-                className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-                title={t.editor.exportPdf}
-              >
-                <Download size={16} />
-              </button>
-            </>
-          )}
-          <button
-            onClick={toggleRightSidebar}
-            className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-            title={t.sidebar.toggleAIPanel}
-          >
-            <MessageSquare size={16} />
-          </button>
+            <span className="ui-compact-hide text-xs text-muted-foreground">
+              {isSaving
+                ? t.editor.saving
+                : isDirty
+                  ? t.editor.edited
+                  : t.common.saved}
+            </span>
+            <button
+              onClick={toggleSplitView}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={t.editor.splitView}
+            >
+              <Columns size={16} />
+            </button>
+            <button
+              onClick={() =>
+                exportToPdf(currentContent, getExportFileName(currentFile))
+              }
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={t.editor.exportPdf}
+            >
+              <Download size={16} />
+            </button>
+            <button
+              onClick={toggleRightSidebar}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={t.sidebar.toggleAIPanel}
+            >
+              <MessageSquare size={16} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main content area */}
       {activeTab?.type === "ai-chat" ? (
