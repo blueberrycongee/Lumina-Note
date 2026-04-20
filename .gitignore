@@ -72,6 +72,9 @@ CLAUDE.md
 # Local Codex/skills scratch
 .tmp_codex_ext/
 skills/
+src-tauri/gen/
+src-tauri/resources/node/
+src-tauri/target/
 !src-tauri/resources/skills/
 !src-tauri/resources/skills/**
 !electron/main/agent/skills/
