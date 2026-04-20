@@ -105,7 +105,7 @@ export function ResizeHandle({
   const hitAreaStyle =
     direction === "left"
       ? { left: "-1px", right: "-7px" }
-      : { left: "-1px", right: "-7px" };
+      : { left: "-7px", right: "-1px" };
 
   // Hover: proximity mask around cursor; Drag: full glow, stronger intensity
   const indicatorStyle: React.CSSProperties | undefined =
