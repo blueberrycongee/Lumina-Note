@@ -24,6 +24,7 @@ import { ToolRegistry } from './agent/tool-registry.js'
 import type { ProviderInterface } from './agent/types.js'
 import { WikiSettingsStore } from './wiki/settings-store.js'
 import { WikiManager } from './wiki/manager.js'
+import { createMainWindowOptions } from './window-config.js'
 
 // ── State ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null
@@ -32,21 +33,7 @@ export default function createWindow(): BrowserWindow {
   const preloadPath = path.join(__dirname, '../preload/index.cjs')
   console.log('[main] preload path:', preloadPath)
 
-  const win = new BrowserWindow({
-    width: 1280,
-    height: 840,
-    minWidth: 800,
-    minHeight: 600,
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 12, y: 16 },
-    backgroundColor: '#1a1a2e',
-    webPreferences: {
-      preload: preloadPath,
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-    },
-  })
+  const win = new BrowserWindow(createMainWindowOptions(preloadPath))
 
   // Log any preload errors (silent by default in Electron)
   win.webContents.on('preload-error', (_event, _preloadPath, error) => {
