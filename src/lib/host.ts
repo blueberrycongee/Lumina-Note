@@ -214,6 +214,13 @@ export async function relaunch(): Promise<void> {
   return invoke("plugin:process|relaunch");
 }
 
+export async function setWindowSize(
+  width: number,
+  height: number,
+): Promise<void> {
+  return invoke("plugin:window|set_size", { width, height });
+}
+
 // ── plugin-shell ──────────────────────────────────────────────────────────
 export async function openExternal(url: string): Promise<void> {
   return invoke("plugin:shell|open", { path: url });

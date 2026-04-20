@@ -60,6 +60,16 @@ export const platformHandlers: Record<string, (args: Record<string, unknown>, wi
     const { default: createWindow } = await import('../index.js')
     createWindow()
   },
+  async 'plugin:window|set_size'({ width, height }, win) {
+    if (!win || win.isDestroyed()) return null
+    const nextWidth = Number(width)
+    const nextHeight = Number(height)
+    if (!Number.isFinite(nextWidth) || !Number.isFinite(nextHeight)) {
+      throw new Error('plugin:window|set_size requires numeric width and height')
+    }
+    win.setSize(Math.round(nextWidth), Math.round(nextHeight))
+    return null
+  },
 
   // ── Dialog ───────────────────────────────────────────────────────────────
   async 'plugin:dialog|open'(args, win) {

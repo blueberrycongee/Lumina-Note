@@ -34,7 +34,7 @@ import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
-import { openDialog, saveFile, startFileWatcher } from "@/lib/host";
+import { openDialog, saveFile, setWindowSize, startFileWatcher } from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
@@ -68,6 +68,9 @@ const DiagramView = lazy(async () => {
   const mod = await import("@/components/diagram/DiagramView");
   return { default: mod.DiagramView };
 });
+
+const MAIN_WORKSPACE_WINDOW_WIDTH = 1280;
+const MAIN_WORKSPACE_WINDOW_HEIGHT = 840;
 
 // Component that shows tabs + graph/editor content
 function EditorWithGraph() {
@@ -793,6 +796,15 @@ function App() {
       window.removeEventListener("open-command-palette", onOpenCommandPalette);
     };
   }, [handleOpenVault, setPaletteOpen, setSearchOpen]);
+
+  useEffect(() => {
+    if (!vaultPath) return;
+    void setWindowSize(MAIN_WORKSPACE_WINDOW_WIDTH, MAIN_WORKSPACE_WINDOW_HEIGHT).catch(
+      (error) => {
+        console.warn("[App] Failed to restore workspace window size:", error);
+      },
+    );
+  }, [vaultPath]);
 
   // Handle resize - must be before conditional returns
   // VS Code 风格：拖动可以折叠/展开面板
