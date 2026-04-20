@@ -169,7 +169,6 @@ export function MainAIChatShell() {
     status: agentStatus,
     messages: rustAgentMessages,
     error: _rustError,
-    totalTokensUsed: rustTotalTokens,
     startTask: rustStartTask,
     abort: agentAbort,
     pendingTool: rustPendingTool,
@@ -970,7 +969,6 @@ export function MainAIChatShell() {
         onStartExportSelection={handleStartExportSelection}
         onCancelExportSelection={handleCancelExportSelection}
         onNewChat={handleNewChat}
-        agentTokens={rustTotalTokens}
       />
 
       <div className="flex-1 relative overflow-hidden">

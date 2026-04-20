@@ -263,7 +263,6 @@ export default {
     studyNotesDesc: "Agent: 知識を整理",
     history: "履歴",
     historyChats: "履歴チャット",
-    sessionTokens: "セッショントークン",
     newChat: "新規チャット",
     exportConversation: "会話をエクスポート",
     exportCancel: "エクスポート終了",

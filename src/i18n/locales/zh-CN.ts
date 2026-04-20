@@ -262,7 +262,6 @@ export default {
     studyNotesDesc: "Agent: 整理知识点",
     history: "历史记录",
     historyChats: "历史对话",
-    sessionTokens: "本会话 Token",
     newChat: "新建对话",
     exportConversation: "导出会话",
     exportCancel: "退出导出",

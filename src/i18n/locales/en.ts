@@ -266,7 +266,6 @@ export default {
     studyNotesDesc: "Agent: Organize knowledge",
     history: "History",
     historyChats: "History",
-    sessionTokens: "Session Tokens",
     newChat: "New Chat",
     exportConversation: "Export Conversation",
     exportCancel: "Exit Export",

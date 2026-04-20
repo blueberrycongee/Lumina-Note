@@ -11,7 +11,6 @@ interface ChatToolbarProps {
   onStartExportSelection: () => void;
   onCancelExportSelection: () => void;
   onNewChat: () => void;
-  agentTokens: number;
 }
 
 export function ChatToolbar({
@@ -23,7 +22,6 @@ export function ChatToolbar({
   onStartExportSelection,
   onCancelExportSelection,
   onNewChat,
-  agentTokens,
 }: ChatToolbarProps) {
   const { t } = useLocaleStore();
 
@@ -43,9 +41,6 @@ export function ChatToolbar({
             {t.ai.historyChats}
           </span>
         </button>
-        <span className="ml-3 text-[11px] text-muted-foreground select-none whitespace-nowrap ui-compact-text ui-compact-hide-md">
-          {t.ai.sessionTokens}: {agentTokens}
-        </span>
       </div>
       <div className="flex items-center gap-2">
         <button
