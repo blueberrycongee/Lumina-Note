@@ -20,17 +20,14 @@ jobs:
 
       - name: Rust cache
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
 
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
 
-      - name: Audit server
-        working-directory: server
-        run: cargo audit
-
-      - name: Audit src-tauri
-        working-directory: src-tauri
-        run: cargo audit
+      - name: Audit Rust server
+        run: cargo audit --manifest-path server/Cargo.toml
 
   npm-audit:
     runs-on: ubuntu-latest
