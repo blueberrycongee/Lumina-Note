@@ -27,7 +27,8 @@ jobs:
         run: cargo install cargo-audit --locked
 
       - name: Audit Rust server
-        run: cargo audit --manifest-path server/Cargo.toml
+        working-directory: server
+        run: cargo audit
 
   npm-audit:
     runs-on: ubuntu-latest
