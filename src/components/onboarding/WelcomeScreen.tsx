@@ -4,6 +4,7 @@ import { TitleBar } from "@/components/layout/TitleBar";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { Button } from "@/components/ui/button";
+import { resolveRendererAssetUrl } from "@/lib/appAsset";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface WelcomeScreenProps {
@@ -46,6 +47,7 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
   const { t } = useLocaleStore();
   const showMacWindowInset = useMacTopChromeEnabled();
   const prefersReducedMotion = useReducedMotion();
+  const logoUrl = resolveRendererAssetUrl("lumina.png");
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -100,7 +102,7 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
                 }}
               />
               <img
-                src="/lumina.png"
+                src={logoUrl}
                 alt="Lumina Note"
                 className="relative w-20 h-20"
               />

@@ -7,6 +7,7 @@
 import { Minus, Square, X, Copy } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { isTauri, getCurrentWindow, platform, type Window } from "@/lib/host";
+import { resolveRendererAssetUrl } from "@/lib/appAsset";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 const isMacByNavigator = (): boolean =>
@@ -15,6 +16,7 @@ const isMacByNavigator = (): boolean =>
 export function TitleBar() {
   const { t } = useLocaleStore();
   const tauriRuntime = isTauri();
+  const logoUrl = resolveRendererAssetUrl("lumina.png");
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMac, setIsMac] = useState(() => isMacByNavigator());
   const usesNativeMacTitleBar = tauriRuntime && isMac;
@@ -179,7 +181,7 @@ export function TitleBar() {
       {/* 左侧：应用图标和标题 */}
       <div className="flex items-center gap-2 px-3">
         <img
-          src="/lumina.png"
+          src={logoUrl}
           alt="Logo"
           className="w-4 h-4 pointer-events-none"
         />
