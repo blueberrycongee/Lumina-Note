@@ -281,8 +281,8 @@ export function Editor() {
       if (isMod && key === "z" && !e.shiftKey) {
         if (!inCodeMirror && inTextInput) return;
 
+        e.preventDefault();
         if (canUndo()) {
-          e.preventDefault();
           undo();
         }
         return;
@@ -292,8 +292,8 @@ export function Editor() {
       if (isMod && (key === "y" || (key === "z" && e.shiftKey))) {
         if (!inCodeMirror && inTextInput) return;
 
+        e.preventDefault();
         if (canRedo()) {
-          e.preventDefault();
           redo();
         }
         return;

@@ -1,6 +1,6 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, createEvent, fireEvent, render } from "@testing-library/react";
 
 import { Editor } from "./Editor";
 import { useFileStore } from "@/stores/useFileStore";
@@ -133,5 +133,50 @@ describe("Editor undo shortcuts", () => {
 
     expect(useFileStore.getState().currentContent).toBe("edited");
     expect(useFileStore.getState().undoStack).toHaveLength(1);
+  });
+
+  it("prevents native undo even when the current file has no store undo history", () => {
+    useFileStore.setState({
+      tabs: [
+        {
+          id: "tab-1",
+          type: "file",
+          path: "/file1.md",
+          name: "file1",
+          content: "A content",
+          isDirty: false,
+          lastSavedContent: "A content",
+          undoStack: [],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: "/file1.md",
+      currentContent: "A content",
+      isDirty: false,
+      isSaving: false,
+      isLoadingFile: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: "A content",
+    });
+
+    const { container } = render(<Editor />);
+    const editor = container.querySelector(".cm-editor");
+    if (!(editor instanceof HTMLElement)) {
+      throw new Error("mocked editor not found");
+    }
+
+    editor.focus();
+    const event = createEvent.keyDown(window, {
+      key: "z",
+      ctrlKey: true,
+      cancelable: true,
+    });
+    fireEvent(window, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(useFileStore.getState().currentContent).toBe("A content");
+    expect(useFileStore.getState().undoStack).toHaveLength(0);
   });
 });
