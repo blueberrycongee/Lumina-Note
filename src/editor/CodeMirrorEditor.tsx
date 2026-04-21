@@ -5431,12 +5431,11 @@ export const CodeMirrorEditor = forwardRef<
       if (!view) return;
       const coords = view.coordsAtPos(from);
       if (!coords) return;
-      const contentRect = view.contentDOM.getBoundingClientRect();
       const menuWidth = 280;
       const menuHeight = 360;
 
-      // Position menu to the left of the content area
-      const x = Math.max(4, contentRect.left - menuWidth - 4);
+      // Position menu to the left of the block
+      const x = Math.max(4, coords.left - menuWidth - 4);
 
       // Use block top as base, but check viewport boundaries
       let y = coords.top;
@@ -5506,7 +5505,6 @@ export const CodeMirrorEditor = forwardRef<
               });
               const newCoords = view.coordsAtPos(insertPos + 1);
               if (newCoords) {
-                const contentRect = view.contentDOM.getBoundingClientRect();
                 const menuWidth = 280;
                 const menuHeight = 360;
 
@@ -5519,7 +5517,7 @@ export const CodeMirrorEditor = forwardRef<
                 setBlockMenu({
                   mode: "insert",
                   position: {
-                    x: Math.max(4, contentRect.left - menuWidth - 4),
+                    x: Math.max(4, newCoords.left - menuWidth - 4),
                     y,
                   },
                   blockFrom: insertPos + 1,
