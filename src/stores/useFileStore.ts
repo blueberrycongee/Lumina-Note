@@ -21,6 +21,7 @@ interface HistoryEntry {
   type: "user" | "ai";
   timestamp: number;
   description?: string;
+  selection?: { anchor: number; head: number };
 }
 
 // 标签页类型
