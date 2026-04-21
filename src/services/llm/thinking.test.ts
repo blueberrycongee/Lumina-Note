@@ -16,11 +16,11 @@ describe("LLM thinking mode capability", () => {
   });
 
   it("detects moonshot k2.5 as param-toggle mode", () => {
-    expect(getThinkingCapability("moonshot", "kimi-k2.5")).toEqual({
+    expect(getThinkingCapability("openai-compatible", "kimi-k2.5")).toEqual({
       strategy: "param-toggle",
       parameter: "thinking",
     });
-    expect(getThinkingCapability("moonshot", "moonshotai/kimi-k2.5")).toEqual({
+    expect(getThinkingCapability("openai-compatible", "moonshotai/kimi-k2.5")).toEqual({
       strategy: "param-toggle",
       parameter: "thinking",
     });
@@ -68,7 +68,7 @@ describe("LLM thinking mode capability", () => {
   it("only sends moonshot thinking disable patch in instant mode", () => {
     expect(
       getThinkingRequestBodyPatch({
-        provider: "moonshot",
+        provider: "openai-compatible",
         model: "kimi-k2.5",
         thinkingMode: "instant",
       })
@@ -76,7 +76,7 @@ describe("LLM thinking mode capability", () => {
 
     expect(
       getThinkingRequestBodyPatch({
-        provider: "moonshot",
+        provider: "openai-compatible",
         model: "kimi-k2.5",
         thinkingMode: "thinking",
       })
@@ -84,8 +84,8 @@ describe("LLM thinking mode capability", () => {
   });
 
   it("reports thinking switch availability", () => {
-    expect(supportsThinkingModeSwitch("moonshot", "kimi-k2.5")).toBe(true);
+    expect(supportsThinkingModeSwitch("openai-compatible", "kimi-k2.5")).toBe(true);
     expect(supportsThinkingModeSwitch("deepseek", "deepseek-chat")).toBe(true);
-    expect(supportsThinkingModeSwitch("openai", "gpt-5.2")).toBe(false);
+    expect(supportsThinkingModeSwitch("openai", "gpt-5.4")).toBe(false);
   });
 });

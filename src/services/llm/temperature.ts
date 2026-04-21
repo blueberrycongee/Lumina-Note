@@ -5,12 +5,15 @@ function includesAny(text: string, patterns: readonly string[]): boolean {
 }
 
 function isMoonshotK25Model(provider: LLMProviderType, model: string): boolean {
-  if (provider !== "moonshot") return false;
+  if (provider !== "openai-compatible") return false;
   const normalized = model.toLowerCase();
   return (
     normalized.includes("kimi-k2.5") ||
     normalized.includes("kimi-k2-5") ||
-    normalized.endsWith("/kimi-k2.5")
+    normalized.includes("kimi-k2.6") ||
+    normalized.includes("kimi-k2-6") ||
+    normalized.endsWith("/kimi-k2.5") ||
+    normalized.endsWith("/kimi-k2.6")
   );
 }
 

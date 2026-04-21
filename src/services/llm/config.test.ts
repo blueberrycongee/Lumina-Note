@@ -13,8 +13,8 @@ describe('LLM Config', () => {
   describe('getLLMConfig', () => {
     it('should return default config initially', () => {
       const config = getLLMConfig();
-      expect(config.provider).toBe('moonshot');
-      expect(config.model).toBe('kimi-k2.5');
+      expect(config.provider).toBe('openai');
+      expect(config.model).toBe('gpt-5.4');
       expect(config.thinkingMode).toBe('auto');
       expect(config.temperature).toBeUndefined();
       expect(config.apiKey).toBe('');
@@ -34,7 +34,7 @@ describe('LLM Config', () => {
       const config = getLLMConfig();
       expect(config.apiKey).toBe('test-key');
       // Other properties should remain unchanged
-      expect(config.provider).toBe('moonshot');
+      expect(config.provider).toBe('openai');
     });
 
     it('should update multiple properties', () => {
@@ -72,9 +72,9 @@ describe('LLM Config', () => {
       resetLLMConfig();
       
       const config = getLLMConfig();
-      expect(config.provider).toBe('moonshot');
+      expect(config.provider).toBe('openai');
       expect(config.apiKey).toBe('');
-      expect(config.model).toBe('kimi-k2.5');
+      expect(config.model).toBe('gpt-5.4');
       expect(config.thinkingMode).toBe('auto');
     });
   });

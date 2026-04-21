@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import {
   findModel,
-  getProviderMetadata,
-  listProviderMetadata,
-  OPENAI_COMPATIBLE_PRESETS,
+  getProviderModels,
+  listProviderModels,
   PROVIDER_METADATA,
-  type ProviderId,
 } from './metadata'
 
 describe('providers/metadata', () => {
@@ -27,7 +25,7 @@ describe('providers/metadata', () => {
   })
 
   it('each provider has label + description + requiresApiKey + supportsBaseUrl', () => {
-    for (const p of listProviderMetadata()) {
+    for (const p of listProviderModels()) {
       expect(p.label).toBeTruthy()
       expect(p.description).toBeTruthy()
       expect(typeof p.requiresApiKey).toBe('boolean')
@@ -37,7 +35,7 @@ describe('providers/metadata', () => {
   })
 
   it('ollama is the only provider that does not require an apiKey', () => {
-    for (const p of listProviderMetadata()) {
+    for (const p of listProviderModels()) {
       if (p.id === 'ollama') {
         expect(p.requiresApiKey).toBe(false)
       } else {
@@ -47,7 +45,7 @@ describe('providers/metadata', () => {
   })
 
   it('non-empty model lists except openai-compatible (presets only)', () => {
-    for (const p of listProviderMetadata()) {
+    for (const p of listProviderModels()) {
       if (p.id === 'openai-compatible') {
         expect(p.models.length).toBe(0)
       } else {
@@ -57,7 +55,7 @@ describe('providers/metadata', () => {
   })
 
   it('each model entry has id + name', () => {
-    for (const p of listProviderMetadata()) {
+    for (const p of listProviderModels()) {
       for (const m of p.models) {
         expect(m.id).toBeTruthy()
         expect(m.name).toBeTruthy()
@@ -72,21 +70,11 @@ describe('providers/metadata', () => {
 
   it('findModel returns undefined for unknown pair', () => {
     expect(findModel('anthropic', 'not-a-model')).toBeUndefined()
-    expect(findModel('bogus' as ProviderId, 'x')).toBeUndefined()
+    expect(findModel('bogus', 'x')).toBeUndefined()
   })
 
-  it('getProviderMetadata returns undefined for unknown provider', () => {
-    expect(getProviderMetadata('anthropic')).toBeDefined()
-    expect(getProviderMetadata('bogus' as ProviderId)).toBeUndefined()
-  })
-
-  it('openai-compatible presets cover Moonshot / Zhipu / Qwen', () => {
-    const ids = OPENAI_COMPATIBLE_PRESETS.map((p) => p.id).sort()
-    expect(ids).toEqual(['moonshot', 'qwen', 'zhipu'])
-    for (const preset of OPENAI_COMPATIBLE_PRESETS) {
-      expect(preset.label).toBeTruthy()
-      expect(preset.defaultBaseUrl.startsWith('https://')).toBe(true)
-      expect(preset.models.length).toBeGreaterThan(0)
-    }
+  it('getProviderModels returns undefined for unknown provider', () => {
+    expect(getProviderModels('anthropic')).toBeDefined()
+    expect(getProviderModels('bogus')).toBeUndefined()
   })
 })

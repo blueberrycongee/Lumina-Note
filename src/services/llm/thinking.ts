@@ -38,7 +38,7 @@ export function getThinkingCapability(
     return { strategy: "none" };
   }
 
-  if (provider === "moonshot" && matchesModelId(model, KIMI_K25_MODEL)) {
+  if (provider === "openai-compatible" && matchesModelId(model, KIMI_K25_MODEL)) {
     return { strategy: "param-toggle", parameter: "thinking" };
   }
 

@@ -4,23 +4,23 @@ import { getRecommendedTemperature, resolveTemperature } from "./temperature";
 
 describe("LLM temperature strategy", () => {
   it("returns provider/model best-practice defaults", () => {
-    expect(getRecommendedTemperature("moonshot", "kimi-k2.5")).toBe(1.0);
-    expect(getRecommendedTemperature("openai", "gpt-5.2-codex")).toBe(0.2);
-    expect(getRecommendedTemperature("zai", "glm-4.7-flash")).toBe(0.6);
+    expect(getRecommendedTemperature("openai-compatible", "kimi-k2.5")).toBe(1.0);
+    expect(getRecommendedTemperature("openai", "gpt-5.4-codex")).toBe(0.2);
+    expect(getRecommendedTemperature("openai-compatible", "glm-4.7-flash")).toBe(0.6);
     expect(getRecommendedTemperature("deepseek", "deepseek-reasoner")).toBe(1.0);
     expect(getRecommendedTemperature("openai", "gpt-4o")).toBe(0.7);
   });
 
   it("uses recommended default when user temperature is not set", () => {
     expect(
-      resolveTemperature({ provider: "moonshot", model: "kimi-k2.5" })
+      resolveTemperature({ provider: "openai-compatible", model: "kimi-k2.5" })
     ).toBe(1.0);
   });
 
   it("forces kimi-k2.5 to use temperature=1.0", () => {
     expect(
       resolveTemperature({
-        provider: "moonshot",
+        provider: "openai-compatible",
         model: "kimi-k2.5",
         configuredTemperature: 1.4,
       })
@@ -30,14 +30,14 @@ describe("LLM temperature strategy", () => {
   it("forces kimi-k2.5 instant mode to use temperature=0.6", () => {
     expect(
       resolveTemperature({
-        provider: "moonshot",
+        provider: "openai-compatible",
         model: "kimi-k2.5",
         thinkingMode: "instant",
       })
     ).toBe(0.6);
     expect(
       resolveTemperature({
-        provider: "moonshot",
+        provider: "openai-compatible",
         model: "kimi-k2.5",
         thinkingMode: "instant",
         configuredTemperature: 1.2,

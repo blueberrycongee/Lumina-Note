@@ -4,7 +4,7 @@
  * Phase 2.5 后,所有 LLM 调用都通过 Electron main 的 agent runtime(AI SDK) 完成。
  * 这里只保留:
  * - 共享的数据类型(Message / Intent / ThinkingMode / ...)
- * - PROVIDER_REGISTRY metadata(用于 UI 展示模型下拉,不绑实现)
+ * - PROVIDER_MODELS metadata(用于 UI 展示模型下拉,不绑实现)
  * - thinking / temperature / routing 辅助工具
  * - callLLM / callLLMStream — 遗留 API,Phase 5 前端重接 agent runtime 时会替换成真实路径
  */
@@ -24,8 +24,6 @@ export type {
   LLMUsage,
   LLMProvider,
   LLMProviderType,
-  ProviderMeta,
-  ModelMeta,
   StreamChunk,
   LLMStream,
   IntentType,
@@ -33,22 +31,24 @@ export type {
   ThinkingMode,
 } from "./types";
 
-export { PROVIDER_REGISTRY } from "./types";
+export {
+  PROVIDER_MODELS,
+  listProviderModels,
+  getProviderModels,
+  findModel,
+} from "./providers/models";
+export type { ProviderMeta as AgentProviderMeta, ModelMeta as AgentModelMeta } from "./providers/models";
 
 // 新的纯数据 provider metadata(Phase 2.3) — 用于 UI 展示,不绑实现
 export type {
-  ProviderId as AgentProviderId,
-  ProviderMeta as AgentProviderMeta,
-  ModelMeta as AgentModelMeta,
   OpenAICompatiblePreset,
 } from "./providers/metadata";
 export {
   PROVIDER_METADATA,
-  OPENAI_COMPATIBLE_PRESETS,
-  listProviderMetadata,
-  getProviderMetadata,
-  findModel,
+  listProviderModels as listProviderMetadata,
+  getProviderModels as getProviderMetadata,
 } from "./providers/metadata";
+export { OPENAI_COMPATIBLE_PRESETS } from "./providers/models";
 
 // OpenAI Compatible 通配通道辅助 (Phase 2.6)
 export type { OpenAiCompatibleSettings } from "./providers/openai-compatible";

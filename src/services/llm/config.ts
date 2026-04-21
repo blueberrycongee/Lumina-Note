@@ -6,9 +6,9 @@ import type { LLMConfig } from "./types";
 
 // 默认配置
 const DEFAULT_CONFIG: LLMConfig = {
-  provider: "moonshot",
+  provider: "openai",
   apiKey: "",
-  model: "kimi-k2.5",
+  model: "gpt-5.4",
   thinkingMode: "auto",
 };
 

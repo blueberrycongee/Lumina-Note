@@ -14,7 +14,7 @@ import {
   OPENAI_COMPATIBLE_PRESETS,
   type OpenAICompatiblePreset,
   type ModelMeta,
-} from './metadata'
+} from './models'
 
 export type { OpenAICompatiblePreset, ModelMeta }
 export { OPENAI_COMPATIBLE_PRESETS }
@@ -39,7 +39,7 @@ export function listOpenAiCompatiblePresets(): OpenAICompatiblePreset[] {
 }
 
 export function getOpenAiCompatiblePreset(id: string): OpenAICompatiblePreset | undefined {
-  return OPENAI_COMPATIBLE_PRESETS.find((p) => p.id === id)
+  return OPENAI_COMPATIBLE_PRESETS.find((p: OpenAICompatiblePreset) => p.id === id)
 }
 
 /**
