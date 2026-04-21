@@ -18,11 +18,7 @@ import {
 } from "@codemirror/view";
 import { StateField, StateEffect, EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
-import {
-  deleteBlock,
-  duplicateBlock,
-  transformBlockTypeByToolbar,
-} from "./blockOperations";
+import { deleteBlock, duplicateBlock } from "./blockOperations";
 
 // ============ 类型定义 ============
 
@@ -35,6 +31,7 @@ export interface BlockInfo {
 }
 
 // ============ 块类型白名单 ============
+// 对应 Lezer Markdown 语法树中的顶层块级节点
 
 const BLOCK_NODE_TYPES = new Set([
   "ATXHeading1",
@@ -104,7 +101,7 @@ function parseBlocks(state: EditorState): BlockInfo[] {
 
   tree.iterate({
     enter(node) {
-      if (node.name === "Document") return;
+      if (node.name === "Document") return; // 继续遍历子节点
 
       if (BLOCK_NODE_TYPES.has(node.name)) {
         const startLine = state.doc.lineAt(node.from);
@@ -116,7 +113,7 @@ function parseBlocks(state: EditorState): BlockInfo[] {
           startLine: startLine.number,
           endLine: endLine.number,
         });
-        return false;
+        return false; // 不进入该节点的子节点（保持顶层块粒度）
       }
     },
   });
@@ -158,10 +155,11 @@ class BlockHandleWidget extends WidgetType {
   toDOM() {
     const handle = document.createElement("div");
     handle.className = "cm-block-handle";
-    handle.setAttribute("aria-label", "Block handle");
+    handle.setAttribute("aria-label", "Block actions");
     handle.setAttribute("role", "button");
     handle.tabIndex = -1;
 
+    // 使用 SVG 图标替代文字，更轻量且不受字体影响
     handle.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="3" cy="3" r="1" fill="currentColor"/>
       <circle cx="3" cy="6" r="1" fill="currentColor"/>
@@ -237,11 +235,27 @@ class BlockHandleWidget extends WidgetType {
       window.addEventListener("mouseup", onMouseUp);
     });
 
+    // 右键点击：打开块操作菜单
+    handle.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(
+        new CustomEvent("lumina-block-menu", {
+          detail: {
+            from: this.blockFrom,
+            to: this.blockTo,
+            clientX: e.clientX,
+            clientY: e.clientY,
+          },
+        })
+      );
+    });
+
     return handle;
   }
 
   ignoreEvent() {
-    return true;
+    return true; // CodeMirror 完全忽略该 widget 的事件
   }
 }
 
@@ -270,176 +284,7 @@ function isEmptyParagraph(state: EditorState, block: BlockInfo): boolean {
   return text === "";
 }
 
-// ============ Block Format Toolbar (hover 浮出式) ============
-
-interface ToolbarButton {
-  id: string;
-  label: string;
-  title: string;
-  action: (view: EditorView, block: BlockInfo) => void;
-}
-
-function createToolbarButtons(): ToolbarButton[] {
-  const format = (
-    id: string,
-    label: string,
-    title: string,
-    targetType: string
-  ): ToolbarButton => ({
-    id,
-    label,
-    title,
-    action: (view, block) => {
-      transformBlockTypeByToolbar(view, block, targetType);
-    },
-  });
-
-  return [
-    format("h1", "H1", "Heading 1", "ATXHeading1"),
-    format("h2", "H2", "Heading 2", "ATXHeading2"),
-    format("h3", "H3", "Heading 3", "ATXHeading3"),
-    format("bullet", "•", "Bullet List", "BulletList"),
-    format("ordered", "1.", "Numbered List", "OrderedList"),
-    {
-      id: "task",
-      label: "☐",
-      title: "Task List",
-      action: (view, block) => {
-        const line = view.state.doc.lineAt(block.from);
-        view.dispatch({
-          changes: {
-            from: line.from,
-            to: line.from,
-            insert: "- [ ] ",
-          },
-          selection: { anchor: line.from + 6 },
-        });
-      },
-    },
-    format("quote", "❝", "Quote", "Blockquote"),
-    format("code", "</>", "Code Block", "FencedCode"),
-    {
-      id: "divider",
-      label: "—",
-      title: "Divider",
-      action: (view, block) => {
-        view.dispatch({
-          changes: { from: block.from, to: block.to, insert: "---" },
-          selection: { anchor: block.from + 3 },
-        });
-      },
-    },
-    {
-      id: "delete",
-      label: "🗑",
-      title: "Delete block",
-      action: (view, block) => deleteBlock(view, block),
-    },
-    {
-      id: "duplicate",
-      label: "📄",
-      title: "Duplicate block",
-      action: (view, block) => duplicateBlock(view, block),
-    },
-  ];
-}
-
-class BlockFormatToolbar {
-  private el: HTMLElement;
-  private buttons: ToolbarButton[];
-  private view: EditorView | null = null;
-  private currentBlock: BlockInfo | null = null;
-
-  constructor() {
-    this.buttons = createToolbarButtons();
-    this.el = document.createElement("div");
-    this.el.className = "cm-block-format-toolbar";
-    this.buildDOM();
-  }
-
-  private buildDOM() {
-    const row1 = document.createElement("div");
-    row1.className = "cm-block-format-row";
-    const row2 = document.createElement("div");
-    row2.className = "cm-block-format-row";
-
-    this.buttons.forEach((btn, idx) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "cm-block-format-btn";
-      button.textContent = btn.label;
-      button.title = btn.title;
-      button.dataset.id = btn.id;
-      button.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (this.view && this.currentBlock) {
-          btn.action(this.view, this.currentBlock);
-        }
-      });
-
-      if (idx < 6) {
-        row1.appendChild(button);
-      } else {
-        row2.appendChild(button);
-      }
-    });
-
-    this.el.appendChild(row1);
-    this.el.appendChild(row2);
-  }
-
-  mount(parent: HTMLElement) {
-    parent.appendChild(this.el);
-  }
-
-  showAt(view: EditorView, block: BlockInfo) {
-    this.view = view;
-    this.currentBlock = block;
-
-    const coords = view.coordsAtPos(block.from);
-    if (!coords) {
-      this.hide();
-      return;
-    }
-
-    // 定位在块左侧：与 .cm-content 左边缘对齐再向左偏移
-    const contentRect = view.contentDOM.getBoundingClientRect();
-    const toolbarWidth = 150; // 近似宽度
-    const left = Math.max(4, contentRect.left - toolbarWidth - 4);
-    const top = coords.top;
-
-    this.el.style.left = `${left}px`;
-    this.el.style.top = `${top}px`;
-    this.el.style.display = "flex";
-
-    // 高亮当前块类型对应的按钮
-    this.el.querySelectorAll(".cm-block-format-btn").forEach((btn) => {
-      const button = btn as HTMLButtonElement;
-      const isActive =
-        (block.type === "ATXHeading1" && button.dataset.id === "h1") ||
-        (block.type === "ATXHeading2" && button.dataset.id === "h2") ||
-        (block.type === "ATXHeading3" && button.dataset.id === "h3") ||
-        (block.type === "BulletList" && button.dataset.id === "bullet") ||
-        (block.type === "OrderedList" && button.dataset.id === "ordered") ||
-        (block.type === "Blockquote" && button.dataset.id === "quote") ||
-        (block.type === "FencedCode" && button.dataset.id === "code");
-      button.classList.toggle("cm-block-format-btn-active", !!isActive);
-    });
-  }
-
-  hide() {
-    this.el.style.display = "none";
-    this.view = null;
-    this.currentBlock = null;
-  }
-
-  destroy() {
-    this.el.remove();
-  }
-}
-
-// ============ 块操作菜单 DOM 管理 (保留右键菜单) ============
+// ============ 块操作菜单 DOM 管理 ============
 
 class BlockMenuManager {
   private menuEl: HTMLElement | null = null;
@@ -477,6 +322,7 @@ class BlockMenuManager {
     menu.appendChild(duplicateItem);
     menu.appendChild(deleteItem);
 
+    // 定位：优先显示在鼠标右侧，如果超出视口则显示在左侧
     menu.style.position = "fixed";
     menu.style.left = `${clientX + 8}px`;
     menu.style.top = `${clientY}px`;
@@ -485,6 +331,7 @@ class BlockMenuManager {
     document.body.appendChild(menu);
     this.menuEl = menu;
 
+    // 如果超出右边界，调整位置
     const menuRect = menu.getBoundingClientRect();
     if (menuRect.right > window.innerWidth - 8) {
       menu.style.left = `${clientX - menuRect.width - 8}px`;
@@ -493,6 +340,7 @@ class BlockMenuManager {
       menu.style.top = `${clientY - menuRect.height}px`;
     }
 
+    // 点击外部关闭
     this.outsideClickHandler = (e: MouseEvent) => {
       if (!menu.contains(e.target as Node)) {
         this.hide();
@@ -528,7 +376,6 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     private dragMoveHandler: ((e: CustomEvent) => void) | null = null;
     private dragEndHandler: ((e: CustomEvent) => void) | null = null;
     private menuManager = new BlockMenuManager();
-    private formatToolbar = new BlockFormatToolbar();
     private dragState: {
       sourceBlock: BlockInfo;
       ghostEl: HTMLElement;
@@ -543,28 +390,15 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       this.attachBlockSelectListener(view);
       this.attachBlockMenuListener(view);
       this.attachDragListeners(view);
-      this.formatToolbar.mount(view.dom);
     }
 
     update(update: ViewUpdate) {
-      const hoverChanged = this.hoverChanged(update);
       if (
         update.docChanged ||
         update.viewportChanged ||
-        hoverChanged ||
         this.blockStateChanged(update)
       ) {
         this.decorations = this.buildDecorations(update.view);
-      }
-
-      // 同步更新格式工具栏位置
-      if (hoverChanged || update.viewportChanged) {
-        const blockState = update.state.field(blockEditorStateField);
-        if (blockState.hovered) {
-          this.formatToolbar.showAt(update.view, blockState.hovered);
-        } else {
-          this.formatToolbar.hide();
-        }
       }
     }
 
@@ -600,28 +434,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         );
       }
       this.menuManager.hide();
-      this.formatToolbar.destroy();
       this.cleanupDrag();
-    }
-
-    private hoverChanged(update: ViewUpdate): boolean {
-      const prev = update.startState.field(blockEditorStateField).hovered;
-      const curr = update.state.field(blockEditorStateField).hovered;
-      if (!prev && !curr) return false;
-      if (!prev || !curr) return true;
-      return prev.from !== curr.from || prev.to !== curr.to;
-    }
-
-    private blockStateChanged(update: ViewUpdate): boolean {
-      const prev = update.startState.field(blockEditorStateField, false);
-      const curr = update.state.field(blockEditorStateField, false);
-      if (!prev || !curr) return false;
-      return (
-        prev.hovered?.from !== curr.hovered?.from ||
-        prev.hovered?.to !== curr.hovered?.to ||
-        prev.selected?.from !== curr.selected?.from ||
-        prev.selected?.to !== curr.selected?.to
-      );
     }
 
     // ── Drag & Drop ───────────────────────────────────────────────
@@ -639,7 +452,6 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         if (!block) return;
 
         this.cleanupDrag();
-        this.formatToolbar.hide(); // 拖拽时隐藏工具栏
 
         const ghost = document.createElement("div");
         ghost.className = "cm-block-drag-ghost";
@@ -688,6 +500,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
           return;
         }
 
+        // 判断插入到目标块前还是后：鼠标在目标块上半部则前，下半部则后
         const coords = view.coordsAtPos(target.from);
         const coordsEnd = view.coordsAtPos(target.to);
         if (!coords || !coordsEnd) return;
@@ -697,11 +510,12 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         this.dragState.targetBlock = target;
         this.dragState.insertAfter = insertAfter;
 
+        // 定位 indicator
         const indicator = this.dragState.indicatorEl;
         indicator.style.display = "block";
         const anchorY = insertAfter ? coordsEnd.bottom : coords.top;
-        indicator.style.top = `${anchorY - editorScrollTop(view)}px`;
-        indicator.style.left = `${coords.left - editorScrollLeft(view)}px`;
+        indicator.style.top = `${anchorY}px`;
+        indicator.style.left = `${coords.left}px`;
         indicator.style.width = `${Math.min(
           coordsEnd.right - coords.left,
           760
@@ -766,6 +580,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         insertPos = target.from;
       }
 
+      // 如果源块在目标块之前，删除后目标位置会前移
       if (source.to < target.from) {
         insertPos -= deleteTo - deleteFrom;
       }
@@ -778,7 +593,17 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       });
     }
 
-    // ── Block Menu (右键) ─────────────────────────────────────────
+    private blockStateChanged(update: ViewUpdate): boolean {
+      const prev = update.startState.field(blockEditorStateField, false);
+      const curr = update.state.field(blockEditorStateField, false);
+      if (!prev || !curr) return false;
+      return (
+        prev.hovered?.from !== curr.hovered?.from ||
+        prev.hovered?.to !== curr.hovered?.to ||
+        prev.selected?.from !== curr.selected?.from ||
+        prev.selected?.to !== curr.selected?.to
+      );
+    }
 
     private attachBlockMenuListener(view: EditorView) {
       this.blockMenuHandler = (e: CustomEvent) => {
@@ -792,6 +617,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         const block = findBlockAtPos(blockState.blocks, from);
         if (block) {
           this.menuManager.show(view, block, clientX, clientY);
+          // 同时选中该块
           view.dispatch({
             selection: { anchor: block.from, head: block.to },
             effects: setSelectedBlock.of(block),
@@ -883,7 +709,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         const startLine = view.state.doc.line(block.startLine);
         const endLine = view.state.doc.line(block.endLine);
 
-        // 块手柄
+        // 块手柄：插入到第一行开头
         decorations.push(
           Decoration.widget({
             widget: new BlockHandleWidget(block.type, block.from, block.to),
@@ -926,18 +752,6 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
   },
   { decorations: (v) => v.decorations }
 );
-
-// ============ 辅助：获取编辑器滚动偏移 ============
-
-function editorScrollTop(view: EditorView): number {
-  const scroller = view.scrollDOM;
-  return scroller.scrollTop;
-}
-
-function editorScrollLeft(view: EditorView): number {
-  const scroller = view.scrollDOM;
-  return scroller.scrollLeft;
-}
 
 // ============ 导出 ============
 
