@@ -145,4 +145,151 @@ describe('useFileStore undo history behavior', () => {
     expect(useFileStore.getState().currentFile).toBe('/file2.md');
     expect(useFileStore.getState().currentContent).toBe(content2);
   });
+
+  it('keeps the active tab snapshot in sync while editing and saving', async () => {
+    const initialContent = generateContent(1);
+    const editedContent = `${initialContent}\nedit-1`;
+
+    useFileStore.setState({
+      tabs: [
+        {
+          id: 'tab-1',
+          type: 'file',
+          path: '/file1.md',
+          name: 'file1',
+          content: initialContent,
+          isDirty: false,
+          lastSavedContent: initialContent,
+          undoStack: [],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: '/file1.md',
+      currentContent: initialContent,
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: initialContent,
+    });
+
+    const store = useFileStore.getState();
+
+    store.updateContent(editedContent, 'user');
+
+    expect(useFileStore.getState().tabs[0]).toMatchObject({
+      content: editedContent,
+      isDirty: true,
+      lastSavedContent: initialContent,
+    });
+
+    await store.save();
+
+    expect(useFileStore.getState().tabs[0]).toMatchObject({
+      content: editedContent,
+      isDirty: false,
+      lastSavedContent: editedContent,
+    });
+  });
+
+  it('restores the saved baseline for each tab when switching between dirty files', () => {
+    useFileStore.setState({
+      tabs: [
+        {
+          id: 'tab-1',
+          type: 'file',
+          path: '/file1.md',
+          name: 'file1',
+          content: 'file-1 edited',
+          isDirty: true,
+          lastSavedContent: 'file-1 saved',
+          undoStack: [{ content: 'file-1 saved', type: 'user', timestamp: 1 }],
+          redoStack: [],
+        },
+        {
+          id: 'tab-2',
+          type: 'file',
+          path: '/file2.md',
+          name: 'file2',
+          content: 'file-2 edited',
+          isDirty: true,
+          lastSavedContent: 'file-2 saved',
+          undoStack: [{ content: 'file-2 saved', type: 'user', timestamp: 2 }],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: '/file1.md',
+      currentContent: 'file-1 edited',
+      isDirty: true,
+      undoStack: [{ content: 'file-1 saved', type: 'user', timestamp: 1 }],
+      redoStack: [],
+      lastSavedContent: 'file-1 saved',
+    });
+
+    const store = useFileStore.getState();
+
+    store.switchTab(1);
+    expect(useFileStore.getState().lastSavedContent).toBe('file-2 saved');
+
+    store.switchTab(0);
+    expect(useFileStore.getState().lastSavedContent).toBe('file-1 saved');
+  });
+
+  it('clears isDirty when undo returns to the saved content after tab switches', () => {
+    const initialContent = generateContent(1);
+    const editedContent = `${initialContent}\nedit-1`;
+
+    useFileStore.setState({
+      tabs: [
+        {
+          id: 'tab-1',
+          type: 'file',
+          path: '/file1.md',
+          name: 'file1',
+          content: initialContent,
+          isDirty: false,
+          lastSavedContent: initialContent,
+          undoStack: [],
+          redoStack: [],
+        },
+        {
+          id: 'tab-2',
+          type: 'file',
+          path: '/file2.md',
+          name: 'file2',
+          content: 'other file',
+          isDirty: false,
+          lastSavedContent: 'other file',
+          undoStack: [],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: '/file1.md',
+      currentContent: initialContent,
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: initialContent,
+    });
+
+    const store = useFileStore.getState();
+
+    store.updateContent(editedContent, 'user');
+    store.switchTab(1);
+    store.switchTab(0);
+    store.undo();
+
+    expect(useFileStore.getState()).toMatchObject({
+      currentContent: initialContent,
+      isDirty: false,
+      lastSavedContent: initialContent,
+    });
+    expect(useFileStore.getState().tabs[0]).toMatchObject({
+      content: initialContent,
+      isDirty: false,
+      lastSavedContent: initialContent,
+    });
+  });
 });
