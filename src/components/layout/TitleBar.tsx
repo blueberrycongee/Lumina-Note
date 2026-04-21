@@ -173,7 +173,7 @@ export function TitleBar() {
   // Windows/Linux 使用自定义标题栏
   return (
     <div
-      className="h-8 flex items-center justify-between bg-background border-b border-border select-none"
+      className="h-8 flex items-center justify-between bg-background border-b border-border/50 select-none"
       onMouseDown={handleDragStart}
       onDoubleClick={handleDoubleClick}
       data-tauri-drag-region

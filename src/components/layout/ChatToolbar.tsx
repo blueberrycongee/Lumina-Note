@@ -33,7 +33,7 @@ export function ChatToolbar({
   const { t } = useLocaleStore();
 
   return (
-    <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border shrink-0 min-w-0">
+    <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border/50 shrink-0 min-w-0">
       <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         {onToggleLeftSidebar && (
           <button

@@ -6,7 +6,7 @@ const rightPanelSource = readFileSync(path.resolve(__dirname, "RightPanel.tsx"),
 
 describe("RightPanel accent styling", () => {
   it("owns its left-side border for divider continuity", () => {
-    expect(rightPanelSource).toContain("border-l border-border bg-background flex flex-col");
+    expect(rightPanelSource).toContain("border-l border-border/50 bg-background flex flex-col");
     expect(rightPanelSource).not.toContain("backdrop-blur-md");
     expect(rightPanelSource).not.toContain("shadow-[inset_1px_0_0_hsl(var(--border)/0.6)]");
   });

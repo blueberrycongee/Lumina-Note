@@ -521,12 +521,12 @@ export function RightPanel() {
   return (
     <aside
       ref={panelRef}
-      className={`w-full h-full border-l border-border bg-background flex flex-col transition-all duration-200 ${
+      className={`w-full h-full border-l border-border/50 bg-background flex flex-col transition-all duration-200 ${
         isDraggingFileOver ? "ring-2 ring-primary ring-inset bg-primary/5" : ""
       }`}
     >
       {/* Tabs */}
-      <div className="ui-compact-row flex border-b border-border bg-background min-w-0">
+      <div className="ui-compact-row flex border-b border-border/50 bg-background min-w-0">
         {/* AI Tab - temporarily hidden */}
         {false && aiPanelMode === "docked" && !isMainAIActive && (
           <button
