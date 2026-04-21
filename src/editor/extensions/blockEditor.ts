@@ -18,7 +18,6 @@ import {
 } from "@codemirror/view";
 import { StateField, StateEffect, EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
-import { deleteBlock, duplicateBlock } from "./blockOperations";
 
 // ============ 类型定义 ============
 
@@ -59,13 +58,13 @@ export const setSelectedBlock = StateEffect.define<BlockInfo | null>();
 
 // ============ 块状态 StateField ============
 
-interface BlockEditorState {
+export interface BlockEditorState {
   blocks: BlockInfo[];
   hovered: BlockInfo | null;
   selected: BlockInfo | null;
 }
 
-const blockEditorStateField = StateField.define<BlockEditorState>({
+export const blockEditorStateField = StateField.define<BlockEditorState>({
   create(state) {
     return {
       blocks: parseBlocks(state),
@@ -123,7 +122,7 @@ function parseBlocks(state: EditorState): BlockInfo[] {
 
 export function findBlockAtPos(
   blocks: BlockInfo[],
-  pos: number
+  pos: number,
 ): BlockInfo | null {
   for (const block of blocks) {
     if (pos >= block.from && pos <= block.to) {
@@ -139,7 +138,7 @@ class BlockHandleWidget extends WidgetType {
   constructor(
     readonly blockType: string,
     readonly blockFrom: number,
-    readonly blockTo: number
+    readonly blockTo: number,
   ) {
     super();
   }
@@ -169,7 +168,7 @@ class BlockHandleWidget extends WidgetType {
       <circle cx="9" cy="9" r="1" fill="currentColor"/>
     </svg>`;
 
-    // 左键：单击选中 / 拖拽排序
+    // 左键：单击打开综合菜单 / 拖拽排序
     handle.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
@@ -192,7 +191,7 @@ class BlockHandleWidget extends WidgetType {
                 clientX: moveEvent.clientX,
                 clientY: moveEvent.clientY,
               },
-            })
+            }),
           );
         }
         if (isDragging) {
@@ -202,7 +201,7 @@ class BlockHandleWidget extends WidgetType {
                 clientX: moveEvent.clientX,
                 clientY: moveEvent.clientY,
               },
-            })
+            }),
           );
         }
       };
@@ -217,16 +216,20 @@ class BlockHandleWidget extends WidgetType {
                 clientX: upEvent.clientX,
                 clientY: upEvent.clientY,
               },
-            })
+            }),
           );
         } else {
+          // Click: open combined menu
           window.dispatchEvent(
-            new CustomEvent("lumina-block-select", {
+            new CustomEvent("lumina-block-menu", {
               detail: {
                 from: this.blockFrom,
                 to: this.blockTo,
+                clientX: upEvent.clientX,
+                clientY: upEvent.clientY,
+                mode: "combined",
               },
-            })
+            }),
           );
         }
       };
@@ -235,7 +238,7 @@ class BlockHandleWidget extends WidgetType {
       window.addEventListener("mouseup", onMouseUp);
     });
 
-    // 右键点击：打开块操作菜单
+    // 右键点击：打开综合菜单
     handle.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -246,8 +249,9 @@ class BlockHandleWidget extends WidgetType {
             to: this.blockTo,
             clientX: e.clientX,
             clientY: e.clientY,
+            mode: "combined",
           },
-        })
+        }),
       );
     });
 
@@ -259,107 +263,59 @@ class BlockHandleWidget extends WidgetType {
   }
 }
 
-// ============ 空块占位提示 Widget ============
-
-class EmptyBlockPlaceholderWidget extends WidgetType {
-  eq(_other: EmptyBlockPlaceholderWidget) {
-    return true;
-  }
-
-  toDOM() {
-    const span = document.createElement("span");
-    span.className = "cm-empty-block-placeholder";
-    span.textContent = "输入 '/' 快速插入...";
-    return span;
-  }
-
-  ignoreEvent() {
-    return true;
-  }
-}
-
 function isEmptyParagraph(state: EditorState, block: BlockInfo): boolean {
   if (block.type !== "Paragraph") return false;
   const text = state.doc.sliceString(block.from, block.to).trim();
   return text === "";
 }
 
-// ============ 块操作菜单 DOM 管理 ============
+// ============ Plus Button Widget for empty paragraphs ============
 
-class BlockMenuManager {
-  private menuEl: HTMLElement | null = null;
-  private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
-
-  show(
-    view: EditorView,
-    block: BlockInfo,
-    clientX: number,
-    clientY: number
+class PlusButtonWidget extends WidgetType {
+  constructor(
+    readonly blockFrom: number,
+    readonly blockTo: number,
   ) {
-    this.hide();
-
-    const menu = document.createElement("div");
-    menu.className = "cm-block-menu";
-
-    const duplicateItem = document.createElement("div");
-    duplicateItem.className = "cm-block-menu-item";
-    duplicateItem.textContent = "Duplicate";
-    duplicateItem.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      duplicateBlock(view, block);
-      this.hide();
-    });
-
-    const deleteItem = document.createElement("div");
-    deleteItem.className = "cm-block-menu-item cm-block-menu-item-danger";
-    deleteItem.textContent = "Delete";
-    deleteItem.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      deleteBlock(view, block);
-      this.hide();
-    });
-
-    menu.appendChild(duplicateItem);
-    menu.appendChild(deleteItem);
-
-    // 定位：优先显示在鼠标右侧，如果超出视口则显示在左侧
-    menu.style.position = "fixed";
-    menu.style.left = `${clientX + 8}px`;
-    menu.style.top = `${clientY}px`;
-    menu.style.zIndex = "1000";
-
-    document.body.appendChild(menu);
-    this.menuEl = menu;
-
-    // 如果超出右边界，调整位置
-    const menuRect = menu.getBoundingClientRect();
-    if (menuRect.right > window.innerWidth - 8) {
-      menu.style.left = `${clientX - menuRect.width - 8}px`;
-    }
-    if (menuRect.bottom > window.innerHeight - 8) {
-      menu.style.top = `${clientY - menuRect.height}px`;
-    }
-
-    // 点击外部关闭
-    this.outsideClickHandler = (e: MouseEvent) => {
-      if (!menu.contains(e.target as Node)) {
-        this.hide();
-      }
-    };
-    setTimeout(() => {
-      document.addEventListener("mousedown", this.outsideClickHandler!);
-    }, 0);
+    super();
   }
 
-  hide() {
-    if (this.outsideClickHandler) {
-      document.removeEventListener("mousedown", this.outsideClickHandler);
-      this.outsideClickHandler = null;
-    }
-    if (this.menuEl) {
-      this.menuEl.remove();
-      this.menuEl = null;
-    }
+  eq(other: PlusButtonWidget) {
+    return other.blockFrom === this.blockFrom && other.blockTo === this.blockTo;
+  }
+
+  toDOM() {
+    const btn = document.createElement("div");
+    btn.className = "cm-block-plus-btn";
+    btn.setAttribute("aria-label", "Add block");
+    btn.setAttribute("role", "button");
+    btn.tabIndex = -1;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+      <line x1="6" y1="2" x2="6" y2="10" stroke="currentColor" stroke-width="1.5"/>
+      <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5"/>
+    </svg>`;
+
+    btn.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(
+        new CustomEvent("lumina-block-menu", {
+          detail: {
+            from: this.blockFrom,
+            to: this.blockTo,
+            clientX: e.clientX,
+            clientY: e.clientY,
+            mode: "insert",
+          },
+        }),
+      );
+    });
+
+    return btn;
+  }
+
+  ignoreEvent() {
+    return true;
   }
 }
 
@@ -371,11 +327,9 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     private mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
     private mouseLeaveHandler: (() => void) | null = null;
     private blockSelectHandler: ((e: CustomEvent) => void) | null = null;
-    private blockMenuHandler: ((e: CustomEvent) => void) | null = null;
     private dragStartHandler: ((e: CustomEvent) => void) | null = null;
     private dragMoveHandler: ((e: CustomEvent) => void) | null = null;
     private dragEndHandler: ((e: CustomEvent) => void) | null = null;
-    private menuManager = new BlockMenuManager();
     private dragState: {
       sourceBlock: BlockInfo;
       ghostEl: HTMLElement;
@@ -388,7 +342,6 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       this.decorations = this.buildDecorations(view);
       this.attachMouseListeners(view);
       this.attachBlockSelectListener(view);
-      this.attachBlockMenuListener(view);
       this.attachDragListeners(view);
     }
 
@@ -406,34 +359,27 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       if (this.blockSelectHandler) {
         window.removeEventListener(
           "lumina-block-select",
-          this.blockSelectHandler as EventListener
-        );
-      }
-      if (this.blockMenuHandler) {
-        window.removeEventListener(
-          "lumina-block-menu",
-          this.blockMenuHandler as EventListener
+          this.blockSelectHandler as EventListener,
         );
       }
       if (this.dragStartHandler) {
         window.removeEventListener(
           "lumina-block-drag-start",
-          this.dragStartHandler as EventListener
+          this.dragStartHandler as EventListener,
         );
       }
       if (this.dragMoveHandler) {
         window.removeEventListener(
           "lumina-block-drag-move",
-          this.dragMoveHandler as EventListener
+          this.dragMoveHandler as EventListener,
         );
       }
       if (this.dragEndHandler) {
         window.removeEventListener(
           "lumina-block-drag-end",
-          this.dragEndHandler as EventListener
+          this.dragEndHandler as EventListener,
         );
       }
-      this.menuManager.hide();
       this.cleanupDrag();
     }
 
@@ -518,7 +464,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         indicator.style.left = `${coords.left}px`;
         indicator.style.width = `${Math.min(
           coordsEnd.right - coords.left,
-          760
+          760,
         )}px`;
       };
 
@@ -533,15 +479,15 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
 
       window.addEventListener(
         "lumina-block-drag-start",
-        this.dragStartHandler as EventListener
+        this.dragStartHandler as EventListener,
       );
       window.addEventListener(
         "lumina-block-drag-move",
-        this.dragMoveHandler as EventListener
+        this.dragMoveHandler as EventListener,
       );
       window.addEventListener(
         "lumina-block-drag-end",
-        this.dragEndHandler as EventListener
+        this.dragEndHandler as EventListener,
       );
     }
 
@@ -565,7 +511,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       view: EditorView,
       source: BlockInfo,
       target: BlockInfo,
-      insertAfter: boolean
+      insertAfter: boolean,
     ) {
       const { state } = view;
       const text = state.doc.sliceString(source.from, source.to);
@@ -605,32 +551,6 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       );
     }
 
-    private attachBlockMenuListener(view: EditorView) {
-      this.blockMenuHandler = (e: CustomEvent) => {
-        const { from, clientX, clientY } = e.detail as {
-          from: number;
-          to: number;
-          clientX: number;
-          clientY: number;
-        };
-        const blockState = view.state.field(blockEditorStateField);
-        const block = findBlockAtPos(blockState.blocks, from);
-        if (block) {
-          this.menuManager.show(view, block, clientX, clientY);
-          // 同时选中该块
-          view.dispatch({
-            selection: { anchor: block.from, head: block.to },
-            effects: setSelectedBlock.of(block),
-            scrollIntoView: false,
-          });
-        }
-      };
-      window.addEventListener(
-        "lumina-block-menu",
-        this.blockMenuHandler as EventListener
-      );
-    }
-
     private attachBlockSelectListener(view: EditorView) {
       this.blockSelectHandler = (e: CustomEvent) => {
         const { from } = e.detail as { from: number; to: number };
@@ -646,7 +566,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       };
       window.addEventListener(
         "lumina-block-select",
-        this.blockSelectHandler as EventListener
+        this.blockSelectHandler as EventListener,
       );
     }
 
@@ -709,23 +629,24 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         const startLine = view.state.doc.line(block.startLine);
         const endLine = view.state.doc.line(block.endLine);
 
-        // 块手柄：插入到第一行开头
-        decorations.push(
-          Decoration.widget({
-            widget: new BlockHandleWidget(block.type, block.from, block.to),
-            side: -1,
-            inline: false,
-            block: false,
-          }).range(startLine.from)
-        );
-
-        // 空段落占位提示
+        // 块手柄：空段落显示 + 按钮，其他显示六点手柄
         if (isEmptyParagraph(view.state, block)) {
           decorations.push(
             Decoration.widget({
-              widget: new EmptyBlockPlaceholderWidget(),
-              side: 1,
-            }).range(startLine.from)
+              widget: new PlusButtonWidget(block.from, block.to),
+              side: -1,
+              inline: false,
+              block: false,
+            }).range(startLine.from),
+          );
+        } else {
+          decorations.push(
+            Decoration.widget({
+              widget: new BlockHandleWidget(block.type, block.from, block.to),
+              side: -1,
+              inline: false,
+              block: false,
+            }).range(startLine.from),
           );
         }
 
@@ -742,7 +663,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
               attributes: {
                 "data-block-type": block.type,
               },
-            }).range(line.from)
+            }).range(line.from),
           );
         }
       }
@@ -750,7 +671,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       return Decoration.set(decorations, true);
     }
   },
-  { decorations: (v) => v.decorations }
+  { decorations: (v) => v.decorations },
 );
 
 // ============ 导出 ============

@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useState,
 } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
@@ -33,8 +34,14 @@ import {
   slashCommandExtensions,
   placeholderExtension,
 } from "./extensions/slashCommand";
-import { blockEditorExtensions } from "./extensions/blockEditor";
+import {
+  blockEditorExtensions,
+  blockEditorStateField,
+  BlockEditorState,
+} from "./extensions/blockEditor";
 import { SlashMenu } from "./components/SlashMenu";
+import { BlockMenu, BlockActionId } from "./components/BlockMenu";
+import { executeBlockAction } from "./extensions/blockOperations";
 import {
   EditorView,
   drawSelection,
@@ -3596,11 +3603,7 @@ const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
       this.sync(view);
     }
     update(update: ViewUpdate) {
-      if (
-        !update.selectionSet &&
-        !update.docChanged &&
-        !update.viewportChanged
-      )
+      if (!update.selectionSet && !update.docChanged && !update.viewportChanged)
         return;
       this.sync(update.view);
     }
@@ -3619,7 +3622,7 @@ const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
         const el =
           atPos instanceof Element
             ? atPos.closest(BLOCK_WIDGET_DOM_SELECTOR)
-            : atPos.parentElement?.closest(BLOCK_WIDGET_DOM_SELECTOR) ?? null;
+            : (atPos.parentElement?.closest(BLOCK_WIDGET_DOM_SELECTOR) ?? null);
         el?.classList.add("cm-block-widget-selected");
       };
       const walk = (set: DecorationSet | undefined) => {
@@ -3740,9 +3743,8 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     }
 
     private rowAtY(y: number): HTMLTableRowElement | null {
-      const tables = this.view.dom.querySelectorAll<HTMLElement>(
-        TABLE_SELECTOR,
-      );
+      const tables =
+        this.view.dom.querySelectorAll<HTMLElement>(TABLE_SELECTOR);
       for (const table of Array.from(tables)) {
         const rect = table.getBoundingClientRect();
         if (y < rect.top || y > rect.bottom) continue;
@@ -3764,25 +3766,22 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
 
     private highlightRowsInRange(minY: number, maxY: number) {
       const nextTables = new Set<HTMLElement>();
-      const tables = this.view.dom.querySelectorAll<HTMLElement>(
-        TABLE_SELECTOR,
-      );
+      const tables =
+        this.view.dom.querySelectorAll<HTMLElement>(TABLE_SELECTOR);
       tables.forEach((table) => {
         const rect = table.getBoundingClientRect();
         // Skip tables that couldn't possibly intersect the drag Y range.
         if (rect.bottom < minY || rect.top > maxY) return;
         let tableTouched = false;
-        table
-          .querySelectorAll<HTMLTableRowElement>("tr")
-          .forEach((row) => {
-            const r = row.getBoundingClientRect();
-            if (r.bottom >= minY && r.top <= maxY) {
-              row.classList.add("cm-table-row-selected");
-              tableTouched = true;
-            } else {
-              row.classList.remove("cm-table-row-selected");
-            }
-          });
+        table.querySelectorAll<HTMLTableRowElement>("tr").forEach((row) => {
+          const r = row.getBoundingClientRect();
+          if (r.bottom >= minY && r.top <= maxY) {
+            row.classList.add("cm-table-row-selected");
+            tableTouched = true;
+          } else {
+            row.classList.remove("cm-table-row-selected");
+          }
+        });
         if (tableTouched) nextTables.add(table);
       });
       // Tables that used to have highlights but no longer intersect the
@@ -3838,9 +3837,10 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     // half of the body the drag didn't reach) while preserving
     // whatever whitespace naturally sits around the table.
     private handleCopy(e: ClipboardEvent) {
-      const highlightedRows = this.view.dom.querySelectorAll<HTMLTableRowElement>(
-        ".cm-table-row-selected",
-      );
+      const highlightedRows =
+        this.view.dom.querySelectorAll<HTMLTableRowElement>(
+          ".cm-table-row-selected",
+        );
       if (highlightedRows.length === 0) return;
 
       const text = this.buildCopyText(Array.from(highlightedRows));
@@ -3874,10 +3874,7 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
           if (cursor < t.range.from) {
             segments.push({
               pos: cursor,
-              text: state.sliceDoc(
-                cursor,
-                Math.min(t.range.from, sel.to),
-              ),
+              text: state.sliceDoc(cursor, Math.min(t.range.from, sel.to)),
             });
           }
           cursor = Math.min(t.range.to, sel.to);
@@ -3901,7 +3898,10 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       segments.sort((a, b) => a.pos - b.pos);
       // Rely on each segment's own trailing/leading newlines (the raw
       // slices already include them); no extra join separator.
-      return segments.map((s) => s.text).filter(Boolean).join("");
+      return segments
+        .map((s) => s.text)
+        .filter(Boolean)
+        .join("");
     }
 
     private collectTableCopyInfos(rows: HTMLTableRowElement[]): Array<{
@@ -3939,9 +3939,8 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       sourceLines: string[];
     }): string {
       const { tableEl, rows, sourceLines } = info;
-      const headerRow = tableEl.querySelector<HTMLTableRowElement>(
-        "thead > tr",
-      );
+      const headerRow =
+        tableEl.querySelector<HTMLTableRowElement>("thead > tr");
       const bodyRows = Array.from(
         tableEl.querySelectorAll<HTMLTableRowElement>("tbody > tr"),
       );
@@ -4147,6 +4146,12 @@ export const CodeMirrorEditor = forwardRef<
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const [blockMenu, setBlockMenu] = useState<{
+    mode: "combined" | "insert";
+    position: { x: number; y: number };
+    blockFrom: number;
+    blockTo: number;
+  } | null>(null);
   const isExternalChange = useRef(false);
   const lastInternalContent = useRef<string>(content);
   const previousModeRef = useRef<ViewMode>(effectiveMode);
@@ -5413,6 +5418,36 @@ export const CodeMirrorEditor = forwardRef<
     return () => window.removeEventListener("lumina-drop", handleLuminaDrop);
   }, []);
 
+  useEffect(() => {
+    const handleBlockMenu = (e: CustomEvent) => {
+      const { from, to, mode } = e.detail as {
+        from: number;
+        to: number;
+        clientX: number;
+        clientY: number;
+        mode: "combined" | "insert";
+      };
+      const view = viewRef.current;
+      if (!view) return;
+      const coords = view.coordsAtPos(from);
+      if (!coords) return;
+      const contentRect = view.contentDOM.getBoundingClientRect();
+      const menuWidth = 280;
+      const x = Math.max(4, contentRect.left - menuWidth - 4);
+      const y = coords.top;
+      setBlockMenu({ mode, position: { x, y }, blockFrom: from, blockTo: to });
+    };
+    window.addEventListener(
+      "lumina-block-menu",
+      handleBlockMenu as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "lumina-block-menu",
+        handleBlockMenu as EventListener,
+      );
+  }, []);
+
   return (
     <>
       <div
@@ -5420,6 +5455,64 @@ export const CodeMirrorEditor = forwardRef<
         className={`codemirror-wrapper h-full ${className}`}
       />
       <SlashMenu view={viewRef.current} />
+      {blockMenu && viewRef.current && (
+        <BlockMenu
+          mode={blockMenu.mode}
+          position={blockMenu.position}
+          activeType={(() => {
+            const view = viewRef.current;
+            if (!view) return undefined;
+            const blockState = view.state.field(
+              blockEditorStateField,
+              false,
+            ) as BlockEditorState | undefined;
+            if (!blockState) return undefined;
+            const block = blockState.blocks.find(
+              (b) =>
+                b.from === blockMenu.blockFrom && b.to === blockMenu.blockTo,
+            );
+            return block?.type;
+          })()}
+          onAction={(actionId: BlockActionId) => {
+            const view = viewRef.current;
+            if (!view) return;
+            const blockState = view.state.field(blockEditorStateField, false);
+            if (!blockState) return;
+            const block = blockState.blocks.find(
+              (b) =>
+                b.from === blockMenu.blockFrom && b.to === blockMenu.blockTo,
+            );
+            if (!block) return;
+
+            if (actionId === "insertBefore" || actionId === "insertAfter") {
+              const insertPos =
+                actionId === "insertBefore" ? block.from : block.to + 1;
+              view.dispatch({
+                changes: { from: insertPos, to: insertPos, insert: "\n" },
+                selection: { anchor: insertPos + 1 },
+              });
+              const newCoords = view.coordsAtPos(insertPos + 1);
+              if (newCoords) {
+                const contentRect = view.contentDOM.getBoundingClientRect();
+                const menuWidth = 280;
+                setBlockMenu({
+                  mode: "insert",
+                  position: {
+                    x: Math.max(4, contentRect.left - menuWidth - 4),
+                    y: newCoords.top,
+                  },
+                  blockFrom: insertPos + 1,
+                  blockTo: insertPos + 1,
+                });
+              }
+              return;
+            }
+
+            executeBlockAction(view, block, actionId);
+          }}
+          onClose={() => setBlockMenu(null)}
+        />
+      )}
     </>
   );
 });
