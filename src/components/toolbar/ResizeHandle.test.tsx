@@ -72,8 +72,8 @@ describe("ResizeHandle", () => {
     const hitArea = container.querySelector(".z-30") as HTMLDivElement;
     mockPointerCapture(hitArea);
 
-    expect(hitArea.style.left).toBe("-1px");
-    expect(hitArea.style.right).toBe("-7px");
+    expect(hitArea.style.left).toBe("-7px");
+    expect(hitArea.style.right).toBe("-1px");
 
     firePointer(hitArea, "pointerdown", { clientX: 100 });
     firePointer(hitArea, "pointermove", { clientX: 120 });

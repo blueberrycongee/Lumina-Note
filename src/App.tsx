@@ -505,6 +505,7 @@ function App() {
     setLeftSidebarOpen,
     setLeftSidebarWidth,
     setRightSidebarWidth,
+    setRightSidebarOpen,
     toggleLeftSidebar,
     toggleRightSidebar,
     splitView,
@@ -520,6 +521,7 @@ function App() {
       setLeftSidebarOpen: state.setLeftSidebarOpen,
       setLeftSidebarWidth: state.setLeftSidebarWidth,
       setRightSidebarWidth: state.setRightSidebarWidth,
+      setRightSidebarOpen: state.setRightSidebarOpen,
       toggleLeftSidebar: state.toggleLeftSidebar,
       toggleRightSidebar: state.toggleRightSidebar,
       splitView: state.splitView,
@@ -852,15 +854,32 @@ function App() {
 
   const handleRightResize = useCallback(
     (delta: number) => {
-      const newWidth = rightSidebarWidth + delta;
-      // 当已经是最小宽度且继续向内拖时，折叠面板
-      if (rightSidebarWidth <= RIGHT_MIN_WIDTH && delta < 0) {
-        toggleRightSidebar();
+      if (!rightSidebarOpen) {
+        // 面板已折叠：累计向左拖拽距离
+        dragAccumulatorRef.current += delta;
+        if (dragAccumulatorRef.current > 50) {
+          // 累计拖动超过 50px，打开面板并设置宽度
+          const newWidth = Math.max(RIGHT_MIN_WIDTH, dragAccumulatorRef.current);
+          setRightSidebarOpen(true);
+          setRightSidebarWidth(newWidth);
+          dragAccumulatorRef.current = 0;
+        }
       } else {
-        setRightSidebarWidth(newWidth);
+        // 面板已打开：调整宽度或折叠
+        dragAccumulatorRef.current = 0; // 重置累计器
+        if (rightSidebarWidth <= RIGHT_MIN_WIDTH && delta < 0) {
+          setRightSidebarOpen(false);
+        } else {
+          setRightSidebarWidth(rightSidebarWidth + delta);
+        }
       }
     },
-    [rightSidebarWidth, setRightSidebarWidth, toggleRightSidebar],
+    [
+      rightSidebarOpen,
+      rightSidebarWidth,
+      setRightSidebarOpen,
+      setRightSidebarWidth,
+    ],
   );
 
   const getAvailableMainWidth = useCallback(() => {
@@ -1033,19 +1052,13 @@ function App() {
           )}
         </main>
 
-        {/* Right Resize Handle */}
-        {/* When the right panel is collapsed there's no expand affordance
-            here on purpose — open it via the command palette
-            (⌘K → "Toggle Right Sidebar"), or let callers like the PDF
-            viewer / diagram view auto-open it when they need to. */}
+        {/* Right Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
         <div className="relative flex-shrink-0 h-full z-20 bg-background">
-          {rightSidebarOpen && (
-            <ResizeHandle
-              direction="right"
-              onResize={handleRightResize}
-              onDoubleClick={toggleRightSidebar}
-            />
-          )}
+          <ResizeHandle
+            direction="right"
+            onResize={handleRightResize}
+            onDoubleClick={toggleRightSidebar}
+          />
         </div>
 
         {/* Right Sidebar */}
