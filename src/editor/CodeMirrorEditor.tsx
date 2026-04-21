@@ -170,6 +170,14 @@ const createEditorTheme = (fontSize: number) =>
     "&.cm-focused .cm-selectionBackground": {
       backgroundColor: "rgba(191, 219, 254, 0.35) !important",
     },
+    // Suppress spurious selection backgrounds that appear above a table
+    // during a bottom-up drag.  atomicRanges snaps the head to tableStart,
+    // and drawSelection paints a rectangle above the table based on
+    // coordsAtPos(tableStart).  This rule hides those phantom rects while
+    // keeping the legitimate selection visuals below the table intact.
+    ".cm-selection-background-suppressed": {
+      opacity: "0 !important",
+    },
 
     // ── Block widget selection hygiene ──────────────────────────────
     // Block-level replace widgets (math block / mermaid / callout / image /
@@ -3559,6 +3567,9 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     // Tables that have highlighted rows during the current drag — so we
     // can clear them between frames without scanning the whole document.
     private touchedTables = new Set<HTMLElement>();
+    // Track bottom-up drag state for selection suppression.
+    private isBottomUpDrag = false;
+    private suppressMinTableTop = -1;
 
     constructor(view: EditorView) {
       this.view = view;
@@ -3617,6 +3628,7 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         this.clearAll();
         return;
       }
+      this.isBottomUpDrag = this.dragStartY > minY;
       this.highlightRowsInRange(minY, maxY);
     }
 
@@ -3641,6 +3653,11 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       // can still copy / inspect. The next mousedown clears via
       // clearAll().
       this.dragStartY = null;
+      this.isBottomUpDrag = false;
+      this.suppressMinTableTop = -1;
+      this.view.dom
+        .querySelectorAll(".cm-selection-background-suppressed")
+        .forEach((el) => el.classList.remove("cm-selection-background-suppressed"));
     }
 
     private highlightRowsInRange(minY: number, maxY: number) {
@@ -3676,6 +3693,23 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         }
       });
       this.touchedTables = nextTables;
+
+      // ── Bottom-up drag: suppress phantom selection above tables ─────
+      // When dragging from below a table upward, atomicRanges snaps the
+      // selection head to tableStart.  drawSelection then paints a
+      // spurious .cm-selectionBackground rectangle above the table
+      // because coordsAtPos(tableStart) lands on the line before the
+      // widget.  We detect this case and hide any selection backgrounds
+      // that sit above the touched tables.
+      this.suppressMinTableTop = -1;
+      if (this.isBottomUpDrag && nextTables.size > 0) {
+        this.suppressMinTableTop = Math.min(
+          ...Array.from(nextTables).map((t) => t.getBoundingClientRect().top),
+        );
+        // Immediate suppression (may catch drawSelection before next update)
+        this.applySelectionSuppression();
+      }
+
       // Tag the view while any rows are highlighted so the CSS rule can
       // hide the browser-native ::selection painted on cells the DOM
       // range crossed (see the .cm-table-rows-dragging block in the
@@ -3699,6 +3733,43 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       this.view.dom
         .querySelectorAll(".cm-table-row-selected")
         .forEach((el) => el.classList.remove("cm-table-row-selected"));
+      // Clear any suppressed selection backgrounds as well.
+      this.view.dom
+        .querySelectorAll(".cm-selection-background-suppressed")
+        .forEach((el) => el.classList.remove("cm-selection-background-suppressed"));
+      this.isBottomUpDrag = false;
+      this.suppressMinTableTop = -1;
+    }
+
+    update(update: ViewUpdate) {
+      if (
+        update.selectionSet &&
+        this.isBottomUpDrag &&
+        this.suppressMinTableTop >= 0
+      ) {
+        // Schedule suppression in a requestMeasure write phase so it runs
+        // AFTER drawSelection's own DOM update (drawSelection queues its
+        // measure in the same update cycle, and our requestMeasure here
+        // comes later because this plugin is registered after drawSelection).
+        this.view.requestMeasure({
+          read: () => {},
+          write: () => this.applySelectionSuppression(),
+        });
+      }
+    }
+
+    private applySelectionSuppression() {
+      if (this.suppressMinTableTop < 0) return;
+      const SUPPRESSED = "cm-selection-background-suppressed";
+      this.view.dom.querySelectorAll(".cm-selectionBackground").forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        if (
+          rect.top < this.suppressMinTableTop &&
+          rect.bottom < this.suppressMinTableTop + 20
+        ) {
+          el.classList.add(SUPPRESSED);
+        }
+      });
     }
 
     // ── Copy: emit source markdown with highlighted-row replacement ──
