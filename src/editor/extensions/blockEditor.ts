@@ -290,9 +290,9 @@ class PlusButtonWidget extends WidgetType {
     btn.setAttribute("role", "button");
     btn.tabIndex = -1;
     btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-      <line x1="6" y1="2" x2="6" y2="10" stroke="currentColor" stroke-width="1.5"/>
-      <line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5"/>
-    </svg>`;
+  <line x1="6" y1="2.5" x2="6" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="2.5" y1="6" x2="9.5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`;
 
     btn.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;

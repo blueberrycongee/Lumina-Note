@@ -134,6 +134,7 @@ export type BlockActionId =
   | "heading6"
   | "bulletList"
   | "orderedList"
+  | "taskList"
   | "blockquote"
   | "paragraph"
   | "codeBlock"
@@ -171,6 +172,7 @@ const ACTION_TO_TYPE: Record<string, string> = {
   heading6: "ATXHeading6",
   bulletList: "BulletList",
   orderedList: "OrderedList",
+  taskList: "BulletList",
   blockquote: "Blockquote",
   paragraph: "Paragraph",
 };
@@ -194,13 +196,14 @@ export function executeBlockAction(
     const line = state.doc.lineAt(block.from);
     const prefixLen = getBlockPrefixLength(state, block);
     const targetPrefix = TARGET_PREFIX[targetType] ?? "";
+    const insert = actionId === "taskList" ? "- [ ] " : targetPrefix;
     view.dispatch({
       changes: {
         from: line.from,
         to: line.from + prefixLen,
-        insert: targetPrefix,
+        insert,
       },
-      selection: { anchor: line.from + targetPrefix.length },
+      selection: { anchor: line.from + insert.length },
     });
     return true;
   }

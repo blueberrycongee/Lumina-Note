@@ -1782,9 +1782,9 @@ body.lumina-block-dragging .cm-block-handle {
 
 .cm-block-plus-btn {
   position: absolute;
-  left: -20px;
+  left: -24px;
   top: 2px;
-  width: 16px;
+  width: 20px;
   height: 20px;
   display: flex;
   align-items: center;
@@ -1794,13 +1794,15 @@ body.lumina-block-dragging .cm-block-handle {
   opacity: 0;
   transition:
     opacity 120ms ease,
-    background-color 120ms ease;
-  border-radius: 4px;
+    background-color 120ms ease,
+    transform 120ms ease;
+  border-radius: 9999px;
 }
 
 .cm-block-plus-btn:hover {
   background: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
+  transform: scale(1.1);
 }
 
 .cm-block-line:hover .cm-block-plus-btn,
