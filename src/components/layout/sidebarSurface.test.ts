@@ -8,7 +8,7 @@ describe('SIDEBAR_SURFACE_CLASSNAME', () => {
     expect(SIDEBAR_SURFACE_CLASSNAME).not.toContain('after:');
     expect(SIDEBAR_SURFACE_CLASSNAME).not.toContain('hover:bg-background/60');
     expect(SIDEBAR_SURFACE_CLASSNAME).toContain('border-r');
-    expect(SIDEBAR_SURFACE_CLASSNAME).toContain('border-border');
+    expect(SIDEBAR_SURFACE_CLASSNAME).toContain('border-border/50');
     expect(SIDEBAR_SURFACE_CLASSNAME).not.toContain('shadow-[inset_-1px_0_0');
   });
 });

@@ -1,0 +1,11 @@
+{
+  "id": "worker-b84ca70b",
+  "type": "worker",
+  "description": "Fix resize handle hit area",
+  "status": "completed",
+  "started_at": "2026-04-21T01:06:12.448724+08:00",
+  "completed_at": "2026-04-21T01:06:18.858439+08:00",
+  "model": "kimi-for-coding",
+  "prompt": "Edit the file `src/components/toolbar/ResizeHandle.tsx`.\n\nAt lines 105-108, there is a bug where the `direction === \"right\"` branch returns the same value as `direction === \"left\"`. Fix it so the right-side resize handle hit area extends to the left (toward the main content area) instead of to the right.\n\nCurrent code:\n```tsx\nconst hitAreaStyle =\n  direction === \"left\"\n    ? { left: \"-1px\", right: \"-7px\" }\n    : { left: \"-1px\", right: \"-7px\" };\n```\n\nChange to:\n```tsx\nconst hitAreaStyle =\n  direction === \"left\"\n    ? { left: \"-1px\", right: \"-7px\" }\n    : { left: \"-7px\", right: \"-1px\" };\n```\n\nThat's the only change needed.",
+  "result": " 修改完成。\n\n- **文件**：`src/components/toolbar/ResizeHandle.tsx`\n- **改动**：将 `direction === \"right\"` 分支的 `hitAreaStyle` 从 `{ left: \"-1px\", right: \"-7px\" }` 改为 `{ left: \"-7px\", right: \"-1px\" }`，使右侧 resize handle 的 hit area 向左（主内容区方向）延伸，而不是向右。"
+}
