@@ -120,6 +120,7 @@ interface FileState {
     content: string,
     source?: "user" | "ai",
     description?: string,
+    selection?: { anchor: number; head: number },
   ) => void;
   save: () => Promise<void>;
   closeFile: () => void;
@@ -1480,6 +1481,7 @@ export const useFileStore = create<FileState>()(
         content: string,
         source: "user" | "ai" = "user",
         description?: string,
+        selection?: { anchor: number; head: number },
       ) => {
         const { currentContent, undoStack, tabs, activeTabIndex } = get();
         const now = Date.now();
@@ -1501,6 +1503,7 @@ export const useFileStore = create<FileState>()(
             type: "ai",
             timestamp: now,
             description: description || t.ai.editChangeLabel,
+            selection,
           };
           const newUndoStack = trimUndoStack([...undoStack, entry]);
           set({
@@ -1520,6 +1523,7 @@ export const useFileStore = create<FileState>()(
               content: currentContent,
               type: "user",
               timestamp: now,
+              selection,
             };
             const newUndoStack = trimUndoStack([...undoStack, entry]);
             set({
