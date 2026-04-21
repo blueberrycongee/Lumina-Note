@@ -239,25 +239,18 @@ const createEditorTheme = (fontSize: number) =>
     // ── Block Editor: block-level hover highlight & boundary ────────
     ".cm-block-line": {
       position: "relative",
-      transition: "background-color 120ms ease",
     },
-    ".cm-block-line.cm-block-hovered": {
+
+    // ── Block Editor: surface decoration ────────────────────────────
+    ".cm-block-surface": {
+      borderRadius: "3px",
+      padding: "1px 0",
+    },
+    ".cm-block-surface.cm-block-hovered": {
       backgroundColor: "hsl(var(--muted) / 0.35)",
     },
-    ".cm-block-line.cm-block-hovered::before": {
-      content: '""',
-      position: "absolute",
-      left: "0",
-      top: "0",
-      bottom: "0",
-      width: "3px",
-      backgroundColor: "hsl(var(--primary) / 0.45)",
-      borderRadius: "0 2px 2px 0",
-      opacity: "0",
-      transition: "opacity 120ms ease",
-    },
-    ".cm-block-line.cm-block-hovered:first-of-type::before": {
-      opacity: "1",
+    ".cm-block-surface.cm-block-selected": {
+      backgroundColor: "hsl(var(--primary) / 0.08)",
     },
 
     // ── Block Editor: drag handle ───────────────────────────────────
@@ -279,11 +272,8 @@ const createEditorTheme = (fontSize: number) =>
       pointerEvents: "auto",
       zIndex: "2",
     },
-    ".cm-block-line.cm-block-hovered .cm-block-handle": {
+    ".cm-block-surface.cm-block-hovered .cm-block-handle": {
       opacity: "1",
-    },
-    ".cm-block-line.cm-block-selected": {
-      backgroundColor: "hsl(var(--primary) / 0.08)",
     },
 
     // ── Block Editor: context menu ──────────────────────────────────

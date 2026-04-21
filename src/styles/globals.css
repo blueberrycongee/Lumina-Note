@@ -1752,7 +1752,7 @@ mark {
 
 .cm-block-handle {
   position: absolute;
-  left: -24px;
+  left: -32px;
   top: 2px;
   width: 16px;
   height: 20px;
@@ -1775,7 +1775,7 @@ mark {
 }
 
 .cm-block-line:hover .cm-block-handle,
-.cm-block-hovered .cm-block-handle {
+.cm-block-surface.cm-block-hovered .cm-block-handle {
   opacity: 1;
 }
 
@@ -1785,7 +1785,7 @@ body.lumina-block-dragging .cm-block-handle {
 
 .cm-block-plus-btn {
   position: absolute;
-  left: -24px;
+  left: -32px;
   top: 2px;
   width: 20px;
   height: 20px;
@@ -1809,7 +1809,7 @@ body.lumina-block-dragging .cm-block-handle {
 }
 
 .cm-block-line:hover .cm-block-plus-btn,
-.cm-block-hovered .cm-block-plus-btn {
+.cm-block-surface.cm-block-hovered .cm-block-plus-btn {
   opacity: 1;
 }
 
@@ -1819,15 +1819,18 @@ body.lumina-block-dragging .cm-block-plus-btn {
 
 .cm-block-line {
   position: relative;
-  border-radius: 4px;
-  transition: background-color 120ms ease;
 }
 
-.cm-block-hovered {
-  background-color: hsl(var(--muted) / 0.4);
+.cm-block-surface {
+  border-radius: 3px;
+  padding: 1px 0;
 }
 
-.cm-block-selected {
+.cm-block-surface.cm-block-hovered {
+  background-color: hsl(var(--muted) / 0.35);
+}
+
+.cm-block-surface.cm-block-selected {
   background-color: hsl(var(--primary) / 0.08);
 }
 
@@ -1962,11 +1965,25 @@ body.lumina-block-dragging .cm-block-plus-btn {
 
 .cm-block-drag-indicator {
   position: absolute;
-  height: 2px;
+  height: 3px;
   background: hsl(var(--primary));
-  border-radius: 1px;
+  border-radius: 2px;
   pointer-events: none;
   z-index: 50;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.15);
+}
+
+.cm-block-drag-indicator::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
 }
 
 body.lumina-block-dragging {
@@ -1975,4 +1992,22 @@ body.lumina-block-dragging {
 
 body.lumina-block-dragging .cm-editor {
   cursor: grabbing;
+}
+
+.cm-block-dragging-source {
+  opacity: 0.4;
+  background-color: hsl(var(--muted) / 0.3) !important;
+}
+
+@keyframes cm-block-land {
+  0% {
+    background-color: hsl(var(--primary) / 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.cm-block-land {
+  animation: cm-block-land 350ms ease-out forwards;
 }

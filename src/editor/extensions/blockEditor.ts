@@ -42,14 +42,16 @@ const BLOCK_NODE_TYPES = new Set([
   "SetextHeading1",
   "SetextHeading2",
   "Paragraph",
-  "BulletList",
-  "OrderedList",
+  "ListItem",
   "Blockquote",
   "FencedCode",
   "CodeBlock",
   "HorizontalRule",
   "Table",
 ]);
+
+// 容器节点：继续遍历子节点，自身不生成块
+const CONTAINER_NODE_TYPES = new Set(["BulletList", "OrderedList"]);
 
 // ============ State Effects ============
 
@@ -97,10 +99,30 @@ export const blockEditorStateField = StateField.define<BlockEditorState>({
 function parseBlocks(state: EditorState): BlockInfo[] {
   const blocks: BlockInfo[] = [];
   const tree = syntaxTree(state);
+  const listTypeStack: string[] = [];
 
   tree.iterate({
     enter(node) {
-      if (node.name === "Document") return; // 继续遍历子节点
+      if (node.name === "Document") return;
+
+      if (CONTAINER_NODE_TYPES.has(node.name)) {
+        listTypeStack.push(node.name);
+        return; // 继续遍历子节点
+      }
+
+      if (node.name === "ListItem") {
+        const listType = listTypeStack[listTypeStack.length - 1] ?? "BulletList";
+        const startLine = state.doc.lineAt(node.from);
+        const endLine = state.doc.lineAt(node.to);
+        blocks.push({
+          from: node.from,
+          to: node.to,
+          type: listType,
+          startLine: startLine.number,
+          endLine: endLine.number,
+        });
+        return false; // 不进入 ListItem 的子节点
+      }
 
       if (BLOCK_NODE_TYPES.has(node.name)) {
         const startLine = state.doc.lineAt(node.from);
@@ -112,7 +134,12 @@ function parseBlocks(state: EditorState): BlockInfo[] {
           startLine: startLine.number,
           endLine: endLine.number,
         });
-        return false; // 不进入该节点的子节点（保持顶层块粒度）
+        return false;
+      }
+    },
+    leave(node) {
+      if (CONTAINER_NODE_TYPES.has(node.name)) {
+        listTypeStack.pop();
       }
     },
   });
@@ -181,7 +208,7 @@ class BlockHandleWidget extends WidgetType {
       const onMouseMove = (moveEvent: MouseEvent) => {
         const dx = moveEvent.clientX - startX;
         const dy = moveEvent.clientY - startY;
-        if (!isDragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        if (!isDragging && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
           isDragging = true;
           window.dispatchEvent(
             new CustomEvent("lumina-block-drag-start", {
@@ -337,6 +364,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       indicatorEl: HTMLElement;
       targetBlock: BlockInfo | null;
       insertAfter: boolean;
+      sourceLineEls: HTMLElement[];
     } | null = null;
 
     constructor(view: EditorView) {
@@ -407,6 +435,25 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
 
         this.cleanupDrag();
 
+        // Mark source block lines with visual feedback
+        const sourceLineEls: HTMLElement[] = [];
+        const sStartLine = view.state.doc.line(block.startLine);
+        const sEndLine = view.state.doc.line(block.endLine);
+        for (let lineNum = sStartLine.number; lineNum <= sEndLine.number; lineNum++) {
+          const line = view.state.doc.line(lineNum);
+          const coords = view.coordsAtPos(line.from);
+          if (!coords) continue;
+          const el = document.elementFromPoint(
+            coords.left + 10,
+            coords.top + 2,
+          ) as HTMLElement | null;
+          if (el && el.closest(".cm-block-line")) {
+            const lineEl = el.closest(".cm-block-line") as HTMLElement;
+            lineEl.classList.add("cm-block-dragging-source");
+            sourceLineEls.push(lineEl);
+          }
+        }
+
         const ghost = document.createElement("div");
         ghost.className = "cm-block-drag-ghost";
         ghost.textContent = view.state.doc
@@ -426,6 +473,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
           indicatorEl: indicator,
           targetBlock: null,
           insertAfter: false,
+          sourceLineEls,
         };
 
         this.updateDragGhost(clientX, clientY);
@@ -440,40 +488,92 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         };
         this.updateDragGhost(clientX, clientY);
 
-        const pos = view.posAtCoords({ x: clientX, y: clientY });
-        if (pos == null) {
-          this.dragState.indicatorEl.style.display = "none";
-          return;
+        const blockState = view.state.field(blockEditorStateField);
+        const source = this.dragState.sourceBlock;
+
+        // Editor container rect for coordinate conversion
+        const editorRect = view.dom.getBoundingClientRect();
+
+        // Find target block by comparing mouse Y with block boundaries
+        // (more reliable than posAtCoords in empty areas)
+        let target: BlockInfo | null = null;
+        let insertAfter = false;
+
+        for (const b of blockState.blocks) {
+          if (b.from === source.from) continue;
+          const bStart = view.coordsAtPos(b.from);
+          const bEnd = view.coordsAtPos(b.to);
+          if (!bStart || !bEnd) continue;
+
+          if (clientY >= bStart.top && clientY <= bEnd.bottom) {
+            target = b;
+            const midY = (bStart.top + bEnd.bottom) / 2;
+            insertAfter = clientY > midY;
+            break;
+          }
         }
 
-        const blockState = view.state.field(blockEditorStateField);
-        const target = findBlockAtPos(blockState.blocks, pos);
-        if (!target || target.from === this.dragState.sourceBlock.from) {
+        // Mouse is in empty area: find nearest block
+        if (!target) {
+          let closestBlock: BlockInfo | null = null;
+          let closestDist = Infinity;
+          for (const b of blockState.blocks) {
+            if (b.from === source.from) continue;
+            const bStart = view.coordsAtPos(b.from);
+            if (!bStart) continue;
+            const dist = Math.abs(clientY - bStart.top);
+            if (dist < closestDist) {
+              closestDist = dist;
+              closestBlock = b;
+            }
+          }
+          if (closestBlock) {
+            target = closestBlock;
+            const tStart = view.coordsAtPos(closestBlock.from);
+            const tEnd = view.coordsAtPos(closestBlock.to);
+            if (tStart && tEnd) {
+              const midY = (tStart.top + tEnd.bottom) / 2;
+              insertAfter = clientY > midY;
+            }
+          }
+        }
+
+        if (!target) {
           this.dragState.indicatorEl.style.display = "none";
           this.dragState.targetBlock = null;
           return;
         }
 
-        // 判断插入到目标块前还是后：鼠标在目标块上半部则前，下半部则后
-        const coords = view.coordsAtPos(target.from);
-        const coordsEnd = view.coordsAtPos(target.to);
-        if (!coords || !coordsEnd) return;
-        const midY = (coords.top + coordsEnd.bottom) / 2;
-        const insertAfter = clientY > midY;
+        // Skip meaningless moves (source already at target position)
+        const sourceIndex = blockState.blocks.findIndex(
+          (b) => b.from === source.from,
+        );
+        const targetIndex = blockState.blocks.findIndex(
+          (b) => b.from === target.from,
+        );
+        const isMeaningless = insertAfter
+          ? sourceIndex === targetIndex + 1
+          : sourceIndex === targetIndex - 1;
+        if (isMeaningless) {
+          this.dragState.indicatorEl.style.display = "none";
+          this.dragState.targetBlock = null;
+          return;
+        }
 
         this.dragState.targetBlock = target;
         this.dragState.insertAfter = insertAfter;
 
-        // 定位 indicator
+        // Position indicator relative to editor container
         const indicator = this.dragState.indicatorEl;
+        const tStart = view.coordsAtPos(target.from);
+        const tEnd = view.coordsAtPos(target.to);
+        if (!tStart || !tEnd) return;
+
         indicator.style.display = "block";
-        const anchorY = insertAfter ? coordsEnd.bottom : coords.top;
-        indicator.style.top = `${anchorY}px`;
-        indicator.style.left = `${coords.left}px`;
-        indicator.style.width = `${Math.min(
-          coordsEnd.right - coords.left,
-          760,
-        )}px`;
+        const anchorY = insertAfter ? tEnd.bottom : tStart.top;
+        indicator.style.top = `${anchorY - editorRect.top}px`;
+        indicator.style.left = `${tStart.left - editorRect.left}px`;
+        indicator.style.width = `${Math.min(tEnd.right - tStart.left, 760)}px`;
       };
 
       this.dragEndHandler = () => {
@@ -511,6 +611,9 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       if (this.dragState) {
         this.dragState.ghostEl.remove();
         this.dragState.indicatorEl.remove();
+        this.dragState.sourceLineEls.forEach((el) => {
+          el.classList.remove("cm-block-dragging-source");
+        });
         this.dragState = null;
       }
     }
@@ -523,28 +626,85 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     ) {
       const { state } = view;
       const text = state.doc.sliceString(source.from, source.to);
-      const trailingNl = source.to < state.doc.length ? 1 : 0;
-      const deleteFrom = source.from;
-      const deleteTo = source.to + trailingNl;
 
-      let insertPos: number;
-      if (insertAfter) {
-        insertPos = target.to + (target.to < state.doc.length ? 1 : 0);
-      } else {
-        insertPos = target.from;
+      // 用预计算的行号定位，避免 syntax tree 位置歧义
+      const sourceStart = state.doc.line(source.startLine);
+      const sourceEnd = state.doc.line(source.endLine);
+      const targetStart = state.doc.line(target.startLine);
+      const targetEnd = state.doc.line(target.endLine);
+
+      // 删除范围：source 块的所有行 + 末尾换行符
+      const deleteFrom = sourceStart.from;
+      let deleteTo = sourceEnd.to;
+      if (sourceEnd.number < state.doc.lines) {
+        const nextLine = state.doc.line(sourceEnd.number + 1);
+        deleteTo = nextLine.from;
       }
 
-      // 如果源块在目标块之前，删除后目标位置会前移
-      if (source.to < target.from) {
-        insertPos -= deleteTo - deleteFrom;
+      // 插入位置和文本
+      let insertPos: number;
+      let insertText: string;
+
+      if (insertAfter) {
+        if (targetEnd.number < state.doc.lines) {
+          // target 后面还有行：插到下一行开头，source 自带换行
+          const nextLine = state.doc.line(targetEnd.number + 1);
+          insertPos = nextLine.from;
+          insertText = text + "\n";
+        } else {
+          // target 是最后一行：追加到文档末尾，前面补换行
+          insertPos = state.doc.length;
+          insertText = "\n" + text;
+        }
+      } else {
+        // 插到 target 开头，source 自带换行
+        insertPos = targetStart.from;
+        insertText = text + "\n";
       }
 
       view.dispatch({
         changes: [
           { from: deleteFrom, to: deleteTo },
-          { from: insertPos, insert: text + "\n" },
+          { from: insertPos, insert: insertText },
         ],
       });
+
+      return {
+        from: adjustedInsertPos,
+        to: adjustedInsertPos + insertText.length,
+      };
+    }
+
+    private flashLandedBlock(
+      view: EditorView,
+      range: { from: number; to: number },
+    ) {
+      const startLine = view.state.doc.lineAt(range.from);
+      const endLine = view.state.doc.lineAt(range.to);
+      const landedLines: HTMLElement[] = [];
+
+      for (
+        let lineNum = startLine.number;
+        lineNum <= endLine.number;
+        lineNum++
+      ) {
+        const line = view.state.doc.line(lineNum);
+        const coords = view.coordsAtPos(line.from);
+        if (!coords) continue;
+        const el = document.elementFromPoint(
+          coords.left + 10,
+          coords.top + 2,
+        ) as HTMLElement | null;
+        if (el && el.closest(".cm-block-line")) {
+          const lineEl = el.closest(".cm-block-line") as HTMLElement;
+          lineEl.classList.add("cm-block-land");
+          landedLines.push(lineEl);
+        }
+      }
+
+      setTimeout(() => {
+        landedLines.forEach((el) => el.classList.remove("cm-block-land"));
+      }, 400);
     }
 
     private blockStateChanged(update: ViewUpdate): boolean {
@@ -586,12 +746,11 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         if (!block) return;
 
         const startLine = view.state.doc.line(block.startLine);
-        const endLine = view.state.doc.line(block.endLine);
         const flashedLines: HTMLElement[] = [];
 
         for (
           let lineNum = startLine.number;
-          lineNum <= endLine.number;
+          lineNum <= block.endLine;
           lineNum++
         ) {
           const line = view.state.doc.line(lineNum);
@@ -671,10 +830,6 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
           block.from === blockState.selected.from &&
           block.to === blockState.selected.to;
 
-        let className = "cm-block-line";
-        if (isHovered) className += " cm-block-hovered";
-        if (isSelected) className += " cm-block-selected";
-
         const startLine = view.state.doc.line(block.startLine);
         const endLine = view.state.doc.line(block.endLine);
 
@@ -699,7 +854,18 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
           );
         }
 
-        // 块行样式
+        // 整块背景装饰（替代逐行 hover 样式）
+        const surfaceClass = `cm-block-surface${
+          isHovered ? " cm-block-hovered" : ""
+        }${isSelected ? " cm-block-selected" : ""}`;
+        decorations.push(
+          Decoration.mark({
+            class: surfaceClass,
+            inclusive: false,
+          }).range(block.from, block.to),
+        );
+
+        // 保留每行的基础 class（flash 等功能依赖 .cm-block-line）
         for (
           let lineNum = startLine.number;
           lineNum <= endLine.number;
@@ -708,7 +874,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
           const line = view.state.doc.line(lineNum);
           decorations.push(
             Decoration.line({
-              class: className,
+              class: "cm-block-line",
               attributes: {
                 "data-block-type": block.type,
               },
