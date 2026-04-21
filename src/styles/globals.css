@@ -1831,6 +1831,19 @@ body.lumina-block-dragging .cm-block-plus-btn {
   background-color: hsl(var(--primary) / 0.08);
 }
 
+@keyframes cm-block-flash {
+  0% {
+    background-color: hsl(var(--primary) / 0.12);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.cm-block-flash {
+  animation: cm-block-flash 200ms ease-out forwards;
+}
+
 .cm-empty-block-placeholder {
   color: hsl(var(--muted-foreground) / 0.5);
   font-style: italic;

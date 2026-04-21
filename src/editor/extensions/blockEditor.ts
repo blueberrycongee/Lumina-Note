@@ -327,6 +327,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     private mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
     private mouseLeaveHandler: (() => void) | null = null;
     private blockSelectHandler: ((e: CustomEvent) => void) | null = null;
+    private flashHandler: ((e: CustomEvent) => void) | null = null;
     private dragStartHandler: ((e: CustomEvent) => void) | null = null;
     private dragMoveHandler: ((e: CustomEvent) => void) | null = null;
     private dragEndHandler: ((e: CustomEvent) => void) | null = null;
@@ -342,6 +343,7 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       this.decorations = this.buildDecorations(view);
       this.attachMouseListeners(view);
       this.attachBlockSelectListener(view);
+      this.attachFlashListener(view);
       this.attachDragListeners(view);
     }
 
@@ -360,6 +362,12 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         window.removeEventListener(
           "lumina-block-select",
           this.blockSelectHandler as EventListener,
+        );
+      }
+      if (this.flashHandler) {
+        window.removeEventListener(
+          "lumina-block-flash",
+          this.flashHandler as EventListener,
         );
       }
       if (this.dragStartHandler) {
@@ -567,6 +575,47 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       window.addEventListener(
         "lumina-block-select",
         this.blockSelectHandler as EventListener,
+      );
+    }
+
+    private attachFlashListener(view: EditorView) {
+      this.flashHandler = (e: CustomEvent) => {
+        const { from } = e.detail as { from: number; to: number };
+        const blockState = view.state.field(blockEditorStateField);
+        const block = findBlockAtPos(blockState.blocks, from);
+        if (!block) return;
+
+        const startLine = view.state.doc.line(block.startLine);
+        const endLine = view.state.doc.line(block.endLine);
+        const flashedLines: HTMLElement[] = [];
+
+        for (
+          let lineNum = startLine.number;
+          lineNum <= endLine.number;
+          lineNum++
+        ) {
+          const line = view.state.doc.line(lineNum);
+          const coords = view.coordsAtPos(line.from);
+          if (!coords) continue;
+          const el = document.elementFromPoint(
+            coords.left + 10,
+            coords.top + 2,
+          ) as HTMLElement | null;
+          if (el && el.closest(".cm-block-line")) {
+            const lineEl = el.closest(".cm-block-line") as HTMLElement;
+            lineEl.classList.add("cm-block-flash");
+            flashedLines.push(lineEl);
+          }
+        }
+
+        setTimeout(() => {
+          flashedLines.forEach((el) => el.classList.remove("cm-block-flash"));
+        }, 250);
+      };
+
+      window.addEventListener(
+        "lumina-block-flash",
+        this.flashHandler as EventListener,
       );
     }
 

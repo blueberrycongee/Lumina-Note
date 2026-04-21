@@ -5509,6 +5509,12 @@ export const CodeMirrorEditor = forwardRef<
             }
 
             executeBlockAction(view, block, actionId);
+            // Trigger flash animation on the block
+            window.dispatchEvent(
+              new CustomEvent("lumina-block-flash", {
+                detail: { from: block.from, to: block.to },
+              }),
+            );
           }}
           onClose={() => setBlockMenu(null)}
         />
