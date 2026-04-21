@@ -181,7 +181,11 @@ describe('CodeMirror editor mode transition selection sync', () => {
       throw new Error('CodeMirror content DOM not found');
     }
 
-    const firstTextNode = contentDom.querySelector('.cm-line')?.firstChild;
+    const firstLine = contentDom.querySelector('.cm-line');
+    const walker = firstLine
+      ? document.createTreeWalker(firstLine, NodeFilter.SHOW_TEXT)
+      : null;
+    const firstTextNode = walker?.nextNode();
     if (!(firstTextNode instanceof Text)) {
       throw new Error('Expected first line text node');
     }

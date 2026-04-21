@@ -5470,12 +5470,18 @@ export const CodeMirrorEditor = forwardRef<
 
     const handleRestoreSelection = (event: Event) => {
       const customEvent = event as CustomEvent<{
-        anchor: number;
-        head: number;
+        filePath?: string | null;
+        selection?: { anchor: number; head: number } | null;
       }>;
-      const { anchor, head } = customEvent.detail;
+      const detail = customEvent.detail;
       const view = viewRef.current;
       if (!view) return;
+      if (!detail?.selection) return;
+      if ((detail.filePath ?? null) !== (filePath ?? null)) return;
+
+      const docLength = view.state.doc.length;
+      const anchor = clampNumber(detail.selection.anchor, 0, docLength);
+      const head = clampNumber(detail.selection.head, 0, docLength);
 
       view.dispatch({
         selection: { anchor, head },
@@ -5490,7 +5496,7 @@ export const CodeMirrorEditor = forwardRef<
         handleRestoreSelection,
       );
     };
-  }, []);
+  }, [filePath]);
 
   return (
     <>

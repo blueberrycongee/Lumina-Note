@@ -52,6 +52,7 @@ export interface Tab {
   name: string;
   content: string;
   isDirty: boolean;
+  lastSavedContent?: string;
   isPinned?: boolean; // 是否固定
   isPreview?: boolean;
   undoStack: HistoryEntry[];
@@ -246,6 +247,30 @@ function trimUndoStack(stack: HistoryEntry[]): HistoryEntry[] {
   return stack.slice(stack.length - MAX_UNDO_HISTORY);
 }
 
+function getTabLastSavedContent(tab: Tab): string {
+  return tab.lastSavedContent ?? tab.content;
+}
+
+function patchTabState(
+  tabs: Tab[],
+  index: number,
+  patch: Pick<
+    Tab,
+    "content" | "isDirty" | "undoStack" | "redoStack" | "lastSavedContent"
+  >,
+): Tab[] {
+  if (index < 0 || index >= tabs.length) {
+    return tabs;
+  }
+
+  const nextTabs = [...tabs];
+  nextTabs[index] = {
+    ...nextTabs[index],
+    ...patch,
+  };
+  return nextTabs;
+}
+
 export const useFileStore = create<FileState>()(
   persist(
     (set, get) => ({
@@ -429,6 +454,7 @@ export const useFileStore = create<FileState>()(
                 ...updatedTabs[existingTabIndex],
                 content: newContent,
                 isDirty: false,
+                lastSavedContent: newContent,
               };
               set({
                 tabs: updatedTabs,
@@ -485,6 +511,7 @@ export const useFileStore = create<FileState>()(
             name: fileName,
             content,
             isDirty: false,
+            lastSavedContent: content,
             isPreview: preview || undefined,
             undoStack: [],
             redoStack: [],
@@ -583,6 +610,7 @@ export const useFileStore = create<FileState>()(
           isDirty,
           undoStack,
           redoStack,
+          lastSavedContent,
         } = get();
         if (index < 0 || index >= tabs.length || index === activeTabIndex)
           return;
@@ -596,6 +624,7 @@ export const useFileStore = create<FileState>()(
             isDirty,
             undoStack,
             redoStack,
+            lastSavedContent,
           };
 
           // 切换到新标签页
@@ -608,7 +637,7 @@ export const useFileStore = create<FileState>()(
             isDirty: targetTab.isDirty,
             undoStack: targetTab.undoStack,
             redoStack: targetTab.redoStack,
-            lastSavedContent: targetTab.content,
+            lastSavedContent: getTabLastSavedContent(targetTab),
           });
         } else {
           // 没有当前标签页，直接切换
@@ -620,7 +649,7 @@ export const useFileStore = create<FileState>()(
             isDirty: targetTab.isDirty,
             undoStack: targetTab.undoStack,
             redoStack: targetTab.redoStack,
-            lastSavedContent: targetTab.content,
+            lastSavedContent: getTabLastSavedContent(targetTab),
           });
         }
       },
@@ -662,6 +691,7 @@ export const useFileStore = create<FileState>()(
             isDirty: false,
             undoStack: [],
             redoStack: [],
+            lastSavedContent: "",
           });
         } else {
           // 还有其他标签页
@@ -704,7 +734,7 @@ export const useFileStore = create<FileState>()(
             isDirty: targetTab.isDirty,
             undoStack: targetTab.undoStack,
             redoStack: targetTab.redoStack,
-            lastSavedContent: targetTab.content,
+            lastSavedContent: getTabLastSavedContent(targetTab),
           });
         }
       },
@@ -740,9 +770,10 @@ export const useFileStore = create<FileState>()(
           activeTabIndex: newActiveIndex >= 0 ? newActiveIndex : 0,
           currentFile: targetTab.path,
           currentContent: targetTab.content,
-          isDirty: false,
+          isDirty: targetTab.isDirty,
           undoStack: targetTab.undoStack,
           redoStack: targetTab.redoStack,
+          lastSavedContent: getTabLastSavedContent(targetTab),
         });
       },
 
@@ -771,6 +802,7 @@ export const useFileStore = create<FileState>()(
             isDirty: false,
             undoStack: [],
             redoStack: [],
+            lastSavedContent: "",
           });
         } else {
           const firstPinned = pinnedTabs[0];
@@ -782,6 +814,7 @@ export const useFileStore = create<FileState>()(
             isDirty: firstPinned.isDirty,
             undoStack: firstPinned.undoStack,
             redoStack: firstPinned.redoStack,
+            lastSavedContent: getTabLastSavedContent(firstPinned),
           });
         }
       },
@@ -958,6 +991,9 @@ export const useFileStore = create<FileState>()(
           currentFile: null,
           currentContent: "",
           isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
         });
       },
 
@@ -1009,6 +1045,9 @@ export const useFileStore = create<FileState>()(
           currentFile: null,
           currentContent: "",
           isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
         });
       },
 
@@ -1116,6 +1155,9 @@ export const useFileStore = create<FileState>()(
           currentFile: null,
           currentContent: "",
           isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
         });
       },
 
@@ -1156,6 +1198,9 @@ export const useFileStore = create<FileState>()(
             currentFile: pdfPath,
             currentContent: "",
             isDirty: false,
+            undoStack: [],
+            redoStack: [],
+            lastSavedContent: "",
           });
           return;
         }
@@ -1196,6 +1241,9 @@ export const useFileStore = create<FileState>()(
           currentFile: pdfPath,
           currentContent: "",
           isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
         });
       },
 
@@ -1232,6 +1280,9 @@ export const useFileStore = create<FileState>()(
             currentFile: diagramPath,
             currentContent: "",
             isDirty: false,
+            undoStack: [],
+            redoStack: [],
+            lastSavedContent: "",
           });
           return;
         }
@@ -1257,6 +1308,7 @@ export const useFileStore = create<FileState>()(
           name: diagramName,
           content: "",
           isDirty: false,
+          lastSavedContent: "",
           undoStack: [],
           redoStack: [],
         };
@@ -1269,6 +1321,9 @@ export const useFileStore = create<FileState>()(
           currentFile: diagramPath,
           currentContent: "",
           isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
         });
       },
 
@@ -1397,6 +1452,9 @@ export const useFileStore = create<FileState>()(
           currentFile: null,
           currentContent: "",
           isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
         });
       },
 
@@ -1462,7 +1520,14 @@ export const useFileStore = create<FileState>()(
 
       // 手动推入历史记录（AI 修改时使用）
       pushHistory: (type: "user" | "ai", description?: string) => {
-        const { currentContent, undoStack } = get();
+        const {
+          currentContent,
+          undoStack,
+          tabs,
+          activeTabIndex,
+          isDirty,
+          lastSavedContent,
+        } = get();
         const entry: HistoryEntry = {
           content: currentContent,
           type,
@@ -1470,7 +1535,15 @@ export const useFileStore = create<FileState>()(
           description,
         };
         const newUndoStack = trimUndoStack([...undoStack, entry]);
+        const nextTabs = patchTabState(tabs, activeTabIndex, {
+          content: currentContent,
+          isDirty,
+          undoStack: newUndoStack,
+          redoStack: [],
+          lastSavedContent,
+        });
         set({
+          tabs: nextTabs,
           undoStack: newUndoStack,
           redoStack: [], // 清空重做栈
         });
@@ -1483,16 +1556,24 @@ export const useFileStore = create<FileState>()(
         description?: string,
         selection?: { anchor: number; head: number },
       ) => {
-        const { currentContent, undoStack, tabs, activeTabIndex } = get();
+        const {
+          currentContent,
+          undoStack,
+          tabs,
+          activeTabIndex,
+          lastSavedContent,
+        } = get();
         const now = Date.now();
 
         // 如果内容没变，不做任何处理
         if (content === currentContent) return;
 
         // Auto-promote preview tab on first edit
+        let nextTabs = tabs;
         const activeTab = tabs[activeTabIndex];
         if (activeTab?.isPreview) {
           get().promotePreviewTab(activeTab.id);
+          nextTabs = get().tabs;
         }
 
         if (source === "ai") {
@@ -1506,9 +1587,18 @@ export const useFileStore = create<FileState>()(
             selection,
           };
           const newUndoStack = trimUndoStack([...undoStack, entry]);
+          const nextDirty = content !== lastSavedContent;
+          nextTabs = patchTabState(nextTabs, activeTabIndex, {
+            content,
+            isDirty: nextDirty,
+            undoStack: newUndoStack,
+            redoStack: [],
+            lastSavedContent,
+          });
           set({
+            tabs: nextTabs,
             currentContent: content,
-            isDirty: true,
+            isDirty: nextDirty,
             undoStack: newUndoStack,
             redoStack: [],
           });
@@ -1526,15 +1616,37 @@ export const useFileStore = create<FileState>()(
               selection,
             };
             const newUndoStack = trimUndoStack([...undoStack, entry]);
+            const nextDirty = content !== lastSavedContent;
+            nextTabs = patchTabState(nextTabs, activeTabIndex, {
+              content,
+              isDirty: nextDirty,
+              undoStack: newUndoStack,
+              redoStack: [],
+              lastSavedContent,
+            });
             set({
+              tabs: nextTabs,
               currentContent: content,
-              isDirty: true,
+              isDirty: nextDirty,
               undoStack: newUndoStack,
               redoStack: [],
             });
           } else {
             // 在 debounce 时间内，只更新内容不创建新撤销点
-            set({ currentContent: content, isDirty: true });
+            const nextDirty = content !== lastSavedContent;
+            nextTabs = patchTabState(nextTabs, activeTabIndex, {
+              content,
+              isDirty: nextDirty,
+              undoStack,
+              redoStack: [],
+              lastSavedContent,
+            });
+            set({
+              tabs: nextTabs,
+              currentContent: content,
+              isDirty: nextDirty,
+              redoStack: [],
+            });
           }
           lastUserEditTime = now;
         }
@@ -1543,8 +1655,15 @@ export const useFileStore = create<FileState>()(
       // 撤销
       undo: () => {
         const t = getCurrentTranslations();
-        const { undoStack, currentContent, redoStack, lastSavedContent } =
-          get();
+        const {
+          undoStack,
+          currentContent,
+          redoStack,
+          lastSavedContent,
+          tabs,
+          activeTabIndex,
+          currentFile,
+        } = get();
         if (undoStack.length === 0) return;
 
         const lastEntry = undoStack[undoStack.length - 1];
@@ -1556,22 +1675,35 @@ export const useFileStore = create<FileState>()(
           type: lastEntry.type,
           timestamp: Date.now(),
           description: lastEntry.description,
+          selection: lastEntry.selection,
         };
 
         const restoredContent = lastEntry.content;
+        const nextDirty = restoredContent !== lastSavedContent;
+        const nextTabs = patchTabState(tabs, activeTabIndex, {
+          content: restoredContent,
+          isDirty: nextDirty,
+          undoStack: newUndoStack,
+          redoStack: [...redoStack, redoEntry],
+          lastSavedContent,
+        });
 
         set({
+          tabs: nextTabs,
           currentContent: restoredContent,
           undoStack: newUndoStack,
           redoStack: [...redoStack, redoEntry],
-          isDirty: restoredContent !== lastSavedContent,
+          isDirty: nextDirty,
         });
 
         // Dispatch selection restore event
         if (lastEntry.selection) {
           window.dispatchEvent(
             new CustomEvent("lumina-restore-selection", {
-              detail: lastEntry.selection,
+              detail: {
+                filePath: currentFile,
+                selection: lastEntry.selection,
+              },
             }),
           );
         }
@@ -1586,8 +1718,15 @@ export const useFileStore = create<FileState>()(
 
       // 重做
       redo: () => {
-        const { redoStack, currentContent, undoStack, lastSavedContent } =
-          get();
+        const {
+          redoStack,
+          currentContent,
+          undoStack,
+          lastSavedContent,
+          tabs,
+          activeTabIndex,
+          currentFile,
+        } = get();
         if (redoStack.length === 0) return;
 
         const lastEntry = redoStack[redoStack.length - 1];
@@ -1599,22 +1738,35 @@ export const useFileStore = create<FileState>()(
           type: lastEntry.type,
           timestamp: Date.now(),
           description: lastEntry.description,
+          selection: lastEntry.selection,
         };
 
         const restoredContent = lastEntry.content;
+        const nextDirty = restoredContent !== lastSavedContent;
+        const nextTabs = patchTabState(tabs, activeTabIndex, {
+          content: restoredContent,
+          isDirty: nextDirty,
+          undoStack: [...undoStack, undoEntry],
+          redoStack: newRedoStack,
+          lastSavedContent,
+        });
 
         set({
+          tabs: nextTabs,
           currentContent: restoredContent,
           redoStack: newRedoStack,
           undoStack: [...undoStack, undoEntry],
-          isDirty: restoredContent !== lastSavedContent,
+          isDirty: nextDirty,
         });
 
         // Dispatch selection restore event
         if (lastEntry.selection) {
           window.dispatchEvent(
             new CustomEvent("lumina-restore-selection", {
-              detail: lastEntry.selection,
+              detail: {
+                filePath: currentFile,
+                selection: lastEntry.selection,
+              },
             }),
           );
         }
@@ -1649,7 +1801,15 @@ export const useFileStore = create<FileState>()(
         set({ isSaving: true });
         try {
           await saveFile(currentFile, currentContent);
+          const nextTabs = patchTabState(get().tabs, get().activeTabIndex, {
+            content: currentContent,
+            isDirty: false,
+            undoStack: get().undoStack,
+            redoStack: get().redoStack,
+            lastSavedContent: currentContent,
+          });
           set({
+            tabs: nextTabs,
             isDirty: false,
             isSaving: false,
             lastSavedContent: currentContent,
@@ -1714,6 +1874,7 @@ export const useFileStore = create<FileState>()(
           isDirty: false,
           undoStack: [],
           redoStack: [],
+          lastSavedContent: "",
           navigationHistory: [],
           navigationIndex: -1,
         });
@@ -1797,7 +1958,12 @@ export const useFileStore = create<FileState>()(
 
           const updatedTabs = tabs.map((tab, i) =>
             i === tabIndex
-              ? { ...tab, content: newContent, isDirty: false }
+              ? {
+                  ...tab,
+                  content: newContent,
+                  isDirty: false,
+                  lastSavedContent: newContent,
+                }
               : tab,
           );
 
