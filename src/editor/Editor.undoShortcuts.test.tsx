@@ -179,4 +179,100 @@ describe("Editor undo shortcuts", () => {
     expect(useFileStore.getState().currentContent).toBe("A content");
     expect(useFileStore.getState().undoStack).toHaveLength(0);
   });
+
+  it("prevents native beforeinput historyUndo fallback inside the editor", () => {
+    useFileStore.setState({
+      tabs: [
+        {
+          id: "tab-1",
+          type: "file",
+          path: "/file1.md",
+          name: "file1",
+          content: "A content",
+          isDirty: false,
+          lastSavedContent: "A content",
+          undoStack: [],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: "/file1.md",
+      currentContent: "A content",
+      isDirty: false,
+      isSaving: false,
+      isLoadingFile: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: "A content",
+    });
+
+    const { container } = render(<Editor />);
+    const editor = container.querySelector(".cm-editor");
+    if (!(editor instanceof HTMLElement)) {
+      throw new Error("mocked editor not found");
+    }
+
+    editor.focus();
+    const event = new Event("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+    }) as InputEvent;
+    Object.defineProperty(event, "inputType", {
+      value: "historyUndo",
+      configurable: true,
+    });
+    fireEvent(editor, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(useFileStore.getState().currentContent).toBe("A content");
+    expect(useFileStore.getState().undoStack).toHaveLength(0);
+  });
+
+  it("routes beforeinput historyUndo to store undo for the active file", () => {
+    useFileStore.setState({
+      tabs: [
+        {
+          id: "tab-1",
+          type: "file",
+          path: "/file1.md",
+          name: "file1",
+          content: "edited",
+          isDirty: true,
+          lastSavedContent: "saved",
+          undoStack: [{ content: "saved", type: "user", timestamp: 1 }],
+          redoStack: [],
+        },
+      ],
+      activeTabIndex: 0,
+      currentFile: "/file1.md",
+      currentContent: "edited",
+      isDirty: true,
+      isSaving: false,
+      isLoadingFile: false,
+      undoStack: [{ content: "saved", type: "user", timestamp: 1 }],
+      redoStack: [],
+      lastSavedContent: "saved",
+    });
+
+    const { container } = render(<Editor />);
+    const editor = container.querySelector(".cm-editor");
+    if (!(editor instanceof HTMLElement)) {
+      throw new Error("mocked editor not found");
+    }
+
+    editor.focus();
+    const event = new Event("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+    }) as InputEvent;
+    Object.defineProperty(event, "inputType", {
+      value: "historyUndo",
+      configurable: true,
+    });
+    fireEvent(editor, event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(useFileStore.getState().currentContent).toBe("saved");
+    expect(useFileStore.getState().redoStack).toHaveLength(1);
+  });
 });

@@ -319,6 +319,44 @@ export function Editor() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    const handleBeforeInput = (e: InputEvent) => {
+      const inputType = e.inputType;
+      if (inputType !== "historyUndo" && inputType !== "historyRedo") return;
+
+      const target = e.target as HTMLElement | null;
+      const inCodeMirror = !!target?.closest?.(".cm-editor");
+      if (!inCodeMirror) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (inputType === "historyUndo") {
+        if (canUndo()) {
+          undo();
+        }
+        return;
+      }
+
+      if (canRedo()) {
+        redo();
+      }
+    };
+
+    document.addEventListener(
+      "beforeinput",
+      handleBeforeInput as EventListener,
+      true,
+    );
+    return () => {
+      document.removeEventListener(
+        "beforeinput",
+        handleBeforeInput as EventListener,
+        true,
+      );
+    };
+  }, [undo, redo, canUndo, canRedo]);
+
   // Debounced save (1000ms after user stops typing, matching VS Code default)
   const debouncedSaveRef = useRef<ReturnType<typeof debounce> | null>(null);
   useEffect(() => {
