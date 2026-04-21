@@ -34,7 +34,7 @@ export interface BlockRange {
 
 export function getBlockAtPos(
   state: EditorState,
-  pos: number
+  pos: number,
 ): BlockRange | null {
   const tree = syntaxTree(state);
   let result: BlockRange | null = null;
@@ -57,7 +57,10 @@ export function getBlockAtPos(
 /**
  * 获取块第一行的 markdown 前缀长度
  */
-export function getBlockPrefixLength(state: EditorState, block: BlockRange): number {
+export function getBlockPrefixLength(
+  state: EditorState,
+  block: BlockRange,
+): number {
   const line = state.doc.lineAt(block.from);
   const text = line.text;
 
@@ -96,10 +99,7 @@ export function getBlockPrefixLength(state: EditorState, block: BlockRange): num
  * 判断 slash 命令位置是否处于块的"可转换起始区"：
  * 块第一行，且块前缀之后只有空白（即 slash 紧跟在块前缀后或行首）
  */
-export function isAtBlockStart(
-  state: EditorState,
-  slashFrom: number
-): boolean {
+export function isAtBlockStart(state: EditorState, slashFrom: number): boolean {
   const block = getBlockAtPos(state, slashFrom);
   if (!block) return false;
   const line = state.doc.lineAt(slashFrom);
@@ -125,6 +125,98 @@ const TARGET_PREFIX: Record<string, string> = {
   Paragraph: "",
 };
 
+export type BlockActionId =
+  | "heading1"
+  | "heading2"
+  | "heading3"
+  | "heading4"
+  | "heading5"
+  | "heading6"
+  | "bulletList"
+  | "orderedList"
+  | "blockquote"
+  | "paragraph"
+  | "codeBlock"
+  | "callout"
+  | "mathBlock"
+  | "table"
+  | "divider"
+  | "image"
+  | "link"
+  | "delete"
+  | "duplicate";
+
+const INSERT_TEMPLATES: Record<
+  string,
+  { template: string; cursorOffset: number }
+> = {
+  codeBlock: { template: "```\n\n```", cursorOffset: 4 },
+  callout: { template: "> [!note]\n> ", cursorOffset: 12 },
+  mathBlock: { template: "$$\n\n$$", cursorOffset: 3 },
+  table: {
+    template: "| Col 1 | Col 2 | Col 3 |\n| --- | --- | --- |\n|  |  |  |",
+    cursorOffset: 2,
+  },
+  divider: { template: "---", cursorOffset: 3 },
+  image: { template: "![]()", cursorOffset: 4 },
+  link: { template: "[]()", cursorOffset: 1 },
+};
+
+const ACTION_TO_TYPE: Record<string, string> = {
+  heading1: "ATXHeading1",
+  heading2: "ATXHeading2",
+  heading3: "ATXHeading3",
+  heading4: "ATXHeading4",
+  heading5: "ATXHeading5",
+  heading6: "ATXHeading6",
+  bulletList: "BulletList",
+  orderedList: "OrderedList",
+  blockquote: "Blockquote",
+  paragraph: "Paragraph",
+};
+
+export function executeBlockAction(
+  view: EditorView,
+  block: BlockRange,
+  actionId: BlockActionId,
+): boolean {
+  const { state } = view;
+
+  if (actionId === "delete") {
+    return deleteBlock(view, block);
+  }
+  if (actionId === "duplicate") {
+    return duplicateBlock(view, block);
+  }
+
+  const targetType = ACTION_TO_TYPE[actionId];
+  if (targetType) {
+    const line = state.doc.lineAt(block.from);
+    const prefixLen = getBlockPrefixLength(state, block);
+    const targetPrefix = TARGET_PREFIX[targetType] ?? "";
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from + prefixLen,
+        insert: targetPrefix,
+      },
+      selection: { anchor: line.from + targetPrefix.length },
+    });
+    return true;
+  }
+
+  const insert = INSERT_TEMPLATES[actionId];
+  if (insert) {
+    view.dispatch({
+      changes: { from: block.from, to: block.to, insert: insert.template },
+      selection: { anchor: block.from + insert.cursorOffset },
+    });
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * 转换当前块类型。
  * 前提：slashFrom 位于块的可转换起始区（isAtBlockStart === true）。
@@ -135,7 +227,7 @@ export function transformBlockType(
   block: BlockRange,
   _targetType: string,
   _slashFrom: number,
-  slashTo: number
+  slashTo: number,
 ): boolean {
   const { state } = view;
   const line = state.doc.lineAt(block.from);
@@ -155,7 +247,7 @@ export function transformBlockType(
 export function transformBlockTypeByToolbar(
   view: EditorView,
   block: BlockRange,
-  targetType: string
+  targetType: string,
 ): boolean {
   const { state } = view;
   const line = state.doc.lineAt(block.from);
