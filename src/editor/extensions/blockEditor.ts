@@ -169,19 +169,70 @@ class BlockHandleWidget extends WidgetType {
       <circle cx="9" cy="9" r="1" fill="currentColor"/>
     </svg>`;
 
-    // 左键点击：选中整个块
+    // 左键：单击选中 / 拖拽排序
     handle.addEventListener("mousedown", (e) => {
-      if (e.button !== 0) return; // 只处理左键
+      if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
-      window.dispatchEvent(
-        new CustomEvent("lumina-block-select", {
-          detail: {
-            from: this.blockFrom,
-            to: this.blockTo,
-          },
-        })
-      );
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let isDragging = false;
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+        if (!isDragging && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+          isDragging = true;
+          window.dispatchEvent(
+            new CustomEvent("lumina-block-drag-start", {
+              detail: {
+                from: this.blockFrom,
+                to: this.blockTo,
+                clientX: moveEvent.clientX,
+                clientY: moveEvent.clientY,
+              },
+            })
+          );
+        }
+        if (isDragging) {
+          window.dispatchEvent(
+            new CustomEvent("lumina-block-drag-move", {
+              detail: {
+                clientX: moveEvent.clientX,
+                clientY: moveEvent.clientY,
+              },
+            })
+          );
+        }
+      };
+
+      const onMouseUp = (upEvent: MouseEvent) => {
+        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("mouseup", onMouseUp);
+        if (isDragging) {
+          window.dispatchEvent(
+            new CustomEvent("lumina-block-drag-end", {
+              detail: {
+                clientX: upEvent.clientX,
+                clientY: upEvent.clientY,
+              },
+            })
+          );
+        } else {
+          window.dispatchEvent(
+            new CustomEvent("lumina-block-select", {
+              detail: {
+                from: this.blockFrom,
+                to: this.blockTo,
+              },
+            })
+          );
+        }
+      };
+
+      window.addEventListener("mousemove", onMouseMove);
+      window.addEventListener("mouseup", onMouseUp);
     });
 
     // 右键点击：打开块操作菜单
@@ -321,13 +372,24 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     private mouseLeaveHandler: (() => void) | null = null;
     private blockSelectHandler: ((e: CustomEvent) => void) | null = null;
     private blockMenuHandler: ((e: CustomEvent) => void) | null = null;
+    private dragStartHandler: ((e: CustomEvent) => void) | null = null;
+    private dragMoveHandler: ((e: CustomEvent) => void) | null = null;
+    private dragEndHandler: ((e: CustomEvent) => void) | null = null;
     private menuManager = new BlockMenuManager();
+    private dragState: {
+      sourceBlock: BlockInfo;
+      ghostEl: HTMLElement;
+      indicatorEl: HTMLElement;
+      targetBlock: BlockInfo | null;
+      insertAfter: boolean;
+    } | null = null;
 
     constructor(view: EditorView) {
       this.decorations = this.buildDecorations(view);
       this.attachMouseListeners(view);
       this.attachBlockSelectListener(view);
       this.attachBlockMenuListener(view);
+      this.attachDragListeners(view);
     }
 
     update(update: ViewUpdate) {
@@ -353,7 +415,182 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
           this.blockMenuHandler as EventListener
         );
       }
+      if (this.dragStartHandler) {
+        window.removeEventListener(
+          "lumina-block-drag-start",
+          this.dragStartHandler as EventListener
+        );
+      }
+      if (this.dragMoveHandler) {
+        window.removeEventListener(
+          "lumina-block-drag-move",
+          this.dragMoveHandler as EventListener
+        );
+      }
+      if (this.dragEndHandler) {
+        window.removeEventListener(
+          "lumina-block-drag-end",
+          this.dragEndHandler as EventListener
+        );
+      }
       this.menuManager.hide();
+      this.cleanupDrag();
+    }
+
+    // ── Drag & Drop ───────────────────────────────────────────────
+
+    private attachDragListeners(view: EditorView) {
+      this.dragStartHandler = (e: CustomEvent) => {
+        const { from, clientX, clientY } = e.detail as {
+          from: number;
+          to: number;
+          clientX: number;
+          clientY: number;
+        };
+        const blockState = view.state.field(blockEditorStateField);
+        const block = findBlockAtPos(blockState.blocks, from);
+        if (!block) return;
+
+        this.cleanupDrag();
+
+        const ghost = document.createElement("div");
+        ghost.className = "cm-block-drag-ghost";
+        ghost.textContent = view.state.doc
+          .sliceString(block.from, Math.min(block.to, block.from + 60))
+          .replace(/\n/g, " ");
+        if (block.to - block.from > 60) ghost.textContent += "…";
+        document.body.appendChild(ghost);
+
+        const indicator = document.createElement("div");
+        indicator.className = "cm-block-drag-indicator";
+        indicator.style.display = "none";
+        view.dom.appendChild(indicator);
+
+        this.dragState = {
+          sourceBlock: block,
+          ghostEl: ghost,
+          indicatorEl: indicator,
+          targetBlock: null,
+          insertAfter: false,
+        };
+
+        this.updateDragGhost(clientX, clientY);
+        document.body.classList.add("lumina-block-dragging");
+      };
+
+      this.dragMoveHandler = (e: CustomEvent) => {
+        if (!this.dragState) return;
+        const { clientX, clientY } = e.detail as {
+          clientX: number;
+          clientY: number;
+        };
+        this.updateDragGhost(clientX, clientY);
+
+        const pos = view.posAtCoords({ x: clientX, y: clientY });
+        if (pos == null) {
+          this.dragState.indicatorEl.style.display = "none";
+          return;
+        }
+
+        const blockState = view.state.field(blockEditorStateField);
+        const target = findBlockAtPos(blockState.blocks, pos);
+        if (!target || target.from === this.dragState.sourceBlock.from) {
+          this.dragState.indicatorEl.style.display = "none";
+          this.dragState.targetBlock = null;
+          return;
+        }
+
+        // 判断插入到目标块前还是后：鼠标在目标块上半部则前，下半部则后
+        const coords = view.coordsAtPos(target.from);
+        const coordsEnd = view.coordsAtPos(target.to);
+        if (!coords || !coordsEnd) return;
+        const midY = (coords.top + coordsEnd.bottom) / 2;
+        const insertAfter = clientY > midY;
+
+        this.dragState.targetBlock = target;
+        this.dragState.insertAfter = insertAfter;
+
+        // 定位 indicator
+        const indicator = this.dragState.indicatorEl;
+        indicator.style.display = "block";
+        const anchorY = insertAfter ? coordsEnd.bottom : coords.top;
+        indicator.style.top = `${anchorY}px`;
+        indicator.style.left = `${coords.left}px`;
+        indicator.style.width = `${Math.min(
+          coordsEnd.right - coords.left,
+          760
+        )}px`;
+      };
+
+      this.dragEndHandler = () => {
+        if (!this.dragState) return;
+        const { sourceBlock, targetBlock, insertAfter } = this.dragState;
+        if (targetBlock) {
+          this.moveBlock(view, sourceBlock, targetBlock, insertAfter);
+        }
+        this.cleanupDrag();
+      };
+
+      window.addEventListener(
+        "lumina-block-drag-start",
+        this.dragStartHandler as EventListener
+      );
+      window.addEventListener(
+        "lumina-block-drag-move",
+        this.dragMoveHandler as EventListener
+      );
+      window.addEventListener(
+        "lumina-block-drag-end",
+        this.dragEndHandler as EventListener
+      );
+    }
+
+    private updateDragGhost(x: number, y: number) {
+      if (!this.dragState) return;
+      const ghost = this.dragState.ghostEl;
+      ghost.style.left = `${x + 12}px`;
+      ghost.style.top = `${y + 12}px`;
+    }
+
+    private cleanupDrag() {
+      document.body.classList.remove("lumina-block-dragging");
+      if (this.dragState) {
+        this.dragState.ghostEl.remove();
+        this.dragState.indicatorEl.remove();
+        this.dragState = null;
+      }
+    }
+
+    private moveBlock(
+      view: EditorView,
+      source: BlockInfo,
+      target: BlockInfo,
+      insertAfter: boolean
+    ) {
+      const { state } = view;
+      const text = state.doc.sliceString(source.from, source.to);
+      const trailingNl = source.to < state.doc.length ? 1 : 0;
+      const deleteFrom = source.from;
+      const deleteTo = source.to + trailingNl;
+
+      let insertPos: number;
+      if (insertAfter) {
+        insertPos = target.to + (target.to < state.doc.length ? 1 : 0);
+      } else {
+        insertPos = target.from;
+      }
+
+      // 如果源块在目标块之前，删除后目标位置会前移
+      if (source.to < target.from) {
+        insertPos -= deleteTo - deleteFrom;
+      }
+
+      view.dispatch({
+        changes: [
+          { from: deleteFrom, to: deleteTo },
+          { from: insertPos, insert: text + "\n" },
+        ],
+      });
     }
 
     private blockStateChanged(update: ViewUpdate): boolean {

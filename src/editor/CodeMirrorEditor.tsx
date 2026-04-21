@@ -308,6 +308,38 @@ const createEditorTheme = (fontSize: number) =>
       userSelect: "none",
       fontStyle: "italic",
     },
+
+    // ── Block Editor: drag ghost & indicator ──────────────────────
+    ".cm-block-drag-ghost": {
+      position: "fixed",
+      zIndex: "9999",
+      pointerEvents: "none",
+      backgroundColor: "hsl(var(--background))",
+      border: "1px solid hsl(var(--border))",
+      borderRadius: "6px",
+      padding: "4px 10px",
+      fontSize: "13px",
+      color: "hsl(var(--foreground))",
+      boxShadow:
+        "0 4px 12px -2px hsl(var(--foreground) / 0.12), 0 2px 4px -2px hsl(var(--foreground) / 0.08)",
+      opacity: "0.9",
+      maxWidth: "300px",
+      overflow: "hidden",
+      whiteSpace: "nowrap",
+      textOverflow: "ellipsis",
+    },
+    ".cm-block-drag-indicator": {
+      position: "absolute",
+      height: "2px",
+      backgroundColor: "hsl(var(--primary))",
+      borderRadius: "1px",
+      pointerEvents: "none",
+      zIndex: "50",
+      transition: "top 60ms ease",
+    },
+    "body.lumina-block-dragging": {
+      cursor: "grabbing",
+    },
     "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
       {
         userSelect: "none",
