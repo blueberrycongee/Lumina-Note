@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
@@ -265,6 +265,8 @@ export function Editor() {
   // 全局键盘快捷键
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+
       const isMod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
       const active = document.activeElement as HTMLElement | null;
@@ -275,11 +277,8 @@ export function Editor() {
           active.tagName === "TEXTAREA" ||
           active.isContentEditable);
 
-      // Ctrl+Z: 撤销（仅当不在其他输入框中时生效）
-      if (isMod && key === "z") {
-        // 让 CodeMirror 自己处理：live 模式且焦点在编辑器内
-        if (editorMode === "live" && inCodeMirror) return;
-        // 其他输入框（如 Chat 文本框）使用浏览器/组件自己的撤销
+      // Ctrl+Z: undo (unless in another text input)
+      if (isMod && key === "z" && !e.shiftKey) {
         if (!inCodeMirror && inTextInput) return;
 
         if (canUndo()) {
@@ -289,9 +288,8 @@ export function Editor() {
         return;
       }
 
-      // Ctrl+Y 或 Ctrl+Shift+Z: 重做
+      // Ctrl+Y or Ctrl+Shift+Z: redo
       if (isMod && (key === "y" || (key === "z" && e.shiftKey))) {
-        if (editorMode === "live" && inCodeMirror) return;
         if (!inCodeMirror && inTextInput) return;
 
         if (canRedo()) {
@@ -312,11 +310,8 @@ export function Editor() {
         goForward();
         return;
       }
-
-      // live 模式使用 CodeMirror 自带的撤销/重做，不拦截
-      // 其他模式不需要拦截
     },
-    [editorMode, undo, redo, canUndo, canRedo, goBack, goForward],
+    [undo, redo, canUndo, canRedo, goBack, goForward],
   );
 
   useEffect(() => {
@@ -325,7 +320,13 @@ export function Editor() {
   }, [handleKeyDown]);
 
   // Debounced save (1000ms after user stops typing, matching VS Code default)
-  const debouncedSave = useMemo(() => debounce(() => save(), 1000), [save]);
+  const debouncedSaveRef = useRef<ReturnType<typeof debounce> | null>(null);
+  useEffect(() => {
+    debouncedSaveRef.current = debounce(() => save(), 1000);
+    return () => {
+      // cleanup handled by debounce internals
+    };
+  }, [save]);
 
   // Save on window blur (when user switches to another app)
   useEffect(() => {
@@ -395,9 +396,7 @@ export function Editor() {
 
             <span className="text-muted-foreground/50 shrink-0">/</span>
             <span className="text-foreground font-medium truncate">
-              {currentFile
-                ? getFileName(currentFile)
-                : t.common.untitled}
+              {currentFile ? getFileName(currentFile) : t.common.untitled}
             </span>
             {isDirty && (
               <span
@@ -503,9 +502,9 @@ export function Editor() {
           <CodeMirrorEditor
             ref={editorRef}
             content={currentContent}
-            onChange={(newContent) => {
-              updateContent(newContent);
-              debouncedSave();
+            onChange={(newContent, selection) => {
+              updateContent(newContent, "user", undefined, selection);
+              debouncedSaveRef.current?.();
             }}
             viewMode={editorMode as ViewMode}
             filePath={currentFile}
