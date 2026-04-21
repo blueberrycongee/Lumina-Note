@@ -403,9 +403,10 @@ class BlockFormatToolbar {
       return;
     }
 
-    // 定位在块左侧（视口坐标 → fixed 定位）
-    const editorRect = view.dom.getBoundingClientRect();
-    const left = Math.max(4, editorRect.left + 4);
+    // 定位在块左侧：与 .cm-content 左边缘对齐再向左偏移
+    const contentRect = view.contentDOM.getBoundingClientRect();
+    const toolbarWidth = 150; // 近似宽度
+    const left = Math.max(4, contentRect.left - toolbarWidth - 4);
     const top = coords.top;
 
     this.el.style.left = `${left}px`;
