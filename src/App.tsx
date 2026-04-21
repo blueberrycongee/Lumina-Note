@@ -9,6 +9,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { getVersion } from "@/lib/host";
 import { listen } from "@/lib/host";
+import { invoke } from "@/lib/host";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
 import { ResizeHandle } from "@/components/toolbar/ResizeHandle";
@@ -619,6 +620,34 @@ function App() {
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  // Send dirty state to Electron main process for close protection
+  useEffect(() => {
+    if (!isTauriAvailable()) return;
+
+    const sendDirtyState = () => {
+      const { isDirty, tabs } = useFileStore.getState();
+      const count =
+        tabs.filter((t) => t.isDirty && t.type === "file").length +
+        (isDirty ? 1 : 0);
+      invoke("set_dirty_state", { count });
+    };
+
+    // Send initial state
+    sendDirtyState();
+
+    // Subscribe to store changes
+    const unsubscribe = useFileStore.subscribe((state, prevState) => {
+      if (
+        state.isDirty !== prevState.isDirty ||
+        state.tabs !== prevState.tabs
+      ) {
+        sendDirtyState();
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   // 全局鼠标拖拽处理：模拟从文件树拖拽文件创建双链
