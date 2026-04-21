@@ -1575,6 +1575,7 @@ mark {
 .codemirror-wrapper .cm-scroller {
   overflow: auto;
   font-family: var(--font-sans);
+  flex-grow: 1;
 }
 
 /* Editor centering — center on .cm-sizer (parent
