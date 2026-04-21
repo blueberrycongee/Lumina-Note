@@ -1,6 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { BlockIcon, BlockIconName } from "./BlockIcon";
-import { useLocaleStore } from "@/stores/useLocaleStore";
 
 export type BlockMenuMode = "combined" | "insert";
 export type BlockActionId =
@@ -38,6 +37,79 @@ interface MenuGroup {
   items: { id: BlockActionId; icon: BlockIconName; title: string }[];
 }
 
+const FORMAT_GROUPS: MenuGroup[] = [
+  {
+    label: "Heading",
+    items: [
+      { id: "heading1", icon: "heading1", title: "Heading 1" },
+      { id: "heading2", icon: "heading2", title: "Heading 2" },
+      { id: "heading3", icon: "heading3", title: "Heading 3" },
+      { id: "heading4", icon: "heading4", title: "Heading 4" },
+      { id: "heading5", icon: "heading5", title: "Heading 5" },
+    ],
+  },
+  {
+    label: "List",
+    items: [
+      { id: "bulletList", icon: "bulletList", title: "Bullet List" },
+      { id: "orderedList", icon: "orderedList", title: "Numbered List" },
+      { id: "taskList", icon: "taskList", title: "Task List" },
+    ],
+  },
+  {
+    label: "Block",
+    items: [
+      { id: "blockquote", icon: "blockquote", title: "Quote" },
+      { id: "codeBlock", icon: "codeBlock", title: "Code Block" },
+      { id: "divider", icon: "divider", title: "Divider" },
+    ],
+  },
+  {
+    label: "Insert",
+    items: [
+      { id: "link", icon: "link", title: "Link" },
+      { id: "image", icon: "image", title: "Image" },
+      { id: "table", icon: "table", title: "Table" },
+      { id: "mathBlock", icon: "mathBlock", title: "Math Block" },
+      { id: "callout", icon: "callout", title: "Callout" },
+    ],
+  },
+];
+
+const MANAGE_ITEMS: {
+  id: BlockActionId;
+  icon: BlockIconName;
+  label: string;
+  title: string;
+  danger?: boolean;
+}[] = [
+  {
+    id: "insertBefore",
+    icon: "insertAbove",
+    label: "Insert above",
+    title: "Insert block above",
+  },
+  {
+    id: "delete",
+    icon: "delete",
+    label: "Delete",
+    title: "Delete block",
+    danger: true,
+  },
+  {
+    id: "duplicate",
+    icon: "duplicate",
+    label: "Duplicate",
+    title: "Duplicate block",
+  },
+  {
+    id: "insertAfter",
+    icon: "insertBelow",
+    label: "Insert below",
+    title: "Insert block below",
+  },
+];
+
 const TYPE_TO_ACTION: Record<string, string> = {
   ATXHeading1: "heading1",
   ATXHeading2: "heading2",
@@ -60,133 +132,6 @@ export function BlockMenu({
 }: BlockMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const { t } = useLocaleStore();
-  const b = t.editor?.blockMenu;
-
-  const FORMAT_GROUPS: MenuGroup[] = [
-    {
-      label: b?.groups?.heading ?? "Heading",
-      items: [
-        {
-          id: "heading1",
-          icon: "heading1",
-          title: b?.items?.heading1 ?? "Heading 1",
-        },
-        {
-          id: "heading2",
-          icon: "heading2",
-          title: b?.items?.heading2 ?? "Heading 2",
-        },
-        {
-          id: "heading3",
-          icon: "heading3",
-          title: b?.items?.heading3 ?? "Heading 3",
-        },
-        {
-          id: "heading4",
-          icon: "heading4",
-          title: b?.items?.heading4 ?? "Heading 4",
-        },
-        {
-          id: "heading5",
-          icon: "heading5",
-          title: b?.items?.heading5 ?? "Heading 5",
-        },
-      ],
-    },
-    {
-      label: b?.groups?.list ?? "List",
-      items: [
-        {
-          id: "bulletList",
-          icon: "bulletList",
-          title: b?.items?.bulletList ?? "Bullet List",
-        },
-        {
-          id: "orderedList",
-          icon: "orderedList",
-          title: b?.items?.orderedList ?? "Numbered List",
-        },
-        {
-          id: "taskList",
-          icon: "taskList",
-          title: b?.items?.taskList ?? "Task List",
-        },
-      ],
-    },
-    {
-      label: b?.groups?.block ?? "Block",
-      items: [
-        {
-          id: "blockquote",
-          icon: "blockquote",
-          title: b?.items?.blockquote ?? "Quote",
-        },
-        {
-          id: "codeBlock",
-          icon: "codeBlock",
-          title: b?.items?.codeBlock ?? "Code Block",
-        },
-        {
-          id: "divider",
-          icon: "divider",
-          title: b?.items?.divider ?? "Divider",
-        },
-      ],
-    },
-    {
-      label: b?.groups?.insert ?? "Insert",
-      items: [
-        { id: "link", icon: "link", title: b?.items?.link ?? "Link" },
-        { id: "image", icon: "image", title: b?.items?.image ?? "Image" },
-        { id: "table", icon: "table", title: b?.items?.table ?? "Table" },
-        {
-          id: "mathBlock",
-          icon: "mathBlock",
-          title: b?.items?.mathBlock ?? "Math Block",
-        },
-        {
-          id: "callout",
-          icon: "callout",
-          title: b?.items?.callout ?? "Callout",
-        },
-      ],
-    },
-  ];
-
-  const MANAGE_ITEMS: {
-    id: BlockActionId;
-    icon: BlockIconName;
-    label: string;
-    title: string;
-    danger?: boolean;
-  }[] = [
-    {
-      id: "insertBefore",
-      icon: "insertAbove",
-      label: b?.items?.insertAbove ?? "Insert above",
-      title: b?.items?.insertAboveTitle ?? "Insert block above",
-    },
-    {
-      id: "delete",
-      icon: "delete",
-      label: b?.items?.delete ?? "Delete",
-      title: b?.items?.deleteTitle ?? "Delete block",
-      danger: true,
-    },
-    {
-      id: "duplicate",
-      icon: "duplicate",
-      label: b?.items?.duplicate ?? "Duplicate",
-      title: b?.items?.duplicateTitle ?? "Duplicate block",
-    },
-    {
-      id: "insertAfter",
-      icon: "insertBelow",
-      label: b?.items?.insertBelow ?? "Insert below",
-      title: b?.items?.insertBelowTitle ?? "Insert block below",
-    },
-  ];
 
   useEffect(() => {
     requestAnimationFrame(() => setIsVisible(true));

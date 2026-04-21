@@ -1,42 +1,48 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock('@/lib/host', () => ({
+vi.mock("@/lib/host", () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
-  readFile: vi.fn((path: string) => Promise.resolve(`# ${path}\n\nMock content for ${path}`)),
-  saveFile: vi.fn((path: string, content: string) => Promise.resolve({ path, content })),
+  readFile: vi.fn((path: string) =>
+    Promise.resolve(`# ${path}\n\nMock content for ${path}`),
+  ),
+  saveFile: vi.fn((path: string, content: string) =>
+    Promise.resolve({ path, content }),
+  ),
   createFile: vi.fn((path: string) => Promise.resolve(path)),
-  createDir: vi.fn((path: string, options?: { recursive?: boolean }) => Promise.resolve({ path, options })),
+  createDir: vi.fn((path: string, options?: { recursive?: boolean }) =>
+    Promise.resolve({ path, options }),
+  ),
 }));
 
-import { useFileStore } from './useFileStore';
+import { useFileStore } from "./useFileStore";
 
 function generateContent(sizeKB: number): string {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789 \n';
-  let content = '# Test File\n\n';
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789 \n";
+  let content = "# Test File\n\n";
   while (content.length < sizeKB * 1024) {
     content += chars[Math.floor(Math.random() * chars.length)];
   }
   return content;
 }
 
-describe('useFileStore undo history behavior', () => {
+describe("useFileStore undo history behavior", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
+    vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
     useFileStore.setState({
-      vaultPath: '/mock/vault',
+      vaultPath: "/mock/vault",
       fileTree: [],
       tabs: [],
       activeTabIndex: -1,
       currentFile: null,
-      currentContent: '',
+      currentContent: "",
       isDirty: false,
       isLoadingTree: false,
       isLoadingFile: false,
       isSaving: false,
       undoStack: [],
       redoStack: [],
-      lastSavedContent: '',
+      lastSavedContent: "",
       navigationHistory: [],
       navigationIndex: -1,
       recentFiles: [],
@@ -48,7 +54,7 @@ describe('useFileStore undo history behavior', () => {
     vi.useRealTimers();
   });
 
-  it('coalesces rapid user edits into a single undo point', () => {
+  it("coalesces rapid user edits into a single undo point", () => {
     const store = useFileStore.getState();
     const initialContent = generateContent(2);
 
@@ -57,16 +63,25 @@ describe('useFileStore undo history behavior', () => {
       lastSavedContent: initialContent,
     });
 
-    store.updateContent(`${initialContent}\nedit-1`, 'user');
+    store.updateContent(`${initialContent}\nedit-1`, "user", undefined, {
+      anchor: 0,
+      head: 0,
+    });
     vi.advanceTimersByTime(400);
-    store.updateContent(`${initialContent}\nedit-2`, 'user');
+    store.updateContent(`${initialContent}\nedit-2`, "user", undefined, {
+      anchor: 0,
+      head: 0,
+    });
     vi.advanceTimersByTime(400);
-    store.updateContent(`${initialContent}\nedit-3`, 'user');
+    store.updateContent(`${initialContent}\nedit-3`, "user", undefined, {
+      anchor: 0,
+      head: 0,
+    });
 
     expect(useFileStore.getState().undoStack).toHaveLength(1);
   });
 
-  it('creates new undo points after the debounce window elapses', () => {
+  it("creates new undo points after the debounce window elapses", () => {
     const store = useFileStore.getState();
     const initialContent = generateContent(2);
 
@@ -75,16 +90,25 @@ describe('useFileStore undo history behavior', () => {
       lastSavedContent: initialContent,
     });
 
-    store.updateContent(`${initialContent}\nedit-1`, 'user');
+    store.updateContent(`${initialContent}\nedit-1`, "user", undefined, {
+      anchor: 0,
+      head: 0,
+    });
     vi.advanceTimersByTime(1200);
-    store.updateContent(`${initialContent}\nedit-2`, 'user');
+    store.updateContent(`${initialContent}\nedit-2`, "user", undefined, {
+      anchor: 0,
+      head: 0,
+    });
     vi.advanceTimersByTime(1200);
-    store.updateContent(`${initialContent}\nedit-3`, 'user');
+    store.updateContent(`${initialContent}\nedit-3`, "user", undefined, {
+      anchor: 0,
+      head: 0,
+    });
 
     expect(useFileStore.getState().undoStack).toHaveLength(3);
   });
 
-  it('caps undo history at 50 entries', () => {
+  it("caps undo history at 50 entries", () => {
     const store = useFileStore.getState();
     const initialContent = generateContent(1);
 
@@ -95,36 +119,81 @@ describe('useFileStore undo history behavior', () => {
 
     for (let i = 0; i < 60; i += 1) {
       vi.advanceTimersByTime(1200);
-      store.updateContent(`${initialContent}\nedit-${i}`, 'user');
+      store.updateContent(`${initialContent}\nedit-${i}`, "user", undefined, {
+        anchor: 0,
+        head: 0,
+      });
     }
 
     const undoStack = useFileStore.getState().undoStack;
     expect(undoStack).toHaveLength(50);
-    expect(undoStack[0]?.content).toContain('edit-9');
-    expect(undoStack.at(-1)?.content).toContain('edit-58');
+    expect(undoStack[0]?.content).toContain("edit-9");
+    expect(undoStack.at(-1)?.content).toContain("edit-58");
   });
 
-  it('replaces the tabs array snapshot when switching tabs', () => {
+  it("clears isDirty when undo restores to lastSavedContent", () => {
+    const store = useFileStore.getState();
+    const initialContent = "hello world";
+
+    useFileStore.setState({
+      currentContent: initialContent,
+      lastSavedContent: initialContent,
+    });
+
+    // Make an edit
+    store.updateContent("hello world edited", "user", undefined, {
+      anchor: 11,
+      head: 11,
+    });
+    expect(useFileStore.getState().isDirty).toBe(true);
+
+    // Undo back to saved content
+    store.undo();
+    expect(useFileStore.getState().currentContent).toBe(initialContent);
+    expect(useFileStore.getState().isDirty).toBe(false);
+  });
+
+  it("stores selection in undo history entries", () => {
+    const store = useFileStore.getState();
+    const initialContent = "hello";
+
+    useFileStore.setState({
+      currentContent: initialContent,
+      lastSavedContent: initialContent,
+    });
+
+    store.updateContent("hello world", "user", undefined, {
+      anchor: 5,
+      head: 10,
+    });
+    vi.advanceTimersByTime(1200);
+
+    const undoStack = useFileStore.getState().undoStack;
+    expect(undoStack).toHaveLength(1);
+    expect(undoStack[0]?.selection).toEqual({ anchor: 5, head: 10 });
+  });
+
+  it("replaces the tabs array snapshot when switching tabs", () => {
     const content1 = generateContent(1);
     const content2 = generateContent(1);
 
     useFileStore.setState({
       tabs: [
         {
-          id: 'tab-1',
-          type: 'file',
-          path: '/file1.md',
-          name: 'file1',
+          id: "tab-1",
+          type: "file",
+          path: "/file1.md",
+          name: "file1",
           content: content1,
           isDirty: false,
           undoStack: [],
           redoStack: [],
         },
         {
-          id: 'tab-2',
-          type: 'file',
-          path: '/file2.md',
-          name: 'file2',
+          id: "tab-2",
+          type: "file",
+          path: "/file2.md",
+          name: "file2",
           content: content2,
           isDirty: false,
           undoStack: [],
@@ -132,7 +201,7 @@ describe('useFileStore undo history behavior', () => {
         },
       ],
       activeTabIndex: 0,
-      currentFile: '/file1.md',
+      currentFile: "/file1.md",
       currentContent: content1,
     });
 
@@ -142,7 +211,7 @@ describe('useFileStore undo history behavior', () => {
     store.switchTab(1);
 
     expect(useFileStore.getState().tabs).not.toBe(initialTabs);
-    expect(useFileStore.getState().currentFile).toBe('/file2.md');
+    expect(useFileStore.getState().currentFile).toBe("/file2.md");
     expect(useFileStore.getState().currentContent).toBe(content2);
   });
 

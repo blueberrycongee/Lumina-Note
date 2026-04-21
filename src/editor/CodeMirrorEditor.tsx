@@ -52,7 +52,7 @@ import {
   ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Table } from "@lezer/markdown";
 import { syntaxTree } from "@codemirror/language";
@@ -100,7 +100,10 @@ const EXTERNAL_JUMP_Y_MARGIN_PX = 24;
 
 interface CodeMirrorEditorProps {
   content: string;
-  onChange: (content: string) => void;
+  onChange: (
+    content: string,
+    selection?: { anchor: number; head: number },
+  ) => void;
   className?: string;
   viewMode?: ViewMode;
   livePreview?: boolean;
@@ -4449,8 +4452,7 @@ export const CodeMirrorEditor = forwardRef<
         readOnlyCompartment.of(EditorState.readOnly.of(isReadOnly)),
         themeCompartment.of([]),
         pluginExtensionsCompartment.of([]),
-        history(),
-        keymap.of([...tableKeymap, ...defaultKeymap, ...historyKeymap]),
+        keymap.of([...tableKeymap, ...defaultKeymap]),
         selectAllDomHandlers,
         markdown({ base: markdownLanguage, extensions: [Table] }),
         EditorView.lineWrapping,
@@ -4481,7 +4483,11 @@ export const CodeMirrorEditor = forwardRef<
               newContent = update.state.doc.toString();
             }
             lastInternalContent.current = newContent;
-            onChange(newContent);
+            const selectionBefore = update.startState.selection.main;
+            onChange(newContent, {
+              anchor: selectionBefore.anchor,
+              head: selectionBefore.head,
+            });
           }
         }),
       ],
@@ -5429,27 +5435,21 @@ export const CodeMirrorEditor = forwardRef<
       };
       const view = viewRef.current;
       if (!view) return;
-
-      const topCoords = view.coordsAtPos(from);
-      const bottomCoords = view.coordsAtPos(to);
-      if (!topCoords || !bottomCoords) return;
-
-      const menuWidth = 240;
+      const coords = view.coordsAtPos(from);
+      if (!coords) return;
+      const menuWidth = 280;
       const menuHeight = 360;
 
-      // Horizontal: align with block left edge
-      let x = topCoords.left;
-      // Keep within viewport
-      if (x + menuWidth > window.innerWidth - 4) {
-        x = window.innerWidth - menuWidth - 4;
-      }
-      x = Math.max(4, x);
+      // Position menu to the left of the block
+      const x = Math.max(4, coords.left - menuWidth - 4);
 
-      // Vertical: appear just below the block's bottom edge
-      let y = bottomCoords.bottom + 4;
-      // If menu would extend below viewport, show it above the block instead
-      if (y + menuHeight > window.innerHeight - 8) {
-        y = Math.max(8, topCoords.top - menuHeight - 4);
+      // Use block top as base, but check viewport boundaries
+      let y = coords.top;
+
+      // If menu would extend below viewport, shift it up
+      const viewportHeight = window.innerHeight;
+      if (y + menuHeight > viewportHeight - 8) {
+        y = Math.max(8, viewportHeight - menuHeight - 8);
       }
 
       setBlockMenu({ mode, position: { x, y }, blockFrom: from, blockTo: to });
@@ -5463,6 +5463,33 @@ export const CodeMirrorEditor = forwardRef<
         "lumina-block-menu",
         handleBlockMenu as EventListener,
       );
+  }, []);
+
+  useEffect(() => {
+    if (!viewRef.current) return;
+
+    const handleRestoreSelection = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        anchor: number;
+        head: number;
+      }>;
+      const { anchor, head } = customEvent.detail;
+      const view = viewRef.current;
+      if (!view) return;
+
+      view.dispatch({
+        selection: { anchor, head },
+        scrollIntoView: true,
+      });
+    };
+
+    window.addEventListener("lumina-restore-selection", handleRestoreSelection);
+    return () => {
+      window.removeEventListener(
+        "lumina-restore-selection",
+        handleRestoreSelection,
+      );
+    };
   }, []);
 
   return (
@@ -5511,25 +5538,19 @@ export const CodeMirrorEditor = forwardRef<
               });
               const newCoords = view.coordsAtPos(insertPos + 1);
               if (newCoords) {
-                const menuWidth = 240;
+                const menuWidth = 280;
                 const menuHeight = 360;
 
-                // Position below the newly inserted block
-                let x = newCoords.left;
-                if (x + menuWidth > window.innerWidth - 4) {
-                  x = window.innerWidth - menuWidth - 4;
-                }
-                x = Math.max(4, x);
-
-                let y = newCoords.bottom + 4;
-                if (y + menuHeight > window.innerHeight - 8) {
-                  y = Math.max(8, newCoords.top - menuHeight - 4);
+                let y = newCoords.top;
+                const viewportHeight = window.innerHeight;
+                if (y + menuHeight > viewportHeight - 8) {
+                  y = Math.max(8, viewportHeight - menuHeight - 8);
                 }
 
                 setBlockMenu({
                   mode: "insert",
                   position: {
-                    x,
+                    x: Math.max(4, newCoords.left - menuWidth - 4),
                     y,
                   },
                   blockFrom: insertPos + 1,

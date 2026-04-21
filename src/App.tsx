@@ -9,6 +9,7 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { getVersion } from "@/lib/host";
 import { listen } from "@/lib/host";
+import { invoke } from "@/lib/host";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
 import { ResizeHandle } from "@/components/toolbar/ResizeHandle";
@@ -34,7 +35,12 @@ import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
-import { openDialog, saveFile, setWindowSize, startFileWatcher } from "@/lib/host";
+import {
+  openDialog,
+  saveFile,
+  setWindowSize,
+  startFileWatcher,
+} from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
@@ -601,6 +607,49 @@ function App() {
     }
   }, [fileTree, buildIndex]);
 
+  // Prevent accidental close when there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const { isDirty, tabs } = useFileStore.getState();
+      const hasDirty =
+        isDirty || tabs.some((t) => t.isDirty && t.type === "file");
+      if (hasDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  // Send dirty state to Electron main process for close protection
+  useEffect(() => {
+    if (!isTauriAvailable()) return;
+
+    const sendDirtyState = () => {
+      const { isDirty, tabs } = useFileStore.getState();
+      const count =
+        tabs.filter((t) => t.isDirty && t.type === "file").length +
+        (isDirty ? 1 : 0);
+      invoke("set_dirty_state", { count });
+    };
+
+    // Send initial state
+    sendDirtyState();
+
+    // Subscribe to store changes
+    const unsubscribe = useFileStore.subscribe((state, prevState) => {
+      if (
+        state.isDirty !== prevState.isDirty ||
+        state.tabs !== prevState.tabs
+      ) {
+        sendDirtyState();
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   // 全局鼠标拖拽处理：模拟从文件树拖拽文件创建双链
   useEffect(() => {
     let dragIndicator: HTMLDivElement | null = null;
@@ -801,11 +850,12 @@ function App() {
 
   useEffect(() => {
     if (!vaultPath) return;
-    void setWindowSize(MAIN_WORKSPACE_WINDOW_WIDTH, MAIN_WORKSPACE_WINDOW_HEIGHT).catch(
-      (error) => {
-        console.warn("[App] Failed to restore workspace window size:", error);
-      },
-    );
+    void setWindowSize(
+      MAIN_WORKSPACE_WINDOW_WIDTH,
+      MAIN_WORKSPACE_WINDOW_HEIGHT,
+    ).catch((error) => {
+      console.warn("[App] Failed to restore workspace window size:", error);
+    });
   }, [vaultPath]);
 
   // Handle resize - must be before conditional returns
@@ -859,7 +909,10 @@ function App() {
         dragAccumulatorRef.current += delta;
         if (dragAccumulatorRef.current > 50) {
           // 累计拖动超过 50px，打开面板并设置宽度
-          const newWidth = Math.max(RIGHT_MIN_WIDTH, dragAccumulatorRef.current);
+          const newWidth = Math.max(
+            RIGHT_MIN_WIDTH,
+            dragAccumulatorRef.current,
+          );
           setRightSidebarOpen(true);
           setRightSidebarWidth(newWidth);
           dragAccumulatorRef.current = 0;
