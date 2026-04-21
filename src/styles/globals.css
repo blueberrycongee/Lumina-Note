@@ -1752,23 +1752,26 @@ mark {
 
 .cm-block-handle {
   position: absolute;
-  left: -20px;
+  left: -24px;
   top: 2px;
   width: 16px;
   height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--muted-foreground) / 0.5);
+  color: hsl(var(--muted-foreground) / 0.35);
   cursor: grab;
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition:
+    opacity 120ms ease 100ms,
+    background-color 120ms ease,
+    color 120ms ease;
   border-radius: 4px;
 }
 
 .cm-block-handle:hover {
   background: hsl(var(--muted));
-  color: hsl(var(--foreground));
+  color: hsl(var(--foreground) / 0.8);
 }
 
 .cm-block-line:hover .cm-block-handle,
