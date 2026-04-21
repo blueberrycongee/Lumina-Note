@@ -10,13 +10,15 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  delay: number
-): (...args: Parameters<T>) => void {
+  delay: number,
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
   let timeoutId: ReturnType<typeof setTimeout>;
-  return (...args: Parameters<T>) => {
+  const debounced = (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn(...args), delay);
   };
+  debounced.cancel = () => clearTimeout(timeoutId);
+  return debounced;
 }
 
 /**

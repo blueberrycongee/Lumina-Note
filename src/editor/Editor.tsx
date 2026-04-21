@@ -324,7 +324,7 @@ export function Editor() {
   useEffect(() => {
     debouncedSaveRef.current = debounce(() => save(), 1000);
     return () => {
-      // cleanup handled by debounce internals
+      debouncedSaveRef.current?.cancel();
     };
   }, [save]);
 
