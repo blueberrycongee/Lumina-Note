@@ -260,7 +260,7 @@ export function Sidebar() {
       />
 
       {/* Toolbar Zone */}
-      <div className="flex flex-col gap-3 py-2 border-b border-border">
+      <div className="flex flex-col gap-3 py-2">
         {/* Quick Actions */}
         <SidebarQuickActions
           vaultPath={vaultPath}

@@ -31,7 +31,7 @@ export function SidebarHeader({
   const { t } = useLocaleStore();
 
   return (
-    <div className="p-3 flex items-center justify-between text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase border-b border-border/60">
+    <div className="p-3 flex items-center justify-between text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase border-b border-border/50">
       <span className="ui-compact-text ui-compact-hide-md">{t.sidebar.files}</span>
       <div className="flex items-center gap-1">
         <button
