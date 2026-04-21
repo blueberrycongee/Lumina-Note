@@ -579,10 +579,16 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
       this.dragEndHandler = () => {
         if (!this.dragState) return;
         const { sourceBlock, targetBlock, insertAfter } = this.dragState;
+        let landedRange: { from: number; to: number } | null = null;
         if (targetBlock) {
-          this.moveBlock(view, sourceBlock, targetBlock, insertAfter);
+          landedRange = this.moveBlock(view, sourceBlock, targetBlock, insertAfter);
         }
         this.cleanupDrag();
+
+        // 落地动效：给新位置的块添加动画
+        if (landedRange) {
+          this.flashLandedBlock(view, landedRange);
+        }
       };
 
       window.addEventListener(
@@ -662,6 +668,11 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         insertText = text + "\n";
       }
 
+      // 计算 dispatch 后插入文本在新文档中的实际位置
+      const deleteLen = deleteTo - deleteFrom;
+      const adjustedInsertPos =
+        insertPos > deleteFrom ? insertPos - deleteLen : insertPos;
+
       view.dispatch({
         changes: [
           { from: deleteFrom, to: deleteTo },
@@ -669,10 +680,11 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         ],
       });
 
-      return {
-        from: adjustedInsertPos,
-        to: adjustedInsertPos + insertText.length,
-      };
+      // 对于追加到末尾的情况（insertText 以 \n 开头），跳过开头的换行符定位
+      const landFrom = insertText.startsWith("\n")
+        ? adjustedInsertPos + 1
+        : adjustedInsertPos;
+      return { from: landFrom, to: adjustedInsertPos + insertText.length };
     }
 
     private flashLandedBlock(
