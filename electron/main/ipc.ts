@@ -25,11 +25,9 @@ import type { McpManager } from "./agent/mcp/manager.js";
 import type { WikiSettingsStore } from "./wiki/settings-store.js";
 import type { WikiManager } from "./wiki/manager.js";
 import { dispatchAgentCommand, isAgentCommand } from "./agent/ipc-dispatch.js";
+import { setDirtyFileCount } from "../main/index.js";
 
 const { autoUpdater } = electronUpdater;
-
-// Dirty state tracking for close protection
-let dirtyFileCount = 0;
 
 // Stub response for unimplemented commands
 function notImplemented(cmd: string) {
@@ -193,7 +191,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
       // ── Dirty state tracking ─────────────────────────────────────────────
       if (cmd === "set_dirty_state") {
-        dirtyFileCount = (args.count as number) ?? 0;
+        setDirtyFileCount((args.count as number) ?? 0);
         return null;
       }
 

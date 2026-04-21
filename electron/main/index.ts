@@ -36,6 +36,9 @@ import { createMainWindowOptions } from "./window-config.js";
 // ── State ──────────────────────────────────────────────────────────────────
 let mainWindow: BrowserWindow | null = null;
 let dirtyFileCount = 0;
+export function setDirtyFileCount(count: number): void {
+  dirtyFileCount = count;
+}
 
 export default function createWindow(): BrowserWindow {
   const preloadPath = path.join(__dirname, "../preload/index.cjs");
