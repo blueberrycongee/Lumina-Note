@@ -521,7 +521,7 @@ export function RightPanel() {
   return (
     <aside
       ref={panelRef}
-      className={`w-full h-full border-l border-border/50 bg-background flex flex-col transition-all duration-200 ${
+      className={`w-full h-full shadow-[inset_1px_0_0_hsl(var(--border)/0.5)] bg-background flex flex-col transition-all duration-200 ${
         isDraggingFileOver ? "ring-2 ring-primary ring-inset bg-primary/5" : ""
       }`}
     >
