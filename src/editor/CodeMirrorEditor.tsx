@@ -5433,8 +5433,20 @@ export const CodeMirrorEditor = forwardRef<
       if (!coords) return;
       const contentRect = view.contentDOM.getBoundingClientRect();
       const menuWidth = 280;
+      const menuHeight = 360;
+
+      // Position menu to the left of the content area
       const x = Math.max(4, contentRect.left - menuWidth - 4);
-      const y = coords.top;
+
+      // Use block top as base, but check viewport boundaries
+      let y = coords.top;
+
+      // If menu would extend below viewport, shift it up
+      const viewportHeight = window.innerHeight;
+      if (y + menuHeight > viewportHeight - 8) {
+        y = Math.max(8, viewportHeight - menuHeight - 8);
+      }
+
       setBlockMenu({ mode, position: { x, y }, blockFrom: from, blockTo: to });
     };
     window.addEventListener(
@@ -5495,11 +5507,19 @@ export const CodeMirrorEditor = forwardRef<
               if (newCoords) {
                 const contentRect = view.contentDOM.getBoundingClientRect();
                 const menuWidth = 280;
+                const menuHeight = 360;
+
+                let y = newCoords.top;
+                const viewportHeight = window.innerHeight;
+                if (y + menuHeight > viewportHeight - 8) {
+                  y = Math.max(8, viewportHeight - menuHeight - 8);
+                }
+
                 setBlockMenu({
                   mode: "insert",
                   position: {
                     x: Math.max(4, contentRect.left - menuWidth - 4),
-                    y: newCoords.top,
+                    y,
                   },
                   blockFrom: insertPos + 1,
                   blockTo: insertPos + 1,
