@@ -526,7 +526,7 @@ export function RightPanel() {
       }`}
     >
       {/* Tabs */}
-      <div className="ui-compact-row flex h-11 items-stretch border-b border-border/50 bg-background min-w-0">
+      <div className="ui-compact-row flex h-11 items-stretch border-b border-border/50 bg-background shadow-[inset_1px_0_0_hsl(var(--border)/0.5)] min-w-0">
         {/* AI Tab - temporarily hidden */}
         {false && aiPanelMode === "docked" && !isMainAIActive && (
           <button
