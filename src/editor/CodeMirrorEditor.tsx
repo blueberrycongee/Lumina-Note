@@ -33,6 +33,7 @@ import {
   slashCommandExtensions,
   placeholderExtension,
 } from "./extensions/slashCommand";
+import { blockEditorExtensions } from "./extensions/blockEditor";
 import { SlashMenu } from "./components/SlashMenu";
 import {
   EditorView,
@@ -232,6 +233,30 @@ const createEditorTheme = (fontSize: number) =>
         backgroundColor: "transparent !important",
         color: "inherit !important",
       },
+
+    // ── Block Editor: block-level hover highlight & boundary ────────
+    ".cm-block-line": {
+      position: "relative",
+      transition: "background-color 120ms ease",
+    },
+    ".cm-block-line.cm-block-hovered": {
+      backgroundColor: "hsl(var(--muted) / 0.35)",
+    },
+    ".cm-block-line.cm-block-hovered::before": {
+      content: '""',
+      position: "absolute",
+      left: "0",
+      top: "0",
+      bottom: "0",
+      width: "3px",
+      backgroundColor: "hsl(var(--primary) / 0.45)",
+      borderRadius: "0 2px 2px 0",
+      opacity: "0",
+      transition: "opacity 120ms ease",
+    },
+    ".cm-block-line.cm-block-hovered:first-of-type::before": {
+      opacity: "1",
+    },
     "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
       {
         userSelect: "none",
@@ -4162,10 +4187,11 @@ export const CodeMirrorEditor = forwardRef<
             tableEditorPlugin(),
             editableCodeBlockField,
             ...widgets,
+            ...blockEditorExtensions,
           ];
         case "source":
         default:
-          return [calloutStateField];
+          return [calloutStateField, ...blockEditorExtensions];
       }
     },
     [resolvedFilePath, vaultPath],
