@@ -7,6 +7,11 @@ import { EditorView, ViewPlugin, ViewUpdate, WidgetType, Decoration, DecorationS
 import { StateField, StateEffect } from "@codemirror/state";
 import type { Translations } from "@/i18n";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import {
+  isAtBlockStart,
+  transformBlockType,
+  getBlockAtPos,
+} from "./blockOperations";
 
 // ============ 类型定义 ============
 
@@ -25,6 +30,26 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   const t = translations ?? getCurrentTranslations();
   const labels = t.editor?.slashMenu?.commands;
   const tableTemplate = labels?.tableTemplate || "| Col 1 | Col 2 | Col 3 |\n| --- | --- | --- |\n|  |  |  |";
+
+  const transformOrInsert = (
+    targetType: string,
+    fallbackInsert: string,
+    fallbackOffset: number
+  ) => {
+    return (view: EditorView, from: number, to: number) => {
+      if (isAtBlockStart(view.state, from)) {
+        const block = getBlockAtPos(view.state, from);
+        if (block) {
+          transformBlockType(view, block, targetType, from, to);
+          return;
+        }
+      }
+      view.dispatch({
+        changes: { from, to, insert: fallbackInsert },
+        selection: { anchor: from + fallbackOffset },
+      });
+    };
+  };
 
   return [
   // AI 命令
@@ -58,12 +83,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "H1",
     description: labels?.heading1Desc || "Large heading",
     category: "heading",
-    action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "# " },
-        selection: { anchor: from + 2 }
-      });
-    },
+    action: transformOrInsert("ATXHeading1", "# ", 2),
   },
   {
     id: "h2",
@@ -71,12 +91,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "H2",
     description: labels?.heading2Desc || "Section heading",
     category: "heading",
-    action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "## " },
-        selection: { anchor: from + 3 }
-      });
-    },
+    action: transformOrInsert("ATXHeading2", "## ", 3),
   },
   {
     id: "h3",
@@ -84,12 +99,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "H3",
     description: labels?.heading3Desc || "Subsection heading",
     category: "heading",
-    action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "### " },
-        selection: { anchor: from + 4 }
-      });
-    },
+    action: transformOrInsert("ATXHeading3", "### ", 4),
   },
   
   // 列表
@@ -99,12 +109,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "•",
     description: labels?.bulletListDesc || "Bulleted list",
     category: "list",
-    action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "- " },
-        selection: { anchor: from + 2 }
-      });
-    },
+    action: transformOrInsert("BulletList", "- ", 2),
   },
   {
     id: "numbered-list",
@@ -112,12 +117,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "1.",
     description: labels?.numberedListDesc || "Numbered list",
     category: "list",
-    action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "1. " },
-        selection: { anchor: from + 3 }
-      });
-    },
+    action: transformOrInsert("OrderedList", "1. ", 3),
   },
   {
     id: "task-list",
@@ -126,9 +126,9 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.taskListDesc || "Todo list",
     category: "list",
     action: (view, from, to) => {
-      view.dispatch({ 
+      view.dispatch({
         changes: { from, to, insert: "- [ ] " },
-        selection: { anchor: from + 6 }
+        selection: { anchor: from + 6 },
       });
     },
   },
@@ -140,12 +140,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "❝",
     description: labels?.quoteDesc || "Blockquote",
     category: "block",
-    action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "> " },
-        selection: { anchor: from + 2 }
-      });
-    },
+    action: transformOrInsert("Blockquote", "> ", 2),
   },
   {
     id: "code-block",
