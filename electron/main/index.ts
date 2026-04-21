@@ -1,5 +1,9 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
+
+// Force overlay scrollbars so custom ::-webkit-scrollbar CSS does not
+// push content left (classic mode). The scrollbar paints on top instead.
+app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar')
 import { registerIpcHandlers } from './ipc.js'
 import { storeHandlers } from './handlers/store.js'
 import { stopAllWatchers } from './handlers/watcher.js'

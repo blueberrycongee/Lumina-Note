@@ -1575,11 +1575,6 @@ mark {
 .codemirror-wrapper .cm-scroller {
   overflow: auto;
   font-family: var(--font-sans);
-  scrollbar-width: none;
-}
-
-.codemirror-wrapper .cm-scroller::-webkit-scrollbar {
-  display: none;
 }
 
 /* Editor centering — center on .cm-sizer (parent
