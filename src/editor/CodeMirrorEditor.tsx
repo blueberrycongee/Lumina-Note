@@ -15,6 +15,7 @@ import { useShallow } from "zustand/react/shallow";
 import { parseLuminaLink } from "@/services/pdf/annotations";
 import { createDir, writeBinaryFile, readBinaryFileBase64 } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
+import { computeStringDiff } from "./lib/diff";
 import {
   buildPastedImageTarget,
   getImageMimeType,
@@ -168,7 +169,7 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-cursor, .cm-dropCursor": { borderLeftColor: "hsl(var(--foreground))" },
     ".cm-line": {
       padding: "0 16px",
-      paddingLeft: "16px",
+      paddingLeft: "24px",
       lineHeight: "1.75",
       position: "relative",
     },
@@ -262,7 +263,7 @@ const createEditorTheme = (fontSize: number) =>
     // ── Block Editor: drag handle ───────────────────────────────────
     ".cm-block-handle": {
       position: "absolute",
-      left: "2px",
+      left: "-4px",
       top: "50%",
       transform: "translateY(-50%)",
       width: "16px",
@@ -5187,10 +5188,13 @@ export const CodeMirrorEditor = forwardRef<
     if (current !== content) {
       isExternalChange.current = true;
       const sel = view.state.selection.main.head;
-      view.dispatch({
-        changes: { from: 0, to: current.length, insert: content },
-        selection: { anchor: Math.min(sel, content.length) },
-      });
+      const diff = computeStringDiff(current, content);
+      if (diff) {
+        view.dispatch({
+          changes: diff,
+          selection: { anchor: Math.min(sel, content.length) },
+        });
+      }
       lastInternalContent.current = content;
       isExternalChange.current = false;
     }
@@ -5483,9 +5487,12 @@ export const CodeMirrorEditor = forwardRef<
       const anchor = clampNumber(detail.selection.anchor, 0, docLength);
       const head = clampNumber(detail.selection.head, 0, docLength);
 
+      const inViewport =
+        view.viewport.from <= anchor && anchor <= view.viewport.to;
+
       view.dispatch({
         selection: { anchor, head },
-        scrollIntoView: true,
+        scrollIntoView: !inViewport,
       });
     };
 

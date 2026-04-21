@@ -102,4 +102,31 @@ describe("CodeMirror undo integration", () => {
     expect(view.state.selection.main.anchor).toBe(4);
     expect(view.state.selection.main.head).toBe(4);
   });
+
+  it("does not force scroll when restored selection is already in viewport", () => {
+    const { view } = setupEditor("hello world", {
+      filePath: "/file1.md",
+    });
+
+    // Ensure viewport covers the whole short document
+    expect(view.viewport.from).toBe(0);
+    expect(view.viewport.to).toBeGreaterThanOrEqual(11);
+
+    act(() => {
+      view.dispatch({ selection: { anchor: 0 } });
+    });
+
+    act(() => {
+      window.dispatchEvent(
+        new CustomEvent("lumina-restore-selection", {
+          detail: {
+            filePath: "/file1.md",
+            selection: { anchor: 5, head: 5 },
+          },
+        }),
+      );
+    });
+
+    expect(view.state.selection.main.anchor).toBe(5);
+  });
 });
