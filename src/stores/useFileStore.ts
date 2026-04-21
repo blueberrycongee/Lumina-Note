@@ -1626,8 +1626,17 @@ export const useFileStore = create<FileState>()(
 
       // Save current file
       save: async () => {
-        const { currentFile, currentContent, isDirty, tabs, activeTabIndex } =
-          get();
+        const {
+          currentFile,
+          currentContent,
+          isDirty,
+          isSaving,
+          tabs,
+          activeTabIndex,
+        } = get();
+
+        if (isSaving) return;
+
         const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
         // Manual save promotes preview tab
