@@ -4,7 +4,7 @@
  *
  * 设计原则：
  * - 块是"视图层"概念，底层仍然是纯 Markdown 文本
- * - 通过 CodeMirror Decoration 给块级节点添加视觉边界
+ * - 通过 CodeMirror Decoration 给块级节点添加视觉边界与交互手柄
  * - 块操作通过文本变更（ChangeSet）实现
  */
 
@@ -14,6 +14,7 @@ import {
   ViewUpdate,
   Decoration,
   DecorationSet,
+  WidgetType,
 } from "@codemirror/view";
 import { StateField, StateEffect, EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
@@ -119,7 +120,7 @@ function parseBlocks(state: EditorState): BlockInfo[] {
   return blocks;
 }
 
-function findBlockAtPos(
+export function findBlockAtPos(
   blocks: BlockInfo[],
   pos: number
 ): BlockInfo | null {
@@ -131,6 +132,64 @@ function findBlockAtPos(
   return null;
 }
 
+// ============ Block Handle Widget ============
+
+class BlockHandleWidget extends WidgetType {
+  constructor(
+    readonly blockType: string,
+    readonly blockFrom: number,
+    readonly blockTo: number
+  ) {
+    super();
+  }
+
+  eq(other: BlockHandleWidget) {
+    return (
+      other.blockType === this.blockType &&
+      other.blockFrom === this.blockFrom &&
+      other.blockTo === this.blockTo
+    );
+  }
+
+  toDOM() {
+    const handle = document.createElement("div");
+    handle.className = "cm-block-handle";
+    handle.setAttribute("aria-label", "Drag to move block");
+    handle.setAttribute("role", "button");
+    handle.tabIndex = -1;
+
+    // 使用 SVG 图标替代文字，更轻量且不受字体影响
+    handle.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="3" cy="3" r="1" fill="currentColor"/>
+      <circle cx="3" cy="6" r="1" fill="currentColor"/>
+      <circle cx="3" cy="9" r="1" fill="currentColor"/>
+      <circle cx="9" cy="3" r="1" fill="currentColor"/>
+      <circle cx="9" cy="6" r="1" fill="currentColor"/>
+      <circle cx="9" cy="9" r="1" fill="currentColor"/>
+    </svg>`;
+
+    // 点击手柄：选中整个块
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(
+        new CustomEvent("lumina-block-select", {
+          detail: {
+            from: this.blockFrom,
+            to: this.blockTo,
+          },
+        })
+      );
+    });
+
+    return handle;
+  }
+
+  ignoreEvent() {
+    return true; // CodeMirror 完全忽略该 widget 的事件
+  }
+}
+
 // ============ 块装饰 ViewPlugin ============
 
 const blockDecorationsPlugin = ViewPlugin.fromClass(
@@ -138,10 +197,12 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     decorations: DecorationSet;
     private mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
     private mouseLeaveHandler: (() => void) | null = null;
+    private blockSelectHandler: ((e: CustomEvent) => void) | null = null;
 
     constructor(view: EditorView) {
       this.decorations = this.buildDecorations(view);
       this.attachMouseListeners(view);
+      this.attachBlockSelectListener(view);
     }
 
     update(update: ViewUpdate) {
@@ -155,7 +216,13 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     }
 
     destroy() {
-      // 事件监听器绑定在 view.dom 上，DOM 销毁时会自动清理
+      // 自定义事件监听器需要在 window 上移除
+      if (this.blockSelectHandler) {
+        window.removeEventListener(
+          "lumina-block-select",
+          this.blockSelectHandler as EventListener
+        );
+      }
     }
 
     private blockStateChanged(update: ViewUpdate): boolean {
@@ -167,6 +234,25 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         prev.hovered?.to !== curr.hovered?.to ||
         prev.selected?.from !== curr.selected?.from ||
         prev.selected?.to !== curr.selected?.to
+      );
+    }
+
+    private attachBlockSelectListener(view: EditorView) {
+      this.blockSelectHandler = (e: CustomEvent) => {
+        const { from } = e.detail as { from: number; to: number };
+        const blockState = view.state.field(blockEditorStateField);
+        const block = findBlockAtPos(blockState.blocks, from);
+        if (block) {
+          view.dispatch({
+            selection: { anchor: block.from, head: block.to },
+            effects: setSelectedBlock.of(block),
+            scrollIntoView: false,
+          });
+        }
+      };
+      window.addEventListener(
+        "lumina-block-select",
+        this.blockSelectHandler as EventListener
       );
     }
 
@@ -206,7 +292,11 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
 
     private buildDecorations(view: EditorView): DecorationSet {
       const blockState = view.state.field(blockEditorStateField);
-      const decorations: Array<{ from: number; to: number; value: Decoration }> = [];
+      const decorations: Array<{
+        from: number;
+        to: number;
+        value: Decoration;
+      }> = [];
 
       for (const block of blockState.blocks) {
         const isHovered =
@@ -225,6 +315,17 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         const startLine = view.state.doc.line(block.startLine);
         const endLine = view.state.doc.line(block.endLine);
 
+        // 块手柄：插入到第一行开头
+        decorations.push(
+          Decoration.widget({
+            widget: new BlockHandleWidget(block.type, block.from, block.to),
+            side: -1,
+            inline: false,
+            block: false,
+          }).range(startLine.from)
+        );
+
+        // 块行样式
         for (
           let lineNum = startLine.number;
           lineNum <= endLine.number;

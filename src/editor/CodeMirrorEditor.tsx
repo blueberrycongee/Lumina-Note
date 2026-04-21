@@ -257,6 +257,32 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-block-line.cm-block-hovered:first-of-type::before": {
       opacity: "1",
     },
+
+    // ── Block Editor: drag handle ───────────────────────────────────
+    ".cm-block-handle": {
+      position: "absolute",
+      left: "2px",
+      top: "50%",
+      transform: "translateY(-50%)",
+      width: "16px",
+      height: "20px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "grab",
+      opacity: "0",
+      transition: "opacity 120ms ease",
+      color: "hsl(var(--muted-foreground) / 0.5)",
+      userSelect: "none",
+      pointerEvents: "auto",
+      zIndex: "2",
+    },
+    ".cm-block-line.cm-block-hovered .cm-block-handle": {
+      opacity: "1",
+    },
+    ".cm-block-line.cm-block-selected": {
+      backgroundColor: "hsl(var(--primary) / 0.08)",
+    },
     "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
       {
         userSelect: "none",

@@ -89,3 +89,4 @@ scripts/plan-loop*.ps1
 # Local Playwright artifacts
 output/playwright/
 .playwright-mcp/
+.tmp_obsidian_re/
