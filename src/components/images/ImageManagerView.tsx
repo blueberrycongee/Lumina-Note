@@ -82,11 +82,11 @@ const getSortOptions = (t: ReturnType<typeof getCurrentTranslations>): Array<{ v
 ];
 
 const statusBadgeStyles = {
-  orphan: "border-amber-500/35 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  referenced: "border-emerald-500/35 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  multi: "border-sky-500/35 bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  recent: "border-violet-500/35 bg-violet-500/10 text-violet-700 dark:text-violet-300",
-  large: "border-rose-500/35 bg-rose-500/10 text-rose-700 dark:text-rose-300",
+  orphan: "bg-warning/10 text-warning",
+  referenced: "bg-success/10 text-success",
+  multi: "bg-primary/10 text-primary",
+  recent: "bg-muted text-muted-foreground",
+  large: "bg-muted text-muted-foreground",
 } as const;
 
 const formatBytes = (bytes: number | null): string => {
@@ -602,7 +602,7 @@ export function ImageManagerView() {
 
         {/* Row 2: search + filters */}
         <div className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border/60 bg-background/80 px-2.5 py-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-2.5 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <input
               value={searchQuery}
@@ -688,27 +688,27 @@ export function ImageManagerView() {
         <div className="flex min-h-0 h-full">
           <div className="min-h-0 flex-1 overflow-hidden">
             {currentSelection.length > 1 ? (
-              <div className="border-b border-border/60 bg-muted/25 px-4 py-2.5">
+              <div className="border-b border-border/60 bg-muted/20 px-4 py-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-3 py-1 text-sm font-medium">
+                  <span className="inline-flex items-center gap-2 rounded-md bg-background px-2.5 py-1 text-xs font-medium">
                     <CheckSquare className="h-4 w-4 text-primary" />
                     {t.imageManager.imagesSelected.replace("{count}", String(currentSelection.length))}
                   </span>
                   <button
                     onClick={() => openMoveDialog(currentSelection.map((image) => image.path))}
-                    className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm hover:bg-accent"
+                    className="rounded-md border border-border/50 bg-background px-2.5 py-1 text-xs hover:bg-accent"
                   >
                     {t.imageManager.moveSelected}
                   </button>
                   <button
                     onClick={() => handleCopyPath(currentSelection.map((image) => image.path))}
-                    className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm hover:bg-accent"
+                    className="rounded-md border border-border/50 bg-background px-2.5 py-1 text-xs hover:bg-accent"
                   >
                     {t.imageManager.copyPaths}
                   </button>
                   <button
                     onClick={clearSelection}
-                    className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm hover:bg-accent"
+                    className="rounded-md border border-border/50 bg-background px-2.5 py-1 text-xs hover:bg-accent"
                   >
                     {t.imageManager.clearSelection}
                   </button>
@@ -750,11 +750,11 @@ export function ImageManagerView() {
                   description={t.imageManager.noMatchDescription}
                 />
               ) : viewMode === "list" ? (
-                <div className="overflow-hidden rounded-2xl border border-border/60 bg-background shadow-sm">
-                  <div className="grid grid-cols-[56px_minmax(0,1.4fr)_minmax(0,1fr)_80px_80px_180px] gap-3 border-b border-border/60 px-4 py-2.5 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground lg:grid-cols-[56px_minmax(0,1.4fr)_minmax(0,1.1fr)_80px_80px_160px_140px]">
+                <div className="divide-y divide-border/50 border-t border-border/50">
+                  <div className="grid grid-cols-[48px_1fr_80px_80px_100px] gap-3 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground md:grid-cols-[48px_1fr_1fr_80px_80px_100px] lg:grid-cols-[48px_1fr_1fr_80px_80px_140px_100px]">
                     <span>{t.imageManager.columnPreview}</span>
                     <span>{t.imageManager.columnFile}</span>
-                    <span>{t.imageManager.columnLocation}</span>
+                    <span className="hidden md:block">{t.imageManager.columnLocation}</span>
                     <span>{t.imageManager.columnRefs}</span>
                     <span>{t.imageManager.columnSize}</span>
                     <span className="hidden lg:block">{t.imageManager.columnChanged}</span>
@@ -778,7 +778,7 @@ export function ImageManagerView() {
                   ))}
                 </div>
               ) : viewMode === "group" ? (
-                <div className="space-y-6">
+                <div className="space-y-5">
                   {groupedImages.map((group) => (
                     <section key={group.key} className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -787,7 +787,7 @@ export function ImageManagerView() {
                           <p className="text-xs text-muted-foreground">{t.imageManager.imageCount.replace("{count}", String(group.items.length))}</p>
                         </div>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                         {group.items.map((image) => (
                           <ImageGridCard
                             key={image.path}
@@ -807,7 +807,7 @@ export function ImageManagerView() {
                   ))}
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                   {filteredImages.map((image) => (
                     <ImageGridCard
                       key={image.path}
@@ -901,11 +901,11 @@ function EmptyState({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("flex h-full flex-col items-center justify-center px-6 text-center", compact ? "min-h-[320px]" : "min-h-[420px]")}>
-      <div className="mb-4 rounded-full border border-border/60 bg-background/80 p-4 shadow-sm">
-        <Icon className={cn("h-7 w-7 text-muted-foreground", spinning && "animate-spin")} />
+    <div className={cn("flex h-full flex-col items-center justify-center px-6 text-center", compact ? "min-h-[240px]" : "min-h-[360px]")}>
+      <div className="mb-3 rounded-full border border-border/60 bg-background/80 p-3 shadow-sm">
+        <Icon className={cn("h-6 w-6 text-muted-foreground", spinning && "animate-spin")} />
       </div>
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="text-base font-semibold">{title}</h2>
       <p className="mt-2 max-w-md text-sm text-muted-foreground">{description}</p>
     </div>
   );
@@ -920,7 +920,7 @@ function StatusBadges({ image }: { image: ImageAssetRecord }) {
         <span
           key={status}
           className={cn(
-            "rounded-full border px-2 py-0.5 text-[11px] font-medium",
+            "rounded-full px-2 py-0.5 text-[11px] font-medium",
             statusBadgeStyles[status as keyof typeof statusBadgeStyles],
           )}
         >
@@ -964,7 +964,7 @@ function CardActions({
   ];
 
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <div className="flex items-center gap-0.5 text-muted-foreground">
       {actions.map((action) => (
         <button
           key={action.label}
@@ -972,7 +972,7 @@ function CardActions({
             event.stopPropagation();
             void action.onClick(path);
           }}
-          className="ui-icon-btn h-8 w-8"
+          className="ui-icon-btn h-7 w-7 hover:text-foreground"
           title={action.label}
         >
           <action.icon className="h-3.5 w-3.5" />
@@ -1019,8 +1019,8 @@ function ImageGridCard({
       onClick={(event) => onSelect(image.path, event)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-2xl border bg-background text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg",
-        selected ? "border-primary/40 ring-2 ring-primary/15" : "border-border/60",
+        "group flex flex-col overflow-hidden rounded-lg border bg-background text-left transition-all hover:border-primary/30",
+        selected ? "border-primary/40 ring-1 ring-primary/10" : "border-border/60",
       )}
     >
       <div className="relative aspect-[5/3] overflow-hidden bg-muted/20">
@@ -1031,11 +1031,11 @@ function ImageGridCard({
           imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
           onDimensions={({ width, height }) => onDimension(width, height)}
         />
-        <div className="absolute left-3 top-3">
+        <div className="absolute right-2 bottom-2">
           <StatusBadges image={image} />
         </div>
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 truncate text-sm font-semibold">{image.name}</h3>
           <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
@@ -1043,7 +1043,7 @@ function ImageGridCard({
           </span>
         </div>
         <span className="text-xs text-muted-foreground">{formatBytes(image.sizeBytes)}</span>
-        <div className="opacity-0 transition-opacity group-hover:opacity-100">
+        <div>
           <CardActions
             path={image.path}
             onCopyPath={onCopyPath}
@@ -1099,14 +1099,14 @@ function ImageListRow({
       onClick={(event) => onSelect(image.path, event)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "grid grid-cols-[56px_minmax(0,1.4fr)_minmax(0,1fr)_80px_80px_180px] gap-3 border-b border-border/50 px-4 py-2.5 text-left transition-colors hover:bg-accent/35 lg:grid-cols-[56px_minmax(0,1.4fr)_minmax(0,1.1fr)_80px_80px_160px_140px]",
+        "grid grid-cols-[48px_1fr_80px_80px_100px] gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-accent/30 md:grid-cols-[48px_1fr_1fr_80px_80px_100px] lg:grid-cols-[48px_1fr_1fr_80px_80px_140px_100px]",
         selected && "bg-primary/5",
       )}
     >
       <ImageThumbnail
         path={image.path}
         alt={image.name}
-        className="h-12 w-14 rounded-lg"
+        className="h-10 w-12 rounded-lg"
         onDimensions={({ width, height }) => onDimension(width, height)}
       />
       <div className="min-w-0">
@@ -1115,7 +1115,7 @@ function ImageListRow({
           <StatusBadges image={image} />
         </div>
       </div>
-      <div className="min-w-0 text-xs text-muted-foreground">
+      <div className="hidden min-w-0 text-xs text-muted-foreground md:block">
         <div className="truncate">{image.relativePath}</div>
         <div className="mt-1 truncate">{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</div>
       </div>
@@ -1171,26 +1171,26 @@ function ImageDetailPanel({
   const { t } = useLocaleStore();
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="border-b border-border/60 px-4 py-4">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t.imageManager.imageDetails}</p>
-        <h2 className="mt-2 text-lg font-semibold">{image.name}</h2>
+      <div className="border-b border-border/60 px-4 py-3">
+        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.imageDetails}</p>
+        <h2 className="mt-2 text-base font-semibold leading-tight">{image.name}</h2>
         <p className="mt-1 break-all text-xs text-muted-foreground">{image.relativePath}</p>
       </div>
       <div className="min-h-0 flex-1 overflow-auto px-4 pt-4">
         <ImageThumbnail
           path={image.path}
           alt={image.name}
-          className="aspect-[4/3] w-full rounded-2xl border border-border/60"
+          className="aspect-[4/3] w-full rounded-lg bg-muted/20"
           onDimensions={({ width, height }) => onDimension(width, height)}
         />
 
         <div className="mt-4 space-y-4 pb-4">
-          <section className="rounded-2xl border border-border/60 bg-background/70 p-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">{t.imageManager.signals}</h3>
               <StatusBadges image={image} />
             </div>
-            <dl className="mt-3 space-y-2 text-sm">
+            <dl className="mt-3 space-y-1.5 text-sm">
               <DetailRow label={t.imageManager.folder} value={image.folderRelativePath === "." ? t.imageManager.vaultRoot : image.folderRelativePath} />
               <DetailRow label={t.imageManager.fileSize} value={formatBytes(image.sizeBytes)} />
               <DetailRow label={t.imageManager.pixelSize} value={dimensions ? `${dimensions.width} × ${dimensions.height}` : t.imageManager.detecting} />
@@ -1198,30 +1198,30 @@ function ImageDetailPanel({
               <DetailRow label={t.imageManager.created} value={formatDate(image.createdAt)} />
               <DetailRow label={t.imageManager.referenceCount} value={String(image.referenceCount)} />
             </dl>
-          </section>
+          </div>
 
-          <section className="rounded-2xl border border-border/60 bg-background/70 p-4">
+          <div className="border-t border-border/50 pt-3">
             <h3 className="text-sm font-semibold">{t.imageManager.actions}</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button onClick={() => onCopyPath(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <button onClick={() => onCopyPath(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
                 {t.imageManager.copyPath}
               </button>
-              <button onClick={() => onLocate(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
+              <button onClick={() => onLocate(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
                 {t.imageManager.locateInTree}
               </button>
-              <button onClick={() => onReveal(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
+              <button onClick={() => onReveal(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
                 {t.imageManager.revealInFinder}
               </button>
-              <button onClick={() => onRename(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
+              <button onClick={() => onRename(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
                 {t.imageManager.renameSafely}
               </button>
-              <button onClick={() => onMove(image.path)} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
+              <button onClick={() => onMove(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
                 {t.imageManager.moveSafely}
               </button>
             </div>
-          </section>
+          </div>
 
-          <section className="rounded-2xl border border-border/60 bg-background/70 p-4">
+          <div className="border-t border-border/50 pt-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">{t.imageManager.referencedByNotes}</h3>
               <span className="text-xs text-muted-foreground">{t.imageManager.noteCount.replace("{count}", String(image.referencedBy.length))}</span>
@@ -1236,7 +1236,7 @@ function ImageDetailPanel({
                   <button
                     key={note.notePath}
                     onClick={() => onOpenNote(note.notePath)}
-                    className="flex w-full items-center justify-between rounded-xl border border-border/60 bg-background px-3 py-3 text-left hover:bg-accent"
+                    className="flex w-full items-center justify-between rounded-md border border-border/60 bg-background px-3 py-2 text-left hover:bg-accent"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 text-sm font-medium">
@@ -1252,7 +1252,7 @@ function ImageDetailPanel({
                 ))}
               </div>
             )}
-          </section>
+          </div>
         </div>
       </div>
     </div>
@@ -1264,9 +1264,9 @@ function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; o
   const totalSize = images.reduce((sum, image) => sum + (image.sizeBytes ?? 0), 0);
   const orphanCount = images.filter((image) => image.orphan).length;
   return (
-    <div className="flex h-full flex-col px-4 py-4">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{t.imageManager.batchActions}</p>
-      <h2 className="mt-2 text-lg font-semibold">{t.imageManager.imagesSelected.replace("{count}", String(images.length))}</h2>
+    <div className="flex h-full flex-col px-4 py-3">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.batchActions}</p>
+      <h2 className="mt-2 text-base font-semibold">{t.imageManager.imagesSelected.replace("{count}", String(images.length))}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {t.imageManager.batchSummary
           .replace("{orphanCount}", String(orphanCount))
@@ -1280,7 +1280,7 @@ function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; o
       </div>
       <div className="mt-5 min-h-0 flex-1 space-y-2 overflow-auto">
         {images.map((image) => (
-          <div key={image.path} className="rounded-xl border border-border/60 bg-background px-3 py-3">
+          <div key={image.path} className="rounded-md border border-border/60 bg-background px-3 py-2">
             <div className="truncate text-sm font-medium">{image.name}</div>
             <div className="mt-1 truncate text-xs text-muted-foreground">{image.relativePath}</div>
           </div>
@@ -1317,8 +1317,8 @@ function ActionDialog({
   const { t } = useLocaleStore();
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-2xl rounded-3xl border border-border/60 bg-background shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
+      <div className="w-full max-w-2xl rounded-xl border border-border/60 bg-background shadow-ui-float">
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
           <div>
             <h2 className="text-lg font-semibold">
               {dialog.kind === "rename" ? t.imageManager.renameImageSafely : t.imageManager.moveImagesSafely.replace("{count}", String(dialog.paths.length))}
@@ -1356,7 +1356,7 @@ function ActionDialog({
           </div>
 
           {dialog.preview ? (
-            <div className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+            <div className="rounded-lg border border-border/60 bg-muted/20 p-4">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-medium text-primary">
                   {t.imageManager.imageFiles.replace("{count}", String(dialog.preview.changes.length))}
@@ -1370,7 +1370,7 @@ function ActionDialog({
                   <h3 className="text-sm font-semibold">{t.imageManager.fileChanges}</h3>
                   <div className="mt-2 space-y-2">
                     {dialog.preview.changes.map((change) => (
-                      <div key={`${change.from}-${change.to}`} className="rounded-xl border border-border/60 bg-background px-3 py-3 text-xs">
+                      <div key={`${change.from}-${change.to}`} className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs">
                         <div className="truncate text-muted-foreground">{change.from}</div>
                         <div className="mt-1 truncate font-medium text-foreground">{change.to}</div>
                       </div>
@@ -1380,13 +1380,13 @@ function ActionDialog({
                 <div>
                   <h3 className="text-sm font-semibold">{t.imageManager.affectedNotes}</h3>
                   {dialog.preview.noteUpdates.length === 0 ? (
-                    <div className="mt-2 rounded-xl border border-dashed border-border/60 px-3 py-3 text-sm text-muted-foreground">
+                    <div className="mt-2 rounded-md border border-dashed border-border/60 px-3 py-2 text-sm text-muted-foreground">
                       {t.imageManager.noNoteReferencesNeedChange}
                     </div>
                   ) : (
                     <div className="mt-2 space-y-2">
                       {dialog.preview.noteUpdates.map((note) => (
-                        <div key={note.notePath} className="rounded-xl border border-border/60 bg-background px-3 py-3 text-xs">
+                        <div key={note.notePath} className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs">
                           <div className="truncate font-medium text-foreground">{note.notePath}</div>
                           <div className="mt-1 text-muted-foreground">{t.imageManager.referencesUpdated.replace("{count}", String(note.changes.reduce((sum, change) => sum + change.occurrenceCount, 0)))}</div>
                         </div>
@@ -1399,7 +1399,7 @@ function ActionDialog({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 px-5 py-3.5">
           <button onClick={onClose} className="rounded-lg border border-border/60 bg-background px-4 py-2 text-sm hover:bg-accent">
             {t.common.cancel}
           </button>
