@@ -8,7 +8,8 @@ export function getResizeHandleIndicatorClassName(isActive: boolean, direction: 
     'absolute inset-y-0 w-[3px] rounded-full pointer-events-none',
     // Align with the sidebar border edge
     direction === 'left' ? '-left-px' : '-right-px',
-    'transition-colors duration-200 ease-out',
-    isActive ? 'bg-border/60' : 'bg-border/30',
+    'bg-border/30',
+    'transition-opacity duration-200 ease-out',
+    isActive ? 'opacity-100' : 'opacity-0',
   );
 }
