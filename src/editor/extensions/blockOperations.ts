@@ -57,7 +57,7 @@ export function getBlockAtPos(
 /**
  * 获取块第一行的 markdown 前缀长度
  */
-function getBlockPrefixLength(state: EditorState, block: BlockRange): number {
+export function getBlockPrefixLength(state: EditorState, block: BlockRange): number {
   const line = state.doc.lineAt(block.from);
   const text = line.text;
 
@@ -143,6 +143,31 @@ export function transformBlockType(
 
   view.dispatch({
     changes: { from: line.from, to: slashTo, insert: targetPrefix },
+    selection: { anchor: line.from + targetPrefix.length },
+  });
+
+  return true;
+}
+
+/**
+ * 工具栏直接转换块类型（无 slash 文本，只替换前缀）
+ */
+export function transformBlockTypeByToolbar(
+  view: EditorView,
+  block: BlockRange,
+  targetType: string
+): boolean {
+  const { state } = view;
+  const line = state.doc.lineAt(block.from);
+  const prefixLen = getBlockPrefixLength(state, block);
+  const targetPrefix = TARGET_PREFIX[targetType] ?? "";
+
+  view.dispatch({
+    changes: {
+      from: line.from,
+      to: line.from + prefixLen,
+      insert: targetPrefix,
+    },
     selection: { anchor: line.from + targetPrefix.length },
   });
 

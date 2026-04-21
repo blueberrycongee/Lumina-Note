@@ -340,6 +340,52 @@ const createEditorTheme = (fontSize: number) =>
     "body.lumina-block-dragging": {
       cursor: "grabbing",
     },
+
+    // ── Block Editor: hover format toolbar ──────────────────────────
+    ".cm-block-format-toolbar": {
+      position: "fixed",
+      zIndex: "100",
+      display: "none",
+      flexDirection: "column",
+      gap: "4px",
+      backgroundColor: "hsl(var(--background))",
+      border: "1px solid hsl(var(--border))",
+      borderRadius: "8px",
+      boxShadow:
+        "0 4px 12px -2px hsl(var(--foreground) / 0.12), 0 2px 4px -2px hsl(var(--foreground) / 0.08)",
+      padding: "6px",
+      transition: "opacity 120ms ease, transform 120ms ease",
+    },
+    ".cm-block-format-row": {
+      display: "flex",
+      gap: "2px",
+    },
+    ".cm-block-format-btn": {
+      width: "28px",
+      height: "28px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "5px",
+      border: "none",
+      backgroundColor: "transparent",
+      color: "hsl(var(--muted-foreground))",
+      fontSize: "12px",
+      fontWeight: "500",
+      cursor: "pointer",
+      transition: "background-color 80ms ease, color 80ms ease",
+      padding: "0",
+      lineHeight: "1",
+      fontFamily: "var(--font-sans)",
+    },
+    ".cm-block-format-btn:hover": {
+      backgroundColor: "hsl(var(--muted) / 0.6)",
+      color: "hsl(var(--foreground))",
+    },
+    ".cm-block-format-btn-active": {
+      backgroundColor: "hsl(var(--primary) / 0.12)",
+      color: "hsl(var(--primary))",
+    },
     "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
       {
         userSelect: "none",
