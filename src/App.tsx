@@ -939,7 +939,7 @@ function App() {
         </div>
 
         {/* Left Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
-        <div className="relative flex-shrink-0 h-full z-20">
+        <div className="relative flex-shrink-0 h-full z-20 bg-background">
           <ResizeHandle
             direction="left"
             onResize={handleLeftResize}
@@ -1038,7 +1038,7 @@ function App() {
             here on purpose — open it via the command palette
             (⌘K → "Toggle Right Sidebar"), or let callers like the PDF
             viewer / diagram view auto-open it when they need to. */}
-        <div className="relative flex-shrink-0 h-full z-20">
+        <div className="relative flex-shrink-0 h-full z-20 bg-background">
           {rightSidebarOpen && (
             <ResizeHandle
               direction="right"

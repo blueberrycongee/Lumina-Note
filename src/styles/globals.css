@@ -272,6 +272,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   .app-sidebar-shell {
     overflow: hidden;
     will-change: width, opacity;
+    background-color: hsl(var(--background));
     transition:
       width var(--ui-motion-sidebar) var(--ui-motion-sidebar-ease),
       opacity var(--ui-motion-sidebar-content) ease-out;
@@ -284,6 +285,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   .app-sidebar-inner {
     height: 100%;
     will-change: transform, opacity;
+    background-color: hsl(var(--background));
     transition:
       transform var(--ui-motion-sidebar-content) var(--ui-motion-sidebar-ease),
       opacity 160ms ease-out;
