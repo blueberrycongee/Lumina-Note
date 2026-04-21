@@ -161,14 +161,24 @@ export function BlockMenu({
         handleClose();
       }
     };
+    const handleEditorInput = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target.closest(".cm-content")) {
+        handleClose();
+      }
+    };
+
     document.addEventListener("keydown", handleKeyDown);
     setTimeout(
       () => document.addEventListener("mousedown", handleClickOutside),
       0,
     );
+    document.addEventListener("beforeinput", handleEditorInput);
+
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("beforeinput", handleEditorInput);
     };
   }, [handleClose]);
 
