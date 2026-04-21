@@ -92,7 +92,7 @@ function BacklinksView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-2 border-b border-border/60 flex items-center gap-2">
+      <div className="p-2 border-b border-border/50 flex items-center gap-2">
         <Link2 size={12} className="text-muted-foreground" />
         <span className="text-xs text-muted-foreground">
           {backlinks.length} {t.panel.backlinks}
@@ -170,7 +170,7 @@ function TagsView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-2 border-b border-border/60 flex items-center gap-2">
+      <div className="p-2 border-b border-border/50 flex items-center gap-2">
         <Tag size={12} className="text-muted-foreground" />
         <span className="text-xs text-muted-foreground">
           {allTags.length} {t.panel.tags}
@@ -284,7 +284,7 @@ function OutlineView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-2 border-b border-border/60 flex items-center justify-between">
+      <div className="p-2 border-b border-border/50 flex items-center justify-between">
         <span className="text-xs text-muted-foreground flex items-center gap-1">
           <List size={12} />
           {headings.length} {t.panel.headings}
@@ -526,7 +526,7 @@ export function RightPanel() {
       }`}
     >
       {/* Tabs */}
-      <div className="ui-compact-row flex border-b border-border/50 bg-background min-w-0">
+      <div className="ui-compact-row flex h-11 items-stretch border-b border-border/50 bg-background min-w-0">
         {/* AI Tab - temporarily hidden */}
         {false && aiPanelMode === "docked" && !isMainAIActive && (
           <button
@@ -601,7 +601,7 @@ export function RightPanel() {
             {/* 右侧主内容区 */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Header with Mode Toggle */}
-              <div className="ui-compact-row p-2 border-b border-border/60 bg-background/35 flex items-center justify-between min-w-0">
+              <div className="ui-compact-row p-2 border-b border-border/50 bg-background/35 flex items-center justify-between min-w-0">
                 <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1 text-xs">
                     <Bot size={12} />
@@ -841,7 +841,7 @@ export function RightPanel() {
                   </div>
 
                   {/* Agent Settings */}
-                  <div className="space-y-2 pt-3 border-t border-border/60">
+                  <div className="space-y-2 pt-3 border-t border-border/50">
                     <div className="text-xs font-medium text-foreground flex items-center gap-1.5">
                       <Bot size={12} /> {t.settingsPanel.agentSettings}
                     </div>
