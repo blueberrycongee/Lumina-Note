@@ -5429,12 +5429,29 @@ export const CodeMirrorEditor = forwardRef<
       };
       const view = viewRef.current;
       if (!view) return;
-      const coords = view.coordsAtPos(from);
-      if (!coords) return;
-      const contentRect = view.contentDOM.getBoundingClientRect();
-      const menuWidth = 280;
-      const x = Math.max(4, contentRect.left - menuWidth - 4);
-      const y = coords.top;
+
+      const topCoords = view.coordsAtPos(from);
+      const bottomCoords = view.coordsAtPos(to);
+      if (!topCoords || !bottomCoords) return;
+
+      const menuWidth = 240;
+      const menuHeight = 360;
+
+      // Horizontal: align with block left edge
+      let x = topCoords.left;
+      // Keep within viewport
+      if (x + menuWidth > window.innerWidth - 4) {
+        x = window.innerWidth - menuWidth - 4;
+      }
+      x = Math.max(4, x);
+
+      // Vertical: appear just below the block's bottom edge
+      let y = bottomCoords.bottom + 4;
+      // If menu would extend below viewport, show it above the block instead
+      if (y + menuHeight > window.innerHeight - 8) {
+        y = Math.max(8, topCoords.top - menuHeight - 4);
+      }
+
       setBlockMenu({ mode, position: { x, y }, blockFrom: from, blockTo: to });
     };
     window.addEventListener(
@@ -5457,6 +5474,7 @@ export const CodeMirrorEditor = forwardRef<
       <SlashMenu view={viewRef.current} />
       {blockMenu && viewRef.current && (
         <BlockMenu
+          key={`block-menu-${blockMenu.blockFrom}-${blockMenu.blockTo}`}
           mode={blockMenu.mode}
           position={blockMenu.position}
           activeType={(() => {
@@ -5493,13 +5511,26 @@ export const CodeMirrorEditor = forwardRef<
               });
               const newCoords = view.coordsAtPos(insertPos + 1);
               if (newCoords) {
-                const contentRect = view.contentDOM.getBoundingClientRect();
-                const menuWidth = 280;
+                const menuWidth = 240;
+                const menuHeight = 360;
+
+                // Position below the newly inserted block
+                let x = newCoords.left;
+                if (x + menuWidth > window.innerWidth - 4) {
+                  x = window.innerWidth - menuWidth - 4;
+                }
+                x = Math.max(4, x);
+
+                let y = newCoords.bottom + 4;
+                if (y + menuHeight > window.innerHeight - 8) {
+                  y = Math.max(8, newCoords.top - menuHeight - 4);
+                }
+
                 setBlockMenu({
                   mode: "insert",
                   position: {
-                    x: Math.max(4, contentRect.left - menuWidth - 4),
-                    y: newCoords.top,
+                    x,
+                    y,
                   },
                   blockFrom: insertPos + 1,
                   blockTo: insertPos + 1,
@@ -5509,6 +5540,12 @@ export const CodeMirrorEditor = forwardRef<
             }
 
             executeBlockAction(view, block, actionId);
+            // Trigger flash animation on the block
+            window.dispatchEvent(
+              new CustomEvent("lumina-block-flash", {
+                detail: { from: block.from, to: block.to },
+              }),
+            );
           }}
           onClose={() => setBlockMenu(null)}
         />

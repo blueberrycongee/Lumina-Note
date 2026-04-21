@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { BlockMenu } from "./BlockMenu";
 
 describe("BlockMenu", () => {
-  it("renders in combined mode with format and manage buttons", () => {
+  it("renders in combined mode with format buttons and manage items", () => {
     render(
       <BlockMenu
         mode="combined"
@@ -12,12 +12,12 @@ describe("BlockMenu", () => {
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByRole("menuitem", { name: /H1/i })).toBeInTheDocument();
-    expect(screen.getByText(/Delete/i)).toBeInTheDocument();
-    expect(screen.getByText(/Duplicate/i)).toBeInTheDocument();
+    expect(screen.getByTitle("Heading 1")).toBeInTheDocument();
+    expect(screen.getByTitle("Delete block")).toBeInTheDocument();
+    expect(screen.getByTitle("Duplicate block")).toBeInTheDocument();
   });
 
-  it("renders in insert mode without delete/duplicate", () => {
+  it("renders in insert mode without manage items", () => {
     render(
       <BlockMenu
         mode="insert"
@@ -26,8 +26,8 @@ describe("BlockMenu", () => {
         onClose={vi.fn()}
       />,
     );
-    expect(screen.getByRole("menuitem", { name: /H1/i })).toBeInTheDocument();
-    expect(screen.queryByText(/Delete/i)).not.toBeInTheDocument();
+    expect(screen.getByTitle("Heading 1")).toBeInTheDocument();
+    expect(screen.queryByTitle("Delete block")).not.toBeInTheDocument();
   });
 
   it("calls onAction with actionId when button clicked", () => {
@@ -40,7 +40,7 @@ describe("BlockMenu", () => {
         onClose={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole("menuitem", { name: /H1/i }));
+    fireEvent.click(screen.getByTitle("Heading 1"));
     expect(onAction).toHaveBeenCalledWith("heading1");
   });
 
@@ -55,6 +55,11 @@ describe("BlockMenu", () => {
       />,
     );
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(onClose).toHaveBeenCalled();
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        expect(onClose).toHaveBeenCalled();
+        resolve(undefined);
+      }, 150);
+    });
   });
 });

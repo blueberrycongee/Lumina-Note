@@ -1752,23 +1752,26 @@ mark {
 
 .cm-block-handle {
   position: absolute;
-  left: -20px;
+  left: -24px;
   top: 2px;
   width: 16px;
   height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: hsl(var(--muted-foreground) / 0.5);
+  color: hsl(var(--muted-foreground) / 0.35);
   cursor: grab;
   opacity: 0;
-  transition: opacity 120ms ease;
+  transition:
+    opacity 120ms ease 100ms,
+    background-color 120ms ease,
+    color 120ms ease;
   border-radius: 4px;
 }
 
 .cm-block-handle:hover {
   background: hsl(var(--muted));
-  color: hsl(var(--foreground));
+  color: hsl(var(--foreground) / 0.8);
 }
 
 .cm-block-line:hover .cm-block-handle,
@@ -1782,9 +1785,9 @@ body.lumina-block-dragging .cm-block-handle {
 
 .cm-block-plus-btn {
   position: absolute;
-  left: -20px;
+  left: -24px;
   top: 2px;
-  width: 16px;
+  width: 20px;
   height: 20px;
   display: flex;
   align-items: center;
@@ -1794,13 +1797,15 @@ body.lumina-block-dragging .cm-block-handle {
   opacity: 0;
   transition:
     opacity 120ms ease,
-    background-color 120ms ease;
-  border-radius: 4px;
+    background-color 120ms ease,
+    transform 120ms ease;
+  border-radius: 9999px;
 }
 
 .cm-block-plus-btn:hover {
   background: hsl(var(--accent));
   color: hsl(var(--accent-foreground));
+  transform: scale(1.1);
 }
 
 .cm-block-line:hover .cm-block-plus-btn,
@@ -1824,6 +1829,19 @@ body.lumina-block-dragging .cm-block-plus-btn {
 
 .cm-block-selected {
   background-color: hsl(var(--primary) / 0.08);
+}
+
+@keyframes cm-block-flash {
+  0% {
+    background-color: hsl(var(--primary) / 0.12);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.cm-block-flash {
+  animation: cm-block-flash 200ms ease-out forwards;
 }
 
 .cm-empty-block-placeholder {
