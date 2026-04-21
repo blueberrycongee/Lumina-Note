@@ -1543,7 +1543,8 @@ export const useFileStore = create<FileState>()(
       // 撤销
       undo: () => {
         const t = getCurrentTranslations();
-        const { undoStack, currentContent, redoStack } = get();
+        const { undoStack, currentContent, redoStack, lastSavedContent } =
+          get();
         if (undoStack.length === 0) return;
 
         const lastEntry = undoStack[undoStack.length - 1];
@@ -1557,12 +1558,23 @@ export const useFileStore = create<FileState>()(
           description: lastEntry.description,
         };
 
+        const restoredContent = lastEntry.content;
+
         set({
-          currentContent: lastEntry.content,
+          currentContent: restoredContent,
           undoStack: newUndoStack,
           redoStack: [...redoStack, redoEntry],
-          isDirty: true,
+          isDirty: restoredContent !== lastSavedContent,
         });
+
+        // Dispatch selection restore event
+        if (lastEntry.selection) {
+          window.dispatchEvent(
+            new CustomEvent("lumina-restore-selection", {
+              detail: lastEntry.selection,
+            }),
+          );
+        }
 
         // 显示撤销提示
         if (lastEntry.type === "ai") {
@@ -1574,7 +1586,8 @@ export const useFileStore = create<FileState>()(
 
       // 重做
       redo: () => {
-        const { redoStack, currentContent, undoStack } = get();
+        const { redoStack, currentContent, undoStack, lastSavedContent } =
+          get();
         if (redoStack.length === 0) return;
 
         const lastEntry = redoStack[redoStack.length - 1];
@@ -1588,12 +1601,23 @@ export const useFileStore = create<FileState>()(
           description: lastEntry.description,
         };
 
+        const restoredContent = lastEntry.content;
+
         set({
-          currentContent: lastEntry.content,
+          currentContent: restoredContent,
           redoStack: newRedoStack,
           undoStack: [...undoStack, undoEntry],
-          isDirty: true,
+          isDirty: restoredContent !== lastSavedContent,
         });
+
+        // Dispatch selection restore event
+        if (lastEntry.selection) {
+          window.dispatchEvent(
+            new CustomEvent("lumina-restore-selection", {
+              detail: lastEntry.selection,
+            }),
+          );
+        }
       },
 
       // 检查是否可以撤销/重做
