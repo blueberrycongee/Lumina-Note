@@ -300,6 +300,14 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-block-menu-item-danger": {
       color: "hsl(var(--destructive))",
     },
+
+    // ── Block Editor: empty paragraph placeholder ──────────────────
+    ".cm-empty-block-placeholder": {
+      color: "hsl(var(--muted-foreground) / 0.4)",
+      pointerEvents: "none",
+      userSelect: "none",
+      fontStyle: "italic",
+    },
     "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
       {
         userSelect: "none",

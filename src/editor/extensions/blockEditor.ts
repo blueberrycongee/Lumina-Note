@@ -208,6 +208,31 @@ class BlockHandleWidget extends WidgetType {
   }
 }
 
+// ============ 空块占位提示 Widget ============
+
+class EmptyBlockPlaceholderWidget extends WidgetType {
+  eq(_other: EmptyBlockPlaceholderWidget) {
+    return true;
+  }
+
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-empty-block-placeholder";
+    span.textContent = "输入 '/' 快速插入...";
+    return span;
+  }
+
+  ignoreEvent() {
+    return true;
+  }
+}
+
+function isEmptyParagraph(state: EditorState, block: BlockInfo): boolean {
+  if (block.type !== "Paragraph") return false;
+  const text = state.doc.sliceString(block.from, block.to).trim();
+  return text === "";
+}
+
 // ============ 块操作菜单 DOM 管理 ============
 
 class BlockMenuManager {
@@ -456,6 +481,16 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
             block: false,
           }).range(startLine.from)
         );
+
+        // 空段落占位提示
+        if (isEmptyParagraph(view.state, block)) {
+          decorations.push(
+            Decoration.widget({
+              widget: new EmptyBlockPlaceholderWidget(),
+              side: 1,
+            }).range(startLine.from)
+          );
+        }
 
         // 块行样式
         for (
