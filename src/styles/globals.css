@@ -565,6 +565,15 @@ body {
   color: hsl(var(--foreground));
 }
 
+/* Electron window drag regions */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-tauri-drag-region="false"] {
+  -webkit-app-region: no-drag;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

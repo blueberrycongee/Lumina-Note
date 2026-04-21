@@ -42,3 +42,13 @@ describe("ui-app-bg", () => {
     expect(darkBlock).toContain("hsl(var(--primary) / 0.07)");
   });
 });
+
+describe("Electron drag regions", () => {
+  it("maps legacy drag-region markers to Electron app-region CSS", () => {
+    const dragRegionBlock = extractBlock("[data-tauri-drag-region]");
+    const noDragRegionBlock = extractBlock('[data-tauri-drag-region="false"]');
+
+    expect(dragRegionBlock).toContain("-webkit-app-region: drag;");
+    expect(noDragRegionBlock).toContain("-webkit-app-region: no-drag;");
+  });
+});
