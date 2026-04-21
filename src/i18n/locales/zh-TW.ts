@@ -165,6 +165,40 @@ export default {
         linkDesc: "插入連結",
       },
     },
+    blockMenu: {
+      groups: {
+        heading: "標題",
+        list: "列表",
+        block: "區塊",
+        insert: "插入",
+      },
+      items: {
+        heading1: "一級標題",
+        heading2: "二級標題",
+        heading3: "三級標題",
+        heading4: "四級標題",
+        heading5: "五級標題",
+        bulletList: "無序列表",
+        orderedList: "有序列表",
+        taskList: "任務列表",
+        blockquote: "引用",
+        codeBlock: "程式碼區塊",
+        divider: "分隔線",
+        link: "連結",
+        image: "圖片",
+        table: "表格",
+        mathBlock: "數學公式",
+        callout: "提示框",
+        insertAbove: "在上方插入",
+        insertAboveTitle: "在區塊上方插入",
+        delete: "刪除",
+        deleteTitle: "刪除區塊",
+        duplicate: "複製",
+        duplicateTitle: "複製區塊",
+        insertBelow: "在下方插入",
+        insertBelowTitle: "在區塊下方插入",
+      },
+    },
     agentEdit: {
       added: "AI 新增",
       modified: "AI 修改",
@@ -1122,21 +1156,24 @@ export default {
     },
     diagnosticsTitle: "診斷",
     diagnosticsCollectLogs: "收集診斷日誌",
-    diagnosticsCollectLogsDesc: "啟用後，Lumina 會將主控台日誌和當機事件寫入本機檔案，以協助排查問題。",
+    diagnosticsCollectLogsDesc:
+      "啟用後，Lumina 會將主控台日誌和當機事件寫入本機檔案，以協助排查問題。",
     diagnosticsLogFolder: "日誌目錄",
     diagnosticsLoading: "載入中...",
     diagnosticsOn: "開啟",
     diagnosticsOff: "關閉",
     diagnosticsRecording: "錄製中",
     diagnosticsEditorTrace: "錄製編輯器互動軌跡",
-    diagnosticsEditorTraceDesc: "啟用後，Lumina 會在記憶體中錄製編輯器模式切換、捲動、焦點變更、點擊和選取同步等事件，以便匯出為 JSON 重現檔案。",
+    diagnosticsEditorTraceDesc:
+      "啟用後，Lumina 會在記憶體中錄製編輯器模式切換、捲動、焦點變更、點擊和選取同步等事件，以便匯出為 JSON 重現檔案。",
     diagnosticsExport: "匯出診斷日誌",
     diagnosticsExporting: "匯出中...",
     diagnosticsClearTrace: "清除互動軌跡",
     diagnosticsExportTrace: "匯出互動軌跡",
     diagnosticsExportDialogTitle: "匯出診斷日誌",
     diagnosticsExportTraceDialogTitle: "匯出互動軌跡",
-    diagnosticsTraceUnavailable: "互動軌跡不可用。請先開啟筆記編輯器並重現問題。",
+    diagnosticsTraceUnavailable:
+      "互動軌跡不可用。請先開啟筆記編輯器並重現問題。",
     cloudSyncTitle: "雲端同步",
     cloudSyncDesc: "登入一次，選擇工作區，然後透過衍生的 WebDAV 端點同步。",
     cloudAccount: "雲端帳戶",
@@ -1167,7 +1204,8 @@ export default {
     cloudToUpload: "待上傳",
     cloudToDownload: "待下載",
     cloudConflicts: "衝突",
-    cloudConflictWarning: "衝突項將保���擱置狀態，在執行時跳過。請在信任同步結果前檢查標記項目。",
+    cloudConflictWarning:
+      "衝突項將保���擱置狀態，在執行時跳過。請在信任同步結果前檢查標記項目。",
     cloudExecuteSync: "執行同步",
     cloudLastSync: "上次同步",
     cloudNeverSynced: "從未同步",
@@ -1313,8 +1351,6 @@ export default {
     baseUrl: "Base URL",
     optional: "可選",
   },
-
-
 
   // 知識圖譜
   knowledgeGraph: {

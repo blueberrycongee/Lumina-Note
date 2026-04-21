@@ -166,6 +166,40 @@ export default {
         linkDesc: "Insert link",
       },
     },
+    blockMenu: {
+      groups: {
+        heading: "Heading",
+        list: "List",
+        block: "Block",
+        insert: "Insert",
+      },
+      items: {
+        heading1: "Heading 1",
+        heading2: "Heading 2",
+        heading3: "Heading 3",
+        heading4: "Heading 4",
+        heading5: "Heading 5",
+        bulletList: "Bullet List",
+        orderedList: "Numbered List",
+        taskList: "Task List",
+        blockquote: "Quote",
+        codeBlock: "Code Block",
+        divider: "Divider",
+        link: "Link",
+        image: "Image",
+        table: "Table",
+        mathBlock: "Math Block",
+        callout: "Callout",
+        insertAbove: "Insert above",
+        insertAboveTitle: "Insert block above",
+        delete: "Delete",
+        deleteTitle: "Delete block",
+        duplicate: "Duplicate",
+        duplicateTitle: "Duplicate block",
+        insertBelow: "Insert below",
+        insertBelowTitle: "Insert block below",
+      },
+    },
     agentEdit: {
       added: "AI added",
       modified: "AI modified",
@@ -1254,25 +1288,30 @@ export default {
     },
     diagnosticsTitle: "Diagnostics",
     diagnosticsCollectLogs: "Collect diagnostics logs",
-    diagnosticsCollectLogsDesc: "When enabled, Lumina writes console logs and crash events to a local file to help debugging.",
+    diagnosticsCollectLogsDesc:
+      "When enabled, Lumina writes console logs and crash events to a local file to help debugging.",
     diagnosticsLogFolder: "Log folder",
     diagnosticsLoading: "loading...",
     diagnosticsOn: "On",
     diagnosticsOff: "Off",
     diagnosticsRecording: "Recording",
     diagnosticsEditorTrace: "Record editor interaction trace",
-    diagnosticsEditorTraceDesc: "When enabled, Lumina starts a fresh in-memory trace for editor mode switches, scroll moves, focus changes, clicks, and selection sync so you can export one repro as JSON.",
+    diagnosticsEditorTraceDesc:
+      "When enabled, Lumina starts a fresh in-memory trace for editor mode switches, scroll moves, focus changes, clicks, and selection sync so you can export one repro as JSON.",
     diagnosticsExport: "Export Diagnostics",
     diagnosticsExporting: "Exporting...",
     diagnosticsClearTrace: "Clear Interaction Trace",
     diagnosticsExportTrace: "Export Interaction Trace",
     diagnosticsExportDialogTitle: "Export Diagnostics",
     diagnosticsExportTraceDialogTitle: "Export Interaction Trace",
-    diagnosticsTraceUnavailable: "Interaction trace is unavailable. Open a note editor and reproduce the issue first.",
+    diagnosticsTraceUnavailable:
+      "Interaction trace is unavailable. Open a note editor and reproduce the issue first.",
     cloudSyncTitle: "Cloud Sync",
-    cloudSyncDesc: "Sign in once, pick a workspace, then sync through the derived WebDAV endpoint.",
+    cloudSyncDesc:
+      "Sign in once, pick a workspace, then sync through the derived WebDAV endpoint.",
     cloudAccount: "Cloud Account",
-    cloudAccountDesc: "Register or log in to bind the current vault to a hosted workspace.",
+    cloudAccountDesc:
+      "Register or log in to bind the current vault to a hosted workspace.",
     cloudLogout: "Logout",
     cloudServer: "Cloud server",
     cloudEmail: "Email",
@@ -1280,7 +1319,8 @@ export default {
     cloudRegister: "Register",
     cloudLogin: "Login",
     cloudWorkspaceBinding: "Workspace Binding",
-    cloudWorkspaceBindingDesc: "Choose the cloud workspace that should back the current vault.",
+    cloudWorkspaceBindingDesc:
+      "Choose the cloud workspace that should back the current vault.",
     cloudWorkspace: "Cloud workspace",
     cloudSignInFirst: "Sign in first",
     cloudNoWorkspace: "No workspace yet",
@@ -1299,7 +1339,8 @@ export default {
     cloudToUpload: "to upload",
     cloudToDownload: "to download",
     cloudConflicts: "conflicts",
-    cloudConflictWarning: "Conflicts stay pending and are skipped during execution. Review the highlighted entries before trusting the sync result.",
+    cloudConflictWarning:
+      "Conflicts stay pending and are skipped during execution. Review the highlighted entries before trusting the sync result.",
     cloudExecuteSync: "Execute Sync",
     cloudLastSync: "Last sync",
     cloudNeverSynced: "Never",
@@ -1340,8 +1381,6 @@ export default {
     skippedVersions: "Skipped versions",
     clearSkipped: "Click to stop skipping this version",
   },
-
-
 
   // Knowledge Graph
   knowledgeGraph: {

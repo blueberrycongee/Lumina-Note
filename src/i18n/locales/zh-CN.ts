@@ -165,6 +165,40 @@ export default {
         linkDesc: "插入链接",
       },
     },
+    blockMenu: {
+      groups: {
+        heading: "标题",
+        list: "列表",
+        block: "块",
+        insert: "插入",
+      },
+      items: {
+        heading1: "一级标题",
+        heading2: "二级标题",
+        heading3: "三级标题",
+        heading4: "四级标题",
+        heading5: "五级标题",
+        bulletList: "无序列表",
+        orderedList: "有序列表",
+        taskList: "任务列表",
+        blockquote: "引用",
+        codeBlock: "代码块",
+        divider: "分割线",
+        link: "链接",
+        image: "图片",
+        table: "表格",
+        mathBlock: "数学公式",
+        callout: "提示框",
+        insertAbove: "在上方插入",
+        insertAboveTitle: "在块上方插入",
+        delete: "删除",
+        deleteTitle: "删除块",
+        duplicate: "复制",
+        duplicateTitle: "复制块",
+        insertBelow: "在下方插入",
+        insertBelowTitle: "在块下方插入",
+      },
+    },
     agentEdit: {
       added: "AI 新增",
       modified: "AI 修改",
@@ -1228,21 +1262,24 @@ export default {
     },
     diagnosticsTitle: "诊断",
     diagnosticsCollectLogs: "收集诊断日志",
-    diagnosticsCollectLogsDesc: "启用后，Lumina 会将控制台日志和崩溃事件写入本地文件，以帮助排查问题。",
+    diagnosticsCollectLogsDesc:
+      "启用后，Lumina 会将控制台日志和崩溃事件写入本地文件，以帮助排查问题。",
     diagnosticsLogFolder: "日志目录",
     diagnosticsLoading: "加载中...",
     diagnosticsOn: "开启",
     diagnosticsOff: "关闭",
     diagnosticsRecording: "录制中",
     diagnosticsEditorTrace: "录制编辑器交互轨迹",
-    diagnosticsEditorTraceDesc: "启用后，Lumina 会在内存中录制编辑器模式切换、滚动、焦点变更、点击和选区同步等事件，以便导出为 JSON 复现文件。",
+    diagnosticsEditorTraceDesc:
+      "启用后，Lumina 会在内存中录制编辑器模式切换、滚动、焦点变更、点击和选区同步等事件，以便导出为 JSON 复现文件。",
     diagnosticsExport: "导出诊断日志",
     diagnosticsExporting: "导出中...",
     diagnosticsClearTrace: "清除交互轨迹",
     diagnosticsExportTrace: "导出交互轨迹",
     diagnosticsExportDialogTitle: "导出诊断日志",
     diagnosticsExportTraceDialogTitle: "导出交互轨迹",
-    diagnosticsTraceUnavailable: "交互轨迹不可用。请先打开笔记编辑器并复现问题。",
+    diagnosticsTraceUnavailable:
+      "交互轨迹不可用。请先打开笔记编辑器并复现问题。",
     cloudSyncTitle: "云同步",
     cloudSyncDesc: "登录一次，选择工作区，然后通过衍生的 WebDAV 端点同步。",
     cloudAccount: "云账户",
@@ -1273,7 +1310,8 @@ export default {
     cloudToUpload: "待上传",
     cloudToDownload: "待下载",
     cloudConflicts: "冲突",
-    cloudConflictWarning: "冲突项将保持挂起状态，在执行时跳过。请在信任同步结果前检查高亮条目。",
+    cloudConflictWarning:
+      "冲突项将保持挂起状态，在执行时跳过。请在信任同步结果前检查高亮条目。",
     cloudExecuteSync: "执行同步",
     cloudLastSync: "上次同步",
     cloudNeverSynced: "从未同步",
@@ -1313,8 +1351,6 @@ export default {
     skippedVersions: "已跳过的版本",
     clearSkipped: "点击取消跳过该版本",
   },
-
-
 
   // 知识图谱
   knowledgeGraph: {

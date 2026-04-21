@@ -165,6 +165,40 @@ export default {
         linkDesc: "リンクを挿入",
       },
     },
+    blockMenu: {
+      groups: {
+        heading: "見出し",
+        list: "リスト",
+        block: "ブロック",
+        insert: "挿入",
+      },
+      items: {
+        heading1: "見出し 1",
+        heading2: "見出し 2",
+        heading3: "見出し 3",
+        heading4: "見出し 4",
+        heading5: "見出し 5",
+        bulletList: "箇条書き",
+        orderedList: "番号付きリスト",
+        taskList: "タスクリスト",
+        blockquote: "引用",
+        codeBlock: "コードブロック",
+        divider: "区切り線",
+        link: "リンク",
+        image: "画像",
+        table: "テーブル",
+        mathBlock: "数式ブロック",
+        callout: "コールアウト",
+        insertAbove: "上に挿入",
+        insertAboveTitle: "ブロックの上に挿入",
+        delete: "削除",
+        deleteTitle: "ブロックを削除",
+        duplicate: "複製",
+        duplicateTitle: "ブロックを複製",
+        insertBelow: "下に挿入",
+        insertBelowTitle: "ブロックの下に挿入",
+      },
+    },
     agentEdit: {
       added: "AI 追加",
       modified: "AI 修正",
@@ -1143,25 +1177,30 @@ export default {
     },
     diagnosticsTitle: "診断",
     diagnosticsCollectLogs: "診断ログを収集",
-    diagnosticsCollectLogsDesc: "有効にすると、Lumina はコンソールログとクラッシュイベントをローカルファイルに書き込み、デバッグに役立てます。",
+    diagnosticsCollectLogsDesc:
+      "有効にすると、Lumina はコンソールログとクラッシュイベントをローカルファイルに書き込み、デバッグに役立てます。",
     diagnosticsLogFolder: "ログフォルダ",
     diagnosticsLoading: "読み込み中...",
     diagnosticsOn: "オン",
     diagnosticsOff: "オフ",
     diagnosticsRecording: "録画中",
     diagnosticsEditorTrace: "エディタ操作トレースを記録",
-    diagnosticsEditorTraceDesc: "有効にすると、Lumina はモード切替、スクロール、フォーカス変更、クリック、選択同期などのエディタ操作をメモリ内に記録し、JSON として書き出せます。",
+    diagnosticsEditorTraceDesc:
+      "有効にすると、Lumina はモード切替、スクロール、フォーカス変更、クリック、選択同期などのエディタ操作をメモリ内に記録し、JSON として書き出せます。",
     diagnosticsExport: "診断ログを書き出す",
     diagnosticsExporting: "書き出し中...",
     diagnosticsClearTrace: "操作トレースをクリア",
     diagnosticsExportTrace: "操作トレースを書き出す",
     diagnosticsExportDialogTitle: "診断ログを書き出す",
     diagnosticsExportTraceDialogTitle: "操作トレースを書き出す",
-    diagnosticsTraceUnavailable: "操作トレースが利用できません。ノートエディタを開いて問題を再現してください。",
+    diagnosticsTraceUnavailable:
+      "操作トレースが利用できません。ノートエディタを開いて問題を再現してください。",
     cloudSyncTitle: "クラウド同期",
-    cloudSyncDesc: "一度ログインしてワークスペースを選び、派生した WebDAV エンドポイント経由で同期します。",
+    cloudSyncDesc:
+      "一度ログインしてワークスペースを選び、派生した WebDAV エンドポイント経由で同期します。",
     cloudAccount: "クラウドアカウント",
-    cloudAccountDesc: "登録またはログインして、現在の Vault をホストワークスペースにバインドします。",
+    cloudAccountDesc:
+      "登録またはログインして、現在の Vault をホストワークスペースにバインドします。",
     cloudLogout: "ログアウト",
     cloudServer: "クラウドサーバー",
     cloudEmail: "メール",
@@ -1169,7 +1208,8 @@ export default {
     cloudRegister: "登録",
     cloudLogin: "ログイン",
     cloudWorkspaceBinding: "ワークスペースバインド",
-    cloudWorkspaceBindingDesc: "現在の Vault をバックアップするクラウドワークスペースを選択します。",
+    cloudWorkspaceBindingDesc:
+      "現在の Vault をバックアップするクラウドワークスペースを選択します。",
     cloudWorkspace: "クラウドワークスペース",
     cloudSignInFirst: "先にログインしてください",
     cloudNoWorkspace: "ワークスペースがありません",
@@ -1188,7 +1228,8 @@ export default {
     cloudToUpload: "アップロード予定",
     cloudToDownload: "ダウンロード予定",
     cloudConflicts: "コンフリクト",
-    cloudConflictWarning: "コンフリクトは保留され、実行時にスキップされます。同期結果を信頼する前に、ハイライトされた項目を確認してください。",
+    cloudConflictWarning:
+      "コンフリクトは保留され、実行時にスキップされます。同期結果を信頼する前に、ハイライトされた項目を確認してください。",
     cloudExecuteSync: "同期を実行",
     cloudLastSync: "最終同期",
     cloudNeverSynced: "未同期",
@@ -1334,8 +1375,6 @@ export default {
     baseUrl: "Base URL",
     optional: "オプション",
   },
-
-
 
   // ナレッジグラフ
   knowledgeGraph: {
