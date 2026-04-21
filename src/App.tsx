@@ -34,7 +34,12 @@ import { useAIStore } from "@/stores/useAIStore";
 import { initRustAgentListeners } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
-import { openDialog, saveFile, setWindowSize, startFileWatcher } from "@/lib/host";
+import {
+  openDialog,
+  saveFile,
+  setWindowSize,
+  startFileWatcher,
+} from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
@@ -601,6 +606,21 @@ function App() {
     }
   }, [fileTree, buildIndex]);
 
+  // Prevent accidental close when there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const { isDirty, tabs } = useFileStore.getState();
+      const hasDirty =
+        isDirty || tabs.some((t) => t.isDirty && t.type === "file");
+      if (hasDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   // 全局鼠标拖拽处理：模拟从文件树拖拽文件创建双链
   useEffect(() => {
     let dragIndicator: HTMLDivElement | null = null;
@@ -801,11 +821,12 @@ function App() {
 
   useEffect(() => {
     if (!vaultPath) return;
-    void setWindowSize(MAIN_WORKSPACE_WINDOW_WIDTH, MAIN_WORKSPACE_WINDOW_HEIGHT).catch(
-      (error) => {
-        console.warn("[App] Failed to restore workspace window size:", error);
-      },
-    );
+    void setWindowSize(
+      MAIN_WORKSPACE_WINDOW_WIDTH,
+      MAIN_WORKSPACE_WINDOW_HEIGHT,
+    ).catch((error) => {
+      console.warn("[App] Failed to restore workspace window size:", error);
+    });
   }, [vaultPath]);
 
   // Handle resize - must be before conditional returns
@@ -859,7 +880,10 @@ function App() {
         dragAccumulatorRef.current += delta;
         if (dragAccumulatorRef.current > 50) {
           // 累计拖动超过 50px，打开面板并设置宽度
-          const newWidth = Math.max(RIGHT_MIN_WIDTH, dragAccumulatorRef.current);
+          const newWidth = Math.max(
+            RIGHT_MIN_WIDTH,
+            dragAccumulatorRef.current,
+          );
           setRightSidebarOpen(true);
           setRightSidebarWidth(newWidth);
           dragAccumulatorRef.current = 0;
