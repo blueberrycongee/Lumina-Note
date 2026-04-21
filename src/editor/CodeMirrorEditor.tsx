@@ -52,7 +52,7 @@ import {
   ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import { defaultKeymap } from "@codemirror/commands";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { Table } from "@lezer/markdown";
 import { syntaxTree } from "@codemirror/language";
@@ -4449,8 +4449,7 @@ export const CodeMirrorEditor = forwardRef<
         readOnlyCompartment.of(EditorState.readOnly.of(isReadOnly)),
         themeCompartment.of([]),
         pluginExtensionsCompartment.of([]),
-        history(),
-        keymap.of([...tableKeymap, ...defaultKeymap, ...historyKeymap]),
+        keymap.of([...tableKeymap, ...defaultKeymap]),
         selectAllDomHandlers,
         markdown({ base: markdownLanguage, extensions: [Table] }),
         EditorView.lineWrapping,
