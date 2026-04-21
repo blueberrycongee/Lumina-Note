@@ -5465,6 +5465,33 @@ export const CodeMirrorEditor = forwardRef<
       );
   }, []);
 
+  useEffect(() => {
+    if (!viewRef.current) return;
+
+    const handleRestoreSelection = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        anchor: number;
+        head: number;
+      }>;
+      const { anchor, head } = customEvent.detail;
+      const view = viewRef.current;
+      if (!view) return;
+
+      view.dispatch({
+        selection: { anchor, head },
+        scrollIntoView: true,
+      });
+    };
+
+    window.addEventListener("lumina-restore-selection", handleRestoreSelection);
+    return () => {
+      window.removeEventListener(
+        "lumina-restore-selection",
+        handleRestoreSelection,
+      );
+    };
+  }, []);
+
   return (
     <>
       <div
