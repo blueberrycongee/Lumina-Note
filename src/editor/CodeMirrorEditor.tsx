@@ -100,7 +100,10 @@ const EXTERNAL_JUMP_Y_MARGIN_PX = 24;
 
 interface CodeMirrorEditorProps {
   content: string;
-  onChange: (content: string) => void;
+  onChange: (
+    content: string,
+    selection?: { anchor: number; head: number },
+  ) => void;
   className?: string;
   viewMode?: ViewMode;
   livePreview?: boolean;
@@ -4480,7 +4483,11 @@ export const CodeMirrorEditor = forwardRef<
               newContent = update.state.doc.toString();
             }
             lastInternalContent.current = newContent;
-            onChange(newContent);
+            const selectionBefore = update.startState.selection.main;
+            onChange(newContent, {
+              anchor: selectionBefore.anchor,
+              head: selectionBefore.head,
+            });
           }
         }),
       ],
