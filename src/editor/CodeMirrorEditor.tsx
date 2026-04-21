@@ -5469,6 +5469,7 @@ export const CodeMirrorEditor = forwardRef<
       <SlashMenu view={viewRef.current} />
       {blockMenu && viewRef.current && (
         <BlockMenu
+          key={`block-menu-${blockMenu.blockFrom}-${blockMenu.blockTo}`}
           mode={blockMenu.mode}
           position={blockMenu.position}
           activeType={(() => {
