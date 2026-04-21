@@ -18,6 +18,7 @@ import {
 } from "@codemirror/view";
 import { StateField, StateEffect, EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
+import { deleteBlock, duplicateBlock } from "./blockOperations";
 
 // ============ 类型定义 ============
 
@@ -154,7 +155,7 @@ class BlockHandleWidget extends WidgetType {
   toDOM() {
     const handle = document.createElement("div");
     handle.className = "cm-block-handle";
-    handle.setAttribute("aria-label", "Drag to move block");
+    handle.setAttribute("aria-label", "Block actions");
     handle.setAttribute("role", "button");
     handle.tabIndex = -1;
 
@@ -168,8 +169,9 @@ class BlockHandleWidget extends WidgetType {
       <circle cx="9" cy="9" r="1" fill="currentColor"/>
     </svg>`;
 
-    // 点击手柄：选中整个块
+    // 左键点击：选中整个块
     handle.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return; // 只处理左键
       e.preventDefault();
       e.stopPropagation();
       window.dispatchEvent(
@@ -177,6 +179,22 @@ class BlockHandleWidget extends WidgetType {
           detail: {
             from: this.blockFrom,
             to: this.blockTo,
+          },
+        })
+      );
+    });
+
+    // 右键点击：打开块操作菜单
+    handle.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      window.dispatchEvent(
+        new CustomEvent("lumina-block-menu", {
+          detail: {
+            from: this.blockFrom,
+            to: this.blockTo,
+            clientX: e.clientX,
+            clientY: e.clientY,
           },
         })
       );
@@ -190,6 +208,85 @@ class BlockHandleWidget extends WidgetType {
   }
 }
 
+// ============ 块操作菜单 DOM 管理 ============
+
+class BlockMenuManager {
+  private menuEl: HTMLElement | null = null;
+  private outsideClickHandler: ((e: MouseEvent) => void) | null = null;
+
+  show(
+    view: EditorView,
+    block: BlockInfo,
+    clientX: number,
+    clientY: number
+  ) {
+    this.hide();
+
+    const menu = document.createElement("div");
+    menu.className = "cm-block-menu";
+
+    const duplicateItem = document.createElement("div");
+    duplicateItem.className = "cm-block-menu-item";
+    duplicateItem.textContent = "Duplicate";
+    duplicateItem.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      duplicateBlock(view, block);
+      this.hide();
+    });
+
+    const deleteItem = document.createElement("div");
+    deleteItem.className = "cm-block-menu-item cm-block-menu-item-danger";
+    deleteItem.textContent = "Delete";
+    deleteItem.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      deleteBlock(view, block);
+      this.hide();
+    });
+
+    menu.appendChild(duplicateItem);
+    menu.appendChild(deleteItem);
+
+    // 定位：优先显示在鼠标右侧，如果超出视口则显示在左侧
+    menu.style.position = "fixed";
+    menu.style.left = `${clientX + 8}px`;
+    menu.style.top = `${clientY}px`;
+    menu.style.zIndex = "1000";
+
+    document.body.appendChild(menu);
+    this.menuEl = menu;
+
+    // 如果超出右边界，调整位置
+    const menuRect = menu.getBoundingClientRect();
+    if (menuRect.right > window.innerWidth - 8) {
+      menu.style.left = `${clientX - menuRect.width - 8}px`;
+    }
+    if (menuRect.bottom > window.innerHeight - 8) {
+      menu.style.top = `${clientY - menuRect.height}px`;
+    }
+
+    // 点击外部关闭
+    this.outsideClickHandler = (e: MouseEvent) => {
+      if (!menu.contains(e.target as Node)) {
+        this.hide();
+      }
+    };
+    setTimeout(() => {
+      document.addEventListener("mousedown", this.outsideClickHandler!);
+    }, 0);
+  }
+
+  hide() {
+    if (this.outsideClickHandler) {
+      document.removeEventListener("mousedown", this.outsideClickHandler);
+      this.outsideClickHandler = null;
+    }
+    if (this.menuEl) {
+      this.menuEl.remove();
+      this.menuEl = null;
+    }
+  }
+}
+
 // ============ 块装饰 ViewPlugin ============
 
 const blockDecorationsPlugin = ViewPlugin.fromClass(
@@ -198,11 +295,14 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     private mouseMoveHandler: ((e: MouseEvent) => void) | null = null;
     private mouseLeaveHandler: (() => void) | null = null;
     private blockSelectHandler: ((e: CustomEvent) => void) | null = null;
+    private blockMenuHandler: ((e: CustomEvent) => void) | null = null;
+    private menuManager = new BlockMenuManager();
 
     constructor(view: EditorView) {
       this.decorations = this.buildDecorations(view);
       this.attachMouseListeners(view);
       this.attachBlockSelectListener(view);
+      this.attachBlockMenuListener(view);
     }
 
     update(update: ViewUpdate) {
@@ -216,13 +316,19 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
     }
 
     destroy() {
-      // 自定义事件监听器需要在 window 上移除
       if (this.blockSelectHandler) {
         window.removeEventListener(
           "lumina-block-select",
           this.blockSelectHandler as EventListener
         );
       }
+      if (this.blockMenuHandler) {
+        window.removeEventListener(
+          "lumina-block-menu",
+          this.blockMenuHandler as EventListener
+        );
+      }
+      this.menuManager.hide();
     }
 
     private blockStateChanged(update: ViewUpdate): boolean {
@@ -234,6 +340,32 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         prev.hovered?.to !== curr.hovered?.to ||
         prev.selected?.from !== curr.selected?.from ||
         prev.selected?.to !== curr.selected?.to
+      );
+    }
+
+    private attachBlockMenuListener(view: EditorView) {
+      this.blockMenuHandler = (e: CustomEvent) => {
+        const { from, clientX, clientY } = e.detail as {
+          from: number;
+          to: number;
+          clientX: number;
+          clientY: number;
+        };
+        const blockState = view.state.field(blockEditorStateField);
+        const block = findBlockAtPos(blockState.blocks, from);
+        if (block) {
+          this.menuManager.show(view, block, clientX, clientY);
+          // 同时选中该块
+          view.dispatch({
+            selection: { anchor: block.from, head: block.to },
+            effects: setSelectedBlock.of(block),
+            scrollIntoView: false,
+          });
+        }
+      };
+      window.addEventListener(
+        "lumina-block-menu",
+        this.blockMenuHandler as EventListener
       );
     }
 

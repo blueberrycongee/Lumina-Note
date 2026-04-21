@@ -60,7 +60,6 @@ import {
   checkUpdateAction,
   collapseOnSelectionFacet,
   tableField,
-  tableEditorField,
   tableEditorPlugin,
   mouseSelectingField,
   setMouseSelecting,
@@ -171,14 +170,6 @@ const createEditorTheme = (fontSize: number) =>
     "&.cm-focused .cm-selectionBackground": {
       backgroundColor: "rgba(191, 219, 254, 0.35) !important",
     },
-    // Suppress spurious selection backgrounds that appear above a table
-    // during a bottom-up drag.  atomicRanges snaps the head to tableStart,
-    // and drawSelection paints a rectangle above the table based on
-    // coordsAtPos(tableStart).  This rule hides those phantom rects while
-    // keeping the legitimate selection visuals below the table intact.
-    ".cm-selection-background-suppressed": {
-      opacity: "0 !important",
-    },
 
     // ── Block widget selection hygiene ──────────────────────────────
     // Block-level replace widgets (math block / mermaid / callout / image /
@@ -282,6 +273,32 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".cm-block-line.cm-block-selected": {
       backgroundColor: "hsl(var(--primary) / 0.08)",
+    },
+
+    // ── Block Editor: context menu ──────────────────────────────────
+    ".cm-block-menu": {
+      backgroundColor: "hsl(var(--background))",
+      border: "1px solid hsl(var(--border))",
+      borderRadius: "8px",
+      boxShadow:
+        "0 4px 12px -2px hsl(var(--foreground) / 0.12), 0 2px 4px -2px hsl(var(--foreground) / 0.08)",
+      padding: "4px 0",
+      minWidth: "140px",
+      fontSize: "13px",
+      overflow: "hidden",
+    },
+    ".cm-block-menu-item": {
+      padding: "6px 12px",
+      cursor: "pointer",
+      color: "hsl(var(--foreground))",
+      transition: "background-color 80ms ease",
+      userSelect: "none",
+    },
+    ".cm-block-menu-item:hover": {
+      backgroundColor: "hsl(var(--muted) / 0.6)",
+    },
+    ".cm-block-menu-item-danger": {
+      color: "hsl(var(--destructive))",
     },
     "&.cm-table-rows-dragging .cm-table-editor, &.cm-table-rows-dragging .cm-table-widget":
       {
@@ -3505,14 +3522,13 @@ function buildBlockWidgetAtomicRanges(state: EditorState): DecorationSet {
     state.field(horizontalRuleStateField, false),
     ranges,
   );
-  // Tables: both the reading-mode widget (tableField) and the live-mode
-  // editable table (tableEditorField) should be treated as atomic. When
-  // a drag crosses into a table, CM selection snaps to the table's
-  // outer boundary and tableRowSelectionPlugin takes over the visual
-  // inside — rows highlight individually instead of the default
-  // selection rectangle clipping through cells.
-  collectBlockWidgetRanges(state.field(tableField, false), ranges);
-  collectBlockWidgetRanges(state.field(tableEditorField, false), ranges);
+  // Tables are intentionally NOT registered here.  Making them atomic
+  // causes `drawSelection` to paint a spurious rectangle above the table
+  // on bottom-up drags because `blockAt` resolves `tableStart` to the
+  // preceding text block when the cursor sits exactly on the boundary.
+  // By leaving tables non-atomic the selection flows through naturally;
+  // the widget's own solid background covers any `.cm-selectionBackground`
+  // inside it, and `tableRowSelectionPlugin` handles the visual highlight.
   if (ranges.length === 0) return Decoration.none;
   return Decoration.set(
     ranges.sort((a, b) => a.from - b.from),
@@ -3526,6 +3542,8 @@ const blockWidgetAtomicRanges = EditorView.atomicRanges.of((view) =>
 
 const BLOCK_WIDGET_DOM_SELECTOR =
   ".cm-math-block, .mermaid-container, .callout, .cm-image-widget, .cm-hr-container";
+// Note: .cm-table-editor and .cm-table-widget are deliberately excluded
+// from this selector — they are no longer atomic widgets.
 
 // When the selection fully contains a block widget's range, tag that
 // widget's DOM with `.cm-block-widget-selected` so its own CSS can paint
@@ -3577,6 +3595,8 @@ const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
       walk(view.state.field(mermaidStateField, false));
       walk(view.state.field(calloutStateField, false));
       walk(view.state.field(horizontalRuleStateField, false));
+      // Tables are intentionally excluded — they are no longer atomic
+      // widgets, so they don't need the .cm-block-widget-selected ring.
     }
   },
 );
@@ -3601,10 +3621,10 @@ const blockWidgetSelectionSyncPlugin = ViewPlugin.fromClass(
 // starts in a paragraph above and ends halfway down a table picks up
 // exactly the table rows it visually covers. The paragraph portion
 // above the table keeps CM's normal selection rectangle; the table
-// portion gets row highlights. Tables are also registered in
-// `EditorView.atomicRanges`, so CM's selection snaps at the table's
-// outer boundary and doesn't bleed a rectangle into the middle of the
-// table while the mouse is inside it.
+// portion gets row highlights.  Tables are *not* registered in
+// `EditorView.atomicRanges` — the selection flows through them
+// naturally and the widget's solid background hides the default
+// rectangle inside the table; row highlights provide the visual feedback.
 const TABLE_SELECTOR = ".cm-table-editor, .cm-table-widget";
 
 const tableRowSelectionPlugin = ViewPlugin.fromClass(
@@ -3618,9 +3638,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
     // Tables that have highlighted rows during the current drag — so we
     // can clear them between frames without scanning the whole document.
     private touchedTables = new Set<HTMLElement>();
-    // Track bottom-up drag state for selection suppression.
-    private isBottomUpDrag = false;
-    private suppressMinTableTop = -1;
 
     constructor(view: EditorView) {
       this.view = view;
@@ -3679,7 +3696,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         this.clearAll();
         return;
       }
-      this.isBottomUpDrag = this.dragStartY > minY;
       this.highlightRowsInRange(minY, maxY);
     }
 
@@ -3704,11 +3720,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       // can still copy / inspect. The next mousedown clears via
       // clearAll().
       this.dragStartY = null;
-      this.isBottomUpDrag = false;
-      this.suppressMinTableTop = -1;
-      this.view.dom
-        .querySelectorAll(".cm-selection-background-suppressed")
-        .forEach((el) => el.classList.remove("cm-selection-background-suppressed"));
     }
 
     private highlightRowsInRange(minY: number, maxY: number) {
@@ -3745,22 +3756,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       });
       this.touchedTables = nextTables;
 
-      // ── Bottom-up drag: suppress phantom selection above tables ─────
-      // When dragging from below a table upward, atomicRanges snaps the
-      // selection head to tableStart.  drawSelection then paints a
-      // spurious .cm-selectionBackground rectangle above the table
-      // because coordsAtPos(tableStart) lands on the line before the
-      // widget.  We detect this case and hide any selection backgrounds
-      // that sit above the touched tables.
-      this.suppressMinTableTop = -1;
-      if (this.isBottomUpDrag && nextTables.size > 0) {
-        this.suppressMinTableTop = Math.min(
-          ...Array.from(nextTables).map((t) => t.getBoundingClientRect().top),
-        );
-        // Immediate suppression (may catch drawSelection before next update)
-        this.applySelectionSuppression();
-      }
-
       // Tag the view while any rows are highlighted so the CSS rule can
       // hide the browser-native ::selection painted on cells the DOM
       // range crossed (see the .cm-table-rows-dragging block in the
@@ -3784,43 +3779,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       this.view.dom
         .querySelectorAll(".cm-table-row-selected")
         .forEach((el) => el.classList.remove("cm-table-row-selected"));
-      // Clear any suppressed selection backgrounds as well.
-      this.view.dom
-        .querySelectorAll(".cm-selection-background-suppressed")
-        .forEach((el) => el.classList.remove("cm-selection-background-suppressed"));
-      this.isBottomUpDrag = false;
-      this.suppressMinTableTop = -1;
-    }
-
-    update(update: ViewUpdate) {
-      if (
-        update.selectionSet &&
-        this.isBottomUpDrag &&
-        this.suppressMinTableTop >= 0
-      ) {
-        // Schedule suppression in a requestMeasure write phase so it runs
-        // AFTER drawSelection's own DOM update (drawSelection queues its
-        // measure in the same update cycle, and our requestMeasure here
-        // comes later because this plugin is registered after drawSelection).
-        this.view.requestMeasure({
-          read: () => {},
-          write: () => this.applySelectionSuppression(),
-        });
-      }
-    }
-
-    private applySelectionSuppression() {
-      if (this.suppressMinTableTop < 0) return;
-      const SUPPRESSED = "cm-selection-background-suppressed";
-      this.view.dom.querySelectorAll(".cm-selectionBackground").forEach((el) => {
-        const rect = el.getBoundingClientRect();
-        if (
-          rect.top < this.suppressMinTableTop &&
-          rect.bottom < this.suppressMinTableTop + 20
-        ) {
-          el.classList.add(SUPPRESSED);
-        }
-      });
     }
 
     // ── Copy: emit source markdown with highlighted-row replacement ──
