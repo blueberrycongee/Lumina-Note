@@ -3,10 +3,7 @@ import { createPortal } from "react-dom";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import {
-  FOLLOW_MAIN_MODEL,
   PROVIDER_MODELS,
-  getResolvedModelForPurpose,
-  hasPurposeModelOverride,
   type LLMProviderType,
 } from "@/services/llm";
 import { invoke } from "@/lib/host";
@@ -42,21 +39,6 @@ function getModelMeta(provider: LLMProviderType, modelId?: string) {
   return PROVIDER_MODELS[provider]?.models.find((m) => m.id === modelId);
 }
 
-function getRouteSelectValue(
-  provider: LLMProviderType,
-  modelId: string | undefined,
-) {
-  if (!modelId || modelId === FOLLOW_MAIN_MODEL) {
-    return FOLLOW_MAIN_MODEL;
-  }
-  if (modelId === "custom") {
-    return "custom";
-  }
-  return PROVIDER_MODELS[provider]?.models.some((m) => m.id === modelId)
-    ? modelId
-    : "custom";
-}
-
 export function AISettingsContent() {
   const { config, setConfig } = useAIStore();
   const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useAgentPrefs();
@@ -70,13 +52,6 @@ export function AISettingsContent() {
     effectiveModelForTemp
   );
   const displayTemperature = config.temperature ?? recommendedTemperature;
-  const provider = config.provider as LLMProviderType;
-  const chatModelMeta = getModelMeta(provider, config.chatModel);
-  const complexModelMeta = getModelMeta(provider, config.complexTaskModel);
-  const chatModelResolved = getResolvedModelForPurpose(config, "chat");
-  const complexTaskModelResolved = getResolvedModelForPurpose(config, "complex");
-  const chatModelOverridesMain = hasPurposeModelOverride(config, "chat");
-  const complexModelOverridesMain = hasPurposeModelOverride(config, "complex");
 
   // 测试连接状态
   const [testResult, setTestResult] = useState<TestResult>({ status: "idle" });
@@ -344,148 +319,6 @@ export function AISettingsContent() {
             onChange={(e) => setConfig({ temperature: parseFloat(e.target.value) })}
             className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
           />
-        </div>
-      </div>
-
-      <div className="space-y-3 pt-3 border-t border-border/60">
-        <div className="space-y-1">
-          <div className="text-xs font-medium text-foreground">{t.aiSettings.dynamicRouting}</div>
-          <p className="text-xs text-muted-foreground">{t.aiSettings.routingDescription}</p>
-        </div>
-
-        <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium text-foreground">{t.aiSettings.chatModel}</div>
-              <p className="text-[11px] text-muted-foreground">{t.aiSettings.chatModelDesc}</p>
-            </div>
-            <span className="text-[11px] text-muted-foreground">
-              {chatModelOverridesMain ? chatModelResolved : t.aiSettings.followMainModel}
-            </span>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <label className="text-xs text-muted-foreground">{t.aiSettings.chatModel}</label>
-              {chatModelMeta?.supportsThinking && <ThinkingModelIcon />}
-            </div>
-            <select
-              value={getRouteSelectValue(provider, config.chatModel)}
-              onChange={(e) => {
-                const nextModel = e.target.value;
-                if (nextModel === FOLLOW_MAIN_MODEL) {
-                  setConfig({
-                    chatModel: undefined,
-                    chatCustomModelId: undefined,
-                  });
-                  return;
-                }
-                if (nextModel === "custom") {
-                  setConfig({
-                    chatModel: "custom",
-                    chatCustomModelId: "",
-                  });
-                  return;
-                }
-                setConfig({
-                  chatModel: nextModel,
-                  chatCustomModelId: undefined,
-                });
-              }}
-              className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-            >
-              <option value={FOLLOW_MAIN_MODEL}>{t.aiSettings.followMainModel}</option>
-              {PROVIDER_MODELS[provider]?.models.map((model) => (
-                <option key={`chat-${model.id}`} value={model.id}>
-                  {formatModelOptionLabel(model)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {config.chatModel === "custom" && (
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.customModelId}</label>
-              <input
-                type="text"
-                value={config.chatCustomModelId || ""}
-                onChange={(e) => setConfig({ chatCustomModelId: e.target.value })}
-                placeholder={t.aiSettings.customModelHint}
-                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-lg border border-border/60 bg-muted/30 p-3 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium text-foreground">{t.aiSettings.complexTaskModel}</div>
-              <p className="text-[11px] text-muted-foreground">{t.aiSettings.complexTaskModelDesc}</p>
-            </div>
-            <span className="text-[11px] text-muted-foreground">
-              {complexModelOverridesMain ? complexTaskModelResolved : t.aiSettings.followMainModel}
-            </span>
-          </div>
-
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <label className="text-xs text-muted-foreground">{t.aiSettings.complexTaskModel}</label>
-              {complexModelMeta?.supportsThinking && <ThinkingModelIcon />}
-            </div>
-            <select
-              value={getRouteSelectValue(provider, config.complexTaskModel)}
-              onChange={(e) => {
-                const nextModel = e.target.value;
-                if (nextModel === FOLLOW_MAIN_MODEL) {
-                  setConfig({
-                    complexTaskModel: undefined,
-                    complexTaskCustomModelId: undefined,
-                  });
-                  return;
-                }
-                if (nextModel === "custom") {
-                  setConfig({
-                    complexTaskModel: "custom",
-                    complexTaskCustomModelId: "",
-                  });
-                  return;
-                }
-                setConfig({
-                  complexTaskModel: nextModel,
-                  complexTaskCustomModelId: undefined,
-                });
-              }}
-              className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-            >
-              <option value={FOLLOW_MAIN_MODEL}>{t.aiSettings.followMainModel}</option>
-              {PROVIDER_MODELS[provider]?.models.map((model) => (
-                <option key={`complex-${model.id}`} value={model.id}>
-                  {formatModelOptionLabel(model)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {config.complexTaskModel === "custom" && (
-            <div>
-              <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.customModelId}</label>
-              <input
-                type="text"
-                value={config.complexTaskCustomModelId || ""}
-                onChange={(e) => setConfig({ complexTaskCustomModelId: e.target.value })}
-                placeholder={t.aiSettings.customModelHint}
-                className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-              />
-            </div>
-          )}
-
-          <div className="rounded bg-background/70 border border-border/50 px-2.5 py-2 text-[11px] text-muted-foreground space-y-1">
-            <p>{t.aiSettings.routingRulesDesc}</p>
-            <p>• {t.aiSettings.chatTask}</p>
-            <p>• {t.aiSettings.searchTask}</p>
-            <p>• {t.aiSettings.complexTaskExamples}</p>
-          </div>
         </div>
       </div>
 

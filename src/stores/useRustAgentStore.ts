@@ -16,7 +16,6 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useAgentProfileStore } from "@/stores/useAgentProfileStore";
 import {
-  getResolvedModelForPurpose,
   callLLM,
   normalizeThinkingMode,
   PROVIDER_MODELS,
@@ -517,16 +516,11 @@ const buildAgentConfig = (aiConfig: AIConfig, autoApprove: boolean): AgentConfig
   const actualModel = aiConfig.model === "custom" && aiConfig.customModelId
     ? aiConfig.customModelId
     : aiConfig.model;
-  const complexTaskModel = getResolvedModelForPurpose(aiConfig, "complex");
-  const shouldUseComplexTaskModel = complexTaskModel !== actualModel;
 
   return {
     provider: aiConfig.provider,
     model: actualModel,
     api_key: aiConfig.apiKey || "",
-    ...(shouldUseComplexTaskModel
-      ? { complex_task_model: complexTaskModel }
-      : {}),
     base_url: aiConfig.baseUrl,
     temperature:
       aiConfig.temperature ??

@@ -15,7 +15,6 @@ import {
 import { invoke, readFile } from "@/lib/host";
 import {
   callLLMStream,
-  buildConfigOverrideForPurpose,
   normalizeThinkingMode,
   supportsThinkingModeSwitch,
   type LLMProviderType,
@@ -494,11 +493,7 @@ export const useAIStore = create<AIState>()(
                 break;
               }
             }
-            response = await chat(
-              modelMessages,
-              filesToSend,
-              buildConfigOverrideForPurpose(config, "chat"),
-            );
+            response = await chat(modelMessages, filesToSend);
           } catch (chatError) {
             throw chatError;
           }
@@ -740,7 +735,6 @@ export const useAIStore = create<AIState>()(
           for await (const chunk of callLLMStream(
             llmMessages,
             { useDefaultTemperature: true, signal: abortController.signal },
-            buildConfigOverrideForPurpose(runtimeConfig, "chat"),
           )) {
             // 每次迭代检查 abort 信号，确保用户点击停止后立即退出循环
             if (abortController.signal.aborted) break;

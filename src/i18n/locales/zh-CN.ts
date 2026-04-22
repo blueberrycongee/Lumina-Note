@@ -1548,27 +1548,6 @@ export default {
     thinkingModeHint:
       "所有支持模型统一使用该开关，不支持的模型会自动忽略此设置。",
     temperature: "温度 (Temperature)",
-    dynamicRouting: "模型路由",
-    enable: "启用",
-    routingDescription: "为聊天与复杂任务分别覆盖模型。",
-    useMainKey: "留空则使用主 Key",
-    chatModel: "聊天模型 (Chat Model)",
-    chatModelDesc: "用于 Chat 模式和简单任务 (如闲聊、搜索)",
-    complexTaskModel: "复杂任务模型 (Complex Task Model)",
-    complexTaskModelDesc:
-      "用于复杂规划、编排式 Agent 执行，以及更重的推理任务。",
-    followMainModel: "跟随主模型 (默认)",
-    noChatModelWarning:
-      "未配置专用聊天模型，将使用主模型处理所有任务。建议配置轻量级模型（如 GPT-4o-mini, Gemini Flash）以降低成本并提高速度。",
-    routingRules: "路由规则",
-    routingRulesDesc:
-      '系统将自动使用"聊天模型"处理以下任务，以节省成本并提高速度：',
-    chatTask: "闲聊 (Chat) - 日常对话、灵感启发",
-    searchTask: "搜索 (Search) - 知识检索、信息查询",
-    complexTaskExamples:
-      "复杂任务 - 长上下文分析、多步骤规划，以及编排式 Agent 任务",
-    otherTasksNote:
-      '其他复杂任务（如编辑、整理、写作）将始终使用"主模型"以保证质量。',
     agentSettings: "Agent 设置",
     autoApproveTools: "自动批准工具调用",
     noManualConfirm: "无需手动确认",

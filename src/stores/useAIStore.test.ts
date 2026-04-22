@@ -34,7 +34,6 @@ vi.mock("@/services/llm", () => ({
     return "auto";
   },
   supportsThinkingModeSwitch: () => true,
-  buildConfigOverrideForPurpose: () => undefined,
 }));
 
 vi.mock("@/services/ai/ai", () => ({

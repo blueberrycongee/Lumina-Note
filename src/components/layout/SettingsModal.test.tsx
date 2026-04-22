@@ -130,13 +130,6 @@ vi.mock("@/stores/useLocaleStore", () => ({
         baseUrl: "Base URL",
         baseUrlOptional: "optional",
         temperature: "Temperature",
-        dynamicRouting: "Dynamic Routing",
-        routingDescription: "Route description",
-        chatModel: "Chat Model",
-        chatModelDesc: "For simple tasks",
-        complexTaskModel: "Complex Task Model",
-        complexTaskModelDesc: "For complex tasks",
-        followMainModel: "Follow Main Model",
         agentSettings: "Agent Settings",
         autoApproveTools: "Auto approve",
         noManualConfirm: "no manual confirm",
@@ -150,10 +143,6 @@ vi.mock("@/stores/useLocaleStore", () => ({
         testFailed: "Failed",
         testResponseEmpty: "Empty response",
         close: "Close",
-        routingRulesDesc: "Rules",
-        chatTask: "Chat",
-        searchTask: "Search",
-        complexTaskExamples: "Complex",
         errors: {},
       },
     },
@@ -161,7 +150,6 @@ vi.mock("@/stores/useLocaleStore", () => ({
 }));
 
 vi.mock("@/services/llm", () => ({
-  FOLLOW_MAIN_MODEL: "__follow_main__",
   PROVIDER_MODELS: {
     openai: {
       label: "OpenAI",
@@ -169,8 +157,6 @@ vi.mock("@/services/llm", () => ({
       models: [{ id: "gpt-5.4", name: "GPT-5.4" }],
     },
   },
-  getResolvedModelForPurpose: () => "gpt-5.4",
-  hasPurposeModelOverride: () => false,
   createProvider: () => ({ call: async () => ({ content: "OK" }) }),
 }));
 

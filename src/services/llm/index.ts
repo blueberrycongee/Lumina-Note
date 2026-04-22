@@ -57,12 +57,6 @@ export {
   buildCustomOpenAiCompatibleSettings,
 } from "./providers/openai-compatible";
 
-export {
-  buildConfigOverrideForPurpose,
-  FOLLOW_MAIN_MODEL,
-  getResolvedModelForPurpose,
-  hasPurposeModelOverride,
-} from "./routing";
 export { getLLMConfig, setLLMConfig, resetLLMConfig } from "./config";
 export {
   normalizeThinkingMode,

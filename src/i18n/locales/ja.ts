@@ -1581,27 +1581,6 @@ export default {
     thinkingModeHint:
       "対応モデルでは同じスイッチで制御し、未対応モデルでは安全に無視されます。",
     temperature: "Temperature",
-    dynamicRouting: "モデルルーティング",
-    enable: "有効",
-    routingDescription: "チャットと複雑タスクで使うモデルを個別に指定できます。",
-    useMainKey: "空欄の場合はメイン Key を使用",
-    chatModel: "チャットモデル",
-    chatModelDesc: "Chat モードと簡単なタスク用（雑談、検索など）",
-    complexTaskModel: "複雑タスクモデル",
-    complexTaskModelDesc:
-      "複雑な計画、オーケストレーション型 Agent 実行、重めの推論タスク向け。",
-    followMainModel: "メインモデルに従う（デフォルト）",
-    noChatModelWarning:
-      "専用チャットモデルが設定されていません。すべてのタスクにメインモデルを使用します。",
-    routingRules: "ルーティングルール",
-    routingRulesDesc:
-      "システムは以下のタスクに「チャットモデル」を自動使用し、コスト削減と速度向上を図ります：",
-    chatTask: "雑談 (Chat) - 日常会話、インスピレーション",
-    searchTask: "検索 (Search) - ナレッジ検索、情報照会",
-    complexTaskExamples:
-      "複雑タスク - 長文脈分析、複数段階の計画、オーケストレーション型 Agent タスク",
-    otherTasksNote:
-      "他の複雑なタスク（編集、整理、執筆など）は品質確保のため常に「メインモデル」を使用。",
     agentSettings: "Agent 設定",
     autoApproveTools: "ツール呼び出しを自動承認",
     noManualConfirm: "手動確認不要",

@@ -1586,27 +1586,6 @@ export default {
     thinkingModeHint:
       "One unified switch across models. Unsupported models safely ignore this option.",
     temperature: "Temperature",
-    dynamicRouting: "Model Routing",
-    enable: "Enable",
-    routingDescription: "Override which model handles chat vs. complex tasks.",
-    useMainKey: "Leave empty to use main key",
-    chatModel: "Chat Model",
-    chatModelDesc: "For Chat mode and simple tasks (e.g. chatting, search)",
-    complexTaskModel: "Complex Task Model",
-    complexTaskModelDesc:
-      "For complex planning, orchestrated agent runs, and heavier reasoning tasks.",
-    followMainModel: "Follow Main Model (default)",
-    noChatModelWarning:
-      "No dedicated chat model configured. Main model will be used for all tasks. Consider configuring a lightweight model (e.g. GPT-4o-mini, Gemini Flash) to reduce costs and improve speed.",
-    routingRules: "Routing Rules",
-    routingRulesDesc:
-      'The system will automatically use "Chat Model" for the following tasks to save costs and improve speed:',
-    chatTask: "Chat - Daily conversation, inspiration",
-    searchTask: "Search - Knowledge retrieval, information query",
-    complexTaskExamples:
-      "Complex tasks - long-context analysis, multi-step planning, and orchestrated agent tasks",
-    otherTasksNote:
-      'Other complex tasks (e.g. editing, organizing, writing) will always use "Main Model" to ensure quality.',
     agentSettings: "Agent Settings",
     autoApproveTools: "Auto-approve tool calls",
     noManualConfirm: "No manual confirmation needed",

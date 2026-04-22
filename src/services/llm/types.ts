@@ -72,10 +72,6 @@ export interface LLMConfig {
   apiKey: string;
   model: string;
   customModelId?: string;
-  chatModel?: string;
-  chatCustomModelId?: string;
-  complexTaskModel?: string;
-  complexTaskCustomModelId?: string;
   baseUrl?: string;
   temperature?: number;
   thinkingMode?: ThinkingMode;

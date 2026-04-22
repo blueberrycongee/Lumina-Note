@@ -1547,27 +1547,6 @@ export default {
     thinkingModeHint:
       "所有支援模型統一使用此開關，不支援的模型會自動忽略此設定。",
     temperature: "溫度 (Temperature)",
-    dynamicRouting: "模型路由",
-    enable: "啟用",
-    routingDescription: "為聊天與複雜任務分別覆蓋模型。",
-    useMainKey: "留空則使用主 Key",
-    chatModel: "聊天模型 (Chat Model)",
-    chatModelDesc: "用於 Chat 模式和簡單任務 (如閒聊、搜尋)",
-    complexTaskModel: "複雜任務模型 (Complex Task Model)",
-    complexTaskModelDesc:
-      "用於複雜規劃、編排式 Agent 執行，以及更重的推理任務。",
-    followMainModel: "跟隨主模型 (預設)",
-    noChatModelWarning:
-      "未配置專用聊天模型，將使用主模型處理所有任務。建議配置輕量級模型以降低成本並提高速度。",
-    routingRules: "路由規則",
-    routingRulesDesc:
-      "系統將自動使用「聊天模型」處理以下任務，以節省成本並提高速度：",
-    chatTask: "閒聊 (Chat) - 日常對話、靈感啟發",
-    searchTask: "搜尋 (Search) - 知識檢索、資訊查詢",
-    complexTaskExamples:
-      "複雜任務 - 長上下文分析、多步驟規劃，以及編排式 Agent 任務",
-    otherTasksNote:
-      "其他複雜任務（如編輯、整理、寫作）將始終使用「主模型」以保證品質。",
     agentSettings: "Agent 設定",
     autoApproveTools: "自動批准工具調用",
     noManualConfirm: "無需手動確認",
