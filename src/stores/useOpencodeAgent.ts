@@ -214,7 +214,21 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     set((state) => {
       if (state.currentSessionId && part.sessionID !== state.currentSessionId) return state;
       const idx = state.messages.findIndex((m) => m.id === part.messageID);
-      if (idx === -1) return state;
+      if (idx === -1) {
+        // Part landed before its parent message.updated event — this is
+        // the common case for assistant streaming: opencode emits the
+        // first token delta before it fires the assistant-message
+        // metadata event. We create an assistant-role stub here so the
+        // delta has somewhere to live. The later message.updated event
+        // upserts the full Message info over this stub.
+        const stub: AgentMessage = {
+          id: part.messageID,
+          role: "assistant",
+          content: partsToText([part]),
+          rawParts: [part],
+        };
+        return { messages: [...state.messages, stub] };
+      }
       const existing = state.messages[idx];
       const nextParts = mergePart(existing.rawParts, part);
       const next = state.messages.slice();
