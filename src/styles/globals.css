@@ -200,24 +200,48 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 @layer components {
+  /* Soft, barely-there ambient tint — enough to give the app a
+     character but never enough to distract. The primary accent washes
+     in from the top-right corner and fades out within a third of the
+     viewport. */
   .ui-app-bg {
     background:
       radial-gradient(
-        900px 600px at 92% 4%,
-        hsl(var(--primary) / 0.05),
-        transparent 62%
+        1100px 700px at 94% -4%,
+        hsl(var(--primary) / 0.035),
+        transparent 60%
       ),
-      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
+      hsl(var(--background));
   }
 
   .dark .ui-app-bg {
     background:
       radial-gradient(
-        900px 600px at 92% 4%,
-        hsl(var(--primary) / 0.07),
-        transparent 62%
+        1100px 700px at 94% -4%,
+        hsl(var(--primary) / 0.08),
+        transparent 60%
       ),
-      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--background)));
+      hsl(var(--background));
+  }
+
+  /* Welcome-hero ambient glow — used behind the WelcomeGreeting so
+     the empty state has character without being loud. Composes onto
+     ui-app-bg. */
+  .ui-hero-glow {
+    background:
+      radial-gradient(
+        600px 380px at 50% 20%,
+        hsl(var(--primary) / 0.05),
+        transparent 70%
+      );
+  }
+  .dark .ui-hero-glow {
+    background:
+      radial-gradient(
+        600px 380px at 50% 20%,
+        hsl(var(--primary) / 0.1),
+        transparent 70%
+      );
   }
 
   .ui-card {
@@ -229,7 +253,10 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .ui-kbd {
-    @apply inline-flex items-center rounded-md border border-border/60 bg-muted/70 px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground;
+    @apply inline-flex items-center rounded-ui-sm border border-border/60 bg-muted/70 px-1.5 py-0.5 text-xs font-medium text-muted-foreground;
+    min-width: 1.25rem;
+    height: 1.125rem;
+    justify-content: center;
   }
 
   .ui-input {

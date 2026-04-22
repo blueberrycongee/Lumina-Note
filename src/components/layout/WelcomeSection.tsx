@@ -327,20 +327,32 @@ function SuggestionCard({
   onClick: () => void;
 }) {
   return (
-    <motion.button
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
+    <button
+      type="button"
       onClick={onClick}
-      className="bg-background/50 hover:bg-accent/60 p-4 rounded-ui-lg cursor-pointer border border-border/50 transition-colors flex flex-col items-start gap-1 text-left"
+      className={[
+        "group relative flex flex-col items-start gap-2 text-left",
+        "rounded-ui-lg border border-border bg-popover p-4",
+        "transition-[background-color,border-color,box-shadow] duration-fast ease-out-subtle",
+        "hover:border-primary/35 hover:bg-accent/60 hover:shadow-elev-1",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+      ].join(" ")}
     >
-      <div className="p-2 bg-background rounded-lg text-muted-foreground mb-1">
+      <div
+        className={[
+          "flex h-9 w-9 items-center justify-center rounded-ui-md",
+          "bg-primary/10 text-primary",
+          "transition-colors duration-fast ease-out-subtle",
+          "group-hover:bg-primary/15",
+        ].join(" ")}
+      >
         <Icon size={18} />
       </div>
       <span className="text-sm font-medium text-foreground">{title}</span>
-      <span className="text-xs text-muted-foreground truncate w-full">
+      <span className="truncate w-full text-xs text-muted-foreground">
         {desc}
       </span>
-    </motion.button>
+    </button>
   );
 }
 
@@ -364,20 +376,35 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="text-center mt-10 md:mt-12 mb-8 space-y-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          className="relative text-center mt-10 md:mt-14 mb-10 space-y-7"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] } }}
           exit={{
             opacity: 0,
-            y: -20,
-            scale: 0.9,
-            transition: { duration: 0.3 },
+            y: -12,
+            scale: 0.96,
+            transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          <div className="w-20 h-20 bg-background rounded-full mx-auto shadow-sm border border-border flex items-center justify-center">
-            <span className="text-4xl">{welcomeEmoji}</span>
+          {/* Soft primary-tinted glow behind the greeting — subtle
+              character without bleeding onto the conversation. */}
+          <div
+            aria-hidden
+            className="ui-hero-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-64"
+          />
+
+          <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
+            {/* outer ring — a whisper of primary */}
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5"
+            />
+            {/* inner disc — crisp popover surface */}
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-border bg-popover shadow-elev-1">
+              <span className="text-4xl leading-none">{welcomeEmoji}</span>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
+          <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-3xl font-semibold tracking-tight text-foreground">
             {t.ai.welcomeTitle}
           </h1>
         </motion.div>
