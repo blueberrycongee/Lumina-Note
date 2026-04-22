@@ -622,7 +622,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                       {file.isFolder ? (
                         <Folder size={14} className="text-yellow-500 shrink-0" />
                       ) : (
-                        <FileText size={14} className="text-slate-500 shrink-0" />
+                        <FileText size={14} className="text-muted-foreground shrink-0" />
                       )}
                       <span className="truncate">{file.name}</span>
                     </button>
@@ -683,7 +683,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 {file.isFolder ? (
                   <Folder size={14} className="text-yellow-500 shrink-0" />
                 ) : (
-                  <FileText size={14} className="text-slate-500 shrink-0" />
+                  <FileText size={14} className="text-muted-foreground shrink-0" />
                 )}
                 <span className="truncate">{file.name}</span>
               </button>

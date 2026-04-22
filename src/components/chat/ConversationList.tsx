@@ -89,8 +89,8 @@ export function ConversationList({ className }: ConversationListProps) {
           
           // 图标颜色
           const iconColor = session.type === "agent" 
-            ? "text-purple-500" 
-            : "text-slate-500";
+            ? "text-primary" 
+            : "text-muted-foreground";
 
           return (
             <div
@@ -129,7 +129,7 @@ export function ConversationList({ className }: ConversationListProps) {
                     </p>
                     {/* 类型标签 */}
                     {session.type === "agent" && (
-                      <span className="text-[10px] text-purple-600 bg-purple-50 dark:bg-purple-900/30 px-1.5 rounded-full inline-block mt-0.5">
+                      <span className="text-xs text-primary bg-primary/10 dark:bg-primary/15 px-1.5 rounded-full inline-block mt-0.5">
                         Agent
                       </span>
                     )}

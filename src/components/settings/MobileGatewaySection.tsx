@@ -217,11 +217,11 @@ export function MobileGatewaySection() {
                         includeMargin
                       />
                     </div>
-                    <div className="text-[10px] text-foreground/70">
+                    <div className="text-xs text-foreground/70">
                       {t.settingsModal.mobileGatewayQrHint}
                     </div>
                   </div>
-                  <div className="text-[10px] text-foreground/70 break-all">
+                  <div className="text-xs text-foreground/70 break-all">
                     {status.pairing_payload}
                   </div>
                 </div>
@@ -232,12 +232,12 @@ export function MobileGatewaySection() {
                   type="button"
                   onClick={handleSyncWorkspace}
                   disabled={!vaultPath || loading}
-                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-60"
+                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-60"
                 >
                   {t.settingsModal.mobileGatewaySyncNow}
                 </button>
               </div>
-              <div className="text-[10px] text-foreground/70 space-y-1">
+              <div className="text-xs text-foreground/70 space-y-1">
                 <div>{t.settingsModal.mobileWorkspaceSyncStatus}: {mobileWorkspaceSync?.status ?? t.settingsModal.mobileWorkspaceSyncUnknown}</div>
                 {mobileWorkspaceSync?.path && (
                   <div className="break-all">{t.settingsModal.mobileWorkspaceSyncPath}: {mobileWorkspaceSync.path}</div>

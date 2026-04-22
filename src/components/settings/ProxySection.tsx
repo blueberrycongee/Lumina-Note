@@ -83,7 +83,7 @@ export function ProxySection() {
             placeholder={t.settingsModal.proxyUrlPlaceholder}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground"
           />
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t.settingsModal.proxyHint}
           </p>
         </div>

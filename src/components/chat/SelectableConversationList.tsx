@@ -59,7 +59,7 @@ export function SelectableConversationList({
               } ${isUser ? "rounded-tr-sm bg-muted px-4 py-2.5" : "px-4 py-3 bg-background"}`}
             >
               <div className="flex items-center justify-between gap-3 mb-2">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {message.role === "user" ? roleLabels.user : roleLabels.assistant}
                 </span>
                 <span

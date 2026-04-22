@@ -258,7 +258,7 @@ export function PluginSection() {
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">{plugin.name}</p>
                         <p className="text-xs text-muted-foreground">{plugin.id} · v{plugin.version}</p>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           {t.plugins.labelApi} {plugin.api_version || "1"}
                           {plugin.min_app_version
                             ? ` · ${t.plugins.labelMinApp} ${plugin.min_app_version}`
@@ -286,7 +286,7 @@ export function PluginSection() {
                       <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                         {t.plugins.techDetails}
                       </summary>
-                      <div className="space-y-2 text-[11px] text-muted-foreground">
+                      <div className="space-y-2 text-xs text-muted-foreground">
                         <div className="break-all">
                           {t.plugins.labelEntry}: <code>{plugin.entry_path}</code>
                         </div>
@@ -294,13 +294,13 @@ export function PluginSection() {
                           {(plugin.permissions || []).map((perm) => (
                             <span
                               key={perm}
-                              className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
+                              className="px-1.5 py-0.5 rounded bg-muted text-xs text-muted-foreground"
                             >
                               {perm}
                             </span>
                           ))}
                           {(plugin.permissions || []).length === 0 && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {t.plugins.statusNoPermissions}
                             </span>
                           )}
@@ -330,7 +330,7 @@ export function PluginSection() {
                                 onClick={() =>
                                   setRibbonItemEnabled(plugin.id, item.itemId, !itemEnabled)
                                 }
-                                className={`h-7 px-2 rounded-md text-[11px] font-medium border transition-colors ${
+                                className={`h-7 px-2 rounded-md text-xs font-medium border transition-colors ${
                                   itemEnabled
                                     ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
                                     : "bg-background/60 border-border hover:bg-muted"
@@ -353,14 +353,14 @@ export function PluginSection() {
                       <div className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md p-2">
                         {t.plugins.statusIncompatible}: {status.reason}
                         {status.error_detail?.field ? (
-                          <div className="mt-1 text-[11px] text-warning/80">
+                          <div className="mt-1 text-xs text-warning/80">
                             {t.plugins.labelField}: <code>{status.error_detail.field}</code>
                           </div>
                         ) : null}
                       </div>
                     )}
                     {enabled && status?.loaded && !status?.error && (
-                      <div className="text-[11px] text-emerald-500">{t.plugins.statusLoaded}</div>
+                      <div className="text-xs text-emerald-500">{t.plugins.statusLoaded}</div>
                     )}
                   </div>
                 );
@@ -398,7 +398,7 @@ export function PluginSection() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{plugin.name}</p>
                       <p className="text-xs text-muted-foreground">{plugin.id} · v{plugin.version}</p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {t.plugins.labelApi} {plugin.api_version || "1"}
                         {plugin.min_app_version
                           ? ` · ${t.plugins.labelMinApp} ${plugin.min_app_version}`
@@ -426,7 +426,7 @@ export function PluginSection() {
                     <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                       {t.plugins.techDetails}
                     </summary>
-                    <div className="space-y-2 text-[11px] text-muted-foreground">
+                    <div className="space-y-2 text-xs text-muted-foreground">
                       <div className="break-all">
                         {t.plugins.labelEntry}: <code>{plugin.entry_path}</code>
                       </div>
@@ -434,13 +434,13 @@ export function PluginSection() {
                         {(plugin.permissions || []).map((perm) => (
                           <span
                             key={perm}
-                            className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
+                            className="px-1.5 py-0.5 rounded bg-muted text-xs text-muted-foreground"
                           >
                             {perm}
                           </span>
                         ))}
                         {(plugin.permissions || []).length === 0 && (
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             {t.plugins.statusNoPermissions}
                           </span>
                         )}
@@ -470,7 +470,7 @@ export function PluginSection() {
                               onClick={() =>
                                 setRibbonItemEnabled(plugin.id, item.itemId, !itemEnabled)
                               }
-                              className={`h-7 px-2 rounded-md text-[11px] font-medium border transition-colors ${
+                              className={`h-7 px-2 rounded-md text-xs font-medium border transition-colors ${
                                 itemEnabled
                                   ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
                                   : "bg-background/60 border-border hover:bg-muted"
@@ -493,14 +493,14 @@ export function PluginSection() {
                     <div className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md p-2">
                       {t.plugins.statusIncompatible}: {status.reason}
                       {status.error_detail?.field ? (
-                        <div className="mt-1 text-[11px] text-warning/80">
+                        <div className="mt-1 text-xs text-warning/80">
                           {t.plugins.labelField}: <code>{status.error_detail.field}</code>
                         </div>
                       ) : null}
                     </div>
                   )}
                   {enabled && status?.loaded && !status?.error && (
-                    <div className="text-[11px] text-emerald-500">{t.plugins.statusLoaded}</div>
+                    <div className="text-xs text-emerald-500">{t.plugins.statusLoaded}</div>
                   )}
                 </div>
               );

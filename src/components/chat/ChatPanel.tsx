@@ -292,7 +292,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
               <span className="inline-flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-1 rounded">
                 <FileText size={10} />
                 {currentFileMeta.name}
-                <span className="text-[10px] opacity-60">
+                <span className="text-xs opacity-60">
                   ({t.common.auto})
                 </span>
               </span>

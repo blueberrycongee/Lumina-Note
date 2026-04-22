@@ -126,7 +126,7 @@ export function MobileOptionsSection() {
             {t.settingsModal.mobileProfileAdd}
           </button>
         </div>
-        <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input
             type="checkbox"
             checked={applyToDesktop}

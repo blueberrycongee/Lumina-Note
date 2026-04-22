@@ -435,7 +435,7 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pl-5 py-1 text-[11px] text-muted-foreground/60 whitespace-pre-wrap border-l border-muted-foreground/20 ml-1.5">
+            <div className="pl-5 py-1 text-xs text-muted-foreground/60 whitespace-pre-wrap border-l border-muted-foreground/20 ml-1.5">
               {thinking || t.agentMessage.thinkingWaiting}
             </div>
           </motion.div>
@@ -489,16 +489,16 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
             <div className="pl-5 py-1 space-y-1 border-l border-muted-foreground/20 ml-1.5">
               {tool.params && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground/50 mb-0.5">{t.agentMessage.params}:</div>
-                  <pre className="text-[10px] bg-muted/30 p-1.5 rounded overflow-x-auto">
+                  <div className="text-xs text-muted-foreground/50 mb-0.5">{t.agentMessage.params}:</div>
+                  <pre className="text-xs bg-muted/30 p-1.5 rounded overflow-x-auto">
                     {tool.params}
                   </pre>
                 </div>
               )}
               {tool.result && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground/50 mb-0.5">{t.agentMessage.result}:</div>
-                  <pre className="text-[10px] bg-muted/30 p-1.5 rounded overflow-x-auto max-h-32 overflow-y-auto">
+                  <div className="text-xs text-muted-foreground/50 mb-0.5">{t.agentMessage.result}:</div>
+                  <pre className="text-xs bg-muted/30 p-1.5 rounded overflow-x-auto max-h-32 overflow-y-auto">
                     {tool.result}
                   </pre>
                 </div>

@@ -1165,7 +1165,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
             >
               <ZoomIn size={14} />
             </button>
-            <span className="text-[10px] w-10 text-center text-muted-foreground">
+            <span className="text-xs w-10 text-center text-muted-foreground">
               {Math.round(zoom * 100)}%
             </span>
             <button
@@ -1230,12 +1230,12 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                     <div className="text-sm font-medium text-foreground truncate">
                       {hoverPreviewNode.label}
                     </div>
-                    <div className="text-[11px] text-muted-foreground truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {hoverPreviewNode.path}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
                     <LinkIcon size={10} />
                     {hoverPreviewNode.connections}
@@ -1297,7 +1297,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
             </div>
             {connectedNodes.length > 0 && (
               <div className="space-y-1">
-                <div className="text-[10px] text-muted-foreground uppercase flex items-center gap-1">
+                <div className="text-xs text-muted-foreground uppercase flex items-center gap-1">
                   <LinkIcon size={10} />
                   {t.knowledgeGraph.linkedNotes} ({connectedNodes.length})
                 </div>

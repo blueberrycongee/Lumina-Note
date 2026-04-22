@@ -213,7 +213,7 @@ export function BlockMenu({
         return (
           <div key={group.label}>
             {groupIndex > 0 && <div className="h-px bg-border/50 my-1.5" />}
-            <div className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground px-1.5 mb-1">
+            <div className="text-xs uppercase tracking-wider font-semibold text-muted-foreground px-1.5 mb-1">
               {group.label}
             </div>
             <div className="flex flex-wrap gap-1">

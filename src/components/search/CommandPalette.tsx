@@ -433,7 +433,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                           </div>
                         )}
                         {cmd.groupTitle && (
-                          <div className="text-[10px] text-primary/80 truncate">{cmd.groupTitle}</div>
+                          <div className="text-xs text-primary/80 truncate">{cmd.groupTitle}</div>
                         )}
                       </div>
                       {cmd.shortcut && (

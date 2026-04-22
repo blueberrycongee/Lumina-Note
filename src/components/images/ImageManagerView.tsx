@@ -920,7 +920,7 @@ function StatusBadges({ image }: { image: ImageAssetRecord }) {
         <span
           key={status}
           className={cn(
-            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+            "rounded-full px-2 py-0.5 text-xs font-medium",
             statusBadgeStyles[status as keyof typeof statusBadgeStyles],
           )}
         >
@@ -1038,7 +1038,7 @@ function ImageGridCard({
       <div className="flex flex-1 flex-col gap-1.5 p-3">
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 truncate text-sm font-semibold">{image.name}</h3>
-          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             {getCurrentTranslations().imageManager.refs.replace("{count}", String(image.referenceCount))}
           </span>
         </div>
@@ -1172,7 +1172,7 @@ function ImageDetailPanel({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="border-b border-border/60 px-4 py-3">
-        <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.imageDetails}</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.imageDetails}</p>
         <h2 className="mt-2 text-base font-semibold leading-tight">{image.name}</h2>
         <p className="mt-1 break-all text-xs text-muted-foreground">{image.relativePath}</p>
       </div>
@@ -1245,7 +1245,7 @@ function ImageDetailPanel({
                       </div>
                       <p className="mt-1 truncate text-xs text-muted-foreground">{note.noteRelativePath}</p>
                     </div>
-                    <span className="ml-3 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                    <span className="ml-3 rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
                       {t.imageManager.refs.replace("{count}", String(note.occurrenceCount))}
                     </span>
                   </button>
@@ -1265,7 +1265,7 @@ function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; o
   const orphanCount = images.filter((image) => image.orphan).length;
   return (
     <div className="flex h-full flex-col px-4 py-3">
-      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.batchActions}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.batchActions}</p>
       <h2 className="mt-2 text-base font-semibold">{t.imageManager.imagesSelected.replace("{count}", String(images.length))}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {t.imageManager.batchSummary

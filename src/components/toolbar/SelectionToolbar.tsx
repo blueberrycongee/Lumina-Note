@@ -412,7 +412,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
       <div className="flex items-center gap-0.5 px-1.5 py-1 bg-background border border-border rounded-lg shadow-lg">
         <button
           onClick={handleAddToChat}
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
           title={t.selectionToolbar.addToChat}
         >
           <MessageSquarePlus size={13} />
@@ -421,7 +421,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         <button
           onClick={handleSummarize}
           disabled={isSummarizing}
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
           title={t.selectionToolbar.selectionSummary}
         >
           <Sparkles size={13} className={isSummarizing ? "animate-spin" : ""} />
@@ -430,7 +430,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         <button
           onClick={handleTranslate}
           disabled={isTranslating}
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
           title={t.selectionToolbar.selectionTranslate}
         >
           <Languages size={13} className={isTranslating ? "animate-spin" : ""} />
@@ -439,7 +439,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         <button
           onClick={handlePolish}
           disabled={isPolishing}
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
           title={t.selectionToolbar.selectionPolish}
         >
           <span className={isPolishing ? "animate-spin" : ""}>✎</span>
@@ -448,7 +448,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         <button
           onClick={handleTodo}
           disabled={isTodoing}
-          className="flex items-center gap-1 px-1.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
           title={t.selectionToolbar.generateTodo}
         >
           <span className={isTodoing ? "animate-spin" : ""}>☑</span>

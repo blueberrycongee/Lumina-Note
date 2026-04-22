@@ -53,7 +53,7 @@ export function PluginContextMenuHost() {
           }}
         >
           <span className="font-medium">{item.title}</span>
-          <span className="ml-2 text-[11px] text-muted-foreground">{item.pluginId}</span>
+          <span className="ml-2 text-xs text-muted-foreground">{item.pluginId}</span>
         </button>
       ))}
     </div>

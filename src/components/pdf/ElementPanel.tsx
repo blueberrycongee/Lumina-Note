@@ -56,7 +56,7 @@ export function ElementPanel({
                     "text-xs px-1.5 py-0.5 rounded",
                     element.type === "text" && "bg-blue-500/20 text-blue-600",
                     element.type === "image" && "bg-green-500/20 text-green-600",
-                    element.type === "table" && "bg-purple-500/20 text-purple-600",
+                    element.type === "table" && "bg-purple-500/20 text-primary",
                     element.type === "equation" && "bg-orange-500/20 text-orange-600"
                   )}>
                     {(t.pdfViewer.elementTypes as Record<string, string>)?.[element.type] || element.type}

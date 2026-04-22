@@ -34,7 +34,7 @@ export function AssistantDiagramPanels({ filePaths, className }: AssistantDiagra
 
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+      <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
         <Bot className="h-3 w-3" />
         <span>{t.diagramView.assistantLiveTitle}</span>
       </div>

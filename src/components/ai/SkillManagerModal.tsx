@@ -126,7 +126,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
                     >
                       <div className="flex items-center justify-between">
                         <div className="text-sm font-medium text-foreground">{skill.title}</div>
-                        <div className="text-[10px] text-muted-foreground">{skill.name}</div>
+                        <div className="text-xs text-muted-foreground">{skill.name}</div>
                       </div>
                       {skill.description && (
                         <div className="text-xs text-muted-foreground mt-1">
@@ -138,7 +138,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
                           {skill.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="px-1.5 py-0.5 rounded bg-muted text-[10px] text-muted-foreground"
+                              className="px-1.5 py-0.5 rounded bg-muted text-xs text-muted-foreground"
                             >
                               {tag}
                             </span>

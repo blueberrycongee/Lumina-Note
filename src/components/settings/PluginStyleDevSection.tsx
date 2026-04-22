@@ -50,7 +50,7 @@ export function PluginStyleDevSection() {
         ) : (
           <div className="space-y-2 max-h-36 overflow-auto">
             {conflicts.slice(0, 20).map((item) => (
-              <div key={item.selector} className="text-[11px] border border-border/60 rounded px-2 py-1 bg-muted/30">
+              <div key={item.selector} className="text-xs border border-border/60 rounded px-2 py-1 bg-muted/30">
                 <div className="font-mono break-all">{item.selector}</div>
                 <div className="text-muted-foreground mt-1">
                   {t.plugins.styleRuntimePlugins}: {item.pluginIds.join(", ")}
@@ -70,7 +70,7 @@ export function PluginStyleDevSection() {
         ) : (
           <div className="space-y-2 max-h-48 overflow-auto">
             {byPlugin.map(([pluginId, list]) => (
-              <div key={pluginId} className="text-[11px] border border-border/60 rounded px-2 py-1 bg-muted/30">
+              <div key={pluginId} className="text-xs border border-border/60 rounded px-2 py-1 bg-muted/30">
                 <div className="font-medium">{pluginId}</div>
                 <div className="text-muted-foreground mt-1">
                   {list

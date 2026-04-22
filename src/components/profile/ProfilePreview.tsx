@@ -151,7 +151,7 @@ export function ProfilePreview() {
                   {note.tags.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {note.tags.slice(0, 4).map((tag) => (
-                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                           #{tag}
                         </span>
                       ))}
@@ -195,7 +195,7 @@ export function ProfilePreview() {
                   {note.tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-2">
                       {note.tags.slice(0, 5).map((tag) => (
-                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                        <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                           #{tag}
                         </span>
                       ))}
