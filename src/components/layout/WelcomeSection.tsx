@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -14,51 +14,8 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
 import type { FileEntry } from "@/lib/host";
 
-const WELCOME_EMOJIS = [
-  "😀",
-  "😃",
-  "😄",
-  "😁",
-  "😆",
-  "😅",
-  "🤣",
-  "😂",
-  "🙂",
-  "🙃",
-  "😊",
-  "😍",
-  "🤩",
-  "😘",
-  "😗",
-  "😋",
-  "😜",
-  "🤪",
-  "😝",
-  "🤑",
-  "🤗",
-  "🤭",
-  "🤫",
-  "🤔",
-  "🤐",
-  "🤨",
-  "😐",
-  "😑",
-  "😶",
-  "😏",
-  "😒",
-  "🙄",
-  "😬",
-  "😌",
-  "😔",
-  "😪",
-  "🤤",
-  "😴",
-  "🥳",
-  "🤠",
-  "🧐",
-  "🤓",
-  "😎",
-];
+// Emoji array removed — the welcome screen now uses a clean text-only
+// greeting without the random emoji avatar disc.
 
 // ── Types ──
 
@@ -368,15 +325,11 @@ interface WelcomeSectionProps {
 export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
   const { t } = useLocaleStore();
 
-  const [welcomeEmoji] = useState(
-    () => WELCOME_EMOJIS[Math.floor(Math.random() * WELCOME_EMOJIS.length)],
-  );
-
   return (
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="relative text-center mt-10 md:mt-14 mb-10 space-y-7"
+          className="relative text-center mt-10 md:mt-14 mb-10 space-y-3"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] } }}
           exit={{
@@ -386,24 +339,6 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
             transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          {/* Soft primary-tinted glow behind the greeting — subtle
-              character without bleeding onto the conversation. */}
-          <div
-            aria-hidden
-            className="ui-hero-glow pointer-events-none absolute inset-x-0 top-0 -z-10 h-64"
-          />
-
-          <div className="relative mx-auto flex h-24 w-24 items-center justify-center">
-            {/* outer ring — a whisper of primary */}
-            <div
-              aria-hidden
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-primary/5"
-            />
-            {/* inner disc — crisp popover surface */}
-            <div className="relative flex h-20 w-20 items-center justify-center rounded-full border border-border bg-popover shadow-elev-1">
-              <span className="text-4xl leading-none">{welcomeEmoji}</span>
-            </div>
-          </div>
           <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-3xl font-semibold tracking-tight text-foreground">
             {t.ai.welcomeTitle}
           </h1>
