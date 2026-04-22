@@ -125,9 +125,9 @@ describe("TabBar", () => {
     expect(screen.getByText("Image Manager")).toBeInTheDocument();
   });
 
-  it("uses the softened primary file icon color for regular file tabs", () => {
+  it("uses the primary file icon color for the active file tab", () => {
     const { container } = render(<TabBar />);
 
-    expect(container.querySelector("svg.lucide-file-text")?.getAttribute("class")).toContain("text-primary/50");
+    expect(container.querySelector("svg.lucide-file-text")?.getAttribute("class")).toContain("text-primary");
   });
 });

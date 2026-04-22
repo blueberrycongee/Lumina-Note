@@ -27,7 +27,7 @@ describe("App sidebar motion", () => {
   });
 
   it("defines directional sidebar motion tokens and nudge states", () => {
-    expect(globalsSource).toContain("--ui-motion-sidebar: 260ms;");
+    expect(globalsSource).toContain("--ui-motion-sidebar: 220ms;");
     expect(globalsSource).toContain(".app-sidebar-shell[data-open=\"false\"]");
     expect(globalsSource).toContain(
       '.app-sidebar-shell[data-open="false"][data-side="left"] .app-sidebar-inner',

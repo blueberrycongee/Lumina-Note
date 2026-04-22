@@ -70,7 +70,7 @@ describe("CodeMirror live code block editing", () => {
     });
 
     expect(writeText).toHaveBeenCalledWith("const token = 1;");
-    expect((button as HTMLButtonElement).textContent).toBe("Copied!");
+    expect((button as HTMLElement).classList.contains("cm-codeblock-copy-success")).toBe(true);
   });
 
   it("allows native cursor placement inside code content", () => {

@@ -15,21 +15,21 @@ describe("fallback theme tokens", () => {
     const rootBlock = extractBlock(":root");
     const darkBlock = extractBlock(".dark");
 
-    expect(rootBlock).toContain("--background: 210 18% 97%;");
-    expect(rootBlock).toContain("--foreground: 215 20% 11%;");
-    expect(rootBlock).toContain("--muted: 210 14% 93%;");
-    expect(rootBlock).toContain("--muted-foreground: 210 8% 42%;");
-    expect(rootBlock).toContain("--accent: 210 12% 91%;");
-    expect(rootBlock).toContain("--border: 210 12% 83%;");
-    expect(rootBlock).toContain("--md-heading: 200 50% 28%;");
+    expect(rootBlock).toContain("--background: 220 16% 99%;");
+    expect(rootBlock).toContain("--foreground: 222 16% 11%;");
+    expect(rootBlock).toContain("--muted: 220 14% 96%;");
+    expect(rootBlock).toContain("--muted-foreground: 220 9% 46%;");
+    expect(rootBlock).toContain("--accent: 220 14% 93%;");
+    expect(rootBlock).toContain("--border: 220 13% 88%;");
+    expect(rootBlock).toContain("--md-heading: 0 0% 9%;");
 
-    expect(darkBlock).toContain("--background: 215 25% 10%;");
-    expect(darkBlock).toContain("--foreground: 210 16% 93%;");
-    expect(darkBlock).toContain("--muted: 215 18% 16%;");
-    expect(darkBlock).toContain("--muted-foreground: 210 10% 56%;");
-    expect(darkBlock).toContain("--accent: 215 14% 19%;");
-    expect(darkBlock).toContain("--border: 210 12% 27%;");
-    expect(darkBlock).toContain("--md-heading: 200 40% 78%;");
+    expect(darkBlock).toContain("--background: 222 20% 7%;");
+    expect(darkBlock).toContain("--foreground: 220 14% 95%;");
+    expect(darkBlock).toContain("--muted: 222 16% 12%;");
+    expect(darkBlock).toContain("--muted-foreground: 220 9% 58%;");
+    expect(darkBlock).toContain("--accent: 222 14% 16%;");
+    expect(darkBlock).toContain("--border: 220 13% 22%;");
+    expect(darkBlock).toContain("--md-heading: 0 0% 93%;");
   });
 });
 
@@ -38,8 +38,8 @@ describe("ui-app-bg", () => {
     const lightBlock = extractBlock(".ui-app-bg");
     const darkBlock = extractBlock(".dark .ui-app-bg");
 
-    expect(lightBlock).toContain("hsl(var(--primary) / 0.05)");
-    expect(darkBlock).toContain("hsl(var(--primary) / 0.07)");
+    expect(lightBlock).toContain("hsl(var(--primary) / 0.035)");
+    expect(darkBlock).toContain("hsl(var(--primary) / 0.08)");
   });
 });
 
