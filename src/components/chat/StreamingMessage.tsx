@@ -10,7 +10,6 @@
  */
 
 import { memo, useMemo } from "react";
-import { Bot } from "lucide-react";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { useAIStore } from "@/stores/useAIStore";
 import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
@@ -102,9 +101,6 @@ export const StreamingMessage = memo(function StreamingMessage({
 
   return (
     <div className={`flex gap-3 mb-6 ${className}`}>
-      <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
-        <Bot size={16} className="text-muted-foreground" />
-      </div>
       <div className="max-w-[80%] text-foreground">
         {resolvedDiagramPaths.length > 0 && (
           <AssistantDiagramPanels
@@ -244,9 +240,6 @@ export const TypingIndicator = memo(function TypingIndicator({
 
   return (
     <div className={`flex gap-3 mb-6 ${className}`}>
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-elev-1">
-        <Bot size={16} />
-      </div>
       <div className="max-w-[80%] text-foreground">
         {resolvedDiagramPaths.length > 0 && (
           <AssistantDiagramPanels

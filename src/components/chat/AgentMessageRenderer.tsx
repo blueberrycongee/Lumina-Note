@@ -30,7 +30,6 @@ import {
   Check,
   X,
   Loader2,
-  Bot,
   Copy,
   AlertTriangle,
   RefreshCw,
@@ -786,9 +785,6 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           {/* AI 回复 - 只有在有内容时才显示 */}
           {round.hasAIContent && (
             <div className="flex gap-3 mb-6">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-elev-1">
-                <Bot size={16} />
-              </div>
               <div className="flex-1 min-w-0 space-y-2">
                 {round.diagramPaths.length > 0 && (
                   <AssistantDiagramPanels filePaths={round.diagramPaths} />
