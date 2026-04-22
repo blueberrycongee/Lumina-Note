@@ -57,7 +57,7 @@ export default defineConfig({
         async writeBundle() {
           try {
             const entries = await readdir(OPENCODE_SERVER_DIST)
-            const outDir = path.resolve(__dirname, 'out/main/chunks')
+            const outDir = path.resolve(__dirname, 'out/main')
             await mkdir(outDir, { recursive: true })
             for (const entry of entries) {
               if (!entry.endsWith('.wasm')) continue
