@@ -53,6 +53,7 @@
     "@langchain/langgraph": "^1.0.4",
     "@lezer/markdown": "^1.6.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@opencode-ai/sdk": "^1.14.20",
     "@openrouter/ai-sdk-provider": "^2.8.0",
     "@schedule-x/calendar": "^4.3.1",
     "@schedule-x/react": "^4.1.0",
