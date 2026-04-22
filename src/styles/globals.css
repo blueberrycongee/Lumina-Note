@@ -715,23 +715,28 @@ body {
 }
 
 .tiptap code {
-  background: hsl(var(--muted));
-  padding: 0.2rem 0.4rem;
+  background: hsl(var(--foreground) / 0.06);
+  border: 1px solid hsl(var(--border) / 0.7);
+  padding: 0.15rem 0.4rem;
   border-radius: 0.25rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .tiptap pre {
-  background: hsl(var(--muted));
-  padding: 1rem;
-  border-radius: 0.5rem;
+  background: hsl(var(--foreground) / 0.04);
+  border: 1px solid hsl(var(--border));
+  padding: 1rem 1.25rem;
+  border-radius: 0.375rem;
   overflow-x: auto;
-  margin: 1rem 0;
+  margin: 1.25rem 0;
+  line-height: 1.6;
 }
 
 .tiptap pre code {
   background: transparent;
+  border: none;
   padding: 0;
+  font-size: 0.8125rem;
 }
 
 .tiptap blockquote {
@@ -824,13 +829,14 @@ body {
 
 /* Code block styles */
 .tiptap .code-block {
-  background: hsl(var(--muted));
-  border-radius: 0.5rem;
-  padding: 1rem;
+  background: hsl(var(--foreground) / 0.04);
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  padding: 1rem 1.25rem;
   font-family: var(--font-mono);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   overflow-x: auto;
-  margin: 1rem 0;
+  margin: 1.25rem 0;
 }
 
 /* KaTeX Math styles */
@@ -1153,28 +1159,33 @@ body {
   margin: 2rem 0;
 }
 
-/* 行内代码 */
+/* 行内代码 — subtle chip, visible against both bg and muted surfaces */
 .prose code {
-  background: hsl(var(--md-code-bg, var(--muted)));
+  background: hsl(var(--md-code-bg, var(--foreground)) / 0.06);
   color: hsl(var(--md-code, var(--foreground)));
-  padding: 0.2rem 0.4rem;
+  border: 1px solid hsl(var(--border) / 0.7);
+  padding: 0.15rem 0.4rem;
   border-radius: 0.25rem;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-family: var(--font-mono);
 }
 
-/* 代码块 */
+/* 代码块 — GitHub-style: distinct bg, thin border, generous padding */
 .prose pre {
-  background: hsl(var(--md-code-block-bg, var(--muted)));
-  padding: 1rem;
-  border-radius: 0.5rem;
+  background: hsl(var(--md-code-block-bg, var(--foreground)) / 0.04);
+  border: 1px solid hsl(var(--border));
+  padding: 1rem 1.25rem;
+  border-radius: 0.375rem;
   overflow-x: auto;
-  margin: 1rem 0;
+  margin: 1.25rem 0;
+  line-height: 1.6;
 }
 .prose pre code {
   background: transparent;
+  border: none;
   color: hsl(var(--md-code-block, var(--foreground)));
   padding: 0;
+  font-size: 0.8125rem;
 }
 
 /* 粗体和斜体 */
@@ -1630,13 +1641,13 @@ mark {
 
 .cm-code-block-widget pre {
   margin: 0;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   overflow-x: auto;
   font-family: var(--font-mono);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.6;
-  border-radius: 0.5rem;
-  background: hsl(var(--muted));
+  border-radius: 0.375rem;
+  background: hsl(var(--foreground) / 0.04);
   border: 1px solid hsl(var(--border));
 }
 
