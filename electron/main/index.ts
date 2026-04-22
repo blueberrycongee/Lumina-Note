@@ -1,3 +1,9 @@
+// MUST be first: sets XDG env vars so opencode's global/index.ts picks
+// an isolated base path instead of ~/.config/opencode / ~/.opencode.
+// Any import below that transitively loads virtual:opencode-server would
+// freeze the paths before we get a chance to redirect them.
+import "./agent-v2/opencode-xdg.js";
+
 import { app, BrowserWindow, Menu } from "electron";
 import path from "path";
 
