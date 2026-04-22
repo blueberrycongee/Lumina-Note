@@ -55,6 +55,7 @@ import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
 import {
+  Button,
   Popover,
   PopoverContent,
   PopoverEmpty,
@@ -1100,51 +1101,50 @@ export function MainAIChatShell() {
                   );
                 })()}
 
-              {/* 工具审批 */}
+              {/* Tool approval card */}
               {!isExportSelectionMode &&
                 pendingTool &&
                 agentStatus === "waiting_approval" && (
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
                     className="mb-5 max-w-[85%]"
                   >
-                    <div className="bg-warning/[0.06] backdrop-blur-sm border border-warning/20 rounded-2xl p-4 shadow-sm">
-                      <div className="flex items-center gap-2 text-warning mb-3">
-                        <div className="w-6 h-6 rounded-full bg-warning/15 flex items-center justify-center">
-                          <AlertCircle className="w-3.5 h-3.5" />
+                    <div className="rounded-ui-lg border border-border bg-popover shadow-elev-2 overflow-hidden">
+                      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-warning/15 text-warning">
+                          <AlertCircle className="h-3 w-3" />
                         </div>
-                        <span className="font-medium text-sm">
+                        <span className="text-sm font-medium text-foreground">
                           {t.ai.needApproval}
                         </span>
+                        <code className="ml-auto px-1.5 py-0.5 rounded-ui-sm border border-border bg-muted font-mono text-xs text-foreground">
+                          {pendingTool.name}
+                        </code>
                       </div>
-                      <div className="text-sm text-foreground mb-3">
-                        <p className="mb-2 text-muted-foreground text-xs">
-                          {t.ai.tool}:{" "}
-                          <code className="px-1.5 py-0.5 bg-foreground/[0.06] border border-border/40 rounded-md text-xs font-mono text-foreground">
-                            {pendingTool.name}
-                          </code>
-                        </p>
-                        <pre className="p-3 bg-foreground/[0.03] border border-border/30 rounded-xl text-xs overflow-x-auto max-h-36 font-mono leading-relaxed">
-                          {JSON.stringify(pendingTool.params, null, 2)}
-                        </pre>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
+                      <pre className="m-4 rounded-ui-md border border-border/60 bg-muted/60 px-3 py-2 font-mono text-xs leading-relaxed text-foreground max-h-36 overflow-x-auto">
+                        {JSON.stringify(pendingTool.params, null, 2)}
+                      </pre>
+                      <div className="flex gap-2 px-4 pb-4">
+                        <Button
+                          variant="primary"
+                          size="sm"
                           onClick={approve}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-success/90 hover:bg-success text-success-foreground text-xs font-medium rounded-xl transition-all duration-200 shadow-sm hover:shadow"
+                          className="gap-1.5"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="h-3.5 w-3.5" />
                           {t.ai.approve}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={reject}
-                          className="flex items-center gap-1.5 px-4 py-2 bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground text-xs font-medium rounded-xl transition-all duration-200"
+                          className="gap-1.5"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <X className="h-3.5 w-3.5" />
                           {t.ai.reject}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
