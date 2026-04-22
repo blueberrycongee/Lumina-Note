@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import {
@@ -8,9 +7,17 @@ import {
 } from "@/services/llm";
 import { invoke } from "@/lib/host";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
-import { Settings, Loader2, Check, X, Zap } from "lucide-react";
+import { Loader2, Check, X, Zap, Bot, Shield } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
+import {
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  Field,
+  SectionHeader,
+  Toggle,
+} from "@/components/ui";
 
 // 测试连接状态类型
 type TestStatus = "idle" | "testing" | "success" | "error";
@@ -141,9 +148,10 @@ export function AISettingsContent() {
     <div className="space-y-4 text-xs">
       {/* AI Provider Settings */}
       <div className="space-y-2">
-        <div className="text-xs font-medium text-foreground flex items-center gap-2">
-          <span>🤖 {t.aiSettings.mainModel}</span>
-        </div>
+        <SectionHeader
+          icon={<Bot size={14} />}
+          title={t.aiSettings.mainModel}
+        />
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.provider}</label>
           <select
@@ -323,30 +331,39 @@ export function AISettingsContent() {
       </div>
 
       {/* Agent 设置 */}
-      <div className="space-y-2 pt-3 border-t border-border/60">
-        <div className="text-xs font-medium text-foreground">🤖 {t.aiSettings.agentSettings}</div>
-        <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={autoApprove}
-            onChange={(e) => setAutoApprove(e.target.checked)}
-            className="w-3 h-3 rounded border-border/60"
-          />
-          {t.aiSettings.autoApproveTools}
-          <span className="text-muted-foreground">({t.aiSettings.noManualConfirm})</span>
-        </label>
-        <label className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
-          <input
-            type="checkbox"
-            checked={autoCompactEnabled}
-            onChange={(e) => setAutoCompactEnabled(e.target.checked)}
-            className="w-3 h-3 rounded border-border/60 mt-0.5"
-          />
-          <div className="flex flex-col gap-0.5">
-            <span>{t.aiSettings.autoCompactContext}</span>
-            <span className="text-[10px] text-muted-foreground">{t.aiSettings.autoCompactHint}</span>
-          </div>
-        </label>
+      <div className="space-y-3 pt-4 border-t border-border/60">
+        <SectionHeader
+          icon={<Shield size={14} />}
+          title={t.aiSettings.agentSettings}
+        />
+        <Field
+          label={t.aiSettings.autoApproveTools}
+          hint={t.aiSettings.noManualConfirm}
+          inline
+        >
+          {(id) => (
+            <Toggle
+              id={id}
+              checked={autoApprove}
+              onChange={setAutoApprove}
+              label={t.aiSettings.autoApproveTools}
+            />
+          )}
+        </Field>
+        <Field
+          label={t.aiSettings.autoCompactContext}
+          hint={t.aiSettings.autoCompactHint}
+          inline
+        >
+          {(id) => (
+            <Toggle
+              id={id}
+              checked={autoCompactEnabled}
+              onChange={setAutoCompactEnabled}
+              label={t.aiSettings.autoCompactContext}
+            />
+          )}
+        </Field>
       </div>
     </div>
   );
@@ -354,39 +371,12 @@ export function AISettingsContent() {
 
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { t } = useLocaleStore();
-
-  if (!isOpen) return null;
-
-  const modal = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* 背景遮罩 */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-spotlight-overlay"
-        onClick={onClose}
-      />
-
-      {/* 模态内容 */}
-      <div className="relative w-[520px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 flex flex-col animate-spotlight-in">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/60">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Settings size={16} />
-            <span>{t.aiSettings.title}</span>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
-            title={t.aiSettings.close}
-          >
-            {t.aiSettings.close}
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">
-          <AISettingsContent />
-        </div>
-      </div>
-    </div>
+  return (
+    <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()} width={520}>
+      <DialogHeader title={t.aiSettings.title} />
+      <DialogBody>
+        <AISettingsContent />
+      </DialogBody>
+    </Dialog>
   );
-
-  return typeof document !== "undefined" ? createPortal(modal, document.body) : modal;
 }
