@@ -551,6 +551,9 @@ const createEditorTheme = (fontSize: number) =>
       right: "6px",
       zIndex: "2",
     },
+    ".cm-lumina-codeblock-collapsed .cm-lumina-codeblock-copy-anchor": {
+      display: "none",
+    },
     ".cm-codeblock-widget code": {
       fontFamily: "'JetBrains Mono', monospace",
     },
@@ -569,6 +572,14 @@ const createEditorTheme = (fontSize: number) =>
         display: "inline-block",
         transform: "translateY(0.18em)",
       },
+    ".cm-codeblock-fence-hidden": {
+      fontSize: "0",
+      color: "transparent",
+    },
+    ".cm-lumina-codeblock-collapsed": {
+      paddingTop: "4px !important",
+      paddingBottom: "4px !important",
+    },
     ".cm-codeblock-source-toggle": {
       justifyContent: "flex-end",
       borderRadius: "8px 8px 0 0",
@@ -1420,6 +1431,16 @@ function addLiveCodeBlockSyntaxHighlight(
   }
 }
 
+function selectionTouchesRange(
+  state: EditorState,
+  from: number,
+  to: number,
+): boolean {
+  return state.selection.ranges.some(
+    (r) => r.from <= to && r.to >= from,
+  );
+}
+
 function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
   const decorations: Range<Decoration>[] = [];
 
@@ -1441,11 +1462,13 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
 
       const openLine = state.doc.lineAt(node.from);
       const closeLine = state.doc.lineAt(Math.max(node.from, node.to - 1));
+      const active = selectionTouchesRange(state, node.from, node.to);
+      const activeSuffix = active ? "" : " cm-lumina-codeblock-collapsed";
 
       decorations.push(
-        Decoration.line({ class: "cm-lumina-codeblock-open" }).range(
-          openLine.from,
-        ),
+        Decoration.line({
+          class: "cm-lumina-codeblock-open" + activeSuffix,
+        }).range(openLine.from),
       );
       decorations.push(
         Decoration.widget({
@@ -1466,15 +1489,22 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
         );
       }
       decorations.push(
-        Decoration.line({ class: "cm-lumina-codeblock-close" }).range(
-          closeLine.from,
-        ),
+        Decoration.line({
+          class: "cm-lumina-codeblock-close" + activeSuffix,
+        }).range(closeLine.from),
       );
+
+      const fenceCls = active
+        ? "cm-codeblock-fence"
+        : "cm-codeblock-fence cm-codeblock-fence-hidden";
+      const langCls = active
+        ? "cm-codeblock-lang"
+        : "cm-codeblock-lang cm-codeblock-fence-hidden";
 
       const openFenceEnd = codeInfo ? codeInfo.from : openLine.to;
       if (openFenceEnd > openLine.from) {
         decorations.push(
-          Decoration.mark({ class: "cm-codeblock-fence" }).range(
+          Decoration.mark({ class: fenceCls }).range(
             openLine.from,
             openFenceEnd,
           ),
@@ -1482,7 +1512,7 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
       }
       if (codeInfo && codeInfo.from < codeInfo.to) {
         decorations.push(
-          Decoration.mark({ class: "cm-codeblock-lang" }).range(
+          Decoration.mark({ class: langCls }).range(
             codeInfo.from,
             codeInfo.to,
           ),
@@ -1490,7 +1520,7 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
       }
       if (codeInfo && codeInfo.to < openLine.to) {
         decorations.push(
-          Decoration.mark({ class: "cm-codeblock-fence" }).range(
+          Decoration.mark({ class: fenceCls }).range(
             codeInfo.to,
             openLine.to,
           ),
@@ -1498,7 +1528,7 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
       }
       if (closeLine.to > closeLine.from) {
         decorations.push(
-          Decoration.mark({ class: "cm-codeblock-fence" }).range(
+          Decoration.mark({ class: fenceCls }).range(
             closeLine.from,
             closeLine.to,
           ),
@@ -1524,7 +1554,7 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
 const editableCodeBlockField = StateField.define<DecorationSet>({
   create: buildEditableCodeBlockDecorations,
   update(deco, tr) {
-    if (tr.docChanged || tr.reconfigured) {
+    if (tr.docChanged || tr.reconfigured || tr.selection) {
       return buildEditableCodeBlockDecorations(tr.state);
     }
     return deco;
