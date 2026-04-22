@@ -203,18 +203,10 @@ export function MainAIChatShell() {
       ? Math.max(0, Math.ceil((llmRetryState.nextRetryAt - retryNow) / 1000))
       : null;
 
-  // 转换 Rust Agent 消息格式以兼容 UI
-  const agentMessages = useMemo(() => {
-    return (
-      rustAgentMessages
-        // 过滤掉意图分析消息（只在调试面板显示）
-        .filter((msg) => !msg.content?.includes("🎯 意图分析"))
-        .map((msg) => ({
-          ...msg,
-          content: msg.content,
-        }))
-    );
-  }, [rustAgentMessages]);
+  const agentMessages = useMemo(
+    () => rustAgentMessages.map((msg) => ({ ...msg, content: msg.content })),
+    [rustAgentMessages],
+  );
 
   // AI store — config, text selections, and input appends (chat messages no longer used)
   const {

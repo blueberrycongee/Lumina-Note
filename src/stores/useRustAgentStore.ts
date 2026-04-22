@@ -1724,13 +1724,6 @@ export const useRustAgentStore = create<RustAgentState>()(
             break;
           }
 
-          // Orchestration events are now no-ops (backend owns these)
-          case "orchestration_updated":
-          case "plan_updated":
-          case "explore_updated":
-          case "verification_updated":
-          case "intent_analysis":
-            break;
         }
       },
 
