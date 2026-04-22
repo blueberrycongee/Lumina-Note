@@ -47,24 +47,62 @@ export default {
           foreground: "hsl(var(--info-foreground))",
         },
       },
+      fontFamily: {
+        sans: ["var(--font-sans)"],
+        mono: ["var(--font-mono)"],
+        display: ["var(--font-display)"],
+      },
       borderRadius: {
         "ui-sm": "var(--ui-radius-sm)",
         "ui-md": "var(--ui-radius-md)",
         "ui-lg": "var(--ui-radius-lg)",
+        "ui-xl": "var(--ui-radius-xl)",
       },
       boxShadow: {
-        "ui-card":
-          "0 1px 3px hsl(var(--foreground) / 0.06)",
-        "ui-float":
-          "0 4px 20px -4px hsl(var(--foreground) / 0.12)",
+        // New three-stop elevation (use these for new code)
+        "elev-1": "var(--elev-1)",
+        "elev-2": "var(--elev-2)",
+        "elev-3": "var(--elev-3)",
+        // Legacy aliases — kept so existing components don't break mid-migration
+        "ui-card": "var(--elev-1)",
+        "ui-float": "var(--elev-2)",
+      },
+      transitionDuration: {
+        fast: "var(--motion-fast)",
+        open: "var(--motion-open)",
+        exit: "var(--motion-exit)",
+        content: "var(--motion-content)",
+      },
+      transitionTimingFunction: {
+        spring: "var(--motion-ease-spring)",
+        "out-subtle": "var(--motion-ease-out)",
+        standard: "var(--motion-ease-standard)",
       },
       animation: {
+        // Fresh, token-aligned motion
+        "pop-in": "popIn var(--motion-open) var(--motion-ease-spring)",
+        "pop-out": "popOut var(--motion-exit) var(--motion-ease-out)",
+        "fade-in-sm":
+          "fadeInSm var(--motion-open) var(--motion-ease-standard)",
+        // Legacy aliases kept for unmigrated callers
         "fade-in": "fadeIn 0.2s ease-out",
         "slide-in": "slideIn 0.2s ease-out",
         "spotlight-overlay": "spotlightOverlay 0.18s ease-out",
         "spotlight-in": "spotlightIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
       },
       keyframes: {
+        popIn: {
+          "0%": { opacity: "0", transform: "translateY(4px) scale(0.98)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+        popOut: {
+          "0%": { opacity: "1", transform: "translateY(0) scale(1)" },
+          "100%": { opacity: "0", transform: "translateY(2px) scale(0.99)" },
+        },
+        fadeInSm: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
         fadeIn: {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },

@@ -46,72 +46,124 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 :root {
-  --background: 210 18% 97%; /* 中性暖白 */
-  --foreground: 215 20% 11%; /* 微暖黑 */
-  --muted: 210 14% 93%; /* 暖灰 */
-  --muted-foreground: 210 8% 42%; /* 暖灰文字 */
-  --accent: 210 12% 91%; /* 暖灰强调 */
-  --accent-foreground: 222 22% 18%;
-  --popover: var(--ui-panel);
-  --popover-foreground: var(--foreground);
-  --primary: 200 70% 45%; /* 柔和灰蓝 */
-  --primary-foreground: 220 24% 98%;
-  --border: 210 12% 83%; /* 暖边框 */
-  --md-heading: 200 50% 28%;
+  /* ── Neutral spine (near-monochrome, cool-tinted) ─────────────────────── */
+  --background: 220 16% 99%;          /* off-white, glare-reduced */
+  --foreground: 222 16% 11%;          /* near-black, cool */
+  --muted: 220 14% 96%;                /* subtle surface */
+  --muted-foreground: 220 9% 46%;      /* quiet, still readable */
+  --accent: 220 14% 93%;               /* hover surface (stronger than muted) */
+  --accent-foreground: 222 16% 11%;
+  --popover: 0 0% 100%;                /* pure white — popovers feel crisp */
+  --popover-foreground: 222 16% 11%;
+  --border: 220 13% 88%;               /* visible, precise */
+
+  /* ── Accent (one disciplined color) ────────────────────────────────────
+   * Indigo 234 89% 58% — same neighborhood as Linear/Vercel without being
+   * corporate-blue. Used for: active state, focus ring, selected rows,
+   * primary buttons, links. Never as a large fill.
+   */
+  --primary: 234 89% 58%;
+  --primary-foreground: 0 0% 100%;
+
+  /* ── Semantic (muted one notch — no neon) ──────────────────────────── */
+  --destructive: 0 72% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 145 55% 40%;
+  --success-foreground: 0 0% 100%;
+  --warning: 32 92% 48%;
+  --warning-foreground: 0 0% 100%;
+  --info: 217 85% 55%;
+  --info-foreground: 0 0% 100%;
+
+  --md-heading: 234 40% 22%;
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, "Noto Sans", "Inter", sans-serif;
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-display: var(--font-sans);
   --font-mono:
-    "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas,
+    "JetBrains Mono", "SF Mono", "Fira Code", "Menlo", Consolas,
     "Liberation Mono", monospace;
 
-  /* UI tokens (aliases + shape) */
+  /* ── Surfaces (three-tier depth) ───────────────────────────────────── */
   --ui-surface: var(--background);
   --ui-panel: var(--muted);
   --ui-panel-2: var(--accent);
-  --ui-radius-sm: 6px;
-  --ui-radius-md: 8px;
-  --ui-radius-lg: 12px;
 
-  /* 语义状态色 (fallback for non-themed contexts) */
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 100%;
-  --success: 142 71% 45%;
-  --success-foreground: 0 0% 100%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 100%;
-  --info: 217 91% 60%;
-  --info-foreground: 0 0% 100%;
+  /* ── Radii — tightened one notch (6/8/12 → 4/6/10) ────────────────── */
+  --ui-radius-sm: 4px;                 /* chips, kbd, tags */
+  --ui-radius-md: 6px;                 /* buttons, inputs, rows */
+  --ui-radius-lg: 10px;                /* cards, popovers */
+  --ui-radius-xl: 14px;                /* dialogs, welcome hero */
 
-  /* UI motion tokens (交互反馈统一) */
-  --ui-motion-feedback: 120ms;
-  --ui-motion-panel: 180ms;
-  --ui-motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --ui-motion-sidebar: 260ms;
-  --ui-motion-sidebar-content: 220ms;
-  --ui-motion-sidebar-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* ── Elevation (three stops — no stacking more) ────────────────────── */
+  --elev-1: 0 1px 2px 0 hsl(var(--foreground) / 0.04);
+  --elev-2:
+    0 2px 8px -2px hsl(var(--foreground) / 0.08),
+    0 1px 2px hsl(var(--foreground) / 0.04);
+  --elev-3:
+    0 8px 24px -8px hsl(var(--foreground) / 0.14),
+    0 2px 4px hsl(var(--foreground) / 0.06);
+
+  /* ── Motion ─────────────────────────────────────────────────────────
+   * Snappier than before. Keyboard selection stays unanimated (Linear rule).
+   * --motion-fast  = hover / state toggle
+   * --motion-open  = popover, tooltip, dropdown opening (spring easing)
+   * --motion-exit  = same things closing (flatter easing, 40% faster)
+   * --motion-content = content state changes (longer, subtler)
+   */
+  --motion-fast: 100ms;
+  --motion-open: 140ms;
+  --motion-exit: 100ms;
+  --motion-content: 200ms;
+  --motion-ease-spring: cubic-bezier(0.2, 0.9, 0.1, 1);
+  --motion-ease-out: cubic-bezier(0.2, 0, 0.4, 1);
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Legacy motion aliases (kept for callers not yet migrated) ────── */
+  --ui-motion-feedback: var(--motion-fast);
+  --ui-motion-panel: var(--motion-open);
+  --ui-motion-ease: var(--motion-ease-spring);
+  --ui-motion-sidebar: 220ms;
+  --ui-motion-sidebar-content: 180ms;
+  --ui-motion-sidebar-ease: var(--motion-ease-spring);
   --ui-sidebar-nudge: 12px;
 }
 
 .dark {
-  --background: 215 25% 10%; /* 暖深灰背景 */
-  --foreground: 210 16% 93%; /* 暖浅灰文字 */
-  --muted: 215 18% 16%; /* 暖深灰 */
-  --muted-foreground: 210 10% 56%;
-  --accent: 215 14% 19%;
-  --accent-foreground: 210 20% 96%;
-  --primary: 200 75% 55%; /* 柔和灰蓝 */
-  --primary-foreground: 222 30% 12%;
-  --border: 210 12% 27%; /* 暖边框 */
-  --md-heading: 200 40% 78%;
-  --destructive: 0 62% 60%;
+  --background: 222 20% 7%;            /* near-black, slight cool tint */
+  --foreground: 220 14% 95%;
+  --muted: 222 16% 12%;
+  --muted-foreground: 220 9% 58%;
+  --accent: 222 14% 16%;
+  --accent-foreground: 220 14% 95%;
+  --popover: 222 18% 10%;              /* lifted from bg */
+  --popover-foreground: 220 14% 95%;
+  --border: 220 13% 22%;
+
+  --primary: 234 85% 68%;              /* more luminous for dark bg */
+  --primary-foreground: 222 20% 7%;
+
+  --destructive: 0 65% 58%;
   --destructive-foreground: 0 0% 100%;
-  --success: 142 60% 55%;
+  --success: 145 50% 55%;
   --success-foreground: 0 0% 100%;
-  --warning: 38 80% 55%;
+  --warning: 32 85% 55%;
   --warning-foreground: 0 0% 100%;
   --info: 217 80% 65%;
   --info-foreground: 0 0% 100%;
+
+  --md-heading: 234 40% 80%;
+
+  /* Shadows in dark mode — slightly heavier because bg is dark */
+  --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
+  --elev-2:
+    0 2px 8px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  --elev-3:
+    0 8px 24px -8px rgba(0, 0, 0, 0.6),
+    0 2px 4px rgba(0, 0, 0, 0.35);
 }
 
 @layer base {
