@@ -58,11 +58,13 @@ body.resizing iframe[data-codex-iframe="true"] {
   --border: 220 13% 88%;               /* visible, precise */
 
   /* ── Accent (one disciplined color) ────────────────────────────────────
-   * Indigo 234 89% 58% — same neighborhood as Linear/Vercel without being
-   * corporate-blue. Used for: active state, focus ring, selected rows,
-   * primary buttons, links. Never as a large fill.
+   * Deep teal-emerald 165° — deliberately *not* the indigo/purple that
+   * every AI + productivity tool uses. Reads as craft, thought, library:
+   * calm-confident rather than tech-vibrant. Used only in small doses —
+   * focus rings, selected-row 2px bars, primary button fills, links.
+   * Never as a large fill.
    */
-  --primary: 234 89% 58%;
+  --primary: 165 45% 38%;
   --primary-foreground: 0 0% 100%;
 
   /* ── Semantic (muted one notch — no neon) ──────────────────────────── */
@@ -75,7 +77,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info: 217 85% 55%;
   --info-foreground: 0 0% 100%;
 
-  --md-heading: 234 40% 22%;
+  --md-heading: 165 30% 22%;
 
   /* ── Typography ─────────────────────────────────────────────────────── */
   --font-sans:
@@ -142,8 +144,8 @@ body.resizing iframe[data-codex-iframe="true"] {
   --popover-foreground: 220 14% 95%;
   --border: 220 13% 22%;
 
-  --primary: 234 85% 68%;              /* more luminous for dark bg */
-  --primary-foreground: 222 20% 7%;
+  --primary: 165 42% 56%;              /* lifted saturation + luminance for dark bg */
+  --primary-foreground: 165 30% 10%;
 
   --destructive: 0 65% 58%;
   --destructive-foreground: 0 0% 100%;
@@ -154,7 +156,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info: 217 80% 65%;
   --info-foreground: 0 0% 100%;
 
-  --md-heading: 234 40% 80%;
+  --md-heading: 165 30% 78%;
 
   /* Shadows in dark mode — slightly heavier because bg is dark */
   --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.35);

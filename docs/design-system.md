@@ -38,15 +38,26 @@ Use:
 
 ### Accent (one color, used sparingly)
 
-`--primary` is indigo (`234 89% 58%` light / `234 85% 68%` dark). Use for:
+`--primary` is a **deep teal-emerald** (`165 45% 38%` light / `165 42%
+56%` dark). Deliberately *not* the indigo / purple that every other AI
+and productivity tool is painted with — that's the "safe SaaS default",
+and we want Lumina to read as craft, thought, library rather than
+generic tech-modern. The hue is calm-confident (closer to Craft / Bear
+/ Things territory than to Linear / Vercel).
+
+Use for:
 - Active nav state, selected row border
 - Focus ring (always via `focus-visible`)
 - Primary button fill
 - Link underline
+- The assistant-avatar identity chip in the conversation
 
-Never as a large fill (no purple cards, no tinted header bars). A single
-8px-wide accent stripe on a selected row is more effective than a full-bleed
-tint.
+Never as a large fill (no tinted header bars, no big teal panels). A
+2px-wide accent stripe on a selected row carries more weight than a
+full-bleed tint; the color is load-bearing precisely because it's rare.
+
+If we ever decide the hue doesn't fit, **a single H/S/L change in
+`src/styles/globals.css`** swaps it everywhere.
 
 ### Semantic
 
