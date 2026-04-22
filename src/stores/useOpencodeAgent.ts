@@ -13,14 +13,11 @@
 // can migrate with minimal churn.
 
 import { create } from "zustand";
-import type {
-  Event,
-  Message,
-  Part,
-  Permission,
-} from "@opencode-ai/sdk/client";
+import type { Event, Message, Part } from "@opencode-ai/sdk/client";
 import type { MessageAttachment } from "@/services/llm";
 import {
+  getCachedServerInfo,
+  getDefaultDirectory,
   getOpencodeClient,
   resetOpencodeClient,
   setDefaultDirectory,
@@ -185,6 +182,60 @@ function mergePart(existing: Part[], incoming: Part): Part[] {
   return next;
 }
 
+/**
+ * POST /permission/:requestID/reply with the body shape the Hono route
+ * actually validates (`{reply: "once" | "always" | "reject"}`). The SDK
+ * client bundle at @opencode-ai/sdk/client doesn't expose any permission
+ * methods, and the deprecated session-scoped endpoint expects a different
+ * field name; doing a raw fetch avoids both mismatches.
+ *
+ * Runs against the cached server URL + basic-auth credentials we already
+ * resolved in client.ts. Includes x-opencode-directory so the instance
+ * middleware routes to the same opencode Instance the session lives in.
+ */
+async function replyPermission(
+  requestId: string | undefined,
+  reply: "once" | "always" | "reject",
+  set: (
+    patch:
+      | Partial<OpencodeAgentStore>
+      | ((s: OpencodeAgentStore) => Partial<OpencodeAgentStore>),
+  ) => void,
+): Promise<void> {
+  if (!requestId) return;
+  const info = getCachedServerInfo();
+  if (!info) return;
+  const directory = getDefaultDirectory();
+  try {
+    const res = await fetch(
+      `${info.url}/permission/${encodeURIComponent(requestId)}/reply`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization:
+            "Basic " + btoa(`${info.username}:${info.password}`),
+          ...(directory ? { "x-opencode-directory": directory } : {}),
+        },
+        body: JSON.stringify({ reply }),
+      },
+    );
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(
+        `permission reply failed: HTTP ${res.status} ${body.slice(0, 200)}`,
+      );
+    }
+    // Optimistically clear pending + resume running; the server will also
+    // fire `permission.replied` which matches this requestID and the
+    // handler no-ops.
+    set({ pendingTool: null, status: "running" });
+  } catch (err) {
+    console.error("[opencode] permission reply failed", err);
+    set({ error: String(err) });
+  }
+}
+
 function sessionSummary(info: {
   id: string;
   title: string;
@@ -305,21 +356,44 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     });
   };
 
-  const applyPermission = (permission: Permission | null) => {
-    if (!permission) {
+  // Shape per EventPermissionAsked in the opencode SDK — but @opencode-ai/sdk/
+  // client's bundled types are older and don't expose PermissionRequest, so
+  // we describe it inline.
+  type PermissionAsked = {
+    id: string;
+    sessionID: string;
+    permission: string; // "bash" | "external_directory" | "edit" | ...
+    patterns: string[];
+    always: string[];
+    metadata?: Record<string, unknown>;
+    tool?: { messageID: string; callID: string };
+  };
+  const applyPermission = (ask: PermissionAsked | null) => {
+    if (!ask) {
       set({ pendingTool: null, status: "running" });
       return;
     }
-    const params =
-      (permission.metadata as Record<string, unknown> | undefined) ?? {};
+    // Surface both the permission type and the first pattern as the tool
+    // "name" so the approval card tells the user what's actually being
+    // asked (bash "rm -rf /tmp/x", external_directory "/Users/...", etc.).
+    // Patterns + metadata become the params pane of the approval card.
+    const firstPattern = ask.patterns[0] ?? "";
+    const displayName = firstPattern
+      ? `${ask.permission}: ${firstPattern}`
+      : ask.permission;
     set({
       pendingTool: {
         tool: {
-          id: permission.id,
-          name: permission.type ?? "tool",
-          params,
+          id: ask.id,
+          name: displayName,
+          params: {
+            permission: ask.permission,
+            patterns: ask.patterns,
+            always: ask.always,
+            ...(ask.metadata ?? {}),
+          },
         },
-        requestId: permission.id,
+        requestId: ask.id,
       },
       status: "waiting_approval",
     });
@@ -460,19 +534,47 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         applyPartRemove(sessionID, messageID, partID);
         return;
       }
-      case "permission.updated": {
-        if (event.properties.sessionID !== get().currentSessionId) return;
-        applyPermission(event.properties);
-        return;
-      }
-      case "permission.replied": {
-        if (event.properties.sessionID !== get().currentSessionId) return;
-        set({ pendingTool: null });
-        return;
-      }
       default:
-        return;
+        // Opencode's actual permission events are `permission.asked` and
+        // `permission.replied` — not the `permission.updated` the
+        // @opencode-ai/sdk/client types snapshot used to suggest. Handle
+        // them under the fallthrough with widened casts; otherwise the
+        // bash / external_directory ask never surfaces in the UI and the
+        // server blocks forever on an unresolved Deferred.
+        break;
     }
+    const eventType = (event as { type: string }).type;
+    if (eventType === "permission.asked") {
+      const props = (event as unknown as { properties: PermissionAsked })
+        .properties;
+      if (
+        props.sessionID &&
+        props.sessionID !== get().currentSessionId
+      ) {
+        return;
+      }
+      applyPermission(props);
+      return;
+    }
+    if (eventType === "permission.replied") {
+      const props = (event as unknown as {
+        properties: { sessionID?: string; requestID?: string };
+      }).properties;
+      if (
+        props.sessionID &&
+        props.sessionID !== get().currentSessionId
+      ) {
+        return;
+      }
+      set((state) => {
+        if (props.requestID && state.pendingTool?.requestId !== props.requestID) {
+          return state;
+        }
+        return { pendingTool: null };
+      });
+      return;
+    }
+    return;
   };
 
   return {
@@ -697,55 +799,11 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     },
 
     async approveTool() {
-      const pending = get().pendingTool;
-      if (!pending) return;
-      try {
-        const client = await getOpencodeClient();
-        const sessionId = get().currentSessionId;
-        if (!sessionId) return;
-        // SDK method name: session.permission.reply or similar — fall through
-        // to a raw fetch if the SDK doesn't expose it at this version.
-        const raw = client as unknown as {
-          permission?: {
-            respond?: (opts: {
-              path: { id: string; permissionID: string };
-              body: { response: "accept" | "reject" };
-            }) => Promise<unknown>;
-          };
-        };
-        await raw.permission?.respond?.({
-          path: { id: sessionId, permissionID: pending.requestId },
-          body: { response: "accept" },
-        });
-        set({ pendingTool: null, status: "running" });
-      } catch (err) {
-        set({ error: String(err) });
-      }
+      await replyPermission(get().pendingTool?.requestId, "once", set);
     },
 
     async rejectTool() {
-      const pending = get().pendingTool;
-      if (!pending) return;
-      try {
-        const client = await getOpencodeClient();
-        const sessionId = get().currentSessionId;
-        if (!sessionId) return;
-        const raw = client as unknown as {
-          permission?: {
-            respond?: (opts: {
-              path: { id: string; permissionID: string };
-              body: { response: "reject" };
-            }) => Promise<unknown>;
-          };
-        };
-        await raw.permission?.respond?.({
-          path: { id: sessionId, permissionID: pending.requestId },
-          body: { response: "reject" },
-        });
-        set({ pendingTool: null, status: "running" });
-      } catch (err) {
-        set({ error: String(err) });
-      }
+      await replyPermission(get().pendingTool?.requestId, "reject", set);
     },
 
     retryTimeout() {
