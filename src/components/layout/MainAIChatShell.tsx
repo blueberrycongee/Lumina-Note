@@ -1489,14 +1489,17 @@ export function MainAIChatShell() {
                   <button
                     ref={plusButtonRef}
                     onClick={() => setShowPlusMenu(!showPlusMenu)}
-                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-colors ${
+                    className={[
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                      "transition-colors duration-fast ease-out-subtle",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
                       showPlusMenu
-                        ? "bg-foreground/10 text-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                        ? "bg-accent text-foreground"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    ].join(" ")}
                     title={"More"}
                   >
-                    <Plus size={18} />
+                    <Plus size={17} />
                   </button>
 
                   {/* Textarea */}
@@ -1516,14 +1519,17 @@ export function MainAIChatShell() {
                   {/* Mic button */}
                   <button
                     onClick={toggleRecording}
-                    className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
+                    className={[
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                      "transition-colors duration-fast ease-out-subtle",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
                       isRecording
-                        ? "bg-destructive/20 text-destructive"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                        ? "bg-destructive/15 text-destructive hover:bg-destructive/20"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    ].join(" ")}
                     title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
                   >
-                    {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                    {isRecording ? <MicOff size={15} /> : <Mic size={15} />}
                   </button>
 
                   {/* Send / Stop button */}
@@ -1558,18 +1564,21 @@ export function MainAIChatShell() {
                               ? t.ai.stop
                               : t.ai.send
                         }
-                        className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-all duration-200 ${
+                        className={[
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                          "transition-[background-color,box-shadow,opacity] duration-fast ease-out-subtle",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
                           stopCurrent
-                            ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            ? "bg-destructive text-destructive-foreground shadow-elev-1 hover:bg-destructive/90"
                             : hasPayload
-                              ? "bg-foreground text-background hover:opacity-80 shadow-md"
-                              : "bg-muted text-muted-foreground cursor-not-allowed"
-                        }`}
+                              ? "bg-primary text-primary-foreground shadow-elev-1 hover:bg-primary/90"
+                              : "bg-muted text-muted-foreground cursor-not-allowed",
+                        ].join(" ")}
                       >
                         {stopCurrent ? (
-                          <Square size={12} fill="currentColor" />
+                          <Square size={11} fill="currentColor" />
                         ) : (
-                          <ArrowUp size={16} strokeWidth={3} />
+                          <ArrowUp size={15} strokeWidth={2.5} />
                         )}
                       </button>
                     );
