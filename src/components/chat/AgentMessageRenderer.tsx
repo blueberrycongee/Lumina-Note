@@ -681,8 +681,15 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
   return (
     <div className={className}>
+      <AnimatePresence initial={false}>
       {rounds.map((round) => (
-        <div key={round.roundKey}>
+        <motion.div
+          key={round.roundKey}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: [0.2, 0.9, 0.1, 1] }}
+          layout="position"
+        >
           {/* 用户消息 */}
           <div className="flex justify-end mb-4">
             <div className="max-w-[80%] bg-muted text-foreground rounded-2xl rounded-tr-sm px-4 py-2.5">
@@ -766,8 +773,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
       ))}
+      </AnimatePresence>
 
       {/* 超时提示 */}
       {isRunning && isLongRunning && onRetryTimeout && (

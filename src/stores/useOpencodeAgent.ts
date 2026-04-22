@@ -313,6 +313,25 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       }
       case "message.updated": {
         const info = event.properties.info;
+        // A real user message arriving means we can drop our optimistic
+        // stand-in. Server-assigned ids don't start with "optimistic-".
+        if (info.role === "user") {
+          set((state) => {
+            if (state.currentSessionId && info.sessionID !== state.currentSessionId)
+              return state;
+            const cleaned = state.messages.filter(
+              (m) => !m.id.startsWith("optimistic-"),
+            );
+            const idx = cleaned.findIndex((m) => m.id === info.id);
+            const existingParts = idx >= 0 ? cleaned[idx].rawParts : [];
+            const merged = makeAgentMessage(info, existingParts);
+            const next = cleaned.slice();
+            if (idx === -1) next.push(merged);
+            else next[idx] = merged;
+            return { messages: next };
+          });
+          return;
+        }
         const existing = get().messages.find((m) => m.id === info.id);
         upsertMessage(info, existing?.rawParts ?? []);
         return;
@@ -488,6 +507,25 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           sessionId = await get().newSession();
           if (!sessionId) throw new Error("failed to create session");
         }
+
+        // Optimistic user message — appears *instantly* so the user sees
+        // their prompt on screen before the HTTP round-trip + SSE event
+        // loop completes (normally 100-500ms). The synthetic id is
+        // dedup'd in handleEvent() when the real user message.updated
+        // event arrives for this session.
+        const optimisticId = `optimistic-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        set((state) => ({
+          messages: [
+            ...state.messages,
+            {
+              id: optimisticId,
+              role: "user" as const,
+              content: task,
+              rawParts: [],
+            },
+          ],
+        }));
+
         const client = await getOpencodeClient();
         // promptAsync returns as soon as the HTTP request is accepted;
         // the actual response tokens arrive over the SSE stream.
@@ -502,7 +540,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           throwOnError: true,
         });
       } catch (err) {
-        set({ status: "error", error: String(err) });
+        // Drop any optimistic entry on failure so the UI doesn't show a
+        // phantom user message.
+        set((state) => ({
+          status: "error",
+          error: String(err),
+          messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
+        }));
       }
     },
 
