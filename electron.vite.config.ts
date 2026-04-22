@@ -11,6 +11,14 @@ const OPENCODE_SERVER_DIST = path.resolve(
 
 export default defineConfig({
   main: {
+    resolve: {
+      alias: {
+        '@lydell/node-pty': path.resolve(
+          __dirname,
+          'electron/main/vendor/opencode-node-pty.ts',
+        ),
+      },
+    },
     build: {
       externalizeDeps: { include: ['electron'] },
       rollupOptions: {
