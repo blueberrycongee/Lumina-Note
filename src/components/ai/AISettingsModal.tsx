@@ -16,6 +16,7 @@ import {
   DialogHeader,
   Field,
   SectionHeader,
+  TextInput,
   Toggle,
 } from "@/components/ui";
 
@@ -145,178 +146,237 @@ export function AISettingsContent() {
   }, [config.provider, config.apiKey, config.model, config.baseUrl]);
 
   return (
-    <div className="space-y-4 text-xs">
+    <div className="space-y-6">
       {/* AI Provider Settings */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         <SectionHeader
           icon={<Bot size={14} />}
           title={t.aiSettings.mainModel}
         />
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.provider}</label>
-          <select
-            value={config.provider}
-            onChange={(e) => {
-              const provider = e.target.value as LLMProviderType;
-              const defaultModel = getDefaultModelForProvider(provider);
-              setConfig({
-                provider,
-                model: defaultModel,
-                customModelId: defaultModel === "custom" ? "" : undefined,
-                baseUrl: PROVIDER_MODELS[provider]?.defaultBaseUrl,
-                temperature: getRecommendedTemperature(provider, defaultModel),
-              });
-            }}
-            className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-          >
-            {Object.entries(PROVIDER_MODELS).map(([key, meta]) => (
-              <option key={key} value={key}>
-                {meta.label} - {meta.description}
-              </option>
-            ))}
-          </select>
-        </div>
 
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">
-            {t.aiSettings.apiKey} {(config.provider === "ollama" || config.provider === "openai-compatible") && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              value={config.apiKey}
-              onChange={(e) => setConfig({ apiKey: e.target.value })}
-              placeholder={
-                config.provider === "ollama"
-                  ? t.aiSettings.localModelNoKey
-                  : config.provider === "anthropic"
-                    ? "sk-ant-..."
-                    : config.provider === "openai-compatible"
-                      ? t.aiSettings.apiKeyOptional
-                      : "sk-..."
-              }
-              className="flex-1 text-xs p-2 rounded border border-border/60 bg-background"
-            />
-            <button
-              onClick={testConnection}
-              disabled={testResult.status === "testing"}
-              className={`px-3 py-2 text-xs rounded border transition-all flex items-center gap-1.5 min-w-[90px] justify-center ${
-                testResult.status === "success"
-                  ? "border-success/50 bg-success/10 text-success"
-                  : testResult.status === "error"
-                    ? "border-destructive/50 bg-destructive/10 text-destructive"
-                    : "border-border/60 hover:bg-muted"
-              }`}
-                  title={t.aiSettings.testButton}
+        <Field label={t.aiSettings.provider}>
+          {(id) => (
+            <select
+              id={id}
+              value={config.provider}
+              onChange={(e) => {
+                const provider = e.target.value as LLMProviderType;
+                const defaultModel = getDefaultModelForProvider(provider);
+                setConfig({
+                  provider,
+                  model: defaultModel,
+                  customModelId: defaultModel === "custom" ? "" : undefined,
+                  baseUrl: PROVIDER_MODELS[provider]?.defaultBaseUrl,
+                  temperature: getRecommendedTemperature(provider, defaultModel),
+                });
+              }}
+              className="w-full rounded-ui-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/30"
             >
-              {testResult.status === "testing" ? (
-                <>
-                  <Loader2 size={12} className="animate-spin" />
-                  {t.aiSettings.testing}
-                </>
-              ) : testResult.status === "success" ? (
-                <>
-                  <Check size={12} />
-                  {testResult.latency ? `${(testResult.latency / 1000).toFixed(1)}s` : t.aiSettings.testSuccessShort}
-                </>
-              ) : testResult.status === "error" ? (
-                <>
-                  <X size={12} />
-                  {t.aiSettings.testFailed}
-                </>
-              ) : (
-                <>
-                  <Zap size={12} />
-                  {t.aiSettings.testButton}
-                </>
+              {Object.entries(PROVIDER_MODELS).map(([key, meta]) => (
+                <option key={key} value={key}>
+                  {meta.label} — {meta.description}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+
+        <Field
+          label={
+            <span className="flex items-center gap-1.5">
+              {t.aiSettings.apiKey}
+              {(config.provider === "ollama" ||
+                config.provider === "openai-compatible") && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  ({t.aiSettings.apiKeyOptional})
+                </span>
               )}
-            </button>
-          </div>
-          {/* 测试结果详情 */}
-          {testResult.status === "error" && testResult.message && (
-            <div className="mt-1.5 text-xs text-destructive bg-destructive/10 rounded px-2 py-1.5 flex items-start gap-1.5">
-              <X size={12} className="shrink-0 mt-0.5" />
-              <span>{testResult.message}</span>
+            </span>
+          }
+        >
+          {(id) => (
+            <div className="space-y-1.5">
+              <div className="flex gap-2">
+                <TextInput
+                  id={id}
+                  type="password"
+                  value={config.apiKey}
+                  onChange={(e) => setConfig({ apiKey: e.target.value })}
+                  placeholder={
+                    config.provider === "ollama"
+                      ? t.aiSettings.localModelNoKey
+                      : config.provider === "anthropic"
+                        ? "sk-ant-..."
+                        : config.provider === "openai-compatible"
+                          ? t.aiSettings.apiKeyOptional
+                          : "sk-..."
+                  }
+                />
+                <button
+                  onClick={testConnection}
+                  disabled={testResult.status === "testing"}
+                  className={[
+                    "flex min-w-[90px] items-center justify-center gap-1.5 rounded-ui-md border px-3 text-sm",
+                    "transition-colors duration-fast ease-out-subtle",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    testResult.status === "success"
+                      ? "border-success/50 bg-success/10 text-success"
+                      : testResult.status === "error"
+                        ? "border-destructive/50 bg-destructive/10 text-destructive"
+                        : "border-border text-foreground hover:bg-accent",
+                  ].join(" ")}
+                  title={t.aiSettings.testButton}
+                >
+                  {testResult.status === "testing" ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      {t.aiSettings.testing}
+                    </>
+                  ) : testResult.status === "success" ? (
+                    <>
+                      <Check size={13} />
+                      {testResult.latency
+                        ? `${(testResult.latency / 1000).toFixed(1)}s`
+                        : t.aiSettings.testSuccessShort}
+                    </>
+                  ) : testResult.status === "error" ? (
+                    <>
+                      <X size={13} />
+                      {t.aiSettings.testFailed}
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={13} />
+                      {t.aiSettings.testButton}
+                    </>
+                  )}
+                </button>
+              </div>
+              {testResult.status === "error" && testResult.message && (
+                <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+                  <X size={12} className="mt-0.5 shrink-0" />
+                  <span>{testResult.message}</span>
+                </div>
+              )}
+              {testResult.status === "success" && (
+                <div className="flex items-center gap-1.5 rounded-ui-sm bg-success/10 px-2 py-1.5 text-xs text-success">
+                  <Check size={12} />
+                  <span>{t.aiSettings.testSuccessDetail}</span>
+                </div>
+              )}
             </div>
           )}
-          {testResult.status === "success" && (
-            <div className="mt-1.5 text-xs text-success bg-success/10 rounded px-2 py-1.5 flex items-center gap-1.5">
-              <Check size={12} />
-              <span>{t.aiSettings.testSuccessDetail}</span>
-            </div>
-          )}
-        </div>
+        </Field>
 
         {config.provider !== "openai-compatible" && (
-        <div>
-          <div className="flex items-center gap-1 mb-1">
-            <label className="text-xs text-muted-foreground">{t.aiSettings.model}</label>
-            {mainModelMeta?.supportsThinking && <ThinkingModelIcon />}
-          </div>
-          <select
-            value={
-              PROVIDER_MODELS[config.provider as LLMProviderType]?.models.some(m => m.id === config.model)
-                ? config.model
-                : "custom"
+          <Field
+            label={
+              <span className="flex items-center gap-1.5">
+                {t.aiSettings.model}
+                {mainModelMeta?.supportsThinking && <ThinkingModelIcon />}
+              </span>
             }
-            onChange={(e) => {
-              const newModel = e.target.value;
-              if (newModel === "custom") {
-                setConfig({
-                  model: newModel,
-                  customModelId: "",
-                  temperature: getRecommendedTemperature(config.provider as LLMProviderType, "custom"),
-                });
-              } else {
-                setConfig({
-                  model: newModel,
-                  temperature: getRecommendedTemperature(config.provider as LLMProviderType, newModel),
-                });
-              }
-            }}
-            className="w-full text-xs p-2 rounded border border-border/60 bg-background"
           >
-            {PROVIDER_MODELS[config.provider as LLMProviderType]?.models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {formatModelOptionLabel(model)}
-              </option>
-            ))}
-          </select>
-        </div>
+            {(id) => (
+              <select
+                id={id}
+                value={
+                  PROVIDER_MODELS[config.provider as LLMProviderType]?.models.some(
+                    (m) => m.id === config.model,
+                  )
+                    ? config.model
+                    : "custom"
+                }
+                onChange={(e) => {
+                  const newModel = e.target.value;
+                  if (newModel === "custom") {
+                    setConfig({
+                      model: newModel,
+                      customModelId: "",
+                      temperature: getRecommendedTemperature(
+                        config.provider as LLMProviderType,
+                        "custom",
+                      ),
+                    });
+                  } else {
+                    setConfig({
+                      model: newModel,
+                      temperature: getRecommendedTemperature(
+                        config.provider as LLMProviderType,
+                        newModel,
+                      ),
+                    });
+                  }
+                }}
+                className="w-full rounded-ui-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/30"
+              >
+                {PROVIDER_MODELS[config.provider as LLMProviderType]?.models.map(
+                  (model) => (
+                    <option key={model.id} value={model.id}>
+                      {formatModelOptionLabel(model)}
+                    </option>
+                  ),
+                )}
+              </select>
+            )}
+          </Field>
         )}
 
-        {(config.model === "custom" || config.provider === "openai-compatible") && (
-          <div>
-            <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.customModelId}</label>
-            <input
-              type="text"
-              value={config.customModelId || ""}
-              onChange={(e) => setConfig({ customModelId: e.target.value })}
-              placeholder={t.aiSettings.customModelHint}
-              className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-            />
-          </div>
+        {(config.model === "custom" ||
+          config.provider === "openai-compatible") && (
+          <Field label={t.aiSettings.customModelId}>
+            {(id) => (
+              <TextInput
+                id={id}
+                type="text"
+                value={config.customModelId || ""}
+                onChange={(e) => setConfig({ customModelId: e.target.value })}
+                placeholder={t.aiSettings.customModelHint}
+              />
+            )}
+          </Field>
         )}
 
-        {(config.model === "custom" || config.provider === "openai-compatible") && (
-          <div>
-            <label className="text-xs text-muted-foreground block mb-1">
-              {t.aiSettings.baseUrl} {config.provider !== "openai-compatible" && <span className="text-muted-foreground">({t.aiSettings.baseUrlOptional})</span>}
+        {(config.model === "custom" ||
+          config.provider === "openai-compatible") && (
+          <Field
+            label={
+              <span className="flex items-center gap-1.5">
+                {t.aiSettings.baseUrl}
+                {config.provider !== "openai-compatible" && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({t.aiSettings.baseUrlOptional})
+                  </span>
+                )}
+              </span>
+            }
+          >
+            {(id) => (
+              <TextInput
+                id={id}
+                type="text"
+                value={config.baseUrl || ""}
+                onChange={(e) =>
+                  setConfig({ baseUrl: e.target.value || undefined })
+                }
+                placeholder={
+                  PROVIDER_MODELS[config.provider as LLMProviderType]
+                    ?.defaultBaseUrl || "https://api.example.com/v1"
+                }
+              />
+            )}
+          </Field>
+        )}
+
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-foreground">
+              {t.aiSettings.temperature}
             </label>
-            <input
-              type="text"
-              value={config.baseUrl || ""}
-              onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
-              placeholder={PROVIDER_MODELS[config.provider as LLMProviderType]?.defaultBaseUrl || "https://api.example.com/v1"}
-              className="w-full text-xs p-2 rounded border border-border/60 bg-background"
-            />
-          </div>
-        )}
-
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-xs text-muted-foreground">{t.aiSettings.temperature}</label>
-            <span className="text-xs text-muted-foreground">{displayTemperature.toFixed(1)}</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {displayTemperature.toFixed(1)}
+            </span>
           </div>
           <input
             type="range"
@@ -325,7 +385,7 @@ export function AISettingsContent() {
             step="0.1"
             value={displayTemperature}
             onChange={(e) => setConfig({ temperature: parseFloat(e.target.value) })}
-            className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+            className="h-1 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
           />
         </div>
       </div>

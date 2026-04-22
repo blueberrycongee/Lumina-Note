@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Sparkles, RefreshCcw, X } from "lucide-react";
+import { Sparkles, RefreshCcw } from "lucide-react";
 import { listAgentSkills } from "@/lib/host";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import {
+  Dialog,
+  DialogBody,
+  DialogHeader,
+  SectionHeader,
+} from "@/components/ui";
 import type { SkillInfo } from "@/types/skills";
 
 interface SkillManagerModalProps {
@@ -26,7 +32,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
       builtin: t.ai.skillsManagerSourceBuiltin,
       unknown: t.ai.skillsManagerSourceUnknown,
     }),
-    [t]
+    [t],
   );
 
   const grouped = useMemo(() => {
@@ -61,84 +67,82 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
     }
   }, [isOpen, loadSkills]);
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-spotlight-overlay" onClick={onClose} aria-hidden="true" />
-      <div className="relative w-[560px] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 flex flex-col animate-spotlight-in">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/60">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Sparkles size={16} />
-            <span>{t.ai.skillsManagerTitle}</span>
+    <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()} width={560}>
+      <DialogHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Sparkles size={16} className="text-muted-foreground" />
+            {t.ai.skillsManagerTitle}
+          </span>
+        }
+        description={t.ai.skillsManagerDesc}
+        badge={
+          <button
+            onClick={loadSkills}
+            disabled={loading}
+            className="flex items-center gap-1.5 rounded-ui-sm px-2 h-7 text-xs text-muted-foreground transition-colors duration-fast ease-out-subtle hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover disabled:opacity-50"
+            title={t.ai.skillsManagerRefresh}
+          >
+            <RefreshCcw size={12} className={loading ? "animate-spin" : ""} />
+            {loading ? t.ai.skillsManagerLoading : t.ai.skillsManagerRefresh}
+          </button>
+        }
+      />
+      <DialogBody>
+        {error && (
+          <div className="mb-4 rounded-ui-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {error}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadSkills}
-              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors flex items-center gap-1"
-              disabled={loading}
-              title={t.ai.skillsManagerRefresh}
-            >
-              <RefreshCcw size={12} className={loading ? "animate-spin" : ""} />
-              {loading ? t.ai.skillsManagerLoading : t.ai.skillsManagerRefresh}
-            </button>
-            <button
-              onClick={onClose}
-              className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors flex items-center gap-1"
-              aria-label={t.common.close}
-              title={t.ai.skillsManagerClose}
-            >
-              <X size={12} />
-              {t.ai.skillsManagerClose}
-            </button>
+        )}
+
+        {!loading && skills.length === 0 && !error && (
+          <div className="py-10 text-center text-sm text-muted-foreground">
+            {t.ai.skillsManagerEmpty}
           </div>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
-          <div className="text-xs text-muted-foreground">{t.ai.skillsManagerDesc}</div>
-
-          {error && (
-            <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-2">
-              {error}
-            </div>
-          )}
-
-          {!loading && skills.length === 0 && !error && (
-            <div className="text-xs text-muted-foreground text-center py-6">
-              {t.ai.skillsManagerEmpty}
-            </div>
-          )}
-
+        <div className="space-y-6">
           {SOURCE_ORDER.map((source) => {
             const items = grouped[source];
             if (!items || items.length === 0) return null;
             return (
               <div key={source} className="space-y-2">
-                <div className="flex items-center justify-between text-xs font-medium text-foreground">
-                  <span>{sourceLabels[source as keyof typeof sourceLabels] ?? source}</span>
-                  <span className="text-muted-foreground">{items.length}</span>
-                </div>
+                <SectionHeader
+                  title={
+                    sourceLabels[source as keyof typeof sourceLabels] ?? source
+                  }
+                  action={
+                    <span className="text-xs text-muted-foreground">
+                      {items.length}
+                    </span>
+                  }
+                />
                 <div className="space-y-2">
                   {items.map((skill) => (
                     <div
                       key={`${skill.source ?? "skill"}:${skill.name}`}
-                      className="border border-border/60 rounded-lg p-3 bg-background/60"
+                      className="rounded-ui-md border border-border bg-muted/30 p-3 transition-colors duration-fast ease-out-subtle hover:border-border hover:bg-muted/60"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium text-foreground">{skill.title}</div>
-                        <div className="text-xs text-muted-foreground">{skill.name}</div>
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div className="text-sm font-medium text-foreground">
+                          {skill.title}
+                        </div>
+                        <code className="shrink-0 font-mono text-xs text-muted-foreground">
+                          {skill.name}
+                        </code>
                       </div>
                       {skill.description && (
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {skill.description}
-                        </div>
+                        </p>
                       )}
                       {skill.tags && skill.tags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1">
                           {skill.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="px-1.5 py-0.5 rounded bg-muted text-xs text-muted-foreground"
+                              className="rounded-ui-sm border border-border/60 bg-background px-1.5 py-0.5 text-[11px] text-muted-foreground"
                             >
                               {tag}
                             </span>
@@ -152,7 +156,7 @@ export function SkillManagerModal({ isOpen, onClose }: SkillManagerModalProps) {
             );
           })}
         </div>
-      </div>
-    </div>
+      </DialogBody>
+    </Dialog>
   );
 }
