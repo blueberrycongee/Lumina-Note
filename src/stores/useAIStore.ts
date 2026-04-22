@@ -498,7 +498,6 @@ export const useAIStore = create<AIState>()(
               modelMessages,
               filesToSend,
               buildConfigOverrideForPurpose(config, "chat"),
-              { intent: "chat" }
             );
           } catch (chatError) {
             throw chatError;

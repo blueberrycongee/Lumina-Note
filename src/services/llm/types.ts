@@ -65,16 +65,6 @@ export type LLMProviderType =
 
 
 
-// ============ 意图识别 ============
-
-export type IntentType = "chat" | "search" | "edit" | "create" | "organize" | "flashcard" | "complex";
-
-export interface Intent {
-  type: IntentType;
-  confidence: number;
-  reasoning: string;
-}
-
 // ============ LLM 配置 ============
 
 export interface LLMConfig {

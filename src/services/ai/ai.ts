@@ -5,13 +5,12 @@
  * 此文件保留业务逻辑（文件引用解析、编辑建议等）
  */
 
-import { 
-  callLLM, 
-  setLLMConfig, 
+import {
+  callLLM,
+  setLLMConfig,
   getLLMConfig,
   type Message,
   type LLMConfig,
-  type IntentType,
 } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
@@ -59,40 +58,13 @@ export function parseFileReferences(message: string): string[] {
   return matches;
 }
 
-// Build system prompt for file editing
-function buildSystemPrompt(files: FileReference[], intent?: IntentType): string {
+// Build system prompt for file editing. Single coding-agent prompt path —
+// chat/flashcard/etc. intent branches were removed when we aligned with
+// opencode's coding-agent model.
+function buildSystemPrompt(files: FileReference[]): string {
   const t = getCurrentTranslations();
-  const chatPrompt = t.prompts.chat;
   const editPrompt = t.prompts.edit;
-  const routerPrompt = t.prompts.router;
-  
-  // 如果是闲聊意图，使用极简 Prompt
-  if (intent === "chat") {
-    let prompt = chatPrompt.system;
-    if (files.length > 0) {
-      prompt += `\n\n${chatPrompt.contextFiles}\n`;
-      for (const file of files) {
-        prompt += `\n=== ${file.name} ===\n${file.content || chatPrompt.emptyFile}\n`;
-      }
-    }
-    return prompt;
-  }
 
-  // 闪卡意图：使用编辑能力并显式注入路由语义，避免意图漂移
-  if (intent === "flashcard") {
-    let prompt = `${editPrompt.system}\n\n${routerPrompt.system}\n\nFocus on flashcard generation and review workflows.`;
-    if (files.length > 0) {
-      prompt += `\n\n${editPrompt.currentFiles}\n`;
-      for (const file of files) {
-        prompt += `\n=== ${file.name} ===\n`;
-        prompt += file.content || editPrompt.contentNotLoaded;
-        prompt += `\n=== ${editPrompt.fileEnd} ===\n`;
-      }
-    }
-    return prompt;
-  }
-
-  // 其他意图（如 edit, organize, complex）使用完整 Prompt
   let prompt = editPrompt.system;
 
   if (files.length > 0) {
@@ -152,9 +124,8 @@ export async function chat(
   messages: Message[],
   files: FileReference[] = [],
   configOverride?: Partial<LLMConfig>,
-  options?: { intent?: IntentType }
 ): Promise<ChatResponse> {
-  const systemPrompt = buildSystemPrompt(files, options?.intent);
+  const systemPrompt = buildSystemPrompt(files);
   
   // 构建完整消息列表
   const fullMessages: Message[] = [

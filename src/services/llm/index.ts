@@ -3,7 +3,7 @@
  *
  * Phase 2.5 后,所有 LLM 调用都通过 Electron main 的 agent runtime(AI SDK) 完成。
  * 这里只保留:
- * - 共享的数据类型(Message / Intent / ThinkingMode / ...)
+ * - 共享的数据类型(Message / ThinkingMode / ...)
  * - PROVIDER_MODELS metadata(用于 UI 展示模型下拉,不绑实现)
  * - thinking / temperature / routing 辅助工具
  * - callLLM / callLLMStream — 遗留 API,Phase 5 前端重接 agent runtime 时会替换成真实路径
@@ -26,8 +26,6 @@ export type {
   LLMProviderType,
   StreamChunk,
   LLMStream,
-  IntentType,
-  Intent,
   ThinkingMode,
 } from "./types";
 
