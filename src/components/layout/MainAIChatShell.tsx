@@ -54,6 +54,15 @@ import {
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
+import {
+  Popover,
+  PopoverContent,
+  PopoverEmpty,
+  PopoverHeader,
+  PopoverList,
+  Row,
+  Kbd,
+} from "@/components/ui";
 import { join as joinPath } from "@/lib/host";
 import {
   buildAgentExportMessages,
@@ -90,6 +99,8 @@ export function MainAIChatShell() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
+  const inputBarRef = useRef<HTMLDivElement | null>(null);
+  const plusButtonRef = useRef<HTMLButtonElement | null>(null);
   const autoSendMessageRef = useRef<string | null>(null);
   const reduceMotion = useReducedMotion();
 
@@ -497,28 +508,7 @@ export function MainAIChatShell() {
     return () => observer.disconnect();
   }, []);
 
-  // Chat mode removed — no firstLoad check needed
-
-  // 点击外部关闭临时菜单
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest("[data-skill-menu]") && !target.closest("textarea")) {
-        setShowSkillMenu(false);
-      }
-      if (
-        !target.closest("[data-mention-menu]") &&
-        !target.closest("textarea")
-      ) {
-        setShowMention(false);
-      }
-      if (!target.closest("[data-plus-menu]")) {
-        setShowPlusMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  // Outside-click + ESC dismissal is handled by <Popover> itself now.
 
   useEffect(() => {
     if (!showMention || !mentionRef.current) return;
@@ -1344,6 +1334,7 @@ export function MainAIChatShell() {
 
               {/* Pill-shaped input bar */}
               <div
+                ref={inputBarRef}
                 className={`relative bg-background/80 backdrop-blur-xl border border-border/50 transition-all duration-300 ${
                   input.includes("\n") || input.length > 80
                     ? "rounded-3xl"
@@ -1354,163 +1345,150 @@ export function MainAIChatShell() {
                     : "shadow-md shadow-black/[0.05]"
                 }`}
               >
-                {/* Popover menus — skill menu */}
-                {showSkillMenu && (
-                  <div
+                {/* Skill menu (slash command) */}
+                <Popover
+                  open={showSkillMenu}
+                  onOpenChange={setShowSkillMenu}
+                  anchor={inputBarRef}
+                >
+                  <PopoverContent
+                    placement="top-start"
                     data-skill-menu
-                    className="absolute left-12 right-12 bottom-full mb-2 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
+                    ref={mentionRef as unknown as React.Ref<HTMLDivElement>}
                   >
-                    <div className="px-3 py-2 text-xs text-muted-foreground border-b border-border/40 flex items-center justify-between">
-                      <span>{t.ai.skillsTitle}</span>
-                      {skillsLoading && (
-                        <span className="text-[10px]">
-                          {t.ai.skillsLoading}
-                        </span>
-                      )}
-                    </div>
-                    <div className="max-h-56 overflow-y-auto">
+                    <PopoverHeader
+                      trailing={
+                        skillsLoading ? (
+                          <span className="text-xs">{t.ai.skillsLoading}</span>
+                        ) : null
+                      }
+                    >
+                      {t.ai.skillsTitle}
+                    </PopoverHeader>
+                    <PopoverList>
                       {filteredSkills.length === 0 ? (
-                        <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                          {t.ai.skillsEmpty}
-                        </div>
+                        <PopoverEmpty>{t.ai.skillsEmpty}</PopoverEmpty>
                       ) : (
                         filteredSkills.map((skill) => (
-                          <button
+                          <Row
                             key={`${skill.source ?? "skill"}:${skill.name}`}
-                            onClick={() => handleSelectSkill(skill)}
-                            className="w-full px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
-                          >
-                            <div className="font-medium text-foreground">
-                              {skill.title}
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate">
-                              {skill.description || skill.name}
-                            </div>
-                          </button>
+                            icon={<Sparkles size={16} />}
+                            title={skill.title}
+                            description={skill.description || skill.name}
+                            onSelect={() => handleSelectSkill(skill)}
+                          />
                         ))
                       )}
-                    </div>
-                  </div>
-                )}
+                    </PopoverList>
+                  </PopoverContent>
+                </Popover>
 
-                {/* Popover menus — mention menu */}
-                {showMention && (
-                  <div
-                    ref={mentionRef}
+                {/* Mention menu (@ file reference) */}
+                <Popover
+                  open={showMention}
+                  onOpenChange={setShowMention}
+                  anchor={inputBarRef}
+                >
+                  <PopoverContent
+                    placement="top-start"
+                    width={288}
                     data-mention-menu
-                    className="absolute left-12 w-72 bottom-full mb-2 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
                   >
-                    <div className="max-h-56 overflow-y-auto">
+                    <PopoverList>
                       {filteredMentionFiles.length === 0 ? (
-                        <div className="px-3 py-3 text-xs text-muted-foreground text-center">
-                          {t.ai.noFilesFound}
-                        </div>
+                        <PopoverEmpty>{t.ai.noFilesFound}</PopoverEmpty>
                       ) : (
                         filteredMentionFiles.map((file, index) => (
-                          <button
+                          <Row
                             key={file.path}
-                            data-selected={index === mentionIndex}
-                            onClick={() => handleSelectMention(file)}
-                            className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors ${
-                              index === mentionIndex ? "bg-accent" : ""
-                            }`}
-                          >
-                            <FileText
-                              size={14}
-                              className="text-slate-500 shrink-0"
-                            />
-                            <span className="truncate">{file.name}</span>
-                          </button>
+                            icon={<FileText size={16} />}
+                            title={file.name}
+                            selected={index === mentionIndex}
+                            onSelect={() => handleSelectMention(file)}
+                          />
                         ))
                       )}
-                    </div>
-                  </div>
-                )}
+                    </PopoverList>
+                  </PopoverContent>
+                </Popover>
 
                 {/* "+" popover menu */}
-                {showPlusMenu && (
-                  <div
-                    data-plus-menu
-                    className="absolute left-2 bottom-full mb-2 w-56 bg-background/95 backdrop-blur-lg border border-border/40 rounded-xl shadow-lg shadow-black/[0.06] z-50 overflow-hidden"
-                  >
-                    <button
-                      onClick={() => {
-                        textareaRef.current?.focus();
-                        handleInputChange(input + "@", input.length + 1);
-                        setShowPlusMenu(false);
-                      }}
-                      className="w-full px-3 py-2.5 text-sm text-left hover:bg-accent transition-colors flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Paperclip
-                          size={16}
-                          className="text-muted-foreground"
-                        />
-                        {"Reference file"}
-                      </span>
-                      <kbd className="text-[11px] text-muted-foreground">@</kbd>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSkillManagerOpen(true);
-                        setShowPlusMenu(false);
-                      }}
-                      className="w-full px-3 py-2.5 text-sm text-left hover:bg-accent transition-colors flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <Sparkles size={16} className="text-muted-foreground" />
-                        Skills
-                      </span>
-                      <kbd className="text-[11px] text-muted-foreground">/</kbd>
-                    </button>
-                    <div className="border-t border-border/30 my-0.5" />
-                    {supportsThinkingMode && (
-                      <div className="px-3 py-2 flex items-center justify-between">
-                        <span className="flex items-center gap-2.5 text-sm">
-                          <Lightbulb
-                            size={16}
-                            className="text-muted-foreground"
-                          />
-                          {t.aiSettings.thinkingMode}
-                        </span>
-                        <select
-                          value={displayThinkingMode}
-                          onChange={(e) =>
-                            setConfig({
-                              thinkingMode: e.target.value as ThinkingMode,
-                            })
-                          }
-                          className="h-6 text-xs px-1.5 rounded-md border border-border/30 bg-background/80"
-                        >
-                          <option value="auto">
-                            {t.aiSettings.thinkingModeAuto}
-                          </option>
-                          <option value="thinking">
-                            {t.aiSettings.thinkingModeThinking}
-                          </option>
-                          <option value="instant">
-                            {t.aiSettings.thinkingModeInstant}
-                          </option>
-                        </select>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => {
-                        setShowSettings(true);
-                        setShowPlusMenu(false);
-                      }}
-                      className="w-full px-3 py-2.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2.5"
-                    >
-                      <Settings size={16} className="text-muted-foreground" />
-                      {t.ai.aiChatSettings}
-                    </button>
-                  </div>
-                )}
+                <Popover
+                  open={showPlusMenu}
+                  onOpenChange={setShowPlusMenu}
+                  anchor={plusButtonRef}
+                >
+                  <PopoverContent placement="top-start" width={240} data-plus-menu>
+                    <PopoverList>
+                      <Row
+                        icon={<Paperclip size={16} />}
+                        title="Reference file"
+                        trailing={<Kbd>@</Kbd>}
+                        onSelect={() => {
+                          textareaRef.current?.focus();
+                          handleInputChange(input + "@", input.length + 1);
+                          setShowPlusMenu(false);
+                        }}
+                      />
+                      <Row
+                        icon={<Sparkles size={16} />}
+                        title="Skills"
+                        trailing={<Kbd>/</Kbd>}
+                        onSelect={() => {
+                          setSkillManagerOpen(true);
+                          setShowPlusMenu(false);
+                        }}
+                      />
+                      {supportsThinkingMode && (
+                        <div className="mt-1 border-t border-border/60 px-3 pb-1 pt-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex items-center gap-2 text-sm text-foreground">
+                              <Lightbulb
+                                size={16}
+                                className="text-muted-foreground"
+                              />
+                              {t.aiSettings.thinkingMode}
+                            </span>
+                            <select
+                              value={displayThinkingMode}
+                              onChange={(e) =>
+                                setConfig({
+                                  thinkingMode: e.target.value as ThinkingMode,
+                                })
+                              }
+                              className="h-7 rounded-ui-sm border border-border bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                            >
+                              <option value="auto">
+                                {t.aiSettings.thinkingModeAuto}
+                              </option>
+                              <option value="thinking">
+                                {t.aiSettings.thinkingModeThinking}
+                              </option>
+                              <option value="instant">
+                                {t.aiSettings.thinkingModeInstant}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+                      <div className="my-1 border-t border-border/60" />
+                      <Row
+                        icon={<Settings size={16} />}
+                        title={t.ai.aiChatSettings}
+                        onSelect={() => {
+                          setShowSettings(true);
+                          setShowPlusMenu(false);
+                        }}
+                      />
+                    </PopoverList>
+                  </PopoverContent>
+                </Popover>
 
                 {/* Pill inner layout: (+) | textarea | mic send */}
                 <div className="flex items-end gap-1 px-2 py-2">
                   {/* "+" button */}
                   <button
+                    ref={plusButtonRef}
                     onClick={() => setShowPlusMenu(!showPlusMenu)}
                     className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-colors ${
                       showPlusMenu
