@@ -32,7 +32,7 @@ import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
 import { useAIStore } from "@/stores/useAIStore";
-import { initRustAgentListeners } from "@/stores/useRustAgentStore";
+import { initOpencodeAgentListeners } from "@/stores/useOpencodeAgent";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
 import {
@@ -310,9 +310,10 @@ function App() {
     }
   }, []);
 
-  // 初始化 Rust Agent 监听（用于移动端会话指令）
+  // Start the opencode event stream + session list at app boot so the UI
+  // is warm before MainAIChatShell mounts. Idempotent.
   useEffect(() => {
-    initRustAgentListeners();
+    initOpencodeAgentListeners();
   }, []);
 
   // 启动时自动检查更新（延迟 5 秒，避免影响启动性能）

@@ -6,7 +6,6 @@
 import { useRef, useEffect, useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 import { Bot, Settings, Trash2, Dock } from "lucide-react";
@@ -32,8 +31,6 @@ export function AIFloatingPanel({
   const { t } = useLocaleStore();
   const { setFloatingPanelOpen } = useUIStore();
   const { config, setConfig, clearChat } = useAIStore();
-  // 使用 Rust Agent store
-  void useRustAgentStore();
 
   const [showSettings, setShowSettings] = useState(false);
   const [isDraggingFileOver, setIsDraggingFileOver] = useState(false);

@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useCallback } from "react";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 
 export type SessionType = "agent" | "chat";
 
@@ -18,8 +18,8 @@ export interface UnifiedSession {
 }
 
 export function useConversationManager() {
-  // Agent store - 使用 Rust Agent
-  const rustAgentStore = useRustAgentStore();
+  // Agent store — opencode-backed.
+  const rustAgentStore = useOpencodeAgent();
 
   const agentSessions = rustAgentStore.sessions;
   const agentCurrentId = rustAgentStore.currentSessionId;
