@@ -13,7 +13,12 @@
 // can migrate with minimal churn.
 
 import { create } from "zustand";
-import type { Event, Message, Part, Permission } from "@opencode-ai/sdk";
+import type {
+  Event,
+  Message,
+  Part,
+  Permission,
+} from "@opencode-ai/sdk/client";
 import type { MessageAttachment } from "@/services/llm";
 import { getOpencodeClient } from "@/services/opencode/client";
 

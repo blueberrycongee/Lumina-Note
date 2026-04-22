@@ -2,7 +2,12 @@
 // running inside Electron main. Server credentials are fetched once from
 // window.lumina.opencode.getServerInfo() and reused across the renderer.
 
-import { createOpencodeClient, type OpencodeClient } from "@opencode-ai/sdk";
+// Import from /client subpath only — the root barrel re-exports /server
+// (which needs cross-spawn + node's `process`) and crashes in the renderer.
+import {
+  createOpencodeClient,
+  type OpencodeClient,
+} from "@opencode-ai/sdk/client";
 
 type ServerInfo = {
   url: string;
