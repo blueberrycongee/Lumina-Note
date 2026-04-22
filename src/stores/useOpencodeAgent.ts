@@ -246,6 +246,44 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     });
   };
 
+  // Apply a streaming field append. Opencode streams token-by-token via
+  // `message.part.delta` events carrying `{field, delta}` — typically
+  // field="text" for TextPart and ReasoningPart. The final
+  // `message.part.updated` later resets the whole part with its complete
+  // content, but if we ignore deltas the UI only updates once at the end
+  // (big blob drop) instead of streaming.
+  const applyPartDelta = (
+    sessionID: string,
+    messageID: string,
+    partID: string,
+    field: string,
+    delta: string,
+  ) => {
+    set((state) => {
+      if (state.currentSessionId && sessionID !== state.currentSessionId) return state;
+      const msgIdx = state.messages.findIndex((m) => m.id === messageID);
+      if (msgIdx === -1) return state;
+      const msg = state.messages[msgIdx];
+      const partIdx = msg.rawParts.findIndex((p) => p.id === partID);
+      if (partIdx === -1) return state;
+
+      const oldPart = msg.rawParts[partIdx] as unknown as Record<string, unknown>;
+      const oldValue = typeof oldPart[field] === "string" ? (oldPart[field] as string) : "";
+      const newPart = { ...oldPart, [field]: oldValue + delta } as unknown as Part;
+
+      const nextParts = msg.rawParts.slice();
+      nextParts[partIdx] = newPart;
+
+      const nextMessages = state.messages.slice();
+      nextMessages[msgIdx] = {
+        ...msg,
+        content: partsToText(nextParts),
+        rawParts: nextParts,
+      };
+      return { messages: nextMessages };
+    });
+  };
+
   const applyPartRemove = (
     sessionID: string,
     messageID: string,
@@ -298,6 +336,30 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       event.type,
       JSON.stringify((event as { properties?: unknown }).properties ?? {}).slice(0, 200),
     );
+    // opencode emits `message.part.delta` for token-by-token streaming,
+    // but @opencode-ai/sdk/client's bundled types snapshot predates that
+    // event so it's not in the Event union. Handle it ahead of the typed
+    // switch with a widened cast — otherwise the UI only refreshes at the
+    // end of the response (one big blob) instead of streaming.
+    if ((event.type as string) === "message.part.delta") {
+      const props = (event as unknown as {
+        properties: {
+          sessionID: string;
+          messageID: string;
+          partID: string;
+          field: string;
+          delta: string;
+        };
+      }).properties;
+      applyPartDelta(
+        props.sessionID,
+        props.messageID,
+        props.partID,
+        props.field,
+        props.delta,
+      );
+      return;
+    }
     switch (event.type) {
       case "session.created":
       case "session.updated": {
