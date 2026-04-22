@@ -222,8 +222,8 @@ export const TypingIndicator = memo(function TypingIndicator({
 
   return (
     <div className={`flex gap-3 mb-6 ${className}`}>
-      <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
-        <Bot size={16} className="text-muted-foreground" />
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-elev-1">
+        <Bot size={16} />
       </div>
       <div className="max-w-[80%] text-foreground">
         {resolvedDiagramPaths.length > 0 && (
@@ -233,12 +233,12 @@ export const TypingIndicator = memo(function TypingIndicator({
           />
         )}
         <div
-          className="flex items-center gap-1.5 h-8 streaming-content-enter"
+          className="streaming-content-enter flex h-8 items-center gap-1.5"
           aria-hidden
         >
           <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
-          <span className="streaming-dot" style={{ animationDelay: "160ms" }} />
-          <span className="streaming-dot" style={{ animationDelay: "320ms" }} />
+          <span className="streaming-dot" style={{ animationDelay: "140ms" }} />
+          <span className="streaming-dot" style={{ animationDelay: "280ms" }} />
         </div>
       </div>
     </div>

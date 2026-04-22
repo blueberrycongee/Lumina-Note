@@ -601,23 +601,26 @@ body.resizing iframe[data-codex-iframe="true"] {
   @keyframes stream-dot-pulse {
     0%,
     100% {
-      opacity: 0.2;
+      opacity: 0.28;
+      transform: translateY(0.5px);
     }
     50% {
-      opacity: 0.72;
+      opacity: 0.9;
+      transform: translateY(-0.5px);
     }
   }
 
   .streaming-content-enter {
-    animation: stream-fade-in 220ms ease-out;
+    animation: stream-fade-in 200ms var(--motion-ease-spring);
   }
 
   .streaming-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 9999px;
-    background: hsl(var(--muted-foreground) / 0.9);
-    animation: stream-dot-pulse 1.35s ease-in-out infinite;
+    background: hsl(var(--muted-foreground));
+    animation: stream-dot-pulse 1.1s ease-in-out infinite;
+    will-change: transform, opacity;
   }
 }
 
