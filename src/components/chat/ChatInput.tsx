@@ -3,14 +3,15 @@
  * 支持 @ 引用文件和 📎 按钮选择文件
  */
 
-import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, forwardRef, useImperativeHandle } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { Send, FileText, Folder, X, Loader2, Paperclip, Quote, Image as ImageIcon, AlertCircle, Terminal, Plus, Pencil, Trash2 } from "lucide-react";
+import { Send, FileText, Folder, X, Loader2, Paperclip, Quote, Image as ImageIcon, AlertCircle, Terminal, Plus, Pencil, Trash2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCommandStore, SlashCommand } from "@/stores/useCommandStore";
 import { CommandManagerModal } from "./CommandManagerModal";
+import { invoke } from "@/lib/host";
 import {
   filterMentionFiles,
   flattenFileTreeToReferences,
@@ -78,6 +79,50 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const [activeCommand, setActiveCommand] = useState<SlashCommand | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCommand, setEditingCommand] = useState<SlashCommand | null>(null);
+
+  // Fetch built-in skills from backend and merge as slash commands
+  const vaultPath = useFileStore((s) => s.vaultPath);
+  const [skillCommands, setSkillCommands] = useState<SlashCommand[]>([]);
+  useEffect(() => {
+    if (!vaultPath || !enableSlashCommands) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const skills = await invoke<Array<{
+          name: string; title: string; description?: string; source?: string;
+        }>>("agent_list_skills", { workspace_path: vaultPath });
+        if (cancelled || !skills?.length) return;
+        const details = await Promise.all(
+          skills.map((s) =>
+            invoke<{ info: typeof s; prompt: string } | null>(
+              "agent_read_skill", { workspace_path: vaultPath, name: s.name },
+            ).catch(() => null),
+          ),
+        );
+        if (cancelled) return;
+        setSkillCommands(
+          details
+            .filter((d): d is NonNullable<typeof d> => d != null && !!d.prompt)
+            .map((d) => ({
+              id: `skill:${d.info.name}`,
+              key: d.info.name,
+              description: d.info.description || d.info.title,
+              prompt: d.prompt,
+              isDefault: false,
+            })),
+        );
+      } catch { /* backend not ready yet */ }
+    })();
+    return () => { cancelled = true; };
+  }, [vaultPath, enableSlashCommands]);
+
+  const allCommands = useMemo(
+    () => {
+      const cmdKeys = new Set(commands.map((c) => c.key));
+      return [...commands, ...skillCommands.filter((s) => !cmdKeys.has(s.key))];
+    },
+    [commands, skillCommands],
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
@@ -207,11 +252,11 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   );
 
   // 过滤匹配的命令
-  const filteredCommands = React.useMemo(() => {
-    if (!commandQuery) return commands;
+  const filteredCommands = useMemo(() => {
+    if (!commandQuery) return allCommands;
     const query = commandQuery.toLowerCase();
-    return commands.filter(c => c.key.toLowerCase().includes(query));
-  }, [commands, commandQuery]);
+    return allCommands.filter(c => c.key.toLowerCase().includes(query));
+  }, [allCommands, commandQuery]);
 
   // 处理输入变化
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -461,7 +506,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
           {/* Active Command Tag */}
           {activeCommand && (
             <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs border border-primary/20">
-              <Terminal size={12} />
+              {activeCommand.id.startsWith("skill:") ? <Sparkles size={12} /> : <Terminal size={12} />}
               <span className="font-medium">/{activeCommand.key}</span>
               <span className="text-muted-foreground ml-1 hidden sm:inline">{activeCommand.description}</span>
               <button
@@ -724,11 +769,18 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">/{cmd.key}</span>
+                      {cmd.id.startsWith("skill:") && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70">
+                          <Sparkles size={10} />
+                          skill
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {cmd.description}
                     </div>
                   </button>
+                  {!cmd.id.startsWith("skill:") && (
                   <div className="flex items-center gap-1">
                     <button
                       onClick={(e) => {
@@ -762,6 +814,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                       <Trash2 size={12} />
                     </button>
                   </div>
+                  )}
                 </div>
               ))
             )}
