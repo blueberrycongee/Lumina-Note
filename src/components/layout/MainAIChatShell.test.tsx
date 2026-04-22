@@ -4,7 +4,7 @@ import { MainAIChatShell } from "./MainAIChatShell";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 describe("MainAIChatShell", () => {
@@ -12,6 +12,7 @@ describe("MainAIChatShell", () => {
     useUIStore.setState({ chatMode: "agent" });
     useFileStore.setState({ vaultPath: "/tmp" });
     useAIStore.setState({ pendingInputAppends: [] });
+    useOpencodeAgent.setState({ messages: [], status: "idle" });
   });
 
   it("renders textarea in agent mode", () => {
@@ -97,12 +98,40 @@ describe("MainAIChatShell", () => {
   });
 
   it("renders assistant thinking as collapsed block and expands on click", () => {
-    useRustAgentStore.setState({
+    // Main chat runs on opencode now. Messages carry structured rawParts
+    // (text / reasoning / tool), so feed those directly — the renderer maps
+    // them via timelineFromOpencodeParts rather than parsing <thinking> XML.
+    useOpencodeAgent.setState({
+      currentSessionId: "test-session",
+      status: "completed",
       messages: [
-        { role: "user", content: "hello" },
         {
+          id: "msg-user",
+          role: "user",
+          content: "hello",
+          rawParts: [],
+        },
+        {
+          id: "msg-assistant",
           role: "assistant",
-          content: "<thinking>step by step</thinking>\n\nfinal answer",
+          content: "final answer",
+          rawParts: [
+            {
+              id: "part-reasoning",
+              sessionID: "test-session",
+              messageID: "msg-assistant",
+              type: "reasoning",
+              text: "step by step",
+              time: { start: 1, end: 2 },
+            } as never,
+            {
+              id: "part-text",
+              sessionID: "test-session",
+              messageID: "msg-assistant",
+              type: "text",
+              text: "final answer",
+            } as never,
+          ],
         },
       ],
     });

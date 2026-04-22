@@ -73,6 +73,12 @@ export interface IpcHandlersOptions {
   mcpManager?: McpManager;
   wikiSettings?: WikiSettingsStore;
   wikiManager?: WikiManager;
+  /**
+   * Called after a renderer-initiated mutation to provider settings
+   * (active provider / per-provider baseUrl / per-provider apiKey).
+   * Hooked from main/index.ts to rebuild opencode env and restart its server.
+   */
+  onProviderSettingsChanged?: () => void | Promise<void>;
 }
 
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
@@ -85,6 +91,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     mcpManager,
     wikiSettings,
     wikiManager,
+    onProviderSettingsChanged,
   } = options;
 
   const webdavHandlers = createWebDAVHandlers({
@@ -177,6 +184,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
             mcpManager,
             wikiSettings,
             wikiManager,
+            onProviderSettingsChanged,
           },
           cmd,
           args,

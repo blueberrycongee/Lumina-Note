@@ -11,6 +11,7 @@ import { useState, useMemo, useCallback, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore, getCurrentTranslations } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
+import type { Part as OpencodePart } from "@opencode-ai/sdk/client";
 import type { ImageContent, MessageAttachment, MessageContent } from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
@@ -50,11 +51,17 @@ type AgentMessage = {
   attachments?: MessageAttachment[];
   agent?: string;
   id?: string;
+  /**
+   * Opencode structured parts. When present the renderer skips the legacy
+   * `🔧 name:` / `<thinking>` string-parsing pipeline and maps parts directly
+   * to timeline entries. The legacy path still serves AgentPanel + Rust agent.
+   */
+  rawParts?: OpencodePart[];
 };
 
 type TimelinePart =
   | { type: "text"; content: string }
-  | { type: "thinking"; content: string }
+  | { type: "thinking"; content: string; status?: "streaming" | "done" }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "diff"; diff: PendingDiff };
 
@@ -354,6 +361,72 @@ function decodeHtmlEntities(str: string): string {
   return str.replace(/&quot;/g, '"').replace(/&amp;/g, "&");
 }
 
+/**
+ * Map opencode's structured Part[] onto the TimelinePart[] we already render.
+ * Boundary-only parts (step-start / step-finish / snapshot) are dropped —
+ * they don't produce UI. Tool state discriminates pending/running/completed
+ * /error so we drive the existing ToolCallCollapsible spinner + check/X.
+ */
+function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
+  const out: TimelinePart[] = [];
+  for (const part of rawParts) {
+    switch (part.type) {
+      case "text": {
+        const text = (part as { text?: string }).text ?? "";
+        if (text.trim().length === 0) continue;
+        out.push({ type: "text", content: text });
+        break;
+      }
+      case "reasoning": {
+        const text = (part as { text?: string }).text ?? "";
+        if (text.length === 0) continue;
+        const time = (part as { time?: { start?: number; end?: number } })
+          .time;
+        const status: "streaming" | "done" =
+          time && time.end === undefined ? "streaming" : "done";
+        out.push({ type: "thinking", content: text, status });
+        break;
+      }
+      case "tool": {
+        const toolPart = part as {
+          tool?: string;
+          state?: {
+            status?: string;
+            input?: Record<string, unknown>;
+            output?: string;
+            error?: string;
+            title?: string;
+          };
+        };
+        const state = toolPart.state ?? {};
+        const name = toolPart.tool ?? "tool";
+        const params = state.input
+          ? formatToolParams(JSON.stringify(state.input))
+          : "";
+        let result: string | undefined;
+        let success: boolean | undefined;
+        if (state.status === "completed") {
+          result = state.output ?? state.title ?? "";
+          success = true;
+        } else if (state.status === "error") {
+          result = state.error ?? "";
+          success = false;
+        }
+        out.push({
+          type: "tool",
+          tool: { name, params, result, success },
+        });
+        break;
+      }
+      default:
+        // step-start / step-finish / snapshot / file / agent / subtask / etc.
+        // Either pure boundary markers or features we haven't ported yet.
+        break;
+    }
+  }
+  return out;
+}
+
 function parseToolMessage(content: string): { tool: ToolCallInfo; isStart: boolean } | null {
   const match = content.match(/^(🔧|✅|❌)\s+(\w+):\s*([\s\S]*)$/);
   if (!match) return null;
@@ -615,6 +688,15 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         const msg = messages[msgIdx];
         const content = getTextFromContent(msg.content);
 
+        // Opencode-backed path: messages carry structured rawParts. Map them
+        // 1:1 to timeline entries and skip the legacy string/emoji parsing
+        // entirely, which otherwise produces zero entries (opencode never
+        // emits `🔧 name:` prefixes).
+        if (msg.rawParts && msg.rawParts.length > 0) {
+          parts.push(...timelineFromOpencodeParts(msg.rawParts));
+          continue;
+        }
+
         if (msg.role === "assistant") {
           appendPartsFromContent(content, parts, lastToolCall, true);
           continue;
@@ -727,7 +809,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                         key={key}
                         thinking={part.content}
                         t={t}
-                        status="done"
+                        status={part.status === "streaming" ? "thinking" : "done"}
                       />
                     );
                   }

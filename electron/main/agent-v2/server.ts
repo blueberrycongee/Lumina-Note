@@ -24,6 +24,33 @@ export type OpencodeServerHandle = {
 
 let handle: OpencodeServerHandle | null = null;
 let starting: Promise<OpencodeServerHandle> | null = null;
+let listeners: Array<(h: OpencodeServerHandle | null) => void> = [];
+
+function notifyListeners(next: OpencodeServerHandle | null): void {
+  for (const fn of listeners) {
+    try {
+      fn(next);
+    } catch (err) {
+      console.error("[opencode] handle listener threw", err);
+    }
+  }
+}
+
+/**
+ * Subscribe to server handle changes. Fires with the current handle (or null)
+ * on subscription, then again whenever startOpencodeServer() produces a new
+ * handle or stopOpencodeServer() clears it. Used by IPC to push fresh URL +
+ * credentials to the renderer after a settings-driven restart.
+ */
+export function onOpencodeHandleChange(
+  fn: (h: OpencodeServerHandle | null) => void,
+): () => void {
+  listeners.push(fn);
+  fn(handle);
+  return () => {
+    listeners = listeners.filter((l) => l !== fn);
+  };
+}
 
 function healthUrl(base: string): string {
   return new URL("/global/health", base).toString();
@@ -92,6 +119,7 @@ export async function startOpencodeServer(opts?: {
       password,
       stop: () => listener.stop?.(),
     };
+    notifyListeners(handle);
     return handle;
   })();
 
@@ -109,5 +137,19 @@ export function getOpencodeServer(): OpencodeServerHandle | null {
 export async function stopOpencodeServer(): Promise<void> {
   const current = handle;
   handle = null;
+  notifyListeners(null);
   if (current) await Promise.resolve(current.stop());
+}
+
+/**
+ * Stop the running server (if any) and start a fresh one. Callers are expected
+ * to update process.env (via provider-bridge.applyOpencodeBridge) before
+ * invoking — opencode reads OPENCODE_CONFIG_CONTENT + OPENCODE_AUTH_CONTENT
+ * only at server construction.
+ */
+export async function restartOpencodeServer(
+  opts?: Parameters<typeof startOpencodeServer>[0],
+): Promise<OpencodeServerHandle> {
+  await stopOpencodeServer();
+  return startOpencodeServer(opts);
 }

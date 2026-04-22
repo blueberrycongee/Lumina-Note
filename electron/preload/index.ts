@@ -90,6 +90,16 @@ contextBridge.exposeInMainWorld('lumina', {
   opencode: {
     getServerInfo: async (): Promise<OpencodeServerInfo> =>
       ipcRenderer.invoke('opencode:get-server-info') as Promise<OpencodeServerInfo>,
+    /**
+     * Fires after a provider-settings-driven restart. Receives the fresh
+     * server info (or null while the new server is still coming up).
+     * Renderer resets its cached OpencodeClient and re-subscribes SSE.
+     */
+    onServerChanged: (handler: (info: OpencodeServerInfo) => void): (() => void) => {
+      const listener = (_event: unknown, info: OpencodeServerInfo) => handler(info)
+      ipcRenderer.on('opencode:server-changed', listener)
+      return () => ipcRenderer.removeListener('opencode:server-changed', listener)
+    },
   },
 })
 

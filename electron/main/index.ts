@@ -6,7 +6,15 @@ import path from "path";
 app.commandLine.appendSwitch("enable-features", "OverlayScrollbar");
 import { registerIpcHandlers } from "./ipc.js";
 import { registerOpencodeIpc } from "./agent-v2/ipc.js";
-import { startOpencodeServer, stopOpencodeServer } from "./agent-v2/server.js";
+import {
+  restartOpencodeServer,
+  startOpencodeServer,
+  stopOpencodeServer,
+} from "./agent-v2/server.js";
+import {
+  applyOpencodeBridge,
+  buildOpencodeBridge,
+} from "./agent-v2/provider-bridge.js";
 import { storeHandlers } from "./handlers/store.js";
 import { stopAllWatchers } from "./handlers/watcher.js";
 import { AgentEventBus } from "./agent/event-bus.js";
@@ -186,6 +194,36 @@ app.whenReady().then(() => {
     settings: wikiSettings,
     providerSelector,
   });
+  // Refresh env from provider settings and (re)start the opencode server.
+  // Called once at cold start and again whenever the user updates AI Settings,
+  // so opencode's next request uses the new provider / key / baseURL.
+  const reloadAndRestartOpencode = async (): Promise<void> => {
+    try {
+      const bridge = await buildOpencodeBridge(providerSettings);
+      applyOpencodeBridge(bridge);
+      const handle = await restartOpencodeServer();
+      console.log(
+        `[main] opencode server at ${handle.url}${
+          bridge ? ` (provider: ${bridge.summary})` : " (no provider configured)"
+        }`,
+      );
+    } catch (err) {
+      console.error("[main] opencode server failed to (re)start", err);
+    }
+  };
+
+  // AISettingsModal.setConfig() fires three IPC calls in rapid succession
+  // (set_active_provider / set_provider_settings / set_provider_api_key).
+  // Debounce so we only do one restart per save.
+  let restartDebounce: NodeJS.Timeout | null = null;
+  const scheduleOpencodeRestart = (): void => {
+    if (restartDebounce) clearTimeout(restartDebounce);
+    restartDebounce = setTimeout(() => {
+      restartDebounce = null;
+      void reloadAndRestartOpencode();
+    }, 150);
+  };
+
   registerIpcHandlers({
     getMainWindow,
     agentRuntime,
@@ -195,12 +233,24 @@ app.whenReady().then(() => {
     mcpManager,
     wikiSettings,
     wikiManager,
+    onProviderSettingsChanged: () => scheduleOpencodeRestart(),
   });
   registerOpencodeIpc();
-  void startOpencodeServer().then(
-    (h) => console.log(`[main] opencode server at ${h.url}`),
-    (err) => console.error("[main] opencode server failed to start", err),
-  );
+
+  void (async () => {
+    try {
+      const bridge = await buildOpencodeBridge(providerSettings);
+      applyOpencodeBridge(bridge);
+      const h = await startOpencodeServer();
+      console.log(
+        `[main] opencode server at ${h.url}${
+          bridge ? ` (provider: ${bridge.summary})` : " (no provider configured)"
+        }`,
+      );
+    } catch (err) {
+      console.error("[main] opencode server failed to start", err);
+    }
+  })();
   buildMenu();
   createWindow();
 

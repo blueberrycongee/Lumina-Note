@@ -20,6 +20,9 @@ declare global {
     lumina?: {
       opencode?: {
         getServerInfo(): Promise<ServerInfo | null>;
+        onServerChanged?(
+          handler: (info: ServerInfo | null) => void,
+        ): () => void;
       };
     };
   }

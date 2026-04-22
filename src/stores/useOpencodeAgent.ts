@@ -20,7 +20,10 @@ import type {
   Permission,
 } from "@opencode-ai/sdk/client";
 import type { MessageAttachment } from "@/services/llm";
-import { getOpencodeClient } from "@/services/opencode/client";
+import {
+  getOpencodeClient,
+  resetOpencodeClient,
+} from "@/services/opencode/client";
 
 export type AgentStatus =
   | "idle"
@@ -466,12 +469,17 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const data = res.data as { id?: string } | undefined;
         const id = data?.id ?? null;
         if (id) {
-          set({
+          // Preserve status: startTask() sets "running" before calling us on
+          // the first-ever send. Overwriting with "idle" here creates a gap
+          // where TypingIndicator (gated on status==="running") doesn't show
+          // until opencode's later session.status{busy} event arrives — that
+          // window is why the very first message has no avatar/dots.
+          set((state) => ({
             currentSessionId: id,
             messages: [],
-            status: "idle",
             error: null,
-          });
+            status: state.status === "running" ? state.status : "idle",
+          }));
         }
         await get().loadSessions();
         return id;
@@ -655,9 +663,42 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 });
 
 // Boot helper — MainAIChatShell calls this on mount so events flow and the
-// session list is populated before the first render.
+// session list is populated before the first render. Also wires the
+// server-restart event: when the user saves new provider settings, the main
+// process restarts opencode under a fresh URL + credentials, and we have to
+// drop our cached client and resubscribe the SSE stream.
+let serverChangedUnlisten: (() => void) | null = null;
+const silenceInit = (err: unknown) => {
+  // Preload missing (tests) or server not yet reachable — both are transient
+  // and should not surface as an unhandled rejection.
+  console.warn("[opencode] init listener error", err);
+};
 export function initOpencodeAgentListeners(): void {
   const store = useOpencodeAgent.getState();
-  void store.subscribe();
-  void store.loadSessions();
+  store.subscribe().catch(silenceInit);
+  store.loadSessions().catch(silenceInit);
+
+  if (serverChangedUnlisten) return;
+  const bridge = typeof window !== "undefined" ? window.lumina?.opencode : undefined;
+  if (!bridge?.onServerChanged) return;
+  serverChangedUnlisten = bridge.onServerChanged((info) => {
+    const current = useOpencodeAgent.getState();
+    current.unsubscribe();
+    resetOpencodeClient();
+    // Clear stale session state — the new opencode instance has its own
+    // session IDs; ours are no longer valid.
+    useOpencodeAgent.setState({
+      currentSessionId: null,
+      messages: [],
+      sessions: [],
+      pendingTool: null,
+      status: "idle",
+      error: null,
+    });
+    if (info) {
+      // Server is back up; resume event stream + session list.
+      useOpencodeAgent.getState().subscribe().catch(silenceInit);
+      useOpencodeAgent.getState().loadSessions().catch(silenceInit);
+    }
+  });
 }

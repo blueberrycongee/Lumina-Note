@@ -73,6 +73,14 @@ export interface AgentDispatchContext {
   mcpManager?: McpManager
   wikiSettings?: WikiSettingsStore
   wikiManager?: WikiManager
+  /**
+   * Fired (fire-and-forget) after the user mutates provider state via any of:
+   *   agent_set_active_provider / agent_set_provider_settings / agent_set_provider_api_key
+   * The opencode-v2 runtime uses this to rebuild OPENCODE_CONFIG_CONTENT +
+   * OPENCODE_AUTH_CONTENT and restart the embedded server so the new key /
+   * model takes effect without restarting the whole app.
+   */
+  onProviderSettingsChanged?: () => void | Promise<void>
 }
 
 export function isAgentCommand(cmd: string): boolean {
@@ -97,7 +105,14 @@ export async function dispatchAgentCommand(
     mcpManager,
     wikiSettings,
     wikiManager,
+    onProviderSettingsChanged,
   } = ctx
+  const triggerProviderRefresh = (): void => {
+    if (!onProviderSettingsChanged) return
+    void Promise.resolve(onProviderSettingsChanged()).catch((err) => {
+      console.error('[ipc-dispatch] provider-settings-changed hook threw', err)
+    })
+  }
   switch (cmd) {
     case 'agent_start_task': {
       const payload = args as unknown as StartTaskRequest
@@ -158,12 +173,14 @@ export async function dispatchAgentCommand(
       const { provider_id } = args as { provider_id?: string }
       if (provider_id === null || provider_id === undefined) {
         providerSettings.setActiveProvider(null)
+        triggerProviderRefresh()
         return null
       }
       if (!hasProvider(provider_id)) {
         throw new Error(`Unknown provider: ${provider_id}`)
       }
       providerSettings.setActiveProvider(provider_id)
+      triggerProviderRefresh()
       return null
     }
     case 'agent_set_provider_settings': {
@@ -179,6 +196,7 @@ export async function dispatchAgentCommand(
         provider_id as ProviderId,
         settings ?? {},
       )
+      triggerProviderRefresh()
       return null
     }
     case 'agent_set_provider_api_key': {
@@ -195,6 +213,7 @@ export async function dispatchAgentCommand(
       } else {
         await providerSettings.setProviderApiKey(provider_id as ProviderId, api_key)
       }
+      triggerProviderRefresh()
       return null
     }
     case 'agent_has_provider_api_key': {
