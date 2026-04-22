@@ -27,7 +27,7 @@ vi.mock('@/services/llm', () => ({
   normalizeThinkingMode: (mode: unknown) =>
     mode === "thinking" || mode === "instant" || mode === "auto" ? mode : "auto",
   supportsThinkingModeSwitch: () => false,
-  PROVIDER_REGISTRY: {
+  PROVIDER_MODELS: {
     openai: {
       models: [
         { id: 'gpt-4', contextWindow: 8192 },

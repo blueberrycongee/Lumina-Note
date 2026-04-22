@@ -162,7 +162,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
 
 vi.mock("@/services/llm", () => ({
   FOLLOW_MAIN_MODEL: "__follow_main__",
-  PROVIDER_REGISTRY: {
+  PROVIDER_MODELS: {
     openai: {
       label: "OpenAI",
       description: "OpenAI API",
