@@ -106,6 +106,14 @@ export async function buildOpencodeBridge(
     // Top-level `model: "providerID/modelID"` sets opencode's defaultModel()
     // so we don't depend on the recent-model heuristic or models.dev ordering.
     model: `${opencodeId}/${resolvedModelId}`,
+    // Force the built-in `build` agent. Opencode merges config files from
+    // ~/.config/opencode and ~/.opencode on startup, and a user who has
+    // played with opencode CLI before may have `default_agent` pointing at
+    // a plugin-provided agent (e.g. "Sisyphus - Ultraworker") whose loader
+    // fails under Electron's ESM — prompts then die with "default agent
+    // not found". Pinning default_agent here, plus passing `agent: "build"`
+    // per-prompt, ensures Lumina always routes through the stable built-in.
+    default_agent: "build",
     provider: {
       [opencodeId]: providerEntry,
     },

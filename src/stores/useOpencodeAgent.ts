@@ -597,11 +597,15 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const client = await getOpencodeClient();
         // promptAsync returns as soon as the HTTP request is accepted;
         // the actual response tokens arrive over the SSE stream.
+        // Explicit `agent: "build"` sidesteps any user-side opencode config
+        // whose `default_agent` points at a plugin-backed agent that fails
+        // to load under Electron (e.g. plugins importing `bun:*`).
         await client.session.promptAsync({
           path: { id: sessionId },
           body: {
+            agent: "build",
             parts: [{ type: "text", text: task } as never],
-          },
+          } as never,
           query: ctx?.workspace_path
             ? { directory: ctx.workspace_path }
             : undefined,
