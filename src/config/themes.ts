@@ -163,8 +163,34 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "default",
     name: "Default",
-    description: "Warm beige tones",
-    ...createThemeColors(40, 10, 5, 215, 25),
+    description: "Clean, neutral gray",
+    ...createThemeColors(220, 16, 12, 0, 0),
+    // Override primary-derived colors to be truly achromatic — the
+    // generator adds saturation offsets to primarySat which at 0 would
+    // leak hue-0 warmth into headings/links. Explicit values match the
+    // Notion/Linear achromatic pattern set in globals.css.
+    light: {
+      ...createThemeColors(220, 16, 12, 0, 0).light,
+      primary: "0 0% 9%",
+      primaryForeground: "0 0% 100%",
+      heading: "0 0% 9%",
+      link: "0 0% 25%",
+      linkHover: "0 0% 15%",
+      blockquoteBorder: "0 0% 70%",
+      listMarker: "0 0% 40%",
+      tag: "0 0% 35%",
+    },
+    dark: {
+      ...createThemeColors(220, 16, 12, 0, 0).dark,
+      primary: "0 0% 98%",
+      primaryForeground: "0 0% 9%",
+      heading: "0 0% 93%",
+      link: "0 0% 75%",
+      linkHover: "0 0% 85%",
+      blockquoteBorder: "0 0% 35%",
+      listMarker: "0 0% 60%",
+      tag: "0 0% 65%",
+    },
   },
   {
     id: "ocean",
