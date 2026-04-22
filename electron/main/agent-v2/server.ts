@@ -102,18 +102,24 @@ export async function startOpencodeServer(opts?: {
     process.env.OPENCODE_SERVER_PASSWORD = password;
     process.env.OPENCODE_CLIENT = "lumina";
 
-    // In dev, force INFO so provider resolution + prompt errors show up
-    // in the main terminal. Silent provider failures were what kept the
-    // earlier "message sends but no reply" bug un-diagnosed.
+    // Log level: default WARN so routine INFO (request trace, permission
+    // ruleset dumps, skill discovery — can be 40KB per line × hundreds of
+    // lines on machines with many installed skills) doesn't flood stderr
+    // and choke the log-forward IPC channel into the renderer.
+    // Real errors (session.error, provider failures, plugin load failures)
+    // are emitted at ERROR/WARN and still surface. Override with
+    // LUMINA_OPENCODE_LOG=INFO (or DEBUG) when deep-diagnosing.
     //
-    // `print: true` bypasses opencode's log-to-file default and writes to
-    // stderr instead. Our log-forward.ts pipe then delivers it to the
-    // renderer DevTools console. Without this flag `Log.init` drops its
-    // output into `~/.local/share/opencode/log/dev.log` and nothing from
-    // the prompt loop (provider resolution, retry attempts, agent errors)
-    // is visible to us.
+    // `print: true` routes output to stderr instead of opencode's on-disk
+    // log file so log-forward.ts can relay to the renderer DevTools console.
     const isDev = process.env.NODE_ENV === "development";
-    const defaultLevel = isDev ? "INFO" : "WARN";
+    const envLevel = process.env.LUMINA_OPENCODE_LOG as
+      | "DEBUG"
+      | "INFO"
+      | "WARN"
+      | "ERROR"
+      | undefined;
+    const defaultLevel = envLevel ?? "WARN";
     await Log.init({
       level: opts?.logLevel ?? defaultLevel,
       print: isDev,

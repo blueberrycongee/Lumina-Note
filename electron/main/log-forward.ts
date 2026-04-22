@@ -14,8 +14,21 @@ type Level = "log" | "info" | "warn" | "error" | "debug";
 
 const CHANNEL = "main-console";
 
+// Per-line cap so a single pathological log entry (opencode dumps the
+// full permission ruleset on every skill load — ~40KB each, and a fresh
+// `~/.claude/skills/...` with ~50 skills produces ~2MB of log text in a
+// few seconds) can't choke the IPC channel or blow up renderer console.
+const MAX_TEXT_BYTES = 2_000;
+
+// Opencode's `service=permission` path spams a full ruleset JSON per
+// skill check; it's rarely useful and drowns everything else out.
+// Cheap substring guard avoids parsing.
+function shouldDrop(text: string): boolean {
+  return text.includes("service=permission");
+}
+
 function broadcast(level: Level, args: unknown[]): void {
-  const text = args
+  let text = args
     .map((arg) => {
       if (typeof arg === "string") return arg;
       try {
@@ -25,6 +38,11 @@ function broadcast(level: Level, args: unknown[]): void {
       }
     })
     .join(" ");
+
+  if (shouldDrop(text)) return;
+  if (text.length > MAX_TEXT_BYTES) {
+    text = text.slice(0, MAX_TEXT_BYTES) + `… [${text.length - MAX_TEXT_BYTES} more chars truncated]`;
+  }
 
   for (const win of BrowserWindow.getAllWindows()) {
     if (win.isDestroyed()) continue;
