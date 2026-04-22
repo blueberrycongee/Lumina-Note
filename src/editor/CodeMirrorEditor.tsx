@@ -601,21 +601,18 @@ const createEditorTheme = (fontSize: number) =>
       borderRadius: "10px 10px 0 0",
     },
     ".cm-codeblock-toggle, .cm-codeblock-copy": {
-      border: "1px solid hsl(var(--border) / 0.5)",
-      backgroundColor: "hsl(var(--background) / 0.72)",
-      color: "hsl(var(--foreground) / 0.84)",
-      borderRadius: "9px",
-      padding: "5px 9px",
-      fontSize: "12px",
+      border: "none",
+      backgroundColor: "transparent",
+      color: "hsl(var(--muted-foreground) / 0.4)",
+      borderRadius: "6px",
+      padding: "4px",
       lineHeight: "1",
       cursor: "pointer",
-      transition:
-        "background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease",
+      transition: "color 0.15s ease, background-color 0.15s ease",
     },
     ".cm-codeblock-toggle:hover, .cm-codeblock-copy:hover": {
-      backgroundColor: "hsl(var(--background) / 0.92)",
-      borderColor: "hsl(var(--border) / 0.8)",
-      color: "hsl(var(--foreground) / 0.96)",
+      backgroundColor: "hsl(var(--foreground) / 0.06)",
+      color: "hsl(var(--foreground) / 0.7)",
     },
     ".cm-codeblock-copy-success": {
       color: "hsl(142 76% 36%)",
@@ -636,14 +633,10 @@ const createEditorTheme = (fontSize: number) =>
       borderRadius: "10px 10px 0 0",
     },
     ".cm-codeblock-lang": {
-      color: "hsl(var(--muted-foreground) / 0.9)",
+      color: "hsl(var(--muted-foreground) / 0.6)",
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: "11px",
       letterSpacing: "0.02em",
-      backgroundColor: "hsl(var(--background) / 0.56)",
-      border: "1px solid hsl(var(--border) / 0.45)",
-      padding: "3px 7px",
-      borderRadius: "999px",
     },
     ".cm-codeblock-content": {
       backgroundColor: "var(--lumina-codeblock-bg) !important",
@@ -997,24 +990,22 @@ class LiveCodeBlockCopyButtonWidget extends WidgetType {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "cm-codeblock-copy";
-    button.textContent = "Copy";
     button.setAttribute("aria-label", "Copy code");
+    button.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     button.addEventListener("click", async (event) => {
       event.preventDefault();
       event.stopPropagation();
 
       const copied = await copyTextToClipboard(this.code);
       if (copied) {
-        button.textContent = "Copied!";
+        button.innerHTML =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
         button.classList.add("cm-codeblock-copy-success");
         setTimeout(() => {
-          button.textContent = "Copy";
+          button.innerHTML =
+            '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
           button.classList.remove("cm-codeblock-copy-success");
-        }, 2000);
-      } else {
-        button.textContent = "Failed";
-        setTimeout(() => {
-          button.textContent = "Copy";
         }, 2000);
       }
     });
