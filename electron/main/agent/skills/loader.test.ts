@@ -66,13 +66,15 @@ describe('parseSkillMarkdown', () => {
 })
 
 describe('SkillLoader.listSkills', () => {
-  it('returns [] when .skills missing', async () => {
+  it('returns built-in skills when .skills missing', async () => {
     const loader = new SkillLoader()
     const out = await loader.listSkills(workspace)
-    expect(out).toEqual([])
+    expect(out.length).toBeGreaterThan(0)
+    expect(out.find((s) => s.name === 'wiki-sync')).toBeTruthy()
+    expect(out.find((s) => s.source === 'builtin')).toBeTruthy()
   })
 
-  it('lists frontmatter from each .md file', async () => {
+  it('lists vault skills alongside built-ins', async () => {
     writeSkill(
       'note-organizer.md',
       `---\nname: note-organizer\ntitle: Note Organizer\ndescription: tidies notes\ntriggers: [organize]\ntools: [fs_read, fs_write]\n---\nprompt body\n`,
@@ -80,13 +82,25 @@ describe('SkillLoader.listSkills', () => {
     writeSkill('plain.md', `# no frontmatter\nbody\n`)
     const loader = new SkillLoader()
     const out = await loader.listSkills(workspace)
-    expect(out).toHaveLength(2)
     const organizer = out.find((s) => s.name === 'note-organizer')
     expect(organizer?.title).toBe('Note Organizer')
     expect(organizer?.tools).toEqual(['fs_read', 'fs_write'])
     expect(organizer?.triggers).toEqual(['organize'])
     const plain = out.find((s) => s.name === 'plain')
     expect(plain?.title).toBe('plain')
+    expect(out.find((s) => s.name === 'wiki-sync')).toBeTruthy()
+  })
+
+  it('vault skill overrides built-in with same name', async () => {
+    writeSkill(
+      'wiki-sync.md',
+      `---\nname: wiki-sync\ntitle: Custom Wiki\n---\ncustom prompt\n`,
+    )
+    const loader = new SkillLoader()
+    const out = await loader.listSkills(workspace)
+    const wikiSkills = out.filter((s) => s.name === 'wiki-sync')
+    expect(wikiSkills).toHaveLength(1)
+    expect(wikiSkills[0].title).toBe('Custom Wiki')
   })
 
   it('skips non-md files', async () => {
@@ -94,7 +108,8 @@ describe('SkillLoader.listSkills', () => {
     fs.writeFileSync(path.join(workspace, '.skills', 'README.txt'), 'ignore me')
     const loader = new SkillLoader()
     const out = await loader.listSkills(workspace)
-    expect(out.map((s) => s.name)).toEqual(['a'])
+    const vaultSkills = out.filter((s) => s.source !== 'builtin')
+    expect(vaultSkills.map((s) => s.name)).toEqual(['a'])
   })
 })
 
@@ -115,6 +130,25 @@ describe('SkillLoader.readSkill', () => {
   it('returns null when skill missing', async () => {
     const loader = new SkillLoader()
     expect(await loader.readSkill(workspace, 'nope')).toBeNull()
+  })
+
+  it('returns built-in skill when no vault override', async () => {
+    const loader = new SkillLoader()
+    const detail = await loader.readSkill(workspace, 'wiki-sync')
+    expect(detail).not.toBeNull()
+    expect(detail?.info.source).toBe('builtin')
+    expect(detail?.prompt).toContain('Wiki Synthesizer')
+  })
+
+  it('vault skill overrides built-in on readSkill', async () => {
+    writeSkill(
+      'wiki-sync.md',
+      `---\nname: wiki-sync\ntitle: My Wiki\n---\ncustom body\n`,
+    )
+    const loader = new SkillLoader()
+    const detail = await loader.readSkill(workspace, 'wiki-sync')
+    expect(detail?.info.title).toBe('My Wiki')
+    expect(detail?.prompt).toBe('custom body')
   })
 })
 
@@ -176,5 +210,13 @@ describe('SkillLoader.applySlashPrefix', () => {
     const out = await loader.applySlashPrefix('/missing some task', workspace)
     expect(out.task).toBe('/missing some task')
     expect(out.systemAddendum).toBeUndefined()
+  })
+
+  it('resolves built-in skill via slash prefix', async () => {
+    const loader = new SkillLoader()
+    const out = await loader.applySlashPrefix('/wiki-sync my-note.md', workspace)
+    expect(out.task).toBe('my-note.md')
+    expect(out.systemAddendum).toContain('Wiki Synthesizer')
+    expect(out.skill?.name).toBe('wiki-sync')
   })
 })

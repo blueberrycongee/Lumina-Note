@@ -25,6 +25,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { parse as parseYaml } from 'yaml'
+import { listBuiltinSkills, getBuiltinSkill } from './builtins.js'
 
 export interface SkillFrontmatter {
   name?: string
@@ -108,16 +109,21 @@ export class SkillLoader {
   async listSkills(workspacePath: string): Promise<SkillInfo[]> {
     const dir = path.join(workspacePath, SKILLS_SUBDIR)
     const files = await this.listSkillFiles(dir)
+    const vaultNames = new Set<string>()
     const out: SkillInfo[] = []
     for (const file of files) {
       try {
         const md = await fs.readFile(file, 'utf-8')
         const { frontmatter } = parseSkillMarkdown(md)
         const name = deriveSkillName(path.basename(file), frontmatter)
+        vaultNames.add(name)
         out.push(this.buildInfo(file, name, frontmatter))
       } catch {
         // ignore unreadable / malformed file
       }
+    }
+    for (const builtin of listBuiltinSkills()) {
+      if (!vaultNames.has(builtin.name)) out.push(builtin)
     }
     out.sort((a, b) => a.name.localeCompare(b.name))
     return out
@@ -125,6 +131,7 @@ export class SkillLoader {
 
   /** 读单个 skill 完整内容 */
   async readSkill(workspacePath: string, name: string): Promise<SkillDetail | null> {
+    // Vault skills override built-ins with the same name
     const dir = path.join(workspacePath, SKILLS_SUBDIR)
     const files = await this.listSkillFiles(dir)
     for (const file of files) {
@@ -139,7 +146,7 @@ export class SkillLoader {
         }
       }
     }
-    return null
+    return getBuiltinSkill(name)
   }
 
   /** 找出 task 触发的 skill(triggers 字符串子串或正则匹配) */
