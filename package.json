@@ -11,6 +11,8 @@
     "dev:vite": "vite",
     "dev:cloud": "sh -c 'trap \"kill 0\" EXIT; npm run server:dev & npm run dev:vite'",
     "bundle-node": "node scripts/bundle_node.mjs",
+    "opencode:bundle": "node scripts/bundle_opencode.mjs",
+    "opencode:smoke": "node scripts/opencode_smoke.mjs",
     "build": "electron-vite build",
     "build:vite": "tsc && vite build",
     "preview": "electron-vite preview",
