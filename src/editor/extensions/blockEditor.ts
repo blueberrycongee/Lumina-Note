@@ -316,10 +316,7 @@ class PlusButtonWidget extends WidgetType {
     btn.setAttribute("aria-label", "Add block");
     btn.setAttribute("role", "button");
     btn.tabIndex = -1;
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-  <line x1="6" y1="2.5" x2="6" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-  <line x1="2.5" y1="6" x2="9.5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-</svg>`;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="2.5" x2="6" y2="9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2.5" y1="6" x2="9.5" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`;
 
     btn.addEventListener("mousedown", (e) => {
       if (e.button !== 0) return;
@@ -893,6 +890,36 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
             }).range(line.from),
           );
         }
+      }
+
+      // 为未被任何块覆盖的空行添加 + 按钮
+      const coveredLines = new Set<number>();
+      for (const block of blockState.blocks) {
+        for (let ln = block.startLine; ln <= block.endLine; ln++) {
+          coveredLines.add(ln);
+        }
+      }
+
+      for (let lineNum = 1; lineNum <= view.state.doc.lines; lineNum++) {
+        if (coveredLines.has(lineNum)) continue;
+        const line = view.state.doc.line(lineNum);
+        if (line.text.trim() !== "") continue;
+
+        decorations.push(
+          Decoration.widget({
+            widget: new PlusButtonWidget(line.from, line.to),
+            side: -1,
+            inline: false,
+            block: false,
+          }).range(line.from),
+        );
+
+        decorations.push(
+          Decoration.line({
+            class: "cm-block-line",
+            attributes: { "data-block-type": "EmptyLine" },
+          }).range(line.from),
+        );
       }
 
       return Decoration.set(decorations, true);

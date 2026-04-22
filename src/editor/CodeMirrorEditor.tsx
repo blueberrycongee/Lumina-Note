@@ -5526,11 +5526,30 @@ export const CodeMirrorEditor = forwardRef<
             if (!view) return;
             const blockState = view.state.field(blockEditorStateField, false);
             if (!blockState) return;
-            const block = blockState.blocks.find(
+            const foundBlock = blockState.blocks.find(
               (b) =>
                 b.from === blockMenu.blockFrom && b.to === blockMenu.blockTo,
             );
-            if (!block) return;
+            let block: {
+              from: number;
+              to: number;
+              type: string;
+              startLine: number;
+              endLine: number;
+            };
+            if (foundBlock) {
+              block = foundBlock;
+            } else {
+              const line = view.state.doc.lineAt(blockMenu.blockFrom);
+              if (line.text.trim() !== "") return;
+              block = {
+                from: line.from,
+                to: line.to,
+                type: "Paragraph",
+                startLine: line.number,
+                endLine: line.number,
+              };
+            }
 
             if (actionId === "insertBefore" || actionId === "insertAfter") {
               const insertPos =
