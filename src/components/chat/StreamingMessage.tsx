@@ -191,10 +191,32 @@ export const TypingIndicator = memo(function TypingIndicator({
     (state) => state.streamingReasoningStatus,
   );
   const agentMessages = useOpencodeAgent((state) => state.messages);
+  // Hide the standalone typing indicator as soon as the current assistant
+  // turn has any renderable opencode part (text / reasoning / tool). After
+  // that point AgentMessageRenderer shows its own bot avatar + streaming
+  // content, so keeping the typing bubble here would paint a second avatar
+  // next to the first while tokens stream in.
+  const latestAssistantHasContent = (() => {
+    for (let i = agentMessages.length - 1; i >= 0; i--) {
+      const msg = agentMessages[i];
+      if (msg.role === "user") break;
+      if (msg.role !== "assistant") continue;
+      const parts = msg.rawParts ?? [];
+      const hasVisible = parts.some(
+        (p) =>
+          p.type === "text" ||
+          p.type === "reasoning" ||
+          p.type === "tool",
+      );
+      if (hasVisible) return true;
+    }
+    return false;
+  })();
   const isAgentWaiting =
     agentStatus === "running" &&
     agentContent.length === 0 &&
-    agentReasoningStatus === "idle";
+    agentReasoningStatus === "idle" &&
+    !latestAssistantHasContent;
   // 根据模式选择
   const isWaiting = currentMode === "agent" ? isAgentWaiting : isChatWaiting;
   const resolvedDiagramPaths = useMemo(() => {
