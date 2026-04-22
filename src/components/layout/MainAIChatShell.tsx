@@ -10,9 +10,9 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import {
-  useRustAgentStore,
-  initRustAgentListeners,
-} from "@/stores/useRustAgentStore";
+  useOpencodeAgent,
+  initOpencodeAgentListeners,
+} from "@/stores/useOpencodeAgent";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -180,11 +180,11 @@ export function MainAIChatShell() {
     llmRequestStartTime,
     llmRetryState,
     retryTimeout,
-  } = useRustAgentStore();
+  } = useOpencodeAgent();
 
   // 初始化 Rust Agent 事件监听器
   useEffect(() => {
-    initRustAgentListeners();
+    initOpencodeAgentListeners();
   }, []);
 
   // 工具审批 - 提取 tool 对象

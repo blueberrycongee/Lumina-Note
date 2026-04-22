@@ -34,8 +34,8 @@ export type AgentMessage = {
 export type AgentSessionSummary = {
   id: string;
   title: string;
-  created_at: number;
-  updated_at: number;
+  createdAt: number;
+  updatedAt: number;
 };
 
 type StartTaskContext = {
@@ -43,24 +43,57 @@ type StartTaskContext = {
   active_note_path?: string;
   active_note_content?: string;
   display_message?: string;
+  // Forwarded as parts on the prompt once we wire attachments — opencode
+  // accepts FilePartInput alongside TextPartInput. For now accepted-but-ignored
+  // to keep the MainAIChatShell call-site compiling.
+  attachments?: unknown[];
+};
+
+// Shape-parity with the legacy store so existing UI code that reaches into
+// these fields keeps compiling. All populated from opencode events once the
+// corresponding hooks are wired; left as null means "feature not yet ported".
+export type QueuedTaskSummary = {
+  id: string;
+  position: number;
+  task: string;
+};
+
+export type RetryState = {
+  attempt: number;
+  maxRetries: number;
+  reason: string;
+  nextRetryAt: number;
+};
+
+export type DebugPromptStack = {
+  provider: string;
+  receivedAt: number;
+  baseSystem: string;
+  systemPrompt: string;
+  rolePrompt: string;
+  builtInAgent: string;
+  workspaceAgent: string;
+  skillsIndex: string | null;
 };
 
 type State = {
   status: AgentStatus;
   messages: AgentMessage[];
   error: string | null;
-  sessionId: string | null;
+  currentSessionId: string | null;
   sessions: AgentSessionSummary[];
   pendingTool: {
     tool: { id: string; name: string; params: Record<string, unknown> };
     requestId: string;
   } | null;
-  // Stubs for shape parity with the legacy store during migration.
-  queuedTasks: never[];
-  activeTaskPreview: null;
-  debugPromptStack: null;
-  llmRequestStartTime: null;
-  llmRetryState: null;
+  // Shape parity with the legacy store during migration. All default to
+  // empty/null — individual features flip on as they get ported to opencode
+  // event hooks (queue, retry, debug prompt panel).
+  queuedTasks: QueuedTaskSummary[];
+  activeTaskPreview: string | null;
+  debugPromptStack: DebugPromptStack | null;
+  llmRequestStartTime: number | null;
+  llmRetryState: RetryState | null;
   totalTokensUsed: number;
   // SSE bookkeeping.
   _subscribed: boolean;
@@ -72,6 +105,8 @@ type Actions = {
   unsubscribe: () => void;
   loadSessions: () => Promise<void>;
   newSession: () => Promise<string | null>;
+  // Alias for useSessionManagement (drop-in for the legacy store).
+  clearChat: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   startTask: (task: string, ctx?: StartTaskContext) => Promise<void>;
@@ -124,8 +159,8 @@ function sessionSummary(info: {
   return {
     id: info.id,
     title: info.title,
-    created_at: info.time.created,
-    updated_at: info.time.updated,
+    createdAt: info.time.created,
+    updatedAt: info.time.updated,
   };
 }
 
@@ -136,7 +171,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
   // don't have to rebuild the whole array for every delta.
   const upsertMessage = (info: Message, parts: Part[]) => {
     set((state) => {
-      if (state.sessionId && info.sessionID !== state.sessionId) return state;
+      if (state.currentSessionId && info.sessionID !== state.currentSessionId) return state;
       const next = state.messages.slice();
       const idx = next.findIndex((m) => m.id === info.id);
       const merged = makeAgentMessage(info, parts);
@@ -148,7 +183,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
   const applyPartUpdate = (part: Part) => {
     set((state) => {
-      if (state.sessionId && part.sessionID !== state.sessionId) return state;
+      if (state.currentSessionId && part.sessionID !== state.currentSessionId) return state;
       const idx = state.messages.findIndex((m) => m.id === part.messageID);
       if (idx === -1) return state;
       const existing = state.messages[idx];
@@ -169,7 +204,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     partID: string,
   ) => {
     set((state) => {
-      if (state.sessionId && sessionID !== state.sessionId) return state;
+      if (state.currentSessionId && sessionID !== state.currentSessionId) return state;
       const idx = state.messages.findIndex((m) => m.id === messageID);
       if (idx === -1) return state;
       const existing = state.messages[idx];
@@ -223,14 +258,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const deletedId = event.properties.info.id;
         set((state) => ({
           sessions: state.sessions.filter((s) => s.id !== deletedId),
-          ...(state.sessionId === deletedId
-            ? { sessionId: null, messages: [] }
+          ...(state.currentSessionId === deletedId
+            ? { currentSessionId: null, messages: [] }
             : {}),
         }));
         return;
       }
       case "session.status": {
-        if (event.properties.sessionID !== get().sessionId) return;
+        if (event.properties.sessionID !== get().currentSessionId) return;
         const status = event.properties.status;
         if (status.type === "busy") set({ status: "running" });
         else if (status.type === "idle") set({ status: "idle" });
@@ -238,13 +273,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         return;
       }
       case "session.idle": {
-        if (event.properties.sessionID === get().sessionId) {
+        if (event.properties.sessionID === get().currentSessionId) {
           set({ status: "idle" });
         }
         return;
       }
       case "session.error": {
-        if (event.properties.sessionID && event.properties.sessionID !== get().sessionId)
+        if (event.properties.sessionID && event.properties.sessionID !== get().currentSessionId)
           return;
         set({
           status: "error",
@@ -260,7 +295,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       }
       case "message.removed": {
         const { sessionID, messageID } = event.properties;
-        if (sessionID !== get().sessionId) return;
+        if (sessionID !== get().currentSessionId) return;
         set((state) => ({
           messages: state.messages.filter((m) => m.id !== messageID),
         }));
@@ -276,12 +311,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         return;
       }
       case "permission.updated": {
-        if (event.properties.sessionID !== get().sessionId) return;
+        if (event.properties.sessionID !== get().currentSessionId) return;
         applyPermission(event.properties);
         return;
       }
       case "permission.replied": {
-        if (event.properties.sessionID !== get().sessionId) return;
+        if (event.properties.sessionID !== get().currentSessionId) return;
         set({ pendingTool: null });
         return;
       }
@@ -294,7 +329,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     status: "idle",
     messages: [],
     error: null,
-    sessionId: null,
+    currentSessionId: null,
     sessions: [],
     pendingTool: null,
     queuedTasks: [],
@@ -365,7 +400,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const id = data?.id ?? null;
         if (id) {
           set({
-            sessionId: id,
+            currentSessionId: id,
             messages: [],
             status: "idle",
             error: null,
@@ -391,7 +426,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           makeAgentMessage(entry.info, entry.parts),
         );
         set({
-          sessionId: id,
+          currentSessionId: id,
           messages,
           status: "idle",
           error: null,
@@ -406,8 +441,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       try {
         const client = await getOpencodeClient();
         await client.session.delete({ path: { id }, throwOnError: true });
-        if (get().sessionId === id) {
-          set({ sessionId: null, messages: [], pendingTool: null });
+        if (get().currentSessionId === id) {
+          set({ currentSessionId: null, messages: [], pendingTool: null });
         }
         await get().loadSessions();
       } catch (err) {
@@ -419,7 +454,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       try {
         set({ status: "running", error: null });
         if (!get()._subscribed) await get().subscribe();
-        let sessionId = get().sessionId;
+        let sessionId = get().currentSessionId;
         if (!sessionId) {
           sessionId = await get().newSession();
           if (!sessionId) throw new Error("failed to create session");
@@ -443,7 +478,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     },
 
     async abort() {
-      const sessionId = get().sessionId;
+      const sessionId = get().currentSessionId;
       if (!sessionId) return;
       try {
         const client = await getOpencodeClient();
@@ -459,7 +494,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       if (!pending) return;
       try {
         const client = await getOpencodeClient();
-        const sessionId = get().sessionId;
+        const sessionId = get().currentSessionId;
         if (!sessionId) return;
         // SDK method name: session.permission.reply or similar — fall through
         // to a raw fetch if the SDK doesn't expose it at this version.
@@ -486,7 +521,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       if (!pending) return;
       try {
         const client = await getOpencodeClient();
-        const sessionId = get().sessionId;
+        const sessionId = get().currentSessionId;
         if (!sessionId) return;
         const raw = client as unknown as {
           permission?: {
@@ -510,5 +545,17 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       // Retry state is surfaced via session.status{type:"retry"}; nothing
       // to do here from the UI side for now.
     },
+
+    async clearChat() {
+      await get().newSession();
+    },
   };
 });
+
+// Boot helper — MainAIChatShell calls this on mount so events flow and the
+// session list is populated before the first render.
+export function initOpencodeAgentListeners(): void {
+  const store = useOpencodeAgent.getState();
+  void store.subscribe();
+  void store.loadSessions();
+}

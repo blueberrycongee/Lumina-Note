@@ -1,5 +1,5 @@
 import { useMemo, useCallback } from "react";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 
 export function formatSessionTime(timestamp: number): string {
   const date = new Date(timestamp);
@@ -21,7 +21,7 @@ export function useSessionManagement() {
     switchSession: rustSwitchSession,
     deleteSession: rustDeleteSession,
     clearChat: rustClearChat,
-  } = useRustAgentStore();
+  } = useOpencodeAgent();
 
   const allSessions = useMemo(() => {
     return rustSessions
