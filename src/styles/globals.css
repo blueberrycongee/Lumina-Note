@@ -1170,7 +1170,55 @@ body {
   font-family: var(--font-mono);
 }
 
-/* 代码块 — GitHub-style: distinct bg, thin border, generous padding */
+/* Code block wrapper (rendered by marked code renderer) */
+.prose .code-block-wrapper {
+  position: relative;
+  margin: 1.25rem 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--md-code-block-bg, var(--foreground)) / 0.04);
+}
+.prose .code-block-wrapper pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.code-block-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px 4px 12px;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+.code-block-lang {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  letter-spacing: 0.02em;
+}
+.code-copy-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+.code-copy-btn:hover {
+  background: hsl(var(--foreground) / 0.08);
+  color: hsl(var(--foreground));
+}
+.code-copy-btn .check-icon { display: none; }
+.code-copy-btn.copied .copy-icon { display: none; }
+.code-copy-btn.copied .check-icon { display: flex; color: hsl(142 76% 36%); }
+
+/* Fallback for bare pre (not wrapped by code-block-wrapper) */
 .prose pre {
   background: hsl(var(--md-code-block-bg, var(--foreground)) / 0.04);
   border: 1px solid hsl(var(--border));
@@ -1707,18 +1755,20 @@ mark {
   background-color: hsl(var(--muted));
 }
 
-/* Syntax Highlighting (highlight.js compatible) */
+/* Syntax Highlighting — muted palette that sits quietly in a
+   grayscale UI. Enough hue to differentiate token types, not
+   enough to dominate. */
 
-/* Light Mode (GitHub Light) */
+/* Light Mode */
 .hljs-comment,
 .hljs-quote {
-  color: #6e7781;
+  color: #8b949e;
 }
 
 .hljs-doctag,
 .hljs-keyword,
 .hljs-formula {
-  color: #cf222e;
+  color: #8a5c9e;
 }
 
 .hljs-section,
@@ -1726,11 +1776,11 @@ mark {
 .hljs-selector-tag,
 .hljs-deletion,
 .hljs-subst {
-  color: #0550ae;
+  color: #4a6a8a;
 }
 
 .hljs-literal {
-  color: #953800;
+  color: #7a6040;
 }
 
 .hljs-string,
@@ -1738,7 +1788,7 @@ mark {
 .hljs-addition,
 .hljs-attribute,
 .hljs-meta .hljs-string {
-  color: #0a3069;
+  color: #4a7a5a;
 }
 
 .hljs-attr,
@@ -1749,7 +1799,7 @@ mark {
 .hljs-selector-attr,
 .hljs-selector-pseudo,
 .hljs-number {
-  color: #953800;
+  color: #7a6040;
 }
 
 .hljs-symbol,
@@ -1758,13 +1808,13 @@ mark {
 .hljs-meta,
 .hljs-selector-id,
 .hljs-title {
-  color: #8250df;
+  color: #6a5a8a;
 }
 
 .hljs-built_in,
 .hljs-title.class_,
 .hljs-class .hljs-title {
-  color: #953800;
+  color: #5a7080;
 }
 
 .hljs-emphasis {
@@ -1779,16 +1829,16 @@ mark {
   text-decoration: underline;
 }
 
-/* Dark Mode (GitHub Dark) */
+/* Dark Mode — same muted philosophy, lifted lightness */
 .dark .hljs-comment,
 .dark .hljs-quote {
-  color: #8b949e;
+  color: #6e7681;
 }
 
 .dark .hljs-doctag,
 .dark .hljs-keyword,
 .dark .hljs-formula {
-  color: #ff7b72;
+  color: #c0a0d0;
 }
 
 .dark .hljs-section,
@@ -1796,11 +1846,11 @@ mark {
 .dark .hljs-selector-tag,
 .dark .hljs-deletion,
 .dark .hljs-subst {
-  color: #79c0ff;
+  color: #8ab4d0;
 }
 
 .dark .hljs-literal {
-  color: #ffa657;
+  color: #c0a080;
 }
 
 .dark .hljs-string,
@@ -1808,7 +1858,7 @@ mark {
 .dark .hljs-addition,
 .dark .hljs-attribute,
 .dark .hljs-meta .hljs-string {
-  color: #a5d6ff;
+  color: #90b8a0;
 }
 
 .dark .hljs-attr,
@@ -1819,7 +1869,7 @@ mark {
 .dark .hljs-selector-attr,
 .dark .hljs-selector-pseudo,
 .dark .hljs-number {
-  color: #ffa657;
+  color: #c0a080;
 }
 
 .dark .hljs-symbol,
@@ -1828,13 +1878,13 @@ mark {
 .dark .hljs-meta,
 .dark .hljs-selector-id,
 .dark .hljs-title {
-  color: #d2a8ff;
+  color: #b0a0c8;
 }
 
 .dark .hljs-built_in,
 .dark .hljs-title.class_,
 .dark .hljs-class .hljs-title {
-  color: #ffa657;
+  color: #90b0c0;
 }
 
 /* Ensure hljs class has proper background/color if needed, though we rely on .cm-code-block-widget */

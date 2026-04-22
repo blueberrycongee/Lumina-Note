@@ -36,6 +36,37 @@ renderer.blockquote = function (quote: string | { text: string }) {
   }
 };
 
+// Code block renderer — wraps <pre><code> in a container with a copy button
+const COPY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const CHECK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+renderer.code = function (token: { text: string; lang?: string; escaped?: boolean }): string {
+  const lang = (token.lang || "").match(/^\S*/)?.[0] || "";
+  const code = token.text.replace(/\n$/, "") + "\n";
+  const escapedCode = token.escaped ? code : escapeHtml(code);
+  const langLabel = lang
+    ? `<span class="code-block-lang">${escapeHtml(lang)}</span>`
+    : "";
+  return (
+    `<div class="code-block-wrapper">` +
+    `<div class="code-block-header">${langLabel}` +
+    `<button class="code-copy-btn" type="button" aria-label="Copy">` +
+    `<span class="copy-icon">${COPY_SVG}</span>` +
+    `<span class="check-icon">${CHECK_SVG}</span>` +
+    `</button></div>` +
+    `<pre><code${lang ? ` class="language-${escapeHtml(lang)}"` : ""}>${escapedCode}</code></pre>` +
+    `</div>\n`
+  );
+};
+
 // Custom image renderer to handle local paths and external URLs
 renderer.image = function (token: { href: string; title: string | null; text: string }) {
   try {
@@ -338,4 +369,19 @@ export function editorToMarkdown(html: string): string {
     console.error("Editor to Markdown error:", error);
     return "";
   }
+}
+
+// Global click handler for code-block copy buttons injected by the renderer
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(".code-copy-btn") as HTMLElement | null;
+    if (!btn) return;
+    const wrapper = btn.closest(".code-block-wrapper");
+    const code = wrapper?.querySelector("pre code");
+    if (!code) return;
+    navigator.clipboard.writeText(code.textContent || "").then(() => {
+      btn.classList.add("copied");
+      setTimeout(() => btn.classList.remove("copied"), 2000);
+    });
+  });
 }

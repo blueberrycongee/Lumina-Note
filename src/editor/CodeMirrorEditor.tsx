@@ -132,13 +132,13 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "transparent",
       fontSize: `${fontSize}px`,
       height: "100%",
-      "--lumina-codeblock-bg": "hsl(var(--muted) / 0.58)",
-      "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.74)",
-      "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.7)",
-      "--lumina-codeblock-border": "hsl(var(--border) / 0.65)",
-      "--lumina-codeblock-border-soft": "hsl(var(--border) / 0.35)",
+      "--lumina-codeblock-bg": "hsl(var(--muted) / 0.4)",
+      "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.52)",
+      "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.46)",
+      "--lumina-codeblock-border": "hsl(var(--border) / 0.5)",
+      "--lumina-codeblock-border-soft": "hsl(var(--border) / 0.25)",
       "--lumina-codeblock-shadow":
-        "0 0 0 1px hsl(var(--border) / 0.08), 0 10px 24px -18px hsl(var(--foreground) / 0.28)",
+        "0 1px 3px 0 hsl(var(--foreground) / 0.05), 0 0 0 1px hsl(var(--border) / 0.08)",
     },
     ".cm-codeblock-widget pre": { fontSize: `${Math.max(10, fontSize - 2)}px` },
 
@@ -515,9 +515,8 @@ const createEditorTheme = (fontSize: number) =>
       overflow: "hidden",
       backgroundColor: "var(--lumina-codeblock-bg)",
       border: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "14px",
+      borderRadius: "10px",
       boxShadow: "var(--lumina-codeblock-shadow)",
-      backdropFilter: "blur(6px)",
     },
     // Code-block cm-lines: pull the line in by 16px on each side so the
     // painted border (drawn at the cm-line's outer edges) lines up with
@@ -538,9 +537,7 @@ const createEditorTheme = (fontSize: number) =>
       fontFamily: "'JetBrains Mono', monospace",
       border: "1px solid var(--lumina-codeblock-border)",
       borderBottom: "1px solid var(--lumina-codeblock-border-soft)",
-      borderRadius: "14px 14px 0 0",
-      boxShadow: "var(--lumina-codeblock-shadow)",
-      backdropFilter: "blur(6px)",
+      borderRadius: "10px 10px 0 0",
     },
     ".cm-lumina-codeblock-content-line": {
       marginLeft: "16px",
@@ -567,9 +564,7 @@ const createEditorTheme = (fontSize: number) =>
       borderLeft: "1px solid var(--lumina-codeblock-border)",
       borderRight: "1px solid var(--lumina-codeblock-border)",
       borderBottom: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "0 0 14px 14px",
-      boxShadow: "var(--lumina-codeblock-shadow)",
-      backdropFilter: "blur(6px)",
+      borderRadius: "0 0 10px 10px",
     },
     ".cm-codeblock-actions": {
       position: "absolute",
@@ -603,7 +598,7 @@ const createEditorTheme = (fontSize: number) =>
       },
     ".cm-codeblock-source-toggle": {
       justifyContent: "flex-end",
-      borderRadius: "14px 14px 0 0",
+      borderRadius: "10px 10px 0 0",
     },
     ".cm-codeblock-toggle, .cm-codeblock-copy": {
       border: "1px solid hsl(var(--border) / 0.5)",
@@ -638,7 +633,7 @@ const createEditorTheme = (fontSize: number) =>
     // === Inline code block styles ===
     ".cm-codeblock-header": {
       fontSize: "12px",
-      borderRadius: "14px 14px 0 0",
+      borderRadius: "10px 10px 0 0",
     },
     ".cm-codeblock-lang": {
       color: "hsl(var(--muted-foreground) / 0.9)",
@@ -664,27 +659,27 @@ const createEditorTheme = (fontSize: number) =>
       borderLeft: "1px solid var(--lumina-codeblock-border)",
       borderRight: "1px solid var(--lumina-codeblock-border)",
       borderBottom: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "0 0 14px 14px",
-      boxShadow: "var(--lumina-codeblock-shadow)",
+      borderRadius: "0 0 10px 10px",
       height: "10px",
     },
-    // hljs token colors
-    ".hljs-keyword": { color: "hsl(var(--md-keyword, 280 70% 55%))" },
-    ".hljs-string": { color: "hsl(var(--md-string, 120 50% 40%))" },
+    // Syntax token colors — desaturated to sit quietly in a grayscale UI.
+    // Enough hue to tell types apart at a glance, not enough to shout.
+    ".hljs-keyword": { color: "hsl(var(--md-keyword, 280 30% 50%))" },
+    ".hljs-string": { color: "hsl(var(--md-string, 140 25% 38%))" },
     ".hljs-comment": {
-      color: "hsl(var(--muted-foreground))",
+      color: "hsl(var(--muted-foreground) / 0.7)",
       fontStyle: "italic",
     },
-    ".hljs-number": { color: "hsl(var(--md-number, 30 80% 50%))" },
-    ".hljs-title": { color: "hsl(var(--md-link, 210 80% 55%))" },
-    ".hljs-built_in": { color: "hsl(var(--md-link, 210 80% 55%))" },
-    ".hljs-type": { color: "hsl(var(--md-keyword, 280 70% 55%))" },
-    ".hljs-function": { color: "hsl(var(--md-link, 210 80% 55%))" },
+    ".hljs-number": { color: "hsl(var(--md-number, 25 40% 46%))" },
+    ".hljs-title": { color: "hsl(var(--md-link, 210 30% 45%))" },
+    ".hljs-built_in": { color: "hsl(var(--md-link, 210 30% 45%))" },
+    ".hljs-type": { color: "hsl(var(--md-keyword, 280 30% 50%))" },
+    ".hljs-function": { color: "hsl(var(--md-link, 210 30% 45%))" },
     ".hljs-params": { color: "hsl(var(--foreground))" },
-    ".hljs-literal": { color: "hsl(var(--md-number, 30 80% 50%))" },
-    ".hljs-attr": { color: "hsl(var(--md-link, 210 80% 55%))" },
+    ".hljs-literal": { color: "hsl(var(--md-number, 25 40% 46%))" },
+    ".hljs-attr": { color: "hsl(var(--md-link, 210 30% 45%))" },
     ".hljs-variable": { color: "hsl(var(--foreground))" },
-    ".hljs-meta": { color: "hsl(var(--muted-foreground))" },
+    ".hljs-meta": { color: "hsl(var(--muted-foreground) / 0.7)" },
 
     // 基础 Markdown 样式
     ".cm-header-1": {
