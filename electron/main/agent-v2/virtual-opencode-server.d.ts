@@ -5,6 +5,14 @@ declare module "virtual:opencode-server" {
   export namespace Log {
     function init(opts: {
       level?: "DEBUG" | "INFO" | "WARN" | "ERROR";
+      /**
+       * When true, the logger writes to stderr instead of the on-disk
+       * log file under `~/.local/share/opencode/log/`. Required in dev
+       * so the main-process log forwarder can relay provider / prompt
+       * loop output to the renderer DevTools console.
+       */
+      print?: boolean;
+      dev?: boolean;
     }): Promise<void>;
   }
 

@@ -23,7 +23,9 @@ import type { MessageAttachment } from "@/services/llm";
 import {
   getOpencodeClient,
   resetOpencodeClient,
+  setDefaultDirectory,
 } from "@/services/opencode/client";
+import { useFileStore } from "@/stores/useFileStore";
 
 export type AgentStatus =
   | "idle"
@@ -130,7 +132,7 @@ type Actions = {
   subscribe: () => Promise<void>;
   unsubscribe: () => void;
   loadSessions: () => Promise<void>;
-  newSession: () => Promise<string | null>;
+  newSession: (directory?: string) => Promise<string | null>;
   // Alias for useSessionManagement (drop-in for the legacy store).
   clearChat: () => Promise<void>;
   switchSession: (id: string) => Promise<void>;
@@ -490,10 +492,17 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       }
     },
 
-    async newSession() {
+    async newSession(directory?: string) {
       try {
         const client = await getOpencodeClient();
-        const res = await client.session.create({ throwOnError: true });
+        // Opencode scopes sessions to an Instance keyed by `directory`.
+        // If we let session.create default to the Electron process cwd but
+        // later send prompt_async under the user's vault path, the prompt
+        // middleware spins up a different Instance — `sessions.get(id)`
+        // hits a not-found path silently and the SSE stream goes dead.
+        // Tie both calls to the same directory.
+        const query = directory ? { directory } : undefined;
+        const res = await client.session.create({ query, throwOnError: true });
         const data = res.data as { id?: string } | undefined;
         const id = data?.id ?? null;
         if (id) {
@@ -559,7 +568,11 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         if (!get()._subscribed) await get().subscribe();
         let sessionId = get().currentSessionId;
         if (!sessionId) {
-          sessionId = await get().newSession();
+          // Create under the same directory we'll prompt against (see the
+          // long comment in newSession). ctx.workspace_path is the vault
+          // root; without it opencode uses process.cwd() which in Electron
+          // resolves to the binary path and mismatches the prompt route.
+          sessionId = await get().newSession(ctx?.workspace_path || undefined);
           if (!sessionId) throw new Error("failed to create session");
         }
 
@@ -696,12 +709,37 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 // process restarts opencode under a fresh URL + credentials, and we have to
 // drop our cached client and resubscribe the SSE stream.
 let serverChangedUnlisten: (() => void) | null = null;
+let vaultUnsubscribe: (() => void) | null = null;
 const silenceInit = (err: unknown) => {
   // Preload missing (tests) or server not yet reachable — both are transient
   // and should not surface as an unhandled rejection.
   console.warn("[opencode] init listener error", err);
 };
 export function initOpencodeAgentListeners(): void {
+  // Pin every opencode HTTP request to the active vault path so the
+  // InstanceMiddleware on the server always routes session/prompt traffic
+  // to the same Instance. Without this, session.create and prompt_async
+  // end up in different Instances and the SSE stream silently drops.
+  const applyVault = (path: string | null) => setDefaultDirectory(path);
+  applyVault(useFileStore.getState().vaultPath);
+  if (!vaultUnsubscribe) {
+    vaultUnsubscribe = useFileStore.subscribe((state, prev) => {
+      if (state.vaultPath !== prev.vaultPath) {
+        applyVault(state.vaultPath);
+        // Previously cached sessions belong to a different Instance now.
+        useOpencodeAgent.setState({
+          currentSessionId: null,
+          messages: [],
+          sessions: [],
+          pendingTool: null,
+          status: "idle",
+          error: null,
+        });
+        useOpencodeAgent.getState().loadSessions().catch(silenceInit);
+      }
+    });
+  }
+
   const store = useOpencodeAgent.getState();
   store.subscribe().catch(silenceInit);
   store.loadSessions().catch(silenceInit);

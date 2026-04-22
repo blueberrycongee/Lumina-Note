@@ -31,6 +31,14 @@ declare global {
 let cachedClient: OpencodeClient | null = null;
 let cachedInfo: ServerInfo | null = null;
 let pending: Promise<OpencodeClient> | null = null;
+// Every opencode route that carries session/message state goes through
+// InstanceMiddleware, which picks the active `directory` from query or
+// `x-opencode-directory` and routes the request to an Instance keyed by
+// that path. If a later request arrives with a different directory, it
+// hits a different Instance and the session you just created is "not
+// found". We stash the current vault path and attach it as a default
+// header so every request stays in the same Instance.
+let defaultDirectory: string | null = null;
 
 async function resolveServerInfo(): Promise<ServerInfo> {
   const bridge = window.lumina?.opencode;
@@ -59,11 +67,15 @@ export async function getOpencodeClient(): Promise<OpencodeClient> {
   pending = (async () => {
     const info = await resolveServerInfo();
     cachedInfo = info;
+    const headers: Record<string, string> = {
+      authorization: buildAuthHeader(info),
+    };
+    if (defaultDirectory) {
+      headers["x-opencode-directory"] = defaultDirectory;
+    }
     cachedClient = createOpencodeClient({
       baseUrl: info.url,
-      headers: {
-        authorization: buildAuthHeader(info),
-      },
+      headers,
     });
     return cachedClient;
   })();
@@ -77,6 +89,22 @@ export async function getOpencodeClient(): Promise<OpencodeClient> {
 
 export function getCachedServerInfo(): ServerInfo | null {
   return cachedInfo;
+}
+
+/**
+ * Pin every subsequent opencode request to `directory`. Call this once
+ * the vault path is known so session/message routes all land in the same
+ * Instance. Resets the cached client so the new default header sticks.
+ */
+export function setDefaultDirectory(directory: string | null): void {
+  if (defaultDirectory === directory) return;
+  defaultDirectory = directory && directory.length > 0 ? directory : null;
+  cachedClient = null;
+  pending = null;
+}
+
+export function getDefaultDirectory(): string | null {
+  return defaultDirectory;
 }
 
 export function resetOpencodeClient(): void {

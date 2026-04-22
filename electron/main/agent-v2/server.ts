@@ -105,9 +105,20 @@ export async function startOpencodeServer(opts?: {
     // In dev, force INFO so provider resolution + prompt errors show up
     // in the main terminal. Silent provider failures were what kept the
     // earlier "message sends but no reply" bug un-diagnosed.
-    const defaultLevel =
-      process.env.NODE_ENV === "development" ? "INFO" : "WARN";
-    await Log.init({ level: opts?.logLevel ?? defaultLevel });
+    //
+    // `print: true` bypasses opencode's log-to-file default and writes to
+    // stderr instead. Our log-forward.ts pipe then delivers it to the
+    // renderer DevTools console. Without this flag `Log.init` drops its
+    // output into `~/.local/share/opencode/log/dev.log` and nothing from
+    // the prompt loop (provider resolution, retry attempts, agent errors)
+    // is visible to us.
+    const isDev = process.env.NODE_ENV === "development";
+    const defaultLevel = isDev ? "INFO" : "WARN";
+    await Log.init({
+      level: opts?.logLevel ?? defaultLevel,
+      print: isDev,
+      dev: isDev,
+    });
 
     const listener = await Server.listen({
       port,
