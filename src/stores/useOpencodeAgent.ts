@@ -14,6 +14,7 @@
 
 import { create } from "zustand";
 import type { Event, Message, Part, Permission } from "@opencode-ai/sdk";
+import type { MessageAttachment } from "@/services/llm";
 import { getOpencodeClient } from "@/services/opencode/client";
 
 export type AgentStatus =
@@ -29,6 +30,9 @@ export type AgentMessage = {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
   rawParts: Part[];
+  // Kept optional for shape parity with the legacy store — not yet
+  // populated from opencode FileParts (deferred).
+  attachments?: MessageAttachment[];
 };
 
 export type AgentSessionSummary = {
@@ -95,6 +99,13 @@ type State = {
   llmRequestStartTime: number | null;
   llmRetryState: RetryState | null;
   totalTokensUsed: number;
+  // StreamingMessage legacy compat — opencode already streams via the
+  // message-part channel so AgentMessageRenderer shows tokens as they
+  // arrive. These fields stay empty/"idle" so the old typing-dots UI
+  // doesn't double-render the same text.
+  streamingContent: string;
+  streamingReasoning: string;
+  streamingReasoningStatus: "idle" | "streaming" | "done";
   // SSE bookkeeping.
   _subscribed: boolean;
   _abortController: AbortController | null;
@@ -338,6 +349,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     llmRequestStartTime: null,
     llmRetryState: null,
     totalTokensUsed: 0,
+    streamingContent: "",
+    streamingReasoning: "",
+    streamingReasoningStatus: "idle" as const,
     _subscribed: false,
     _abortController: null,
 

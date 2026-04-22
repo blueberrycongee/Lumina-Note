@@ -1,16 +1,19 @@
 /**
- * 流式消息显示组件
+ * 流式消息显示组件。
  *
- * 统一处理 Agent 和 Chat 模式的流式输出渲染
- * - Agent 模式：从 useRustAgentStore 获取 streamingContent
- * - Chat 模式：从 useAIStore 获取 streamingContent
+ * Agent 模式下 opencode 已经在 messages[] 里流式更新文本,
+ * AgentMessageRenderer 会直接渲染,这里的 streamingContent 字段
+ * 保持为空是故意的 —— 避免同一段文本被渲染两次。
+ * TypingIndicator 仍然基于 status==="running" 的瞬态显示等待点。
+ *
+ * Chat 模式保留老 useAIStore 的 streamingContent 路径(还在用)。
  */
 
 import { memo, useMemo } from "react";
 import { Bot } from "lucide-react";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { useAIStore } from "@/stores/useAIStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useUIStore } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingCollapsible } from "./AgentMessageRenderer";
@@ -42,8 +45,8 @@ export const StreamingMessage = memo(function StreamingMessage({
   const currentMode = mode ?? chatMode;
 
   // Agent 模式数据
-  const agentContent = useRustAgentStore((state) => state.streamingContent);
-  const agentStatus = useRustAgentStore((state) => state.status);
+  const agentContent = useOpencodeAgent((state) => state.streamingContent);
+  const agentStatus = useOpencodeAgent((state) => state.status);
 
   // Chat 模式数据
   const chatContent = useAIStore((state) => state.streamingContent);
@@ -55,11 +58,11 @@ export const StreamingMessage = memo(function StreamingMessage({
   const chatMessages = useAIStore((state) => state.messages);
 
   // Agent 思考流
-  const agentReasoning = useRustAgentStore((state) => state.streamingReasoning);
-  const agentReasoningStatus = useRustAgentStore(
+  const agentReasoning = useOpencodeAgent((state) => state.streamingReasoning);
+  const agentReasoningStatus = useOpencodeAgent(
     (state) => state.streamingReasoningStatus,
   );
-  const agentMessages = useRustAgentStore((state) => state.messages);
+  const agentMessages = useOpencodeAgent((state) => state.messages);
 
   // 根据模式选择数据
   const content = currentMode === "agent" ? agentContent : chatContent;
@@ -168,8 +171,8 @@ export const TypingIndicator = memo(function TypingIndicator({
   const currentMode = mode ?? chatMode;
 
   // Agent 模式数据
-  const agentContent = useRustAgentStore((state) => state.streamingContent);
-  const agentStatus = useRustAgentStore((state) => state.status);
+  const agentContent = useOpencodeAgent((state) => state.streamingContent);
+  const agentStatus = useOpencodeAgent((state) => state.status);
 
   // Chat 模式数据
   const chatContent = useAIStore((state) => state.streamingContent);
@@ -184,10 +187,10 @@ export const TypingIndicator = memo(function TypingIndicator({
     chatContent.length === 0 &&
     chatReasoningStatus === "idle";
 
-  const agentReasoningStatus = useRustAgentStore(
+  const agentReasoningStatus = useOpencodeAgent(
     (state) => state.streamingReasoningStatus,
   );
-  const agentMessages = useRustAgentStore((state) => state.messages);
+  const agentMessages = useOpencodeAgent((state) => state.messages);
   const isAgentWaiting =
     agentStatus === "running" &&
     agentContent.length === 0 &&
