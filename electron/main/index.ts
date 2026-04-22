@@ -5,6 +5,8 @@ import path from "path";
 // push content left (classic mode). The scrollbar paints on top instead.
 app.commandLine.appendSwitch("enable-features", "OverlayScrollbar");
 import { registerIpcHandlers } from "./ipc.js";
+import { registerOpencodeIpc } from "./agent-v2/ipc.js";
+import { startOpencodeServer, stopOpencodeServer } from "./agent-v2/server.js";
 import { storeHandlers } from "./handlers/store.js";
 import { stopAllWatchers } from "./handlers/watcher.js";
 import { AgentEventBus } from "./agent/event-bus.js";
@@ -194,6 +196,11 @@ app.whenReady().then(() => {
     wikiSettings,
     wikiManager,
   });
+  registerOpencodeIpc();
+  void startOpencodeServer().then(
+    (h) => console.log(`[main] opencode server at ${h.url}`),
+    (err) => console.error("[main] opencode server failed to start", err),
+  );
   buildMenu();
   createWindow();
 
@@ -205,4 +212,8 @@ app.whenReady().then(() => {
 app.on("window-all-closed", () => {
   stopAllWatchers();
   if (process.platform !== "darwin") app.quit();
+});
+
+app.on("before-quit", () => {
+  void stopOpencodeServer();
 });

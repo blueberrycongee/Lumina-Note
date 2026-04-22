@@ -77,5 +77,21 @@ contextBridge.exposeInMainWorld('__TAURI__', {
   },
 })
 
+// ── Opencode server bridge ─────────────────────────────────────────────────
+// Exposed as window.lumina.opencode so the renderer can build an
+// @opencode-ai/sdk client against the in-process server.
+type OpencodeServerInfo = {
+  url: string
+  username: string
+  password: string
+} | null
+
+contextBridge.exposeInMainWorld('lumina', {
+  opencode: {
+    getServerInfo: async (): Promise<OpencodeServerInfo> =>
+      ipcRenderer.invoke('opencode:get-server-info') as Promise<OpencodeServerInfo>,
+  },
+})
+
 ipcRenderer.send('__preload_ready')
 console.log('[preload] __TAURI_INTERNALS__ shim installed')
