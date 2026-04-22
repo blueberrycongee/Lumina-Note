@@ -1667,15 +1667,15 @@ mark {
    of .cm-content), not on .cm-content itself. This prevents ::selection
    from painting in padding zones since .cm-content has no extra padding. */
 .codemirror-wrapper .cm-sizer {
-  max-width: 56rem; /* max-w-4xl */
+  max-width: 42rem;
   margin: 0 auto;
-  padding: 1rem 2rem; /* py-4 px-8 */
+  padding: 1rem 2rem;
 }
 .codemirror-wrapper .cm-content {
-  max-width: 56rem;
+  max-width: 42rem;
 }
 .codemirror-wrapper .cm-line {
-  max-width: 56rem;
+  max-width: 42rem;
 }
 
 /* 暗色模式适配 */
