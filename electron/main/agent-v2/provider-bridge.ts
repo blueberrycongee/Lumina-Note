@@ -14,6 +14,34 @@ import type { ProviderId } from "../agent/providers/registry.js";
 
 const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 
+// System prompt injected as the `build` agent's prompt. Opencode's
+// default behaviour (session/llm.ts:103) is: if an agent has a
+// non-empty `prompt` field, it REPLACES the provider-default prompt
+// (anthropic.txt / default.txt / etc.) — which otherwise introduces the
+// assistant as "opencode, an interactive CLI tool ... software
+// engineering tasks", completely wrong for a notes app.
+//
+// Keep it short. Longer context bloats every request. Tool behaviour is
+// already shaped by opencode's tool definitions; this prompt only needs
+// to set identity, register the app's purpose, and nudge the tone.
+const LUMINA_SYSTEM_PROMPT = `You are Lumina's AI assistant, embedded inside the Lumina note-taking and knowledge-management app.
+
+Your job is to help the user think, research, write, and maintain a personal knowledge vault made of Markdown notes.
+
+You have tools (read, write, edit, grep, glob, list, webfetch, websearch, bash) available. Use them when:
+- The user asks anything about the vault's contents.
+- The user asks you to create, edit, restructure, or cross-reference notes.
+- Research or web lookups would materially improve the answer.
+
+For conversational questions (explaining, brainstorming, translating, summarizing pasted text) just answer directly — no tool use needed.
+
+Rules:
+- Respond in the user's language. Most users write Chinese; match them unless they ask for English.
+- When writing or editing notes, actually modify the file — don't just describe what you'd write.
+- When editing, read the note first so you can make a targeted edit instead of overwriting.
+- Prefer concise, well-structured Markdown. If the user wants long-form, they'll ask.
+- Never call yourself "opencode" or a "CLI tool for software engineering." You are Lumina's assistant.`;
+
 // Lumina provider id → opencode provider id. Mainline providers use the
 // same id as models.dev so opencode's registry picks up model metadata,
 // pricing, context limits, etc.
@@ -122,14 +150,18 @@ export async function buildOpencodeBridge(
     // Top-level `model: "providerID/modelID"` sets opencode's defaultModel()
     // so we don't depend on the recent-model heuristic or models.dev ordering.
     model: `${opencodeId}/${resolvedModelId}`,
-    // Force the built-in `build` agent. Opencode merges config files from
-    // ~/.config/opencode and ~/.opencode on startup, and a user who has
-    // played with opencode CLI before may have `default_agent` pointing at
-    // a plugin-provided agent (e.g. "Sisyphus - Ultraworker") whose loader
-    // fails under Electron's ESM — prompts then die with "default agent
-    // not found". Pinning default_agent here, plus passing `agent: "build"`
-    // per-prompt, ensures Lumina always routes through the stable built-in.
+    // Force the built-in `build` agent (see the long comment in
+    // useOpencodeAgent.startTask: plugin-backed agents from the user's
+    // CLI config can break).
     default_agent: "build",
+    // Override `build`'s system prompt with Lumina's. config.agent[name]
+    // merges into the built-in agents record (agent/agent.ts:236-263);
+    // `.prompt` wins over the provider default at llm.ts:103.
+    agent: {
+      build: {
+        prompt: LUMINA_SYSTEM_PROMPT,
+      },
+    },
     provider: {
       [opencodeId]: providerEntry,
     },
