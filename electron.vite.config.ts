@@ -1,5 +1,6 @@
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import { existsSync } from 'node:fs'
 import { copyFile, mkdir, readdir } from 'node:fs/promises'
 import path from 'path'
 import pkg from './package.json'
@@ -31,10 +32,24 @@ export default defineConfig({
         name: 'lumina:virtual-opencode-server',
         enforce: 'pre',
         resolveId(id) {
-          if (id === 'virtual:opencode-server') {
-            return this.resolve(path.join(OPENCODE_SERVER_DIST, 'node.js'))
+          if (id !== 'virtual:opencode-server') return undefined
+          const bundle = path.join(OPENCODE_SERVER_DIST, 'node.js')
+          if (!existsSync(bundle)) {
+            this.error(
+              [
+                `opencode server bundle missing at ${bundle}.`,
+                '',
+                'First-time setup on a fresh checkout:',
+                '  1. Install bun         — https://bun.sh (or `brew install oven-sh/bun/bun`)',
+                '  2. Clone opencode      — git clone https://github.com/anomalyco/opencode thirdparty/opencode',
+                '  3. Install its deps    — (cd thirdparty/opencode && bun install)',
+                '  4. Build the bundle    — npm run opencode:bundle',
+                '',
+                'After that, `npm run dev` resolves virtual:opencode-server normally.',
+              ].join('\n'),
+            )
           }
-          return undefined
+          return this.resolve(bundle)
         },
       },
       {
