@@ -12,7 +12,6 @@ import { Kbd } from "./kbd";
 import { Row } from "./row";
 import {
   filterAndRankCommands,
-  getAllCommands,
   useCommandMenu,
   type CommandGroupId,
   type CommandItem,
@@ -45,8 +44,19 @@ const GROUP_LABEL: Record<CommandGroupId, string> = {
 };
 
 export function CommandMenu() {
-  const { open, query, setOpen, setQuery } = useCommandMenu();
-  const commands = useCommandMenu((s) => getAllCommands(s));
+  // Stable slice selectors — touching s.sources directly gives a ref that
+  // only changes when register/unregisterSource fires. Flattening here
+  // (inside useMemo, not inside the zustand selector) avoids the "selector
+  // returns new array every render → infinite loop" footgun.
+  const open = useCommandMenu((s) => s.open);
+  const query = useCommandMenu((s) => s.query);
+  const sources = useCommandMenu((s) => s.sources);
+  const setOpen = useCommandMenu((s) => s.setOpen);
+  const setQuery = useCommandMenu((s) => s.setQuery);
+  const commands = useMemo(
+    () => Object.values(sources).flat(),
+    [sources],
+  );
   const reduceMotion = useReducedMotion();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
