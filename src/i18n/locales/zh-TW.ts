@@ -330,9 +330,6 @@ export default {
     status: "狀態",
     fullMsgsCount: "完整訊息數",
     displayMsgsCount: "顯示訊息數",
-    intentResult: "意圖識別結果",
-    notTriggered: "未觸發",
-    noIntentData: "暫無意圖數據",
     noMsgs: "暫無訊息，傳送一條訊息開始除錯",
     attachImage: "新增圖片",
     modelNoVision: "目前模型不支援圖片",
@@ -366,10 +363,6 @@ export default {
     modeChat: "聊天",
     modeAgent: "Agent",
     modeCodex: "Codex",
-    intentRecognized: "已識別意圖",
-    intentEmpty: "未識別意圖",
-    intentTypeLabel: "類型",
-    intentRouteLabel: "路由",
     unsupportedProvider: "不支援的 AI 提供商: {provider}",
     providerError: "{provider} 請求失敗：{error}",
     apiErrorWithStatus: "API 錯誤 ({status}): {error}",
@@ -1554,11 +1547,9 @@ export default {
     thinkingModeHint:
       "所有支援模型統一使用此開關，不支援的模型會自動忽略此設定。",
     temperature: "溫度 (Temperature)",
-    dynamicRouting: "動態路由 (Intent Routing)",
+    dynamicRouting: "模型路由",
     enable: "啟用",
-    routingDescription: "配置意圖識別模型和路由規則。",
-    intentModel: "意圖識別模型 (Intent Model)",
-    intentModelDesc: "用於分析用戶意圖 (Chat/Search/Edit/...)",
+    routingDescription: "為聊天與複雜任務分別覆蓋模型。",
     useMainKey: "留空則使用主 Key",
     chatModel: "聊天模型 (Chat Model)",
     chatModelDesc: "用於 Chat 模式和簡單任務 (如閒聊、搜尋)",
@@ -1831,31 +1822,6 @@ export default {
       contentNotLoaded: "(內容未載入)",
     },
 
-    // 意圖路由提示詞
-    router: {
-      system: `你是一個意圖分類器。分析使用者的請求並將其歸類為以下意圖之一：
-
-1. "chat": 閒聊、簡單問題、問候。
-2. "search": 詢問查找筆記中的資訊、搜尋特定主題。
-3. "create": 請求建立新筆記、撰寫文章、生成大綱。
-4. "edit": 請求修改、重寫、修復、格式化現有文字/筆記，或向現有筆記寫入新內容。
-5. "organize": 請求整理筆記、建立資料夾、移動檔案或清理。
-6. "flashcard": 請求生成閃卡、製作記憶卡片、從內容提取知識點用於複習、Anki 卡片。
-7. "complex": 多步驟任務、編碼、推理或需要深度分析的請求。
-
-僅輸出 JSON：{"type": "<chat|search|create|edit|organize|flashcard|complex>", "confidence": 0.0-1.0, "reasoning": "簡短說明"}`,
-    },
-
-    // 查詢改寫提示詞
-    rewriter: {
-      system: `你是一個查詢改寫助手。對使用者的輸入進行保守改寫，目標是：
-1) 保留所有與意圖相關的關鍵詞和實體；
-2) 刪除無意義閒聊或客套語；
-3) 將問題或請求簡化為適合意圖識別與任務執行的短句（不超過 60 個字元）；
-4) **不要**使用過去式或聲稱任何動作已經完成（不要輸出「已刪除」、「已完成」、「已成功」等）；
-5) 輸出必須是請求/任務形式，例如「刪除檔案 foo.md 的末尾總結部分」或「將 xxx 合併到 yyy」；
-6) 只輸出改寫後的單句（不要添加解釋、前綴或多餘標點）。`,
-    },
 
     // 上下文壓縮提示詞
     contextSummary: {

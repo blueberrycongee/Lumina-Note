@@ -334,9 +334,6 @@ export default {
     status: "ステータス",
     fullMsgsCount: "完全メッセージ数",
     displayMsgsCount: "表示メッセージ数",
-    intentResult: "インテント認識結果",
-    notTriggered: "未トリガー",
-    noIntentData: "インテントデータなし",
     noMsgs: "メッセージがありません。メッセージを送信してデバッグを開始",
     attachImage: "画像を追加",
     modelNoVision: "現在のモデルは画像をサポートしていません",
@@ -371,10 +368,6 @@ export default {
     modeChat: "チャット",
     modeAgent: "Agent",
     modeCodex: "Codex",
-    intentRecognized: "意図を認識しました",
-    intentEmpty: "意図が検出されませんでした",
-    intentTypeLabel: "タイプ",
-    intentRouteLabel: "ルート",
     unsupportedProvider: "サポートされていない AI プロバイダー: {provider}",
     providerError: "{provider} リクエストに失敗しました: {error}",
     apiErrorWithStatus: "API エラー ({status}): {error}",
@@ -1588,11 +1581,9 @@ export default {
     thinkingModeHint:
       "対応モデルでは同じスイッチで制御し、未対応モデルでは安全に無視されます。",
     temperature: "Temperature",
-    dynamicRouting: "ダイナミックルーティング",
+    dynamicRouting: "モデルルーティング",
     enable: "有効",
-    routingDescription: "インテント認識モデルとルーティングルールを設定。",
-    intentModel: "インテント認識モデル",
-    intentModelDesc: "ユーザーインテント分析用 (Chat/Search/Edit/...)",
+    routingDescription: "チャットと複雑タスクで使うモデルを個別に指定できます。",
     useMainKey: "空欄の場合はメイン Key を使用",
     chatModel: "チャットモデル",
     chatModelDesc: "Chat モードと簡単なタスク用（雑談、検索など）",
@@ -1870,31 +1861,6 @@ export default {
       contentNotLoaded: "(内容未読み込み)",
     },
 
-    // インテントルータープロンプト
-    router: {
-      system: `あなたはインテント分類器です。ユーザーのリクエストを分析し、以下のインテントのいずれかに分類してください：
-
-1. "chat": 雑談、簡単な質問、挨拶
-2. "search": ノート内の情報検索、特定のトピックの検索
-3. "create": 新しいノートの作成、記事の執筆、アウトラインの生成
-4. "edit": 既存のテキスト/ノートの変更、書き直し、修正、フォーマット
-5. "organize": ノートの整理、フォルダの作成、ファイルの移動、クリーンアップ
-6. "flashcard": フラッシュカードの生成、復習用の知識ポイントの抽出
-7. "complex": マルチステップタスク、コーディング、推論、深い分析が必要なリクエスト
-
-JSONのみを出力：{"type": "<chat|search|create|edit|organize|flashcard|complex>", "confidence": 0.0-1.0, "reasoning": "簡単な説明"}`,
-    },
-
-    // クエリ書き換えプロンプト
-    rewriter: {
-      system: `あなたはクエリ書き換えアシスタントです。以下の目標でユーザー入力を保守的に書き換えてください：
-1) インテント関連のすべてのキーワードとエンティティを保持
-2) 意味のない雑談や挨拶を削除
-3) 質問やリクエストを短いフレーズに簡略化（60文字以内）
-4) 過去形を使用したり、アクションが完了したと主張しないでください
-5) 出力はリクエスト/タスク形式である必要があります
-6) 書き換えられた単一の文のみを出力してください`,
-    },
 
     // コンテキスト圧縮プロンプト
     contextSummary: {

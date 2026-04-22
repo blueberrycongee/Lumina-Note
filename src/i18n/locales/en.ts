@@ -335,9 +335,6 @@ export default {
     status: "Status",
     fullMsgsCount: "Full messages",
     displayMsgsCount: "Display messages",
-    intentResult: "Intent Recognition Result",
-    notTriggered: "Not triggered",
-    noIntentData: "No intent data",
     noMsgs: "No messages, send a message to start debugging",
     attachImage: "Add image",
     modelNoVision: "Current model does not support images",
@@ -372,10 +369,6 @@ export default {
     modeChat: "Chat",
     modeAgent: "Agent",
     modeCodex: "Codex",
-    intentRecognized: "Intent recognized",
-    intentEmpty: "No intent detected",
-    intentTypeLabel: "Type",
-    intentRouteLabel: "Route",
     unsupportedProvider: "Unsupported AI provider: {provider}",
     providerError: "{provider} request failed: {error}",
     apiErrorWithStatus: "API error ({status}): {error}",
@@ -1593,11 +1586,9 @@ export default {
     thinkingModeHint:
       "One unified switch across models. Unsupported models safely ignore this option.",
     temperature: "Temperature",
-    dynamicRouting: "Dynamic Routing (Intent Routing)",
+    dynamicRouting: "Model Routing",
     enable: "Enable",
-    routingDescription: "Configure intent recognition model and routing rules.",
-    intentModel: "Intent Model",
-    intentModelDesc: "For analyzing user intent (Chat/Search/Edit/...)",
+    routingDescription: "Override which model handles chat vs. complex tasks.",
     useMainKey: "Leave empty to use main key",
     chatModel: "Chat Model",
     chatModelDesc: "For Chat mode and simple tasks (e.g. chatting, search)",
@@ -1872,32 +1863,6 @@ Important notes:
       currentFiles: "[Current file content] (use this as reference):",
       fileEnd: "End of file",
       contentNotLoaded: "(content not loaded)",
-    },
-
-    // Intent router prompts
-    router: {
-      system: `You are an intent classifier. Analyze the user's request and classify it into one of these intents:
-
-1. "chat": Casual conversation, simple questions, greetings.
-2. "search": Asking to find information in notes, searching specific topics.
-3. "create": Requesting to create new notes, write articles, generate outlines.
-4. "edit": Requesting to modify, rewrite, fix, format existing text/notes, or write new content to existing notes.
-5. "organize": Requesting to organize notes, create folders, move files, or clean up.
-6. "flashcard": Requesting to generate flashcards, create memory cards, extract knowledge points for review, Anki cards.
-7. "complex": Multi-step tasks, coding, reasoning, or requests requiring deep analysis.
-
-Output only JSON: {"type": "<chat|search|create|edit|organize|flashcard|complex>", "confidence": 0.0-1.0, "reasoning": "brief explanation"}`,
-    },
-
-    // Query rewriter prompts
-    rewriter: {
-      system: `You are a query rewriting assistant. Perform conservative rewriting of user input with these goals:
-1) Preserve all intent-related keywords and entities;
-2) Remove meaningless chitchat or pleasantries;
-3) Simplify questions or requests into short phrases suitable for intent recognition and task execution (no more than 60 characters);
-4) **Do not** use past tense or claim any action has been completed (no "deleted", "completed", "succeeded", etc.);
-5) Output must be in request/task form, e.g., "delete the summary section at the end of foo.md" or "merge xxx into yyy";
-6) Output only the rewritten single sentence (no explanations, prefixes, or extra punctuation).`,
     },
 
     // Context compaction prompts

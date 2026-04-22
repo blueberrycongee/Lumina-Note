@@ -330,9 +330,6 @@ export default {
     status: "状态",
     fullMsgsCount: "完整消息数",
     displayMsgsCount: "显示消息数",
-    intentResult: "意图识别结果",
-    notTriggered: "未触发",
-    noIntentData: "暂无意图数据",
     noMsgs: "暂无消息，发送一条消息开始调试",
     attachImage: "添加图片",
     modelNoVision: "当前模型不支持图片",
@@ -366,10 +363,6 @@ export default {
     modeChat: "对话",
     modeAgent: "Agent",
     modeCodex: "Codex",
-    intentRecognized: "识别到意图",
-    intentEmpty: "未识别到意图",
-    intentTypeLabel: "类型",
-    intentRouteLabel: "路由",
     unsupportedProvider: "不支持的 AI 提供商: {provider}",
     providerError: "{provider} 请求失败：{error}",
     apiErrorWithStatus: "API 错误 ({status}): {error}",
@@ -1555,11 +1548,9 @@ export default {
     thinkingModeHint:
       "所有支持模型统一使用该开关，不支持的模型会自动忽略此设置。",
     temperature: "温度 (Temperature)",
-    dynamicRouting: "动态路由 (Intent Routing)",
+    dynamicRouting: "模型路由",
     enable: "启用",
-    routingDescription: "配置意图识别模型和路由规则。",
-    intentModel: "意图识别模型 (Intent Model)",
-    intentModelDesc: "用于分析用户意图 (Chat/Search/Edit/...)",
+    routingDescription: "为聊天与复杂任务分别覆盖模型。",
     useMainKey: "留空则使用主 Key",
     chatModel: "聊天模型 (Chat Model)",
     chatModelDesc: "用于 Chat 模式和简单任务 (如闲聊、搜索)",
@@ -1833,31 +1824,6 @@ export default {
       contentNotLoaded: "(内容未加载)",
     },
 
-    // 意图路由提示词
-    router: {
-      system: `你是一个意图分类器。分析用户的请求并将其归类为以下意图之一：
-
-1. "chat": 闲聊、简单问题、问候。
-2. "search": 询问查找笔记中的信息、搜索特定主题。
-3. "create": 请求创建新笔记、撰写文章、生成大纲。
-4. "edit": 请求修改、重写、修复、格式化现有文本/笔记，或向现有笔记写入新内容。
-5. "organize": 请求整理笔记、创建文件夹、移动文件或清理。
-6. "flashcard": 请求生成闪卡、制作记忆卡片、从内容提取知识点用于复习、Anki 卡片。
-7. "complex": 多步骤任务、编码、推理或需要深度分析的请求。
-
-仅输出 JSON：{"type": "<chat|search|create|edit|organize|flashcard|complex>", "confidence": 0.0-1.0, "reasoning": "简短说明"}`,
-    },
-
-    // 查询改写提示词
-    rewriter: {
-      system: `你是一个查询改写助手。对用户的输入进行保守改写，目标是：
-1) 保留所有与意图相关的关键词和实体；
-2) 删除无意义闲聊或客套语；
-3) 将问题或请求简化为适合意图识别与任务执行的短句（不超过 60 个字符）；
-4) **不要**使用过去时或声称任何动作已经完成（不要输出"已删除"、"已完成"、"已成功"等）；
-5) 输出必须是请求/任务形式，例如"删除文件 foo.md 的末尾总结部分"或"将 xxx 合并到 yyy"；
-6) 只输出改写后的单句（不要添加解释、前缀或多余标点）。`,
-    },
 
     // 上下文压缩提示词
     contextSummary: {
