@@ -12,6 +12,7 @@ import {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import {
   AnimatePresence,
   motion,
@@ -189,7 +190,15 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
       ? { opacity: 0 }
       : { opacity: 0, y: placement.startsWith("top") ? 2 : -2, scale: 0.99 };
 
-    return (
+    if (typeof document === "undefined") return null;
+
+    // IMPORTANT: portal into document.body so `position: fixed` is
+    // interpreted relative to the viewport. Without this, any ancestor
+    // with a `transform` (framer-motion <motion.div>, Tailwind
+    // `transform` utility, CSS `will-change: transform`, etc.) changes
+    // the fixed containing block and the popover floats to wrong
+    // coordinates.
+    return createPortal(
       <AnimatePresence>
         {open ? (
           <motion.div
@@ -214,7 +223,8 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
             {children}
           </motion.div>
         ) : null}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body,
     );
   },
 );
