@@ -24,10 +24,6 @@ import {
 } from "./agent-v2/provider-bridge.js";
 import { storeHandlers } from "./handlers/store.js";
 import { stopAllWatchers } from "./handlers/watcher.js";
-import { AgentEventBus } from "./agent/event-bus.js";
-import { IpcApprovalGate } from "./agent/approval-gate.js";
-import { DebugLog } from "./agent/debug-log.js";
-import { MemoryStore } from "./agent/memory-store.js";
 import { AiSdkProvider } from "./agent/providers/ai-sdk-provider.js";
 import {
   createLanguageModel,
@@ -37,14 +33,7 @@ import {
   ProviderSettingsStore,
   type SecretStore,
 } from "./agent/providers/settings-store.js";
-import { AgentRuntime } from "./agent/runtime.js";
 import { SkillLoader } from "./agent/skills/loader.js";
-import { McpManager } from "./agent/mcp/manager.js";
-import { refreshMcpTools } from "./agent/mcp/tools.js";
-import { registerFsTools } from "./agent/tools/fs.js";
-import { registerShellTool } from "./agent/tools/shell.js";
-import { registerApplyPatchTool } from "./agent/tools/apply-patch.js";
-import { ToolRegistry } from "./agent/tool-registry.js";
 import type { ProviderInterface } from "./agent/types.js";
 import { WikiSettingsStore } from "./wiki/settings-store.js";
 import { WikiManager } from "./wiki/manager.js";
@@ -142,15 +131,14 @@ const secretStore: SecretStore = {
 
 app.whenReady().then(() => {
   installMainLogForwarding();
-  const agentEventBus = new AgentEventBus(getMainWindow);
-  const approvalGate = new IpcApprovalGate();
-  const debugLog = new DebugLog({ baseDir: app.getPath("logs") });
-  const memoryStore = new MemoryStore();
   const providerSettings = new ProviderSettingsStore({
     baseDir: app.getPath("userData"),
     secretStore,
   });
 
+  // Provider selector is still used by WikiManager for background wiki-note
+  // synthesis — the embedded opencode server runs the chat agent, but Lumina's
+  // own wiki synthesizer calls an AI SDK provider directly.
   const providerSelector = async (): Promise<ProviderInterface | null> => {
     const activeId = providerSettings.getActiveProvider();
     if (!activeId) return null;
@@ -168,32 +156,6 @@ app.whenReady().then(() => {
     }
   };
 
-  const toolRegistry = new ToolRegistry();
-  registerFsTools(toolRegistry);
-  registerShellTool(toolRegistry);
-  // apply_patch needs the active vault path; beforeStart below keeps it fresh.
-  let currentVaultPath: string | null = null;
-  registerApplyPatchTool(toolRegistry, { rootDir: () => currentVaultPath });
-
-  const mcpManager = new McpManager({ baseDir: app.getPath("userData") });
-  void mcpManager.init().catch((err) => {
-    console.error("[main] mcp init failed", err);
-  });
-
-  const agentRuntime = new AgentRuntime({
-    eventBus: agentEventBus,
-    approvalGate,
-    debugLog,
-    memoryStore,
-    providerSelector,
-    toolRegistry,
-    beforeStart: async (context) => {
-      currentVaultPath = context.workspace_path ?? null;
-      await refreshMcpTools(toolRegistry, mcpManager).catch((err) => {
-        console.error("[main] mcp tool refresh failed", err);
-      });
-    },
-  });
   const skillLoader = new SkillLoader();
   const wikiSettings = new WikiSettingsStore({
     baseDir: app.getPath("userData"),
@@ -234,11 +196,8 @@ app.whenReady().then(() => {
 
   registerIpcHandlers({
     getMainWindow,
-    agentRuntime,
-    debugLog,
     providerSettings,
     skillLoader,
-    mcpManager,
     wikiSettings,
     wikiManager,
     onProviderSettingsChanged: () => scheduleOpencodeRestart(),

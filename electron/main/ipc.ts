@@ -17,11 +17,8 @@ import { createDiagnosticsHandlers } from "./handlers/diagnostics.js";
 import { createPluginsHandlers } from "./handlers/plugins.js";
 import { session } from "electron";
 import electronUpdater from "electron-updater";
-import type { AgentRuntime } from "./agent/runtime.js";
-import type { DebugLog } from "./agent/debug-log.js";
 import type { ProviderSettingsStore } from "./agent/providers/settings-store.js";
 import type { SkillLoader } from "./agent/skills/loader.js";
-import type { McpManager } from "./agent/mcp/manager.js";
 import type { WikiSettingsStore } from "./wiki/settings-store.js";
 import type { WikiManager } from "./wiki/manager.js";
 import { dispatchAgentCommand, isAgentCommand } from "./agent/ipc-dispatch.js";
@@ -66,11 +63,8 @@ const eventStubs: Record<string, () => unknown> = {
 
 export interface IpcHandlersOptions {
   getMainWindow: () => BrowserWindow | null;
-  agentRuntime: AgentRuntime;
-  debugLog?: DebugLog;
   providerSettings?: ProviderSettingsStore;
   skillLoader?: SkillLoader;
-  mcpManager?: McpManager;
   wikiSettings?: WikiSettingsStore;
   wikiManager?: WikiManager;
   /**
@@ -84,11 +78,8 @@ export interface IpcHandlersOptions {
 export function registerIpcHandlers(options: IpcHandlersOptions): void {
   const {
     getMainWindow,
-    agentRuntime,
-    debugLog,
     providerSettings,
     skillLoader,
-    mcpManager,
     wikiSettings,
     wikiManager,
     onProviderSettingsChanged,
@@ -173,15 +164,13 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
       // ── Plugins ─────────────────────────────────────────────────────────
       if (cmd in pluginsHandlers) return pluginsHandlers[cmd](args);
 
-      // ── Agent / Vault (TS runtime) ──────────────────────────────────────
+      // ── Agent IPC surface (provider settings, skills, vault, wiki).
+      // The agent runtime itself is gone; the main chat runs on opencode.
       if (isAgentCommand(cmd)) {
         return dispatchAgentCommand(
           {
-            runtime: agentRuntime,
-            debugLog,
             providerSettings,
             skillLoader,
-            mcpManager,
             wikiSettings,
             wikiManager,
             onProviderSettingsChanged,

@@ -6,22 +6,9 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { AgentEventBus } from '../agent/event-bus.js'
 import { dispatchAgentCommand } from '../agent/ipc-dispatch.js'
-import { AgentRuntime } from '../agent/runtime.js'
 import { WikiManager } from './manager.js'
 import { WikiSettingsStore } from './settings-store.js'
-import type { AgentEvent } from '../agent/types.js'
-
-class SilentBus extends AgentEventBus {
-  public events: AgentEvent[] = []
-  constructor() {
-    super(() => null)
-  }
-  emit(e: AgentEvent): void {
-    this.events.push(e)
-  }
-}
 
 let vault = ''
 let baseDir = ''
@@ -42,13 +29,12 @@ afterEach(() => {
 })
 
 function buildCtx() {
-  const runtime = new AgentRuntime({ eventBus: new SilentBus() })
   const wikiSettings = new WikiSettingsStore({ baseDir })
   const wikiManager = new WikiManager({
     settings: wikiSettings,
     providerSelector: () => null,
   })
-  return { runtime, wikiSettings, wikiManager }
+  return { wikiSettings, wikiManager }
 }
 
 describe('wiki_bind / wiki_rebuild / wiki_synthesize_note / wiki_stop dispatch', () => {
@@ -107,7 +93,7 @@ describe('wiki_bind / wiki_rebuild / wiki_synthesize_note / wiki_stop dispatch',
   })
 
   it('returns ok:false when wikiManager not provided', async () => {
-    const ctx = { runtime: new AgentRuntime({ eventBus: new SilentBus() }) }
+    const ctx = {}
     const rb = (await dispatchAgentCommand(ctx, 'wiki_rebuild', {})) as {
       ok: boolean
       error?: string

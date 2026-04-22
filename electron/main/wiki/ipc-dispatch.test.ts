@@ -6,21 +6,8 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { AgentEventBus } from '../agent/event-bus.js'
 import { dispatchAgentCommand, isAgentCommand } from '../agent/ipc-dispatch.js'
-import { AgentRuntime } from '../agent/runtime.js'
 import { DEFAULT_WIKI_SETTINGS, WikiSettingsStore } from './settings-store.js'
-import type { AgentEvent } from '../agent/types.js'
-
-class SilentBus extends AgentEventBus {
-  public events: AgentEvent[] = []
-  constructor() {
-    super(() => null)
-  }
-  emit(e: AgentEvent): void {
-    this.events.push(e)
-  }
-}
 
 let baseDir = ''
 beforeEach(() => {
@@ -35,9 +22,8 @@ afterEach(() => {
 })
 
 function buildCtx() {
-  const runtime = new AgentRuntime({ eventBus: new SilentBus() })
   const wikiSettings = new WikiSettingsStore({ baseDir })
-  return { runtime, wikiSettings }
+  return { wikiSettings }
 }
 
 describe('isAgentCommand routes wiki_*', () => {
@@ -79,8 +65,7 @@ describe('wiki_* dispatch', () => {
   })
 
   it('returns null when wikiSettings is not provided in ctx', async () => {
-    const runtime = new AgentRuntime({ eventBus: new SilentBus() })
-    const ctx = { runtime }
+    const ctx = {}
     expect(await dispatchAgentCommand(ctx, 'wiki_get_settings', {})).toBeNull()
     expect(
       await dispatchAgentCommand(ctx, 'wiki_set_settings', { settings: {} }),
