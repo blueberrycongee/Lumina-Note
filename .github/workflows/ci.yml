@@ -25,7 +25,10 @@ jobs:
       - name: Stub opencode server bundle for CI
         run: |
           mkdir -p thirdparty/opencode/packages/opencode/dist/node
-          echo "module.exports = {};" > thirdparty/opencode/packages/opencode/dist/node/node.js
+          cat > thirdparty/opencode/packages/opencode/dist/node/node.js << 'STUB'
+          export const Log = { init: async () => {} };
+          export const Server = { listen: async () => ({ url: new URL("http://localhost:0"), stop: () => {} }) };
+          STUB
 
       - name: Typecheck + build
         run: npm run build
