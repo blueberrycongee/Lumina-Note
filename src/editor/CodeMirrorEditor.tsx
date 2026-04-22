@@ -632,24 +632,68 @@ const createEditorTheme = (fontSize: number) =>
       borderRadius: "0 0 8px 8px",
       height: "10px",
     },
-    // Syntax token colors — desaturated to sit quietly in a grayscale UI.
-    // Enough hue to tell types apart at a glance, not enough to shout.
-    ".hljs-keyword": { color: "hsl(var(--md-keyword, 280 30% 50%))" },
-    ".hljs-string": { color: "hsl(var(--md-string, 140 25% 38%))" },
-    ".hljs-comment": {
-      color: "hsl(var(--muted-foreground) / 0.7)",
+    // Syntax token colors — each semantic category gets its own hue.
+    // Warm, ink-on-paper feel: enough color to differentiate at a glance,
+    // not enough to compete with the user's prose.
+    ".hljs-keyword, .hljs-doctag, .hljs-formula": {
+      color: "hsl(270 40% 48%)",
+    },
+    ".hljs-string, .hljs-regexp, .hljs-addition": {
+      color: "hsl(150 35% 36%)",
+    },
+    ".hljs-comment, .hljs-quote": {
+      color: "hsl(210 8% 60%)",
       fontStyle: "italic",
     },
-    ".hljs-number": { color: "hsl(var(--md-number, 25 40% 46%))" },
-    ".hljs-title": { color: "hsl(var(--md-link, 210 30% 45%))" },
-    ".hljs-built_in": { color: "hsl(var(--md-link, 210 30% 45%))" },
-    ".hljs-type": { color: "hsl(var(--md-keyword, 280 30% 50%))" },
-    ".hljs-function": { color: "hsl(var(--md-link, 210 30% 45%))" },
-    ".hljs-params": { color: "hsl(var(--foreground))" },
-    ".hljs-literal": { color: "hsl(var(--md-number, 25 40% 46%))" },
-    ".hljs-attr": { color: "hsl(var(--md-link, 210 30% 45%))" },
-    ".hljs-variable": { color: "hsl(var(--foreground))" },
-    ".hljs-meta": { color: "hsl(var(--muted-foreground) / 0.7)" },
+    ".hljs-number, .hljs-literal": {
+      color: "hsl(24 50% 44%)",
+    },
+    ".hljs-title, .hljs-function": {
+      color: "hsl(215 45% 42%)",
+    },
+    ".hljs-built_in, .hljs-title.class_, .hljs-class .hljs-title": {
+      color: "hsl(185 45% 35%)",
+    },
+    ".hljs-type, .hljs-selector-pseudo": {
+      color: "hsl(330 40% 45%)",
+    },
+    ".hljs-attr, .hljs-property, .hljs-attribute": {
+      color: "hsl(10 45% 48%)",
+    },
+    ".hljs-variable, .hljs-template-variable": {
+      color: "hsl(30 45% 45%)",
+    },
+    ".hljs-params": {
+      color: "hsl(var(--foreground) / 0.85)",
+    },
+    ".hljs-operator, .hljs-punctuation": {
+      color: "hsl(200 15% 45%)",
+    },
+    ".hljs-meta, .hljs-meta .hljs-keyword": {
+      color: "hsl(195 20% 50%)",
+    },
+    ".hljs-meta .hljs-string": {
+      color: "hsl(18 55% 45%)",
+    },
+    ".hljs-tag, .hljs-name, .hljs-selector-tag": {
+      color: "hsl(350 40% 42%)",
+    },
+    ".hljs-section, .hljs-selector-id": {
+      color: "hsl(215 45% 42%)",
+      fontWeight: "600",
+    },
+    ".hljs-selector-class, .hljs-selector-attr": {
+      color: "hsl(275 35% 48%)",
+    },
+    ".hljs-symbol, .hljs-bullet, .hljs-link": {
+      color: "hsl(260 30% 50%)",
+    },
+    ".hljs-deletion": {
+      color: "hsl(0 50% 45%)",
+    },
+    ".hljs-subst": {
+      color: "hsl(var(--foreground) / 0.9)",
+    },
 
     // 基础 Markdown 样式
     ".cm-header-1": {
