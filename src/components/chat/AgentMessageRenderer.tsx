@@ -691,8 +691,8 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
           layout="position"
         >
           {/* 用户消息 */}
-          <div className="flex justify-end mb-4">
-            <div className="max-w-[80%] bg-muted text-foreground rounded-2xl rounded-tr-sm px-4 py-2.5">
+          <div className="flex justify-end mb-5">
+            <div className="max-w-[80%] rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-[15px] leading-relaxed text-foreground">
               <UserMessageBubbleContent
                 text={round.userContent}
                 attachments={round.userAttachments}
@@ -703,9 +703,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
           {/* AI 回复 - 只有在有内容时才显示 */}
           {round.hasAIContent && (
-            <div className="flex gap-3 mb-4">
-              <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
-                <Bot size={16} className="text-muted-foreground" />
+            <div className="flex gap-3 mb-6">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-elev-1">
+                <Bot size={16} />
               </div>
               <div className="flex-1 min-w-0 space-y-2">
                 {round.diagramPaths.length > 0 && (

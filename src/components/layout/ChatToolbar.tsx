@@ -32,22 +32,33 @@ export function ChatToolbar({
 }: ChatToolbarProps) {
   const { t } = useLocaleStore();
 
+  const iconButton =
+    "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors duration-fast ease-out-subtle hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+  const pillButton =
+    "flex items-center gap-1.5 rounded-ui-sm px-2 h-7 text-xs transition-colors duration-fast ease-out-subtle whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+
   return (
-    <div className="ui-compact-row h-10 flex items-center justify-between px-4 border-b border-border/50 shrink-0 min-w-0">
-      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+    <div className="ui-compact-row h-11 flex items-center justify-between px-3 border-b border-border/60 shrink-0 min-w-0">
+      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
         {onToggleLeftSidebar && (
           <button
             onClick={onToggleLeftSidebar}
-            className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground text-muted-foreground shrink-0"
+            className={iconButton}
             title={t.sidebar.toggleSidebar}
           >
-            <Sidebar size={16} />
+            <Sidebar size={15} />
           </button>
         )}
         {title && (
           <>
-            <span className="text-muted-foreground/50 shrink-0">/</span>
-            <span className="text-sm text-foreground font-medium truncate">
+            <span
+              aria-hidden
+              className="mx-0.5 text-muted-foreground/60 shrink-0"
+            >
+              /
+            </span>
+            <span className="truncate text-sm font-medium text-foreground">
               {title}
             </span>
           </>
@@ -55,19 +66,18 @@ export function ChatToolbar({
         <button
           onClick={onToggleHistory}
           className={cn(
-            "flex items-center gap-1.5 px-2 py-1 text-xs rounded-md transition-colors whitespace-nowrap",
-            showHistory
-              ? "bg-muted text-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            pillButton,
+            "ml-1",
+            showHistory && "bg-accent text-foreground",
           )}
         >
-          <History size={14} />
+          <History size={13} />
           <span className="ui-compact-text ui-compact-hide">
             {t.ai.historyChats}
           </span>
         </button>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1 shrink-0">
         <button
           onClick={
             isExportSelectionMode
@@ -75,20 +85,17 @@ export function ChatToolbar({
               : onStartExportSelection
           }
           disabled={isLoading || exportCandidates.length === 0}
-          className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          className={pillButton}
         >
-          <Download size={14} />
+          <Download size={13} />
           <span className="ui-compact-text ui-compact-hide">
             {isExportSelectionMode
               ? t.ai.exportCancel
               : t.ai.exportConversation}
           </span>
         </button>
-        <button
-          onClick={onNewChat}
-          className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors whitespace-nowrap"
-        >
-          <Plus size={14} />
+        <button onClick={onNewChat} className={pillButton}>
+          <Plus size={13} />
           <span className="ui-compact-text ui-compact-hide">
             {t.ai.newChat}
           </span>
@@ -96,10 +103,10 @@ export function ChatToolbar({
         {onToggleRightSidebar && (
           <button
             onClick={onToggleRightSidebar}
-            className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground text-muted-foreground shrink-0"
+            className={iconButton}
             title={t.sidebar.toggleAIPanel}
           >
-            <MessageSquare size={16} />
+            <MessageSquare size={15} />
           </button>
         )}
       </div>
