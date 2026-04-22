@@ -1,0 +1,4 @@
+[advisories]
+# rustls-webpki panic in CRL parsing — transitive via sqlx → rustls.
+# Fix available in webpki >=0.103.13; waiting for sqlx to pick it up.
+ignore = ["RUSTSEC-2026-0104"]

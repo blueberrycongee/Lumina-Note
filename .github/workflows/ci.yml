@@ -22,6 +22,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Stub opencode server bundle for CI
+        run: |
+          mkdir -p thirdparty/opencode/packages/opencode/dist/node
+          echo "module.exports = {};" > thirdparty/opencode/packages/opencode/dist/node/node.js
+
       - name: Typecheck + build
         run: npm run build
 
