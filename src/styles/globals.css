@@ -39,7 +39,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   color: hsl(var(--foreground));
 }
 
-/* 全局选区颜色（更淡的蓝色）*/
+/* 全局选区颜色 */
 ::selection {
   background-color: hsl(var(--primary) / 0.25);
   color: inherit;
@@ -57,14 +57,15 @@ body.resizing iframe[data-codex-iframe="true"] {
   --popover-foreground: 222 16% 11%;
   --border: 220 13% 88%;               /* visible, precise */
 
-  /* ── Accent (one disciplined color) ────────────────────────────────────
-   * Deep teal-emerald 165° — deliberately *not* the indigo/purple that
-   * every AI + productivity tool uses. Reads as craft, thought, library:
-   * calm-confident rather than tech-vibrant. Used only in small doses —
-   * focus rings, selected-row 2px bars, primary button fills, links.
-   * Never as a large fill.
+  /* ── Primary (achromatic — Notion / Linear pattern) ─────────────────
+   * Near-black in light mode, near-white in dark mode. "Primary" is
+   * effectively the text/action color: buttons, links, focus rings,
+   * selected-row bars. No hue → the UI reads as typographic and
+   * neutral, not branded around a specific color. This is what Notion
+   * and Linear do: the product's character comes from layout and type,
+   * not from painting the UI a theme color.
    */
-  --primary: 165 45% 38%;
+  --primary: 0 0% 9%;
   --primary-foreground: 0 0% 100%;
 
   /* ── Semantic (muted one notch — no neon) ──────────────────────────── */
@@ -77,7 +78,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info: 217 85% 55%;
   --info-foreground: 0 0% 100%;
 
-  --md-heading: 165 30% 22%;
+  --md-heading: 0 0% 9%;
 
   /* ── Typography ─────────────────────────────────────────────────────── */
   --font-sans:
@@ -144,8 +145,8 @@ body.resizing iframe[data-codex-iframe="true"] {
   --popover-foreground: 220 14% 95%;
   --border: 220 13% 22%;
 
-  --primary: 165 42% 56%;              /* lifted saturation + luminance for dark bg */
-  --primary-foreground: 165 30% 10%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
 
   --destructive: 0 65% 58%;
   --destructive-foreground: 0 0% 100%;
@@ -156,7 +157,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info: 217 80% 65%;
   --info-foreground: 0 0% 100%;
 
-  --md-heading: 165 30% 78%;
+  --md-heading: 0 0% 93%;
 
   /* Shadows in dark mode — slightly heavier because bg is dark */
   --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
