@@ -29,6 +29,7 @@ import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
 // import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
+import { CommandMenu, CommandMenuProvider } from "@/components/ui";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
 import { useAIStore } from "@/stores/useAIStore";
@@ -1167,6 +1168,10 @@ function App() {
         isOpen={isSkillManagerOpen}
         onClose={() => setSkillManagerOpen(false)}
       />
+
+      {/* Cmd+K command palette */}
+      <CommandMenuProvider />
+      <CommandMenu />
 
       {/* AI Floating Ball - temporarily hidden */}
       {/* <AIFloatingBall /> */}

@@ -31,3 +31,5 @@ export {
   type ToggleProps,
 } from "./field";
 export { SectionHeader, type SectionHeaderProps } from "./section-header";
+export { CommandMenu } from "./command-menu";
+export { CommandMenuProvider } from "./command-menu-provider";
