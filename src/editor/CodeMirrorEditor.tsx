@@ -45,7 +45,6 @@ import { BlockMenu, BlockActionId } from "./components/BlockMenu";
 import { executeBlockAction } from "./extensions/blockOperations";
 import {
   EditorView,
-  drawSelection,
   keymap,
   Decoration,
   DecorationSet,
@@ -132,13 +131,9 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "transparent",
       fontSize: `${fontSize}px`,
       height: "100%",
-      "--lumina-codeblock-bg": "hsl(var(--muted) / 0.4)",
-      "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.52)",
-      "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.46)",
-      "--lumina-codeblock-border": "hsl(var(--border) / 0.5)",
-      "--lumina-codeblock-border-soft": "hsl(var(--border) / 0.25)",
-      "--lumina-codeblock-shadow":
-        "0 1px 3px 0 hsl(var(--foreground) / 0.05), 0 0 0 1px hsl(var(--border) / 0.08)",
+      "--lumina-codeblock-bg": "hsl(var(--muted) / 0.5)",
+      "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.6)",
+      "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.54)",
     },
     ".cm-codeblock-widget pre": { fontSize: `${Math.max(10, fontSize - 2)}px` },
 
@@ -172,14 +167,6 @@ const createEditorTheme = (fontSize: number) =>
       paddingLeft: "24px",
       lineHeight: "1.75",
       position: "relative",
-    },
-
-    // 选区颜色（更淡的蓝色）
-    ".cm-selectionBackground": {
-      backgroundColor: "rgba(191, 219, 254, 0.25) !important",
-    },
-    "&.cm-focused .cm-selectionBackground": {
-      backgroundColor: "rgba(191, 219, 254, 0.35) !important",
     },
 
     // ── Block widget selection hygiene ──────────────────────────────
@@ -514,20 +501,11 @@ const createEditorTheme = (fontSize: number) =>
       position: "relative",
       overflow: "hidden",
       backgroundColor: "var(--lumina-codeblock-bg)",
-      border: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "10px",
-      boxShadow: "var(--lumina-codeblock-shadow)",
+      borderRadius: "8px",
     },
-    // Code-block cm-lines: pull the line in by 16px on each side so the
-    // painted border (drawn at the cm-line's outer edges) lines up with
-    // the text column's outer edge — regular text sits at cm-line's 16px
-    // padding, while the code-block border was at cm-line's edge 0 /
-    // 760, i.e. 16px overshoot in both directions. Matching the margin
-    // puts the whole box inside the same 728px text-column lane, so no
-    // block widget looks "wider than where selection can go" anymore.
     ".cm-lumina-codeblock-open": {
-      marginLeft: "16px",
-      marginRight: "16px",
+      marginLeft: "36px",
+      marginRight: "36px",
       paddingLeft: "14px !important",
       paddingRight: "78px !important",
       paddingTop: "8px !important",
@@ -535,25 +513,21 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "var(--lumina-codeblock-bg)",
       color: "hsl(var(--muted-foreground) / 0.78)",
       fontFamily: "'JetBrains Mono', monospace",
-      border: "1px solid var(--lumina-codeblock-border)",
-      borderBottom: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "10px 10px 0 0",
+      borderRadius: "8px 8px 0 0",
     },
     ".cm-lumina-codeblock-content-line": {
-      marginLeft: "16px",
-      marginRight: "16px",
+      marginLeft: "36px",
+      marginRight: "36px",
       backgroundColor: "var(--lumina-codeblock-bg)",
       color: "hsl(var(--foreground) / 0.96)",
       fontFamily: "'JetBrains Mono', monospace",
       paddingLeft: "14px !important",
       paddingRight: "14px !important",
       lineHeight: "1.7 !important",
-      boxShadow:
-        "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
     ".cm-lumina-codeblock-close": {
-      marginLeft: "16px",
-      marginRight: "16px",
+      marginLeft: "36px",
+      marginRight: "36px",
       paddingLeft: "14px !important",
       paddingRight: "14px !important",
       paddingTop: "2px !important",
@@ -561,10 +535,7 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "var(--lumina-codeblock-bg)",
       color: "hsl(var(--muted-foreground) / 0.78)",
       fontFamily: "'JetBrains Mono', monospace",
-      borderLeft: "1px solid var(--lumina-codeblock-border)",
-      borderRight: "1px solid var(--lumina-codeblock-border)",
-      borderBottom: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "0 0 10px 10px",
+      borderRadius: "0 0 8px 8px",
     },
     ".cm-codeblock-actions": {
       position: "absolute",
@@ -577,7 +548,7 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-lumina-codeblock-copy-anchor": {
       position: "absolute",
       top: "8px",
-      right: "10px",
+      right: "6px",
       zIndex: "2",
     },
     ".cm-codeblock-widget code": {
@@ -600,7 +571,7 @@ const createEditorTheme = (fontSize: number) =>
       },
     ".cm-codeblock-source-toggle": {
       justifyContent: "flex-end",
-      borderRadius: "10px 10px 0 0",
+      borderRadius: "8px 8px 0 0",
     },
     ".cm-codeblock-toggle, .cm-codeblock-copy": {
       border: "none",
@@ -625,14 +596,12 @@ const createEditorTheme = (fontSize: number) =>
       fontFamily: "'JetBrains Mono', monospace",
       paddingLeft: "14px !important",
       paddingRight: "14px !important",
-      boxShadow:
-        "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
 
     // === Inline code block styles ===
     ".cm-codeblock-header": {
       fontSize: "12px",
-      borderRadius: "10px 10px 0 0",
+      borderRadius: "8px 8px 0 0",
     },
     ".cm-codeblock-lang": {
       color: "hsl(var(--muted-foreground) / 0.6)",
@@ -646,15 +615,10 @@ const createEditorTheme = (fontSize: number) =>
       color: "hsl(var(--foreground) / 0.96)",
       padding: "0 14px !important",
       lineHeight: "1.7 !important",
-      boxShadow:
-        "inset 1px 0 0 var(--lumina-codeblock-border), inset -1px 0 0 var(--lumina-codeblock-border)",
     },
     ".cm-codeblock-footer": {
       backgroundColor: "var(--lumina-codeblock-bg)",
-      borderLeft: "1px solid var(--lumina-codeblock-border)",
-      borderRight: "1px solid var(--lumina-codeblock-border)",
-      borderBottom: "1px solid var(--lumina-codeblock-border)",
-      borderRadius: "0 0 10px 10px",
+      borderRadius: "0 0 8px 8px",
       height: "10px",
     },
     // Syntax token colors — desaturated to sit quietly in a grayscale UI.
@@ -4422,7 +4386,7 @@ export const CodeMirrorEditor = forwardRef<
 
   useEffect(() => {
     if (!containerRef.current) return;
-    const disableCustomDrawSelection = false;
+    const disableCustomDrawSelection = true;
 
     const state = EditorState.create({
       doc: content,
@@ -4435,7 +4399,6 @@ export const CodeMirrorEditor = forwardRef<
         selectAllDomHandlers,
         markdown({ base: markdownLanguage, extensions: [Table] }),
         EditorView.lineWrapping,
-        drawSelection(),
         blockWidgetAtomicRanges,
         blockWidgetSelectionSyncPlugin,
         tableRowSelectionPlugin,
