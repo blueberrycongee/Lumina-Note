@@ -49,15 +49,6 @@ vi.mock("@/stores/useAIStore", () => ({
   }),
 }));
 
-vi.mock("@/stores/useRustAgentStore", () => ({
-  useRustAgentStore: () => ({
-    autoApprove: false,
-    setAutoApprove: () => undefined,
-    autoCompactEnabled: false,
-    setAutoCompactEnabled: () => undefined,
-  }),
-}));
-
 vi.mock("@/stores/useFileStore", () => ({
   useFileStore: () => ({
     vaultPath: null,
