@@ -1188,7 +1188,7 @@ export function MainAIChatShell() {
                   }}
                   className="w-full max-w-3xl mx-auto px-4 mb-2"
                 >
-                  <div className="bg-foreground/[0.03] backdrop-blur-sm border border-border/40 rounded-2xl p-3">
+                  <div className="rounded-ui-lg border border-border bg-muted/60 p-3">
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div className="flex items-center gap-2 text-sm font-medium">
                         <History className="w-4 h-4 text-muted-foreground" />
@@ -1332,18 +1332,17 @@ export function MainAIChatShell() {
                 </div>
               )}
 
-              {/* Pill-shaped input bar */}
+              {/* Input bar — pill when single-line, rounded rect when multi-line.
+                  Kept as the visual hero of the surface; uses a crisp solid
+                  background + token shadow instead of the old translucent +
+                  backdrop-blur pattern. */}
               <div
                 ref={inputBarRef}
-                className={`relative bg-background/80 backdrop-blur-xl border border-border/50 transition-all duration-300 ${
+                className={`relative border border-border bg-popover transition-[border-radius,box-shadow] duration-fast ease-out-subtle ${
                   input.includes("\n") || input.length > 80
-                    ? "rounded-3xl"
+                    ? "rounded-ui-xl"
                     : "rounded-full"
-                } ${
-                  hasStarted
-                    ? "shadow-sm shadow-black/[0.03]"
-                    : "shadow-md shadow-black/[0.05]"
-                }`}
+                } ${hasStarted ? "shadow-elev-1" : "shadow-elev-2"}`}
               >
                 {/* Skill menu (slash command) */}
                 <Popover
