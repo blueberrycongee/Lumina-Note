@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -373,11 +373,7 @@ export function RightPanel() {
     effectiveModelForTemp,
   );
   const displayTemperature = config.temperature ?? recommendedTemperature;
-  // 使用 Rust Agent store
-  const rustAgentStore = useRustAgentStore();
-
-  const autoApprove = rustAgentStore.autoApprove;
-  const setAutoApprove = rustAgentStore.setAutoApprove;
+  const { autoApprove, setAutoApprove } = useAgentPrefs();
 
   const [showSettings, setShowSettings] = useState(false);
   const [isDraggingAI, setIsDraggingAI] = useState(false);

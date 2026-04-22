@@ -4,14 +4,21 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { useAgentProfileStore } from "@/stores/useAgentProfileStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useAgentPrefs } from "@/stores/useAgentPrefs";
+
+// The Tauri-era mobile companion sync is gone post-electron migration;
+// these helpers are no-ops so the existing UI keeps working until the
+// mobile flow is either rebuilt on opencode or the whole section is
+// removed.
+const syncMobileOptions = () => {};
+const syncMobileSessions = () => {};
 
 export function MobileOptionsSection() {
   const { t } = useLocaleStore();
   const { workspaces, currentWorkspaceId, setCurrentWorkspace, removeWorkspace } = useWorkspaceStore();
   const { profiles, currentProfileId, createProfileFromCurrent, setCurrentProfile, removeProfile } = useAgentProfileStore();
   const { setVaultPath } = useFileStore();
-  const { syncMobileOptions, syncMobileSessions, autoApprove } = useRustAgentStore();
+  const { autoApprove } = useAgentPrefs();
   const [profileName, setProfileName] = useState("");
   const [applyToDesktop, setApplyToDesktop] = useState(false);
 

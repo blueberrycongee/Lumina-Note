@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAIStore } from "@/stores/useAIStore";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import {
   FOLLOW_MAIN_MODEL,
   PROVIDER_MODELS,
@@ -59,7 +59,7 @@ function getRouteSelectValue(
 
 export function AISettingsContent() {
   const { config, setConfig } = useAIStore();
-  const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useRustAgentStore();
+  const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useAgentPrefs();
   const { t } = useLocaleStore();
   const errorMessages = t.aiSettings.errors as Record<string, string>;
   const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);

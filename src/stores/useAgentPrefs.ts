@@ -1,0 +1,49 @@
+// Persisted agent preferences — autoApprove + autoCompactEnabled.
+//
+// These used to live on useRustAgentStore. Splitting them out keeps the
+// agent runtime store (useOpencodeAgent) free of UI-only toggles and
+// means settings panels don't have to import the agent runtime just to
+// read a boolean.
+//
+// `autoApprove` drives opencode's permission flow — when we wire the
+// permission hook later, the server-side plugin reads this value.
+
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { createLegacyKeyJSONStorage } from "@/lib/persistStorage";
+
+type State = {
+  autoApprove: boolean;
+  autoCompactEnabled: boolean;
+};
+
+type Actions = {
+  setAutoApprove: (value: boolean) => void;
+  setAutoCompactEnabled: (value: boolean) => void;
+};
+
+export type AgentPrefsStore = State & Actions;
+
+export const useAgentPrefs = create<AgentPrefsStore>()(
+  persist(
+    (set) => ({
+      autoApprove: false,
+      autoCompactEnabled: true,
+      setAutoApprove: (autoApprove) => set({ autoApprove }),
+      setAutoCompactEnabled: (autoCompactEnabled) => set({ autoCompactEnabled }),
+    }),
+    {
+      name: "lumina-agent-prefs",
+      storage: createLegacyKeyJSONStorage([
+        "lumina-agent-prefs",
+        // Matches the old zustand persist key inside useRustAgentStore so
+        // existing users keep their toggle state across the upgrade.
+        "lumina-rust-agent-store",
+      ]),
+      partialize: (state) => ({
+        autoApprove: state.autoApprove,
+        autoCompactEnabled: state.autoCompactEnabled,
+      }),
+    },
+  ),
+);
