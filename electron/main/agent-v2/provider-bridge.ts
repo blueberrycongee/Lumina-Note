@@ -77,10 +77,23 @@ export async function buildOpencodeBridge(
   if (persisted.headers) options.headers = persisted.headers;
   if (Object.keys(options).length > 0) providerEntry.options = options;
 
+  // Conservative token limits used when we can't look the model up in
+  // models.dev. Opencode's `maxOutputTokens()` falls back to 32_000 when
+  // limit.output is missing, which DeepSeek (8192 ceiling), Moonshot
+  // (4096), and most small OpenAI-compatible endpoints reject with HTTP
+  // 400 "Invalid max_tokens". 4096 is the lowest common denominator and
+  // is safely accepted by every provider we've tested.
+  const CUSTOM_MODEL_LIMITS = {
+    context: 32_000,
+    output: 4_096,
+  };
+
   if (luminaId === "openai-compatible") {
     providerEntry.name = persisted.name ?? "Custom OpenAI-compatible";
     providerEntry.npm = "@ai-sdk/openai-compatible";
-    providerEntry.models = { [resolvedModelId]: {} };
+    providerEntry.models = {
+      [resolvedModelId]: { limit: CUSTOM_MODEL_LIMITS },
+    };
     if (!persisted.baseUrl) {
       // openai-compatible without baseURL is unusable — opencode's openai
       // SDK would hit api.openai.com, which defeats the point.
@@ -91,14 +104,17 @@ export async function buildOpencodeBridge(
     }
   } else if (luminaId === "ollama") {
     // ollama isn't in opencode's BUNDLED_PROVIDERS; declare it explicitly so
-    // Npm.add() resolves ollama-ai-provider-v2 at runtime.
+    // Npm.add() resolves ollama-ai-provider-v2 at runtime. Local model
+    // token caps vary wildly; 4096 output is a safe default.
     providerEntry.name = "Ollama";
     providerEntry.npm = "ollama-ai-provider-v2";
-    providerEntry.models = { [resolvedModelId]: {} };
+    providerEntry.models = {
+      [resolvedModelId]: { limit: CUSTOM_MODEL_LIMITS },
+    };
   } else {
     // Mainline providers — declare the model so it shows up even if
-    // models.dev hasn't been fetched yet. An empty object is fine;
-    // opencode merges with its registry.
+    // models.dev hasn't been fetched yet. Empty object lets opencode merge
+    // with its registry (correct limits come from there).
     providerEntry.models = { [resolvedModelId]: {} };
   }
 
