@@ -536,7 +536,7 @@ const createEditorTheme = (fontSize: number) =>
       color: "hsl(var(--muted-foreground) / 0.78)",
       fontFamily: "'JetBrains Mono', monospace",
       border: "1px solid var(--lumina-codeblock-border)",
-      borderBottom: "1px solid var(--lumina-codeblock-border-soft)",
+      borderBottom: "1px solid var(--lumina-codeblock-border)",
       borderRadius: "10px 10px 0 0",
     },
     ".cm-lumina-codeblock-content-line": {
@@ -594,7 +594,9 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".cm-lumina-codeblock-open .cm-codeblock-fence, .cm-lumina-codeblock-close .cm-codeblock-fence":
       {
-        color: "hsl(var(--muted-foreground) / 0.72)",
+        color: "transparent",
+        textDecoration: "line-through",
+        textDecorationColor: "hsl(var(--muted-foreground) / 0.25)",
       },
     ".cm-codeblock-source-toggle": {
       justifyContent: "flex-end",
