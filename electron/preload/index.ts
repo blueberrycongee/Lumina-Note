@@ -103,5 +103,22 @@ contextBridge.exposeInMainWorld('lumina', {
   },
 })
 
+// Pipe forwarded main-process logs into the renderer DevTools console so
+// users (and us) don't have to flip between terminals while debugging.
+// Every forwarded line is prefixed so it's visually distinct from genuine
+// renderer logs and greppable in pastes.
+type MainLogPayload = { level: 'log' | 'info' | 'warn' | 'error' | 'debug'; text: string }
+ipcRenderer.on('main-console', (_event, payload: MainLogPayload) => {
+  const { level, text } = payload
+  const prefix = '%c[main]'
+  const style = 'color:#888;font-weight:600'
+  const method = (console as unknown as Record<string, (...args: unknown[]) => void>)[level]
+  if (typeof method === 'function') {
+    method(prefix, style, text)
+  } else {
+    console.log(prefix, style, text)
+  }
+})
+
 ipcRenderer.send('__preload_ready')
 console.log('[preload] __TAURI_INTERNALS__ shim installed')

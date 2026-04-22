@@ -5,6 +5,7 @@ import path from "path";
 // push content left (classic mode). The scrollbar paints on top instead.
 app.commandLine.appendSwitch("enable-features", "OverlayScrollbar");
 import { registerIpcHandlers } from "./ipc.js";
+import { installMainLogForwarding } from "./log-forward.js";
 import { registerOpencodeIpc } from "./agent-v2/ipc.js";
 import {
   restartOpencodeServer,
@@ -134,6 +135,7 @@ const secretStore: SecretStore = {
 };
 
 app.whenReady().then(() => {
+  installMainLogForwarding();
   const agentEventBus = new AgentEventBus(getMainWindow);
   const approvalGate = new IpcApprovalGate();
   const debugLog = new DebugLog({ baseDir: app.getPath("logs") });

@@ -102,7 +102,12 @@ export async function startOpencodeServer(opts?: {
     process.env.OPENCODE_SERVER_PASSWORD = password;
     process.env.OPENCODE_CLIENT = "lumina";
 
-    await Log.init({ level: opts?.logLevel ?? "WARN" });
+    // In dev, force INFO so provider resolution + prompt errors show up
+    // in the main terminal. Silent provider failures were what kept the
+    // earlier "message sends but no reply" bug un-diagnosed.
+    const defaultLevel =
+      process.env.NODE_ENV === "development" ? "INFO" : "WARN";
+    await Log.init({ level: opts?.logLevel ?? defaultLevel });
 
     const listener = await Server.listen({
       port,

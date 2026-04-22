@@ -286,6 +286,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
   };
 
   const handleEvent = (event: Event) => {
+    // Temporary diagnostic — every SSE event the renderer receives. Makes
+    // "promptAsync 204 but nothing happens" self-diagnosing: if this log
+    // never fires for a given send, SSE connection is broken; if only
+    // session.status/idle fires, the server ran and returned empty; if
+    // session.error fires, the provider chain rejected the request.
+    console.log(
+      "[opencode-sse]",
+      event.type,
+      JSON.stringify((event as { properties?: unknown }).properties ?? {}).slice(0, 200),
+    );
     switch (event.type) {
       case "session.created":
       case "session.updated": {
@@ -327,10 +337,21 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       case "session.error": {
         if (event.properties.sessionID && event.properties.sessionID !== get().currentSessionId)
           return;
-        set({
-          status: "error",
-          error: JSON.stringify(event.properties.error ?? "unknown"),
-        });
+        // Extract a readable message — opencode wraps errors as NamedError
+        // blobs `{name, data: {message, ...}}`. Fall back to raw JSON only
+        // when the shape is unexpected.
+        const raw = event.properties.error as unknown;
+        let message = "unknown";
+        if (raw && typeof raw === "object") {
+          const obj = raw as { data?: { message?: unknown }; message?: unknown };
+          if (typeof obj.data?.message === "string") message = obj.data.message;
+          else if (typeof obj.message === "string") message = obj.message;
+          else message = JSON.stringify(raw);
+        } else if (typeof raw === "string") {
+          message = raw;
+        }
+        console.error("[opencode-sse] session.error:", message);
+        set({ status: "error", error: message });
         return;
       }
       case "message.updated": {
@@ -423,15 +444,22 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       // unsubscribed so a retry can be attempted later.
       void (async () => {
         try {
+          console.log("[opencode-sse] connecting…");
           const result = await client.event.subscribe({
             signal: controller.signal,
           });
+          console.log("[opencode-sse] connected");
           for await (const event of result.stream) {
             handleEvent(event as Event);
           }
+          console.log("[opencode-sse] stream ended cleanly");
+          set({ _subscribed: false, _abortController: null });
         } catch (err) {
-          if (controller.signal.aborted) return;
-          console.error("[opencode] event stream failed", err);
+          if (controller.signal.aborted) {
+            console.log("[opencode-sse] aborted");
+            return;
+          }
+          console.error("[opencode-sse] stream failed", err);
           set({
             error: String(err),
             status: "error",

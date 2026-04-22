@@ -41,19 +41,31 @@ export async function buildOpencodeBridge(
   providerSettings: ProviderSettingsStore,
 ): Promise<OpencodeBridge | null> {
   const luminaId = providerSettings.getActiveProvider();
-  if (!luminaId) return null;
+  if (!luminaId) {
+    console.log("[opencode-bridge] skip: no active provider in settings");
+    return null;
+  }
 
   const opencodeId = PROVIDER_ID_MAP[luminaId];
-  if (!opencodeId) return null;
+  if (!opencodeId) {
+    console.log(`[opencode-bridge] skip: provider '${luminaId}' has no opencode mapping`);
+    return null;
+  }
 
   const persisted = providerSettings.getProviderSettings(luminaId);
   const resolvedModelId = persisted.modelId;
-  if (!resolvedModelId) return null;
+  if (!resolvedModelId) {
+    console.log(`[opencode-bridge] skip: provider '${luminaId}' has no modelId set`);
+    return null;
+  }
 
   const apiKey = (await providerSettings.getProviderApiKey(luminaId)) ?? "";
   // Local-only providers (Ollama) don't need a key; everything else does.
   const keyRequired = luminaId !== "ollama";
-  if (keyRequired && !apiKey) return null;
+  if (keyRequired && !apiKey) {
+    console.log(`[opencode-bridge] skip: provider '${luminaId}' has no apiKey in keychain`);
+    return null;
+  }
 
   // Build config.provider entry. Mainline providers just need the apiKey
   // + optional baseURL override. The openai-compatible path needs a full
@@ -72,6 +84,9 @@ export async function buildOpencodeBridge(
     if (!persisted.baseUrl) {
       // openai-compatible without baseURL is unusable — opencode's openai
       // SDK would hit api.openai.com, which defeats the point.
+      console.log(
+        `[opencode-bridge] skip: openai-compatible needs a baseUrl (current modelId='${resolvedModelId}')`,
+      );
       return null;
     }
   } else if (luminaId === "ollama") {
@@ -105,10 +120,19 @@ export async function buildOpencodeBridge(
       }
     : {};
 
+  const summary = `${opencodeId}/${resolvedModelId}${persisted.baseUrl ? ` @ ${persisted.baseUrl}` : ""}`;
+  // Mask the key in the log: first 4 + last 4 chars, enough to tell whether
+  // the right key is in use without leaking it.
+  const maskedKey = apiKey
+    ? `${apiKey.slice(0, 4)}…${apiKey.slice(-4)} (${apiKey.length} chars)`
+    : "(none)";
+  console.log(
+    `[opencode-bridge] built: ${summary} key=${maskedKey}`,
+  );
   return {
     config: JSON.stringify(config),
     auth: JSON.stringify(auth),
-    summary: `${opencodeId}/${resolvedModelId}${persisted.baseUrl ? ` @ ${persisted.baseUrl}` : ""}`,
+    summary,
   };
 }
 
