@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { useRustAgentStore } from "@/stores/useRustAgentStore";
+import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ChatInput } from "./ChatInput";
@@ -43,8 +43,7 @@ export function AgentPanel() {
     },
   );
 
-  // 使用 Rust Agent store
-  const rustStore = useRustAgentStore();
+  const rustStore = useOpencodeAgent();
 
   // 选择实际使用的 store 数据
   const status = rustStore.status;

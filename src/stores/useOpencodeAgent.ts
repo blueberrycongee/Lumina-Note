@@ -33,6 +33,11 @@ export type AgentMessage = {
   // Kept optional for shape parity with the legacy store — not yet
   // populated from opencode FileParts (deferred).
   attachments?: MessageAttachment[];
+  // Legacy store carried the pre-display source text here so retry
+  // semantics could resend the raw message. opencode returns the user
+  // prompt in `content` directly, so this stays undefined; callers
+  // already use `rawContent ?? content`.
+  rawContent?: string;
 };
 
 export type AgentSessionSummary = {
@@ -106,6 +111,8 @@ type State = {
   streamingContent: string;
   streamingReasoning: string;
   streamingReasoningStatus: "idle" | "streaming" | "done";
+  debugEnabled: boolean;
+  debugLogPath: string | null;
   // SSE bookkeeping.
   _subscribed: boolean;
   _abortController: AbortController | null;
@@ -125,6 +132,12 @@ type Actions = {
   approveTool: () => Promise<void>;
   rejectTool: () => Promise<void>;
   retryTimeout: () => void;
+  // Debug hook stubs — the legacy runtime wrote a per-request prompt dump
+  // to disk. opencode surfaces the same information through its standard
+  // logging (see Log.init({level:"DEBUG"}) in electron/main/agent-v2),
+  // so these buttons are inert until we wire a fresh debug UI.
+  enableDebug: (rootDir: string) => void;
+  disableDebug: () => void;
 };
 
 export type OpencodeAgentStore = State & Actions;
@@ -352,6 +365,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     streamingContent: "",
     streamingReasoning: "",
     streamingReasoningStatus: "idle" as const,
+    debugEnabled: false,
+    debugLogPath: null,
     _subscribed: false,
     _abortController: null,
 
@@ -562,6 +577,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
     async clearChat() {
       await get().newSession();
+    },
+
+    enableDebug() {
+      // No-op: legacy Rust runtime wrote a prompt dump to rootDir. opencode
+      // uses its own Log.init() pipeline; the button stays inert until a
+      // replacement UI hook lands.
+    },
+
+    disableDebug() {
+      // No-op, see enableDebug.
     },
   };
 });
