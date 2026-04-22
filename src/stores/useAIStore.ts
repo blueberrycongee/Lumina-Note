@@ -12,7 +12,7 @@ import {
   setAIConfig,
   getAIConfig,
 } from "@/services/ai/ai";
-import { readFile } from "@/lib/host";
+import { invoke, readFile } from "@/lib/host";
 import {
   callLLMStream,
   buildConfigOverrideForPurpose,
@@ -101,6 +101,13 @@ function generateTitleFromAssistantContent(content: string, fallback?: string): 
   const maxLen = 20;
   const result = base.length > maxLen ? `${base.slice(0, maxLen)}...` : base;
   return result || finalFallback;
+}
+
+function resolveProviderModelId(config: AIConfig): string {
+  if (config.model !== "custom") {
+    return config.model;
+  }
+  return config.customModelId?.trim() || "";
 }
 
 function shouldStreamThinking(config: AIConfig): boolean {
@@ -196,6 +203,7 @@ export const useAIStore = create<AIState>()(
       config: getAIConfig(),
       encryptedApiKey: undefined,
       setConfig: async (newConfig) => {
+        const currentConfig = getAIConfig();
         // 如果有新的 apiKey，先加密
         if (newConfig.apiKey !== undefined) {
           const encryptedKey = await encryptApiKey(newConfig.apiKey);
@@ -209,6 +217,45 @@ export const useAIStore = create<AIState>()(
         } else {
           setAIConfig(newConfig);
           set({ config: getAIConfig() });
+        }
+
+        // Sync provider-related changes to backend
+        try {
+          const nextConfig = getAIConfig();
+          const nextProvider = nextConfig.provider;
+          const providerChanged = nextProvider !== currentConfig.provider;
+          const previousModelId = resolveProviderModelId(currentConfig);
+          const nextModelId = resolveProviderModelId(nextConfig);
+          const providerSettingsChanged =
+            providerChanged ||
+            nextModelId !== previousModelId ||
+            nextConfig.baseUrl !== currentConfig.baseUrl;
+
+          if (providerChanged) {
+            await invoke("agent_set_active_provider", { provider_id: nextProvider });
+          }
+
+          if (providerSettingsChanged) {
+            await invoke("agent_set_provider_settings", {
+              provider_id: nextProvider,
+              settings: {
+                modelId: nextModelId || undefined,
+                baseUrl: nextConfig.baseUrl || undefined,
+              },
+            });
+          }
+
+          if (
+            newConfig.apiKey !== undefined &&
+            newConfig.apiKey !== currentConfig.apiKey
+          ) {
+            await invoke("agent_set_provider_api_key", {
+              provider_id: nextProvider,
+              api_key: newConfig.apiKey,
+            });
+          }
+        } catch (err) {
+          console.error("[AIStore] failed to sync provider config to backend", err);
         }
       },
 
@@ -369,7 +416,7 @@ export const useAIStore = create<AIState>()(
         // 使用内存中的配置（已解密），而不是 store 中可能未同步的配置
         const config = getAIConfig();
 
-        if (!config.apiKey?.trim() && config.provider !== "ollama" && config.provider !== "custom") {
+        if (!config.apiKey?.trim() && config.provider !== "ollama" && config.provider !== "openai-compatible") {
           set({ error: t.ai.apiKeyRequired });
           return;
         }
@@ -629,7 +676,7 @@ export const useAIStore = create<AIState>()(
           _abortController: abortController,
         });
 
-        if (!runtimeConfig.apiKey?.trim() && runtimeConfig.provider !== "ollama" && runtimeConfig.provider !== "custom") {
+        if (!runtimeConfig.apiKey?.trim() && runtimeConfig.provider !== "ollama" && runtimeConfig.provider !== "openai-compatible") {
           set({ error: t.ai.apiKeyRequired, isStreaming: false, streamingReasoningStatus: "idle" });
           return;
         }
@@ -927,7 +974,7 @@ export const useAIStore = create<AIState>()(
       },
     }),
     {
-      name: "lumina-ai",
+      name: "lumina-ai-v2",
       partialize: (state) => {
         const persistedConfig = state.config.apiKey
           ? { ...state.config, apiKey: state.encryptedApiKey || state.config.apiKey }
@@ -941,7 +988,6 @@ export const useAIStore = create<AIState>()(
         };
       },
       onRehydrateStorage: () => async (state) => {
-        // 恢复数据后，解密 apiKey 并同步 config 到内存
         if (state?.config) {
           try {
             const storedEncryptedKey = state.encryptedApiKey ?? state.config.apiKey ?? "";
@@ -949,8 +995,31 @@ export const useAIStore = create<AIState>()(
               ? await decryptApiKey(storedEncryptedKey)
               : "";
             const decryptedConfig = { ...state.config, apiKey: decryptedKey };
+
+            // Fetch backend provider settings and override provider-related fields
+            try {
+              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string }> }>("agent_get_provider_settings");
+              if (backend?.activeProviderId) {
+                const providerId = backend.activeProviderId;
+                const pp = backend.perProvider[providerId] ?? {};
+                decryptedConfig.provider = providerId as LLMProviderType;
+                if (providerId === "openai-compatible") {
+                  decryptedConfig.model = "custom";
+                  decryptedConfig.customModelId = pp.modelId ?? "";
+                } else {
+                  if (pp.modelId) {
+                    decryptedConfig.model = pp.modelId;
+                  }
+                  decryptedConfig.customModelId = undefined;
+                }
+                if (pp.baseUrl) decryptedConfig.baseUrl = pp.baseUrl;
+                else decryptedConfig.baseUrl = undefined;
+              }
+            } catch {
+              // Backend not available (e.g. web build), use local config
+            }
+
             setAIConfig(decryptedConfig);
-            // Avoid touching useAIStore binding during store bootstrap (TDZ).
             queueMicrotask(() => {
               useAIStore.setState({
                 config: decryptedConfig,

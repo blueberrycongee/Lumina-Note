@@ -4,12 +4,12 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useRustAgentStore } from "@/stores/useRustAgentStore";
 import {
   FOLLOW_MAIN_MODEL,
-  PROVIDER_REGISTRY,
+  PROVIDER_MODELS,
   getResolvedModelForPurpose,
   hasPurposeModelOverride,
   type LLMProviderType,
-  createProvider,
 } from "@/services/llm";
+import { invoke } from "@/lib/host";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
 import { Settings, Loader2, Check, X, Zap } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -33,9 +33,13 @@ function formatModelOptionLabel(model: { name: string; supportsThinking?: boolea
   return model.name;
 }
 
+function getDefaultModelForProvider(provider: LLMProviderType): string {
+  return PROVIDER_MODELS[provider]?.models[0]?.id || "custom";
+}
+
 function getModelMeta(provider: LLMProviderType, modelId?: string) {
   if (!modelId || modelId === "custom") return undefined;
-  return PROVIDER_REGISTRY[provider]?.models.find((m) => m.id === modelId);
+  return PROVIDER_MODELS[provider]?.models.find((m) => m.id === modelId);
 }
 
 function getRouteSelectValue(
@@ -48,7 +52,7 @@ function getRouteSelectValue(
   if (modelId === "custom") {
     return "custom";
   }
-  return PROVIDER_REGISTRY[provider]?.models.some((m) => m.id === modelId)
+  return PROVIDER_MODELS[provider]?.models.some((m) => m.id === modelId)
     ? modelId
     : "custom";
 }
@@ -111,8 +115,7 @@ export function AISettingsContent() {
 
   // 测试 API 连接
   const testConnection = useCallback(async () => {
-    // 检查 API Key（Ollama / Custom 除外）
-    if (config.provider !== "ollama" && config.provider !== "custom" && !config.apiKey) {
+    if (config.provider !== "ollama" && config.provider !== "openai-compatible" && !config.apiKey) {
       setTestResult({ status: "error", message: errorMessages.no_key });
       return;
     }
@@ -121,17 +124,20 @@ export function AISettingsContent() {
     const startTime = Date.now();
 
     try {
-      const provider = createProvider(config);
+      const modelId = config.model === "custom" ? (config.customModelId || "") : config.model;
+      const baseUrl = config.baseUrl || PROVIDER_MODELS[config.provider as LLMProviderType]?.defaultBaseUrl;
 
-      // 发送简单测试请求
-      const response = await provider.call(
-        [{ role: "user", content: "Reply with exactly: OK" }],
-        { maxTokens: 10, useDefaultTemperature: true }
-      );
+      const result = await invoke<{ success: boolean; latencyMs?: number; error?: string }>("agent_test_provider", {
+        provider_id: config.provider,
+        model_id: modelId,
+        settings: {
+          apiKey: config.apiKey,
+          baseUrl,
+        },
+      });
 
-      const latency = Date.now() - startTime;
-
-      if (response.content) {
+      if (result.success) {
+        const latency = result.latencyMs ?? (Date.now() - startTime);
         setTestResult({
           status: "success",
           message: t.aiSettings.testSuccess,
@@ -140,7 +146,7 @@ export function AISettingsContent() {
       } else {
         setTestResult({
           status: "error",
-          message: t.aiSettings.testResponseEmpty,
+          message: parseError(result.error ?? t.aiSettings.testResponseEmpty),
         });
       }
     } catch (error) {
@@ -149,7 +155,7 @@ export function AISettingsContent() {
         message: parseError(error),
       });
     }
-  }, [config, parseError]);
+  }, [config, parseError, t.aiSettings.testSuccess, t.aiSettings.testResponseEmpty, errorMessages.no_key]);
 
   // 配置变化时重置测试状态
   useEffect(() => {
@@ -169,17 +175,18 @@ export function AISettingsContent() {
             value={config.provider}
             onChange={(e) => {
               const provider = e.target.value as LLMProviderType;
-              const providerMeta = PROVIDER_REGISTRY[provider];
-              const defaultModel = providerMeta?.models[0]?.id || "";
+              const defaultModel = getDefaultModelForProvider(provider);
               setConfig({
                 provider,
                 model: defaultModel,
+                customModelId: defaultModel === "custom" ? "" : undefined,
+                baseUrl: PROVIDER_MODELS[provider]?.defaultBaseUrl,
                 temperature: getRecommendedTemperature(provider, defaultModel),
               });
             }}
             className="w-full text-xs p-2 rounded border border-border/60 bg-background"
           >
-            {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
+            {Object.entries(PROVIDER_MODELS).map(([key, meta]) => (
               <option key={key} value={key}>
                 {meta.label} - {meta.description}
               </option>
@@ -189,7 +196,7 @@ export function AISettingsContent() {
 
         <div>
           <label className="text-xs text-muted-foreground block mb-1">
-            {t.aiSettings.apiKey} {(config.provider === "ollama" || config.provider === "custom") && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
+            {t.aiSettings.apiKey} {(config.provider === "ollama" || config.provider === "openai-compatible") && <span className="text-muted-foreground">({t.aiSettings.apiKeyOptional})</span>}
           </label>
           <div className="flex gap-2">
             <input
@@ -201,7 +208,7 @@ export function AISettingsContent() {
                   ? t.aiSettings.localModelNoKey
                   : config.provider === "anthropic"
                     ? "sk-ant-..."
-                    : config.provider === "custom"
+                    : config.provider === "openai-compatible"
                       ? t.aiSettings.apiKeyOptional
                       : "sk-..."
               }
@@ -257,7 +264,7 @@ export function AISettingsContent() {
           )}
         </div>
 
-        {config.provider !== "custom" && (
+        {config.provider !== "openai-compatible" && (
         <div>
           <div className="flex items-center gap-1 mb-1">
             <label className="text-xs text-muted-foreground">{t.aiSettings.model}</label>
@@ -265,7 +272,7 @@ export function AISettingsContent() {
           </div>
           <select
             value={
-              PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.some(m => m.id === config.model)
+              PROVIDER_MODELS[config.provider as LLMProviderType]?.models.some(m => m.id === config.model)
                 ? config.model
                 : "custom"
             }
@@ -286,7 +293,7 @@ export function AISettingsContent() {
             }}
             className="w-full text-xs p-2 rounded border border-border/60 bg-background"
           >
-            {PROVIDER_REGISTRY[config.provider as LLMProviderType]?.models.map((model) => (
+            {PROVIDER_MODELS[config.provider as LLMProviderType]?.models.map((model) => (
               <option key={model.id} value={model.id}>
                 {formatModelOptionLabel(model)}
               </option>
@@ -295,7 +302,7 @@ export function AISettingsContent() {
         </div>
         )}
 
-        {(config.model === "custom" || config.provider === "custom") && (
+        {(config.model === "custom" || config.provider === "openai-compatible") && (
           <div>
             <label className="text-xs text-muted-foreground block mb-1">{t.aiSettings.customModelId}</label>
             <input
@@ -308,16 +315,16 @@ export function AISettingsContent() {
           </div>
         )}
 
-        {(config.model === "custom" || config.provider === "custom") && (
+        {(config.model === "custom" || config.provider === "openai-compatible") && (
           <div>
             <label className="text-xs text-muted-foreground block mb-1">
-              {t.aiSettings.baseUrl} {config.provider !== "custom" && <span className="text-muted-foreground">({t.aiSettings.baseUrlOptional})</span>}
+              {t.aiSettings.baseUrl} {config.provider !== "openai-compatible" && <span className="text-muted-foreground">({t.aiSettings.baseUrlOptional})</span>}
             </label>
             <input
               type="text"
               value={config.baseUrl || ""}
               onChange={(e) => setConfig({ baseUrl: e.target.value || undefined })}
-              placeholder={PROVIDER_REGISTRY[config.provider as LLMProviderType]?.defaultBaseUrl || "https://api.example.com/v1"}
+              placeholder={PROVIDER_MODELS[config.provider as LLMProviderType]?.defaultBaseUrl || "https://api.example.com/v1"}
               className="w-full text-xs p-2 rounded border border-border/60 bg-background"
             />
           </div>
@@ -388,7 +395,7 @@ export function AISettingsContent() {
               className="w-full text-xs p-2 rounded border border-border/60 bg-background"
             >
               <option value={FOLLOW_MAIN_MODEL}>{t.aiSettings.followMainModel}</option>
-              {PROVIDER_REGISTRY[provider]?.models.map((model) => (
+              {PROVIDER_MODELS[provider]?.models.map((model) => (
                 <option key={`chat-${model.id}`} value={model.id}>
                   {formatModelOptionLabel(model)}
                 </option>
@@ -452,7 +459,7 @@ export function AISettingsContent() {
               className="w-full text-xs p-2 rounded border border-border/60 bg-background"
             >
               <option value={FOLLOW_MAIN_MODEL}>{t.aiSettings.followMainModel}</option>
-              {PROVIDER_REGISTRY[provider]?.models.map((model) => (
+              {PROVIDER_MODELS[provider]?.models.map((model) => (
                 <option key={`complex-${model.id}`} value={model.id}>
                   {formatModelOptionLabel(model)}
                 </option>

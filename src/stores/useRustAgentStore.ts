@@ -19,7 +19,7 @@ import {
   getResolvedModelForPurpose,
   callLLM,
   normalizeThinkingMode,
-  PROVIDER_REGISTRY,
+  PROVIDER_MODELS,
   supportsThinkingModeSwitch,
   type LLMProviderType,
   type Message as LLMMessage,
@@ -187,7 +187,7 @@ function resolveCompactionConfig() {
 }
 
 function resolveModelContextWindow(resolvedConfig: ReturnType<typeof resolveCompactionConfig>) {
-  const providerMeta = PROVIDER_REGISTRY[resolvedConfig.provider];
+  const providerMeta = PROVIDER_MODELS[resolvedConfig.provider];
   if (!providerMeta) return null;
 
   const modelId = resolvedConfig.model === "custom" && resolvedConfig.customModelId
@@ -647,7 +647,7 @@ export const useRustAgentStore = create<RustAgentState>()(
           ],
         });
 
-        if (!aiConfig.apiKey?.trim() && aiConfig.provider !== "ollama" && aiConfig.provider !== "custom") {
+        if (!aiConfig.apiKey?.trim() && aiConfig.provider !== "ollama" && aiConfig.provider !== "openai-compatible") {
           const t = getCurrentTranslations();
           set({
             status: "error",

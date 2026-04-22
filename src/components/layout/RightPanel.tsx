@@ -7,7 +7,7 @@ import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData } from "@/lib/dragState";
 import { getFileName } from "@/lib/utils";
-import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
+import { PROVIDER_MODELS, type LLMProviderType } from "@/services/llm";
 import { getRecommendedTemperature } from "@/services/llm/temperature";
 import {
   FileText,
@@ -36,6 +36,10 @@ function formatModelOptionLabel(model: {
   supportsThinking?: boolean;
 }): string {
   return model.name;
+}
+
+function getDefaultModelForProvider(provider: LLMProviderType): string {
+  return PROVIDER_MODELS[provider]?.models[0]?.id || "custom";
 }
 
 // Backlinks view component
@@ -670,12 +674,14 @@ export function RightPanel() {
                         value={config.provider}
                         onChange={(e) => {
                           const provider = e.target.value as LLMProviderType;
-                          const providerMeta = PROVIDER_REGISTRY[provider];
                           const defaultModel =
-                            providerMeta?.models[0]?.id || "";
+                            getDefaultModelForProvider(provider);
                           setConfig({
                             provider,
                             model: defaultModel,
+                            customModelId:
+                              defaultModel === "custom" ? "" : undefined,
+                            baseUrl: PROVIDER_MODELS[provider]?.defaultBaseUrl,
                             temperature: getRecommendedTemperature(
                               provider,
                               defaultModel,
@@ -684,7 +690,7 @@ export function RightPanel() {
                         }}
                         className="ui-input h-9 text-xs"
                       >
-                        {Object.entries(PROVIDER_REGISTRY).map(
+                        {Object.entries(PROVIDER_MODELS).map(
                           ([key, meta]) => (
                             <option key={key} value={key}>
                               {meta.label} - {meta.description}
@@ -697,7 +703,7 @@ export function RightPanel() {
                       <label className="text-xs text-muted-foreground block mb-1">
                         API Key{" "}
                         {(config.provider === "ollama" ||
-                          config.provider === "custom") && (
+                          config.provider === "openai-compatible") && (
                           <span className="text-muted-foreground">
                             ({t.settingsPanel.apiKeyOptional})
                           </span>
@@ -712,26 +718,27 @@ export function RightPanel() {
                             ? t.settingsPanel.localModelNoKey
                             : config.provider === "anthropic"
                               ? "sk-ant-..."
-                              : config.provider === "custom"
+                              : config.provider === "openai-compatible"
                                 ? t.settingsPanel.apiKeyOptional
                                 : "sk-..."
                         }
                         className="ui-input h-9 text-xs"
                       />
                     </div>
+                    {config.provider !== "openai-compatible" && (
                     <div>
                       <div className="flex items-center gap-1 mb-1">
                         <label className="text-xs text-muted-foreground">
                           {t.settingsPanel.model}
                         </label>
-                        {PROVIDER_REGISTRY[
+                        {PROVIDER_MODELS[
                           config.provider as LLMProviderType
                         ]?.models.find((m) => m.id === config.model)
                           ?.supportsThinking && <ThinkingModelIcon />}
                       </div>
                       <select
                         value={
-                          PROVIDER_REGISTRY[
+                          PROVIDER_MODELS[
                             config.provider as LLMProviderType
                           ]?.models.some((m) => m.id === config.model)
                             ? config.model
@@ -761,7 +768,7 @@ export function RightPanel() {
                         }}
                         className="ui-input h-9 text-xs"
                       >
-                        {PROVIDER_REGISTRY[
+                        {PROVIDER_MODELS[
                           config.provider as LLMProviderType
                         ]?.models.map((model) => (
                           <option key={model.id} value={model.id}>
@@ -770,8 +777,10 @@ export function RightPanel() {
                         ))}
                       </select>
                     </div>
+                    )}
                     {/* 自定义模型 ID 输入框 */}
-                    {config.model === "custom" && (
+                    {(config.model === "custom" ||
+                      config.provider === "openai-compatible") && (
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">
                           {t.settingsPanel.customModelId}
@@ -806,7 +815,7 @@ export function RightPanel() {
                           setConfig({ baseUrl: e.target.value || undefined })
                         }
                         placeholder={
-                          PROVIDER_REGISTRY[config.provider as LLMProviderType]
+                          PROVIDER_MODELS[config.provider as LLMProviderType]
                             ?.defaultBaseUrl
                         }
                         className="ui-input h-9 text-xs"

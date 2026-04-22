@@ -13,11 +13,15 @@ import { Bot, Settings, Trash2, Dock } from "lucide-react";
 import { AgentPanel } from "../chat/AgentPanel";
 import { ConversationList } from "../chat/ConversationList";
 import { getDragData } from "@/lib/dragState";
-import { PROVIDER_REGISTRY, type LLMProviderType } from "@/services/llm";
+import { PROVIDER_MODELS, type LLMProviderType } from "@/services/llm";
 
 interface AIFloatingPanelProps {
   ballPosition: { x: number; y: number };
   onDock: (e: React.MouseEvent) => void;
+}
+
+function getDefaultModelForProvider(provider: LLMProviderType): string {
+  return PROVIDER_MODELS[provider]?.models[0]?.id || "custom";
 }
 
 export function AIFloatingPanel({
@@ -209,13 +213,18 @@ export function AIFloatingPanel({
                     value={config.provider}
                     onChange={(e) => {
                       const provider = e.target.value as LLMProviderType;
-                      const providerMeta = PROVIDER_REGISTRY[provider];
-                      const defaultModel = providerMeta?.models[0]?.id || "";
-                      setConfig({ provider, model: defaultModel });
+                      const defaultModel = getDefaultModelForProvider(provider);
+                      setConfig({
+                        provider,
+                        model: defaultModel,
+                        customModelId:
+                          defaultModel === "custom" ? "" : undefined,
+                        baseUrl: PROVIDER_MODELS[provider]?.defaultBaseUrl,
+                      });
                     }}
                     className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   >
-                    {Object.entries(PROVIDER_REGISTRY).map(([key, meta]) => (
+                    {Object.entries(PROVIDER_MODELS).map(([key, meta]) => (
                       <option key={key} value={key}>
                         {meta.label}
                       </option>
@@ -234,13 +243,14 @@ export function AIFloatingPanel({
                     className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   />
                 </div>
+                {config.provider !== "openai-compatible" && (
                 <div>
                   <label className="text-xs text-muted-foreground block mb-1">
                     {t.aiFloatingPanel.model}
                   </label>
                   <select
                     value={
-                      PROVIDER_REGISTRY[
+                      PROVIDER_MODELS[
                         config.provider as LLMProviderType
                       ]?.models.some((m) => m.id === config.model)
                         ? config.model
@@ -256,7 +266,7 @@ export function AIFloatingPanel({
                     }}
                     className="w-full text-xs p-2 rounded border border-border/60 bg-background"
                   >
-                    {PROVIDER_REGISTRY[
+                    {PROVIDER_MODELS[
                       config.provider as LLMProviderType
                     ]?.models.map((model) => (
                       <option key={model.id} value={model.id}>
@@ -265,8 +275,10 @@ export function AIFloatingPanel({
                     ))}
                   </select>
                 </div>
+                )}
                 {/* 自定义模型 ID 输入框 */}
-                {config.model === "custom" && (
+                {(config.model === "custom" ||
+                  config.provider === "openai-compatible") && (
                   <div>
                     <label className="text-xs text-muted-foreground block mb-1">
                       {t.aiFloatingPanel.customModelId}
@@ -297,7 +309,7 @@ export function AIFloatingPanel({
                       setConfig({ baseUrl: e.target.value || undefined })
                     }
                     placeholder={
-                      PROVIDER_REGISTRY[config.provider as LLMProviderType]
+                      PROVIDER_MODELS[config.provider as LLMProviderType]
                         ?.defaultBaseUrl
                     }
                     className="w-full text-xs p-2 rounded border border-border/60 bg-background"

@@ -59,8 +59,8 @@ describe("MainAIChatShell", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
-        provider: "moonshot",
-        model: "kimi-k2.5",
+        provider: "deepseek",
+        model: "deepseek-chat",
         thinkingMode: "auto",
       },
     }));
@@ -68,10 +68,7 @@ describe("MainAIChatShell", () => {
     render(<MainAIChatShell />);
 
     // Thinking mode is inside the "+" menu — click to open
-    const plusBtn = screen
-      .getAllByRole("button")
-      .find((b) => b.getAttribute("title") === "More" || b.textContent === "");
-    if (plusBtn) fireEvent.click(plusBtn);
+    fireEvent.click(screen.getByTitle("More"));
 
     const { t } = useLocaleStore.getState();
     expect(screen.getByText(t.aiSettings.thinkingMode)).toBeTruthy();
@@ -84,8 +81,8 @@ describe("MainAIChatShell", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
-        provider: "openai",
-        model: "gpt-5.2",
+        provider: "deepseek",
+        model: "gpt-5.4",
         thinkingMode: "auto",
       },
     }));
@@ -93,10 +90,7 @@ describe("MainAIChatShell", () => {
     render(<MainAIChatShell />);
 
     // Open plus menu
-    const plusBtn = screen
-      .getAllByRole("button")
-      .find((b) => b.getAttribute("title") === "More" || b.textContent === "");
-    if (plusBtn) fireEvent.click(plusBtn);
+    fireEvent.click(screen.getByTitle("More"));
 
     const { t } = useLocaleStore.getState();
     expect(screen.queryByText(t.aiSettings.thinkingMode)).toBeNull();

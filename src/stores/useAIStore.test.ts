@@ -4,13 +4,23 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const callLLMStreamMock = vi.hoisted(() => vi.fn());
-const getAIConfigMock = vi.hoisted(() =>
-  vi.fn(() => ({
-    provider: "moonshot",
-    model: "kimi-k2-0711-preview",
+const invokeMock = vi.hoisted(() => vi.fn(async () => null));
+const aiConfigState = vi.hoisted(() => ({
+  current: {
+    provider: "openai",
+    model: "gpt-5.4",
     apiKey: "sk-test-key",
     temperature: 0.5,
-  }))
+  },
+}));
+const getAIConfigMock = vi.hoisted(() => vi.fn(() => ({ ...aiConfigState.current })));
+const setAIConfigMock = vi.hoisted(() =>
+  vi.fn((newConfig: Record<string, unknown>) => {
+    aiConfigState.current = {
+      ...aiConfigState.current,
+      ...newConfig,
+    };
+  })
 );
 
 vi.mock("@/services/llm", () => ({
@@ -29,7 +39,7 @@ vi.mock("@/services/llm", () => ({
 
 vi.mock("@/services/ai/ai", () => ({
   getAIConfig: getAIConfigMock,
-  setAIConfig: vi.fn(),
+  setAIConfig: setAIConfigMock,
   chat: vi.fn(),
   parseFileReferences: vi.fn(() => []),
   parseEditSuggestions: vi.fn(() => []),
@@ -37,6 +47,7 @@ vi.mock("@/services/ai/ai", () => ({
 }));
 
 vi.mock("@/lib/host", () => ({
+  invoke: invokeMock,
   readFile: vi.fn(async (path: string) => path ? "" : ""),
 }));
 
@@ -71,10 +82,18 @@ import { useAIStore } from "./useAIStore";
 describe("useAIStore sendMessageStream", () => {
   beforeEach(() => {
     callLLMStreamMock.mockClear();
+    invokeMock.mockClear();
+    setAIConfigMock.mockClear();
+    aiConfigState.current = {
+      provider: "openai",
+      model: "gpt-5.4",
+      apiKey: "sk-test-key",
+      temperature: 0.5,
+    };
     useAIStore.setState({
       config: {
-        provider: "moonshot",
-        model: "kimi-k2-0711-preview",
+        provider: "openai",
+        model: "gpt-5.4",
         apiKey: "sk-test-key",
         temperature: 0.5,
       },
@@ -114,5 +133,25 @@ describe("useAIStore sendMessageStream", () => {
 
     expect(callLLMStreamMock).not.toHaveBeenCalled();
     expect(useAIStore.getState().messages).toHaveLength(0);
+  });
+
+  it("syncs resolved provider settings to backend for custom models", async () => {
+    await useAIStore.getState().setConfig({
+      provider: "openai-compatible",
+      model: "custom",
+      customModelId: "kimi-k2.5",
+      baseUrl: "https://api.moonshot.cn/v1",
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("agent_set_active_provider", {
+      provider_id: "openai-compatible",
+    });
+    expect(invokeMock).toHaveBeenCalledWith("agent_set_provider_settings", {
+      provider_id: "openai-compatible",
+      settings: {
+        modelId: "kimi-k2.5",
+        baseUrl: "https://api.moonshot.cn/v1",
+      },
+    });
   });
 });
