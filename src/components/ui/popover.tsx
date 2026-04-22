@@ -116,38 +116,98 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
       [ref],
     );
 
-    // Position based on anchor bounding box.
+    // Position based on anchor bounding box. Recomputes on open, on
+    // window resize, and on any ancestor scroll so the popover tracks
+    // its anchor while the page moves around it.
     const [style, setStyle] = useState<React.CSSProperties>({});
-    useLayoutEffect(() => {
-      if (!open) return;
+    const reposition = useCallback(() => {
       const anchor = anchorRef?.current;
       if (!anchor) return;
       const rect = anchor.getBoundingClientRect();
-      const base: React.CSSProperties = {
-        position: "fixed",
-        zIndex: 50,
-        ...(width !== undefined ? { width } : { minWidth: rect.width }),
-      };
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const contentWidth =
+        typeof width === "number"
+          ? width
+          : localRef.current?.offsetWidth ?? rect.width;
+      const contentHeight = localRef.current?.offsetHeight ?? 0;
+      const margin = 8;
+
+      let top: number | undefined;
+      let bottom: number | undefined;
+      let left: number | undefined;
+      let right: number | undefined;
+
       switch (placement) {
         case "bottom-start":
-          base.top = rect.bottom + offset;
-          base.left = rect.left;
+          top = rect.bottom + offset;
+          left = rect.left;
           break;
         case "bottom-end":
-          base.top = rect.bottom + offset;
-          base.right = window.innerWidth - rect.right;
+          top = rect.bottom + offset;
+          right = vw - rect.right;
           break;
         case "top-start":
-          base.bottom = window.innerHeight - rect.top + offset;
-          base.left = rect.left;
+          bottom = vh - rect.top + offset;
+          left = rect.left;
           break;
         case "top-end":
-          base.bottom = window.innerHeight - rect.top + offset;
-          base.right = window.innerWidth - rect.right;
+          bottom = vh - rect.top + offset;
+          right = vw - rect.right;
           break;
       }
-      setStyle(base);
-    }, [open, anchorRef, placement, offset, width]);
+
+      // Viewport clamp — keep popover at least `margin` inside each edge.
+      // Uses measured content dimensions (available after first layout tick).
+      if (left !== undefined) {
+        const maxLeft = vw - contentWidth - margin;
+        left = Math.max(margin, Math.min(left, maxLeft));
+      }
+      if (right !== undefined) {
+        const maxRight = vw - contentWidth - margin;
+        right = Math.max(margin, Math.min(right, maxRight));
+      }
+      if (top !== undefined && contentHeight > 0) {
+        const maxTop = vh - contentHeight - margin;
+        top = Math.max(margin, Math.min(top, maxTop));
+      }
+      if (bottom !== undefined && contentHeight > 0) {
+        const maxBottom = vh - contentHeight - margin;
+        bottom = Math.max(margin, Math.min(bottom, maxBottom));
+      }
+
+      setStyle({
+        position: "fixed",
+        zIndex: 50,
+        ...(top !== undefined ? { top } : {}),
+        ...(bottom !== undefined ? { bottom } : {}),
+        ...(left !== undefined ? { left } : {}),
+        ...(right !== undefined ? { right } : {}),
+        ...(width !== undefined ? { width } : { minWidth: rect.width }),
+      });
+    }, [anchorRef, placement, offset, width]);
+
+    useLayoutEffect(() => {
+      if (!open) return;
+      reposition();
+      // Second pass on the next frame so content dimensions are measured
+      // and viewport clamp kicks in. Cheap — it's a single rAF.
+      const id = requestAnimationFrame(reposition);
+      return () => cancelAnimationFrame(id);
+    }, [open, reposition]);
+
+    useEffect(() => {
+      if (!open) return;
+      const handle = () => reposition();
+      window.addEventListener("resize", handle);
+      // Capture-phase scroll listener catches every scrolling ancestor
+      // (inner lists, overflow containers, etc.).
+      window.addEventListener("scroll", handle, true);
+      return () => {
+        window.removeEventListener("resize", handle);
+        window.removeEventListener("scroll", handle, true);
+      };
+    }, [open, reposition]);
 
     // Outside click + ESC dismissal.
     useEffect(() => {
