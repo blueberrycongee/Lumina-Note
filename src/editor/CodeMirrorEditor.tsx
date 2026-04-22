@@ -594,9 +594,9 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".cm-lumina-codeblock-open .cm-codeblock-fence, .cm-lumina-codeblock-close .cm-codeblock-fence":
       {
-        color: "transparent",
-        textDecoration: "line-through",
-        textDecorationColor: "hsl(var(--muted-foreground) / 0.25)",
+        color: "hsl(var(--muted-foreground) / 0.35)",
+        display: "inline-block",
+        transform: "translateY(0.18em)",
       },
     ".cm-codeblock-source-toggle": {
       justifyContent: "flex-end",
