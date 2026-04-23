@@ -44,7 +44,7 @@ export function ChatHistorySidebar({
       <motion.div
         initial={{ x: -240, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        exit={{ x: -240, opacity: 0 }}
+        exit={{ x: -240, opacity: 0, transition: { duration: 0.15, ease: [0.2, 0, 0.4, 1] } }}
         transition={{ duration: 0.22, ease: [0.2, 0.9, 0.1, 1] }}
         className="absolute left-0 top-0 z-40 flex h-full w-60 flex-col border-r border-border bg-background shadow-elev-2"
       >

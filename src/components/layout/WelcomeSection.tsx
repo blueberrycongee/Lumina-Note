@@ -290,8 +290,9 @@ function SuggestionCard({
       className={[
         "group relative flex flex-col items-start gap-2 text-left",
         "rounded-ui-lg border border-border bg-popover p-4",
-        "transition-[background-color,border-color,box-shadow] duration-fast ease-out-subtle",
+        "transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-subtle",
         "hover:border-primary/35 hover:bg-accent/60 hover:shadow-elev-1",
+        "active:scale-[0.97]",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       ].join(" ")}
     >
@@ -334,9 +335,9 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
           animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] } }}
           exit={{
             opacity: 0,
-            y: -12,
-            scale: 0.96,
-            transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] },
+            y: -8,
+            scale: 0.98,
+            transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
           }}
         >
           <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-3xl font-semibold tracking-tight text-foreground">
@@ -377,16 +378,17 @@ export function WelcomeSuggestions({
       {!hasStarted && (
         <motion.div
           className="w-full max-w-3xl mx-auto px-4 mt-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0, transition: { delay: 0.1 } }}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0, transition: { delay: 0.1, duration: 0.28, ease: [0.2, 0.9, 0.1, 1] } }}
           exit={{
             opacity: 0,
-            y: 50,
+            y: 12,
+            scale: 0.98,
             pointerEvents: "none",
-            transition: { duration: 0.2 },
+            transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
             {actions.map((action, idx) => (
               <SuggestionCard
                 key={idx}

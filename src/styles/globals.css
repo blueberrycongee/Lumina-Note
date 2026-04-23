@@ -1566,29 +1566,29 @@ mark {
 
 /* Animation classes */
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: fadeIn 0.2s var(--motion-ease-out) forwards;
 }
 
 .animate-slide-up {
-  animation: slideUp 0.3s ease-out forwards;
+  animation: slideUp 0.25s var(--motion-ease-spring) forwards;
 }
 
 .animate-slide-left {
-  animation: slideInLeft 0.3s ease-out forwards;
+  animation: slideInLeft 0.25s var(--motion-ease-spring) forwards;
 }
 
 .animate-slide-right {
-  animation: slideInRight 0.3s ease-out forwards;
+  animation: slideInRight 0.25s var(--motion-ease-spring) forwards;
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.2s ease-out forwards;
+  animation: scaleIn 0.18s var(--motion-ease-spring) forwards;
 }
 
 /* Stagger children animation */
 .stagger-children > * {
   opacity: 0;
-  animation: slideUp 0.3s ease-out forwards;
+  animation: slideUp 0.25s var(--motion-ease-spring) forwards;
 }
 
 .stagger-children > *:nth-child(1) {

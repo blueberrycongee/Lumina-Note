@@ -19,20 +19,20 @@ const containerVariants: Variants = {
 };
 
 const fadeUpVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: [0.2, 0.8, 0.2, 1] },
+    transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] },
   },
 };
 
 const logoVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.35, ease: [0.2, 0.8, 0.2, 1] },
+    transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] },
   },
 };
 
