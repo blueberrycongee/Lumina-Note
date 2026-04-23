@@ -1120,8 +1120,12 @@ class CalloutBlockWidget extends WidgetType {
     readonly foldable: boolean,
     readonly defaultFolded: boolean,
     readonly blockFrom: number,
+    readonly lineCount: number,
   ) {
     super();
+  }
+  get estimatedHeight() {
+    return this.lineCount * 22 + 32;
   }
   eq(other: CalloutBlockWidget) {
     return (
@@ -1137,6 +1141,7 @@ class CalloutBlockWidget extends WidgetType {
   toDOM(view: EditorView) {
     const wrapper = document.createElement("div");
     wrapper.className = `callout callout-${this.color}${this.defaultFolded ? " callout-folded" : ""}`;
+    wrapper.tabIndex = -1;
 
     const editBtn = document.createElement("button");
     editBtn.type = "button";
@@ -3405,7 +3410,9 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
             header.foldable,
             header.defaultFolded,
             blockFrom,
+            allLineFroms.length,
           ),
+          side: 1,
           block: true,
         }).range(blockFrom, blockTo),
       );
