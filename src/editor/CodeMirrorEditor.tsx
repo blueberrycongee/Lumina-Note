@@ -1042,16 +1042,45 @@ class LiveCodeBlockCopyButtonWidget extends WidgetType {
 
 // Mermaid 图表 Widget
 class MermaidWidget extends WidgetType {
-  constructor(readonly code: string) {
+  constructor(
+    readonly code: string,
+    readonly blockFrom: number,
+  ) {
     super();
   }
   eq(other: MermaidWidget) {
-    return other.code === this.code;
+    return other.code === this.code && other.blockFrom === this.blockFrom;
   }
-  toDOM() {
+  toDOM(view: EditorView) {
     const container = document.createElement("div");
     container.className = "mermaid-container my-2";
     container.dataset.widgetType = "codeblock";
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "mermaid-edit-source-btn";
+    editBtn.setAttribute("aria-label", "编辑这个区块");
+    editBtn.title = "编辑这个区块";
+    editBtn.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+    editBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const blockFrom = this.blockFrom;
+      const blockRange = mermaidBlockPositionsCache.find(
+        (c) => c.from === blockFrom,
+      );
+      if (!blockRange) return;
+      const fenceLine = view.state.doc.lineAt(blockRange.from);
+      const contentLineStart = fenceLine.to + 1;
+      const targetPos = Math.min(contentLineStart, blockRange.to);
+      view.dispatch({
+        effects: toggleMermaidEdit.of({ from: blockFrom }),
+        selection: { anchor: targetPos },
+      });
+      view.focus();
+    });
+    container.appendChild(editBtn);
 
     const pre = document.createElement("pre");
     pre.className = "mermaid";
@@ -1747,10 +1776,46 @@ function buildMathDecorations(state: EditorState): DecorationSet {
 // Mermaid 代码块位置缓存（常规代码块改用 codemirror-live-markdown）
 let mermaidBlockPositionsCache: { from: number; to: number }[] = [];
 
+const toggleMermaidEdit = StateEffect.define<{ from: number }>();
+
+const mermaidEditingField = StateField.define<Set<number>>({
+  create: () => new Set(),
+  update(set, tr) {
+    let next = set;
+    for (const e of tr.effects) {
+      if (e.is(toggleMermaidEdit)) {
+        next = new Set(next);
+        next.add(e.value.from);
+      }
+    }
+    if (tr.docChanged) {
+      const mapping = tr.changes;
+      const mapped = new Set<number>();
+      for (const pos of next) {
+        const newPos = mapping.mapPos(pos, 1);
+        mapped.add(newPos);
+      }
+      next = mapped;
+    }
+    if (tr.selection && next.size > 0) {
+      const sel = tr.state.selection.main;
+      const stillInside = [...next].some((pos) =>
+        mermaidBlockPositionsCache.some(
+          (c) => c.from === pos && sel.from >= c.from && sel.from <= c.to,
+        ),
+      );
+      if (!stillInside) next = new Set();
+    }
+    return next;
+  },
+});
+
 const mermaidStateField = StateField.define<DecorationSet>({
   create: buildMermaidDecorations,
   update(deco, tr) {
     if (tr.docChanged || tr.reconfigured)
+      return buildMermaidDecorations(tr.state);
+    if (tr.effects.some((e) => e.is(toggleMermaidEdit)))
       return buildMermaidDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
@@ -1786,6 +1851,8 @@ function shouldShowMermaidSource(
 ): boolean {
   const shouldCollapse = state.facet(collapseOnSelectionFacet);
   if (!shouldCollapse) return false;
+  const editingSet = state.field(mermaidEditingField, false);
+  if (editingSet && editingSet.has(from)) return true;
   const isDragging = state.field(mouseSelectingField, false);
   if (isDragging) return false;
   return state.selection.ranges.some((range) => {
@@ -1821,7 +1888,7 @@ function buildMermaidDecorations(state: EditorState): DecorationSet {
         if (shouldShowMermaidSource(state, node.from, node.to)) return;
 
         const code = lines.slice(1, lines.length - 1).join("\n");
-        const widget = new MermaidWidget(code);
+        const widget = new MermaidWidget(code, node.from);
         decorations.push(
           Decoration.replace({ widget, block: true }).range(node.from, node.to),
         );
@@ -4214,6 +4281,7 @@ export const CodeMirrorEditor = forwardRef<
         : null;
       const widgets = [
         mathStateField,
+        mermaidEditingField,
         mermaidStateField,
         calloutStateField,
         highlightStateField,

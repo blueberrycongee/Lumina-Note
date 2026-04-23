@@ -1466,6 +1466,7 @@ mark {
 
 /* Mermaid 图表容器 */
 .mermaid-container {
+  position: relative;
   margin: 1rem 0;
   padding: 1rem;
   background: hsl(var(--muted) / 0.3);
@@ -1481,6 +1482,38 @@ mark {
 .mermaid-container svg {
   max-width: 100%;
   height: auto;
+}
+
+.mermaid-edit-source-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.85);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+  backdrop-filter: blur(4px);
+}
+
+.mermaid-container:hover .mermaid-edit-source-btn {
+  opacity: 1;
+}
+
+.mermaid-edit-source-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 /* 暗色主题下的 mermaid */
