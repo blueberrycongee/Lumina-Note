@@ -115,6 +115,7 @@ export interface CodeMirrorEditorRef {
   scrollToLine: (line: number) => void;
   syncSelectionToViewport: () => void;
   getScrollDOM: () => HTMLElement | null;
+  overrideModeTransitionScroll: (line: number) => void;
 }
 
 type ExternalJumpDetail = {
@@ -4320,6 +4321,7 @@ export const CodeMirrorEditor = forwardRef<
   const effectiveModeRef = useRef<ViewMode>(effectiveMode);
   const pendingModeTransitionRestoreRef =
     useRef<PendingModeTransitionRestore | null>(null);
+  const modeTransitionScrollOverrideRef = useRef<number | null>(null);
   const transitionSequenceRef = useRef(0);
 
   const { openPDFTab, fileTree, openFile, vaultPath, currentFile } =
@@ -4594,6 +4596,9 @@ export const CodeMirrorEditor = forwardRef<
       },
       syncSelectionToViewport,
       getScrollDOM: () => viewRef.current?.scrollDOM ?? null,
+      overrideModeTransitionScroll: (line: number) => {
+        modeTransitionScrollOverrideRef.current = line;
+      },
     }),
     [syncSelectionToViewport],
   );
@@ -5243,11 +5248,41 @@ export const CodeMirrorEditor = forwardRef<
 
     if (modeChanged) {
       transitionSequenceRef.current = transitionId;
-      const snapshot = captureModeTransitionSnapshot(
-        view,
-        previousMode,
-        scrollContainer,
-      );
+
+      const scrollOverrideLine = modeTransitionScrollOverrideRef.current;
+      modeTransitionScrollOverrideRef.current = null;
+
+      let snapshot: ModeTransitionSnapshot;
+      if (scrollOverrideLine !== null) {
+        const targetLine = Math.min(
+          Math.max(1, scrollOverrideLine),
+          view.state.doc.lines,
+        );
+        const pos = view.state.doc.line(targetLine).from;
+        const offsetTop = getViewportAnchorOffset(scrollContainer);
+        snapshot = {
+          mode: previousMode,
+          viewportAnchor: { pos, offsetTop, source: "viewport" },
+          selection: {
+            anchor: view.state.selection.main.anchor,
+            head: view.state.selection.main.head,
+            from: view.state.selection.main.from,
+            to: view.state.selection.main.to,
+          },
+          viewport: {
+            from: view.viewport.from,
+            to: view.viewport.to,
+          },
+          scrollTop: scrollContainer.scrollTop,
+        };
+      } else {
+        snapshot = captureModeTransitionSnapshot(
+          view,
+          previousMode,
+          scrollContainer,
+        );
+      }
+
       transitionPlan = buildModeTransitionPlan({
         transitionId,
         snapshot,
@@ -5267,6 +5302,7 @@ export const CodeMirrorEditor = forwardRef<
         selectionTo: snapshot.selection.to,
         viewportFrom: snapshot.viewport.from,
         viewportTo: snapshot.viewport.to,
+        scrollOverride: scrollOverrideLine,
       });
       discardCrossModeCaret(
         view,

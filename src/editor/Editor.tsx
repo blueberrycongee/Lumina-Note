@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState } from "react";
+import { useEffect, useCallback, useRef, useState, type MutableRefObject } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
@@ -99,6 +99,33 @@ export function Editor() {
 
   const editorRef = useRef<CodeMirrorEditorRef>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const readingScrollRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
+  const scrollLineForReadingRef = useRef<number | null>(null);
+
+  const handleReadingScrollRef = useCallback((el: HTMLDivElement | null) => {
+    readingScrollRef.current = el;
+    if (!el || scrollLineForReadingRef.current === null) return;
+    const targetLine = scrollLineForReadingRef.current;
+    scrollLineForReadingRef.current = null;
+
+    const applyScroll = () => {
+      const content = useFileStore.getState().currentContent;
+      const totalLines = content.split("\n").length;
+      const proportion =
+        totalLines > 1 ? (targetLine - 1) / (totalLines - 1) : 0;
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll > 0) {
+        el.scrollTop = proportion * maxScroll;
+      }
+    };
+
+    requestAnimationFrame(() => {
+      applyScroll();
+      requestAnimationFrame(() => {
+        applyScroll();
+      });
+    });
+  }, []);
   const lastOuterScrollTraceAtRef = useRef(0);
   const editorScrollFadeTimerRef = useRef<number | null>(null);
   const [_isEditorScrollActive, setIsEditorScrollActive] = useState(false);
@@ -252,6 +279,23 @@ export function Editor() {
   const handleModeChange = useCallback(
     (mode: EditorMode) => {
       if (mode === editorMode) return;
+
+      if (editorMode === "reading" && readingScrollRef.current) {
+        const el = readingScrollRef.current;
+        const maxScroll = el.scrollHeight - el.clientHeight;
+        const proportion = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
+        const content = useFileStore.getState().currentContent;
+        const totalLines = content.split("\n").length;
+        const targetLine = Math.max(
+          1,
+          Math.round(proportion * (totalLines - 1)) + 1,
+        );
+        editorRef.current?.overrideModeTransitionScroll(targetLine);
+      } else if (mode === "reading") {
+        scrollLineForReadingRef.current =
+          editorRef.current?.getScrollLine() ?? 1;
+      }
+
       markEditorTrace("editor-mode-change-requested", {
         previousMode: editorMode,
         mode,
@@ -539,7 +583,7 @@ export function Editor() {
 
           {/* ReadingView — shown on top when in reading mode */}
           {editorMode === "reading" && (
-            <div className="h-full overflow-auto">
+            <div ref={handleReadingScrollRef} className="h-full overflow-auto">
               <ReadingView
                 content={currentContent}
                 filePath={currentFile}
