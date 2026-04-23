@@ -27,18 +27,18 @@ describe("ReadingView edit activation", () => {
     window.getSelection()?.removeAllRanges();
   });
 
-  it("activates edit mode on a normal content click", () => {
+  it("does not activate edit mode on a normal content click", () => {
     const onActivateEdit = vi.fn();
-    render(<ReadingView content="Alpha Beta Gamma" onActivateEdit={onActivateEdit} />);
+    render(<ReadingView content="Alpha Beta Gamma" />);
 
     fireEvent.click(screen.getByText("Alpha Beta Gamma"));
 
-    expect(onActivateEdit).toHaveBeenCalledTimes(1);
+    expect(onActivateEdit).not.toHaveBeenCalled();
   });
 
   it("does not activate edit mode when text is selected", () => {
     const onActivateEdit = vi.fn();
-    render(<ReadingView content="Alpha Beta Gamma" onActivateEdit={onActivateEdit} />);
+    render(<ReadingView content="Alpha Beta Gamma" />);
 
     const paragraph = screen.getByText("Alpha Beta Gamma");
     const textNode = paragraph.firstChild;
@@ -60,7 +60,7 @@ describe("ReadingView edit activation", () => {
 
   it("does not activate edit mode after a drag gesture", () => {
     const onActivateEdit = vi.fn();
-    render(<ReadingView content="Alpha Beta Gamma" onActivateEdit={onActivateEdit} />);
+    render(<ReadingView content="Alpha Beta Gamma" />);
 
     const paragraph = screen.getByText("Alpha Beta Gamma");
     fireEvent.pointerDown(paragraph, { button: 0, clientX: 10, clientY: 10 });

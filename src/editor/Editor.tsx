@@ -669,7 +669,6 @@ export function Editor() {
               <ReadingView
                 content={currentContent}
                 filePath={currentFile}
-                onActivateEdit={() => handleModeChange("live")}
               />
             </div>
           )}

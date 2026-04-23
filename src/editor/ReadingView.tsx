@@ -23,10 +23,9 @@ interface ReadingViewProps {
   content: string;
   className?: string;
   filePath?: string | null;
-  onActivateEdit?: () => void;
 }
 
-export function ReadingView({ content, className = "", filePath = null, onActivateEdit }: ReadingViewProps) {
+export function ReadingView({ content, className = "", filePath = null }: ReadingViewProps) {
   const { fileTree, openFile, vaultPath, currentFile } = useFileStore(
     useShallow((state) => ({
       fileTree: state.fileTree,
@@ -38,8 +37,6 @@ export function ReadingView({ content, className = "", filePath = null, onActiva
   const { openSecondaryPdf } = useSplitStore();
   const { setSplitView } = useUIStore();
   const containerRef = useRef<HTMLDivElement>(null);
-  const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
-  const suppressNextActivateRef = useRef(false);
 
   const html = useMemo(() => {
     return parseMarkdown(content);
@@ -132,37 +129,6 @@ export function ReadingView({ content, className = "", filePath = null, onActiva
     return () => container.removeEventListener('click', handleCalloutFold);
   }, [html]);
 
-  const hasSelectionInsideReadingView = useCallback(() => {
-    const container = containerRef.current;
-    const selection = window.getSelection();
-    if (!container || !selection || selection.isCollapsed || selection.rangeCount === 0) {
-      return false;
-    }
-
-    const selectedText = selection.toString().trim();
-    if (!selectedText) return false;
-
-    const range = selection.getRangeAt(0);
-    return container.contains(range.commonAncestorContainer);
-  }, []);
-
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.button !== 0) return;
-    pointerDownRef.current = { x: e.clientX, y: e.clientY };
-    suppressNextActivateRef.current = false;
-  }, []);
-
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    const start = pointerDownRef.current;
-    pointerDownRef.current = null;
-    if (!start) return;
-
-    const dragDistance = Math.hypot(e.clientX - start.x, e.clientY - start.y);
-    if (dragDistance > 4) {
-      suppressNextActivateRef.current = true;
-    }
-  }, []);
-
   // Handle WikiLink, Tag, and Lumina link clicks
   const handleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -231,30 +197,11 @@ export function ReadingView({ content, className = "", filePath = null, onActiva
       }
       return;
     }
-
-    // Click on non-interactive content switches back to edit mode
-    const isInteractive =
-      target.closest("a") ||
-      target.closest("button") ||
-      target.closest(".wikilink") ||
-      target.closest(".tag") ||
-      target.closest(".callout-title");
-    if (!isInteractive && onActivateEdit) {
-      // Text selection and drag-selection can still emit a click; don't
-      // treat those gestures as an edit activation.
-      if (suppressNextActivateRef.current || hasSelectionInsideReadingView()) {
-        suppressNextActivateRef.current = false;
-        return;
-      }
-      onActivateEdit();
-    }
   }, [
     fileTree,
-    hasSelectionInsideReadingView,
     openFile,
     openSecondaryPdf,
     setSplitView,
-    onActivateEdit,
   ]);
 
   return (
@@ -265,8 +212,6 @@ export function ReadingView({ content, className = "", filePath = null, onActiva
       // modes, and stays identical as sidebars collapse/expand.
       className={`reading-view prose prose-neutral dark:prose-invert max-w-[760px] mx-auto ${className}`}
       dangerouslySetInnerHTML={{ __html: html }}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
       onClick={handleClick}
     />
   );
