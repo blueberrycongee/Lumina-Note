@@ -246,14 +246,13 @@ export function parseMarkdown(markdown: string): string {
     const mermaidPlaceholders: string[] = [];
     const mermaidPrefix = "⟦MERMAID_BLOCK_";
     const mermaidSuffix = "⟧";
-    
+
     processed = processed.replace(/```mermaid\s*([\s\S]*?)```/gi, (_match, code) => {
-      const escapedCode = code.trim()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-      mermaidPlaceholders.push(escapedCode);
+      // Keep raw mermaid text — do NOT HTML-escape it.
+      // Mermaid reads textContent from <pre class="mermaid"> and parses
+      // directives like %%{init: {'theme': 'base', ...}}%% itself.
+      // HTML-escaping would break those directives.
+      mermaidPlaceholders.push(code.trim());
       return `${mermaidPrefix}${mermaidPlaceholders.length - 1}${mermaidSuffix}`;
     });
     

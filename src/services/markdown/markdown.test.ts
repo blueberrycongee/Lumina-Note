@@ -183,6 +183,15 @@ describe('parseMarkdown', () => {
       expect(result).toContain('class="mermaid-container"');
       expect(result).toContain('class="mermaid"');
     });
+
+    it('should preserve %%{init}%% directives without HTML-escaping', () => {
+      const md = '```mermaid\n%%{init: {\'theme\': \'base\'}}%%\ngraph TD\nA-->B\n```';
+      const result = parseMarkdown(md);
+      // The directive must survive verbatim — no &apos; or &quot; entities
+      expect(result).toContain("'theme': 'base'");
+      expect(result).not.toContain('&apos;');
+      expect(result).not.toContain('&quot;');
+    });
   });
 
   describe('error handling', () => {
