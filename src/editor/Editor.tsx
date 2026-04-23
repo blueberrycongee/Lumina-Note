@@ -537,8 +537,8 @@ export function Editor() {
             }}
           />
 
-          {/* CodeMirror editor — cm-scroller is the sole scroll container */}
-          {editorMode === "reading" ? (
+          {/* ReadingView — shown on top when in reading mode */}
+          {editorMode === "reading" && (
             <div className="h-full overflow-auto">
               <ReadingView
                 content={currentContent}
@@ -546,7 +546,18 @@ export function Editor() {
                 onActivateEdit={() => handleModeChange("live")}
               />
             </div>
-          ) : (
+          )}
+
+          {/* CodeMirror editor — always mounted to preserve scroll position
+              across mode switches; hidden via CSS in reading mode so its
+              scrollDOM.scrollTop and viewport anchor are retained. */}
+          <div
+            className={
+              editorMode === "reading"
+                ? "absolute inset-0 invisible pointer-events-none"
+                : "h-full"
+            }
+          >
             <CodeMirrorEditor
               ref={editorRef}
               content={currentContent}
@@ -557,7 +568,7 @@ export function Editor() {
               viewMode={editorMode as ViewMode}
               filePath={currentFile}
             />
-          )}
+          </div>
         </div>
       )}
     </div>
