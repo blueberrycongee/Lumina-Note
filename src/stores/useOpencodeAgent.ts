@@ -812,6 +812,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     },
 
     async clearChat() {
+      if (get().currentSessionId && get().messages.length === 0) return;
       await get().newSession();
     },
 
