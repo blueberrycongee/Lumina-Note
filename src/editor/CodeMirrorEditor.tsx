@@ -1119,6 +1119,7 @@ class CalloutBlockWidget extends WidgetType {
     readonly color: string,
     readonly foldable: boolean,
     readonly defaultFolded: boolean,
+    readonly blockFrom: number,
   ) {
     super();
   }
@@ -1129,12 +1130,38 @@ class CalloutBlockWidget extends WidgetType {
       other.content === this.content &&
       other.color === this.color &&
       other.foldable === this.foldable &&
-      other.defaultFolded === this.defaultFolded
+      other.defaultFolded === this.defaultFolded &&
+      other.blockFrom === this.blockFrom
     );
   }
-  toDOM() {
+  toDOM(view: EditorView) {
     const wrapper = document.createElement("div");
     wrapper.className = `callout callout-${this.color}${this.defaultFolded ? " callout-folded" : ""}`;
+
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.className = "callout-edit-source-btn";
+    editBtn.setAttribute("aria-label", "编辑这个区块");
+    editBtn.title = "编辑这个区块";
+    editBtn.innerHTML =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+    editBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const blockFrom = this.blockFrom;
+      const blockRange = calloutPositionsCache.find(
+        (c) => c.from === blockFrom,
+      );
+      if (!blockRange) return;
+      const headerLine = view.state.doc.lineAt(blockRange.from);
+      const targetPos = headerLine.to;
+      view.dispatch({
+        effects: toggleCalloutEdit.of({ from: blockFrom }),
+        selection: { anchor: targetPos },
+      });
+      view.focus();
+    });
+    wrapper.appendChild(editBtn);
 
     const icon = document.createElement("span");
     icon.className = "callout-icon";
@@ -3244,6 +3271,40 @@ function buildWikiLinkDecorations(state: EditorState): DecorationSet {
 // ============ Callout StateField ============
 let calloutPositionsCache: { from: number; to: number }[] = [];
 
+const toggleCalloutEdit = StateEffect.define<{ from: number }>();
+
+const calloutEditingField = StateField.define<Set<number>>({
+  create: () => new Set(),
+  update(set, tr) {
+    let next = set;
+    for (const e of tr.effects) {
+      if (e.is(toggleCalloutEdit)) {
+        next = new Set(next);
+        next.add(e.value.from);
+      }
+    }
+    if (tr.docChanged) {
+      const mapping = tr.changes;
+      const mapped = new Set<number>();
+      for (const pos of next) {
+        const newPos = mapping.mapPos(pos, 1);
+        mapped.add(newPos);
+      }
+      next = mapped;
+    }
+    if (tr.selection && next.size > 0) {
+      const sel = tr.state.selection.main;
+      const stillInside = [...next].some((pos) =>
+        calloutPositionsCache.some(
+          (c) => c.from === pos && sel.from >= c.from && sel.from <= c.to,
+        ),
+      );
+      if (!stillInside) next = new Set();
+    }
+    return next;
+  },
+});
+
 function shouldShowCalloutSource(
   state: EditorState,
   from: number,
@@ -3251,17 +3312,10 @@ function shouldShowCalloutSource(
 ): boolean {
   const shouldCollapse = state.facet(collapseOnSelectionFacet);
   if (!shouldCollapse) return false;
+  const editingSet = state.field(calloutEditingField, false);
+  if (editingSet && editingSet.has(from)) return true;
   const isDragging = state.field(mouseSelectingField, false);
   if (isDragging) return false;
-  // Only reveal source when the caret (collapsed selection) is inside the
-  // callout. Range selections that cross the callout keep it in widget
-  // mode on purpose — `EditorView.atomicRanges` snaps those selections to
-  // the widget's outer boundary, and `blockWidgetSelectionSyncPlugin` tags
-  // the widget DOM with `.cm-block-widget-selected` so the UI still shows
-  // "the whole callout is selected" via a primary-colored ring. That is
-  // the intentional difference from math/image/hr, which use the
-  // permissive `shouldShowSource` so text-like widgets reveal for inline
-  // editing on any intersection.
   return state.selection.ranges.some(
     (range) =>
       range.from === range.to && range.from >= from && range.from <= to,
@@ -3339,6 +3393,7 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
             resolved.color,
             header.foldable,
             header.defaultFolded,
+            blockFrom,
           ),
           block: true,
         }).range(blockFrom, blockTo),
@@ -3358,6 +3413,8 @@ const calloutStateField = StateField.define<DecorationSet>({
   create: buildCalloutDecorations,
   update(deco, tr) {
     if (tr.docChanged || tr.reconfigured)
+      return buildCalloutDecorations(tr.state);
+    if (tr.effects.some((e) => e.is(toggleCalloutEdit)))
       return buildCalloutDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
@@ -4283,6 +4340,7 @@ export const CodeMirrorEditor = forwardRef<
         mathStateField,
         mermaidEditingField,
         mermaidStateField,
+        calloutEditingField,
         calloutStateField,
         highlightStateField,
         horizontalRuleStateField,

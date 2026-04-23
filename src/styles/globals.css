@@ -887,6 +887,7 @@ body {
 
 /* --- Base callout block --- */
 .callout {
+  position: relative;
   display: flex;
   gap: 0.75rem;
   margin: 0.75rem 0;
@@ -894,6 +895,38 @@ body {
   border-radius: 6px;
   font-size: inherit;
   line-height: 1.6;
+}
+
+.callout-edit-source-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: hsl(var(--background) / 0.85);
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+  backdrop-filter: blur(4px);
+}
+
+.callout:hover .callout-edit-source-btn {
+  opacity: 1;
+}
+
+.callout-edit-source-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 .callout-icon {
