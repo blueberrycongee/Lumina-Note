@@ -11,6 +11,7 @@ import {
   type CodeMirrorEditorRef,
   ViewMode,
 } from "./CodeMirrorEditor";
+import { ReadingView } from "./ReadingView";
 import { SelectionToolbar } from "@/components/toolbar/SelectionToolbar";
 import { SelectionContextMenu } from "@/components/toolbar/SelectionContextMenu";
 import {
@@ -537,16 +538,26 @@ export function Editor() {
           />
 
           {/* CodeMirror editor — cm-scroller is the sole scroll container */}
-          <CodeMirrorEditor
-            ref={editorRef}
-            content={currentContent}
-            onChange={(newContent, selection) => {
-              updateContent(newContent, "user", undefined, selection);
-              debouncedSaveRef.current?.();
-            }}
-            viewMode={editorMode as ViewMode}
-            filePath={currentFile}
-          />
+          {editorMode === "reading" ? (
+            <div className="h-full overflow-auto">
+              <ReadingView
+                content={currentContent}
+                filePath={currentFile}
+                onActivateEdit={() => handleModeChange("live")}
+              />
+            </div>
+          ) : (
+            <CodeMirrorEditor
+              ref={editorRef}
+              content={currentContent}
+              onChange={(newContent, selection) => {
+                updateContent(newContent, "user", undefined, selection);
+                debouncedSaveRef.current?.();
+              }}
+              viewMode={editorMode as ViewMode}
+              filePath={currentFile}
+            />
+          )}
         </div>
       )}
     </div>

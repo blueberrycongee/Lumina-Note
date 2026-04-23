@@ -23,9 +23,10 @@ interface ReadingViewProps {
   content: string;
   className?: string;
   filePath?: string | null;
+  onActivateEdit?: () => void;
 }
 
-export function ReadingView({ content, className = "", filePath = null }: ReadingViewProps) {
+export function ReadingView({ content, className = "", filePath = null, onActivateEdit }: ReadingViewProps) {
   const { fileTree, openFile, vaultPath, currentFile } = useFileStore(
     useShallow((state) => ({
       fileTree: state.fileTree,
@@ -195,8 +196,20 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
           new CustomEvent("tag-clicked", { detail: { tag: tagName } })
         );
       }
+      return;
     }
-  }, [fileTree, openFile, openSecondaryPdf, setSplitView]);
+
+    // Click on non-interactive content switches back to edit mode
+    const isInteractive =
+      target.closest("a") ||
+      target.closest("button") ||
+      target.closest(".wikilink") ||
+      target.closest(".tag") ||
+      target.closest(".callout-title");
+    if (!isInteractive && onActivateEdit) {
+      onActivateEdit();
+    }
+  }, [fileTree, openFile, openSecondaryPdf, setSplitView, onActivateEdit]);
 
   return (
     <div
