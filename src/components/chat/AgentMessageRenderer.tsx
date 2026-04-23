@@ -468,6 +468,8 @@ function cleanUserMessage(content: string): string {
     .replace(/<task>([\s\S]*?)<\/task>/g, "$1")
     .replace(/<current_note[^>]*>[\s\S]*?<\/current_note>/g, "")
     .replace(/<related_notes[^>]*>[\s\S]*?<\/related_notes>/g, "")
+    .replace(/\n\n\[Quoted references\][\s\S]*$/g, "")
+    .replace(/\n\n\[(User referenced file content|用户引用的文件内容|使用者引用的檔案內容|ユーザーが参照したファイル内容)\][\s\S]*$/g, "")
     .trim();
 }
 

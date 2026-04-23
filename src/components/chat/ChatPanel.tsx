@@ -138,6 +138,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   const [canSend, setCanSend] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottom = useRef(true);
   const chatInputRef = useRef<ChatInputRef>(null);
   const { isRecording, interimText, toggleRecording } = useSpeechToText(
     (text: string) => {
@@ -147,6 +148,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
 
   // 滚动到底部
   useEffect(() => {
+    if (!isNearBottom.current) return;
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
@@ -196,6 +198,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
         await processMessageWithFiles(message, files, quotedSelections);
       const latestFileInfo = getCurrentFileInfo();
 
+      isNearBottom.current = true;
       setInputValue("");
       await sendMessageStream(
         fullMessage,
@@ -308,6 +311,13 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
       {/* Chat History */}
       <div
         ref={messagesContainerRef}
+        onScroll={() => {
+          const el = messagesContainerRef.current;
+          if (el) {
+            isNearBottom.current =
+              el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+          }
+        }}
         className="flex-1 overflow-y-auto p-3 space-y-3"
       >
         {/* Welcome message */}

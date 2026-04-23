@@ -752,8 +752,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             {
               id: optimisticId,
               role: "user" as const,
-              content: task,
+              content: ctx?.display_message || task,
               rawParts: [],
+              attachments: (ctx?.attachments as MessageAttachment[] | undefined) || [],
             },
           ],
         }));

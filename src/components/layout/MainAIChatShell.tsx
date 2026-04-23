@@ -98,6 +98,8 @@ export function MainAIChatShell() {
   const [selectedExportIds, setSelectedExportIds] = useState<string[]>([]);
   const [isExportingConversation, setIsExportingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottom = useRef(true);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<HTMLDivElement | null>(null);
@@ -466,7 +468,7 @@ export function MainAIChatShell() {
 
   // 自动滚动到底部
   useEffect(() => {
-    if (!messagesEndRef.current) {
+    if (!messagesEndRef.current || !isNearBottom.current) {
       return;
     }
     if (import.meta.env.DEV && typeof performance !== "undefined") {
@@ -723,6 +725,7 @@ export function MainAIChatShell() {
       }
 
       const message = effectiveInput;
+      isNearBottom.current = true;
       setInput("");
       autoSendMessageRef.current = null;
       const files = [...referencedFiles];
@@ -1031,6 +1034,14 @@ export function MainAIChatShell() {
 
           {/* 消息列表区域 (对话模式) */}
           <div
+            ref={scrollContainerRef}
+            onScroll={() => {
+              const el = scrollContainerRef.current;
+              if (el) {
+                isNearBottom.current =
+                  el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+              }
+            }}
             className="w-full min-h-0 scrollbar-thin"
             style={{
               flexBasis: 0,

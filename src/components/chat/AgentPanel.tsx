@@ -37,6 +37,8 @@ export function AgentPanel() {
   const { t } = useLocaleStore();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottom = useRef(true);
   const chatInputRef = useRef<ChatInputRef>(null);
   const { isRecording, interimText, toggleRecording } = useSpeechToText(
     (text: string) => {
@@ -105,6 +107,7 @@ export function AgentPanel() {
 
   // 滚动到底部
   useEffect(() => {
+    if (!isNearBottom.current) return;
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
@@ -126,6 +129,7 @@ export function AgentPanel() {
     )
       return;
 
+    isNearBottom.current = true;
     setInput("");
     const { currentFile, currentContent } = useFileStore.getState();
 
@@ -231,7 +235,17 @@ export function AgentPanel() {
       </div>
 
       {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div
+        ref={scrollContainerRef}
+        onScroll={() => {
+          const el = scrollContainerRef.current;
+          if (el) {
+            isNearBottom.current =
+              el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+          }
+        }}
+        className="flex-1 overflow-y-auto p-3 space-y-3"
+      >
         {/* 欢迎消息 */}
         {messages.length === 0 && (
           <div className="text-sm text-muted-foreground leading-relaxed">
