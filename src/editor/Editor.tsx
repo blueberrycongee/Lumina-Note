@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef, useState, type MutableRefObject } from "react";
+import { useEffect, useCallback, useRef, useState, useLayoutEffect } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
@@ -39,6 +39,53 @@ const modeIcons: Record<EditorMode, React.ReactNode> = {
 
 // 局部图谱展开状态（组件外部以保持状态）
 let localGraphExpandedState = false;
+
+type ModeScrollSnapshot = {
+  mode: EditorMode;
+  scrollTop: number;
+  scrollHeight: number;
+  clientHeight: number;
+  maxScrollTop: number;
+  ratio: number;
+};
+
+function getMaxScrollTop(element: HTMLElement) {
+  return Math.max(0, element.scrollHeight - element.clientHeight);
+}
+
+function clampScrollTop(value: number, maxScrollTop: number) {
+  return Math.min(maxScrollTop, Math.max(0, value));
+}
+
+function captureModeScrollSnapshot(
+  element: HTMLElement,
+  mode: EditorMode,
+): ModeScrollSnapshot {
+  const maxScrollTop = getMaxScrollTop(element);
+  const scrollTop = clampScrollTop(element.scrollTop, maxScrollTop);
+  return {
+    mode,
+    scrollTop,
+    scrollHeight: element.scrollHeight,
+    clientHeight: element.clientHeight,
+    maxScrollTop,
+    ratio: maxScrollTop > 0 ? scrollTop / maxScrollTop : 0,
+  };
+}
+
+function restoreModeScrollSnapshot(
+  element: HTMLElement,
+  snapshot: ModeScrollSnapshot,
+) {
+  const maxScrollTop = getMaxScrollTop(element);
+  const targetTop =
+    snapshot.maxScrollTop > 0 && maxScrollTop > 0
+      ? snapshot.ratio * maxScrollTop
+      : snapshot.scrollTop;
+  const scrollTop = clampScrollTop(targetTop, maxScrollTop);
+  element.scrollTop = scrollTop;
+  return { scrollTop, maxScrollTop };
+}
 
 export function Editor() {
   const { t } = useLocaleStore();
@@ -98,34 +145,9 @@ export function Editor() {
   } = useUIStore();
 
   const editorRef = useRef<CodeMirrorEditorRef>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const readingScrollRef = useRef<HTMLDivElement | null>(null) as MutableRefObject<HTMLDivElement | null>;
-  const scrollLineForReadingRef = useRef<number | null>(null);
-
-  const handleReadingScrollRef = useCallback((el: HTMLDivElement | null) => {
-    readingScrollRef.current = el;
-    if (!el || scrollLineForReadingRef.current === null) return;
-    const targetLine = scrollLineForReadingRef.current;
-    scrollLineForReadingRef.current = null;
-
-    const applyScroll = () => {
-      const content = useFileStore.getState().currentContent;
-      const totalLines = content.split("\n").length;
-      const proportion =
-        totalLines > 1 ? (targetLine - 1) / (totalLines - 1) : 0;
-      const maxScroll = el.scrollHeight - el.clientHeight;
-      if (maxScroll > 0) {
-        el.scrollTop = proportion * maxScroll;
-      }
-    };
-
-    requestAnimationFrame(() => {
-      applyScroll();
-      requestAnimationFrame(() => {
-        applyScroll();
-      });
-    });
-  }, []);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const readingScrollContainerRef = useRef<HTMLDivElement>(null);
+  const pendingModeScrollSnapshotRef = useRef<ModeScrollSnapshot | null>(null);
   const lastOuterScrollTraceAtRef = useRef(0);
   const editorScrollFadeTimerRef = useRef<number | null>(null);
   const [_isEditorScrollActive, setIsEditorScrollActive] = useState(false);
@@ -151,6 +173,22 @@ export function Editor() {
     [],
   );
 
+  const getScrollContainerForMode = useCallback((mode: EditorMode) => {
+    if (mode === "reading") return readingScrollContainerRef.current;
+    const editorHandle = editorRef.current as
+      | CodeMirrorEditorRef
+      | HTMLElement
+      | null;
+    if (
+      editorHandle &&
+      "getScrollDOM" in editorHandle &&
+      typeof editorHandle.getScrollDOM === "function"
+    ) {
+      return editorHandle.getScrollDOM();
+    }
+    return editorHandle instanceof HTMLElement ? editorHandle : null;
+  }, []);
+
   // 局部图谱展开/收起状态
   const [localGraphExpanded, setLocalGraphExpanded] = useState(
     localGraphExpandedState,
@@ -161,6 +199,51 @@ export function Editor() {
       return !prev;
     });
   }, []);
+
+  useLayoutEffect(() => {
+    const container = getScrollContainerForMode(editorMode);
+    scrollContainerRef.current = container;
+
+    const snapshot = pendingModeScrollSnapshotRef.current;
+    if (!container || !snapshot) return;
+
+    const initialRestore = restoreModeScrollSnapshot(container, snapshot);
+    markEditorTrace("editor-mode-scroll-restored", {
+      fromMode: snapshot.mode,
+      mode: editorMode,
+      phase: "layout",
+      sourceScrollTop: snapshot.scrollTop,
+      sourceMaxScrollTop: snapshot.maxScrollTop,
+      targetScrollTop: initialRestore.scrollTop,
+      targetMaxScrollTop: initialRestore.maxScrollTop,
+    });
+
+    let firstFrame = 0;
+    let secondFrame = 0;
+    firstFrame = window.requestAnimationFrame(() => {
+      restoreModeScrollSnapshot(container, snapshot);
+      secondFrame = window.requestAnimationFrame(() => {
+        const finalRestore = restoreModeScrollSnapshot(container, snapshot);
+        markEditorTrace("editor-mode-scroll-restored", {
+          fromMode: snapshot.mode,
+          mode: editorMode,
+          phase: "raf-2",
+          sourceScrollTop: snapshot.scrollTop,
+          sourceMaxScrollTop: snapshot.maxScrollTop,
+          targetScrollTop: finalRestore.scrollTop,
+          targetMaxScrollTop: finalRestore.maxScrollTop,
+        });
+        if (pendingModeScrollSnapshotRef.current === snapshot) {
+          pendingModeScrollSnapshotRef.current = null;
+        }
+      });
+    });
+
+    return () => {
+      if (firstFrame) window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [editorMode, getScrollContainerForMode, markEditorTrace]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -279,32 +362,27 @@ export function Editor() {
   const handleModeChange = useCallback(
     (mode: EditorMode) => {
       if (mode === editorMode) return;
-
-      if (editorMode === "reading" && readingScrollRef.current) {
-        const el = readingScrollRef.current;
-        const maxScroll = el.scrollHeight - el.clientHeight;
-        const proportion = maxScroll > 0 ? el.scrollTop / maxScroll : 0;
-        const content = useFileStore.getState().currentContent;
-        const totalLines = content.split("\n").length;
-        const targetLine = Math.max(
-          1,
-          Math.round(proportion * (totalLines - 1)) + 1,
-        );
-        editorRef.current?.overrideModeTransitionScroll(targetLine);
-      } else if (mode === "reading") {
-        scrollLineForReadingRef.current =
-          editorRef.current?.getScrollLine() ?? 1;
-      }
-
+      const scrollContainer = getScrollContainerForMode(editorMode);
+      const scrollSnapshot = scrollContainer
+        ? captureModeScrollSnapshot(scrollContainer, editorMode)
+        : null;
+      pendingModeScrollSnapshotRef.current = scrollSnapshot;
       markEditorTrace("editor-mode-change-requested", {
         previousMode: editorMode,
         mode,
         activeTabType: activeTab?.type || "unknown",
-        outerScrollTop: scrollContainerRef.current?.scrollTop ?? null,
+        outerScrollTop: scrollSnapshot?.scrollTop ?? null,
+        outerMaxScrollTop: scrollSnapshot?.maxScrollTop ?? null,
       });
       setEditorMode(mode);
     },
-    [activeTab?.type, editorMode, markEditorTrace, setEditorMode],
+    [
+      activeTab?.type,
+      editorMode,
+      getScrollContainerForMode,
+      markEditorTrace,
+      setEditorMode,
+    ],
   );
 
   // 全局键盘快捷键
@@ -583,7 +661,11 @@ export function Editor() {
 
           {/* ReadingView — shown on top when in reading mode */}
           {editorMode === "reading" && (
-            <div ref={handleReadingScrollRef} className="h-full overflow-auto">
+            <div
+              ref={readingScrollContainerRef}
+              className="h-full overflow-auto"
+              data-editor-scroll-container="reading"
+            >
               <ReadingView
                 content={currentContent}
                 filePath={currentFile}
