@@ -22,6 +22,7 @@ import type {
   ProviderSettingsStore,
 } from './providers/settings-store.js'
 import { testProviderConnection } from './providers/test-connection.js'
+import { setAutoApproveToolCalls } from '../agent-v2/provider-bridge.js'
 import type { SkillLoader } from './skills/loader.js'
 import type { WikiManager } from '../wiki/manager.js'
 import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
@@ -119,6 +120,12 @@ export async function dispatchAgentCommand(
       } else {
         await providerSettings.setProviderApiKey(provider_id as ProviderId, api_key)
       }
+      triggerProviderRefresh()
+      return null
+    }
+    case 'agent_set_auto_approve': {
+      const { value } = args as { value?: boolean }
+      setAutoApproveToolCalls(!!value)
       triggerProviderRefresh()
       return null
     }

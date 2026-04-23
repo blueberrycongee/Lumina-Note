@@ -14,6 +14,12 @@ import type { ProviderId } from "../agent/providers/registry.js";
 
 const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 
+let _autoApproveToolCalls = false;
+
+export function setAutoApproveToolCalls(value: boolean): void {
+  _autoApproveToolCalls = value;
+}
+
 // System prompt injected as the `build` agent's prompt. Opencode's
 // default behaviour (session/llm.ts:103) is: if an agent has a
 // non-empty `prompt` field, it REPLACES the provider-default prompt
@@ -146,7 +152,7 @@ export async function buildOpencodeBridge(
     providerEntry.models = { [resolvedModelId]: {} };
   }
 
-  const config = {
+  const config: Record<string, unknown> = {
     // Top-level `model: "providerID/modelID"` sets opencode's defaultModel()
     // so we don't depend on the recent-model heuristic or models.dev ordering.
     model: `${opencodeId}/${resolvedModelId}`,
@@ -166,6 +172,10 @@ export async function buildOpencodeBridge(
       [opencodeId]: providerEntry,
     },
   };
+
+  if (_autoApproveToolCalls) {
+    config.permission = "allow";
+  }
 
   const auth = apiKey
     ? {

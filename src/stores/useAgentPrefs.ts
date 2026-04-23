@@ -5,12 +5,13 @@
 // means settings panels don't have to import the agent runtime just to
 // read a boolean.
 //
-// `autoApprove` drives opencode's permission flow — when we wire the
-// permission hook later, the server-side plugin reads this value.
+// `autoApprove` drives opencode's permission flow — synced to the main
+// process via IPC, which injects `permission: "allow"` into the config.
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { createLegacyKeyJSONStorage } from "@/lib/persistStorage";
+import { invoke } from "@/lib/host";
 
 type State = {
   autoApprove: boolean;
@@ -29,7 +30,10 @@ export const useAgentPrefs = create<AgentPrefsStore>()(
     (set) => ({
       autoApprove: false,
       autoCompactEnabled: true,
-      setAutoApprove: (autoApprove) => set({ autoApprove }),
+      setAutoApprove: (autoApprove) => {
+        set({ autoApprove });
+        invoke("agent_set_auto_approve", { value: autoApprove }).catch(() => {});
+      },
       setAutoCompactEnabled: (autoCompactEnabled) => set({ autoCompactEnabled }),
     }),
     {
@@ -44,6 +48,11 @@ export const useAgentPrefs = create<AgentPrefsStore>()(
         autoApprove: state.autoApprove,
         autoCompactEnabled: state.autoCompactEnabled,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          invoke("agent_set_auto_approve", { value: state.autoApprove }).catch(() => {});
+        }
+      },
     },
   ),
 );
