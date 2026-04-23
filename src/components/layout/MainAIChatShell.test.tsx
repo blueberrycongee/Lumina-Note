@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MainAIChatShell } from "./MainAIChatShell";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
@@ -8,11 +8,18 @@ import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 describe("MainAIChatShell", () => {
+  const originalStartTask = useOpencodeAgent.getState().startTask;
+
   beforeEach(() => {
     useUIStore.setState({ chatMode: "agent" });
     useFileStore.setState({ vaultPath: "/tmp" });
     useAIStore.setState({ pendingInputAppends: [] });
-    useOpencodeAgent.setState({ messages: [], status: "idle" });
+    useOpencodeAgent.setState({
+      messages: [],
+      status: "idle",
+      currentSessionId: null,
+      startTask: originalStartTask,
+    });
   });
 
   it("renders textarea in agent mode", () => {
@@ -144,5 +151,87 @@ describe("MainAIChatShell", () => {
     fireEvent.click(thinkingToggle);
     expect(screen.getByText("step by step")).toBeTruthy();
     expect(screen.getByText("final answer")).toBeTruthy();
+  });
+
+  it("sends a lumina prompt link through opencode when input is empty", async () => {
+    const startTask = vi.fn(async () => undefined);
+    useOpencodeAgent.setState({
+      currentSessionId: "test-session",
+      status: "idle",
+      startTask: startTask as typeof originalStartTask,
+      messages: [
+        {
+          id: "msg-user",
+          role: "user",
+          content: "hello",
+          rawParts: [],
+        },
+        {
+          id: "msg-assistant",
+          role: "assistant",
+          content: "[继续追问](lumina-prompt:)",
+          rawParts: [
+            {
+              id: "part-text",
+              sessionID: "test-session",
+              messageID: "msg-assistant",
+              type: "text",
+              text: "[继续追问](lumina-prompt:)",
+            } as never,
+          ],
+        },
+      ],
+    });
+
+    render(<MainAIChatShell />);
+    fireEvent.click(screen.getByText("继续追问"));
+
+    await waitFor(() => expect(startTask).toHaveBeenCalledTimes(1));
+    const [task, context] = startTask.mock
+      .calls[0] as unknown as Parameters<typeof originalStartTask>;
+    expect(task).toBe("继续追问");
+    expect(context).toMatchObject({
+      workspace_path: "/tmp",
+      display_message: "继续追问",
+    });
+  });
+
+  it("appends a lumina prompt link to existing draft instead of sending", () => {
+    const startTask = vi.fn(async () => undefined);
+    useOpencodeAgent.setState({
+      currentSessionId: "test-session",
+      status: "idle",
+      startTask: startTask as typeof originalStartTask,
+      messages: [
+        {
+          id: "msg-user",
+          role: "user",
+          content: "hello",
+          rawParts: [],
+        },
+        {
+          id: "msg-assistant",
+          role: "assistant",
+          content: "[继续追问](lumina-prompt:)",
+          rawParts: [
+            {
+              id: "part-text",
+              sessionID: "test-session",
+              messageID: "msg-assistant",
+              type: "text",
+              text: "[继续追问](lumina-prompt:)",
+            } as never,
+          ],
+        },
+      ],
+    });
+
+    render(<MainAIChatShell />);
+    const input = screen.getByRole("textbox") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "已有草稿" } });
+    fireEvent.click(screen.getByText("继续追问"));
+
+    expect(startTask).not.toHaveBeenCalled();
+    expect(input.value).toBe("已有草稿\n\n继续追问");
   });
 });

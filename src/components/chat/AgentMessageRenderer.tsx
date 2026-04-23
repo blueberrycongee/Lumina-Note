@@ -7,7 +7,7 @@
  * - Text segments (Markdown)
  */
 
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, memo, type MouseEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore, getCurrentTranslations } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
@@ -22,6 +22,7 @@ import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from 
 import { AssistantDiagramPanels } from "./AssistantDiagramPanels";
 import { getDiagramAttachmentFilePaths } from "./diagramAttachmentUtils";
 import { UserMessageBubbleContent } from "./UserMessageBubbleContent";
+import { getPromptFromPromptLink } from "./promptLinks";
 import {
   ChevronRight,
   ChevronDown,
@@ -589,6 +590,7 @@ interface AgentMessageRendererProps {
   messages: AgentMessage[];
   isRunning: boolean;
   className?: string;
+  onPromptLinkClick?: (prompt: string) => void;
   // 超时检测（LLM 请求级别）
   llmRequestStartTime?: number | null;
   onRetryTimeout?: () => void;
@@ -608,6 +610,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
   messages,
   isRunning,
   className = "",
+  onPromptLinkClick,
   llmRequestStartTime,
   onRetryTimeout,
 }: AgentMessageRendererProps) {
@@ -617,6 +620,25 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     threshold: TIMEOUT_THRESHOLD_MS,
     enabled: isRunning,
   });
+
+  const handlePromptLinkClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (!onPromptLinkClick) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const anchor = target.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || !event.currentTarget.contains(anchor)) return;
+
+      const prompt = getPromptFromPromptLink(anchor);
+      if (!prompt) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      onPromptLinkClick(prompt);
+    },
+    [onPromptLinkClick],
+  );
 
   const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } = useAIStore();
   const openFile = useFileStore((state) => state.openFile);
@@ -761,7 +783,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
   }, [messages, pendingDiff]);
 
   return (
-    <div className={className}>
+    <div className={className} onClick={handlePromptLinkClick}>
       <AnimatePresence initial={false}>
       {rounds.map((round) => (
         <motion.div

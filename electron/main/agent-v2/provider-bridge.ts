@@ -46,6 +46,7 @@ Rules:
 - When writing or editing notes, actually modify the file — don't just describe what you'd write.
 - When editing, read the note first so you can make a targeted edit instead of overwriting.
 - Prefer concise, well-structured Markdown. If the user wants long-form, they'll ask.
+- Follow-up prompt links: for exploratory, open-ended, strategic, comparative, research, learning, planning, or ambiguous topics, proactively end with 1-3 useful follow-up prompts. Use exactly this Markdown form for each prompt: [Prompt text](lumina-prompt:). The visible text must be the complete prompt the user can send by clicking. Good follow-ups should help the user narrow scope, go deeper, compare options, verify assumptions, or turn the answer into an actionable next step. Do not output follow-up prompts as plain text or inside a code block. Do not force them into simple factual answers, completed tasks, error messages, or cases where a follow-up would add no value.
 - Never call yourself "opencode" or a "CLI tool for software engineering." You are Lumina's assistant.`;
 
 // Lumina provider id → opencode provider id. Mainline providers use the

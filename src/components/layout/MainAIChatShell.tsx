@@ -772,6 +772,57 @@ export function MainAIChatShell() {
     handleSendRef.current = handleSend;
   }, [handleSend]);
 
+  const appendPromptSuggestionToInput = useCallback(
+    (prompt: string) => {
+      setInput((prev) =>
+        prev.trim() ? `${prev.trimEnd()}\n\n${prompt}` : prompt,
+      );
+      setShowMention(false);
+      setMentionQuery("");
+      setMentionIndex(0);
+      setShowSkillMenu(false);
+      window.setTimeout(() => {
+        textareaRef.current?.focus();
+        autoResizeTextarea();
+      }, 0);
+    },
+    [autoResizeTextarea, setShowSkillMenu],
+  );
+
+  const handlePromptLinkClick = useCallback(
+    (prompt: string) => {
+      const trimmedPrompt = prompt.trim();
+      if (!trimmedPrompt || isExportSelectionMode) return;
+
+      const hasPendingInput =
+        input.trim().length > 0 ||
+        selectedSkills.length > 0 ||
+        referencedFiles.length > 0 ||
+        textSelections.length > 0;
+      if (
+        hasPendingInput ||
+        agentStatus === "running" ||
+        isAgentWaitingApproval
+      ) {
+        appendPromptSuggestionToInput(trimmedPrompt);
+        return;
+      }
+
+      void handleSend(trimmedPrompt);
+    },
+    [
+      agentStatus,
+      appendPromptSuggestionToInput,
+      handleSend,
+      input,
+      isAgentWaitingApproval,
+      isExportSelectionMode,
+      referencedFiles.length,
+      selectedSkills.length,
+      textSelections.length,
+    ],
+  );
+
   const autoSendRef = useRef(false);
 
   useEffect(() => {
@@ -1062,6 +1113,7 @@ export function MainAIChatShell() {
                   isRunning={agentStatus === "running"}
                   llmRequestStartTime={llmRequestStartTime}
                   onRetryTimeout={retryTimeout}
+                  onPromptLinkClick={handlePromptLinkClick}
                 />
               )}
 

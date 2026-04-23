@@ -1321,6 +1321,17 @@ body {
   color: hsl(var(--md-link-hover, var(--primary)));
 }
 
+.prose a[href^="lumina-prompt:"] {
+  cursor: pointer;
+  font-weight: 600;
+  text-decoration-style: dotted;
+}
+
+.prose a[href^="lumina-prompt:"]:hover {
+  background-color: hsl(var(--primary) / 0.08);
+  border-radius: 0.2rem;
+}
+
 /* 高亮 */
 .prose mark {
   background: hsl(var(--md-highlight, 50 80% 85%));

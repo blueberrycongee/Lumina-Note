@@ -8,7 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { ChatInput } from "./ChatInput";
+import { ChatInput, type ChatInputRef } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
 import { StreamingOutput } from "./StreamingMessage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -37,6 +37,7 @@ export function AgentPanel() {
   const { t } = useLocaleStore();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputRef>(null);
   const { isRecording, interimText, toggleRecording } = useSpeechToText(
     (text: string) => {
       setInput((prev) => (prev ? prev + " " + text : text));
@@ -139,6 +140,32 @@ export function AgentPanel() {
       displayMessage,
       attachments,
     });
+  };
+
+  const appendPromptSuggestionToInput = (prompt: string) => {
+    setInput((prev) =>
+      prev.trim() ? `${prev.trimEnd()}\n\n${prompt}` : prompt,
+    );
+  };
+
+  const handlePromptLinkClick = (prompt: string) => {
+    const trimmedPrompt = prompt.trim();
+    if (!trimmedPrompt) return;
+
+    const hasInputAttachments =
+      (chatInputRef.current?.getReferencedFiles().length ?? 0) > 0 ||
+      (chatInputRef.current?.getAttachedImages().length ?? 0) > 0;
+    if (
+      input.trim() ||
+      hasInputAttachments ||
+      status === "running" ||
+      isWaitingApproval
+    ) {
+      appendPromptSuggestionToInput(trimmedPrompt);
+      return;
+    }
+
+    void handleSendWithFiles(trimmedPrompt, []);
   };
 
   return (
@@ -272,6 +299,7 @@ export function AgentPanel() {
           isRunning={status === "running"}
           llmRequestStartTime={llmRequestStartTime}
           onRetryTimeout={retryTimeout}
+          onPromptLinkClick={handlePromptLinkClick}
         />
 
         {/* 流式输出 */}
@@ -357,6 +385,7 @@ export function AgentPanel() {
 
         <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-[box-shadow,border-color] duration-fast ease-out-subtle">
           <ChatInput
+            ref={chatInputRef}
             value={input}
             onChange={setInput}
             onSend={handleSendWithFiles}
