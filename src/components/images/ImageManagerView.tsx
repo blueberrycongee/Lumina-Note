@@ -1019,7 +1019,7 @@ function ImageGridCard({
       onClick={(event) => onSelect(image.path, event)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-lg border bg-background text-left transition-all hover:border-primary/30",
+        "group flex flex-col overflow-hidden rounded-lg border bg-background text-left transition-[border-color,box-shadow] duration-fast ease-out-subtle hover:border-primary/30",
         selected ? "border-primary/40 ring-1 ring-primary/10" : "border-border/60",
       )}
     >

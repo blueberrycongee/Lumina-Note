@@ -168,12 +168,12 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
     bg-background/60 border border-border/60
     focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
     placeholder:text-muted-foreground/50
-    transition-all
+    transition-[border-color,box-shadow] duration-fast ease-out-subtle
   `;
 
   const buttonClass = `
     px-4 py-2 rounded-lg text-sm font-medium
-    transition-all hover:scale-[1.02] active:scale-[0.98]
+    transition-[background-color,transform] duration-150 ease-out active:scale-[0.97]
     disabled:opacity-50 disabled:cursor-not-allowed
   `;
 

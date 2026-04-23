@@ -789,7 +789,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                         setIsModalOpen(true);
                         setShowCommand(false);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-[opacity,color,background-color] duration-fast ease-out-subtle"
                       title={t.common.edit}
                     >
                       <Pencil size={12} />
@@ -808,7 +808,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                           });
                         }
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-background rounded-md transition-all"
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-background rounded-md transition-[opacity,color,background-color] duration-fast ease-out-subtle"
                       title={t.common.delete}
                     >
                       <Trash2 size={12} />

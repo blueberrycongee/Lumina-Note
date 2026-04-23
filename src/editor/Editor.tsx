@@ -502,7 +502,7 @@ export function Editor() {
           {/* 局部知识图谱 - 悬浮在右上角，可收起 */}
           {currentFile?.endsWith(".md") &&
             (localGraphExpanded ? (
-              <div className="absolute top-3 right-3 w-80 h-56 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 overflow-hidden transition-all duration-300">
+              <div className="absolute top-3 right-3 w-80 h-56 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 overflow-hidden animate-pop-in">
                 <button
                   onClick={toggleLocalGraph}
                   className="absolute top-1.5 right-1.5 p-1 rounded hover:bg-accent/80 text-muted-foreground hover:text-foreground z-10 transition-colors"
@@ -515,7 +515,7 @@ export function Editor() {
             ) : (
               <button
                 onClick={toggleLocalGraph}
-                className="absolute top-3 right-3 p-2.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-300"
+                className="absolute top-3 right-3 p-2.5 bg-background/90 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg z-20 text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-colors duration-fast ease-out-subtle"
                 title={t.common.localGraph}
               >
                 <Network size={18} />

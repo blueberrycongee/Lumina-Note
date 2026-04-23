@@ -279,7 +279,12 @@ body.resizing iframe[data-codex-iframe="true"] {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     transition:
       background-color var(--ui-motion-feedback) var(--ui-motion-ease),
-      color var(--ui-motion-feedback) var(--ui-motion-ease);
+      color var(--ui-motion-feedback) var(--ui-motion-ease),
+      transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  .ui-icon-btn:active:not(:disabled) {
+    transform: scale(0.92);
   }
 
   .db-surface {
@@ -307,18 +312,26 @@ body.resizing iframe[data-codex-iframe="true"] {
     @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-ui-md bg-primary px-3 text-sm font-medium text-primary-foreground;
     @apply hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-    transition-property: background-color, border-color, box-shadow, color;
+    transition-property: background-color, border-color, box-shadow, color, transform;
     transition-duration: var(--ui-motion-feedback);
     transition-timing-function: var(--ui-motion-ease);
+  }
+
+  .db-action-btn:active:not(:disabled) {
+    transform: scale(0.97);
   }
 
   .db-toggle-btn {
     @apply inline-flex h-8 items-center gap-1.5 rounded-ui-md px-2.5 text-sm text-muted-foreground;
     @apply hover:bg-accent hover:text-foreground;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
-    transition-property: background-color, border-color, color, box-shadow;
+    transition-property: background-color, border-color, color, box-shadow, transform;
     transition-duration: var(--ui-motion-feedback);
     transition-timing-function: var(--ui-motion-ease);
+  }
+
+  .db-toggle-btn:active:not(:disabled) {
+    transform: scale(0.97);
   }
 
   .db-toggle-btn[data-active="true"] {
@@ -1596,7 +1609,10 @@ mark {
 
 /* Smooth transitions */
 .transition-smooth {
-  transition: all var(--ui-motion-panel) var(--ui-motion-ease);
+  transition:
+    width var(--ui-motion-panel) var(--ui-motion-ease),
+    opacity var(--ui-motion-panel) var(--ui-motion-ease),
+    transform var(--ui-motion-panel) var(--ui-motion-ease);
 }
 
 /* Hover lift effect */
@@ -1606,9 +1622,11 @@ mark {
     box-shadow var(--ui-motion-feedback) var(--ui-motion-ease);
 }
 
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px hsl(var(--foreground) / 0.1);
+  }
 }
 
 /* Focus ring */

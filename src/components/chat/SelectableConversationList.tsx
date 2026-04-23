@@ -52,7 +52,7 @@ export function SelectableConversationList({
             <button
               type="button"
               onClick={() => onToggleMessage(message.id)}
-              className={`max-w-[80%] text-left rounded-2xl border transition-all ${
+              className={`max-w-[80%] text-left rounded-2xl border transition-[border-color,box-shadow,background-color] duration-fast ease-out-subtle ${
                 checked
                   ? "border-primary/70 ring-1 ring-primary/40 bg-primary/5"
                   : "border-border hover:border-primary/30 hover:bg-muted/30"

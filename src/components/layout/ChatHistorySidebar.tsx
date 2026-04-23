@@ -85,7 +85,7 @@ export function ChatHistorySidebar({
                       onDeleteSession(session.id, session.type);
                     }}
                     title={t.common.delete}
-                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-ui-sm text-muted-foreground opacity-0 transition-all duration-fast ease-out-subtle hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 group-hover:opacity-100"
+                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-ui-sm text-muted-foreground opacity-0 transition-[opacity,color,background-color] duration-fast ease-out-subtle hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-primary/40 group-hover:opacity-100"
                   >
                     <Trash2 size={12} />
                   </button>

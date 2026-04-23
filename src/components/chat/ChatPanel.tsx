@@ -519,7 +519,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
             : "p-3 border-t border-border/60"
         }
       >
-        <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+        <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-[box-shadow,border-color] duration-fast ease-out-subtle">
           <ChatInput
             ref={chatInputRef}
             value={inputValue}

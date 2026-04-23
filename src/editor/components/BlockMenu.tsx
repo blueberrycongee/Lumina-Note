@@ -194,7 +194,7 @@ export function BlockMenu({
   return (
     <div
       ref={menuRef}
-      className={`fixed z-[100] min-w-[200px] max-w-[240px] bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg p-1.5 transition-all duration-150 ${
+      className={`fixed z-[100] min-w-[200px] max-w-[240px] bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg p-1.5 transition-[opacity,transform] duration-150 ${
         isVisible
           ? "opacity-100 translate-y-0 scale-100"
           : "opacity-0 translate-y-1.5 scale-[0.96]"
@@ -223,7 +223,7 @@ export function BlockMenu({
                   <button
                     key={item.id}
                     type="button"
-                    className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-all duration-100 ${
+                    className={`w-9 h-9 flex items-center justify-center rounded-lg border transition-[background-color,color,border-color,box-shadow,transform] duration-100 ease-out ${
                       active
                         ? "bg-primary/10 text-primary border-primary/25 ring-2 ring-primary/40"
                         : "bg-background text-foreground border-border hover:bg-accent/60 active:scale-95"

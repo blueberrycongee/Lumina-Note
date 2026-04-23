@@ -355,7 +355,7 @@ export function AgentPanel() {
       <div className="p-3 border-t border-border/60">
         {/* 模式在后台由意图自动选择，不在 UI 显示 */}
 
-        <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-all">
+        <div className="bg-muted/30 border border-border/60 rounded-lg p-2 focus-within:ring-1 focus-within:ring-primary/50 transition-[box-shadow,border-color] duration-fast ease-out-subtle">
           <ChatInput
             value={input}
             onChange={setInput}

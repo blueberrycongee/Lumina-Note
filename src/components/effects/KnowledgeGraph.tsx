@@ -1029,7 +1029,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     <div className={`flex h-full ${className}`}>
       {/* Settings Panel */}
       <div className={cn(
-        "w-64 border-r border-border/60 bg-background flex-shrink-0 overflow-y-auto transition-all duration-200",
+        "w-64 border-r border-border/60 bg-background flex-shrink-0 overflow-y-auto transition-[width,opacity] duration-200 ease-out",
         showSettings ? "opacity-100" : "w-0 opacity-0 overflow-hidden"
       )}>
         <div className="p-4 space-y-6">
@@ -1212,7 +1212,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
           <div
             className={cn(
-              "absolute top-3 right-3 z-10 w-72 rounded-xl border border-border/70 bg-background/88 backdrop-blur-md shadow-lg pointer-events-none transition-all duration-200 ease-out",
+              "absolute top-3 right-3 z-10 w-72 rounded-xl border border-border/70 bg-background/88 backdrop-blur-md shadow-lg pointer-events-none transition-[opacity,transform] duration-150 ease-out",
               hoverPreviewNode
                 ? "opacity-100 translate-y-0 scale-100"
                 : "opacity-0 translate-y-2 scale-[0.98]"

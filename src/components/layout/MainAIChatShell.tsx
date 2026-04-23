@@ -1088,7 +1088,7 @@ export function MainAIChatShell() {
                           <button
                             key={file}
                             onClick={() => openFile(file)}
-                            className="group flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.07] hover:bg-primary/15 text-primary/80 hover:text-primary rounded-xl text-xs transition-all duration-200 border border-primary/10 hover:border-primary/25 hover:shadow-sm"
+                            className="group flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.07] hover:bg-primary/15 text-primary/80 hover:text-primary rounded-xl text-xs transition-[background-color,color,border-color,box-shadow] duration-fast ease-out-subtle border border-primary/10 hover:border-primary/25 hover:shadow-sm"
                           >
                             <FileText size={13} className="shrink-0" />
                             <span className="truncate max-w-[200px]">

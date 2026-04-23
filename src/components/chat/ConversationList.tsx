@@ -45,7 +45,7 @@ export function ConversationList({ className }: ConversationListProps) {
   return (
     <div
       className={cn(
-        "flex flex-col border-r border-border/60 bg-muted/30 transition-all duration-300 ease-in-out",
+        "flex flex-col border-r border-border/60 bg-muted/30 transition-[width] duration-200 ease-out",
         isExpanded ? "w-48" : "w-12",
         className
       )}
@@ -65,7 +65,7 @@ export function ConversationList({ className }: ConversationListProps) {
         <button
           onClick={handleNewConversation}
           className={cn(
-            "flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-all",
+            "flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-[width,padding,background-color] duration-150 ease-out",
             isExpanded ? "w-full py-2 px-3" : "w-8 h-8 rounded-full"
           )}
           title={t.conversationList.newConversation}
@@ -97,7 +97,7 @@ export function ConversationList({ className }: ConversationListProps) {
               key={session.id}
               onClick={() => handleSwitchSession(session.id, session.type)}
               className={cn(
-                "group flex items-center px-2 py-2.5 cursor-pointer transition-all border-l-2",
+                "group flex items-center px-2 py-2.5 cursor-pointer transition-[background-color,border-color,box-shadow] duration-fast ease-out-subtle border-l-2",
                 isActive
                   ? "border-primary bg-background shadow-sm"
                   : "border-transparent hover:bg-background/50 hover:shadow-sm"

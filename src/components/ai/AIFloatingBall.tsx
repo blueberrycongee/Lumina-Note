@@ -135,14 +135,14 @@ export function AIFloatingBall() {
       >
         <div
           className={`
-            w-14 h-14 rounded-full shadow-lg 
+            w-14 h-14 rounded-full shadow-lg
             flex items-center justify-center
-            ${isFloatingBallDragging ? "" : "transition-all duration-200"}
-            ${floatingPanelOpen 
-              ? "bg-primary text-primary-foreground" 
+            ${isFloatingBallDragging ? "" : "transition-[transform,background-color,box-shadow] duration-150 ease-out"}
+            ${floatingPanelOpen
+              ? "bg-primary text-primary-foreground"
               : "bg-background border border-border hover:bg-muted"
             }
-            ${isFloatingBallDragging ? "scale-110 shadow-xl" : "hover:scale-105"}
+            ${isFloatingBallDragging ? "scale-110 shadow-xl" : "active:scale-95"}
           `}
         >
           {floatingPanelOpen ? (
@@ -173,16 +173,16 @@ export function AIFloatingBall() {
         <div 
           className={`
             fixed right-0 top-0 w-24 h-full z-40
-            transition-all duration-200
-            ${floatingBallPosition.x > window.innerWidth - 150 
-              ? "bg-primary/20 border-l-2 border-primary" 
+            transition-[background-color,border-color] duration-150 ease-out
+            ${floatingBallPosition.x > window.innerWidth - 150
+              ? "bg-primary/20 border-l-2 border-primary"
               : "bg-transparent"
             }
           `}
         >
           <div className="flex items-center justify-center h-full">
             {floatingBallPosition.x > window.innerWidth - 150 && (
-              <Dock size={32} className="text-primary animate-pulse" />
+              <Dock size={32} className="text-primary opacity-80" />
             )}
           </div>
         </div>

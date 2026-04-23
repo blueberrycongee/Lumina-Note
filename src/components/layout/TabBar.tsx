@@ -203,7 +203,20 @@ export function TabBar() {
                     : tab.name
               }
               onSelect={() => switchTab(index)}
-              onDoubleClick={() => tab.isPreview && promotePreviewTab(tab.id)}
+              onDoubleClick={() => {
+                if (tab.isPreview) {
+                  promotePreviewTab(tab.id);
+                } else if (!tab.isPinned) {
+                  void closeTab(index).catch((error) => {
+                    reportOperationError({
+                      source: "TabBar.doubleClickClose",
+                      action: "Close tab",
+                      error,
+                      context: { index, tabId: tab.id },
+                    });
+                  });
+                }
+              }}
               onClose={(e) => handleClose(e, index)}
               onContextMenu={(e) => handleContextMenu(e, index)}
               onMouseDown={handleTabMouseDown}
@@ -217,7 +230,7 @@ export function TabBar() {
         <>
           <div className="fixed inset-0 z-40" onClick={handleClickOutside} aria-hidden="true" />
           <div
-            className="fixed z-50 bg-background border border-border rounded-ui-md shadow-ui-float py-1 min-w-[160px]"
+            className="fixed z-50 bg-background border border-border rounded-ui-md shadow-ui-float py-1 min-w-[160px] animate-pop-in"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button

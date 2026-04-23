@@ -45,7 +45,7 @@ export function ErrorNotifications() {
       {sorted.map((notice) => (
         <div
           key={notice.id}
-          className={`rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur-sm ${
+          className={`rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur-sm animate-slide-right ${
             notice.level === "warning"
               ? "border-warning/40 text-warning"
               : notice.level === "info"

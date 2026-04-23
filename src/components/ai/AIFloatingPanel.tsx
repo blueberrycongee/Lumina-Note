@@ -145,7 +145,7 @@ export function AIFloatingPanel({
   return (
     <div
       ref={panelRef}
-      className={`fixed z-50 bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden transition-all duration-200 ${
+      className={`fixed z-50 bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden transition-[box-shadow,border-color] duration-150 ease-out ${
         isDraggingFileOver ? "ring-2 ring-primary ring-inset" : ""
       }`}
       style={{
