@@ -895,6 +895,7 @@ body {
   border-radius: 6px;
   font-size: inherit;
   line-height: 1.6;
+  transition: box-shadow 200ms ease;
 }
 
 .callout-edit-source-btn {
@@ -1007,6 +1008,14 @@ body {
   background: hsl(0 0% 95%);
 }
 
+/* --- Hover hint: subtle left-edge accent (matches editing border) --- */
+.callout-blue:hover { box-shadow: inset 3px 0 0 hsl(210 40% 55% / 0.35); }
+.callout-green:hover { box-shadow: inset 3px 0 0 hsl(140 35% 50% / 0.35); }
+.callout-yellow:hover { box-shadow: inset 3px 0 0 hsl(45 50% 55% / 0.35); }
+.callout-red:hover { box-shadow: inset 3px 0 0 hsl(0 40% 55% / 0.35); }
+.callout-purple:hover { box-shadow: inset 3px 0 0 hsl(270 35% 55% / 0.35); }
+.callout-gray:hover { box-shadow: inset 3px 0 0 hsl(0 0% 55% / 0.35); }
+
 .callout-blue .callout-title {
   color: hsl(210 40% 40%);
 }
@@ -1065,6 +1074,13 @@ body {
   color: hsl(0 0% 70%);
 }
 
+.dark .callout-blue:hover { box-shadow: inset 3px 0 0 hsl(210 40% 55% / 0.4); }
+.dark .callout-green:hover { box-shadow: inset 3px 0 0 hsl(140 35% 50% / 0.4); }
+.dark .callout-yellow:hover { box-shadow: inset 3px 0 0 hsl(45 50% 55% / 0.4); }
+.dark .callout-red:hover { box-shadow: inset 3px 0 0 hsl(0 40% 55% / 0.4); }
+.dark .callout-purple:hover { box-shadow: inset 3px 0 0 hsl(270 35% 55% / 0.4); }
+.dark .callout-gray:hover { box-shadow: inset 3px 0 0 hsl(0 0% 50% / 0.4); }
+
 /* --- CodeMirror editor: editing mode (active callout) --- */
 .codemirror-wrapper .callout-editing {
   margin: 0;
@@ -1072,6 +1088,7 @@ body {
   border-radius: 0;
   border-left: 3px solid;
   display: block;
+  line-height: 1.6;
 }
 
 .codemirror-wrapper .callout-editing.callout-editing-first {
