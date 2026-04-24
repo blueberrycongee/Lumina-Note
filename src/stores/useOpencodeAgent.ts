@@ -500,12 +500,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           set((state) => {
             if (state.currentSessionId && info.sessionID !== state.currentSessionId)
               return state;
+            const optimistic = state.messages.find((m) => m.id.startsWith("optimistic-"));
             const cleaned = state.messages.filter(
               (m) => !m.id.startsWith("optimistic-"),
             );
             const idx = cleaned.findIndex((m) => m.id === info.id);
             const existingParts = idx >= 0 ? cleaned[idx].rawParts : [];
             const merged = makeAgentMessage(info, existingParts);
+            if (optimistic?.attachments?.length) {
+              merged.attachments = optimistic.attachments;
+            }
             const next = cleaned.slice();
             if (idx === -1) next.push(merged);
             else next[idx] = merged;
