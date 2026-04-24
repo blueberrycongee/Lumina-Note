@@ -8,7 +8,7 @@ function dedupeAttachments(attachments: MessageAttachment[]): MessageAttachment[
   for (const attachment of attachments) {
     const key = attachment.type === "file"
       ? `file::${attachment.path ?? ""}::${attachment.name}`
-      : `quote::${attachment.sourcePath ?? ""}::${attachment.source}::${attachment.locator ?? ""}::${attachment.text}`;
+      : `quote::${attachment.sourcePath ?? ""}::${attachment.source}::${attachment.locator ?? ""}::${attachment.summary}`;
     if (seen.has(key)) continue;
     seen.add(key);
     result.push(attachment);

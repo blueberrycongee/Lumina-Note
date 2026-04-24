@@ -66,8 +66,9 @@ function buildQuoteContext(quotes: QuoteReference[]): string {
       if (locator) lines.push(`locator: ${locator}`);
       if (quote.range) lines.push(`range: ${JSON.stringify(quote.range)}`);
       lines.push(`summary: ${quote.summary || summarizeQuoteText(quote.text)}`);
-      lines.push("content:");
-      lines.push(quote.text);
+      if (quote.sourcePath) {
+        lines.push("(read the file above if you need the full content)");
+      }
       return lines.join("\n");
     })
     .join("\n\n");
@@ -91,7 +92,7 @@ export async function processMessageWithFiles(
     }));
   const quoteAttachments: MessageAttachment[] = quotedSelections.map((quote) => ({
     type: "quote",
-    text: quote.text,
+    text: quote.summary || summarizeQuoteText(quote.text),
     source: quote.source,
     sourcePath: quote.sourcePath,
     summary: quote.summary || summarizeQuoteText(quote.text),
