@@ -47,6 +47,10 @@ import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
 import { getTextFromContent } from "../chat/messageContentUtils";
 import {
+  scrollStickyContainerToBottom,
+  updateStickyScrollState,
+} from "../chat/stickyScroll";
+import {
   filterMentionFiles,
   flattenFileTreeToReferences,
   parseMentionQueryAtCursor,
@@ -100,6 +104,7 @@ export function MainAIChatShell() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottom = useRef(true);
+  const lastScrollTopRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
   const inputBarRef = useRef<HTMLDivElement | null>(null);
@@ -468,13 +473,14 @@ export function MainAIChatShell() {
 
   // 自动滚动到底部
   useEffect(() => {
-    if (!messagesEndRef.current || !isNearBottom.current) {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer || !isNearBottom.current) {
       return;
     }
     if (import.meta.env.DEV && typeof performance !== "undefined") {
       performance.mark("lumina:scroll:before");
     }
-    messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    scrollStickyContainerToBottom(scrollContainer, lastScrollTopRef);
     if (import.meta.env.DEV && typeof performance !== "undefined") {
       performance.mark("lumina:scroll:after");
       performance.measure(
@@ -1038,8 +1044,11 @@ export function MainAIChatShell() {
             onScroll={() => {
               const el = scrollContainerRef.current;
               if (el) {
-                isNearBottom.current =
-                  el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+                updateStickyScrollState(
+                  el,
+                  lastScrollTopRef,
+                  isNearBottom,
+                );
               }
             }}
             className="w-full min-h-0 scrollbar-thin"

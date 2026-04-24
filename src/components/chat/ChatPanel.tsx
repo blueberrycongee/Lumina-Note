@@ -32,6 +32,10 @@ import {
   getTextFromContent,
   getUserMessageDisplay,
 } from "./messageContentUtils";
+import {
+  scrollStickyContainerToBottom,
+  updateStickyScrollState,
+} from "./stickyScroll";
 
 // Edit suggestion card
 function EditCard({
@@ -139,6 +143,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottom = useRef(true);
+  const lastScrollTopRef = useRef(0);
   const chatInputRef = useRef<ChatInputRef>(null);
   const { isRecording, interimText, toggleRecording } = useSpeechToText(
     (text: string) => {
@@ -149,10 +154,9 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   // 滚动到底部
   useEffect(() => {
     if (!isNearBottom.current) return;
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
+    const messagesContainer = messagesContainerRef.current;
+    if (!messagesContainer) return;
+    scrollStickyContainerToBottom(messagesContainer, lastScrollTopRef);
   }, [messages, isLoading, isStreaming]);
 
   const getCurrentFileInfo = useCallback(() => {
@@ -314,8 +318,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
         onScroll={() => {
           const el = messagesContainerRef.current;
           if (el) {
-            isNearBottom.current =
-              el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+            updateStickyScrollState(el, lastScrollTopRef, isNearBottom);
           }
         }}
         className="flex-1 overflow-y-auto p-3 space-y-3"

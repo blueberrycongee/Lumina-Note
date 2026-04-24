@@ -11,6 +11,10 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ChatInput, type ChatInputRef } from "./ChatInput";
 import { AgentMessageRenderer } from "./AgentMessageRenderer";
 import { StreamingOutput } from "./StreamingMessage";
+import {
+  scrollStickyContainerToBottom,
+  updateStickyScrollState,
+} from "./stickyScroll";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import {
   processMessageWithFiles,
@@ -39,6 +43,7 @@ export function AgentPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isNearBottom = useRef(true);
+  const lastScrollTopRef = useRef(0);
   const chatInputRef = useRef<ChatInputRef>(null);
   const { isRecording, interimText, toggleRecording } = useSpeechToText(
     (text: string) => {
@@ -108,10 +113,9 @@ export function AgentPanel() {
   // 滚动到底部
   useEffect(() => {
     if (!isNearBottom.current) return;
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+    scrollStickyContainerToBottom(scrollContainer, lastScrollTopRef);
   }, [messages]);
 
   // 发送消息（支持引用文件）
@@ -240,8 +244,7 @@ export function AgentPanel() {
         onScroll={() => {
           const el = scrollContainerRef.current;
           if (el) {
-            isNearBottom.current =
-              el.scrollTop + el.clientHeight >= el.scrollHeight - 80;
+            updateStickyScrollState(el, lastScrollTopRef, isNearBottom);
           }
         }}
         className="flex-1 overflow-y-auto p-3 space-y-3"
