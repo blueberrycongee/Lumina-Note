@@ -271,12 +271,12 @@ export function Ribbon({
   return (
     <div
       className={cn(
-        "w-11 h-full bg-background flex flex-col items-center",
+        "w-11 h-full bg-muted flex flex-col items-center",
       )}
     >
       {showMacTrafficLightSafeArea ? (
         <div
-          className="h-11 w-full shrink-0 border-b border-border/50"
+          className="h-11 w-full shrink-0"
           data-tauri-drag-region
           data-testid="mac-ribbon-traffic-lights-safe-area"
         />

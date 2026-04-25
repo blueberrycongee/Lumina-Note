@@ -3,7 +3,7 @@ import { SIDEBAR_SURFACE_CLASSNAME } from './sidebarSurface';
 
 describe('SIDEBAR_SURFACE_CLASSNAME', () => {
   it('owns its right-side border for divider continuity', () => {
-    expect(SIDEBAR_SURFACE_CLASSNAME).toContain('bg-background');
+    expect(SIDEBAR_SURFACE_CLASSNAME).toContain('bg-muted');
     expect(SIDEBAR_SURFACE_CLASSNAME).not.toContain('backdrop-blur-md');
     expect(SIDEBAR_SURFACE_CLASSNAME).not.toContain('after:');
     expect(SIDEBAR_SURFACE_CLASSNAME).not.toContain('hover:bg-background/60');
