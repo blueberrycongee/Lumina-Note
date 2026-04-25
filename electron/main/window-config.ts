@@ -15,7 +15,7 @@ export function createMainWindowOptions(
     minWidth: MAIN_WINDOW_MIN_WIDTH,
     minHeight: MAIN_WINDOW_MIN_HEIGHT,
     titleBarStyle: platformName === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 12, y: 16 },
+    trafficLightPosition: { x: 20, y: 14 },
     backgroundColor: '#1a1a2e',
     webPreferences: {
       preload: preloadPath,

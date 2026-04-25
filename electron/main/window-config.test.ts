@@ -24,6 +24,6 @@ describe('createMainWindowOptions', () => {
     const options = createMainWindowOptions('/tmp/preload.cjs', 'darwin')
 
     expect(options.titleBarStyle).toBe('hiddenInset')
-    expect(options.trafficLightPosition).toEqual({ x: 12, y: 16 })
+    expect(options.trafficLightPosition).toEqual({ x: 20, y: 14 })
   })
 })
