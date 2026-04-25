@@ -47,11 +47,11 @@ function TabItem({
       data-tab-index={index}
       data-tauri-drag-region="false"
       className={cn(
-        "group relative flex items-center gap-1.5 px-2 py-1.5 text-[13px] cursor-grab border-r border-border/30 w-full",
+        "group relative flex items-center gap-1.5 px-3 py-1.5 text-[13px] cursor-grab w-full",
         "transition-[background-color,color] duration-150 select-none",
         isActive
-          ? "bg-background text-foreground rounded-t-md"
-          : "bg-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          ? "bg-background text-foreground rounded-t-lg"
+          : "bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground border-r border-border/30",
         isDragging && "opacity-50 cursor-grabbing",
         isDropTarget && dropPosition === 'left' && "border-l-2 border-l-primary",
         isDropTarget && dropPosition === 'right' && "border-r-2 border-r-primary"
@@ -207,7 +207,7 @@ export function TabBar() {
   return (
     <>
       <div
-        className="flex h-11 shrink-0 items-stretch bg-muted"
+        className="flex h-11 shrink-0 items-stretch bg-ribbon"
         data-tauri-drag-region={showMacTopActions ? true : undefined}
       >
         <div
