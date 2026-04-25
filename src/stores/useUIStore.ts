@@ -61,6 +61,10 @@ interface UIState {
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
 
+  // Block editor (handles, +button, block menu, drag-reorder)
+  blockEditorEnabled: boolean;
+  setBlockEditorEnabled: (enabled: boolean) => void;
+
   // Split view
   splitView: boolean;
   splitDirection: "horizontal" | "vertical";
@@ -110,6 +114,7 @@ const partializeUIState = (state: UIState) => ({
   aiPanelMode: state.aiPanelMode,
   mainView: state.mainView,
   editorMode: state.editorMode,
+  blockEditorEnabled: state.blockEditorEnabled,
   splitView: state.splitView,
   splitDirection: state.splitDirection,
   diagnosticsEnabled: state.diagnosticsEnabled,
@@ -198,6 +203,10 @@ export const useUIStore = create<UIState>()(
       // Editor mode - default to live preview
       editorMode: "live",
       setEditorMode: (mode) => set({ editorMode: mode }),
+
+      // Block editor — default off; user opts in via Settings
+      blockEditorEnabled: false,
+      setBlockEditorEnabled: (enabled) => set({ blockEditorEnabled: enabled }),
 
       // Split view
       splitView: false,
