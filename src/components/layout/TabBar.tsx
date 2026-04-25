@@ -9,7 +9,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useMacTopChromeEnabled } from "./MacTopChrome";
 
 const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 72;
-const MAC_COLLAPSED_RIBBON_WIDTH = 44;
+const MAC_COLLAPSED_RIBBON_WIDTH = 64;
 const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLAPSED_RIBBON_WIDTH;
 
 interface TabItemProps {

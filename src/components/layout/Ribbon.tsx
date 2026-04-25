@@ -271,7 +271,7 @@ export function Ribbon({
   return (
     <div
       className={cn(
-        "w-11 h-full bg-muted flex flex-col items-center",
+        "w-16 h-full bg-muted flex flex-col items-center",
       )}
     >
       {showMacTrafficLightSafeArea ? (

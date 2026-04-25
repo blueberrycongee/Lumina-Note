@@ -93,7 +93,7 @@ describe("TabBar", () => {
 
     render(<TabBar />);
 
-    expect(screen.getByTestId("mac-tabbar-traffic-light-spacer")).toHaveStyle({ width: "28px" });
+    expect(screen.getByTestId("mac-tabbar-traffic-light-spacer")).toHaveStyle({ width: "8px" });
   });
 
   it("does not add the traffic-light spacer while the file tree is open", () => {

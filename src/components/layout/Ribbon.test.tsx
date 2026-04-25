@@ -164,7 +164,7 @@ describe("Ribbon", () => {
     ).toHaveAttribute("data-tauri-drag-region", "true");
     expect(
       screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
-    ).toHaveClass("border-b");
+    ).not.toHaveClass("border-b");
     expect(container.firstElementChild).not.toHaveClass("border-r");
     expect(screen.getByTestId("ribbon-content")).not.toHaveClass("border-r");
     expect(
