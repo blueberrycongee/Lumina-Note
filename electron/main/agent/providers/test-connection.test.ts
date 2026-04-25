@@ -1,20 +1,30 @@
 import { describe, expect, it } from 'vitest'
 import { MockLanguageModelV3 } from 'ai/test'
+import type { LanguageModelV3GenerateResult } from '@ai-sdk/provider'
 
 import { testProviderConnection } from './test-connection.js'
 
 function successModel(): MockLanguageModelV3 {
-  return new MockLanguageModelV3({
-    doGenerate: async () => ({
-      content: [{ type: 'text', text: 'pong' }],
-      finishReason: 'stop',
-      usage: {
-        inputTokens: 1,
-        outputTokens: 1,
-        totalTokens: 2,
+  const result: LanguageModelV3GenerateResult = {
+    content: [{ type: 'text', text: 'pong' }],
+    finishReason: { unified: 'stop', raw: 'stop' },
+    usage: {
+      inputTokens: {
+        total: 1,
+        noCache: 1,
+        cacheRead: 0,
+        cacheWrite: 0,
       },
-      warnings: [],
-    }),
+      outputTokens: {
+        total: 1,
+        text: 1,
+        reasoning: 0,
+      },
+    },
+    warnings: [],
+  }
+  return new MockLanguageModelV3({
+    doGenerate: result,
   })
 }
 

@@ -50,8 +50,12 @@ export async function startFileWatcher(
     .on("addDir", (p) => emit("create", p))
     .on("unlinkDir", (p) => emit("remove", p))
     .on("error", (err) => {
-      const code = (err as NodeJS.ErrnoException).code;
-      console.error(`[FileWatcher] Error watching ${watchPath}:`, err.message);
+      const code =
+        typeof err === "object" && err !== null && "code" in err
+          ? (err as NodeJS.ErrnoException).code
+          : undefined;
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[FileWatcher] Error watching ${watchPath}:`, message);
       if (code === "EMFILE" || code === "ENFILE") {
         console.error(
           "[FileWatcher] File descriptor limit reached, stopping watcher",

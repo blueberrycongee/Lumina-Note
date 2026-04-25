@@ -10,7 +10,15 @@
  * message-metadata / raw / source / file) 忽略。
  */
 
-import { jsonSchema, streamText, tool, type LanguageModel, type TextStreamPart } from 'ai'
+import {
+  jsonSchema,
+  streamText,
+  tool,
+  type LanguageModel,
+  type ModelMessage,
+  type TextStreamPart,
+  type ToolSet,
+} from 'ai'
 
 import type {
   ContentBlock,
@@ -28,7 +36,7 @@ export interface AiSdkProviderOptions {
   maxOutputTokens?: number
 }
 
-type SdkStreamPart = TextStreamPart<Record<string, ReturnType<typeof tool>>>
+type SdkStreamPart = TextStreamPart<ToolSet>
 
 export class AiSdkProvider implements ProviderInterface {
   constructor(private readonly options: AiSdkProviderOptions) {}
@@ -53,7 +61,7 @@ export class AiSdkProvider implements ProviderInterface {
 
 // ── Conversion: Our Message[] → AI SDK ModelMessage[] ──────────────────────
 
-export function convertMessages(messages: Message[]): Parameters<typeof streamText>[0]['messages'] {
+export function convertMessages(messages: Message[]): ModelMessage[] {
   const out: Array<Record<string, unknown>> = []
   for (const msg of messages) {
     if (msg.role === 'system') {
@@ -123,9 +131,9 @@ export function convertMessages(messages: Message[]): Parameters<typeof streamTe
       })
     }
   }
-  // The AI SDK types for messages are strictly typed; we cast via unknown to keep
-  // callers type-safe while letting SDK validate at runtime.
-  return out as unknown as Parameters<typeof streamText>[0]['messages']
+  // The AI SDK types for messages are stricter than the local agent format; the
+  // conversion keeps the unsafe boundary contained here.
+  return out as unknown as ModelMessage[]
 }
 
 function flattenText(content: Message['content']): string {
@@ -164,7 +172,7 @@ function convertAssistantBlock(
 
 export function convertTools(
   tools: ToolDefinition[],
-): Parameters<typeof streamText>[0]['tools'] | undefined {
+): ToolSet | undefined {
   if (!tools || tools.length === 0) return undefined
   const out: Record<string, ReturnType<typeof tool>> = {}
   for (const def of tools) {
@@ -173,7 +181,7 @@ export function convertTools(
       inputSchema: jsonSchema(def.input_schema),
     })
   }
-  return out as unknown as Parameters<typeof streamText>[0]['tools']
+  return out as ToolSet
 }
 
 // ── Conversion: AI SDK fullStream → our ProviderChunk ──────────────────────

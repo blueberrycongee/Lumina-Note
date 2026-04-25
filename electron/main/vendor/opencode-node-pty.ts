@@ -22,10 +22,11 @@ try {
   // module keeps resolving relative to the original package layout.
   nodePty = require(packageEntry) as Record<string, unknown>
 } catch (error) {
-  throw new Error(
+  const wrapped = new Error(
     `Failed to load opencode node-pty package from ${packageEntry}`,
-    { cause: error },
   )
+  ;(wrapped as Error & { cause?: unknown }).cause = error
+  throw wrapped
 }
 
 export const spawn = nodePty.spawn as (...args: unknown[]) => unknown

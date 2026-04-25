@@ -1,24 +1,3 @@
-declare module "marked-katex-extension" {
-  import { MarkedExtension } from "marked";
-  
-  interface KatexOptions {
-    throwOnError?: boolean;
-    output?: "html" | "mathml" | "htmlAndMathml";
-    displayMode?: boolean;
-    errorColor?: string;
-    macros?: Record<string, string>;
-    minRuleThickness?: number;
-    colorIsTextColor?: boolean;
-    maxSize?: number;
-    maxExpand?: number;
-    strict?: boolean | "warn" | "error" | "ignore";
-    trust?: boolean | ((context: { command: string; url: string; protocol: string }) => boolean);
-    globalGroup?: boolean;
-  }
-  
-  export default function markedKatex(options?: KatexOptions): MarkedExtension;
-}
-
 declare module "turndown" {
   interface Options {
     headingStyle?: "setext" | "atx";

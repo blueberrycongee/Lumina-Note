@@ -11,6 +11,12 @@
 import { BrowserWindow } from "electron";
 
 type Level = "log" | "info" | "warn" | "error" | "debug";
+type WriteCallback = (err?: Error | null) => void;
+type StreamWrite = (
+  chunk: string | Uint8Array,
+  encodingOrCallback?: BufferEncoding | WriteCallback,
+  callback?: WriteCallback,
+) => boolean;
 
 const CHANNEL = "main-console";
 
@@ -69,19 +75,22 @@ export function installMainLogForwarding(): void {
 
   // Opencode's Log.init() writes through process.stdout.write directly,
   // bypassing console.*. Intercept that too.
-  const origStdout = process.stdout.write.bind(process.stdout);
-  const origStderr = process.stderr.write.bind(process.stderr);
+  const origStdout = process.stdout.write.bind(process.stdout) as StreamWrite;
+  const origStderr = process.stderr.write.bind(process.stderr) as StreamWrite;
 
-  (process.stdout.write as unknown) = (chunk: unknown, ...rest: unknown[]) => {
-    const text = typeof chunk === "string" ? chunk : Buffer.isBuffer(chunk) ? chunk.toString("utf8") : "";
-    if (text.trim()) broadcast("log", [text.replace(/\n$/, "")]);
-    return origStdout(chunk as Parameters<typeof origStdout>[0], ...(rest as Parameters<typeof origStdout>));
+  const wrapWrite = (level: "log" | "error", original: StreamWrite): StreamWrite => {
+    return (chunk, encodingOrCallback, callback) => {
+      const text = typeof chunk === "string" ? chunk : Buffer.isBuffer(chunk) ? chunk.toString("utf8") : "";
+      if (text.trim()) broadcast(level, [text.replace(/\n$/, "")]);
+      if (typeof encodingOrCallback === "function") {
+        return original(chunk, encodingOrCallback);
+      }
+      return original(chunk, encodingOrCallback, callback);
+    };
   };
-  (process.stderr.write as unknown) = (chunk: unknown, ...rest: unknown[]) => {
-    const text = typeof chunk === "string" ? chunk : Buffer.isBuffer(chunk) ? chunk.toString("utf8") : "";
-    if (text.trim()) broadcast("error", [text.replace(/\n$/, "")]);
-    return origStderr(chunk as Parameters<typeof origStderr>[0], ...(rest as Parameters<typeof origStderr>));
-  };
+
+  process.stdout.write = wrapWrite("log", origStdout) as typeof process.stdout.write;
+  process.stderr.write = wrapWrite("error", origStderr) as typeof process.stderr.write;
 }
 
 export const MAIN_CONSOLE_CHANNEL = CHANNEL;
