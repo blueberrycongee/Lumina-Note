@@ -68,6 +68,7 @@ CLAUDE.md
 .claude/
 .kiro/
 .codex/
+.wuu/
 
 # Local Codex/skills scratch
 .tmp_codex_ext/
