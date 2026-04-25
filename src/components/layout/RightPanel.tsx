@@ -72,7 +72,7 @@ function BacklinksView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-2 border-b border-border/50 flex items-center gap-2">
+      <div className="h-10 px-2 border-b border-border/50 flex items-center gap-2">
         <Link2 size={12} className="text-muted-foreground" />
         <span className="text-[11px] text-muted-foreground">
           {backlinks.length} {t.panel.backlinks}
@@ -150,7 +150,7 @@ function TagsView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-2 border-b border-border/50 flex items-center gap-2">
+      <div className="h-10 px-2 border-b border-border/50 flex items-center gap-2">
         <Tag size={12} className="text-muted-foreground" />
         <span className="text-[11px] text-muted-foreground">
           {allTags.length} {t.panel.tags}
@@ -264,7 +264,7 @@ function OutlineView() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-2 border-b border-border/50 flex items-center justify-between">
+      <div className="h-10 px-2 border-b border-border/50 flex items-center justify-between">
         <span className="text-[11px] text-muted-foreground flex items-center gap-1">
           <List size={12} />
           {headings.length} {t.panel.headings}
