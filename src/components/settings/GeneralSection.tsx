@@ -3,7 +3,11 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { OFFICIAL_THEMES, Theme } from "@/config/themes";
-import { loadUserThemes, getUserThemes, deleteUserTheme } from "@/config/themePlugin";
+import {
+  loadUserThemes,
+  getUserThemes,
+  deleteUserTheme,
+} from "@/config/themePlugin";
 import { Check, Plus, Trash2, Palette } from "lucide-react";
 import { ThemeEditor } from "../ai/ThemeEditor";
 import { LanguageSwitcher } from "../layout/LanguageSwitcher";
@@ -14,7 +18,16 @@ interface GeneralSectionProps {
 
 export function GeneralSection({ isOpen }: GeneralSectionProps) {
   const { t } = useLocaleStore();
-  const { themeId, setThemeId, editorMode, setEditorMode, editorFontSize, setEditorFontSize } = useUIStore();
+  const {
+    themeId,
+    setThemeId,
+    editorMode,
+    setEditorMode,
+    editorFontSize,
+    setEditorFontSize,
+    blockEditorEnabled,
+    setBlockEditorEnabled,
+  } = useUIStore();
   const { vaultPath } = useFileStore();
 
   const [showThemeEditor, setShowThemeEditor] = useState(false);
@@ -23,7 +36,7 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
 
   useEffect(() => {
     if (isOpen && vaultPath) {
-      loadUserThemes(vaultPath).then(themes => {
+      loadUserThemes(vaultPath).then((themes) => {
         setUserThemes(themes);
       });
     }
@@ -31,11 +44,13 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
 
   const handleDeleteTheme = async (theme: Theme) => {
     if (!vaultPath) return;
-    if (confirm(t.settingsModal.confirmDeleteTheme.replace('{name}', theme.name))) {
+    if (
+      confirm(t.settingsModal.confirmDeleteTheme.replace("{name}", theme.name))
+    ) {
       await deleteUserTheme(vaultPath, theme.id);
       setUserThemes(getUserThemes());
       if (themeId === theme.id) {
-        setThemeId('default');
+        setThemeId("default");
       }
     }
   };
@@ -71,12 +86,16 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
             {t.settingsModal.createTheme}
           </button>
         </div>
-        <p className="text-sm text-muted-foreground">{t.settingsModal.themeDescription}</p>
+        <p className="text-sm text-muted-foreground">
+          {t.settingsModal.themeDescription}
+        </p>
 
         {/* 用户主题 */}
         {userThemes.length > 0 && (
           <>
-            <p className="text-xs text-muted-foreground mt-4">{t.settingsModal.myThemes}</p>
+            <p className="text-xs text-muted-foreground mt-4">
+              {t.settingsModal.myThemes}
+            </p>
             <div className="grid grid-cols-3 gap-3">
               {userThemes.map((theme) => (
                 <div
@@ -90,20 +109,29 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                   <button
                     onClick={() => setThemeId(theme.id)}
                     className="w-full text-left"
-                    title={t.settingsModal.applyTheme.replace('{name}', theme.name)}
+                    title={t.settingsModal.applyTheme.replace(
+                      "{name}",
+                      theme.name,
+                    )}
                   >
                     <div className="flex gap-1 mb-2">
                       <div
                         className="w-4 h-4 rounded-full border border-border/60"
-                        style={{ backgroundColor: `hsl(${theme.light.primary})` }}
+                        style={{
+                          backgroundColor: `hsl(${theme.light.primary})`,
+                        }}
                       />
                       <div
                         className="w-4 h-4 rounded-full border border-border/60"
-                        style={{ backgroundColor: `hsl(${theme.dark.primary})` }}
+                        style={{
+                          backgroundColor: `hsl(${theme.dark.primary})`,
+                        }}
                       />
                     </div>
                     <p className="font-medium text-sm">{theme.name}</p>
-                    <p className="text-xs text-muted-foreground">{theme.description}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {theme.description}
+                    </p>
                   </button>
 
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -135,7 +163,9 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
         )}
 
         {/* 官方主题 */}
-        <p className="text-xs text-muted-foreground mt-4">{t.settingsModal.officialThemes}</p>
+        <p className="text-xs text-muted-foreground mt-4">
+          {t.settingsModal.officialThemes}
+        </p>
         <div className="grid grid-cols-3 gap-3">
           {OFFICIAL_THEMES.map((theme) => (
             <button
@@ -146,7 +176,10 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                   ? "ring-2 ring-primary bg-primary/10"
                   : "bg-background/60 hover:bg-muted/50"
               }`}
-              title={t.settingsModal.applyTheme.replace('{name}', (t.settingsModal.themes as any)?.[theme.id]?.name || theme.name)}
+              title={t.settingsModal.applyTheme.replace(
+                "{name}",
+                (t.settingsModal.themes as any)?.[theme.id]?.name || theme.name,
+              )}
             >
               <div className="flex gap-1 mb-2">
                 <div
@@ -159,10 +192,12 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                 />
               </div>
               <p className="font-medium text-sm">
-                {(t.settingsModal.themes as any)?.[theme.id]?.name || theme.name}
+                {(t.settingsModal.themes as any)?.[theme.id]?.name ||
+                  theme.name}
               </p>
               <p className="text-xs text-muted-foreground">
-                {(t.settingsModal.themes as any)?.[theme.id]?.description || theme.description}
+                {(t.settingsModal.themes as any)?.[theme.id]?.description ||
+                  theme.description}
               </p>
               {themeId === theme.id && (
                 <div className="absolute top-2 right-2">
@@ -183,7 +218,9 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
         {/* 语言设置 */}
         <div className="flex items-center justify-between py-2">
           <div>
-            <p className="font-medium">{t.settings?.language || t.welcome?.language || "Language"}</p>
+            <p className="font-medium">
+              {t.settings?.language || t.welcome?.language || "Language"}
+            </p>
           </div>
           <LanguageSwitcher
             menuAlign="right"
@@ -195,7 +232,9 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
         <div className="flex items-center justify-between py-2">
           <div>
             <p className="font-medium">{t.settingsModal.defaultEditMode}</p>
-            <p className="text-sm text-muted-foreground">{t.settingsModal.defaultEditModeDesc}</p>
+            <p className="text-sm text-muted-foreground">
+              {t.settingsModal.defaultEditModeDesc}
+            </p>
           </div>
           <select
             value={editorMode}
@@ -208,14 +247,44 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
           </select>
         </div>
 
+        {/* 块编辑器交互 */}
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <p className="font-medium">{t.settingsModal.blockEditor}</p>
+            <p className="text-sm text-muted-foreground">
+              {t.settingsModal.blockEditorDesc}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={blockEditorEnabled}
+            aria-label={t.settingsModal.blockEditor}
+            onClick={() => setBlockEditorEnabled(!blockEditorEnabled)}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+              blockEditorEnabled ? "bg-primary" : "bg-muted"
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                blockEditorEnabled ? "translate-x-4.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
+
         {/* 字体大小 */}
         <div className="py-2 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">{t.settingsModal.editorFontSize}</p>
-              <p className="text-sm text-muted-foreground">{t.settingsModal.editorFontSizeDesc}</p>
+              <p className="text-sm text-muted-foreground">
+                {t.settingsModal.editorFontSizeDesc}
+              </p>
             </div>
-            <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{editorFontSize}px</span>
+            <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+              {editorFontSize}px
+            </span>
           </div>
 
           <div className="flex items-center gap-3">

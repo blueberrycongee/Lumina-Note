@@ -1184,6 +1184,9 @@ export default {
     readingMode: "Reading Mode",
     editorFontSize: "Editor Font Size",
     editorFontSizeDesc: "Adjust the font size for the editor (10-32px)",
+    blockEditor: "Block Editor",
+    blockEditorDesc:
+      "Enable block handles, block menu, and drag-to-reorder; disabling reverts to plain Markdown.",
     fontPreview: "Preview",
     aiAssistant: "AI Assistant",
     currentModel: "Current Model",

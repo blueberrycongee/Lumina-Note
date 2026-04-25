@@ -115,4 +115,16 @@ describe("useUIStore", () => {
     expect(persisted.themeId).toBe("legacy-theme");
     expect(persisted.isSettingsOpen).toBeUndefined();
   });
+
+  it("defaults blockEditorEnabled to false and persists changes", async () => {
+    const { useUIStore } = await loadStore();
+
+    expect(useUIStore.getState().blockEditorEnabled).toBe(false);
+
+    useUIStore.getState().setBlockEditorEnabled(true);
+
+    expect(useUIStore.getState().blockEditorEnabled).toBe(true);
+    const persisted = parsePersistedState("lumina-ui");
+    expect(persisted.blockEditorEnabled).toBe(true);
+  });
 });

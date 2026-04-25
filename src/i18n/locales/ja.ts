@@ -1076,6 +1076,8 @@ export default {
     readingMode: "閲覧モード",
     editorFontSize: "エディタのフォントサイズ",
     editorFontSizeDesc: "エディタのフォントサイズを調整 (10-32px)",
+    blockEditor: "ブロックエディタ",
+    blockEditorDesc: "ブロックハンドル、ブロックメニュー、ドラッグ並べ替えを有効化",
     fontPreview: "プレビュー",
     aiAssistant: "AI アシスタント",
     currentModel: "現在のモデル",

@@ -4,6 +4,7 @@ import { EditorView } from "@codemirror/view";
 
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 import { setHoveredBlock } from "./extensions/blockEditor";
+import { useUIStore } from "@/stores/useUIStore";
 
 function setupEditor(content: string) {
   const onChange = vi.fn();
@@ -43,6 +44,10 @@ function hoverFirstParagraph(view: EditorView, content: string) {
 }
 
 describe("CodeMirror block toolbar", () => {
+  beforeEach(() => {
+    useUIStore.setState({ blockEditorEnabled: true });
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     cleanup();

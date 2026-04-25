@@ -1553,9 +1553,7 @@ function selectionTouchesRange(
   from: number,
   to: number,
 ): boolean {
-  return state.selection.ranges.some(
-    (r) => r.from <= to && r.to >= from,
-  );
+  return state.selection.ranges.some((r) => r.from <= to && r.to >= from);
 }
 
 function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
@@ -1629,18 +1627,12 @@ function buildEditableCodeBlockDecorations(state: EditorState): DecorationSet {
       }
       if (codeInfo && codeInfo.from < codeInfo.to) {
         decorations.push(
-          Decoration.mark({ class: langCls }).range(
-            codeInfo.from,
-            codeInfo.to,
-          ),
+          Decoration.mark({ class: langCls }).range(codeInfo.from, codeInfo.to),
         );
       }
       if (codeInfo && codeInfo.to < openLine.to) {
         decorations.push(
-          Decoration.mark({ class: fenceCls }).range(
-            codeInfo.to,
-            openLine.to,
-          ),
+          Decoration.mark({ class: fenceCls }).range(codeInfo.to, openLine.to),
         );
       }
       if (closeLine.to > closeLine.from) {
@@ -4337,6 +4329,7 @@ export const CodeMirrorEditor = forwardRef<
   const { openSecondaryPdf } = useSplitStore();
   const { setSplitView, editorFontSize, editorInteractionTraceEnabled } =
     useUIStore();
+  const blockEditorEnabled = useUIStore((s) => s.blockEditorEnabled);
 
   const markTransitionTrace = useCallback(
     (type: string, payload: Record<string, unknown>) => {
@@ -4382,14 +4375,17 @@ export const CodeMirrorEditor = forwardRef<
             tableEditorPlugin(),
             editableCodeBlockField,
             ...widgets,
-            ...blockEditorExtensions,
+            ...(blockEditorEnabled ? blockEditorExtensions : []),
           ];
         case "source":
         default:
-          return [calloutStateField, ...blockEditorExtensions];
+          return [
+            calloutStateField,
+            ...(blockEditorEnabled ? blockEditorExtensions : []),
+          ];
       }
     },
-    [resolvedFilePath, vaultPath],
+    [resolvedFilePath, vaultPath, blockEditorEnabled],
   );
 
   const syncSelectionToViewport = useCallback(() => {
