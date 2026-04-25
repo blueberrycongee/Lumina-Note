@@ -440,7 +440,7 @@ export function Sidebar() {
             }}
             onMouseLeave={() => setIsRootDragOver(false)}
             className={cn(
-              "cursor-pointer select-none px-1 py-2 text-[13px] font-medium truncate transition-colors rounded-ui-sm",
+              "cursor-pointer select-none px-1 py-2 text-[13px] font-medium truncate transition-colors rounded-ui-sm text-center",
               isRootDragOver && "bg-primary/10",
               selectedPath === vaultPath &&
                 "bg-primary/10 text-primary",
