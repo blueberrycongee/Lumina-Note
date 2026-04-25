@@ -46,7 +46,7 @@ function TabItem({
       data-tab-index={index}
       data-tauri-drag-region="false"
       className={cn(
-        "group relative flex items-center gap-1.5 px-3 py-1.5 text-[13px] cursor-grab border-r border-border/50",
+        "group relative flex items-center gap-1.5 px-2 py-1.5 text-[13px] cursor-grab border-r border-border/50 min-w-[40px] max-w-[180px] flex-1",
         "transition-[background-color,color] duration-150 select-none",
         isActive
           ? "bg-background text-foreground border-b-2 border-b-primary"
@@ -75,7 +75,7 @@ function TabItem({
       ) : (
         <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       )}
-      <span className={cn("truncate max-w-[120px]", tab.isPreview && "italic")}>{displayName}</span>
+      <span className={cn("truncate min-w-0", tab.isPreview && "italic")}>{displayName}</span>
       {tab.isPinned && (
         <Pin size={10} className="shrink-0 text-primary rotate-45" />
       )}
@@ -175,7 +175,7 @@ export function TabBar() {
       >
         <div
           ref={containerRef}
-          className="flex min-w-0 flex-1 items-stretch overflow-x-auto scrollbar-hide"
+          className="flex min-w-0 flex-1 items-stretch overflow-hidden"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
           data-testid="mac-tabbar-tabstrip"
         >
