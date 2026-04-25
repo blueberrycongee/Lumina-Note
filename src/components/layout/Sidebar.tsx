@@ -27,7 +27,6 @@ import {
   type CreatingState,
 } from "./hooks/useSidebarFileOperations";
 import { SidebarHeader } from "./SidebarHeader";
-import { SidebarQuickActions } from "./SidebarQuickActions";
 import { useMacTopChromeEnabled } from "./MacTopChrome";
 
 interface ContextMenuState {
@@ -279,12 +278,6 @@ export function Sidebar() {
 
       {/* Toolbar Zone */}
       <div className="flex flex-col gap-3 py-2">
-        {/* Quick Actions */}
-        <SidebarQuickActions
-          vaultPath={vaultPath}
-          onQuickNote={handleQuickNote}
-        />
-
         {/* Favorites */}
         <div className="px-2">
           <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm px-2 py-1">
