@@ -50,6 +50,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Stub opencode server bundle for CI
+        run: |
+          mkdir -p thirdparty/opencode/packages/opencode/dist/node
+          cat > thirdparty/opencode/packages/opencode/dist/node/node.js << 'STUB'
+          export const Log = { init: async () => {} };
+          export const Server = { listen: async () => ({ url: new URL("http://localhost:0"), stop: () => {} }) };
+          STUB
+
       - name: Build renderer + main
         run: npm run build
 
