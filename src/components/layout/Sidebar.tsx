@@ -394,65 +394,67 @@ export function Sidebar() {
       </div>
 
       {/* Vault Name - root drop zone */}
-      {renamingPath === vaultPath ? (
-        <div className="px-2 py-1.5">
-          <input
-            type="text"
-            value={renameValue}
-            onChange={(e) => setRenameValue(e.target.value)}
-            onBlur={() => {
-              void handleRename();
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
+      <div className="px-2">
+        {renamingPath === vaultPath ? (
+          <div className="py-1.5">
+            <input
+              type="text"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={() => {
                 void handleRename();
-              } else if (e.key === "Escape") {
-                setRenamingPath(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleRename();
+                } else if (e.key === "Escape") {
+                  setRenamingPath(null);
+                }
+              }}
+              autoFocus
+              className="ui-input h-8 w-full border-primary/60 px-2"
+            />
+          </div>
+        ) : (
+          <div
+            role="button"
+            tabIndex={0}
+            data-folder-path={vaultPath}
+            onClick={handleSelectRoot}
+            onContextMenu={handleRootContextMenu}
+            onKeyDown={(e) => {
+              if (
+                (e.key === "Enter" || e.key === "F2") &&
+                selectedPath === vaultPath
+              ) {
+                e.preventDefault();
+                handleStartRootRename();
               }
             }}
-            autoFocus
-            className="ui-input h-8 w-full border-primary/60 px-2"
-          />
-        </div>
-      ) : (
-        <div
-          role="button"
-          tabIndex={0}
-          data-folder-path={vaultPath}
-          onClick={handleSelectRoot}
-          onContextMenu={handleRootContextMenu}
-          onKeyDown={(e) => {
-            if (
-              (e.key === "Enter" || e.key === "F2") &&
-              selectedPath === vaultPath
-            ) {
-              e.preventDefault();
-              handleStartRootRename();
-            }
-          }}
-          onMouseEnter={() => {
-            const dragData = getDragData();
-            if (dragData?.isDragging) {
-              setIsRootDragOver(true);
-            }
-          }}
-          onMouseLeave={() => setIsRootDragOver(false)}
-          className={cn(
-            "cursor-pointer select-none px-3 py-2 text-[13px] font-medium truncate transition-colors",
-            isRootDragOver && "bg-primary/10",
-            selectedPath === vaultPath &&
-              "bg-primary/10 text-primary",
-          )}
-        >
-          {vaultPath?.split(/[/\\]/).pop() || "Notes"}
-        </div>
-      )}
+            onMouseEnter={() => {
+              const dragData = getDragData();
+              if (dragData?.isDragging) {
+                setIsRootDragOver(true);
+              }
+            }}
+            onMouseLeave={() => setIsRootDragOver(false)}
+            className={cn(
+              "cursor-pointer select-none px-1 py-2 text-[13px] font-medium truncate transition-colors rounded-ui-sm",
+              isRootDragOver && "bg-primary/10",
+              selectedPath === vaultPath &&
+                "bg-primary/10 text-primary",
+            )}
+          >
+            {vaultPath?.split(/[/\\]/).pop() || "Notes"}
+          </div>
+        )}
+      </div>
 
       {/* File Tree */}
       <div
         className={cn(
-          "sidebar-file-tree-scroll flex-1 overflow-auto py-2 pr-1",
+          "sidebar-file-tree-scroll flex-1 overflow-auto py-2 px-2",
           isFileTreeScrollActive && "is-scroll-active",
         )}
         onScroll={markFileTreeScrollActive}
