@@ -85,10 +85,8 @@ import {
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
-  const { setSkillManagerOpen, toggleLeftSidebar, toggleRightSidebar } = useUIStore();
-  // chatMode is always "agent" now (codex moved to plugin system)
-  const chatMode = "agent" as const;
-  const isCodexMode = false;
+  const { setSkillManagerOpen, toggleLeftSidebar, toggleRightSidebar } =
+    useUIStore();
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
@@ -153,7 +151,9 @@ export function MainAIChatShell() {
     const ro = new ResizeObserver(scheduleResize);
     ro.observe(el);
 
-    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts;
+    const fonts = (
+      document as Document & { fonts?: { ready?: Promise<unknown> } }
+    ).fonts;
     fonts?.ready?.then(scheduleResize).catch(() => undefined);
 
     return () => {
@@ -210,15 +210,14 @@ export function MainAIChatShell() {
   const pendingTool = rustPendingTool?.tool;
   const [retryNow, setRetryNow] = useState(Date.now());
   useEffect(() => {
-    if (!llmRetryState || chatMode !== "agent" || agentStatus !== "running")
-      return;
+    if (!llmRetryState || agentStatus !== "running") return;
     const timer = window.setInterval(() => {
       setRetryNow(Date.now());
     }, 500);
     return () => window.clearInterval(timer);
-  }, [llmRetryState, chatMode, agentStatus]);
+  }, [llmRetryState, agentStatus]);
   const retrySecondsLeft =
-    llmRetryState && chatMode === "agent" && agentStatus === "running"
+    llmRetryState && agentStatus === "running"
       ? Math.max(0, Math.ceil((llmRetryState.nextRetryAt - retryNow) / 1000))
       : null;
 
@@ -299,9 +298,7 @@ export function MainAIChatShell() {
   );
 
   // 判断是否有对话历史（用于控制动画状态）
-  const hasStarted = isCodexMode
-    ? true
-    : agentMessages.length > 0 || agentStatus === "error";
+  const hasStarted = agentMessages.length > 0 || agentStatus === "error";
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof performance === "undefined") {
@@ -329,9 +326,7 @@ export function MainAIChatShell() {
   const isAgentWaitingApproval = agentStatus === "waiting_approval";
   const agentQueueCount = rustQueuedTasks.length;
 
-  const isConversationMode = chatMode === "agent";
   const exportCandidates = useMemo<ExportMessage[]>(() => {
-    if (chatMode !== "agent") return [];
     const normalizedMessages: RawConversationMessage[] = agentMessages.map(
       (message) => ({
         id: message.id,
@@ -340,7 +335,7 @@ export function MainAIChatShell() {
       }),
     );
     return buildAgentExportMessages(normalizedMessages);
-  }, [chatMode, agentMessages]);
+  }, [agentMessages]);
 
   const selectedExportIdSet = useMemo(
     () => new Set(selectedExportIds),
@@ -356,13 +351,6 @@ export function MainAIChatShell() {
     );
     return currentSession?.title || t.ai.conversation;
   }, [allSessions, rustSessionId, t.ai.conversation]);
-
-  useEffect(() => {
-    if (!isConversationMode) {
-      setIsExportSelectionMode(false);
-      setSelectedExportIds([]);
-    }
-  }, [isConversationMode]);
 
   useEffect(() => {
     const validIds = new Set(exportCandidates.map((message) => message.id));
@@ -397,7 +385,6 @@ export function MainAIChatShell() {
     if (
       !vaultPath ||
       selectedExportIds.length === 0 ||
-      !isConversationMode ||
       isExportingConversation
     ) {
       return;
@@ -417,7 +404,7 @@ export function MainAIChatShell() {
       const modeName = "agent";
       const markdown = buildConversationExportMarkdown({
         title: currentConversationTitle,
-        modeLabel: `${t.ai.mode}: ${t.ai.modeAgent}`,
+        modeLabel: t.ai.modeAgent,
         messages: selectedMessages,
         roleLabels: {
           user: t.ai.exportRoleUser,
@@ -456,14 +443,10 @@ export function MainAIChatShell() {
   }, [
     vaultPath,
     selectedExportIds,
-    isConversationMode,
     isExportingConversation,
     exportCandidates,
-    chatMode,
     currentConversationTitle,
-    t.ai.mode,
     t.ai.modeAgent,
-    t.ai.modeChat,
     t.ai.exportRoleUser,
     t.ai.exportRoleAssistant,
     t.ai.exportFailed,
@@ -614,41 +597,33 @@ export function MainAIChatShell() {
     return () => cancelAnimationFrame(id);
   }, [hasStarted, reduceMotion]);
 
-  const handleInputChange = useCallback(
-    (value: string, cursorPos?: number) => {
-      setInput(value);
-      const effectiveCursor = cursorPos ?? value.length;
-      const mention = parseMentionQueryAtCursor(value, effectiveCursor);
-      if (mention !== null) {
-        setShowMention(true);
-        setMentionQuery(mention);
-        setMentionIndex(0);
-        setShowSkillMenu(false);
-        setSkillQuery("");
-        return;
-      }
-
-      setShowMention(false);
-      setMentionQuery("");
+  const handleInputChange = useCallback((value: string, cursorPos?: number) => {
+    setInput(value);
+    const effectiveCursor = cursorPos ?? value.length;
+    const mention = parseMentionQueryAtCursor(value, effectiveCursor);
+    if (mention !== null) {
+      setShowMention(true);
+      setMentionQuery(mention);
       setMentionIndex(0);
+      setShowSkillMenu(false);
+      setSkillQuery("");
+      return;
+    }
 
-      if (chatMode !== "agent") {
-        setSkillQuery("");
-        setShowSkillMenu(false);
-        return;
-      }
-      const textBeforeCursor = value.slice(0, effectiveCursor);
-      const match = textBeforeCursor.match(/(?:^|\s)\/([^\s]*)$/);
-      if (match) {
-        setSkillQuery(match[1] ?? "");
-        setShowSkillMenu(true);
-      } else {
-        setSkillQuery("");
-        setShowSkillMenu(false);
-      }
-    },
-    [chatMode],
-  );
+    setShowMention(false);
+    setMentionQuery("");
+    setMentionIndex(0);
+
+    const textBeforeCursor = value.slice(0, effectiveCursor);
+    const match = textBeforeCursor.match(/(?:^|\s)\/([^\s]*)$/);
+    if (match) {
+      setSkillQuery(match[1] ?? "");
+      setShowSkillMenu(true);
+    } else {
+      setSkillQuery("");
+      setShowSkillMenu(false);
+    }
+  }, []);
 
   const handleSelectMention = useCallback(
     (file: ReferencedFile) => {
@@ -898,7 +873,7 @@ export function MainAIChatShell() {
       }
     }
 
-    if (showSkillMenu && chatMode === "agent") {
+    if (showSkillMenu) {
       if (e.key === "Enter") {
         e.preventDefault();
         if (filteredSkills.length > 0) {
@@ -935,8 +910,6 @@ export function MainAIChatShell() {
 
   // 从消息历史中提取创建/编辑的文件
   const extractCreatedFiles = useCallback((): string[] => {
-    if (chatMode !== "agent") return [];
-
     const uniqueFiles = new Map<string, string>();
     const addFile = (candidate: unknown) => {
       if (typeof candidate !== "string" || !candidate.trim()) return;
@@ -995,7 +968,7 @@ export function MainAIChatShell() {
       }
     }
     return [...uniqueFiles.values()];
-  }, [messages, chatMode, resolveCreatedFilePath]);
+  }, [messages, resolveCreatedFilePath]);
 
   return (
     <div
@@ -1044,11 +1017,7 @@ export function MainAIChatShell() {
             onScroll={() => {
               const el = scrollContainerRef.current;
               if (el) {
-                updateStickyScrollState(
-                  el,
-                  lastScrollTopRef,
-                  isNearBottom,
-                );
+                updateStickyScrollState(el, lastScrollTopRef, isNearBottom);
               }
             }}
             className="w-full min-h-0 scrollbar-thin"
@@ -1223,12 +1192,10 @@ export function MainAIChatShell() {
                 )}
 
               {/* 流式输出 - Agent 和 Chat 模式统一使用 StreamingOutput 组件 */}
-              {!isExportSelectionMode && chatMode === "agent" && (
-                <StreamingOutput mode={chatMode} />
-              )}
+              {!isExportSelectionMode && <StreamingOutput />}
 
               {/* Agent 错误提示 */}
-              {chatMode === "agent" && agentStatus === "error" && (
+              {agentStatus === "error" && (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1489,7 +1456,11 @@ export function MainAIChatShell() {
                   onOpenChange={setShowPlusMenu}
                   anchor={plusButtonRef}
                 >
-                  <PopoverContent placement="top-start" width={240} data-plus-menu>
+                  <PopoverContent
+                    placement="top-start"
+                    width={240}
+                    data-plus-menu
+                  >
                     <PopoverList>
                       <Row
                         icon={<Paperclip size={16} />}
@@ -1711,9 +1682,9 @@ export function MainAIChatShell() {
                   </h2>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">
-                      {t.ai.mode}: {chatMode} | {t.ai.status}: {agentStatus} |{" "}
-                      {t.ai.fullMsgsCount}: {fullMessages.length} |{" "}
-                      {t.ai.displayMsgsCount}: {agentMessages.length}
+                      {t.ai.status}: {agentStatus} | {t.ai.fullMsgsCount}:{" "}
+                      {fullMessages.length} | {t.ai.displayMsgsCount}:{" "}
+                      {agentMessages.length}
                     </span>
                     <button
                       onClick={() => setShowDebug(false)}

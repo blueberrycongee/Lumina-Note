@@ -6,14 +6,11 @@
  * 保持为空是故意的 —— 避免同一段文本被渲染两次。
  * TypingIndicator 仍然基于 status==="running" 的瞬态显示等待点。
  *
- * Chat 模式保留老 useAIStore 的 streamingContent 路径(还在用)。
  */
 
 import { memo, useMemo } from "react";
 import { parseMarkdown } from "@/services/markdown/markdown";
-import { useAIStore } from "@/stores/useAIStore";
 import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
-import { useUIStore } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingCollapsible } from "./AgentMessageRenderer";
 import { AssistantDiagramPanels } from "./AssistantDiagramPanels";
@@ -21,8 +18,6 @@ import { getDiagramAttachmentFilePaths } from "./diagramAttachmentUtils";
 import { getUserMessageDisplay } from "./messageContentUtils";
 
 interface StreamingMessageProps {
-  /** 强制指定模式（kept for API compat, agent-only now） */
-  mode?: "agent" | "chat";
   /** 自定义类名 */
   className?: string;
   /** 可选：直接传入流式阶段要展示的图文件列表 */
@@ -35,26 +30,16 @@ interface StreamingMessageProps {
  * 根据当前模式自动选择数据源，渲染流式输出内容
  */
 export const StreamingMessage = memo(function StreamingMessage({
-  mode,
   className = "",
   diagramPaths,
 }: StreamingMessageProps) {
   const { t } = useLocaleStore();
-  const chatMode = useUIStore((state) => state.chatMode);
-  const currentMode = mode ?? chatMode;
 
   // Agent 模式数据
   const agentContent = useOpencodeAgent((state) => state.streamingContent);
   const agentStatus = useOpencodeAgent((state) => state.status);
 
-  // Chat 模式数据
-  const chatContent = useAIStore((state) => state.streamingContent);
-  const chatStreaming = useAIStore((state) => state.isStreaming);
-  const chatReasoning = useAIStore((state) => state.streamingReasoning);
-  const chatReasoningStatus = useAIStore(
-    (state) => state.streamingReasoningStatus,
-  );
-  const chatMessages = useAIStore((state) => state.messages);
+
 
   // Agent 思考流
   const agentReasoning = useOpencodeAgent((state) => state.streamingReasoning);
@@ -63,25 +48,21 @@ export const StreamingMessage = memo(function StreamingMessage({
   );
   const agentMessages = useOpencodeAgent((state) => state.messages);
 
-  // 根据模式选择数据
-  const content = currentMode === "agent" ? agentContent : chatContent;
-  const reasoning = currentMode === "agent" ? agentReasoning : chatReasoning;
-  const reasoningStatus =
-    currentMode === "agent" ? agentReasoningStatus : chatReasoningStatus;
+  const content = agentContent;
+  const reasoning = agentReasoning;
+  const reasoningStatus = agentReasoningStatus;
   const hasReasoningPanel =
     reasoningStatus !== "idle" || reasoning.trim().length > 0;
   const isStreaming =
-    currentMode === "agent"
-      ? agentStatus === "running" &&
-        (agentContent.length > 0 || hasReasoningPanel)
-      : chatStreaming && (chatContent.length > 0 || hasReasoningPanel);
+    agentStatus === "running" &&
+    (agentContent.length > 0 || hasReasoningPanel);
   const resolvedDiagramPaths = useMemo(() => {
     if (diagramPaths && diagramPaths.length > 0) {
       return diagramPaths;
     }
 
     const sourceMessages =
-      currentMode === "agent" ? agentMessages : chatMessages;
+      agentMessages;
     for (let i = sourceMessages.length - 1; i >= 0; i -= 1) {
       const message = sourceMessages[i];
       if (message.role !== "user") continue;
@@ -92,7 +73,7 @@ export const StreamingMessage = memo(function StreamingMessage({
       return getDiagramAttachmentFilePaths(attachments);
     }
     return [];
-  }, [agentMessages, chatMessages, currentMode, diagramPaths]);
+  }, [agentMessages, diagramPaths]);
 
   // 不在流式状态或没有内容时不渲染
   if (!isStreaming || (!content && !hasReasoningPanel)) {
@@ -145,8 +126,6 @@ export const StreamingMessage = memo(function StreamingMessage({
 });
 
 interface TypingIndicatorProps {
-  /** 强制指定模式 */
-  mode?: "agent" | "chat";
   /** 自定义类名 */
   className?: string;
   /** 可选：直接传入流式阶段要展示的图文件列表 */
@@ -159,29 +138,15 @@ interface TypingIndicatorProps {
  * 在等待首个 token 时显示跳动的点
  */
 export const TypingIndicator = memo(function TypingIndicator({
-  mode,
   className = "",
   diagramPaths,
 }: TypingIndicatorProps) {
-  const chatMode = useUIStore((state) => state.chatMode);
-  const currentMode = mode ?? chatMode;
 
   // Agent 模式数据
   const agentContent = useOpencodeAgent((state) => state.streamingContent);
   const agentStatus = useOpencodeAgent((state) => state.status);
 
-  // Chat 模式数据
-  const chatContent = useAIStore((state) => state.streamingContent);
-  const chatStreaming = useAIStore((state) => state.isStreaming);
-  const chatLoading = useAIStore((state) => state.isLoading);
-  const chatReasoningStatus = useAIStore(
-    (state) => state.streamingReasoningStatus,
-  );
-  const chatMessages = useAIStore((state) => state.messages);
-  const isChatWaiting =
-    (chatStreaming || chatLoading) &&
-    chatContent.length === 0 &&
-    chatReasoningStatus === "idle";
+
 
   const agentReasoningStatus = useOpencodeAgent(
     (state) => state.streamingReasoningStatus,
@@ -213,15 +178,14 @@ export const TypingIndicator = memo(function TypingIndicator({
     agentContent.length === 0 &&
     agentReasoningStatus === "idle" &&
     !latestAssistantHasContent;
-  // 根据模式选择
-  const isWaiting = currentMode === "agent" ? isAgentWaiting : isChatWaiting;
+  const isWaiting = isAgentWaiting;
   const resolvedDiagramPaths = useMemo(() => {
     if (diagramPaths && diagramPaths.length > 0) {
       return diagramPaths;
     }
 
     const sourceMessages =
-      currentMode === "agent" ? agentMessages : chatMessages;
+      agentMessages;
     for (let i = sourceMessages.length - 1; i >= 0; i -= 1) {
       const message = sourceMessages[i];
       if (message.role !== "user") continue;
@@ -232,7 +196,7 @@ export const TypingIndicator = memo(function TypingIndicator({
       return getDiagramAttachmentFilePaths(attachments);
     }
     return [];
-  }, [agentMessages, chatMessages, currentMode, diagramPaths]);
+  }, [agentMessages, diagramPaths]);
 
   if (!isWaiting) {
     return null;
@@ -266,19 +230,16 @@ export const TypingIndicator = memo(function TypingIndicator({
  * 自动处理两种状态的切换
  */
 export const StreamingOutput = memo(function StreamingOutput({
-  mode,
   className = "",
   diagramPaths,
 }: StreamingMessageProps) {
   return (
     <>
       <TypingIndicator
-        mode={mode}
         className={className}
         diagramPaths={diagramPaths}
       />
       <StreamingMessage
-        mode={mode}
         className={className}
         diagramPaths={diagramPaths}
       />

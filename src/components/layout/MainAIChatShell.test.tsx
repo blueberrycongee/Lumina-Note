@@ -11,7 +11,6 @@ describe("MainAIChatShell", () => {
   const originalStartTask = useOpencodeAgent.getState().startTask;
 
   beforeEach(() => {
-    useUIStore.setState({ chatMode: "agent" });
     useFileStore.setState({ vaultPath: "/tmp" });
     useAIStore.setState({ pendingInputAppends: [] });
     useOpencodeAgent.setState({
@@ -187,8 +186,9 @@ describe("MainAIChatShell", () => {
     fireEvent.click(screen.getByText("继续追问"));
 
     await waitFor(() => expect(startTask).toHaveBeenCalledTimes(1));
-    const [task, context] = startTask.mock
-      .calls[0] as unknown as Parameters<typeof originalStartTask>;
+    const [task, context] = startTask.mock.calls[0] as unknown as Parameters<
+      typeof originalStartTask
+    >;
     expect(task).toBe("继续追问");
     expect(context).toMatchObject({
       workspace_path: "/tmp",

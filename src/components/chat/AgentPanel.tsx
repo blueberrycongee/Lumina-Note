@@ -320,7 +320,7 @@ export function AgentPanel() {
         />
 
         {/* 流式输出 */}
-        <StreamingOutput mode="agent" />
+        <StreamingOutput />
 
         {/* 工具审批 */}
         {pendingTool && status === "waiting_approval" && (

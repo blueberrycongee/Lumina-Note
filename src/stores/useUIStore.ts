@@ -38,10 +38,6 @@ interface UIState {
   rightPanelTab: "chat" | "outline" | "backlinks" | "tags";
   setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags") => void;
 
-  // Chat mode — agent-only (codex moved to plugin system)
-  chatMode: "agent";
-  setChatMode: (mode: "agent") => void;
-
   // AI Panel (docked in right panel or floating)
   aiPanelMode: AIPanelMode;
   floatingBallPosition: { x: number; y: number };
@@ -106,7 +102,6 @@ const partializeUIState = (state: UIState) => ({
   leftSidebarWidth: state.leftSidebarWidth,
   rightSidebarWidth: state.rightSidebarWidth,
   rightPanelTab: state.rightPanelTab,
-  chatMode: state.chatMode,
   aiPanelMode: state.aiPanelMode,
   mainView: state.mainView,
   editorMode: state.editorMode,
@@ -173,10 +168,6 @@ export const useUIStore = create<UIState>()(
       // Right panel tabs
       rightPanelTab: "chat",
       setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
-
-      // Chat mode
-      chatMode: "agent", // 默认使用 Agent 模式
-      setChatMode: (mode) => set({ chatMode: mode }),
 
       // AI Panel floating
       aiPanelMode: "docked",
@@ -248,14 +239,6 @@ export const useUIStore = create<UIState>()(
         if (theme) {
           applyTheme(theme, state?.isDarkMode || false);
           pluginThemeRuntime.reapply();
-        }
-        // Migrate removed chat/codex modes → agent
-        if (
-          state &&
-          ((state.chatMode as string) === "chat" ||
-            (state.chatMode as string) === "codex")
-        ) {
-          state.chatMode = "agent";
         }
         if (state) {
           state.isSettingsOpen = false;

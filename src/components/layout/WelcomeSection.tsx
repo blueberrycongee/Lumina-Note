@@ -11,7 +11,6 @@ import {
   BookOpen,
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { useUIStore } from "@/stores/useUIStore";
 import type { FileEntry } from "@/lib/host";
 
 // Emoji array removed — the welcome screen now uses a clean text-only
@@ -23,7 +22,6 @@ interface QuickAction {
   icon: React.ElementType;
   label: string;
   desc: string;
-  mode: "agent";
   prompt: string;
 }
 
@@ -141,7 +139,7 @@ function buildFileAction(
         icon: ACTION_ICONS.polish,
         label: t.ai.polishText,
         desc: file.name,
-        mode: "agent",
+
         prompt: fill(p.polishText),
       };
     case "summarize":
@@ -149,7 +147,7 @@ function buildFileAction(
         icon: ACTION_ICONS.summarize,
         label: t.ai.summarizeNote,
         desc: file.name,
-        mode: "agent",
+
         prompt: fill(p.summarizeNote),
       };
     case "write":
@@ -157,7 +155,7 @@ function buildFileAction(
         icon: ACTION_ICONS.write,
         label: t.ai.writeArticle,
         desc: file.name,
-        mode: "agent",
+
         prompt: fill(p.writeArticle),
       };
     case "study":
@@ -165,7 +163,7 @@ function buildFileAction(
         icon: ACTION_ICONS.study,
         label: t.ai.studyNotes,
         desc: file.name,
-        mode: "agent",
+
         prompt: fill(p.studyNotes),
       };
   }
@@ -332,7 +330,11 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
         <motion.div
           className="relative text-center mt-10 md:mt-14 mb-10 space-y-3"
           initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] } }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] },
+          }}
           exit={{
             opacity: 0,
             y: -8,
@@ -358,7 +360,6 @@ export function WelcomeSuggestions({
   fileTree = [],
 }: WelcomeSectionProps) {
   const { t } = useLocaleStore();
-  const setChatMode = useUIStore((s) => s.setChatMode);
 
   // Memoize with a stable key that changes when workspace context changes
   // (current file, recent files count, file tree length)
@@ -369,7 +370,6 @@ export function WelcomeSuggestions({
   );
 
   const handleQuickAction = (action: QuickAction) => {
-    setChatMode(action.mode);
     onSetInput(action.prompt);
   };
 
@@ -379,7 +379,15 @@ export function WelcomeSuggestions({
         <motion.div
           className="w-full max-w-3xl mx-auto px-4 mt-10"
           initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0, transition: { delay: 0.1, duration: 0.28, ease: [0.2, 0.9, 0.1, 1] } }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            transition: {
+              delay: 0.1,
+              duration: 0.28,
+              ease: [0.2, 0.9, 0.1, 1],
+            },
+          }}
           exit={{
             opacity: 0,
             y: 12,

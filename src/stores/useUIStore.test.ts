@@ -70,12 +70,10 @@ describe("useUIStore", () => {
     const { useUIStore } = await loadStore();
 
     useUIStore.getState().setThemeId("ocean");
-    useUIStore.getState().setChatMode("agent");
 
     expect(localStorage.getItem("neurone-ui")).toBeNull();
     const persisted = parsePersistedState("lumina-ui");
     expect(persisted.themeId).toBe("ocean");
-    expect(persisted.chatMode).toBe("agent");
   });
 
   it("does not persist temporary modal and floating panel state", async () => {
@@ -100,7 +98,6 @@ describe("useUIStore", () => {
         state: {
           isDarkMode: true,
           themeId: "legacy-theme",
-          chatMode: "agent",
           isSettingsOpen: true,
           floatingPanelOpen: true,
         },
@@ -111,7 +108,6 @@ describe("useUIStore", () => {
     const { useUIStore } = await loadStore();
 
     expect(useUIStore.getState().themeId).toBe("legacy-theme");
-    expect(useUIStore.getState().chatMode).toBe("agent");
     expect(useUIStore.getState().isSettingsOpen).toBe(false);
     expect(useUIStore.getState().floatingPanelOpen).toBe(false);
     expect(localStorage.getItem("neurone-ui")).toBeNull();

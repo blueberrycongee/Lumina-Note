@@ -7,7 +7,7 @@
 import { useMemo, useCallback } from "react";
 import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 
-export type SessionType = "agent" | "chat";
+export type SessionType = "agent";
 
 export interface UnifiedSession {
   id: string;
@@ -86,20 +86,13 @@ export function useConversationManager() {
   }, [agentSessions, agentCurrentId, deleteAgentSession]);
 
   return {
-    // 状态
-    chatMode: "agent" as const,
     allSessions,
     currentSessionId,
-
-    // 操作
     handleSwitchSession,
     handleDeleteSession,
     handleNewConversation,
     handleDeleteCurrentSession,
     handleClearHistory,
     isCurrentSession,
-
-    // 模式切换 (no-op for backwards compat)
-    setChatMode: (_mode: string) => {},
   };
 }
