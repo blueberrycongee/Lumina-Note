@@ -4656,6 +4656,7 @@ export const CodeMirrorEditor = forwardRef<
 
     const view = new EditorView({ state, parent: containerRef.current });
     viewRef.current = view;
+    view.scrollDOM.classList.add("editor-scroll-shell");
     const ownerDoc = view.dom.ownerDocument;
     const selectionTrace = createSelectionTraceControl(view, {
       disableCustomDrawSelection,
@@ -4814,7 +4815,15 @@ export const CodeMirrorEditor = forwardRef<
         selectionTrace.snapshot(source);
       }
     };
+    let scrollFadeTimer: ReturnType<typeof setTimeout> | null = null;
     const handleEditorScroll = () => {
+      view.scrollDOM.classList.add("is-scroll-active");
+      if (scrollFadeTimer) clearTimeout(scrollFadeTimer);
+      scrollFadeTimer = setTimeout(() => {
+        view.scrollDOM.classList.remove("is-scroll-active");
+        scrollFadeTimer = null;
+      }, 720);
+
       const now = Date.now();
       if (now - lastScrollTraceAt < 80) return;
       lastScrollTraceAt = now;
@@ -5206,6 +5215,7 @@ export const CodeMirrorEditor = forwardRef<
       view.contentDOM.removeEventListener("mouseup", handleContentMouseUp);
       view.scrollDOM.removeEventListener("scroll", handleEditorScroll);
       view.scrollDOM.removeEventListener("wheel", handleEditorWheel);
+      if (scrollFadeTimer) clearTimeout(scrollFadeTimer);
       ownerDoc.removeEventListener("mousemove", handleMouseMove);
       ownerDoc.removeEventListener("mouseup", handleMouseUp);
       ownerDoc.removeEventListener("keydown", handleEditorKeyDown, true);

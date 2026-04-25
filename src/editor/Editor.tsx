@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { exportToPdf, getExportFileName } from "@/services/pdf/exportPdf";
 import { TabBar } from "@/components/layout/TabBar";
+import { useScrollFade } from "@/hooks/useScrollFade";
 import { cn } from "@/lib/utils";
 
 const modeIcons: Record<EditorMode, React.ReactNode> = {
@@ -145,6 +146,7 @@ export function Editor() {
   const editorRef = useRef<CodeMirrorEditorRef>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const readingScrollContainerRef = useRef<HTMLDivElement>(null);
+  useScrollFade(useCallback(() => readingScrollContainerRef.current, []));
   const pendingModeScrollSnapshotRef = useRef<ModeScrollSnapshot | null>(null);
   const lastOuterScrollTraceAtRef = useRef(0);
   const editorScrollFadeTimerRef = useRef<number | null>(null);
@@ -643,7 +645,7 @@ export function Editor() {
           {editorMode === "reading" && (
             <div
               ref={readingScrollContainerRef}
-              className="h-full overflow-auto"
+              className="h-full overflow-auto editor-scroll-shell"
               data-editor-scroll-container="reading"
             >
               <ReadingView
