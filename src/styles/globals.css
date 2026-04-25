@@ -93,6 +93,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --ui-surface: var(--background);
   --ui-panel: var(--muted);
   --ui-panel-2: var(--accent);
+  --ui-ribbon: 220 14% 91%;              /* ribbon bar — one step darker than muted */
 
   /* ── Radii — tightened one notch (6/8/12 → 4/6/10) ────────────────── */
   --ui-radius-sm: 4px;                 /* chips, kbd, tags */
@@ -158,6 +159,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info-foreground: 0 0% 100%;
 
   --md-heading: 0 0% 93%;
+  --ui-ribbon: 222 16% 9%;               /* ribbon bar — one step darker than muted */
 
   /* Shadows in dark mode — slightly heavier because bg is dark */
   --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.35);

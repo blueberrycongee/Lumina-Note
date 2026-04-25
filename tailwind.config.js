@@ -14,6 +14,7 @@ export default {
         surface: "hsl(var(--ui-surface))",
         panel: "hsl(var(--ui-panel))",
         "panel-2": "hsl(var(--ui-panel-2))",
+        ribbon: "hsl(var(--ui-ribbon))",
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",

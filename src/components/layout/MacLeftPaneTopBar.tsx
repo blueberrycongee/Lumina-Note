@@ -10,7 +10,7 @@ export function MacLeftPaneTopBar() {
   return (
     <div className="flex h-11 items-stretch bg-muted">
       <div
-        className="h-full w-16 shrink-0 flex items-center justify-center"
+        className="h-full w-16 shrink-0 flex items-center justify-center bg-ribbon border-r border-border/30"
         data-tauri-drag-region
         data-testid="mac-left-pane-traffic-lights-safe-area"
       >

@@ -165,7 +165,7 @@ describe("Ribbon", () => {
     expect(
       screen.getByTestId("mac-ribbon-traffic-lights-safe-area"),
     ).not.toHaveClass("border-b");
-    expect(container.firstElementChild).not.toHaveClass("border-r");
+    expect(container.firstElementChild).toHaveClass("border-r");
     expect(screen.getByTestId("ribbon-content")).not.toHaveClass("border-r");
     expect(
       screen.getByRole("button", { name: "Global Search" }),
