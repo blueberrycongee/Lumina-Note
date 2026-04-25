@@ -141,9 +141,12 @@ export function TabBar() {
     setContextMenu(null);
   }, []);
 
+  const isExplicitClose = useRef(false);
+
   const handleClose = useCallback(
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
+      isExplicitClose.current = true;
       const tab = tabs[index];
       void closeTab(index).catch((error) => {
         reportOperationError({
@@ -193,8 +196,9 @@ export function TabBar() {
                 key={tab.id}
                 initial={{ width: 0, opacity: 0 }}
                 animate={{ width: "auto", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
+                exit={isExplicitClose.current ? { width: 0, opacity: 0 } : undefined}
                 transition={{ duration: 0.15, ease: [0.2, 0, 0.4, 1] }}
+                onAnimationComplete={() => { isExplicitClose.current = false; }}
                 className="flex-1 min-w-[40px] max-w-[180px] overflow-hidden"
               >
                 <TabItem
@@ -216,6 +220,7 @@ export function TabBar() {
                     if (tab.isPreview) {
                       promotePreviewTab(tab.id);
                     } else if (!tab.isPinned) {
+                      isExplicitClose.current = true;
                       void closeTab(index).catch((error) => {
                         reportOperationError({
                           source: "TabBar.doubleClickClose",
@@ -257,6 +262,7 @@ export function TabBar() {
             <div className="h-px bg-border my-1" />
             <button
               onClick={() => {
+                isExplicitClose.current = true;
                 closeTab(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
@@ -267,6 +273,7 @@ export function TabBar() {
             </button>
             <button
               onClick={() => {
+                isExplicitClose.current = true;
                 closeOtherTabs(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
@@ -276,6 +283,7 @@ export function TabBar() {
             </button>
             <button
               onClick={() => {
+                isExplicitClose.current = true;
                 closeAllTabs();
                 setContextMenu(null);
               }}
