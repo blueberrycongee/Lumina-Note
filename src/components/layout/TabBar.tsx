@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
@@ -47,11 +47,11 @@ function TabItem({
       data-tab-index={index}
       data-tauri-drag-region="false"
       className={cn(
-        "group relative flex items-center gap-1.5 px-3 py-1.5 text-[13px] cursor-grab w-full",
+        "group relative flex items-center gap-1.5 px-2 py-1.5 text-[13px] cursor-grab border-r border-border/50 w-full",
         "transition-[background-color,color] duration-150 select-none",
         isActive
-          ? "bg-background text-foreground rounded-t-lg"
-          : "bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground border-r border-border/30",
+          ? "bg-background text-foreground border-b-2 border-b-primary"
+          : "bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
         isDragging && "opacity-50 cursor-grabbing",
         isDropTarget && dropPosition === 'left' && "border-l-2 border-l-primary",
         isDropTarget && dropPosition === 'right' && "border-r-2 border-r-primary"
@@ -106,16 +106,7 @@ interface ContextMenuState {
   tabIndex: number;
 }
 
-interface TabBarProps {
-  /**
-   * Optional toolbar rendered as a second row directly under the tabs.
-   * Active tab visually extends down through this row as a white "channel"
-   * anchored at the toolbar's bottom border (browser-tab style).
-   */
-  toolbar?: ReactNode;
-}
-
-export function TabBar({ toolbar }: TabBarProps = {}) {
+export function TabBar() {
   const { t } = useLocaleStore();
   const { tabs, activeTabIndex, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
     useFileStore(
@@ -134,43 +125,11 @@ export function TabBar({ toolbar }: TabBarProps = {}) {
   const [dropTargetIndex] = useState<number | null>(null);
   const [dropPosition] = useState<'left' | 'right' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const tabRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const isDragging = useRef(false);
   const showMacTopActions = useMacTopChromeEnabled();
   const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
-
-  // Track active tab's bounding box (left + width) so the toolbar row can
-  // render a white "extension" beneath it — making the active tab feel
-  // anchored to the toolbar's bottom border, not the gray TabBar's bottom.
-  const [activeBox, setActiveBox] = useState<{ left: number; width: number } | null>(null);
-  const activeTabId = activeTabIndex >= 0 ? tabs[activeTabIndex]?.id ?? null : null;
-
-  useLayoutEffect(() => {
-    if (!toolbar || !activeTabId || !containerRef.current) {
-      setActiveBox(null);
-      return;
-    }
-    const measure = () => {
-      const tabEl = tabRefs.current.get(activeTabId);
-      const containerEl = containerRef.current;
-      if (!tabEl || !containerEl) {
-        setActiveBox(null);
-        return;
-      }
-      const cRect = containerEl.getBoundingClientRect();
-      const tRect = tabEl.getBoundingClientRect();
-      setActiveBox({ left: tRect.left - cRect.left, width: tRect.width });
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(containerRef.current);
-    for (const el of tabRefs.current.values()) {
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
-  }, [toolbar, activeTabId, tabs.length]);
 
   // IDs of tabs currently animating their close (shrinking out). The tab is
   // still in the store during this window — store removal happens after the
@@ -247,87 +206,65 @@ export function TabBar({ toolbar }: TabBarProps = {}) {
   // 即使没有标签页也显示空的标签栏（保持 UI 一致性）
   return (
     <>
-      <div className="flex flex-col shrink-0 bg-ribbon">
-        {/* Tabs row */}
+      <div
+        className="flex h-11 shrink-0 items-stretch border-b border-border/50 bg-background"
+        data-tauri-drag-region={showMacTopActions ? true : undefined}
+      >
         <div
-          className="flex h-11 items-stretch"
+          ref={containerRef}
+          className="flex min-w-0 flex-1 items-stretch overflow-hidden"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
+          data-testid="mac-tabbar-tabstrip"
         >
-          <div
-            ref={containerRef}
-            className="flex min-w-0 flex-1 items-stretch overflow-hidden"
-            data-tauri-drag-region={showMacTopActions ? true : undefined}
-            data-testid="mac-tabbar-tabstrip"
-          >
-            {showMacTrafficLightInset ? (
+          {showMacTrafficLightInset ? (
+            <div
+              className="h-full shrink-0"
+              style={{ width: `${MAC_TABBAR_LEFT_SAFE_INSET}px` }}
+              data-testid="mac-tabbar-traffic-light-spacer"
+            />
+          ) : null}
+          {tabs.map((tab, index) => {
+            const isClosing = closingIds.has(tab.id);
+            return (
               <div
-                className="h-full shrink-0"
-                style={{ width: `${MAC_TABBAR_LEFT_SAFE_INSET}px` }}
-                data-testid="mac-tabbar-traffic-light-spacer"
-              />
-            ) : null}
-            {tabs.map((tab, index) => {
-              const isClosing = closingIds.has(tab.id);
-              return (
-                <div
-                  key={tab.id}
-                  ref={(el) => {
-                    if (el) tabRefs.current.set(tab.id, el);
-                    else tabRefs.current.delete(tab.id);
-                  }}
-                  className={cn(
-                    "flex-1 overflow-hidden",
-                    isClosing
-                      ? "min-w-0 max-w-0 opacity-0 pointer-events-none transition-[max-width,min-width,opacity] duration-150 ease-out"
-                      : "min-w-[40px] max-w-[180px]"
-                  )}
-                >
-                  <TabItem
-                    tab={tab}
-                    index={index}
-                    isActive={index === activeTabIndex}
-                    isDragging={index === draggedIndex && isDragging.current}
-                    isDropTarget={index === dropTargetIndex}
-                    dropPosition={index === dropTargetIndex ? dropPosition : null}
-                    displayName={
-                      tab.type === "ai-chat"
-                        ? t.common.aiChatTab
-                        : tab.type === "graph"
-                          ? t.graph.title
-                          : tab.name
+                key={tab.id}
+                className={cn(
+                  "flex-1 overflow-hidden",
+                  isClosing
+                    ? "min-w-0 max-w-0 opacity-0 pointer-events-none transition-[max-width,min-width,opacity] duration-150 ease-out"
+                    : "min-w-[40px] max-w-[180px]"
+                )}
+              >
+                <TabItem
+                  tab={tab}
+                  index={index}
+                  isActive={index === activeTabIndex}
+                  isDragging={index === draggedIndex && isDragging.current}
+                  isDropTarget={index === dropTargetIndex}
+                  dropPosition={index === dropTargetIndex ? dropPosition : null}
+                  displayName={
+                    tab.type === "ai-chat"
+                      ? t.common.aiChatTab
+                      : tab.type === "graph"
+                        ? t.graph.title
+                        : tab.name
+                  }
+                  onSelect={() => switchTab(index)}
+                  onDoubleClick={() => {
+                    if (tab.isPreview) {
+                      promotePreviewTab(tab.id);
+                    } else if (!tab.isPinned) {
+                      animateClose(tab.id);
                     }
-                    onSelect={() => switchTab(index)}
-                    onDoubleClick={() => {
-                      if (tab.isPreview) {
-                        promotePreviewTab(tab.id);
-                      } else if (!tab.isPinned) {
-                        animateClose(tab.id);
-                      }
-                    }}
-                    onClose={(e) => handleClose(e, index)}
-                    onContextMenu={(e) => handleContextMenu(e, index)}
-                    onMouseDown={handleTabMouseDown}
-                  />
-                </div>
-              );
-            })}
-          </div>
+                  }}
+                  onClose={(e) => handleClose(e, index)}
+                  onContextMenu={(e) => handleContextMenu(e, index)}
+                  onMouseDown={handleTabMouseDown}
+                />
+              </div>
+            );
+          })}
         </div>
-
-        {/* Toolbar row — visually merges with active tab as a single white channel */}
-        {toolbar && (
-          <div className="relative h-10 border-b border-border shrink-0">
-            {/* White extension below the active tab */}
-            {activeBox && (
-              <div
-                aria-hidden
-                className="absolute top-0 bottom-0 bg-background pointer-events-none"
-                style={{ left: activeBox.left, width: activeBox.width }}
-              />
-            )}
-            <div className="relative h-full">{toolbar}</div>
-          </div>
-        )}
       </div>
 
       {/* Context Menu */}

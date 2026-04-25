@@ -498,101 +498,102 @@ export function Editor() {
     return () => window.removeEventListener("blur", handleBlur);
   }, [isDirty, save, activeTab?.type]);
 
-  const editorToolbar = activeTab?.type !== "ai-chat" ? (
-    <div className="ui-compact-row h-full flex items-center px-4 justify-between select-none">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
-        <button
-          onClick={toggleLeftSidebar}
-          className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground shrink-0"
-          title={t.sidebar.toggleSidebar}
-        >
-          <Sidebar size={16} />
-        </button>
-
-        {/* Navigation buttons */}
-        <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            onClick={goBack}
-            disabled={!canGoBack()}
-            className={cn(
-              "p-1 rounded transition-colors",
-              canGoBack()
-                ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                : "text-muted-foreground/30 cursor-not-allowed",
-            )}
-            title={t.editor.goBackShortcut}
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            onClick={goForward}
-            disabled={!canGoForward()}
-            className={cn(
-              "p-1 rounded transition-colors",
-              canGoForward()
-                ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                : "text-muted-foreground/30 cursor-not-allowed",
-            )}
-            title={t.editor.goForwardShortcut}
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-
-      </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {/* Mode Switcher — single button cycling live → reading → source */}
-        <button
-          onClick={() => {
-            const order: EditorMode[] = ["live", "reading", "source"];
-            const next =
-              order[(order.indexOf(editorMode) + 1) % order.length];
-            handleModeChange(next);
-          }}
-          className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-          title={modeLabels[editorMode]}
-        >
-          {modeIcons[editorMode]}
-        </button>
-
-        <span className="ui-compact-hide text-xs text-muted-foreground">
-          {isSaving
-            ? t.editor.saving
-            : isDirty
-              ? t.editor.edited
-              : t.common.saved}
-        </span>
-        <button
-          onClick={toggleSplitView}
-          className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-          title={t.editor.splitView}
-        >
-          <Columns size={16} />
-        </button>
-        <button
-          onClick={() =>
-            exportToPdf(currentContent, getExportFileName(currentFile))
-          }
-          className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-          title={t.editor.exportPdf}
-        >
-          <Download size={16} />
-        </button>
-        <button
-          onClick={toggleRightSidebar}
-          className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-          title={t.sidebar.toggleAIPanel}
-        >
-          <MessageSquare size={16} />
-        </button>
-      </div>
-    </div>
-  ) : null;
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-background transition-colors duration-300">
-      {/* Tab Bar with embedded editor toolbar — active tab merges with editor below */}
-      <TabBar toolbar={editorToolbar} />
+      {/* Tab Bar */}
+      <TabBar />
+
+      {/* Top Navigation Bar — 非 AI 聊天模式下显示 */}
+      {activeTab?.type !== "ai-chat" && (
+        <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
+            <button
+              onClick={toggleLeftSidebar}
+              className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground shrink-0"
+              title={t.sidebar.toggleSidebar}
+            >
+              <Sidebar size={16} />
+            </button>
+
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={goBack}
+                disabled={!canGoBack()}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  canGoBack()
+                    ? "hover:bg-accent text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground/30 cursor-not-allowed",
+                )}
+                title={t.editor.goBackShortcut}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={goForward}
+                disabled={!canGoForward()}
+                className={cn(
+                  "p-1 rounded transition-colors",
+                  canGoForward()
+                    ? "hover:bg-accent text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground/30 cursor-not-allowed",
+                )}
+                title={t.editor.goForwardShortcut}
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
+
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mode Switcher — single button cycling live → reading → source */}
+            <button
+              onClick={() => {
+                const order: EditorMode[] = ["live", "reading", "source"];
+                const next =
+                  order[(order.indexOf(editorMode) + 1) % order.length];
+                handleModeChange(next);
+              }}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={modeLabels[editorMode]}
+            >
+              {modeIcons[editorMode]}
+            </button>
+
+            <span className="ui-compact-hide text-xs text-muted-foreground">
+              {isSaving
+                ? t.editor.saving
+                : isDirty
+                  ? t.editor.edited
+                  : t.common.saved}
+            </span>
+            <button
+              onClick={toggleSplitView}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={t.editor.splitView}
+            >
+              <Columns size={16} />
+            </button>
+            <button
+              onClick={() =>
+                exportToPdf(currentContent, getExportFileName(currentFile))
+              }
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={t.editor.exportPdf}
+            >
+              <Download size={16} />
+            </button>
+            <button
+              onClick={toggleRightSidebar}
+              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              title={t.sidebar.toggleAIPanel}
+            >
+              <MessageSquare size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main content area */}
       {activeTab?.type === "ai-chat" ? (

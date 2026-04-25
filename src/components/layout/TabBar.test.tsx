@@ -108,11 +108,10 @@ describe("TabBar", () => {
   it("matches the macOS left top bar height at 44px", () => {
     macTopChromeEnabled.value = true;
 
-    render(<TabBar />);
+    const { container } = render(<TabBar />);
 
-    const tabsRow = screen.getByTestId("mac-tabbar-tabstrip").parentElement;
-    expect(tabsRow).toHaveClass("h-11");
-    expect(tabsRow).not.toHaveClass("min-h-[32px]");
+    expect(container.firstElementChild).toHaveClass("h-11");
+    expect(container.firstElementChild).not.toHaveClass("min-h-[32px]");
   });
 
   it("shows the dedicated image manager tab icon", () => {
