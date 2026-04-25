@@ -1170,6 +1170,8 @@ export default {
     readingMode: "阅读模式",
     editorFontSize: "编辑器字体大小",
     editorFontSizeDesc: "调整编辑器的字体大小 (10-32px)",
+    blockEditor: "块编辑器交互",
+    blockEditorDesc: "启用块手柄、块菜单和拖拽排序;关闭后编辑器为纯 Markdown",
     fontPreview: "预览",
     aiAssistant: "AI 助手",
     currentModel: "当前模型",
