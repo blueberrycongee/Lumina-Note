@@ -76,7 +76,7 @@ function TabItem({
       ) : (
         <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       )}
-      <span className={cn("truncate min-w-0", tab.isPreview && "italic")}>{displayName}</span>
+      <span className={cn("flex-1 truncate min-w-0", tab.isPreview && "italic")}>{displayName}</span>
       {tab.isPinned && (
         <Pin size={10} className="shrink-0 text-primary rotate-45" />
       )}
