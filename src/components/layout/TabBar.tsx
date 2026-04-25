@@ -50,7 +50,7 @@ function TabItem({
         "group relative flex h-full items-center gap-1.5 px-2.5 text-[13px] cursor-grab w-full rounded-md",
         "transition-[background-color,color] duration-150 select-none",
         isActive
-          ? "bg-background text-foreground ring-1 ring-border/50 shadow-sm"
+          ? "bg-background text-foreground ring-1 ring-[hsl(var(--foreground)/0.12)] shadow-sm"
           : "bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground",
         isDragging && "opacity-50 cursor-grabbing",
         isDropTarget && dropPosition === 'left' && "ring-2 ring-primary ring-inset",
