@@ -200,8 +200,11 @@ export function TabBar() {
                 key={tab.id}
                 initial={false}
                 animate={{ width: "auto", opacity: 1 }}
-                exit={closingIds.current.has(tab.id) ? { width: 0, opacity: 0 } : {}}
-                transition={{ duration: 0.15, ease: [0.2, 0, 0.4, 1] }}
+                exit={
+                  closingIds.current.has(tab.id)
+                    ? { width: 0, opacity: 0, transition: { duration: 0.15, ease: [0.2, 0, 0.4, 1] } }
+                    : { opacity: 0, transition: { duration: 0 } }
+                }
                 onAnimationComplete={() => { closingIds.current.delete(tab.id); }}
                 className="flex-1 min-w-[40px] max-w-[180px] overflow-hidden"
               >
