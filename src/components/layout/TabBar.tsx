@@ -265,25 +265,25 @@ export function TabBar() {
               </div>
             );
           })}
-        </div>
-        <button
-          type="button"
-          data-testid="mac-tabbar-new-tab"
-          data-tauri-drag-region="false"
-          onClick={() => {
-            void createNewFile().catch((error) => {
-              reportOperationError({
-                source: "TabBar.newTab",
-                action: "Create new file from tab bar",
-                error,
+          <button
+            type="button"
+            data-testid="mac-tabbar-new-tab"
+            data-tauri-drag-region="false"
+            onClick={() => {
+              void createNewFile().catch((error) => {
+                reportOperationError({
+                  source: "TabBar.newTab",
+                  action: "Create new file from tab bar",
+                  error,
+                });
               });
-            });
-          }}
-          aria-label={t.tabBar.newTab}
-          className="shrink-0 flex items-center justify-center w-9 my-1.5 mr-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        >
-          <Plus size={16} />
-        </button>
+            }}
+            aria-label={t.tabBar.newTab}
+            className="shrink-0 flex items-center justify-center w-9 rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Context Menu */}

@@ -135,12 +135,13 @@ describe("TabBar", () => {
     expect(container.querySelector("svg.lucide-file-text")?.getAttribute("class")).toContain("text-primary");
   });
 
-  it("renders a new-tab button at the right edge of the tab bar", () => {
+  it("renders a new-tab button immediately after the last tab inside the tab strip", () => {
     render(<TabBar />);
 
     const newTabButton = screen.getByTestId("mac-tabbar-new-tab");
     expect(newTabButton).toBeInTheDocument();
     expect(newTabButton).toHaveAttribute("aria-label", "New tab");
+    expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(newTabButton);
   });
 
   it("invokes createNewFile when the new-tab button is clicked", () => {
