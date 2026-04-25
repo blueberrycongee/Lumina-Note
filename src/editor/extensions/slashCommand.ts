@@ -352,7 +352,7 @@ class PlaceholderWidget extends WidgetType {
       color: hsl(var(--muted-foreground) / 0.5);
       pointer-events: none;
       position: absolute;
-      left: 16px;
+      left: 28px;
       font-style: italic;
     `;
     return span;
