@@ -70,9 +70,8 @@ Récupérez la dernière version depuis [Releases](https://github.com/blueberryc
 
 <h3 align="center">Espace de travail IA</h3>
 
-- Mode : `Agent` (extension VS Code intégrée dans la barre latérale)
+- Mode Agent pour l'édition, la planification et l'automatisation des tâches
 - Support multi-fournisseurs : OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Routage simple des modèles par usage : `Main Model`
 - Runtime d'agent orchestré pour les tâches plus lourdes, avec un chemin rapide pour les demandes simples
 - Recherche sémantique locale (RAG) dans votre vault
 
@@ -111,7 +110,7 @@ Récupérez la dernière version depuis [Releases](https://github.com/blueberryc
 
 1. Installez Lumina Note depuis Releases.
 2. Choisissez un dossier local comme vault au premier lancement.
-3. Configurez un fournisseur de modèle et votre clé API dans le panneau IA, puis définissez si besoin des modèles `Main` dans Dynamic Routing.
+3. Configurez un fournisseur de modèle et votre clé API dans le panneau IA, puis choisissez si besoin votre modèle préféré.
 4. Créez votre première note et commencez à relier avec `[[WikiLinks]]`.
 
 ---

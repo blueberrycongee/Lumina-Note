@@ -70,9 +70,9 @@
 
 <h3 align="center">AI 工作區</h3>
 
-- 模式：`Agent`（側欄內嵌 VS Code 擴充）
+- Agent 模式：支援編輯、規劃與任務自動化
 - 支援多模型服務商：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- 支援依用途配置模型：`主模型` / `聊天模型` / `複雜任務模型`
+- 主模型可自由配置
 - 較重的任務會進入編排式 Agent 執行流程，簡單任務則保留快速路徑
 - 以本地筆記庫為基礎的語意檢索（RAG）
 
@@ -111,7 +111,7 @@
 
 1. 從 Releases 安裝 Lumina Note。
 2. 首次啟動時選擇本機資料夾作為筆記庫。
-3. 在 AI 面板中設定模型服務商與 API Key，並可在 Dynamic Routing 中依用途設定 `主模型` / `聊天模型` / `複雜任務模型`。
+3. 在 AI 面板中設定模型服務商與 API Key，並可在設定中選擇偏好模型。
 4. 建立第一則筆記，並用 `[[WikiLinks]]` 串連知識。
 
 ---

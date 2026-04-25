@@ -70,9 +70,8 @@ Baixe a versão mais recente em [Releases](https://github.com/blueberrycongee/Lu
 
 <h3 align="center">Workspace de IA</h3>
 
-- Modo: `Agent` (extensão VS Code embutida na barra lateral)
+- Modo Agent para edição, planejamento e automação de tarefas
 - Suporte a vários provedores: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Roteamento simples de modelos por finalidade: `Main Model`
 - Runtime de agente orquestrado para tarefas mais pesadas, com caminho rápido para solicitações simples
 - Recuperação semântica local (RAG) a partir do seu vault
 
@@ -111,7 +110,7 @@ Baixe a versão mais recente em [Releases](https://github.com/blueberrycongee/Lu
 
 1. Instale o Lumina Note a partir de Releases.
 2. Escolha uma pasta local como seu vault na primeira execução.
-3. Configure um provedor de modelos e sua API key no painel de IA e, se quiser, defina modelos `Main` em Dynamic Routing.
+3. Configure um provedor de modelos e sua API key no painel de IA e, se quiser, escolha seu modelo preferido.
 4. Crie sua primeira nota e comece a conectar com `[[WikiLinks]]`.
 
 ---

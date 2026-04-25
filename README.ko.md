@@ -70,9 +70,8 @@
 
 <h3 align="center">AI 워크스페이스</h3>
 
-- 모드: `Agent` (사이드바에 내장된 VS Code 확장)
+- Agent 모드: 편집, 계획 및 작업 자동화
 - 다중 모델 제공자 지원: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- 목적별로 간단하게 모델을 나눠 설정: `Main Model`
 - 무거운 작업은 오케스트레이션 Agent 런타임으로 보내고, 단순 요청은 빠른 경로를 유지
 - 로컬 볼트를 대상으로 한 시맨틱 검색(RAG)
 
@@ -111,7 +110,7 @@
 
 1. Releases 에서 Lumina Note 를 설치합니다.
 2. 처음 실행할 때 로컬 폴더를 볼트로 선택합니다.
-3. AI 패널에서 모델 제공자와 API 키를 설정하고, 필요하면 Dynamic Routing 에서 `Main` 모델을 정합니다.
+3. AI 패널에서 모델 제공자와 API 키를 설정하고, 필요하면 원하는 모델을 선택합니다.
 4. 첫 노트를 만들고 `[[WikiLinks]]` 로 연결을 시작합니다.
 
 ---

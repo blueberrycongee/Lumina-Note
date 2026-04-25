@@ -70,9 +70,8 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 <h3 align="center">AI workspace</h3>
 
-- Mode: `Agent` (embedded VS Code extension in the sidebar)
+- Agent mode for editing, planning, and task automation
 - Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Simple purpose-based model routing: `Main Model`
 - Orchestrated agent runtime for heavier tasks, with a fast path for simpler requests
 - Local semantic retrieval (RAG) from your vault
 
@@ -111,7 +110,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 1. Install Lumina Note from Releases.
 2. Choose a local folder as your vault on first launch.
-3. Configure a model provider and API key in the AI panel, then optionally set `Main` models in Dynamic Routing.
+3. Configure a model provider and API key in the AI panel, then optionally choose your preferred model.
 4. Create your first note and start linking with `[[WikiLinks]]`.
 
 ---

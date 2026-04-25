@@ -70,9 +70,8 @@
 
 <h3 align="center">AI ワークスペース</h3>
 
-- モード: `Agent`（サイドバーに埋め込まれた VS Code 拡張）
+- Agent モード：編集・計画・タスク自動化
 - 対応プロバイダ: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- 用途別モデル設定: `Main Model`
 - 重いタスクはオーケストレーション実行に回し、軽いタスクは高速パスを維持
 - Vault を対象にしたローカル意味検索（RAG）
 
@@ -111,7 +110,7 @@
 
 1. Releases から Lumina Note をインストール
 2. 初回起動時にローカルフォルダを Vault として選択
-3. AI パネルでモデルプロバイダと API Key を設定し、必要に応じて Dynamic Routing で `Main` モデルを設定
+3. AI パネルでモデルプロバイダと API Key を設定し、必要に応じてお好みのモデルを選択
 4. 最初のノートを作成し、`[[WikiLinks]]` でつなげる
 
 ---
