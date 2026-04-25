@@ -27,7 +27,6 @@ import {
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
-// import { AIFloatingBall } from "@/components/ai/AIFloatingBall";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { CommandMenu, CommandMenuProvider } from "@/components/ui";
 import { PDFViewer } from "@/components/pdf";
@@ -1172,12 +1171,6 @@ function App() {
       {/* Cmd+K command palette */}
       <CommandMenuProvider />
       <CommandMenu />
-
-      {/* AI Floating Ball - temporarily hidden */}
-      {/* <AIFloatingBall /> */}
-
-      {/* Voice Input Floating Ball - 暂时隐藏，后续移入系统级入口 */}
-      {/* <VoiceInputBall /> */}
 
       {/* Hidden welcome preview: tap top-right corner 5 times to activate */}
       {welcomePreview && (

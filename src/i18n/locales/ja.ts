@@ -199,10 +199,6 @@ export default {
         insertBelowTitle: "ブロックの下に挿入",
       },
     },
-    agentEdit: {
-      added: "AI 追加",
-      modified: "AI 修正",
-    },
   },
 
   // AI アシスタント

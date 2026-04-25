@@ -200,10 +200,6 @@ export default {
         insertBelowTitle: "Insert block below",
       },
     },
-    agentEdit: {
-      added: "AI added",
-      modified: "AI modified",
-    },
   },
 
   // AI Assistant

@@ -199,10 +199,6 @@ export default {
         insertBelowTitle: "在區塊下方插入",
       },
     },
-    agentEdit: {
-      added: "AI 新增",
-      modified: "AI 修改",
-    },
   },
 
   // AI 助手

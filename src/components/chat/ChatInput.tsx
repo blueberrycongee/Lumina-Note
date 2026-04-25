@@ -155,7 +155,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       addFileRef(filePath, fileName);
     };
 
-    // 从父容器（RightPanel/AIFloatingPanel）转发的拖拽事件
+    // Handle file drops forwarded by the panel container.
     const handlePanelFileDrop = (e: Event) => {
       const { filePath, fileName } = (e as CustomEvent).detail;
       if (!filePath || !fileName) return;

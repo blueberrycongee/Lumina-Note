@@ -54,7 +54,7 @@ type AgentMessage = {
   /**
    * Opencode structured parts. When present the renderer skips the legacy
    * `🔧 name:` / `<thinking>` string-parsing pipeline and maps parts directly
-   * to timeline entries. The legacy path still serves AgentPanel + Rust agent.
+   * to timeline entries.
    */
   rawParts?: OpencodePart[];
 };

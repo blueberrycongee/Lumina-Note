@@ -1,6 +1,6 @@
 /**
  * Wiki index loader — 扫描 vault/wiki/*.md,把每个 wiki 页的 frontmatter 摘成
- * 前端 useVaultStore 期待的 WikiIndex 形状。是 vault_load_index IPC 的实现。
+ * renderer 期待的 WikiIndex 形状。是 vault_load_index IPC 的实现。
  *
  * 这里不参与同步逻辑(那是 WikiManager 的事),只是把磁盘上"已合成"的产物
  * 列给前端 viewer 用。
