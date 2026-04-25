@@ -46,7 +46,7 @@ function TabItem({
       data-tab-index={index}
       data-tauri-drag-region="false"
       className={cn(
-        "group relative flex items-center gap-1.5 px-3 py-1.5 text-sm cursor-grab border-r border-border/50",
+        "group relative flex items-center gap-1.5 px-3 py-1.5 text-[13px] cursor-grab border-r border-border/50",
         "transition-[background-color,color] duration-150 select-none",
         isActive
           ? "bg-background text-foreground border-b-2 border-b-primary"
@@ -61,19 +61,19 @@ function TabItem({
       onMouseDown={(e) => onMouseDown(e, index)}
     >
       {tab.type === "graph" || tab.type === "isolated-graph" ? (
-        <Network size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <Network size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       ) : tab.type === "pdf" ? (
-        <FileText size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       ) : tab.type === "diagram" ? (
-        <Shapes size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <Shapes size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       ) : tab.type === "profile-preview" ? (
-        <User size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <User size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       ) : tab.type === "plugin-view" ? (
-        <Puzzle size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <Puzzle size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       ) : tab.type === "image-manager" ? (
-        <Images size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <Images size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       ) : (
-        <FileText size={12} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+        <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
       )}
       <span className={cn("truncate max-w-[120px]", tab.isPreview && "italic")}>{displayName}</span>
       {tab.isPinned && (
@@ -238,7 +238,7 @@ export function TabBar() {
                 togglePinTab(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors flex items-center gap-2"
+              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors flex items-center gap-2"
             >
               <Pin size={12} className={tabs[contextMenu.tabIndex]?.isPinned ? "" : "rotate-45"} />
               {tabs[contextMenu.tabIndex]?.isPinned ? t.tabBar.unpin : t.tabBar.pin}
@@ -249,7 +249,7 @@ export function TabBar() {
                 closeTab(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={tabs[contextMenu.tabIndex]?.isPinned}
             >
               {t.tabBar.close}
@@ -259,7 +259,7 @@ export function TabBar() {
                 closeOtherTabs(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors"
             >
               {t.tabBar.closeOthers}
             </button>
@@ -268,7 +268,7 @@ export function TabBar() {
                 closeAllTabs();
                 setContextMenu(null);
               }}
-              className="w-full px-3 py-1.5 text-sm text-left hover:bg-accent transition-colors"
+              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors"
             >
               {t.tabBar.closeAll}
             </button>

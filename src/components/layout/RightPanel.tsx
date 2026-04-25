@@ -41,7 +41,7 @@ function BacklinksView() {
 
   if (!currentFile) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <Link2 size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.openNoteToShowBacklinks}</p>
       </div>
@@ -50,7 +50,7 @@ function BacklinksView() {
 
   if (isIndexing) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <Loader2 size={24} className="animate-spin mb-2" />
         <p>{t.panel.buildingIndex}</p>
       </div>
@@ -59,7 +59,7 @@ function BacklinksView() {
 
   if (backlinks.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <Link2 size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.noBacklinks}</p>
         <p className="text-xs opacity-70 mt-1">
@@ -74,7 +74,7 @@ function BacklinksView() {
       {/* Header */}
       <div className="p-2 border-b border-border/50 flex items-center gap-2">
         <Link2 size={12} className="text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-[11px] text-muted-foreground">
           {backlinks.length} {t.panel.backlinks}
         </span>
       </div>
@@ -89,7 +89,7 @@ function BacklinksView() {
           >
             <div className="flex items-center gap-2 mb-1">
               <FileText size={12} className="text-primary shrink-0" />
-              <span className="text-sm font-medium truncate group-hover:text-primary">
+              <span className="text-[13px] font-medium truncate group-hover:text-primary">
                 {backlink.name}
               </span>
               <ArrowUpRight
@@ -130,7 +130,7 @@ function TagsView() {
 
   if (isIndexing) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <Loader2 size={24} className="animate-spin mb-2" />
         <p>{t.panel.buildingIndex}</p>
       </div>
@@ -139,7 +139,7 @@ function TagsView() {
 
   if (allTags.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <Tag size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.noTags}</p>
         <p className="text-xs opacity-70 mt-1">{t.panel.tagHint}</p>
@@ -152,7 +152,7 @@ function TagsView() {
       {/* Header */}
       <div className="p-2 border-b border-border/50 flex items-center gap-2">
         <Tag size={12} className="text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-[11px] text-muted-foreground">
           {allTags.length} {t.panel.tags}
         </span>
       </div>
@@ -170,7 +170,7 @@ function TagsView() {
                 className={`text-muted-foreground transition-transform ${expandedTags.has(tagInfo.tag) ? "rotate-90" : ""}`}
               />
               <Hash size={12} className="text-primary" />
-              <span className="text-sm flex-1">{tagInfo.tag}</span>
+              <span className="text-[13px] flex-1">{tagInfo.tag}</span>
               <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                 {tagInfo.count}
               </span>
@@ -183,7 +183,7 @@ function TagsView() {
                   <button
                     key={filePath}
                     onClick={() => openFile(filePath, { preview: true })}
-                    className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2 text-sm"
+                    className="w-full text-left px-3 py-1.5 hover:bg-accent transition-colors flex items-center gap-2 text-[13px]"
                   >
                     <FileText size={12} className="text-muted-foreground" />
                     <span className="truncate">{getFileName(filePath)}</span>
@@ -241,7 +241,7 @@ function OutlineView() {
 
   if (!currentFile) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <List size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.openNoteToShowOutline}</p>
       </div>
@@ -250,7 +250,7 @@ function OutlineView() {
 
   if (headings.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-sm p-4">
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground text-[13px] p-4">
         <Hash size={32} className="text-primary/25 mb-2" />
         <p>{t.panel.noHeadings}</p>
         <p className="text-xs opacity-70 mt-1">{t.panel.headingHint}</p>
@@ -265,7 +265,7 @@ function OutlineView() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-2 border-b border-border/50 flex items-center justify-between">
-        <span className="text-xs text-muted-foreground flex items-center gap-1">
+        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
           <List size={12} />
           {headings.length} {t.panel.headings}
         </span>
@@ -304,7 +304,7 @@ function OutlineView() {
               onClick={() =>
                 scrollToHeading(heading.line, heading.text, heading.from)
               }
-              className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent transition-colors flex items-center gap-2 group"
+              className="w-full text-left px-3 py-1.5 text-[13px] hover:bg-accent transition-colors flex items-center gap-2 group"
               style={{ paddingLeft: 12 + indent }}
             >
               <span className="text-muted-foreground text-xs opacity-50 shrink-0 group-hover:opacity-100">

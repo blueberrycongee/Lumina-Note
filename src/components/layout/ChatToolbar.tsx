@@ -36,7 +36,7 @@ export function ChatToolbar({
     "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors duration-fast ease-out-subtle hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   const pillButton =
-    "flex items-center gap-1.5 rounded-ui-sm px-2 h-7 text-xs transition-colors duration-fast ease-out-subtle whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+    "flex items-center gap-1.5 rounded-ui-sm px-2 h-7 text-[11px] transition-colors duration-fast ease-out-subtle whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
 
   return (
     <div className="ui-compact-row h-11 flex items-center justify-between px-3 border-b border-border/60 shrink-0 min-w-0">

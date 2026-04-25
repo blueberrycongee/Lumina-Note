@@ -270,7 +270,7 @@ export function Sidebar() {
         {/* Favorites */}
         <div className="px-2">
           <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm px-2 py-1">
-            <span className="flex min-w-0 items-center gap-1.5 text-xs font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+            <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
               <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
               {t.favorites.title}
             </span>
@@ -278,7 +278,7 @@ export function Sidebar() {
               <button
                 onClick={() => setFavoriteSortMode("manual")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-[11px] rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "manual"
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -290,7 +290,7 @@ export function Sidebar() {
               <button
                 onClick={() => setFavoriteSortMode("recentAdded")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-[11px] rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentAdded"
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -302,7 +302,7 @@ export function Sidebar() {
               <button
                 onClick={() => setFavoriteSortMode("recentOpened")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[10px] rounded transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-[11px] rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentOpened"
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -323,7 +323,7 @@ export function Sidebar() {
                 <div
                   key={entry.path}
                   className={cn(
-                    "group flex items-center gap-2 px-2 py-1 rounded-ui-md text-xs",
+                    "group flex items-center gap-2 px-2 py-1 rounded-ui-md text-[13px]",
                     currentFile === entry.path
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -428,7 +428,7 @@ export function Sidebar() {
           }}
           onMouseLeave={() => setIsRootDragOver(false)}
           className={cn(
-            "cursor-pointer select-none px-3 py-2 text-sm font-medium truncate transition-colors",
+            "cursor-pointer select-none px-3 py-2 text-[13px] font-medium truncate transition-colors",
             isRootDragOver && "bg-primary/10",
             selectedPath === vaultPath &&
               "bg-primary/10 text-primary",
@@ -459,7 +459,7 @@ export function Sidebar() {
           />
         )}
         {fileTree.length === 0 && !creating ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-sm">
+          <div className="px-4 py-8 text-center text-muted-foreground text-[13px]">
             {t.file.emptyFolder}
           </div>
         ) : (
@@ -546,7 +546,7 @@ function CreateInputRow({
   return (
     <div
       data-file-tree-item="true"
-      className="w-full flex items-center gap-1.5 py-1.5 pr-2 text-sm rounded-ui-sm"
+      className="w-full flex items-center gap-1.5 py-1.5 pr-2 text-[13px] rounded-ui-sm"
       style={{ paddingLeft }}
     >
       {type === "folder" ? (
@@ -770,7 +770,7 @@ function FileTreeItem({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className={cn(
-            "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-sm cursor-pointer select-none rounded-ui-sm",
+            "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-[13px] cursor-pointer select-none rounded-ui-sm",
             isSelected ? "bg-primary/10 text-primary" : "hover:bg-accent",
             isDragOver && "bg-primary/10",
           )}
@@ -904,7 +904,7 @@ function FileTreeItem({
       onDoubleClick={() => onPermanentOpen(entry)}
       onContextMenu={(e) => onContextMenu(e, entry)}
       className={cn(
-        "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-sm cursor-grab select-none rounded-ui-sm",
+        "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-[13px] cursor-grab select-none rounded-ui-sm",
         showActive
           ? "bg-primary/10 text-primary"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",

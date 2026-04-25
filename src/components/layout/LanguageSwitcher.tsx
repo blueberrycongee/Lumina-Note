@@ -117,7 +117,7 @@ export function LanguageSwitcher({
               key={loc.code}
               onClick={() => handleSelect(loc.code as Locale)}
               className={clsx(
-                "w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between",
+                "w-full px-3 py-2 text-left text-[13px] hover:bg-accent transition-colors flex items-center justify-between",
                 locale === loc.code ? "text-primary font-medium" : ""
               )}
             >

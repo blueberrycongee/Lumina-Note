@@ -49,7 +49,7 @@ export function ChatHistorySidebar({
         className="absolute left-0 top-0 z-40 flex h-full w-60 flex-col border-r border-border bg-background shadow-elev-2"
       >
         <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-          <h3 className="text-xs font-medium text-muted-foreground">
+          <h3 className="text-[11px] font-medium text-muted-foreground">
             {t.ai.historyChats}
           </h3>
           <button
@@ -61,7 +61,7 @@ export function ChatHistorySidebar({
         </div>
         <div className="flex-1 overflow-y-auto p-1 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
           {allSessions.length === 0 ? (
-            <div className="p-6 text-center text-xs text-muted-foreground">
+            <div className="p-6 text-center text-[11px] text-muted-foreground">
               {t.ai.noHistory}
             </div>
           ) : (
