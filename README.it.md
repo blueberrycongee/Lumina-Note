@@ -30,7 +30,7 @@ Le tue note restano sul tuo dispositivo. Lumina Note ti aiuta a scrivere, colleg
 
 - **Progettato local-first**: il tuo vault resta in locale e decidi tu cosa inviare ai provider di modelli.
 - **Flusso di lavoro centrato sulla conoscenza**: editing Markdown, WikiLinks, vista grafo e recupero AI lavorano come un unico sistema.
-- **AI che agisce davvero**: `Chat`, `Agent` e `Codex` supportano attività reali di editing, pianificazione e automazione.
+- **AI che agisce davvero**: `Agent` supporta attività reali di editing, pianificazione e automazione.
 
 ---
 
@@ -70,9 +70,9 @@ Scarica l'ultima versione da [Releases](https://github.com/blueberrycongee/Lumin
 
 <h3 align="center">Workspace AI</h3>
 
-- Modalità: `Chat` / `Agent` / `Codex` (estensione VS Code integrata nella barra laterale)
+- Modalità: `Agent` (estensione VS Code integrata nella barra laterale)
 - Supporto multi-provider: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Routing semplice dei modelli per scopo: `Main Model` / `Chat Model` / `Complex Task Model`
+- Routing semplice dei modelli per scopo: `Main Model`
 - Runtime agente orchestrato per attività più pesanti, con percorso rapido per richieste semplici
 - Recupero semantico locale (RAG) dal tuo vault
 
@@ -111,7 +111,7 @@ Scarica l'ultima versione da [Releases](https://github.com/blueberrycongee/Lumin
 
 1. Installa Lumina Note da Releases.
 2. Al primo avvio scegli una cartella locale come vault.
-3. Configura un provider di modelli e la tua API key nel pannello AI, poi opzionalmente imposta i modelli `Main` / `Chat` / `Complex Task` in Dynamic Routing.
+3. Configura un provider di modelli e la tua API key nel pannello AI, poi opzionalmente imposta i modelli `Main` in Dynamic Routing.
 4. Crea la tua prima nota e inizia a collegarla con `[[WikiLinks]]`.
 
 ---

@@ -30,7 +30,7 @@ Deine Notizen bleiben auf deinem Gerät. Lumina Note hilft dir, Wissen mit KI zu
 
 - **Local-first entwickelt**: Dein Vault bleibt lokal und du entscheidest, was an Modellanbieter gesendet wird.
 - **Auf Wissensarbeit ausgerichtet**: Markdown-Editor, WikiLinks, Graph-Ansicht und KI-Retrieval arbeiten als ein System zusammen.
-- **KI, die wirklich handelt**: `Chat`, `Agent` und `Codex` unterstützen echte Bearbeitungs-, Planungs- und Automatisierungsaufgaben.
+- **KI, die wirklich handelt**: `Agent` unterstützt echte Bearbeitungs-, Planungs- und Automatisierungsaufgaben.
 
 ---
 
@@ -70,9 +70,9 @@ Die neueste Version findest du unter [Releases](https://github.com/blueberrycong
 
 <h3 align="center">KI-Workspace</h3>
 
-- Modi: `Chat` / `Agent` / `Codex` (eingebettete VS Code Erweiterung in der Seitenleiste)
+- Modus: `Agent` (eingebettete VS Code Erweiterung in der Seitenleiste)
 - Unterstützung für mehrere Anbieter: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Einfache modellbezogene Zweckzuordnung: `Main Model` / `Chat Model` / `Complex Task Model`
+- Einfache modellbezogene Zweckzuordnung: `Main Model`
 - Orchestrierte Agent-Laufzeit für schwerere Aufgaben, mit schnellem Pfad für einfache Anfragen
 - Lokales semantisches Retrieval (RAG) aus deinem Vault
 
@@ -111,7 +111,7 @@ Die neueste Version findest du unter [Releases](https://github.com/blueberrycong
 
 1. Installiere Lumina Note aus den Releases.
 2. Wähle beim ersten Start einen lokalen Ordner als Vault.
-3. Konfiguriere im KI-Panel einen Modellanbieter und deinen API-Schlüssel und lege bei Bedarf in Dynamic Routing `Main` / `Chat` / `Complex Task` Modelle fest.
+3. Konfiguriere im KI-Panel einen Modellanbieter und deinen API-Schlüssel und lege bei Bedarf in Dynamic Routing `Main` Modelle fest.
 4. Erstelle deine erste Notiz und verknüpfe sie mit `[[WikiLinks]]`.
 
 ---

@@ -30,7 +30,7 @@ Your notes stay on your device. Lumina Note helps you write, connect, search, an
 
 - **Local-first by design**: your vault is local, and you decide what gets sent to model providers.
 - **Knowledge-centered workflow**: Markdown editing, WikiLinks, graph view, and AI retrieval work as one system.
-- **AI that can actually act**: Chat, Agent, and Codex mode support real editing, planning, and automation tasks.
+- **AI that can actually act**: Agent mode supports real editing, planning, and automation tasks.
 
 ---
 
@@ -70,9 +70,9 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 <h3 align="center">AI workspace</h3>
 
-- Modes: `Chat` / `Agent` / `Codex` (embedded VS Code extension in the sidebar)
+- Mode: `Agent` (embedded VS Code extension in the sidebar)
 - Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- Simple purpose-based model routing: `Main Model` / `Chat Model` / `Complex Task Model`
+- Simple purpose-based model routing: `Main Model`
 - Orchestrated agent runtime for heavier tasks, with a fast path for simpler requests
 - Local semantic retrieval (RAG) from your vault
 
@@ -111,7 +111,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 1. Install Lumina Note from Releases.
 2. Choose a local folder as your vault on first launch.
-3. Configure a model provider and API key in the AI panel, then optionally set `Main` / `Chat` / `Complex Task` models in Dynamic Routing.
+3. Configure a model provider and API key in the AI panel, then optionally set `Main` models in Dynamic Routing.
 4. Create your first note and start linking with `[[WikiLinks]]`.
 
 ---

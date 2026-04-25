@@ -30,7 +30,7 @@
 
 - **ローカルファースト設計**: Vault はローカル管理で、モデルに送る内容を自分で選べます。
 - **知識作業をひとつに統合**: Markdown 編集、WikiLinks、グラフ表示、AI 検索が一体で動作します。
-- **実務に使える AI**: `Chat`、`Agent`、`Codex` が実際の編集・計画・自動化タスクを支援します。
+- **実務に使える AI**: `Agent` が実際の編集・計画・自動化タスクを支援します。
 
 ---
 
@@ -70,9 +70,9 @@
 
 <h3 align="center">AI ワークスペース</h3>
 
-- モード: `Chat` / `Agent` / `Codex`（サイドバーに埋め込まれた VS Code 拡張）
+- モード: `Agent`（サイドバーに埋め込まれた VS Code 拡張）
 - 対応プロバイダ: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
-- 用途別モデル設定: `Main Model` / `Chat Model` / `Complex Task Model`
+- 用途別モデル設定: `Main Model`
 - 重いタスクはオーケストレーション実行に回し、軽いタスクは高速パスを維持
 - Vault を対象にしたローカル意味検索（RAG）
 
@@ -111,7 +111,7 @@
 
 1. Releases から Lumina Note をインストール
 2. 初回起動時にローカルフォルダを Vault として選択
-3. AI パネルでモデルプロバイダと API Key を設定し、必要に応じて Dynamic Routing で `Main` / `Chat` / `Complex Task` モデルを設定
+3. AI パネルでモデルプロバイダと API Key を設定し、必要に応じて Dynamic Routing で `Main` モデルを設定
 4. 最初のノートを作成し、`[[WikiLinks]]` でつなげる
 
 ---

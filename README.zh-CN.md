@@ -30,7 +30,7 @@
 
 - **本地优先**：你的笔记库保留在本地，是否发送给模型服务商由你决定。
 - **围绕知识工作流设计**：Markdown 编辑、双链、图谱和 AI 检索是一个整体。
-- **AI 不只是聊天**：`Chat`、`Agent`、`Codex` 支持真实编辑、规划与自动化任务。
+- **AI 不只是聊天**：`Agent` 支持真实编辑、规划与自动化任务。
 
 ---
 
@@ -70,7 +70,7 @@
 
 <h3 align="center">AI 工作区</h3>
 
-- 模式：`Chat` / `Agent` / `Codex`（侧边栏内嵌 VS Code 扩展）
+- 模式：`Agent`（侧边栏内嵌 VS Code 扩展）
 - 支持多模型服务商：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - 支持按用途配置模型：`主模型` / `聊天模型` / `复杂任务模型`
 - 复杂任务会进入编排式 Agent 运行时，简单任务保持轻量快速路径
