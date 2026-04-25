@@ -22,10 +22,10 @@ export interface SendOptions {
 }
 
 export interface ProcessedMessage {
-  displayMessage: string;  // 用于前端显示（仅用户输入文本）
-  fullMessage: string;     // 发送给 AI（包含文件完整内容）
-  fileContext: string;     // 引用文件的内容（用于上下文）
-  quoteContext: string;    // 引用片段的结构化上下文（用于模型）
+  displayMessage: string; // 用于前端显示（仅用户输入文本）
+  fullMessage: string; // 发送给 AI（包含文件完整内容）
+  fileContext: string; // 引用文件的内容（用于上下文）
+  quoteContext: string; // 引用片段的结构化上下文（用于模型）
   attachments: MessageAttachment[];
 }
 
@@ -58,10 +58,7 @@ function buildQuoteContext(quotes: QuoteReference[]): string {
   return quotes
     .map((quote, index) => {
       const locator = quote.locator || formatQuoteRange(quote.range);
-      const lines = [
-        `[QUOTE ${index + 1}]`,
-        `source: ${quote.source}`,
-      ];
+      const lines = [`[QUOTE ${index + 1}]`, `source: ${quote.source}`];
       if (quote.sourcePath) lines.push(`path: ${quote.sourcePath}`);
       if (locator) lines.push(`locator: ${locator}`);
       if (quote.range) lines.push(`range: ${JSON.stringify(quote.range)}`);
@@ -84,23 +81,28 @@ export async function processMessageWithFiles(
 ): Promise<ProcessedMessage> {
   const t = getCurrentTranslations();
   const fileAttachments: MessageAttachment[] = referencedFiles
-    .filter(f => !f.isFolder)
-    .map(f => ({
+    .filter((f) => !f.isFolder)
+    .map((f) => ({
       type: "file",
       name: f.name,
       path: f.path,
     }));
-  const quoteAttachments: MessageAttachment[] = quotedSelections.map((quote) => ({
-    type: "quote",
-    text: quote.summary || summarizeQuoteText(quote.text),
-    source: quote.source,
-    sourcePath: quote.sourcePath,
-    summary: quote.summary || summarizeQuoteText(quote.text),
-    locator: quote.locator || formatQuoteRange(quote.range),
-    range: quote.range,
-  }));
-  const attachments: MessageAttachment[] = [...fileAttachments, ...quoteAttachments];
-  
+  const quoteAttachments: MessageAttachment[] = quotedSelections.map(
+    (quote) => ({
+      type: "quote",
+      text: quote.text,
+      source: quote.source,
+      sourcePath: quote.sourcePath,
+      summary: quote.summary || summarizeQuoteText(quote.text),
+      locator: quote.locator || formatQuoteRange(quote.range),
+      range: quote.range,
+    }),
+  );
+  const attachments: MessageAttachment[] = [
+    ...fileAttachments,
+    ...quoteAttachments,
+  ];
+
   const trimmedMessage = message.trim();
   const displayMessage = trimmedMessage;
 
@@ -146,13 +148,20 @@ export async function processMessageWithFiles(
  * Hook: 提供统一的消息处理函数
  */
 export function useChatSend() {
-  const processMessage = useCallback(async (
-    message: string,
-    referencedFiles: ReferencedFile[],
-    quotedSelections: QuoteReference[] = [],
-  ): Promise<ProcessedMessage> => {
-    return processMessageWithFiles(message, referencedFiles, quotedSelections);
-  }, []);
+  const processMessage = useCallback(
+    async (
+      message: string,
+      referencedFiles: ReferencedFile[],
+      quotedSelections: QuoteReference[] = [],
+    ): Promise<ProcessedMessage> => {
+      return processMessageWithFiles(
+        message,
+        referencedFiles,
+        quotedSelections,
+      );
+    },
+    [],
+  );
 
   return { processMessage };
 }
