@@ -34,6 +34,10 @@ interface UIState {
   setLeftSidebarWidth: (width: number) => void;
   setRightSidebarWidth: (width: number) => void;
 
+  // Left sidebar mode (file tree or search panel)
+  leftSidebarMode: "files" | "search";
+  setLeftSidebarMode: (mode: "files" | "search") => void;
+
   // Right panel tabs
   rightPanelTab: "chat" | "outline" | "backlinks" | "tags";
   setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags") => void;
@@ -171,6 +175,9 @@ export const useUIStore = create<UIState>()(
         set({ rightSidebarWidth: Math.max(280, Math.min(560, width)) }),
 
       // Right panel tabs
+      leftSidebarMode: "files",
+      setLeftSidebarMode: (mode) => set({ leftSidebarMode: mode }),
+
       rightPanelTab: "chat",
       setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
 

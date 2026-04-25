@@ -28,6 +28,8 @@ import {
 } from "./hooks/useSidebarFileOperations";
 import { SidebarHeader } from "./SidebarHeader";
 import { useMacTopChromeEnabled } from "./MacTopChrome";
+import { SearchSidebar } from "@/components/search/SearchSidebar";
+import { useUIStore } from "@/stores/useUIStore";
 
 interface ContextMenuState {
   x: number;
@@ -44,6 +46,7 @@ interface RootContextMenuState {
 export function Sidebar() {
   const { t } = useLocaleStore();
   const showMacTopChrome = useMacTopChromeEnabled();
+  const leftSidebarMode = useUIStore((state) => state.leftSidebarMode);
   const { isLoadingTree } = useFileStore(
     useShallow((state) => ({
       isLoadingTree: state.isLoadingTree,
@@ -259,6 +262,14 @@ export function Sidebar() {
       }
     };
   }, []);
+
+  if (leftSidebarMode === "search") {
+    return (
+      <aside className={SIDEBAR_SURFACE_CLASSNAME}>
+        <SearchSidebar />
+      </aside>
+    );
+  }
 
   return (
     <aside className={SIDEBAR_SURFACE_CLASSNAME}>

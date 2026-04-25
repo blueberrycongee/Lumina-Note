@@ -24,7 +24,6 @@ import {
   CommandPalette,
   PaletteMode,
 } from "@/components/search/CommandPalette";
-import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
 import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
@@ -170,12 +169,6 @@ function DiffViewWrapper() {
   );
 }
 
-interface GlobalSearchRequest {
-  query?: string;
-  pathPrefixes?: string[];
-  scopeLabel?: string;
-}
-
 const AUTO_TOOLTIP_FLAG = "data-lumina-auto-tooltip";
 
 function inferButtonTooltip(button: HTMLButtonElement): string {
@@ -256,9 +249,6 @@ function App() {
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState<PaletteMode>("command");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchRequest, setSearchRequest] =
-    useState<GlobalSearchRequest | null>(null);
   const [isLoadingVault, setIsLoadingVault] = useState(false);
   const [welcomePreview, setWelcomePreview] = useState(false);
   const welcomeTapRef = useRef<{
@@ -794,11 +784,12 @@ function App() {
         return;
       }
 
-      // Ctrl+Shift+F: Global search
+      // Ctrl+Shift+F: Global search → switch left sidebar to search mode
       if (isCtrl && e.shiftKey && e.key === "F") {
         e.preventDefault();
-        setSearchRequest(null);
-        setSearchOpen(true);
+        const ui = useUIStore.getState();
+        if (!ui.leftSidebarOpen) ui.setLeftSidebarOpen(true);
+        ui.setLeftSidebarMode("search");
         return;
       }
 
@@ -833,10 +824,10 @@ function App() {
   // Listen for window-level entry actions dispatched from top-level chrome
   useEffect(() => {
     const onOpenVault = () => handleOpenVault();
-    const onOpenSearch = (event: Event) => {
-      const customEvent = event as CustomEvent<GlobalSearchRequest | undefined>;
-      setSearchRequest(customEvent.detail ?? null);
-      setSearchOpen(true);
+    const onOpenSearch = () => {
+      const ui = useUIStore.getState();
+      if (!ui.leftSidebarOpen) ui.setLeftSidebarOpen(true);
+      ui.setLeftSidebarMode("search");
     };
     const onOpenCommandPalette = () => setPaletteOpen(true);
     window.addEventListener("open-vault", onOpenVault);
@@ -847,7 +838,7 @@ function App() {
       window.removeEventListener("open-global-search", onOpenSearch);
       window.removeEventListener("open-command-palette", onOpenCommandPalette);
     };
-  }, [handleOpenVault, setPaletteOpen, setSearchOpen]);
+  }, [handleOpenVault, setPaletteOpen]);
 
   useEffect(() => {
     if (!vaultPath) return;
@@ -1153,13 +1144,6 @@ function App() {
         mode={paletteMode}
         onClose={() => setPaletteOpen(false)}
         onModeChange={setPaletteMode}
-      />
-
-      {/* Global Search */}
-      <GlobalSearch
-        isOpen={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        request={searchRequest}
       />
 
       {/* Skill Manager */}

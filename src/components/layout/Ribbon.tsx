@@ -53,7 +53,15 @@ export function Ribbon({
   const closeUpdateModal = useCallback(() => setShowUpdateModal(false), []);
   const closePlugins = useCallback(() => setShowPlugins(false), []);
   const { t } = useLocaleStore();
-  const { isDarkMode, toggleTheme, setRightPanelTab } = useUIStore();
+  const {
+    isDarkMode,
+    toggleTheme,
+    setRightPanelTab,
+    leftSidebarMode,
+    setLeftSidebarMode,
+    leftSidebarOpen,
+    setLeftSidebarOpen,
+  } = useUIStore();
   const isRibbonItemEnabled = usePluginStore(
     (state) => state.isRibbonItemEnabled,
   );
@@ -295,10 +303,20 @@ export function Ribbon({
         <div className="flex flex-col items-center gap-1">
           {/* Search */}
           <button
-            onClick={() =>
-              window.dispatchEvent(new CustomEvent("open-global-search"))
-            }
-            className="w-9 h-9 ui-icon-btn"
+            onClick={() => {
+              if (leftSidebarOpen && leftSidebarMode === "search") {
+                setLeftSidebarMode("files");
+              } else {
+                if (!leftSidebarOpen) setLeftSidebarOpen(true);
+                setLeftSidebarMode("search");
+              }
+            }}
+            className={cn(
+              "w-9 h-9 ui-icon-btn",
+              leftSidebarMode === "search" && leftSidebarOpen
+                ? "bg-primary/10 text-primary"
+                : "",
+            )}
             title={t.ribbon.globalSearch}
           >
             <Search size={20} />
