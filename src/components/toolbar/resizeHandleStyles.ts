@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 export const RESIZE_HANDLE_WRAPPER_CLASSNAME =
-  'group relative h-full w-2 flex-shrink-0 cursor-col-resize select-none z-20';
+  'group relative h-full w-0 flex-shrink-0 cursor-col-resize select-none z-20';
 
 export function getResizeHandleIndicatorClassName(isActive: boolean, direction: 'left' | 'right') {
   return cn(
