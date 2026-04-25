@@ -240,7 +240,6 @@ export default {
     askAnything: "問任何問題...",
     settings: "AI 設定",
     agentMode: "Agent 模式 - 智慧任務執行",
-    chatMode: "對話模式 - 簡單問答",
     conversation: "對話",
     inputPlaceholder: "輸入訊息... (@ 引用檔案)",
     agentPlaceholder: "輸入任務指令... (@ 引用檔案)",
@@ -315,7 +314,6 @@ export default {
     searchFile: "搜尋檔案...",
     fileNotFound: "未找到檔案",
     filesCount: "共 {count} 個檔案",
-    chatModeHint: "簡單的對話模式，無法操作檔案",
     agentModeHint: "智慧助手模式，可以讀寫檔案和執行任務",
     notConfigured: "未配置",
     aiChatSettings: "AI 對話設定",
@@ -360,9 +358,7 @@ export default {
     webSearchEnable: "啟用網路搜尋",
     webSearchDisable: "關閉網路搜尋",
     performanceDebugMessage: "效能調試已啟用，重新整理後生效",
-    modeChat: "聊天",
     modeAgent: "Agent",
-    modeCodex: "Codex",
     unsupportedProvider: "不支援的 AI 提供商: {provider}",
     providerError: "{provider} 請求失敗：{error}",
     apiErrorWithStatus: "API 錯誤 ({status}): {error}",
@@ -1332,7 +1328,6 @@ export default {
   // AI 懸浮面板
   aiFloatingPanel: {
     agentMode: "Agent 模式",
-    chatMode: "對話模式",
     notConfigured: "未配置",
     clearChat: "清空對話",
     settings: "設定",

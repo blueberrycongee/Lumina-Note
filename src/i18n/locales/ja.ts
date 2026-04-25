@@ -240,7 +240,6 @@ export default {
     askAnything: "何でも質問してください...",
     settings: "AI 設定",
     agentMode: "Agent モード - スマートタスク実行",
-    chatMode: "チャットモード - シンプルなQ&A",
     conversation: "チャット",
     inputPlaceholder: "メッセージを入力... (@ でファイル参照)",
     agentPlaceholder: "タスク指示を入力... (@ でファイル参照)",
@@ -316,7 +315,6 @@ export default {
     searchFile: "ファイルを検索...",
     fileNotFound: "ファイルが見つかりません",
     filesCount: "全 {count} ファイル",
-    chatModeHint: "シンプルなチャットモード、ファイル操作不可",
     agentModeHint:
       "スマートアシスタントモード、ファイル読み書きとタスク実行可能",
     notConfigured: "未設定",
@@ -365,9 +363,7 @@ export default {
     webSearchDisable: "ウェブ検索を無効化",
     performanceDebugMessage:
       "パフォーマンスデバッグが有効です。再読み込みで反映されます。",
-    modeChat: "チャット",
     modeAgent: "Agent",
-    modeCodex: "Codex",
     unsupportedProvider: "サポートされていない AI プロバイダー: {provider}",
     providerError: "{provider} リクエストに失敗しました: {error}",
     apiErrorWithStatus: "API エラー ({status}): {error}",
@@ -1356,7 +1352,6 @@ export default {
   // AI フローティングパネル
   aiFloatingPanel: {
     agentMode: "Agent モード",
-    chatMode: "チャットモード",
     notConfigured: "未設定",
     clearChat: "チャットをクリア",
     settings: "設定",

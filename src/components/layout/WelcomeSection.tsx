@@ -176,28 +176,24 @@ function buildGenericActions(t: Translations): QuickAction[] {
       icon: GENERIC_ICONS.brainstorm,
       label: t.ai.polishText,
       desc: t.ai.polishTextDesc,
-      mode: "agent",
       prompt: p.polishTextGeneric,
     },
     {
       icon: GENERIC_ICONS.chat,
       label: t.ai.summarizeNote,
       desc: t.ai.summarizeNoteDesc,
-      mode: "agent",
       prompt: p.summarizeNoteGeneric,
     },
     {
       icon: GENERIC_ICONS.write,
       label: t.ai.writeArticle,
       desc: t.ai.writeArticleDesc,
-      mode: "agent",
       prompt: p.writeArticleGeneric,
     },
     {
       icon: GENERIC_ICONS.learn,
       label: t.ai.studyNotes,
       desc: t.ai.studyNotesDesc,
-      mode: "agent",
       prompt: p.studyNotesGeneric,
     },
   ];

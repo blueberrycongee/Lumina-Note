@@ -242,7 +242,6 @@ export default {
     askAnything: "Ask anything...",
     settings: "AI Settings",
     agentMode: "Agent Mode - Smart Task Execution",
-    chatMode: "Chat Mode - Simple Q&A",
     conversation: "Chat",
     inputPlaceholder: "Type a message... (@ to reference files)",
     agentPlaceholder: "Enter task instruction... (@ to reference files)",
@@ -319,7 +318,6 @@ export default {
     searchFile: "Search files...",
     fileNotFound: "No files found",
     filesCount: "{count} files total",
-    chatModeHint: "Chat mode answers questions, but cannot change files.",
     agentModeHint:
       "Agent mode can read and edit files, then run tasks for you.",
     notConfigured: "Not configured",
@@ -366,9 +364,7 @@ export default {
     webSearchDisable: "Disable web search",
     performanceDebugMessage:
       "Performance debug enabled. Reload to take effect.",
-    modeChat: "Chat",
     modeAgent: "Agent",
-    modeCodex: "Codex",
     unsupportedProvider: "Unsupported AI provider: {provider}",
     providerError: "{provider} request failed: {error}",
     apiErrorWithStatus: "API error ({status}): {error}",
@@ -1054,7 +1050,6 @@ export default {
   // AI Floating Panel
   aiFloatingPanel: {
     agentMode: "Agent Mode",
-    chatMode: "Chat Mode",
     notConfigured: "Not configured",
     clearChat: "Clear chat",
     settings: "Settings",

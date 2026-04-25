@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useUIStore } from "@/stores/useUIStore";
-import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -322,22 +321,13 @@ function OutlineView() {
 
 export function RightPanel() {
   const { t } = useLocaleStore();
-  const {
-    rightPanelTab,
-    setRightPanelTab,
-    aiPanelMode,
-    setAIPanelMode,
-    setFloatingBallPosition,
-    setFloatingBallDragging,
-  } = useUIStore();
+  const { rightPanelTab, setRightPanelTab, aiPanelMode } = useUIStore();
   const { tabs, activeTabIndex } = useFileStore(
     useShallow((state) => ({
       tabs: state.tabs,
       activeTabIndex: state.activeTabIndex,
     })),
   );
-
-
 
   const [isDraggingFileOver, setIsDraggingFileOver] = useState(false);
   const panelRef = useRef<HTMLElement>(null);

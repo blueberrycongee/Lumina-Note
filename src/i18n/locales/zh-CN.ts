@@ -240,7 +240,6 @@ export default {
     askAnything: "问任何问题...",
     settings: "AI 设置",
     agentMode: "Agent 模式 - 智能任务执行",
-    chatMode: "对话模式 - 简单问答",
     conversation: "对话",
     inputPlaceholder: "输入消息... (@ 引用文件)",
     agentPlaceholder: "输入任务指令... (@ 引用文件)",
@@ -315,7 +314,6 @@ export default {
     searchFile: "搜索文件...",
     fileNotFound: "未找到文件",
     filesCount: "共 {count} 个文件",
-    chatModeHint: "简单的对话模式，无法操作文件",
     agentModeHint: "智能助手模式，可以读写文件和执行任务",
     notConfigured: "未配置",
     aiChatSettings: "AI 对话设置",
@@ -360,9 +358,7 @@ export default {
     webSearchEnable: "启用联网搜索",
     webSearchDisable: "关闭联网搜索",
     performanceDebugMessage: "性能调试已启用，刷新后生效",
-    modeChat: "对话",
     modeAgent: "Agent",
-    modeCodex: "Codex",
     unsupportedProvider: "不支持的 AI 提供商: {provider}",
     providerError: "{provider} 请求失败：{error}",
     apiErrorWithStatus: "API 错误 ({status}): {error}",
@@ -1037,7 +1033,6 @@ export default {
   // AI 悬浮面板
   aiFloatingPanel: {
     agentMode: "Agent 模式",
-    chatMode: "对话模式",
     notConfigured: "未配置",
     clearChat: "清空对话",
     settings: "设置",
