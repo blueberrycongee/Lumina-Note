@@ -2,14 +2,14 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsModal } from "./SettingsModal";
 
-const {
-  getVersionMock,
-} = vi.hoisted(() => ({
+const { getVersionMock, setBlockEditorEnabledMock } = vi.hoisted(() => ({
   getVersionMock: vi.fn(async () => "1.2.3"),
+  setBlockEditorEnabledMock: vi.fn(),
 }));
 
 vi.mock("@/lib/host", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
+  const actual =
+    await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
   return { ...actual, getVersion: getVersionMock };
 });
 
@@ -31,6 +31,8 @@ vi.mock("@/stores/useUIStore", () => ({
     setEditorMode: () => undefined,
     editorFontSize: 16,
     setEditorFontSize: () => undefined,
+    blockEditorEnabled: false,
+    setBlockEditorEnabled: setBlockEditorEnabledMock,
     proxyUrl: "",
     proxyEnabled: false,
     setProxyUrl: () => undefined,
@@ -90,11 +92,15 @@ vi.mock("@/stores/useLocaleStore", () => ({
         readingMode: "Reading Mode",
         editorFontSize: "Editor Font Size",
         editorFontSizeDesc: "Editor font size description",
+        blockEditor: "Block editor",
+        blockEditorDesc:
+          "Enable block handles, block menu, and drag-to-reorder; disabling reverts to plain Markdown.",
         aiAssistant: "AI Assistant",
         currentModel: "Current Model",
         configInRightPanel: "Configure more options in the right panel",
         notConfigured: "Not configured",
-        softwareUpdateDescription: "Check the current version and open the updater window.",
+        softwareUpdateDescription:
+          "Check the current version and open the updater window.",
         softwareUpdateOpen: "Open updater",
         about: "About",
         appDescription: "Local-first AI note app",
@@ -208,7 +214,13 @@ describe("SettingsModal", () => {
   });
 
   it("renders tabbed navigation with 6 tabs", () => {
-    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
 
     expect(screen.getByText("General")).toBeInTheDocument();
     expect(screen.getByText("AI")).toBeInTheDocument();
@@ -219,14 +231,26 @@ describe("SettingsModal", () => {
   });
 
   it("defaults to general tab showing theme and editor", () => {
-    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
 
     expect(screen.getByText("Theme")).toBeInTheDocument();
     expect(screen.getByText("Editor")).toBeInTheDocument();
   });
 
   it("switches to system tab and shows update section", async () => {
-    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
 
     fireEvent.click(screen.getByText("System"));
 
@@ -241,7 +265,13 @@ describe("SettingsModal", () => {
   });
 
   it("switches to sync tab and shows WebDAV", () => {
-    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
 
     fireEvent.click(screen.getByText("Sync"));
 
@@ -250,7 +280,13 @@ describe("SettingsModal", () => {
   });
 
   it("switches to network tab and shows proxy", () => {
-    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
 
     fireEvent.click(screen.getByText("Network"));
 
@@ -258,11 +294,33 @@ describe("SettingsModal", () => {
   });
 
   it("switches to publish tab and shows publish section", () => {
-    render(<SettingsModal isOpen onClose={() => undefined} onOpenUpdateModal={onOpenUpdateModal} />);
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
 
     fireEvent.click(screen.getByText("Publish"));
 
     expect(screen.getByText("PublishSettings")).toBeInTheDocument();
     expect(screen.getByText("ProfileSettings")).toBeInTheDocument();
+  });
+
+  it("renders the block editor toggle and toggles state on click", async () => {
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={() => undefined}
+      />,
+    );
+
+    const toggle = await screen.findByRole("switch", { name: /block editor/i });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+
+    fireEvent.click(toggle);
+    expect(setBlockEditorEnabledMock).toHaveBeenCalledWith(true);
   });
 });
