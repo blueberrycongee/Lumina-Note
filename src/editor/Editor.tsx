@@ -500,14 +500,6 @@ export function Editor() {
     return () => window.removeEventListener("blur", handleBlur);
   }, [isDirty, save, activeTab?.type]);
 
-  if (isLoadingFile) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-muted-foreground">{t.common.loading}</div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-background transition-colors duration-300">
       {/* Tab Bar */}
