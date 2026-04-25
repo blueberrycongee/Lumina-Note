@@ -314,7 +314,7 @@ export function Ribbon({
             className={cn(
               "w-9 h-9 ui-icon-btn",
               leftSidebarMode === "search" && leftSidebarOpen
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                 : "",
             )}
             title={t.ribbon.globalSearch}
@@ -331,7 +331,7 @@ export function Ribbon({
             className={cn(
               "w-9 h-9 ui-icon-btn",
               activeSection === "ai"
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                 : "",
             )}
             title={t.ribbon.aiChatMain}
@@ -345,7 +345,7 @@ export function Ribbon({
             className={cn(
               "w-9 h-9 ui-icon-btn",
               activeSection === "file"
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                 : "",
             )}
             title={t.ribbon.fileEditor}
@@ -358,7 +358,7 @@ export function Ribbon({
             className={cn(
               "w-9 h-9 ui-icon-btn",
               activeSection === "image-manager"
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                 : "",
             )}
             title={imageManagerTitle}
@@ -372,7 +372,7 @@ export function Ribbon({
             className={cn(
               "w-9 h-9 ui-icon-btn",
               activeSection === "graph"
-                ? "bg-primary/10 text-primary"
+                ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                 : "",
             )}
             title={t.graph.title}
@@ -396,7 +396,7 @@ export function Ribbon({
               className={cn(
                 "w-9 h-9 ui-icon-btn text-xs",
                 isPluginRibbonItemActive(item)
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                   : "",
               )}
               title={item.title}
@@ -448,7 +448,7 @@ export function Ribbon({
               className={cn(
                 "w-9 h-9 ui-icon-btn text-xs",
                 isPluginRibbonItemActive(item)
-                  ? "bg-primary/10 text-primary"
+                  ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
                   : "",
               )}
               title={item.title}
