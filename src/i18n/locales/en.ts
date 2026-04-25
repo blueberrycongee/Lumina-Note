@@ -1005,6 +1005,7 @@ export default {
     closeAll: "Close All",
     pin: "Pin Tab",
     unpin: "Unpin Tab",
+    newTab: "New tab",
   },
 
   // Conversation List

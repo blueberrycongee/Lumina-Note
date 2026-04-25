@@ -1285,6 +1285,7 @@ export default {
     closeAll: "關閉全部",
     pin: "固定標籤頁",
     unpin: "取消固定",
+    newTab: "新建標籤頁",
   },
 
   // 對話列表

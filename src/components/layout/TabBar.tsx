@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { X, FileText, Network, Pin, User, Puzzle, Shapes, Images } from "lucide-react";
+import { X, FileText, Network, Pin, Plus, User, Puzzle, Shapes, Images } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
@@ -47,14 +47,14 @@ function TabItem({
       data-tab-index={index}
       data-tauri-drag-region="false"
       className={cn(
-        "group relative flex items-center gap-1.5 px-2 py-1.5 text-[13px] cursor-grab border-r border-border/50 w-full",
+        "group relative flex h-full items-center gap-1.5 px-2.5 text-[13px] cursor-grab w-full rounded-md",
         "transition-[background-color,color] duration-150 select-none",
         isActive
-          ? "bg-background text-foreground border-b-2 border-b-primary"
-          : "bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
+          ? "bg-background text-foreground shadow-sm"
+          : "bg-transparent text-muted-foreground hover:bg-accent/60 hover:text-foreground",
         isDragging && "opacity-50 cursor-grabbing",
-        isDropTarget && dropPosition === 'left' && "border-l-2 border-l-primary",
-        isDropTarget && dropPosition === 'right' && "border-r-2 border-r-primary"
+        isDropTarget && dropPosition === 'left' && "ring-2 ring-primary ring-inset",
+        isDropTarget && dropPosition === 'right' && "ring-2 ring-primary ring-inset"
       )}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
@@ -108,7 +108,7 @@ interface ContextMenuState {
 
 export function TabBar() {
   const { t } = useLocaleStore();
-  const { tabs, activeTabIndex, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
+  const { tabs, activeTabIndex, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab, createNewFile } =
     useFileStore(
       useShallow((state) => ({
         tabs: state.tabs,
@@ -118,6 +118,7 @@ export function TabBar() {
         closeAllTabs: state.closeAllTabs,
         togglePinTab: state.togglePinTab,
         promotePreviewTab: state.promotePreviewTab,
+        createNewFile: state.createNewFile,
       })),
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -207,12 +208,12 @@ export function TabBar() {
   return (
     <>
       <div
-        className="flex h-11 shrink-0 items-stretch border-b border-border/50 bg-background"
+        className="flex h-11 shrink-0 items-stretch bg-muted"
         data-tauri-drag-region={showMacTopActions ? true : undefined}
       >
         <div
           ref={containerRef}
-          className="flex min-w-0 flex-1 items-stretch overflow-hidden"
+          className="flex min-w-0 flex-1 items-stretch overflow-x-auto scrollbar-hide gap-0.5 px-1 pt-1.5 pb-1"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
           data-testid="mac-tabbar-tabstrip"
         >
@@ -229,10 +230,10 @@ export function TabBar() {
               <div
                 key={tab.id}
                 className={cn(
-                  "flex-1 overflow-hidden",
+                  "flex-none overflow-hidden transition-[width,min-width,opacity] duration-150 ease-out",
                   isClosing
-                    ? "min-w-0 max-w-0 opacity-0 pointer-events-none transition-[max-width,min-width,opacity] duration-150 ease-out"
-                    : "min-w-[40px] max-w-[180px]"
+                    ? "w-0 min-w-0 opacity-0 pointer-events-none"
+                    : "w-[200px] min-w-[80px]"
                 )}
               >
                 <TabItem
@@ -265,6 +266,24 @@ export function TabBar() {
             );
           })}
         </div>
+        <button
+          type="button"
+          data-testid="mac-tabbar-new-tab"
+          data-tauri-drag-region="false"
+          onClick={() => {
+            void createNewFile().catch((error) => {
+              reportOperationError({
+                source: "TabBar.newTab",
+                action: "Create new file from tab bar",
+                error,
+              });
+            });
+          }}
+          aria-label={t.tabBar.newTab}
+          className="shrink-0 flex items-center justify-center w-9 my-1.5 mr-1 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        >
+          <Plus size={16} />
+        </button>
       </div>
 
       {/* Context Menu */}

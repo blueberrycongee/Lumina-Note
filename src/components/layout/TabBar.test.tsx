@@ -1,10 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TabBar } from "./TabBar";
 
 const macTopChromeEnabled = vi.hoisted(() => ({ value: false }));
 const leftSidebarOpenState = vi.hoisted(() => ({ value: true }));
+const createNewFile = vi.hoisted(() => vi.fn(async () => undefined));
 const switchTab = () => undefined;
 const closeTab = async () => undefined;
 const closeOtherTabs = () => undefined;
@@ -26,6 +27,7 @@ vi.mock("@/stores/useFileStore", () => ({
       closeAllTabs,
       reorderTabs,
       togglePinTab,
+      createNewFile,
     }),
 }));
 
@@ -44,6 +46,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
         close: "Close",
         closeOthers: "Close Others",
         closeAll: "Close All",
+        newTab: "New tab",
       },
     },
   }),
@@ -69,6 +72,7 @@ describe("TabBar", () => {
     macTopChromeEnabled.value = false;
     leftSidebarOpenState.value = true;
     fileStoreState.tabs = [{ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false }];
+    createNewFile.mockClear();
   });
 
   it("does not render macOS top actions outside macOS overlay mode", () => {
@@ -129,5 +133,21 @@ describe("TabBar", () => {
     const { container } = render(<TabBar />);
 
     expect(container.querySelector("svg.lucide-file-text")?.getAttribute("class")).toContain("text-primary");
+  });
+
+  it("renders a new-tab button at the right edge of the tab bar", () => {
+    render(<TabBar />);
+
+    const newTabButton = screen.getByTestId("mac-tabbar-new-tab");
+    expect(newTabButton).toBeInTheDocument();
+    expect(newTabButton).toHaveAttribute("aria-label", "New tab");
+  });
+
+  it("invokes createNewFile when the new-tab button is clicked", () => {
+    render(<TabBar />);
+
+    fireEvent.click(screen.getByTestId("mac-tabbar-new-tab"));
+
+    expect(createNewFile).toHaveBeenCalledTimes(1);
   });
 });

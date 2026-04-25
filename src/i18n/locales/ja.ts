@@ -1309,6 +1309,7 @@ export default {
     closeAll: "すべて閉じる",
     pin: "タブを固定",
     unpin: "固定を解除",
+    newTab: "新しいタブ",
   },
 
   // 会話リスト

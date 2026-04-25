@@ -988,6 +988,7 @@ export default {
     closeAll: "关闭全部",
     pin: "固定标签页",
     unpin: "取消固定",
+    newTab: "新建标签页",
   },
 
   // 对话列表
