@@ -159,7 +159,6 @@ npm run dev
 <h2 align="center">オープンソースコンポーネント</h2>
 
 - エディタコア: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
-- Rust オーケストレーションランタイム: [forge](https://github.com/blueberrycongee/forge)
 
 ---
 

@@ -159,7 +159,6 @@ npm run dev
 <h2 align="center">Componentes de código abierto</h2>
 
 - Núcleo del editor: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
-- Runtime de orquestación en Rust: [forge](https://github.com/blueberrycongee/forge)
 
 ---
 

@@ -160,7 +160,6 @@ npm run dev
 <h2 align="center">開源元件</h2>
 
 - 編輯器核心：[codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
-- Rust 編排執行時：[forge](https://github.com/blueberrycongee/forge)
 
 ---
 

@@ -159,7 +159,6 @@ npm run dev
 <h2 align="center">Componenti open source</h2>
 
 - Core editor: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
-- Runtime di orchestrazione Rust: [forge](https://github.com/blueberrycongee/forge)
 
 ---
 

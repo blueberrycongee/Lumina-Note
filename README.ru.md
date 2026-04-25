@@ -159,7 +159,6 @@ npm run dev
 <h2 align="center">Open source компоненты</h2>
 
 - Ядро редактора: [codemirror-live-markdown](https://github.com/blueberrycongee/codemirror-live-markdown)
-- Rust runtime для оркестрации: [forge](https://github.com/blueberrycongee/forge)
 
 ---
 
