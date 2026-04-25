@@ -3,15 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MacLeftPaneTopBar } from "./MacLeftPaneTopBar";
 
-const toggleLeftSidebar = vi.fn();
-
-vi.mock("@/stores/useUIStore", () => ({
-  useUIStore: (selector: (state: unknown) => unknown) =>
-    selector({
-      toggleLeftSidebar,
-    }),
-}));
-
 vi.mock("@/stores/useFileStore", () => ({
   useFileStore: (selector: (state: unknown) => unknown) =>
     selector({
@@ -45,20 +36,15 @@ vi.mock("@/lib/host", () => ({
 describe("MacLeftPaneTopBar", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    toggleLeftSidebar.mockReset();
   });
 
-  it("reserves a dedicated traffic-light safe area and keeps the collapse control interactive", () => {
+  it("reserves a dedicated traffic-light safe area", () => {
     render(<MacLeftPaneTopBar />);
 
     expect(screen.getByTestId("mac-left-pane-traffic-lights-safe-area")).toHaveAttribute(
       "data-tauri-drag-region",
       "true",
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "Files" }));
-
-    expect(toggleLeftSidebar).toHaveBeenCalledTimes(1);
   });
 
   it("uses a full-height control row so left controls align like the right top bar", () => {

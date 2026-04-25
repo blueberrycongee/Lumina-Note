@@ -3,20 +3,17 @@ import {
   FilePlus,
   FolderOpen,
   FolderPlus,
-  PanelLeftClose,
   RefreshCw,
   Shapes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { useUIStore } from "@/stores/useUIStore";
 import { openNewWindow } from "@/lib/host";
 import { WindowControls } from "./WindowControls";
 
 export function MacLeftPaneTopBar() {
   const { t } = useLocaleStore();
-  const toggleLeftSidebar = useUIStore((state) => state.toggleLeftSidebar);
   const isLoadingTree = useFileStore((state) => state.isLoadingTree);
   const refreshFileTree = useFileStore((state) => state.refreshFileTree);
 
@@ -100,17 +97,6 @@ export function MacLeftPaneTopBar() {
         </button>
 
         <div className="flex-1" />
-
-        <button
-          type="button"
-          onClick={toggleLeftSidebar}
-          className="w-7 h-7 ui-icon-btn"
-          title={t.sidebar.files}
-          aria-label={t.sidebar.files}
-          data-tauri-drag-region="false"
-        >
-          <PanelLeftClose className="h-4 w-4" />
-        </button>
       </div>
     </div>
   );

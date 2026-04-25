@@ -555,16 +555,6 @@ export function Editor() {
               </button>
             </div>
 
-            <span className="text-muted-foreground/50 shrink-0">/</span>
-            <span className="text-foreground font-medium truncate">
-              {currentFile ? getFileName(currentFile) : t.common.untitled}
-            </span>
-            {isDirty && (
-              <span
-                className="w-2 h-2 rounded-full bg-orange-400 shrink-0"
-                title={t.common.unsavedChanges}
-              />
-            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {/* Mode Switcher — single button cycling live → reading → source */}
