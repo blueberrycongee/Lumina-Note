@@ -1,5 +1,4 @@
-import { useCallback, useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
@@ -12,6 +11,7 @@ import { useMacTopChromeEnabled } from "./MacTopChrome";
 const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 64;
 const MAC_COLLAPSED_RIBBON_WIDTH = 64;
 const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLAPSED_RIBBON_WIDTH;
+const CLOSE_ANIMATION_MS = 150;
 
 interface TabItemProps {
   tab: Tab;
@@ -108,13 +108,12 @@ interface ContextMenuState {
 
 export function TabBar() {
   const { t } = useLocaleStore();
-  const { tabs, activeTabIndex, switchTab, closeTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
+  const { tabs, activeTabIndex, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
     useFileStore(
       useShallow((state) => ({
         tabs: state.tabs,
         activeTabIndex: state.activeTabIndex,
         switchTab: state.switchTab,
-        closeTab: state.closeTab,
         closeOtherTabs: state.closeOtherTabs,
         closeAllTabs: state.closeAllTabs,
         togglePinTab: state.togglePinTab,
@@ -132,6 +131,52 @@ export function TabBar() {
   const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
 
+  // IDs of tabs currently animating their close (shrinking out). The tab is
+  // still in the store during this window — store removal happens after the
+  // animation finishes. This is what lets the component own the animation
+  // semantics: only user-initiated closes get an animation; preview replaces
+  // and external removals just unmount instantly via React reconciliation.
+  const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
+  const timeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    return () => {
+      for (const t of timeouts.current) clearTimeout(t);
+      timeouts.current.clear();
+    };
+  }, []);
+
+  const animateClose = useCallback((tabId: string) => {
+    setClosingIds((prev) => {
+      if (prev.has(tabId)) return prev;
+      const next = new Set(prev);
+      next.add(tabId);
+      return next;
+    });
+    const timeout = setTimeout(() => {
+      timeouts.current.delete(timeout);
+      const state = useFileStore.getState();
+      const idx = state.tabs.findIndex((t) => t.id === tabId);
+      if (idx >= 0) {
+        void state.closeTab(idx).catch((error) => {
+          reportOperationError({
+            source: "TabBar.animateClose",
+            action: "Close tab",
+            error,
+            context: { tabId },
+          });
+        });
+      }
+      setClosingIds((prev) => {
+        if (!prev.has(tabId)) return prev;
+        const next = new Set(prev);
+        next.delete(tabId);
+        return next;
+      });
+    }, CLOSE_ANIMATION_MS);
+    timeouts.current.add(timeout);
+  }, []);
+
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, tabIndex: index });
@@ -141,27 +186,13 @@ export function TabBar() {
     setContextMenu(null);
   }, []);
 
-  const closingIds = useRef(new Set<string>());
-
-  const markClosing = useCallback((...ids: string[]) => {
-    for (const id of ids) closingIds.current.add(id);
-  }, []);
-
   const handleClose = useCallback(
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
       const tab = tabs[index];
-      if (tab) markClosing(tab.id);
-      void closeTab(index).catch((error) => {
-        reportOperationError({
-          source: "TabBar.handleClose",
-          action: "Close tab",
-          error,
-          context: { index, tabId: tab?.id },
-        });
-      });
+      if (tab) animateClose(tab.id);
     },
-    [closeTab, tabs, markClosing]
+    [tabs, animateClose]
   );
 
   // 自定义鼠标拖拽（绕过 Tauri WebView 的 HTML5 拖拽限制）
@@ -171,8 +202,6 @@ export function TabBar() {
     setDraggedIndex(index);
     isDragging.current = false;
   }, []);
-
-  // 监听全局鼠标移动和松开
 
   // 即使没有标签页也显示空的标签栏（保持 UI 一致性）
   return (
@@ -194,19 +223,17 @@ export function TabBar() {
               data-testid="mac-tabbar-traffic-light-spacer"
             />
           ) : null}
-          <AnimatePresence initial={false}>
-            {tabs.map((tab, index) => (
-              <motion.div
+          {tabs.map((tab, index) => {
+            const isClosing = closingIds.has(tab.id);
+            return (
+              <div
                 key={tab.id}
-                initial={false}
-                animate={{ width: "auto", opacity: 1 }}
-                exit={
-                  closingIds.current.has(tab.id)
-                    ? { width: 0, opacity: 0, transition: { duration: 0.15, ease: [0.2, 0, 0.4, 1] } }
-                    : { opacity: 0, transition: { duration: 0 } }
-                }
-                onAnimationComplete={() => { closingIds.current.delete(tab.id); }}
-                className="flex-1 min-w-[40px] max-w-[180px] overflow-hidden"
+                className={cn(
+                  "flex-1 overflow-hidden",
+                  isClosing
+                    ? "min-w-0 max-w-0 opacity-0 pointer-events-none transition-[max-width,min-width,opacity] duration-150 ease-out"
+                    : "min-w-[40px] max-w-[180px]"
+                )}
               >
                 <TabItem
                   tab={tab}
@@ -227,24 +254,16 @@ export function TabBar() {
                     if (tab.isPreview) {
                       promotePreviewTab(tab.id);
                     } else if (!tab.isPinned) {
-                      markClosing(tab.id);
-                      void closeTab(index).catch((error) => {
-                        reportOperationError({
-                          source: "TabBar.doubleClickClose",
-                          action: "Close tab",
-                          error,
-                          context: { index, tabId: tab.id },
-                        });
-                      });
+                      animateClose(tab.id);
                     }
                   }}
                   onClose={(e) => handleClose(e, index)}
                   onContextMenu={(e) => handleContextMenu(e, index)}
                   onMouseDown={handleTabMouseDown}
                 />
-              </motion.div>
-            ))}
-          </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -270,8 +289,7 @@ export function TabBar() {
             <button
               onClick={() => {
                 const tab = tabs[contextMenu.tabIndex];
-                if (tab) markClosing(tab.id);
-                closeTab(contextMenu.tabIndex);
+                if (tab) animateClose(tab.id);
                 setContextMenu(null);
               }}
               className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -281,8 +299,6 @@ export function TabBar() {
             </button>
             <button
               onClick={() => {
-                const kept = contextMenu.tabIndex;
-                tabs.forEach((t, i) => { if (i !== kept) markClosing(t.id); });
                 closeOtherTabs(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
@@ -292,7 +308,6 @@ export function TabBar() {
             </button>
             <button
               onClick={() => {
-                tabs.forEach((t) => markClosing(t.id));
                 closeAllTabs();
                 setContextMenu(null);
               }}

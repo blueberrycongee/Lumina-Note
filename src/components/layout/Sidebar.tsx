@@ -98,7 +98,6 @@ export function Sidebar() {
     refreshFileTree,
     moveFileToFolder,
     moveFolderToFolder,
-    handleQuickNote,
     handleRename,
     handleStartRootRename,
     handleSelect,

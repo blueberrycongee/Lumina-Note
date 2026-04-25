@@ -5,7 +5,7 @@ import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
 import { LocalGraph } from "@/components/effects/LocalGraph";
-import { debounce, getFileName } from "@/lib/utils";
+import { debounce } from "@/lib/utils";
 import {
   CodeMirrorEditor,
   type CodeMirrorEditorRef,
@@ -105,7 +105,6 @@ export function Editor() {
     save,
     isDirty,
     isSaving,
-    isLoadingFile,
     goBack,
     goForward,
     canGoBack,
@@ -124,7 +123,6 @@ export function Editor() {
       save: state.save,
       isDirty: state.isDirty,
       isSaving: state.isSaving,
-      isLoadingFile: state.isLoadingFile,
       goBack: state.goBack,
       goForward: state.goForward,
       canGoBack: state.canGoBack,
