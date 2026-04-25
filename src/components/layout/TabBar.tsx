@@ -141,10 +141,17 @@ export function TabBar() {
     setContextMenu(null);
   }, []);
 
+  const closingIds = useRef(new Set<string>());
+
+  const markClosing = useCallback((...ids: string[]) => {
+    for (const id of ids) closingIds.current.add(id);
+  }, []);
+
   const handleClose = useCallback(
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
       const tab = tabs[index];
+      if (tab) markClosing(tab.id);
       void closeTab(index).catch((error) => {
         reportOperationError({
           source: "TabBar.handleClose",
@@ -154,7 +161,7 @@ export function TabBar() {
         });
       });
     },
-    [closeTab, tabs]
+    [closeTab, tabs, markClosing]
   );
 
   // 自定义鼠标拖拽（绕过 Tauri WebView 的 HTML5 拖拽限制）
@@ -190,11 +197,12 @@ export function TabBar() {
           <AnimatePresence initial={false}>
             {tabs.map((tab, index) => (
               <motion.div
-                key={tab.isPreview ? "preview" : tab.id}
+                key={tab.id}
                 initial={false}
                 animate={{ width: "auto", opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
+                exit={closingIds.current.has(tab.id) ? { width: 0, opacity: 0 } : {}}
                 transition={{ duration: 0.15, ease: [0.2, 0, 0.4, 1] }}
+                onAnimationComplete={() => { closingIds.current.delete(tab.id); }}
                 className="flex-1 min-w-[40px] max-w-[180px] overflow-hidden"
               >
                 <TabItem
@@ -216,6 +224,7 @@ export function TabBar() {
                     if (tab.isPreview) {
                       promotePreviewTab(tab.id);
                     } else if (!tab.isPinned) {
+                      markClosing(tab.id);
                       void closeTab(index).catch((error) => {
                         reportOperationError({
                           source: "TabBar.doubleClickClose",
@@ -257,7 +266,8 @@ export function TabBar() {
             <div className="h-px bg-border my-1" />
             <button
               onClick={() => {
-
+                const tab = tabs[contextMenu.tabIndex];
+                if (tab) markClosing(tab.id);
                 closeTab(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
@@ -268,7 +278,8 @@ export function TabBar() {
             </button>
             <button
               onClick={() => {
-
+                const kept = contextMenu.tabIndex;
+                tabs.forEach((t, i) => { if (i !== kept) markClosing(t.id); });
                 closeOtherTabs(contextMenu.tabIndex);
                 setContextMenu(null);
               }}
@@ -278,7 +289,7 @@ export function TabBar() {
             </button>
             <button
               onClick={() => {
-
+                tabs.forEach((t) => markClosing(t.id));
                 closeAllTabs();
                 setContextMenu(null);
               }}
