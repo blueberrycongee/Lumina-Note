@@ -212,4 +212,19 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     const win = BrowserWindow.fromWebContents(event.sender);
     console.log("[main] preload bridge ready for window", win?.id ?? "unknown");
   });
+
+  ipcMain.on("window:minimize", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize();
+  });
+
+  ipcMain.on("window:maximize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) {
+      win.isMaximized() ? win.unmaximize() : win.maximize();
+    }
+  });
+
+  ipcMain.on("window:close", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close();
+  });
 }

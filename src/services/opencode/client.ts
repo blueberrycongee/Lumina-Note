@@ -16,15 +16,16 @@ type ServerInfo = {
 };
 
 declare global {
-  interface Window {
-    lumina?: {
-      opencode?: {
-        getServerInfo(): Promise<ServerInfo | null>;
-        onServerChanged?(
-          handler: (info: ServerInfo | null) => void,
-        ): () => void;
-      };
+  interface LuminaBridge {
+    opencode?: {
+      getServerInfo(): Promise<ServerInfo | null>;
+      onServerChanged?(
+        handler: (info: ServerInfo | null) => void,
+      ): () => void;
     };
+  }
+  interface Window {
+    lumina?: LuminaBridge;
   }
 }
 

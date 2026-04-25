@@ -1,6 +1,7 @@
 import { PanelLeftClose } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
+import { WindowControls } from "./WindowControls";
 
 export function MacLeftPaneTopBar() {
   const { t } = useLocaleStore();
@@ -9,10 +10,12 @@ export function MacLeftPaneTopBar() {
   return (
     <div className="flex h-11 items-stretch bg-muted">
       <div
-        className="h-full w-[72px] shrink-0"
+        className="h-full w-[72px] shrink-0 flex items-center justify-center"
         data-tauri-drag-region
         data-testid="mac-left-pane-traffic-lights-safe-area"
-      />
+      >
+        <WindowControls />
+      </div>
 
       <div className="flex h-full min-w-0 flex-1 items-center gap-1 pl-2 pr-2" data-tauri-drag-region data-testid="mac-left-pane-controls">
         <div className="flex-1" />

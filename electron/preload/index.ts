@@ -101,6 +101,11 @@ contextBridge.exposeInMainWorld('lumina', {
       return () => ipcRenderer.removeListener('opencode:server-changed', listener)
     },
   },
+  windowControls: {
+    minimize: (): void => ipcRenderer.send('window:minimize'),
+    maximize: (): void => ipcRenderer.send('window:maximize'),
+    close: (): void => ipcRenderer.send('window:close'),
+  },
 })
 
 // Pipe forwarded main-process logs into the renderer DevTools console so

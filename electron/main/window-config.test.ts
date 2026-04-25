@@ -23,7 +23,6 @@ describe('createMainWindowOptions', () => {
   it('keeps the macOS hidden inset titlebar', () => {
     const options = createMainWindowOptions('/tmp/preload.cjs', 'darwin')
 
-    expect(options.titleBarStyle).toBe('hiddenInset')
-    expect(options.trafficLightPosition).toEqual({ x: 20, y: 14 })
+    expect(options.titleBarStyle).toBe('hidden')
   })
 })

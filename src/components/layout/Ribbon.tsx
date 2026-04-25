@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { exists, isTauriAvailable } from "@/lib/host";
 import { SettingsModal } from "./SettingsModal";
 import { UpdateModal } from "./UpdateModal";
+import { WindowControls } from "./WindowControls";
 import {
   type PluginRibbonItem,
   usePluginUiStore,
@@ -241,7 +242,7 @@ export function Ribbon({
                   : t.updateChecker.descUnsupported;
   const updateTitle = `${t.updateChecker.title} · ${updateTitleDetail}`;
   const updateButtonClassName = cn(
-    "relative w-8 h-8 ui-icon-btn",
+    "relative w-9 h-9 ui-icon-btn",
     updateRibbonState === "available" && "text-primary",
     updateRibbonState === "in-progress" && "text-primary",
     updateRibbonState === "ready" && "text-success",
@@ -254,15 +255,15 @@ export function Ribbon({
     updateRibbonState === "ready" ? "bg-success" : "bg-primary";
 
   const renderUpdateIcon = () => {
-    if (updateRibbonState === "available") return <Download size={18} />;
+    if (updateRibbonState === "available") return <Download size={20} />;
     if (updateRibbonState === "in-progress")
-      return <Loader2 size={18} className="animate-spin" />;
-    if (updateRibbonState === "ready") return <RotateCcw size={18} />;
-    if (updateRibbonState === "cancelled") return <AlertCircle size={18} />;
-    if (updateRibbonState === "error") return <AlertCircle size={18} />;
+      return <Loader2 size={20} className="animate-spin" />;
+    if (updateRibbonState === "ready") return <RotateCcw size={20} />;
+    if (updateRibbonState === "cancelled") return <AlertCircle size={20} />;
+    if (updateRibbonState === "error") return <AlertCircle size={20} />;
     return (
       <RefreshCw
-        size={18}
+        size={20}
         className={updateRibbonState === "checking" ? "animate-spin" : ""}
       />
     );
@@ -276,29 +277,31 @@ export function Ribbon({
     >
       {showMacTrafficLightSafeArea ? (
         <div
-          className="h-11 w-full shrink-0"
+          className="h-11 w-full shrink-0 flex items-center justify-center"
           data-tauri-drag-region
           data-testid="mac-ribbon-traffic-lights-safe-area"
-        />
+        >
+          <WindowControls />
+        </div>
       ) : null}
       <div
         data-testid="ribbon-content"
         className={cn(
-          "w-full min-h-0 flex-1 flex flex-col items-center pb-2 gap-0.5",
+          "w-full min-h-0 flex-1 flex flex-col items-center pb-2 gap-1",
           showMacTrafficLightSafeArea || flushTopSpacing ? "pt-0" : "pt-2",
         )}
       >
         {/* Top icons */}
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="flex flex-col items-center gap-1">
           {/* Search */}
           <button
             onClick={() =>
               window.dispatchEvent(new CustomEvent("open-global-search"))
             }
-            className="w-8 h-8 ui-icon-btn"
+            className="w-9 h-9 ui-icon-btn"
             title={t.ribbon.globalSearch}
           >
-            <Search size={18} />
+            <Search size={20} />
           </button>
 
           {/* AI Chat - Main View */}
@@ -308,64 +311,64 @@ export function Ribbon({
               setRightPanelTab("outline");
             }}
             className={cn(
-              "w-8 h-8 ui-icon-btn",
+              "w-9 h-9 ui-icon-btn",
               activeSection === "ai"
                 ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={t.ribbon.aiChatMain}
           >
-            <Bot size={18} />
+            <Bot size={20} />
           </button>
 
           {/* Files/Editor */}
           <button
             onClick={handleSwitchToFiles}
             className={cn(
-              "w-8 h-8 ui-icon-btn",
+              "w-9 h-9 ui-icon-btn",
               activeSection === "file"
                 ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={t.ribbon.fileEditor}
           >
-            <FileText size={18} />
+            <FileText size={20} />
           </button>
 
           <button
             onClick={openImageManagerTab}
             className={cn(
-              "w-8 h-8 ui-icon-btn",
+              "w-9 h-9 ui-icon-btn",
               activeSection === "image-manager"
                 ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={imageManagerTitle}
           >
-            <Images size={18} />
+            <Images size={20} />
           </button>
 
           {/* Graph */}
           <button
             onClick={openGraphTab}
             className={cn(
-              "w-8 h-8 ui-icon-btn",
+              "w-9 h-9 ui-icon-btn",
               activeSection === "graph"
                 ? "bg-primary/10 text-primary"
                 : "",
             )}
             title={t.graph.title}
           >
-            <Network size={18} />
+            <Network size={20} />
           </button>
 
           {/* Plugins */}
           <button
             onClick={() => setShowPlugins(true)}
-            className="w-8 h-8 ui-icon-btn"
+            className="w-9 h-9 ui-icon-btn"
             title={t.ribbon.plugins}
           >
-            <Puzzle size={18} />
+            <Puzzle size={20} />
           </button>
 
           {topPluginRibbonItems.map((item) => (
@@ -373,7 +376,7 @@ export function Ribbon({
               key={`${item.pluginId}:${item.itemId}`}
               onClick={() => item.run()}
               className={cn(
-                "w-8 h-8 ui-icon-btn text-xs",
+                "w-9 h-9 ui-icon-btn text-xs",
                 isPluginRibbonItemActive(item)
                   ? "bg-primary/10 text-primary"
                   : "",
@@ -389,7 +392,7 @@ export function Ribbon({
         <div className="flex-1" />
 
         {/* Bottom icons */}
-        <div className="flex flex-col items-center gap-0.5">
+        <div className="flex flex-col items-center gap-1">
           <button
             onClick={handleOpenUpdateModal}
             className={updateButtonClassName}
@@ -413,11 +416,11 @@ export function Ribbon({
             onClick={() => {
               void handleOpenRepository();
             }}
-            className="w-8 h-8 ui-icon-btn"
+            className="w-9 h-9 ui-icon-btn"
             title={t.ribbon.starProject}
             aria-label={t.ribbon.starProject}
           >
-            <Star size={18} />
+            <Star size={20} />
           </button>
 
           {bottomPluginRibbonItems.map((item) => (
@@ -425,7 +428,7 @@ export function Ribbon({
               key={`${item.pluginId}:${item.itemId}`}
               onClick={() => item.run()}
               className={cn(
-                "w-8 h-8 ui-icon-btn text-xs",
+                "w-9 h-9 ui-icon-btn text-xs",
                 isPluginRibbonItemActive(item)
                   ? "bg-primary/10 text-primary"
                   : "",
@@ -439,19 +442,19 @@ export function Ribbon({
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="w-8 h-8 ui-icon-btn"
+            className="w-9 h-9 ui-icon-btn"
             title={isDarkMode ? t.ribbon.switchToLight : t.ribbon.switchToDark}
           >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
           {/* Settings */}
           <button
             onClick={handleOpenSettings}
-            className="w-8 h-8 ui-icon-btn"
+            className="w-9 h-9 ui-icon-btn"
             title={t.ribbon.settings}
           >
-            <Settings size={18} />
+            <Settings size={20} />
           </button>
         </div>
       </div>
