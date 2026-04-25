@@ -3,6 +3,7 @@ import { Bot, FileText, FolderOpen, HardDrive } from "lucide-react";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
+import { WindowControls } from "@/components/layout/WindowControls";
 import { Button } from "@/components/ui/button";
 import { resolveRendererAssetUrl } from "@/lib/appAsset";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -55,10 +56,14 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
       <div className="relative flex-1 ui-app-bg overflow-hidden flex flex-col">
         {showMacWindowInset ? (
           <div
-            className="flex items-center justify-end px-4 py-2"
+            className="flex items-center px-4 py-2"
             data-tauri-drag-region
             data-testid="welcome-top-row"
           >
+            <div className="w-16 flex justify-center shrink-0" data-tauri-drag-region="false">
+              <WindowControls />
+            </div>
+            <div className="flex-1" />
             <LanguageSwitcher compact stopPropagation />
           </div>
         ) : (
