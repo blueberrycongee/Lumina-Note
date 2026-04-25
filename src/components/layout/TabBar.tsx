@@ -1,4 +1,5 @@
 import { useCallback, useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
@@ -46,7 +47,7 @@ function TabItem({
       data-tab-index={index}
       data-tauri-drag-region="false"
       className={cn(
-        "group relative flex items-center gap-1.5 px-2 py-1.5 text-[13px] cursor-grab border-r border-border/50 min-w-[40px] max-w-[180px] flex-1",
+        "group relative flex items-center gap-1.5 px-2 py-1.5 text-[13px] cursor-grab border-r border-border/50 w-full",
         "transition-[background-color,color] duration-150 select-none",
         isActive
           ? "bg-background text-foreground border-b-2 border-b-primary"
@@ -186,42 +187,52 @@ export function TabBar() {
               data-testid="mac-tabbar-traffic-light-spacer"
             />
           ) : null}
-          {tabs.map((tab, index) => (
-            <TabItem
-              key={tab.id}
-              tab={tab}
-              index={index}
-              isActive={index === activeTabIndex}
-              isDragging={index === draggedIndex && isDragging.current}
-              isDropTarget={index === dropTargetIndex}
-              dropPosition={index === dropTargetIndex ? dropPosition : null}
-              displayName={
-                tab.type === "ai-chat"
-                  ? t.common.aiChatTab
-                  : tab.type === "graph"
-                    ? t.graph.title
-                    : tab.name
-              }
-              onSelect={() => switchTab(index)}
-              onDoubleClick={() => {
-                if (tab.isPreview) {
-                  promotePreviewTab(tab.id);
-                } else if (!tab.isPinned) {
-                  void closeTab(index).catch((error) => {
-                    reportOperationError({
-                      source: "TabBar.doubleClickClose",
-                      action: "Close tab",
-                      error,
-                      context: { index, tabId: tab.id },
-                    });
-                  });
-                }
-              }}
-              onClose={(e) => handleClose(e, index)}
-              onContextMenu={(e) => handleContextMenu(e, index)}
-              onMouseDown={handleTabMouseDown}
-            />
-          ))}
+          <AnimatePresence initial={false}>
+            {tabs.map((tab, index) => (
+              <motion.div
+                key={tab.id}
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: "auto", opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.15, ease: [0.2, 0, 0.4, 1] }}
+                className="flex-1 min-w-[40px] max-w-[180px] overflow-hidden"
+              >
+                <TabItem
+                  tab={tab}
+                  index={index}
+                  isActive={index === activeTabIndex}
+                  isDragging={index === draggedIndex && isDragging.current}
+                  isDropTarget={index === dropTargetIndex}
+                  dropPosition={index === dropTargetIndex ? dropPosition : null}
+                  displayName={
+                    tab.type === "ai-chat"
+                      ? t.common.aiChatTab
+                      : tab.type === "graph"
+                        ? t.graph.title
+                        : tab.name
+                  }
+                  onSelect={() => switchTab(index)}
+                  onDoubleClick={() => {
+                    if (tab.isPreview) {
+                      promotePreviewTab(tab.id);
+                    } else if (!tab.isPinned) {
+                      void closeTab(index).catch((error) => {
+                        reportOperationError({
+                          source: "TabBar.doubleClickClose",
+                          action: "Close tab",
+                          error,
+                          context: { index, tabId: tab.id },
+                        });
+                      });
+                    }
+                  }}
+                  onClose={(e) => handleClose(e, index)}
+                  onContextMenu={(e) => handleContextMenu(e, index)}
+                  onMouseDown={handleTabMouseDown}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
