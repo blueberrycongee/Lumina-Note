@@ -194,9 +194,9 @@ export function TabBar() {
             {tabs.map((tab, index) => (
               <motion.div
                 key={tab.id}
-                initial={{ width: 0, opacity: 0 }}
+                initial={false}
                 animate={{ width: "auto", opacity: 1 }}
-                exit={isExplicitClose.current ? { width: 0, opacity: 0 } : undefined}
+                exit={isExplicitClose.current ? { width: 0, opacity: 0 } : { width: "auto", opacity: 1 }}
                 transition={{ duration: 0.15, ease: [0.2, 0, 0.4, 1] }}
                 onAnimationComplete={() => { isExplicitClose.current = false; }}
                 className="flex-1 min-w-[40px] max-w-[180px] overflow-hidden"
