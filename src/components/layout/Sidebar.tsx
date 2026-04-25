@@ -28,6 +28,7 @@ import {
 } from "./hooks/useSidebarFileOperations";
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarQuickActions } from "./SidebarQuickActions";
+import { useMacTopChromeEnabled } from "./MacTopChrome";
 
 interface ContextMenuState {
   x: number;
@@ -43,6 +44,7 @@ interface RootContextMenuState {
 
 export function Sidebar() {
   const { t } = useLocaleStore();
+  const showMacTopChrome = useMacTopChromeEnabled();
   const { isLoadingTree } = useFileStore(
     useShallow((state) => ({
       isLoadingTree: state.isLoadingTree,
@@ -227,6 +229,20 @@ export function Sidebar() {
     };
   }, [focusTreePath]);
 
+  useEffect(() => {
+    const onNewFile = () => handleNewFile();
+    const onNewDiagram = () => handleNewDiagram();
+    const onNewFolder = () => handleNewFolder();
+    window.addEventListener("sidebar:new-file", onNewFile);
+    window.addEventListener("sidebar:new-diagram", onNewDiagram);
+    window.addEventListener("sidebar:new-folder", onNewFolder);
+    return () => {
+      window.removeEventListener("sidebar:new-file", onNewFile);
+      window.removeEventListener("sidebar:new-diagram", onNewDiagram);
+      window.removeEventListener("sidebar:new-folder", onNewFolder);
+    };
+  }, [handleNewFile, handleNewDiagram, handleNewFolder]);
+
   const markFileTreeScrollActive = useCallback(() => {
     setIsFileTreeScrollActive(true);
     if (fileTreeScrollFadeTimerRef.current !== null) {
@@ -248,16 +264,18 @@ export function Sidebar() {
 
   return (
     <aside className={SIDEBAR_SURFACE_CLASSNAME}>
-      {/* Header */}
-      <SidebarHeader
-        onNewFile={() => handleNewFile()}
-        onNewDiagram={() => handleNewDiagram()}
-        onNewFolder={() => handleNewFolder()}
-        onRefresh={refreshFileTree}
-        isLoadingTree={isLoadingTree}
-        onOpenFolder={handleOpenFolder}
-        onNewWindow={handleNewWindow}
-      />
+      {/* Header — hidden on Mac where buttons live in MacLeftPaneTopBar */}
+      {!showMacTopChrome && (
+        <SidebarHeader
+          onNewFile={() => handleNewFile()}
+          onNewDiagram={() => handleNewDiagram()}
+          onNewFolder={() => handleNewFolder()}
+          onRefresh={refreshFileTree}
+          isLoadingTree={isLoadingTree}
+          onOpenFolder={handleOpenFolder}
+          onNewWindow={handleNewWindow}
+        />
+      )}
 
       {/* Toolbar Zone */}
       <div className="flex flex-col gap-3 py-2">
