@@ -73,7 +73,8 @@ vi.mock("@/components/effects/LocalGraph", () => ({
 }));
 
 vi.mock("@/components/layout/TabBar", () => ({
-  TabBar: () => null,
+  TabBar: ({ toolbar }: { toolbar?: React.ReactNode } = {}) =>
+    toolbar ? <div data-testid="mock-tabbar-toolbar">{toolbar}</div> : null,
 }));
 
 vi.mock("@/services/pdf/exportPdf", () => ({
