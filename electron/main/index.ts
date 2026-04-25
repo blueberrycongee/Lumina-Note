@@ -52,6 +52,10 @@ export default function createWindow(): BrowserWindow {
 
   const win = new BrowserWindow(createMainWindowOptions(preloadPath));
 
+  if (process.platform === "darwin") {
+    win.setWindowButtonVisibility(false);
+  }
+
   // Log any preload errors (silent by default in Electron)
   win.webContents.on("preload-error", (_event, _preloadPath, error) => {
     console.error("[main] Preload script error:", error);
