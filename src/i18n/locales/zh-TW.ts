@@ -20,6 +20,7 @@ export default {
     noRecentVaults: "無最近倉庫",
     clearHistory: "清除歷史",
     selectParentFolder: "選擇父資料夾",
+    newVaultButton: "新建",
   },
 
   // 通用

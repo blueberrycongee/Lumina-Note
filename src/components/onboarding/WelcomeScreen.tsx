@@ -15,7 +15,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface WelcomeScreenProps {
   onOpenVault: (path?: string) => void;
-  onCreateVault?: (parentPath: string, name: string) => void;
+  onCreateVault?: (name: string) => void;
 }
 
 const containerVariants: Variants = {
@@ -46,7 +46,6 @@ export function WelcomeScreen({
   const clearVaults = useRecentVaultStore((s) => s.clearVaults);
 
   const [showNamePrompt, setShowNamePrompt] = useState(false);
-  const [createParentPath, setCreateParentPath] = useState<string | null>(null);
 
   const handleOpenExisting = useCallback(async () => {
     try {
@@ -63,31 +62,18 @@ export function WelcomeScreen({
     }
   }, [onOpenVault, t.welcome.openFolder]);
 
-  const handleCreateVault = useCallback(async () => {
-    try {
-      const selected = await openDialog({
-        directory: true,
-        multiple: false,
-        title: t.welcome.selectParentFolder,
-      });
-      if (selected && typeof selected === "string") {
-        setCreateParentPath(selected);
-        setShowNamePrompt(true);
-      }
-    } catch (error) {
-      console.error("[WelcomeScreen] Create vault dialog failed:", error);
-    }
+  const handleCreateVault = useCallback(() => {
+    setShowNamePrompt(true);
   }, []);
 
   const handleNameSubmit = useCallback(
     (name: string) => {
-      if (createParentPath && onCreateVault) {
-        onCreateVault(createParentPath, name);
+      if (onCreateVault) {
+        onCreateVault(name);
       }
       setShowNamePrompt(false);
-      setCreateParentPath(null);
     },
-    [createParentPath, onCreateVault],
+    [onCreateVault],
   );
 
   return (
@@ -167,7 +153,7 @@ export function WelcomeScreen({
                     title={t.welcome.createVault}
                     description={t.welcome.createVaultDesc}
                     action={{
-                      label: t.common.create,
+                      label: t.welcome.newVaultButton,
                       variant: "secondary",
                       onClick: handleCreateVault,
                     }}
@@ -190,10 +176,7 @@ export function WelcomeScreen({
       <VaultNamePrompt
         isOpen={showNamePrompt}
         onSubmit={handleNameSubmit}
-        onCancel={() => {
-          setShowNamePrompt(false);
-          setCreateParentPath(null);
-        }}
+        onCancel={() => setShowNamePrompt(false)}
       />
     </div>
   );

@@ -41,6 +41,8 @@ import {
   saveFile,
   setWindowSize,
   startFileWatcher,
+  homeDir,
+  join,
 } from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
@@ -762,13 +764,15 @@ function App() {
   );
 
   const handleCreateVault = useCallback(
-    async (parentPath: string, name: string) => {
-      const vaultPath = `${parentPath}/${name}`;
+    async (name: string) => {
       try {
+        const home = await homeDir();
+        const parentPath = await join(home, "Documents");
+        const vaultPath = await join(parentPath, name);
         await createDir(vaultPath);
-        await createDir(`${vaultPath}/.lumina`);
-        await createDir(`${vaultPath}/.lumina/skills`);
-        await createDir(`${vaultPath}/.lumina/plugins`);
+        await createDir(await join(vaultPath, ".lumina"));
+        await createDir(await join(vaultPath, ".lumina", "skills"));
+        await createDir(await join(vaultPath, ".lumina", "plugins"));
         addRecentVault(vaultPath);
         await setVaultPath(vaultPath);
       } catch (error) {

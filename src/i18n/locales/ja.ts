@@ -20,6 +20,7 @@ export default {
     noRecentVaults: "最近のボールトがありません",
     clearHistory: "履歴をクリア",
     selectParentFolder: "親フォルダを選択",
+    newVaultButton: "新規",
   },
 
   // 共通

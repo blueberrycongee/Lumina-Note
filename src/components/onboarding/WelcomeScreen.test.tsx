@@ -48,6 +48,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
         noRecentVaults: "No recent vaults",
         clearHistory: "Clear History",
         selectParentFolder: "Select Parent Folder",
+        newVaultButton: "New",
       },
       common: {
         cancel: "Cancel",

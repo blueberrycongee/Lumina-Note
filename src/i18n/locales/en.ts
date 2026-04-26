@@ -20,6 +20,7 @@ export default {
     noRecentVaults: "No recent vaults",
     clearHistory: "Clear History",
     selectParentFolder: "Select Parent Folder",
+    newVaultButton: "New",
   },
 
   // Common
