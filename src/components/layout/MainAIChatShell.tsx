@@ -15,6 +15,7 @@ import {
 } from "@/stores/useOpencodeAgent";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
+import { useHoverIntent } from "@/hooks/useHoverIntent";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { processMessageWithFiles } from "@/hooks/useChatSend";
 import { resolve } from "@/lib/path";
@@ -83,7 +84,12 @@ export function MainAIChatShell() {
     useUIStore();
   const [input, setInput] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [showPlusMenu, setShowPlusMenu] = useState(false);
+  // Hover-with-delay opens the plus menu so the user doesn't have to click
+  // every time. Mouse-into trigger waits 300ms, mouse-out waits 200ms before
+  // closing — enough buffer to cross the gap into the popover content.
+  const plusMenu = useHoverIntent();
+  const showPlusMenu = plusMenu.open;
+  const setShowPlusMenu = plusMenu.setOpen;
   const [showHistory, setShowHistory] = useState(false);
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
   const [showMention, setShowMention] = useState(false);
@@ -1448,6 +1454,7 @@ export function MainAIChatShell() {
                   anchor={plusButtonRef}
                 >
                   <PopoverContent
+                    {...plusMenu.contentHandlers}
                     placement="top-start"
                     width={240}
                     data-plus-menu
@@ -1489,7 +1496,7 @@ export function MainAIChatShell() {
                   {/* "+" button */}
                   <button
                     ref={plusButtonRef}
-                    onClick={() => setShowPlusMenu(!showPlusMenu)}
+                    {...plusMenu.triggerHandlers}
                     className={[
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
                       "transition-colors duration-fast ease-out-subtle",
