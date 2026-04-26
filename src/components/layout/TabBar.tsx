@@ -138,7 +138,7 @@ function TabItem({
       <TabShape isActive={isActive} isDropTarget={isDropTarget} />
       <div
         className={cn(
-          "relative flex h-full items-center gap-1.5 pl-4 pr-4 text-[13px] transition-colors duration-150",
+          "relative flex h-full items-center gap-2 pl-5 pr-5 text-[13px] transition-colors duration-150",
           isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
         )}
       >
@@ -314,7 +314,7 @@ export function TabBar() {
                   "flex-none transition-[width,min-width,opacity] duration-150 ease-out",
                   isClosing
                     ? "w-0 min-w-0 opacity-0 pointer-events-none overflow-hidden"
-                    : "w-[220px] min-w-[100px]"
+                    : "w-[240px] min-w-[110px]"
                 )}
               >
                 <TabItem
