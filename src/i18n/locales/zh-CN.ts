@@ -517,6 +517,12 @@ export default {
     emptyFileHint: "从侧边栏拖放或双击打开",
   },
 
+  windowControls: {
+    close: "关闭窗口",
+    minimize: "最小化窗口",
+    maximize: "最大化窗口",
+  },
+
   // 视图/标签
   views: {
     fileEditor: "文件编辑器",

@@ -524,6 +524,12 @@ export default {
     emptyFileHint: "Drag from the sidebar or double-click to open",
   },
 
+  windowControls: {
+    close: "Close window",
+    minimize: "Minimize window",
+    maximize: "Maximize window",
+  },
+
   // Views / Tabs
   views: {
     fileEditor: "File Editor",

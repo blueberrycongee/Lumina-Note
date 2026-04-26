@@ -146,6 +146,7 @@ function TabItem({
   onContextMenu,
   onMouseDown,
 }: TabItemProps) {
+  const { t } = useLocaleStore();
   return (
     <div
       data-tab-index={index}
@@ -192,6 +193,7 @@ function TabItem({
           <button
             data-tauri-drag-region="false"
             onClick={onClose}
+            aria-label={t.tabBar.close}
             className={cn(
               "shrink-0 p-0.5 rounded-ui-sm hover:bg-accent",
               "opacity-0 group-hover:opacity-100 transition-opacity",

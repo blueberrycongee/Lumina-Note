@@ -523,6 +523,12 @@ export default {
     emptyFileHint: "サイドバーからドラッグするかダブルクリックして開く",
   },
 
+  windowControls: {
+    close: "ウィンドウを閉じる",
+    minimize: "ウィンドウを最小化",
+    maximize: "ウィンドウを最大化",
+  },
+
   // ビュー/タブ
   views: {
     fileEditor: "ファイルエディタ",

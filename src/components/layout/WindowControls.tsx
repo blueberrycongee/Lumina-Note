@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useLocaleStore } from "@/stores/useLocaleStore";
+
 declare global {
   interface LuminaBridge {
     windowControls?: {
@@ -16,19 +18,19 @@ const isMac =
 
 type Action = "close" | "minimize" | "maximize";
 
-const buttons: ReadonlyArray<{
-  action: Action;
-  color: string;
-  hoverColor: string;
-  icon: string;
-  label: string;
-}> = [
-  { action: "close", color: "#FF5F57", hoverColor: "#FF4136", icon: "×", label: "Close" },
-  { action: "minimize", color: "#FEBC2E", hoverColor: "#F5A623", icon: "−", label: "Minimize" },
-  { action: "maximize", color: "#28C840", hoverColor: "#1DB954", icon: "⤡", label: "Maximize" },
-];
+const buttonStyles: Record<
+  Action,
+  { color: string; hoverColor: string; icon: string }
+> = {
+  close: { color: "#FF5F57", hoverColor: "#FF4136", icon: "×" },
+  minimize: { color: "#FEBC2E", hoverColor: "#F5A623", icon: "−" },
+  maximize: { color: "#28C840", hoverColor: "#1DB954", icon: "⤡" },
+};
+
+const ORDERED_ACTIONS: ReadonlyArray<Action> = ["close", "minimize", "maximize"];
 
 export function WindowControls() {
+  const { t } = useLocaleStore();
   const [isHovered, setIsHovered] = useState(false);
   const [hoveredAction, setHoveredAction] = useState<Action | null>(null);
   const [isFocused, setIsFocused] = useState(() =>
@@ -62,7 +64,8 @@ export function WindowControls() {
       }}
       data-tauri-drag-region="false"
     >
-      {buttons.map(({ action, color, hoverColor, icon, label }) => {
+      {ORDERED_ACTIONS.map((action) => {
+        const { color, hoverColor, icon } = buttonStyles[action];
         const background = !isFocused
           ? "#CCCCCC"
           : hoveredAction === action
@@ -86,7 +89,7 @@ export function WindowControls() {
               padding: 0,
               border: 0,
             }}
-            aria-label={label}
+            aria-label={t.windowControls[action]}
           >
             {isHovered && isFocused ? icon : null}
           </button>
