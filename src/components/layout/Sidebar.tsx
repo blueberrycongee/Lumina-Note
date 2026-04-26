@@ -17,7 +17,10 @@ import {
   Shapes,
   Star,
   StarOff,
+  Pencil,
+  ArrowLeftRight,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverList, Row } from "@/components/ui";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useCloudSyncStore } from "@/stores/useCloudSyncStore";
 import { useShallow } from "zustand/react/shallow";
@@ -43,7 +46,11 @@ interface RootContextMenuState {
   y: number;
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  onSwitchVault?: () => void;
+}
+
+export function Sidebar({ onSwitchVault }: SidebarProps) {
   const { t } = useLocaleStore();
   const showMacTopChrome = useMacTopChromeEnabled();
   const leftSidebarMode = useUIStore((state) => state.leftSidebarMode);
@@ -404,62 +411,21 @@ export function Sidebar() {
       </div>
 
       {/* Vault Name - root drop zone */}
-      <div className="px-2">
-        {renamingPath === vaultPath ? (
-          <div className="py-1.5">
-            <input
-              type="text"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onBlur={() => {
-                void handleRename();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  void handleRename();
-                } else if (e.key === "Escape") {
-                  setRenamingPath(null);
-                }
-              }}
-              autoFocus
-              className="ui-input h-8 w-full border-primary/60 px-2"
-            />
-          </div>
-        ) : (
-          <div
-            role="button"
-            tabIndex={0}
-            data-folder-path={vaultPath}
-            onClick={handleSelectRoot}
-            onContextMenu={handleRootContextMenu}
-            onKeyDown={(e) => {
-              if (
-                (e.key === "Enter" || e.key === "F2") &&
-                selectedPath === vaultPath
-              ) {
-                e.preventDefault();
-                handleStartRootRename();
-              }
-            }}
-            onMouseEnter={() => {
-              const dragData = getDragData();
-              if (dragData?.isDragging) {
-                setIsRootDragOver(true);
-              }
-            }}
-            onMouseLeave={() => setIsRootDragOver(false)}
-            className={cn(
-              "cursor-pointer select-none px-1 py-2 text-[13px] font-medium truncate transition-colors rounded-ui-sm text-center",
-              isRootDragOver && "bg-primary/10",
-              selectedPath === vaultPath &&
-                "bg-primary/10 text-primary",
-            )}
-          >
-            {vaultPath?.split(/[/\\]/).pop() || "Notes"}
-          </div>
-        )}
-      </div>
+      <VaultNameSection
+        vaultPath={vaultPath}
+        renamingPath={renamingPath}
+        renameValue={renameValue}
+        setRenameValue={setRenameValue}
+        handleRename={handleRename}
+        setRenamingPath={setRenamingPath}
+        handleStartRootRename={handleStartRootRename}
+        handleSelectRoot={handleSelectRoot}
+        handleRootContextMenu={handleRootContextMenu}
+        isRootDragOver={isRootDragOver}
+        setIsRootDragOver={setIsRootDragOver}
+        selectedPath={selectedPath}
+        onSwitchVault={onSwitchVault}
+      />
 
       {/* File Tree */}
       <div
@@ -938,6 +904,148 @@ function FileTreeItem({
       <span className="truncate pointer-events-none">
         {getFileName(entry.name)}
       </span>
+    </div>
+  );
+}
+
+/* ── Vault Name Section ─────────────────────────────────────────────── */
+
+interface VaultNameSectionProps {
+  vaultPath: string | null;
+  renamingPath: string | null;
+  renameValue: string;
+  setRenameValue: (v: string) => void;
+  handleRename: () => void;
+  setRenamingPath: (p: string | null) => void;
+  handleStartRootRename: () => void;
+  handleSelectRoot: () => void;
+  handleRootContextMenu: (e: React.MouseEvent) => void;
+  isRootDragOver: boolean;
+  setIsRootDragOver: (v: boolean) => void;
+  selectedPath: string | null;
+  onSwitchVault?: () => void;
+}
+
+function VaultNameSection({
+  vaultPath,
+  renamingPath,
+  renameValue,
+  setRenameValue,
+  handleRename,
+  setRenamingPath,
+  handleStartRootRename,
+  handleSelectRoot,
+  handleRootContextMenu,
+  isRootDragOver,
+  setIsRootDragOver,
+  selectedPath,
+  onSwitchVault,
+}: VaultNameSectionProps) {
+  const { t } = useLocaleStore();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const nameRef = useRef<HTMLDivElement>(null);
+  const vaultName = vaultPath?.split(/[/\\]/).pop() || "Notes";
+
+  const handleRenameClick = () => {
+    setMenuOpen(false);
+    handleStartRootRename();
+  };
+
+  const handleSwitchClick = () => {
+    setMenuOpen(false);
+    onSwitchVault?.();
+  };
+
+  if (renamingPath === vaultPath) {
+    return (
+      <div className="px-2 py-1.5">
+        <input
+          type="text"
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onBlur={() => {
+            void handleRename();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void handleRename();
+            } else if (e.key === "Escape") {
+              setRenamingPath(null);
+            }
+          }}
+          autoFocus
+          className="ui-input h-8 w-full border-primary/60 px-2"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-2">
+      <Popover open={menuOpen} onOpenChange={setMenuOpen} anchor={nameRef}>
+        <div
+          ref={nameRef}
+          role="button"
+          tabIndex={0}
+          data-folder-path={vaultPath}
+          onClick={handleSelectRoot}
+          onContextMenu={handleRootContextMenu}
+          onKeyDown={(e) => {
+            if (
+              (e.key === "Enter" || e.key === "F2") &&
+              selectedPath === vaultPath
+            ) {
+              e.preventDefault();
+              handleStartRootRename();
+            }
+          }}
+          onMouseEnter={() => {
+            const dragData = getDragData();
+            if (dragData?.isDragging) {
+              setIsRootDragOver(true);
+            }
+          }}
+          onMouseLeave={() => setIsRootDragOver(false)}
+          className={cn(
+            "group flex items-center gap-1 cursor-pointer select-none px-2 py-2 text-[13px] font-medium truncate transition-colors rounded-ui-sm",
+            isRootDragOver && "bg-primary/10",
+            selectedPath === vaultPath && "bg-primary/10 text-primary",
+          )}
+        >
+          <span className="flex-1 truncate text-left">{vaultName}</span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen((prev) => !prev);
+            }}
+            className="shrink-0 p-0.5 rounded-ui-sm opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground hover:bg-accent"
+            aria-label={t.workspace?.actions || "Actions"}
+          >
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <PopoverContent placement="bottom-start" width={200}>
+          <PopoverList>
+            <Row
+              icon={<Pencil className="w-4 h-4" />}
+              title={t.common?.edit || "Rename"}
+              onSelect={handleRenameClick}
+              role="menuitem"
+            />
+            {onSwitchVault && (
+              <Row
+                icon={<ArrowLeftRight className="w-4 h-4" />}
+                title={t.workspace?.switch || "Switch"}
+                onSelect={handleSwitchClick}
+                role="menuitem"
+              />
+            )}
+          </PopoverList>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

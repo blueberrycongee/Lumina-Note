@@ -970,7 +970,9 @@ function App() {
                 style={{ width: leftSidebarWidth }}
               >
                 <DevProfiler id="Sidebar">
-                  <Sidebar />
+                  <Sidebar
+                    onSwitchVault={() => useFileStore.getState().clearVault()}
+                  />
                 </DevProfiler>
               </div>
             </div>
