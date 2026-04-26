@@ -11,7 +11,7 @@ import {
   resolveTemperatureLock,
   type TemperatureLock,
 } from "@/services/llm/temperature";
-import { Loader2, Check, X, Zap, Bot, Shield, Lock } from "lucide-react";
+import { Loader2, Check, X, Zap, Bot, Shield, Lock, Info } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 import {
@@ -58,11 +58,52 @@ function formatTemperatureLockMessage(
   return template.replace("{value}", lock.value.toFixed(1));
 }
 
+function formatApiConstraintsValues(
+  template: string,
+  c: NonNullable<ReturnType<typeof getModelMeta>>["apiConstraints"],
+): string {
+  if (!c) return "";
+  return template
+    .replace("{topP}", c.topP ? c.topP.fixed.toString() : "—")
+    .replace(
+      "{presencePenalty}",
+      c.presencePenalty ? c.presencePenalty.fixed.toString() : "—",
+    )
+    .replace(
+      "{frequencyPenalty}",
+      c.frequencyPenalty ? c.frequencyPenalty.fixed.toString() : "—",
+    )
+    .replace("{n}", c.n ? c.n.fixed.toString() : "—");
+}
+
+// LabelRow — label on the left, optional right-aligned slot (e.g. "Optional"
+// tag, brain icon). Keeps the inline parenthetical out of the label proper
+// so the field's primary identifier reads first.
+function LabelRow({
+  children,
+  trailing,
+}: {
+  children: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <span className="flex items-center justify-between gap-3">
+      <span className="flex items-center gap-1.5">{children}</span>
+      {trailing ? (
+        <span className="text-xs font-normal text-muted-foreground/80">
+          {trailing}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function AISettingsContent() {
   const { config, setConfig } = useAIStore();
   const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useAgentPrefs();
   const { t } = useLocaleStore();
   const errorMessages = t.aiSettings.errors as Record<string, string>;
+  const providerMeta = PROVIDER_MODELS[config.provider as LLMProviderType];
   const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);
   const effectiveModelForTemp =
     config.model === "custom" ? (config.customModelId || "custom") : config.model;
@@ -80,6 +121,9 @@ export function AISettingsContent() {
     ? temperatureLock.value
     : (config.temperature ?? recommendedTemperature);
   const apiConstraints = mainModelMeta?.apiConstraints;
+  const apiKeyOptional =
+    config.provider === "ollama" || config.provider === "openai-compatible";
+  const baseUrlOptional = config.provider !== "openai-compatible";
 
   // 测试连接状态
   const [testResult, setTestResult] = useState<TestResult>({ status: "idle" });
@@ -174,7 +218,10 @@ export function AISettingsContent() {
           title={t.aiSettings.mainModel}
         />
 
-        <Field label={t.aiSettings.provider}>
+        <Field
+          label={t.aiSettings.provider}
+          hint={providerMeta?.description}
+        >
           {(id) => (
             <select
               id={id}
@@ -194,7 +241,7 @@ export function AISettingsContent() {
             >
               {Object.entries(PROVIDER_MODELS).map(([key, meta]) => (
                 <option key={key} value={key}>
-                  {meta.label} — {meta.description}
+                  {meta.label}
                 </option>
               ))}
             </select>
@@ -203,88 +250,86 @@ export function AISettingsContent() {
 
         <Field
           label={
-            <span className="flex items-center gap-1.5">
+            <LabelRow
+              trailing={apiKeyOptional ? t.aiSettings.apiKeyOptional : undefined}
+            >
               {t.aiSettings.apiKey}
-              {(config.provider === "ollama" ||
-                config.provider === "openai-compatible") && (
-                <span className="text-xs font-normal text-muted-foreground">
-                  ({t.aiSettings.apiKeyOptional})
-                </span>
-              )}
-            </span>
+            </LabelRow>
           }
         >
           {(id) => (
-            <div className="space-y-1.5">
-              <div className="flex gap-2">
-                <TextInput
-                  id={id}
-                  type="password"
-                  value={config.apiKey}
-                  onChange={(e) => setConfig({ apiKey: e.target.value })}
-                  placeholder={
-                    config.provider === "ollama"
-                      ? t.aiSettings.localModelNoKey
-                      : config.provider === "anthropic"
-                        ? "sk-ant-..."
-                        : config.provider === "openai-compatible"
-                          ? t.aiSettings.apiKeyOptional
-                          : "sk-..."
-                  }
-                />
+            <div className="space-y-2">
+              <TextInput
+                id={id}
+                type="password"
+                value={config.apiKey}
+                onChange={(e) => setConfig({ apiKey: e.target.value })}
+                placeholder={
+                  config.provider === "ollama"
+                    ? t.aiSettings.localModelNoKey
+                    : config.provider === "anthropic"
+                      ? "sk-ant-..."
+                      : config.provider === "openai-compatible"
+                        ? t.aiSettings.apiKeyOptional
+                        : "sk-..."
+                }
+              />
+              {testResult.status === "error" && testResult.message ? (
+                <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+                  <X size={12} className="mt-0.5 shrink-0" />
+                  <span>{testResult.message}</span>
+                </div>
+              ) : testResult.status === "success" ? (
+                <div className="flex items-center gap-1.5 rounded-ui-sm bg-success/10 px-2 py-1.5 text-xs text-success">
+                  <Check size={12} />
+                  <span>
+                    {t.aiSettings.testSuccessDetail}
+                    {testResult.latency
+                      ? ` · ${(testResult.latency / 1000).toFixed(1)}s`
+                      : ""}
+                  </span>
+                </div>
+              ) : null}
+              <div className="flex justify-end">
                 <button
                   onClick={testConnection}
                   disabled={testResult.status === "testing"}
                   className={[
-                    "flex min-w-[90px] items-center justify-center gap-1.5 rounded-ui-md border px-3 text-sm",
+                    "inline-flex items-center gap-1.5 rounded-ui-md border px-2.5 py-1 text-xs",
                     "transition-colors duration-fast ease-out-subtle",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                     testResult.status === "success"
-                      ? "border-success/50 bg-success/10 text-success"
+                      ? "border-success/40 bg-success/5 text-success"
                       : testResult.status === "error"
-                        ? "border-destructive/50 bg-destructive/10 text-destructive"
-                        : "border-border text-foreground hover:bg-accent",
+                        ? "border-destructive/40 bg-destructive/5 text-destructive"
+                        : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
                   ].join(" ")}
                   title={t.aiSettings.testButton}
                 >
                   {testResult.status === "testing" ? (
                     <>
-                      <Loader2 size={13} className="animate-spin" />
+                      <Loader2 size={12} className="animate-spin" />
                       {t.aiSettings.testing}
                     </>
                   ) : testResult.status === "success" ? (
                     <>
-                      <Check size={13} />
-                      {testResult.latency
-                        ? `${(testResult.latency / 1000).toFixed(1)}s`
-                        : t.aiSettings.testSuccessShort}
+                      <Check size={12} />
+                      {t.aiSettings.testSuccessShort}
                     </>
                   ) : testResult.status === "error" ? (
                     <>
-                      <X size={13} />
+                      <X size={12} />
                       {t.aiSettings.testFailed}
                     </>
                   ) : (
                     <>
-                      <Zap size={13} />
+                      <Zap size={12} />
                       {t.aiSettings.testButton}
                     </>
                   )}
                 </button>
               </div>
-              {testResult.status === "error" && testResult.message && (
-                <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-                  <X size={12} className="mt-0.5 shrink-0" />
-                  <span>{testResult.message}</span>
-                </div>
-              )}
-              {testResult.status === "success" && (
-                <div className="flex items-center gap-1.5 rounded-ui-sm bg-success/10 px-2 py-1.5 text-xs text-success">
-                  <Check size={12} />
-                  <span>{t.aiSettings.testSuccessDetail}</span>
-                </div>
-              )}
             </div>
           )}
         </Field>
@@ -292,10 +337,10 @@ export function AISettingsContent() {
         {config.provider !== "openai-compatible" && (
           <Field
             label={
-              <span className="flex items-center gap-1.5">
+              <LabelRow>
                 {t.aiSettings.model}
                 {mainModelMeta?.supportsThinking && <ThinkingModelIcon />}
-              </span>
+              </LabelRow>
             }
           >
             {(id) => (
@@ -362,15 +407,13 @@ export function AISettingsContent() {
           config.provider === "openai-compatible") && (
           <Field
             label={
-              <span className="flex items-center gap-1.5">
+              <LabelRow
+                trailing={baseUrlOptional ? t.aiSettings.apiKeyOptional : undefined}
+              >
                 {t.aiSettings.baseUrl}
-                {config.provider !== "openai-compatible" && (
-                  <span className="text-xs font-normal text-muted-foreground">
-                    ({t.aiSettings.baseUrlOptional})
-                  </span>
-                )}
-              </span>
+              </LabelRow>
             }
+            hint={baseUrlOptional ? t.aiSettings.baseUrlOptional : undefined}
           >
             {(id) => (
               <TextInput
@@ -402,16 +445,22 @@ export function AISettingsContent() {
                   : undefined
               }
             >
-              {t.aiSettings.temperature}
-              {temperatureLock && (
-                <Lock
-                  size={11}
-                  aria-label={t.aiSettings.temperatureLock.title}
-                  className="text-muted-foreground"
-                />
-              )}
+              <span>{t.aiSettings.temperature}</span>
+              {/* Reserve fixed width for the lock indicator so the row doesn't reflow when the lock toggles. */}
+              <span
+                aria-hidden={!temperatureLock}
+                className="inline-flex h-3 w-3 items-center justify-center"
+              >
+                {temperatureLock ? (
+                  <Lock
+                    size={11}
+                    aria-label={t.aiSettings.temperatureLock.title}
+                    className="text-muted-foreground"
+                  />
+                ) : null}
+              </span>
             </label>
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
               {displayTemperature.toFixed(1)}
             </span>
           </div>
@@ -425,40 +474,34 @@ export function AISettingsContent() {
             onChange={(e) => setConfig({ temperature: parseFloat(e.target.value) })}
             className="h-1 w-full appearance-none rounded-full bg-muted accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           />
-          {temperatureLock && (
-            <p className="text-xs text-muted-foreground">
-              {formatTemperatureLockMessage(
-                t.aiSettings.temperatureLock[temperatureLock.reason],
-                temperatureLock,
+          {(temperatureLock || apiConstraints) && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              {temperatureLock && (
+                <span>
+                  {formatTemperatureLockMessage(
+                    t.aiSettings.temperatureLock[temperatureLock.reason],
+                    temperatureLock,
+                  )}
+                </span>
               )}
-            </p>
-          )}
-          {apiConstraints && (
-            <p className="text-xs text-muted-foreground/80">
-              {t.aiSettings.apiConstraintsHint
-                .replace(
-                  "{topP}",
-                  apiConstraints.topP
-                    ? apiConstraints.topP.fixed.toString()
-                    : "—",
-                )
-                .replace(
-                  "{presencePenalty}",
-                  apiConstraints.presencePenalty
-                    ? apiConstraints.presencePenalty.fixed.toString()
-                    : "—",
-                )
-                .replace(
-                  "{frequencyPenalty}",
-                  apiConstraints.frequencyPenalty
-                    ? apiConstraints.frequencyPenalty.fixed.toString()
-                    : "—",
-                )
-                .replace(
-                  "{n}",
-                  apiConstraints.n ? apiConstraints.n.fixed.toString() : "—",
-                )}
-            </p>
+              {apiConstraints && (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-ui-sm text-muted-foreground/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                  aria-label={formatApiConstraintsValues(
+                    t.aiSettings.apiConstraintsHint,
+                    apiConstraints,
+                  )}
+                  data-tooltip={formatApiConstraintsValues(
+                    t.aiSettings.apiConstraintsHint,
+                    apiConstraints,
+                  )}
+                >
+                  <Info size={11} aria-hidden />
+                  <span>{t.aiSettings.apiConstraintsBadge}</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -469,35 +512,47 @@ export function AISettingsContent() {
           icon={<Shield size={14} />}
           title={t.aiSettings.agentSettings}
         />
-        <Field
+        <ToggleRow
           label={t.aiSettings.autoApproveTools}
           hint={t.aiSettings.noManualConfirm}
-          inline
-        >
-          {(id) => (
-            <Toggle
-              id={id}
-              checked={autoApprove}
-              onChange={setAutoApprove}
-              label={t.aiSettings.autoApproveTools}
-            />
-          )}
-        </Field>
-        <Field
+          checked={autoApprove}
+          onChange={setAutoApprove}
+        />
+        <ToggleRow
           label={t.aiSettings.autoCompactContext}
           hint={t.aiSettings.autoCompactHint}
-          inline
-        >
-          {(id) => (
-            <Toggle
-              id={id}
-              checked={autoCompactEnabled}
-              onChange={setAutoCompactEnabled}
-              label={t.aiSettings.autoCompactContext}
-            />
-          )}
-        </Field>
+          checked={autoCompactEnabled}
+          onChange={setAutoCompactEnabled}
+        />
       </div>
+    </div>
+  );
+}
+
+// ToggleRow — label and toggle on the same row, hint stacked below the
+// label. Avoids the cramping caused by `Field inline` when the hint runs
+// long: the toggle stays anchored to the row's right edge instead of
+// vertical-centering against a wrapping hint.
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <div className="py-1.5">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <Toggle checked={checked} onChange={onChange} label={label} />
+      </div>
+      {hint ? (
+        <p className="mt-1 pr-12 text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -505,7 +560,7 @@ export function AISettingsContent() {
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { t } = useLocaleStore();
   return (
-    <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()} width={520}>
+    <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()} width={560}>
       <DialogHeader title={t.aiSettings.title} />
       <DialogBody>
         <AISettingsContent />

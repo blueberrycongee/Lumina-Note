@@ -1607,6 +1607,7 @@ export default {
     },
     apiConstraintsHint:
       "API 制約: top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
+    apiConstraintsBadge: "API パラメータ固定",
     agentSettings: "Agent 設定",
     autoApproveTools: "ツール呼び出しを自動承認",
     noManualConfirm: "手動確認不要",

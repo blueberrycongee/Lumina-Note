@@ -1574,6 +1574,7 @@ export default {
     },
     apiConstraintsHint:
       "API 约束：top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
+    apiConstraintsBadge: "API 参数锁定",
     agentSettings: "Agent 设置",
     autoApproveTools: "自动批准工具调用",
     noManualConfirm: "无需手动确认",

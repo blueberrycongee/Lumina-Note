@@ -1573,6 +1573,7 @@ export default {
     },
     apiConstraintsHint:
       "API 限制：top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
+    apiConstraintsBadge: "API 參數鎖定",
     agentSettings: "Agent 設定",
     autoApproveTools: "自動批准工具調用",
     noManualConfirm: "無需手動確認",

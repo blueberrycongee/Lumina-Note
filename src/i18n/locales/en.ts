@@ -1613,6 +1613,7 @@ export default {
     },
     apiConstraintsHint:
       "API constraints: top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
+    apiConstraintsBadge: "Locked API params",
     agentSettings: "Agent Settings",
     autoApproveTools: "Auto-approve tool calls",
     noManualConfirm: "No manual confirmation needed",
