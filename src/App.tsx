@@ -46,6 +46,7 @@ import { MacLeftPaneTopBar } from "@/components/layout/MacLeftPaneTopBar";
 import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
 import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
+import { AutoTooltipHost } from "@/components/ui/tooltip";
 import { ProfilePreview } from "@/components/profile/ProfilePreview";
 import { DevProfiler } from "@/perf/DevProfiler";
 import type { FsChangePayload } from "@/lib/fsChange";
@@ -169,45 +170,6 @@ function DiffViewWrapper() {
   );
 }
 
-const AUTO_TOOLTIP_FLAG = "data-lumina-auto-tooltip";
-
-function inferButtonTooltip(button: HTMLButtonElement): string {
-  const ariaLabel = button.getAttribute("aria-label")?.trim();
-  if (ariaLabel) return ariaLabel;
-
-  const dataTooltip = button.getAttribute("data-tooltip")?.trim();
-  if (dataTooltip) return dataTooltip;
-
-  const text = button.textContent?.replace(/\s+/g, " ").trim() ?? "";
-  if (text.length > 0) {
-    return text.length > 80 ? `${text.slice(0, 79)}…` : text;
-  }
-
-  return "点击执行此操作";
-}
-
-function applyAutoButtonTooltips(root: ParentNode) {
-  const buttons = root.querySelectorAll<HTMLButtonElement>("button");
-  buttons.forEach((button) => {
-    const currentTitle = button.getAttribute("title")?.trim() ?? "";
-    const autoTitle = button.getAttribute(AUTO_TOOLTIP_FLAG)?.trim() ?? "";
-    const hasExplicitTitle =
-      currentTitle.length > 0 && currentTitle !== autoTitle;
-    if (hasExplicitTitle) {
-      button.removeAttribute(AUTO_TOOLTIP_FLAG);
-      return;
-    }
-
-    const inferred = inferButtonTooltip(button);
-    if (currentTitle !== inferred) {
-      button.setAttribute("title", inferred);
-    }
-    if (autoTitle !== inferred) {
-      button.setAttribute(AUTO_TOOLTIP_FLAG, inferred);
-    }
-  });
-}
-
 function App() {
   const {
     vaultPath,
@@ -255,43 +217,6 @@ function App() {
     count: number;
     timer: ReturnType<typeof setTimeout> | null;
   }>({ count: 0, timer: null });
-
-  // Global button tooltip fallback: auto-fill title for buttons that don't define one.
-  useEffect(() => {
-    applyAutoButtonTooltips(document);
-
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === "childList") {
-          mutation.addedNodes.forEach((node) => {
-            if (!(node instanceof HTMLElement)) return;
-            if (node.tagName === "BUTTON") {
-              applyAutoButtonTooltips(node.parentElement ?? document);
-              return;
-            }
-            applyAutoButtonTooltips(node);
-          });
-        }
-
-        if (
-          mutation.type === "attributes" &&
-          mutation.target instanceof HTMLButtonElement
-        ) {
-          const button = mutation.target;
-          applyAutoButtonTooltips(button.parentElement ?? document);
-        }
-      }
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["aria-label", "data-tooltip", "title"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
 
   // 首次启动时默认打开 AI Chat
   useEffect(() => {
@@ -958,13 +883,19 @@ function App() {
 
   // Welcome screen when no vault is open
   if (!vaultPath) {
-    return <WelcomeScreen onOpenVault={handleOpenVault} />;
+    return (
+      <>
+        <WelcomeScreen onOpenVault={handleOpenVault} />
+        <AutoTooltipHost />
+      </>
+    );
   }
 
   return (
     <div className="h-full flex flex-col bg-background">
       <TitleBar />
       <PluginShellSlotHost slotId="app-top" />
+      <AutoTooltipHost />
       <div
         ref={layoutRef}
         className="flex-1 flex overflow-hidden transition-colors duration-300"
