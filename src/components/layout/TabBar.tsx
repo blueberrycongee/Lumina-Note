@@ -179,13 +179,6 @@ function TabItem({
     >
       <TabShape isActive={isActive} isDropTarget={isDropTarget} />
       <div
-        // Pad the bottom by the ear radius so `items-center` vertically
-        // centers icons, text, and the close button within the silhouette's
-        // *body* region (above the ears), not the full cell. This keeps the
-        // hover rounded-rect — which is also bounded by the body region —
-        // fully covering all content, and matches how Chrome positions its
-        // tab content above the ear flare.
-        style={{ paddingBottom: TAB_SHAPE_EAR_RADIUS }}
         className={cn(
           "relative flex h-full items-center gap-2 pl-7 pr-5 text-[13px] transition-colors duration-150",
           isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
