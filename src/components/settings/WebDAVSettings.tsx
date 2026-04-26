@@ -201,7 +201,11 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
         <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
           <AlertCircle size={16} className="text-destructive shrink-0" />
           <span className="text-sm text-destructive">{combinedError}</span>
-          <button onClick={handleDismissError} className="ml-auto p-1 hover:bg-destructive/20 rounded">
+          <button
+            onClick={handleDismissError}
+            className="ml-auto p-1 hover:bg-destructive/20 rounded"
+            aria-label={t.common.close}
+          >
             <X size={14} className="text-destructive" />
           </button>
         </div>
@@ -441,7 +445,11 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
         <div className="space-y-3 p-3 rounded-lg border border-border/60">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">{t.settingsModal.cloudSyncPlan}</h4>
-            <button onClick={() => setShowPlan(false)} className="p-1 hover:bg-muted rounded">
+            <button
+              onClick={() => setShowPlan(false)}
+              className="p-1 hover:bg-muted rounded"
+              aria-label={t.common.close}
+            >
               <X size={14} />
             </button>
           </div>

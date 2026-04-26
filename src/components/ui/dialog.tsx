@@ -7,6 +7,7 @@ import {
 } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 /**
  * Dialog — modal overlay with backdrop, focus trap, ESC dismissal.
@@ -60,6 +61,7 @@ export const Dialog = forwardRef<HTMLDivElement, DialogProps>(function Dialog(
   const reduceMotion = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const { t } = useLocaleStore();
 
   // ESC + focus restoration
   useEffect(() => {
@@ -147,7 +149,7 @@ export const Dialog = forwardRef<HTMLDivElement, DialogProps>(function Dialog(
                   "hover:bg-accent hover:text-foreground",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
                 )}
-                aria-label="Close"
+                aria-label={t.common.close}
               >
                 <X size={14} />
               </button>
