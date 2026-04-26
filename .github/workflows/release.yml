@@ -66,6 +66,9 @@ jobs:
         run: npm run ${{ matrix.script }} -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Code signing is currently unsigned. Disable identity auto-discovery
+          # so electron-builder doesn't try to load empty CSC_LINK as a file.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

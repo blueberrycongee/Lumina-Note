@@ -38,10 +38,11 @@ mac:
     - target: zip
       arch: [arm64, x64]
   icon: build-resources/icon.icns
-  hardenedRuntime: true
+  # Code signing is not configured (no Apple cert in CI). Setting identity to null
+  # tells electron-builder to skip signing instead of failing on empty CSC_LINK.
+  identity: null
+  hardenedRuntime: false
   gatekeeperAssess: false
-  entitlements: build-resources/entitlements.mac.plist
-  entitlementsInherit: build-resources/entitlements.mac.plist
 
 win:
   target:
