@@ -1483,6 +1483,18 @@ mark {
 /* Reading view - 移除动画 */
 .reading-view {
   /* animation removed for smooth mode switching */
+
+  /* Mirror the visible offsets that CodeMirrorEditor produces via its two
+     stacked rules — .cm-content vertical padding (16px top + 16px bottom)
+     and .cm-line horizontal padding (24px left + 16px right) — so reading
+     mode's text column lines up exactly with live/source mode. Both modes
+     already had a centered 760px outer box, but in CM the text was inset
+     by 24/16 while reading text sat flush at the box edges, so toggling
+     modes visibly shifted the column ~24px to the left. Tailwind preflight
+     gives this element box-sizing: border-box, so max-w-[760px] keeps the
+     same outer footprint as .cm-content and the inner column lands at the
+     matching 720px. */
+  padding: 16px 16px 16px 24px;
 }
 
 /* Mermaid 图表容器 */
