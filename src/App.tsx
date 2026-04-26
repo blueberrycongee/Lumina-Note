@@ -806,6 +806,8 @@ function App() {
 
   useEffect(() => {
     if (!vaultPath) return;
+    useUIStore.getState().setLeftSidebarOpen(true);
+    useUIStore.getState().setRightSidebarOpen(false);
     void setWindowSize(
       MAIN_WORKSPACE_WINDOW_WIDTH,
       MAIN_WORKSPACE_WINDOW_HEIGHT,
