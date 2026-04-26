@@ -1128,19 +1128,27 @@ body {
 .prose h6 {
   color: hsl(var(--md-heading, var(--foreground)));
 }
+/* Heading line-heights mirror the per-level values in CodeMirrorEditor's
+   theme (.cm-header-1: 1.3, .cm-header-2: 1.4, .cm-header-3: 1.5). Without
+   these, reading-mode headings inherit .prose's body line-height (1.75)
+   and end up visibly taller than the same heading in live/source — the
+   biggest single source of "reading mode feels different" between modes. */
 .prose h1 {
   font-size: 2rem;
   font-weight: 700;
+  line-height: 1.3;
   margin: 1.5rem 0 1rem;
 }
 .prose h2 {
   font-size: 1.5rem;
   font-weight: 600;
+  line-height: 1.4;
   margin: 1.5rem 0 0.75rem;
 }
 .prose h3 {
   font-size: 1.25rem;
   font-weight: 600;
+  line-height: 1.5;
   margin: 1.25rem 0 0.5rem;
 }
 .prose h4 {
@@ -1499,6 +1507,17 @@ mark {
      of padding so the outer footprint is also 42rem. */
   max-width: 42rem;
   padding: 32px 48px 32px 56px;
+}
+
+/* The first child's margin-top doesn't collapse with .reading-view's
+   padding-top (margin-collapse only happens through zero-padding parents),
+   so a doc starting with `# Title` gets pushed an extra 24px down compared
+   to live/source mode where the same line just sits on cm-content's
+   padding. Zero out the leading margin so the top of every reading-view
+   document starts at the same screen position as the corresponding
+   cm-line — no jump on mode toggle. */
+.reading-view > :first-child {
+  margin-top: 0;
 }
 
 /* Mermaid 图表容器 */
