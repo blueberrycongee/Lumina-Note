@@ -1021,7 +1021,7 @@ function VaultNameSection({
               setMenuOpen((prev) => !prev);
             }}
             className="shrink-0 p-0.5 rounded-ui-sm opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground hover:bg-accent"
-            aria-label={t.workspace?.actions || "Actions"}
+            aria-label={t.workspace?.switch || "Switch Workspace"}
           >
             <ChevronDown className="w-3.5 h-3.5" />
           </button>
@@ -1031,7 +1031,7 @@ function VaultNameSection({
           <PopoverList>
             <Row
               icon={<Pencil className="w-4 h-4" />}
-              title={t.common?.edit || "Rename"}
+              title={t.workspace?.rename || "Rename"}
               onSelect={handleRenameClick}
               role="menuitem"
             />

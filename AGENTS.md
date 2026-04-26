@@ -44,6 +44,12 @@ Agent launch rule:
 - When dispatching Claude/Codex through TermCanvas CLI, start a fresh agent terminal with `termcanvas terminal create --prompt "..."`
 - Do not use `termcanvas terminal input` for task dispatch; it is not a supported automation path
 
+TermCanvas Computer Use:
+- TermCanvas may dynamically inject a Computer Use MCP server into Claude/Codex terminals; it does not have to appear in static MCP settings files.
+- For local macOS desktop apps or system UI, check for TermCanvas Computer Use before assuming only shell, browser, or Playwright tools are available.
+- If available, call `status` first, then `setup` if permissions or helper health are missing, then `get_instructions` for the current operating protocol.
+- Do not manually start `computer-use-helper`, write its state file, launch the MCP server, or hand-write JSON-RPC unless explicitly debugging Computer Use itself.
+
 Workflow control:
 - After dispatching, always call `hydra watch`. It returns at decision points.
 1. Watch until decision point: `hydra watch --workbench <workbenchId> --repo .`
@@ -72,3 +78,75 @@ All human-readable content (summary, outputs, evidence, reflection) lives in
 first, then publish `result.json` atomically as the final artifact of the run.
 
 When NOT to use: simple fixes, high-certainty tasks, or work that is faster to do directly in the current agent.
+
+## TermCanvas Task System
+
+TermCanvas has a first-class task store. Tasks are persistent records of work
+the user wants done — captured when the user expresses intent, not when the
+work happens. Use the `termcanvas task` CLI to read and write them. Any agent
+terminal can record, read, and update tasks.
+
+When to record a task:
+- User says "记一下", "回头处理", "帮我留意", "later", "todo this", or any phrasing that defers the work.
+- User describes a problem or idea but isn't asking you to fix it right now.
+- User pastes a GitHub issue URL and asks you to track it (record the URL via `--link`).
+
+Do NOT silently nod — capture the task with `termcanvas task add` so it survives the session.
+
+Recording a task:
+```
+termcanvas task add --title "<short imperative>" --body "<detail>" [--link <url>]
+```
+- `--title`: short, scannable. Rephrase the user's words into imperative mood.
+- `--body`: longer description, including any context the user gave.
+- `--link <url>`: attach an external reference (GitHub issue, doc, etc.). Use `--link-type github_issue` for issue URLs.
+- Repo defaults to cwd. Pass `--repo <path>` only if you need a different one.
+
+Reading and updating tasks:
+- `termcanvas task list` — list tasks for the current repo (filter `--status done` etc.)
+- `termcanvas task show <id>` — read a single task before acting on it
+- `termcanvas task update <id> --status done` — mark complete after finishing the work
+- `termcanvas task update <id> --body "..."` — refine the description as you learn more
+
+Rules:
+- Tasks belong to the user. Don't invent tasks the user didn't ask for.
+- One task per intent. Three deferred items = three `task add` calls.
+- After completing work that originated from a task, call `task update <id> --status done`.
+- The task store is local to TermCanvas. It does NOT auto-sync to GitHub. If the user wants something on GitHub, they will say so explicitly.
+- Status values: `open` (default), `done`, `dropped`. Pick `dropped` (not delete) when a task is abandoned, so the history is preserved.
+
+## TermCanvas Pin System
+
+TermCanvas has a first-class pin store. Pins are persistent records of work
+the user wants done — captured when the user expresses intent, not when the
+work happens. Use the `termcanvas pin` CLI to read and write them. Any agent
+terminal can record, read, and update pins.
+
+When to record a pin:
+- User says "记一下", "回头处理", "帮我留意", "later", "todo this", or any phrasing that defers the work.
+- User describes a problem or idea but isn't asking you to fix it right now.
+- User pastes a GitHub issue URL and asks you to track it (record the URL via `--link`).
+
+Do NOT silently nod — capture the pin with `termcanvas pin add` so it survives the session.
+
+Recording a pin:
+```
+termcanvas pin add --title "<short imperative>" --body "<detail>" [--link <url>]
+```
+- `--title`: short, scannable. Rephrase the user's words into imperative mood.
+- `--body`: longer description, including any context the user gave.
+- `--link <url>`: attach an external reference (GitHub issue, doc, etc.). Use `--link-type github_issue` for issue URLs.
+- Repo defaults to cwd. Pass `--repo <path>` only if you need a different one.
+
+Reading and updating pins:
+- `termcanvas pin list` — list pins for the current repo (filter `--status done` etc.)
+- `termcanvas pin show <id>` — read a single pin before acting on it
+- `termcanvas pin update <id> --status done` — mark complete after finishing the work
+- `termcanvas pin update <id> --body "..."` — refine the description as you learn more
+
+Rules:
+- Pins belong to the user. Don't invent pins the user didn't ask for.
+- One pin per intent. Three deferred items = three `pin add` calls.
+- After completing work that originated from a pin, call `pin update <id> --status done`.
+- The pin store is local to TermCanvas. It does NOT auto-sync to GitHub. If the user wants something on GitHub, they will say so explicitly.
+- Status values: `open` (default), `done`, `dropped`. Pick `dropped` (not delete) when a pin is abandoned, so the history is preserved.

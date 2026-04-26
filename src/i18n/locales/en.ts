@@ -91,6 +91,11 @@ export default {
     moveDown: "Move down",
   },
 
+  workspace: {
+    rename: "Rename",
+    switch: "Switch Workspace",
+  },
+
   // Overview
   overview: {
     title: "Overview",

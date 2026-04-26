@@ -91,6 +91,11 @@ export default {
     moveDown: "下へ",
   },
 
+  workspace: {
+    rename: "名前を変更",
+    switch: "ワークスペースを切り替え",
+  },
+
   // 概要
   overview: {
     title: "概要",

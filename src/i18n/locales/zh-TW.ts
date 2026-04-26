@@ -91,6 +91,11 @@ export default {
     moveDown: "下移",
   },
 
+  workspace: {
+    rename: "重新命名",
+    switch: "更換工作區",
+  },
+
   // 概覽
   overview: {
     title: "概覽",
