@@ -140,15 +140,16 @@ const createEditorTheme = (fontSize: number) =>
 
     // Keep the text column at a stable, readable width no matter what the
     // main-area width is. When a sidebar collapses the editor's main pane
-    // jumps in width, but the text column stays at 760px and floats into
+    // jumps in width, but the column stays a fixed 42rem and floats into
     // the middle of whatever pane it's in, so line wrapping and selection
     // shape stay identical across the three common layouts (both panes
     // open / left collapsed / right collapsed). Only the empty space to
     // either side of the text changes.
     //
-    // 760px ≈ 80 characters at 14px — the upper end of the typographically
-    // recommended 60–80 char reading width, with headroom for CJK text
-    // (which is denser per line).
+    // The 42rem cap actually lives in globals.css under
+    // `.codemirror-wrapper .cm-sizer / .cm-content / .cm-line`, so the
+    // reading-mode `.reading-view` rule there can stay in lock-step. 42rem
+    // ≈ 672px ≈ 60–75 characters at 14px — typographic comfort zone.
     //
     // margin: 0 auto (instead of justify-content on the scroller) means
     // if gutters get added later, they still sit at the left edge and the
@@ -158,7 +159,6 @@ const createEditorTheme = (fontSize: number) =>
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       padding: "16px 0",
       caretColor: "hsl(var(--foreground))",
-      maxWidth: "760px",
       marginLeft: "auto",
       marginRight: "auto",
     },
