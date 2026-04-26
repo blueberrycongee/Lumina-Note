@@ -86,6 +86,7 @@ scripts/plan-loop*.ps1
 .tmp_node/
 .superset/
 .worktrees/
+.hydra/
 
 # Local Playwright artifacts
 output/playwright/
