@@ -57,15 +57,25 @@ function ChipButton({
       data-chip={testId}
       className={[
         "flex h-7 shrink-0 items-center gap-1 self-end rounded-full px-2",
-        "text-xs transition-colors duration-fast ease-out-subtle",
+        "text-xs",
+        // Spotify-style micro-motion: bg + 1px lift + soft shadow ride together
+        // on a single 200ms ease so the chip "rises" smoothly on hover, and
+        // stays risen while its popover is open.
+        "transition-[background-color,color,transform,box-shadow] duration-content ease-out-subtle",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
         open
-          ? "bg-accent text-foreground"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          ? "bg-accent text-foreground -translate-y-px shadow-elev-1"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground hover:-translate-y-px hover:shadow-elev-1",
       ].join(" ")}
     >
       <span className="block max-w-[140px] truncate font-medium">{label}</span>
-      <ChevronUp size={12} className="shrink-0 opacity-70" />
+      <ChevronUp
+        size={12}
+        className={[
+          "shrink-0 transition-opacity duration-content ease-out-subtle",
+          open ? "opacity-100" : "opacity-70",
+        ].join(" ")}
+      />
     </button>
   );
 }

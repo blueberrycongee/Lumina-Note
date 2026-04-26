@@ -1499,11 +1499,14 @@ export function MainAIChatShell() {
                     {...plusMenu.triggerHandlers}
                     className={[
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      "transition-colors duration-fast ease-out-subtle",
+                      // Match the chip-row micro-motion: bg + 1px lift + soft
+                      // shadow ride together so the trigger "rises" smoothly on
+                      // hover and stays risen while the popover is open.
+                      "transition-[background-color,color,transform,box-shadow] duration-content ease-out-subtle",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
                       showPlusMenu
-                        ? "bg-accent text-foreground"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                        ? "bg-accent text-foreground -translate-y-px shadow-elev-1"
+                        : "text-muted-foreground hover:bg-accent hover:text-foreground hover:-translate-y-px hover:shadow-elev-1",
                     ].join(" ")}
                     title={"More"}
                   >

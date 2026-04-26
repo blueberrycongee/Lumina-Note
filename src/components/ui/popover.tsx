@@ -244,14 +244,27 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
       : {
           opacity: 0,
           y: placement.startsWith("top") ? 4 : -4,
-          scale: 0.98,
+          scale: 0.96,
         };
     const animate = reduceMotion
       ? { opacity: 1 }
       : { opacity: 1, y: 0, scale: 1 };
     const exit = reduceMotion
       ? { opacity: 0 }
-      : { opacity: 0, y: placement.startsWith("top") ? 2 : -2, scale: 0.99 };
+      : { opacity: 0, y: placement.startsWith("top") ? 2 : -2, scale: 0.98 };
+
+    // Anchor the scale/translate animation to the corner closest to the
+    // trigger so the popover reads as "popping out from the chip" rather than
+    // ballooning from its own centre. Subtle but the difference between a
+    // floaty and a connected feel.
+    const transformOrigin =
+      placement === "top-start"
+        ? "bottom left"
+        : placement === "top-end"
+          ? "bottom right"
+          : placement === "bottom-end"
+            ? "top right"
+            : "top left";
 
     if (typeof document === "undefined") return null;
 
@@ -273,10 +286,10 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
             animate={animate}
             exit={exit}
             transition={{
-              duration: 0.14,
+              duration: 0.16,
               ease: [0.2, 0.9, 0.1, 1],
             }}
-            style={style}
+            style={{ ...style, transformOrigin }}
             className={cn(
               "overflow-hidden rounded-ui-lg border border-border bg-popover text-popover-foreground shadow-elev-2",
               className,
