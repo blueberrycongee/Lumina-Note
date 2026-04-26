@@ -228,7 +228,9 @@ export const useAIStore = create<AIState>()(
           const providerSettingsChanged =
             providerChanged ||
             nextModelId !== previousModelId ||
-            nextConfig.baseUrl !== currentConfig.baseUrl;
+            nextConfig.baseUrl !== currentConfig.baseUrl ||
+            nextConfig.thinkingMode !== currentConfig.thinkingMode ||
+            nextConfig.reasoningEffort !== currentConfig.reasoningEffort;
 
           if (providerChanged) {
             await invoke("agent_set_active_provider", { provider_id: nextProvider });
@@ -240,6 +242,8 @@ export const useAIStore = create<AIState>()(
               settings: {
                 modelId: nextModelId || undefined,
                 baseUrl: nextConfig.baseUrl || undefined,
+                thinkingMode: nextConfig.thinkingMode,
+                reasoningEffort: nextConfig.reasoningEffort,
               },
             });
           }

@@ -14,6 +14,11 @@ import path from 'node:path'
 
 import type { ProviderId } from './registry.js'
 
+// Mirror of the renderer types in src/services/llm/types.ts. Kept inline to
+// avoid cross-tree imports — the literal sets are tiny and stable.
+export type ThinkingMode = 'auto' | 'thinking' | 'instant'
+export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh'
+
 export interface ProviderPersistedSettings {
   baseUrl?: string
   modelId?: string
@@ -21,6 +26,10 @@ export interface ProviderPersistedSettings {
   name?: string
   /** 附加 HTTP header(罕见,用户自填) */
   headers?: Record<string, string>
+  /** 用户在 UI 选择的思考模式(auto/thinking/instant) */
+  thinkingMode?: ThinkingMode
+  /** 推理强度(low/medium/high/xhigh)— 仅当模型支持 effort 轴时生效 */
+  reasoningEffort?: ReasoningEffort
 }
 
 export interface AllProviderSettings {

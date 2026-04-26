@@ -1545,6 +1545,7 @@ export default {
     reasoningEffortLow: "低",
     reasoningEffortMedium: "中",
     reasoningEffortHigh: "高",
+    reasoningEffortXHigh: "超高",
     temperature: "溫度 (Temperature)",
     agentSettings: "Agent 設定",
     autoApproveTools: "自動批准工具調用",

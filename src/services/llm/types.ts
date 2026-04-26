@@ -92,9 +92,10 @@ export type ThinkingMode = "auto" | "thinking" | "instant";
 
 // Optional second axis: when a model supports tunable reasoning depth on top of
 // the binary thinking toggle (e.g. DeepSeek V4 Pro's `reasoning_effort: "high"`,
-// OpenAI o-series `reasoning.effort`, Anthropic `thinking.budget_tokens`).
+// OpenAI GPT-5.x `reasoning.effort`, Anthropic `thinking.budget_tokens`).
 // Each provider maps these levels to its native parameter shape.
-export type ReasoningEffort = "low" | "medium" | "high";
+// `xhigh` is GPT-5.5's "extreme" tier — most other providers cap at "high".
+export type ReasoningEffort = "low" | "medium" | "high" | "xhigh";
 
 // ============ LLM 响应 ============
 

@@ -63,6 +63,7 @@ export {
   normalizeThinkingMode,
   getThinkingCapability,
   supportsThinkingModeSwitch,
+  supportsBinaryThinkingToggle,
   supportedReasoningEfforts,
   resolveThinkingModel,
   getThinkingRequestBodyPatch,

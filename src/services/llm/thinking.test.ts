@@ -6,6 +6,7 @@ import {
   normalizeThinkingMode,
   resolveThinkingModel,
   supportedReasoningEfforts,
+  supportsBinaryThinkingToggle,
   supportsThinkingModeSwitch,
 } from "./thinking";
 
@@ -89,7 +90,20 @@ describe("LLM thinking mode capability", () => {
     expect(supportsThinkingModeSwitch("deepseek", "deepseek-chat")).toBe(true);
     expect(supportsThinkingModeSwitch("deepseek", "deepseek-v4-pro")).toBe(true);
     expect(supportsThinkingModeSwitch("deepseek", "deepseek-v4-flash")).toBe(true);
+    expect(supportsThinkingModeSwitch("openai", "gpt-5.5")).toBe(true);
     expect(supportsThinkingModeSwitch("openai", "gpt-5.4")).toBe(false);
+  });
+
+  it("reports binary toggle separately from effort axis", () => {
+    // Binary toggle: true for param-toggle and separate-model
+    expect(supportsBinaryThinkingToggle("openai-compatible", "kimi-k2.5")).toBe(true);
+    expect(supportsBinaryThinkingToggle("deepseek", "deepseek-chat")).toBe(true);
+    expect(supportsBinaryThinkingToggle("deepseek", "deepseek-v4-pro")).toBe(true);
+    // Binary toggle: false for effort-only models — UI should hide the
+    // auto/thinking/instant select and show only the effort selector.
+    expect(supportsBinaryThinkingToggle("openai", "gpt-5.5")).toBe(false);
+    expect(supportsBinaryThinkingToggle("openai", "gpt-5.5-pro")).toBe(false);
+    expect(supportsBinaryThinkingToggle("openai", "gpt-5.4")).toBe(false);
   });
 
   describe("DeepSeek V4 param-toggle", () => {
@@ -180,6 +194,74 @@ describe("LLM thinking mode capability", () => {
           thinkingMode: "thinking",
         })
       ).toBe("deepseek-v4-pro");
+    });
+  });
+
+  describe("OpenAI GPT-5.5 effort-only", () => {
+    it("exposes the full low/medium/high/xhigh effort range", () => {
+      expect(getThinkingCapability("openai", "gpt-5.5")).toEqual({
+        strategy: "effort-only",
+        parameter: "reasoning",
+        efforts: ["low", "medium", "high", "xhigh"],
+      });
+      expect(getThinkingCapability("openai", "gpt-5.5-pro")).toEqual({
+        strategy: "effort-only",
+        parameter: "reasoning",
+        efforts: ["low", "medium", "high", "xhigh"],
+      });
+      expect(supportedReasoningEfforts("openai", "gpt-5.5")).toEqual([
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+      ]);
+    });
+
+    it("emits the nested OpenAI shape `reasoning.effort`", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "openai",
+          model: "gpt-5.5",
+          reasoningEffort: "high",
+        })
+      ).toEqual({ reasoning: { effort: "high" } });
+
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "openai",
+          model: "gpt-5.5-pro",
+          reasoningEffort: "xhigh",
+        })
+      ).toEqual({ reasoning: { effort: "xhigh" } });
+    });
+
+    it("omits the patch when no effort is selected (API default applies)", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "openai",
+          model: "gpt-5.5",
+        })
+      ).toBeUndefined();
+    });
+
+    it("ignores effort on non-effort-only OpenAI models", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "openai",
+          model: "gpt-5.4",
+          reasoningEffort: "high",
+        })
+      ).toBeUndefined();
+    });
+
+    it("never resolves a separate model (effort-only is single-id)", () => {
+      expect(
+        resolveThinkingModel({
+          provider: "openai",
+          model: "gpt-5.5",
+          thinkingMode: "thinking",
+        })
+      ).toBe("gpt-5.5");
     });
   });
 });

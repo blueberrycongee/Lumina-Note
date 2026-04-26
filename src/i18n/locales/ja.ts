@@ -1579,6 +1579,7 @@ export default {
     reasoningEffortLow: "低",
     reasoningEffortMedium: "中",
     reasoningEffortHigh: "高",
+    reasoningEffortXHigh: "超高",
     temperature: "Temperature",
     agentSettings: "Agent 設定",
     autoApproveTools: "ツール呼び出しを自動承認",

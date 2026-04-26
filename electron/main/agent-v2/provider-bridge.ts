@@ -11,6 +11,7 @@
 
 import type { ProviderSettingsStore } from "../agent/providers/settings-store.js";
 import type { ProviderId } from "../agent/providers/registry.js";
+import { buildModelOptionsBlob } from "../agent/providers/thinking-options.js";
 
 const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 
@@ -151,6 +152,26 @@ export async function buildOpencodeBridge(
     // models.dev hasn't been fetched yet. Empty object lets opencode merge
     // with its registry (correct limits come from there).
     providerEntry.models = { [resolvedModelId]: {} };
+  }
+
+  // Per-model `options` blob is what opencode forwards as Vercel AI SDK
+  // `providerOptions`. We compute the provider-native shape from the user's
+  // thinkingMode + reasoningEffort selection (see thinking-options.ts). When
+  // there's nothing to send (e.g. model doesn't expose a thinking axis, or
+  // the user hasn't enabled it), we leave `options` unset so opencode falls
+  // back to provider defaults.
+  const optionsBlob = buildModelOptionsBlob({
+    provider: luminaId,
+    modelId: resolvedModelId,
+    thinkingMode: persisted.thinkingMode,
+    reasoningEffort: persisted.reasoningEffort,
+  });
+  if (optionsBlob) {
+    const models = providerEntry.models as Record<string, Record<string, unknown>>;
+    models[resolvedModelId] = {
+      ...models[resolvedModelId],
+      options: optionsBlob,
+    };
   }
 
   const config: Record<string, unknown> = {

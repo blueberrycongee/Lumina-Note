@@ -79,6 +79,7 @@ import {
 import {
   normalizeThinkingMode,
   supportedReasoningEfforts,
+  supportsBinaryThinkingToggle,
   supportsThinkingModeSwitch,
   type LLMProviderType,
   type ReasoningEffort,
@@ -254,15 +255,25 @@ export function MainAIChatShell() {
     config.provider as LLMProviderType,
     effectiveModelForThinking,
   );
+  const supportsBinaryToggle = supportsBinaryThinkingToggle(
+    config.provider as LLMProviderType,
+    effectiveModelForThinking,
+  );
   const displayThinkingMode = normalizeThinkingMode(config.thinkingMode);
   const availableEfforts = supportedReasoningEfforts(
     config.provider as LLMProviderType,
     effectiveModelForThinking,
   );
+  // Effort selector visible whenever the model exposes effort levels. For
+  // models that ALSO have a binary toggle, it's gated behind "thinking" mode;
+  // for effort-only models (e.g. GPT-5.5) it's the only thinking control.
+  const effortSelectorVisible =
+    !!availableEfforts && (!supportsBinaryToggle || displayThinkingMode === "thinking");
   const effortLabel: Record<ReasoningEffort, string> = {
     low: t.aiSettings.reasoningEffortLow,
     medium: t.aiSettings.reasoningEffortMedium,
     high: t.aiSettings.reasoningEffortHigh,
+    xhigh: t.aiSettings.reasoningEffortXHigh,
   };
 
   // Wrap session hooks with local state side effects
@@ -1494,37 +1505,57 @@ export function MainAIChatShell() {
                       />
                       {supportsThinkingMode && (
                         <div className="mt-1 border-t border-border/60 px-3 pb-1 pt-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-2 text-sm text-foreground">
-                              <Lightbulb
-                                size={16}
-                                className="text-muted-foreground"
-                              />
-                              {t.aiSettings.thinkingMode}
-                            </span>
-                            <select
-                              value={displayThinkingMode}
-                              onChange={(e) =>
-                                setConfig({
-                                  thinkingMode: e.target.value as ThinkingMode,
-                                })
+                          {supportsBinaryToggle && (
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-2 text-sm text-foreground">
+                                <Lightbulb
+                                  size={16}
+                                  className="text-muted-foreground"
+                                />
+                                {t.aiSettings.thinkingMode}
+                              </span>
+                              <select
+                                value={displayThinkingMode}
+                                onChange={(e) =>
+                                  setConfig({
+                                    thinkingMode: e.target.value as ThinkingMode,
+                                  })
+                                }
+                                className="h-7 rounded-ui-sm border border-border bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                              >
+                                <option value="auto">
+                                  {t.aiSettings.thinkingModeAuto}
+                                </option>
+                                <option value="thinking">
+                                  {t.aiSettings.thinkingModeThinking}
+                                </option>
+                                <option value="instant">
+                                  {t.aiSettings.thinkingModeInstant}
+                                </option>
+                              </select>
+                            </div>
+                          )}
+                          {effortSelectorVisible && (
+                            <div
+                              className={
+                                supportsBinaryToggle
+                                  ? "mt-2 flex items-center justify-between gap-2"
+                                  : "flex items-center justify-between gap-2"
                               }
-                              className="h-7 rounded-ui-sm border border-border bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                             >
-                              <option value="auto">
-                                {t.aiSettings.thinkingModeAuto}
-                              </option>
-                              <option value="thinking">
-                                {t.aiSettings.thinkingModeThinking}
-                              </option>
-                              <option value="instant">
-                                {t.aiSettings.thinkingModeInstant}
-                              </option>
-                            </select>
-                          </div>
-                          {availableEfforts && displayThinkingMode === "thinking" && (
-                            <div className="mt-2 flex items-center justify-between gap-2">
-                              <span className="text-sm text-muted-foreground pl-6">
+                              <span
+                                className={
+                                  supportsBinaryToggle
+                                    ? "text-sm text-muted-foreground pl-6"
+                                    : "flex items-center gap-2 text-sm text-foreground"
+                                }
+                              >
+                                {!supportsBinaryToggle && (
+                                  <Lightbulb
+                                    size={16}
+                                    className="text-muted-foreground"
+                                  />
+                                )}
                                 {t.aiSettings.reasoningEffort}
                               </span>
                               <select
@@ -1542,7 +1573,7 @@ export function MainAIChatShell() {
                                 <option value="">
                                   {t.aiSettings.reasoningEffortDefault}
                                 </option>
-                                {availableEfforts.map((level) => (
+                                {availableEfforts!.map((level) => (
                                   <option key={level} value={level}>
                                     {effortLabel[level]}
                                   </option>

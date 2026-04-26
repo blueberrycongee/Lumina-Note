@@ -78,6 +78,25 @@ describe('providers/metadata', () => {
     expect(getProviderModels('bogus')).toBeUndefined()
   })
 
+  it('openai catalog lists GPT-5.5 family on top with thinking support, keeps legacy 5.4 / 5.4-mini / 5 visible', () => {
+    const openai = getProviderModels('openai')
+    expect(openai).toBeDefined()
+
+    const ids = openai?.models.map((m) => m.id) ?? []
+    expect(ids).toContain('gpt-5.5')
+    expect(ids).toContain('gpt-5.5-pro')
+    expect(ids).toContain('gpt-5.4')
+    expect(ids).toContain('gpt-5.4-mini')
+    expect(ids).toContain('gpt-5')
+
+    // GPT-5.5 family must be first so it's the default highlight in the dropdown.
+    expect(ids[0]).toBe('gpt-5.5-pro')
+    expect(ids[1]).toBe('gpt-5.5')
+
+    expect(findModel('openai', 'gpt-5.5')?.supportsThinking).toBe(true)
+    expect(findModel('openai', 'gpt-5.5-pro')?.supportsThinking).toBe(true)
+  })
+
   it('deepseek catalog lists V4 models with 1M context and drops the /v1 suffix from the default base URL', () => {
     const deepseek = getProviderModels('deepseek')
     expect(deepseek).toBeDefined()

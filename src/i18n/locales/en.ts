@@ -1585,6 +1585,7 @@ export default {
     reasoningEffortLow: "Low",
     reasoningEffortMedium: "Medium",
     reasoningEffortHigh: "High",
+    reasoningEffortXHigh: "Extreme",
     temperature: "Temperature",
     agentSettings: "Agent Settings",
     autoApproveTools: "Auto-approve tool calls",
