@@ -1599,6 +1599,10 @@ export default {
     reasoningEffortHigh: "High",
     reasoningEffortXHigh: "Extreme",
     reasoningEffortMax: "Maximum",
+    modelPicker: {
+      title: "Switch model",
+      moreModels: "More models",
+    },
     temperature: "Temperature",
     agentSettings: "Agent Settings",
     autoApproveTools: "Auto-approve tool calls",

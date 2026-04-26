@@ -1593,6 +1593,10 @@ export default {
     reasoningEffortHigh: "高",
     reasoningEffortXHigh: "超高",
     reasoningEffortMax: "最大",
+    modelPicker: {
+      title: "モデル切替",
+      moreModels: "他のモデル",
+    },
     temperature: "Temperature",
     agentSettings: "Agent 設定",
     autoApproveTools: "ツール呼び出しを自動承認",

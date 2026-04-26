@@ -61,7 +61,10 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 
-  it("renders thinking mode selector in plus menu for supported models", () => {
+  // Thinking-mode + effort selectors moved out of the "+" menu in W3 — they
+  // now live in the ModelEffortPicker chip beside the send button. The "+"
+  // menu is back to: Reference file / Skills / AI settings.
+  it("only renders Reference / Skills / Settings rows in the + popover", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
@@ -73,33 +76,14 @@ describe("MainAIChatShell", () => {
 
     render(<MainAIChatShell />);
 
-    // Thinking mode is inside the "+" menu — click to open
-    fireEvent.click(screen.getByTitle("More"));
-
-    const { t } = useLocaleStore.getState();
-    expect(screen.getByText(t.aiSettings.thinkingMode)).toBeTruthy();
-    const selector = screen.getByRole("combobox");
-    fireEvent.change(selector, { target: { value: "instant" } });
-    expect(useAIStore.getState().config.thinkingMode).toBe("instant");
-  });
-
-  it("hides thinking mode in plus menu for unsupported models", () => {
-    useAIStore.setState((state) => ({
-      config: {
-        ...state.config,
-        provider: "deepseek",
-        model: "gpt-5.4",
-        thinkingMode: "auto",
-      },
-    }));
-
-    render(<MainAIChatShell />);
-
-    // Open plus menu
     fireEvent.click(screen.getByTitle("More"));
 
     const { t } = useLocaleStore.getState();
     expect(screen.queryByText(t.aiSettings.thinkingMode)).toBeNull();
+    expect(screen.queryByText(t.aiSettings.reasoningEffort)).toBeNull();
+    expect(screen.getByText("Reference file")).toBeTruthy();
+    expect(screen.getByText("Skills")).toBeTruthy();
+    expect(screen.getByText(t.ai.aiChatSettings)).toBeTruthy();
   });
 
   it("renders assistant thinking as collapsed block and expands on click", () => {

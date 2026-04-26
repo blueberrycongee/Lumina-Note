@@ -35,7 +35,6 @@ import {
   AlertCircle,
   Check,
   Settings,
-  Lightbulb,
 } from "lucide-react";
 import { useSessionManagement } from "./hooks/useSessionManagement";
 import { useSkillSearch } from "./hooks/useSkillSearch";
@@ -58,6 +57,7 @@ import {
 import type { ReferencedFile } from "@/hooks/useChatSend";
 import { useShallow } from "zustand/react/shallow";
 import { AISettingsModal } from "../ai/AISettingsModal";
+import { ModelEffortPicker } from "../chat/ModelEffortPicker";
 import {
   Button,
   Popover,
@@ -76,15 +76,6 @@ import {
   type ExportMessage,
   type RawConversationMessage,
 } from "@/features/conversation-export/exportUtils";
-import {
-  normalizeThinkingMode,
-  supportedReasoningEfforts,
-  supportsBinaryThinkingToggle,
-  supportsThinkingModeSwitch,
-  type LLMProviderType,
-  type ReasoningEffort,
-  type ThinkingMode,
-} from "@/services/llm";
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
@@ -229,10 +220,9 @@ export function MainAIChatShell() {
     [rustAgentMessages],
   );
 
-  // AI store — config, text selections, and input appends (chat messages no longer used)
+  // AI store — text selections + input appends. Model/effort are owned by the
+  // ModelEffortPicker which subscribes to the store directly.
   const {
-    config,
-    setConfig,
     textSelections,
     removeTextSelection,
     clearTextSelections,
@@ -240,8 +230,6 @@ export function MainAIChatShell() {
     consumeInputAppends,
   } = useAIStore(
     useShallow((state) => ({
-      config: state.config,
-      setConfig: state.setConfig,
       textSelections: state.textSelections,
       removeTextSelection: state.removeTextSelection,
       clearTextSelections: state.clearTextSelections,
@@ -249,34 +237,6 @@ export function MainAIChatShell() {
       consumeInputAppends: state.consumeInputAppends,
     })),
   );
-  const effectiveModelForThinking =
-    config.model === "custom" ? config.customModelId || "custom" : config.model;
-  const supportsThinkingMode = supportsThinkingModeSwitch(
-    config.provider as LLMProviderType,
-    effectiveModelForThinking,
-  );
-  const supportsBinaryToggle = supportsBinaryThinkingToggle(
-    config.provider as LLMProviderType,
-    effectiveModelForThinking,
-  );
-  const displayThinkingMode = normalizeThinkingMode(config.thinkingMode);
-  const availableEfforts = supportedReasoningEfforts(
-    config.provider as LLMProviderType,
-    effectiveModelForThinking,
-  );
-  // Effort selector visible whenever the model exposes effort levels. For
-  // models that ALSO have a binary toggle, it's gated behind "thinking" mode;
-  // for effort-only models (e.g. GPT-5.5) it's the only thinking control.
-  const effortSelectorVisible =
-    !!availableEfforts && (!supportsBinaryToggle || displayThinkingMode === "thinking");
-  const effortLabel: Record<ReasoningEffort, string> = {
-    none: t.aiSettings.reasoningEffortNone,
-    low: t.aiSettings.reasoningEffortLow,
-    medium: t.aiSettings.reasoningEffortMedium,
-    high: t.aiSettings.reasoningEffortHigh,
-    xhigh: t.aiSettings.reasoningEffortXHigh,
-    max: t.aiSettings.reasoningEffortMax,
-  };
 
   // Wrap session hooks with local state side effects
   const handleSwitchSession = useCallback(
@@ -769,7 +729,6 @@ export function MainAIChatShell() {
       textSelections,
       clearTextSelections,
       rustStartTask,
-      config,
       selectedSkills,
       isExportSelectionMode,
     ],
@@ -1505,87 +1464,6 @@ export function MainAIChatShell() {
                           setShowPlusMenu(false);
                         }}
                       />
-                      {supportsThinkingMode && (
-                        <div className="mt-1 border-t border-border/60 px-3 pb-1 pt-2">
-                          {supportsBinaryToggle && (
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="flex items-center gap-2 text-sm text-foreground">
-                                <Lightbulb
-                                  size={16}
-                                  className="text-muted-foreground"
-                                />
-                                {t.aiSettings.thinkingMode}
-                              </span>
-                              <select
-                                value={displayThinkingMode}
-                                onChange={(e) =>
-                                  setConfig({
-                                    thinkingMode: e.target.value as ThinkingMode,
-                                  })
-                                }
-                                className="h-7 rounded-ui-sm border border-border bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                              >
-                                <option value="auto">
-                                  {t.aiSettings.thinkingModeAuto}
-                                </option>
-                                <option value="thinking">
-                                  {t.aiSettings.thinkingModeThinking}
-                                </option>
-                                <option value="instant">
-                                  {t.aiSettings.thinkingModeInstant}
-                                </option>
-                              </select>
-                            </div>
-                          )}
-                          {effortSelectorVisible && (
-                            <div
-                              className={
-                                supportsBinaryToggle
-                                  ? "mt-2 flex items-center justify-between gap-2"
-                                  : "flex items-center justify-between gap-2"
-                              }
-                            >
-                              <span
-                                className={
-                                  supportsBinaryToggle
-                                    ? "text-sm text-muted-foreground pl-6"
-                                    : "flex items-center gap-2 text-sm text-foreground"
-                                }
-                              >
-                                {!supportsBinaryToggle && (
-                                  <Lightbulb
-                                    size={16}
-                                    className="text-muted-foreground"
-                                  />
-                                )}
-                                {t.aiSettings.reasoningEffort}
-                              </span>
-                              <select
-                                value={config.reasoningEffort ?? ""}
-                                onChange={(e) => {
-                                  const next = e.target.value;
-                                  setConfig({
-                                    reasoningEffort: next === ""
-                                      ? undefined
-                                      : (next as ReasoningEffort),
-                                  });
-                                }}
-                                className="h-7 rounded-ui-sm border border-border bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                              >
-                                <option value="">
-                                  {t.aiSettings.reasoningEffortDefault}
-                                </option>
-                                {availableEfforts!.map((level) => (
-                                  <option key={level} value={level}>
-                                    {effortLabel[level]}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <div className="my-1 border-t border-border/60" />
                       <Row
                         icon={<Settings size={16} />}
                         title={t.ai.aiChatSettings}
@@ -1630,6 +1508,11 @@ export function MainAIChatShell() {
                     rows={1}
                     autoFocus
                   />
+
+                  {/* Model + effort picker — Codex-style chip, sits to the
+                      left of mic/send so the per-message tuning surface is
+                      adjacent to the action it tunes. */}
+                  <ModelEffortPicker />
 
                   {/* Mic button */}
                   <button

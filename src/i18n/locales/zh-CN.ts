@@ -1560,6 +1560,10 @@ export default {
     reasoningEffortHigh: "高",
     reasoningEffortXHigh: "超高",
     reasoningEffortMax: "极限",
+    modelPicker: {
+      title: "切换模型",
+      moreModels: "其他模型",
+    },
     temperature: "温度 (Temperature)",
     agentSettings: "Agent 设置",
     autoApproveTools: "自动批准工具调用",
