@@ -10,6 +10,8 @@ import { useShallow } from "zustand/react/shallow";
 import { getVersion } from "@/lib/host";
 import { listen } from "@/lib/host";
 import { invoke } from "@/lib/host";
+import { createDir } from "@/lib/host";
+import { useRecentVaultStore } from "@/stores/useRecentVaultStore";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { RightPanel } from "@/components/layout/RightPanel";
 import { ResizeHandle } from "@/components/toolbar/ResizeHandle";
@@ -729,22 +731,52 @@ function App() {
     };
   }, [save, vaultPath, createNewFile]);
 
-  // Open folder dialog
-  const handleOpenVault = useCallback(async () => {
-    try {
-      const selected = await openDialog({
-        directory: true,
-        multiple: false,
-        title: t.welcome.openFolder,
-      });
+  const addRecentVault = useRecentVaultStore((s) => s.addVault);
 
-      if (selected && typeof selected === "string") {
-        setVaultPath(selected);
+  const handleOpenVault = useCallback(
+    async (path?: string) => {
+      if (path) {
+        addRecentVault(path);
+        await setVaultPath(path);
+        return;
       }
-    } catch (error) {
-      console.error("[App.handleOpenVault] Open folder dialog failed:", error);
-    }
-  }, [setVaultPath, t.welcome.openFolder]);
+      try {
+        const selected = await openDialog({
+          directory: true,
+          multiple: false,
+          title: t.welcome.openFolder,
+        });
+
+        if (selected && typeof selected === "string") {
+          addRecentVault(selected);
+          await setVaultPath(selected);
+        }
+      } catch (error) {
+        console.error(
+          "[App.handleOpenVault] Open folder dialog failed:",
+          error,
+        );
+      }
+    },
+    [setVaultPath, t.welcome.openFolder, addRecentVault],
+  );
+
+  const handleCreateVault = useCallback(
+    async (parentPath: string, name: string) => {
+      const vaultPath = `${parentPath}/${name}`;
+      try {
+        await createDir(vaultPath);
+        await createDir(`${vaultPath}/.lumina`);
+        await createDir(`${vaultPath}/.lumina/skills`);
+        await createDir(`${vaultPath}/.lumina/plugins`);
+        addRecentVault(vaultPath);
+        await setVaultPath(vaultPath);
+      } catch (error) {
+        console.error("[App.handleCreateVault] Failed to create vault:", error);
+      }
+    },
+    [setVaultPath, addRecentVault],
+  );
 
   // Listen for window-level entry actions dispatched from top-level chrome
   useEffect(() => {
@@ -885,7 +917,10 @@ function App() {
   if (!vaultPath) {
     return (
       <>
-        <WelcomeScreen onOpenVault={handleOpenVault} />
+        <WelcomeScreen
+          onOpenVault={handleOpenVault}
+          onCreateVault={handleCreateVault}
+        />
         <AutoTooltipHost />
       </>
     );
