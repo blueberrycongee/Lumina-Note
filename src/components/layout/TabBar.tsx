@@ -314,7 +314,7 @@ export function TabBar() {
                   "flex-none transition-[width,min-width,opacity] duration-150 ease-out",
                   isClosing
                     ? "w-0 min-w-0 opacity-0 pointer-events-none overflow-hidden"
-                    : "w-[200px] min-w-[80px]"
+                    : "w-[220px] min-w-[100px]"
                 )}
               >
                 <TabItem
