@@ -17,7 +17,7 @@ import type { ProviderId } from './registry.js'
 // Mirror of the renderer types in src/services/llm/types.ts. Kept inline to
 // avoid cross-tree imports — the literal sets are tiny and stable.
 export type ThinkingMode = 'auto' | 'thinking' | 'instant'
-export type ReasoningEffort = 'low' | 'medium' | 'high' | 'xhigh'
+export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 export interface ProviderPersistedSettings {
   baseUrl?: string

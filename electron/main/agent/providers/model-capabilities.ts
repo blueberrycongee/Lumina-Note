@@ -22,6 +22,7 @@ export type ModelReasoningSpec =
       strategy: 'param-toggle'
       nativeShape: 'deepseek-v4' | 'moonshot-kimi'
       efforts?: ReasoningEffort[]
+      defaultEffort?: ReasoningEffort
     }
   | {
       strategy: 'separate-model'
@@ -30,11 +31,14 @@ export type ModelReasoningSpec =
     }
   | {
       strategy: 'effort-only'
-      nativeShape: 'openai-reasoning'
+      nativeShape: 'openai-reasoning' | 'anthropic-output-config'
       efforts: ReasoningEffort[]
+      defaultEffort: ReasoningEffort
     }
 
-const GPT_55_EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high', 'xhigh']
+const GPT_5x_EFFORTS: ReasoningEffort[] = ['none', 'low', 'medium', 'high', 'xhigh']
+const ANTHROPIC_OPUS_47_EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high', 'xhigh', 'max']
+const ANTHROPIC_SONNET_46_EFFORTS: ReasoningEffort[] = ['low', 'medium', 'high', 'max']
 
 // Keyed as `<providerId>::<modelId>` for direct lookup. Lookups should also
 // honor a leading `vendor/` prefix (handled by `lookupReasoningSpec`).
@@ -42,23 +46,71 @@ const TABLE: Record<string, ModelReasoningSpec> = {
   'openai::gpt-5.5': {
     strategy: 'effort-only',
     nativeShape: 'openai-reasoning',
-    efforts: GPT_55_EFFORTS,
+    efforts: GPT_5x_EFFORTS,
+    defaultEffort: 'medium',
   },
   'openai::gpt-5.5-pro': {
     strategy: 'effort-only',
     nativeShape: 'openai-reasoning',
-    efforts: GPT_55_EFFORTS,
+    efforts: GPT_5x_EFFORTS,
+    defaultEffort: 'medium',
+  },
+  'openai::gpt-5.4': {
+    strategy: 'effort-only',
+    nativeShape: 'openai-reasoning',
+    efforts: GPT_5x_EFFORTS,
+    defaultEffort: 'none',
+  },
+  'openai::gpt-5.4-mini': {
+    strategy: 'effort-only',
+    nativeShape: 'openai-reasoning',
+    efforts: GPT_5x_EFFORTS,
+    defaultEffort: 'none',
+  },
+  'openai::gpt-5': {
+    strategy: 'effort-only',
+    nativeShape: 'openai-reasoning',
+    efforts: GPT_5x_EFFORTS,
+    defaultEffort: 'none',
+  },
+  'anthropic::claude-opus-4-7': {
+    strategy: 'effort-only',
+    nativeShape: 'anthropic-output-config',
+    efforts: ANTHROPIC_OPUS_47_EFFORTS,
+    defaultEffort: 'high',
+  },
+  'anthropic::claude-sonnet-4-6': {
+    strategy: 'effort-only',
+    nativeShape: 'anthropic-output-config',
+    efforts: ANTHROPIC_SONNET_46_EFFORTS,
+    defaultEffort: 'high',
+  },
+  'anthropic::claude-opus-4-6': {
+    strategy: 'effort-only',
+    nativeShape: 'anthropic-output-config',
+    efforts: ANTHROPIC_SONNET_46_EFFORTS,
+    defaultEffort: 'high',
+  },
+  'anthropic::claude-opus-4-5': {
+    strategy: 'effort-only',
+    nativeShape: 'anthropic-output-config',
+    efforts: ANTHROPIC_SONNET_46_EFFORTS,
+    defaultEffort: 'high',
   },
   'deepseek::deepseek-v4-pro': {
     strategy: 'param-toggle',
     nativeShape: 'deepseek-v4',
-    efforts: ['high'],
+    efforts: ['high', 'max'],
   },
   'deepseek::deepseek-v4-flash': {
     strategy: 'param-toggle',
     nativeShape: 'deepseek-v4',
   },
   'openai-compatible::kimi-k2.5': {
+    strategy: 'param-toggle',
+    nativeShape: 'moonshot-kimi',
+  },
+  'openai-compatible::kimi-k2.6': {
     strategy: 'param-toggle',
     nativeShape: 'moonshot-kimi',
   },

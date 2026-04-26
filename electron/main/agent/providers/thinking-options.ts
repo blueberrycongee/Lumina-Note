@@ -2,9 +2,14 @@
 // NATIVE option blob that opencode ships through to the Vercel AI SDK call as
 // `providerOptions`. The shape MUST mirror what each provider's SDK expects:
 //
-//   DeepSeek V4:  { thinking: { type: "enabled" }, reasoning_effort: "high" }
-//   OpenAI 5.5:   { reasoning: { effort: "high" } }                (nested object)
-//   Kimi K2.5:    { thinking: { type: "disabled" } }               (only when forcing instant)
+//   DeepSeek V4:   { extra_body: { thinking: { type: "enabled" } }, reasoning_effort: "high" }
+//                  (DeepSeek's `thinking` field is forwarded under `extra_body`,
+//                   while `reasoning_effort` stays at the top level.)
+//   OpenAI 5.5:    { reasoning: { effort: "high" } }              (nested object)
+//   Anthropic 4.x: { output_config: { effort: "low" }, thinking: { type: "adaptive" } }
+//                  (`high` is the API default — when it's the resolved effort
+//                   we omit `output_config.effort` entirely per Anthropic docs.)
+//   Kimi K2.5/6:   { thinking: { type: "disabled" } }             (only when forcing instant)
 //
 // The renderer counterpart is src/services/llm/thinking.ts. The (provider,
 // modelId) → ModelReasoningSpec mapping is centralised in
@@ -31,6 +36,15 @@ export function buildModelOptionsBlob(params: {
     switch (spec.nativeShape) {
       case 'openai-reasoning':
         return { reasoning: { effort: reasoningEffort } }
+      case 'anthropic-output-config': {
+        const blob: Record<string, unknown> = {
+          thinking: { type: 'adaptive' },
+        }
+        if (reasoningEffort !== 'high') {
+          blob.output_config = { effort: reasoningEffort }
+        }
+        return blob
+      }
     }
   }
 
@@ -38,7 +52,9 @@ export function buildModelOptionsBlob(params: {
   switch (spec.nativeShape) {
     case 'deepseek-v4': {
       if (thinkingMode !== 'thinking') return undefined
-      const blob: Record<string, unknown> = { thinking: { type: 'enabled' } }
+      const blob: Record<string, unknown> = {
+        extra_body: { thinking: { type: 'enabled' } },
+      }
       if (reasoningEffort && spec.efforts?.includes(reasoningEffort)) {
         blob.reasoning_effort = reasoningEffort
       }

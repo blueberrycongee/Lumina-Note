@@ -15,13 +15,16 @@ import {
 import { invoke, readFile } from "@/lib/host";
 import {
   callLLMStream,
+  getDefaultReasoningEffort,
   normalizeThinkingMode,
+  supportedReasoningEfforts,
   supportsThinkingModeSwitch,
   type LLMProviderType,
   type MessageAttachment,
   type ImageContent,
   type TextContent,
   type MessageContent,
+  type ReasoningEffort,
 } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { formatUserFriendlyError } from "./aiErrorFormatting";
@@ -203,15 +206,40 @@ export const useAIStore = create<AIState>()(
       encryptedApiKey: undefined,
       setConfig: async (newConfig) => {
         const currentConfig = getAIConfig();
+
+        // When the user switches models (or providers), the previously
+        // selected reasoningEffort may no longer be valid for the new model
+        // (e.g. switching from GPT-5.5 with effort='medium' to a model that
+        // only accepts ['high','max']). Reset to the new model's per-API
+        // default in that case so we never send an unsupported value.
+        const providerOrModelChanged =
+          (newConfig.provider !== undefined && newConfig.provider !== currentConfig.provider) ||
+          (newConfig.model !== undefined && newConfig.model !== currentConfig.model) ||
+          (newConfig.customModelId !== undefined &&
+            newConfig.customModelId !== currentConfig.customModelId);
+        if (providerOrModelChanged && newConfig.reasoningEffort === undefined) {
+          const nextProvider = (newConfig.provider ?? currentConfig.provider) as LLMProviderType;
+          const nextModelRaw = newConfig.model ?? currentConfig.model;
+          const nextCustomModelId = newConfig.customModelId ?? currentConfig.customModelId;
+          const nextModel =
+            nextModelRaw === "custom" ? (nextCustomModelId?.trim() || "") : nextModelRaw;
+          const supported = supportedReasoningEfforts(nextProvider, nextModel);
+          const carriedEffort = currentConfig.reasoningEffort as ReasoningEffort | undefined;
+          if (!supported || !carriedEffort || !supported.includes(carriedEffort)) {
+            const fallback = getDefaultReasoningEffort(nextProvider, nextModel);
+            newConfig = { ...newConfig, reasoningEffort: fallback ?? undefined };
+          }
+        }
+
         // 如果有新的 apiKey，先加密
         if (newConfig.apiKey !== undefined) {
           const encryptedKey = await encryptApiKey(newConfig.apiKey);
           newConfig = { ...newConfig, apiKey: newConfig.apiKey }; // 内存中保持明文
           setAIConfig(newConfig);
           // 存储时使用加密的 key
-          set({ 
-            config: { ...getAIConfig() }, 
-            encryptedApiKey: encryptedKey 
+          set({
+            config: { ...getAIConfig() },
+            encryptedApiKey: encryptedKey
           });
         } else {
           setAIConfig(newConfig);

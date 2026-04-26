@@ -34,6 +34,11 @@ vi.mock("@/services/llm", () => ({
     return "auto";
   },
   supportsThinkingModeSwitch: () => true,
+  // W2: useAIStore.setConfig consults these when the user switches model so it
+  // can drop a stale reasoningEffort that the new model wouldn't accept. The
+  // tests don't exercise the reset behavior, so simple stubs suffice.
+  supportedReasoningEfforts: () => null,
+  getDefaultReasoningEffort: () => null,
 }));
 
 vi.mock("@/services/ai/ai", () => ({

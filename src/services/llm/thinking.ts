@@ -133,15 +133,37 @@ export function resolveThinkingModel(params: {
   return model;
 }
 
+// Returns the per-provider API default effort for a (provider, model) pair,
+// or null when the model has no effort axis. UI uses this to pick a sensible
+// initial value when the user has not made an explicit selection or has just
+// switched to a model whose previous selection is no longer valid.
+export function getDefaultReasoningEffort(
+  provider: LLMProviderType,
+  model?: string,
+): ReasoningEffort | null {
+  if (!model) return null;
+  const spec = findModelInCatalog(provider, model)?.reasoning;
+  if (!spec) return null;
+  if (spec.strategy === "effort-only" || spec.strategy === "param-toggle") {
+    return spec.defaultEffort ?? null;
+  }
+  return null;
+}
+
 // Builds the per-call request-body patch in the provider's NATIVE shape. The
 // returned object is what gets merged into the request payload (or, for opencode,
 // what gets put under `provider.{id}.models.{modelId}.options` so opencode passes
 // it through as Vercel AI SDK `providerOptions`).
 //
 // Provider native shapes (intentionally NOT unified — each SDK reads its own):
-//   DeepSeek V4:  { thinking: { type: "enabled" }, reasoning_effort: "high" }
-//   OpenAI 5.5:   { reasoning: { effort: "high" } }   (nested object, not flat)
-//   Kimi K2.5:    { thinking: { type: "disabled" } }  (only when forcing instant)
+//   DeepSeek V4:  { extra_body: { thinking: { type: "enabled" } }, reasoning_effort: "high" }
+//                 (DeepSeek's `thinking` field is forwarded under `extra_body`,
+//                  while `reasoning_effort` stays at the top level.)
+//   OpenAI 5.5:   { reasoning: { effort: "high" } }    (nested object, not flat)
+//   Anthropic 4.x: { output_config: { effort: "high" }, thinking: { type: "adaptive" } }
+//                 (`high` equals API default, so the `output_config.effort` field
+//                  is omitted in that case per Anthropic docs.)
+//   Kimi K2.5/6:  { thinking: { type: "disabled" } }  (only when forcing instant)
 export function getThinkingRequestBodyPatch(params: {
   provider: LLMProviderType;
   model: string;
@@ -162,6 +184,18 @@ export function getThinkingRequestBodyPatch(params: {
     switch (spec.nativeShape) {
       case "openai-reasoning":
         return { reasoning: { effort: reasoningEffort } };
+      case "anthropic-output-config": {
+        // Anthropic docs: `effort: 'high'` is the API default — sending it
+        // produces identical behavior to omitting the field entirely. Skip
+        // the field in that case to keep the request minimal.
+        const patch: Record<string, unknown> = {
+          thinking: { type: "adaptive" },
+        };
+        if (reasoningEffort !== "high") {
+          patch.output_config = { effort: reasoningEffort };
+        }
+        return patch;
+      }
     }
   }
 
@@ -169,8 +203,11 @@ export function getThinkingRequestBodyPatch(params: {
   switch (spec.nativeShape) {
     case "deepseek-v4": {
       if (mode !== "thinking") return undefined;
+      // DeepSeek wraps the `thinking` field under `extra_body` per the
+      // official OpenAI-compatible docs. `reasoning_effort` stays at the
+      // top level.
       const patch: Record<string, unknown> = {
-        thinking: { type: "enabled" },
+        extra_body: { thinking: { type: "enabled" } },
       };
       if (reasoningEffort && spec.efforts?.includes(reasoningEffort)) {
         patch.reasoning_effort = reasoningEffort;

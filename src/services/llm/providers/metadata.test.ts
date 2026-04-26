@@ -117,4 +117,64 @@ describe('providers/metadata', () => {
     expect(flash?.contextWindow).toBe(1000000)
     expect(flash?.supportsThinking).toBe(true)
   })
+
+  // ---- W2: spec gap fills ----
+
+  it('GPT-5.4 family is no longer flagged as legacy (W2: now effort-only)', () => {
+    for (const id of ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5']) {
+      const model = findModel('openai', id)
+      expect(model, `expected '${id}' to exist in the openai catalog`).toBeDefined()
+      expect(model?.legacy).toBeFalsy()
+      expect(model?.reasoning?.strategy).toBe('effort-only')
+    }
+  })
+
+  it('DeepSeek V4 Pro now exposes both high and max efforts (W2)', () => {
+    const pro = findModel('deepseek', 'deepseek-v4-pro')
+    expect(pro?.reasoning?.strategy).toBe('param-toggle')
+    if (pro?.reasoning && pro.reasoning.strategy === 'param-toggle') {
+      expect(pro.reasoning.efforts).toEqual(['high', 'max'])
+    }
+  })
+
+  it('Anthropic catalog includes Opus 4.6 and Opus 4.5 alongside 4.7 / Sonnet 4.6 / Haiku 4.5 (W2)', () => {
+    const anthropic = getProviderModels('anthropic')
+    const ids = anthropic?.models.map((m) => m.id) ?? []
+    expect(ids).toContain('claude-opus-4-7')
+    expect(ids).toContain('claude-sonnet-4-6')
+    expect(ids).toContain('claude-haiku-4-5')
+    expect(ids).toContain('claude-opus-4-6')
+    expect(ids).toContain('claude-opus-4-5')
+
+    const opus47 = findModel('anthropic', 'claude-opus-4-7')
+    expect(opus47?.reasoning?.strategy).toBe('effort-only')
+    if (opus47?.reasoning && opus47.reasoning.strategy === 'effort-only') {
+      expect(opus47.reasoning.nativeShape).toBe('anthropic-output-config')
+      expect(opus47.reasoning.efforts).toEqual(['low', 'medium', 'high', 'xhigh', 'max'])
+      expect(opus47.reasoning.defaultEffort).toBe('high')
+    }
+
+    const sonnet46 = findModel('anthropic', 'claude-sonnet-4-6')
+    if (sonnet46?.reasoning && sonnet46.reasoning.strategy === 'effort-only') {
+      expect(sonnet46.reasoning.efforts).toEqual(['low', 'medium', 'high', 'max'])
+    }
+
+    // Haiku 4.5 still has no reasoning capability per Anthropic docs.
+    const haiku = findModel('anthropic', 'claude-haiku-4-5')
+    expect(haiku?.reasoning).toBeUndefined()
+  })
+
+  it('Kimi K2.6 is present in the moonshot openai-compatible preset and carries the tool_choice constraint (W2)', async () => {
+    const { OPENAI_COMPATIBLE_PRESETS } = await import('./models')
+    const moonshot = OPENAI_COMPATIBLE_PRESETS.find((p) => p.id === 'moonshot')
+    expect(moonshot).toBeDefined()
+    const ids = moonshot?.models.map((m) => m.id) ?? []
+    expect(ids).toContain('kimi-k2.6')
+    expect(ids).toContain('kimi-k2.5')
+
+    const k26 = moonshot?.models.find((m) => m.id === 'kimi-k2.6')
+    expect(k26?.supportsThinking).toBe(true)
+    expect(k26?.reasoning?.strategy).toBe('param-toggle')
+    expect(k26?.toolChoiceConstraintsWhenThinking).toEqual(['auto', 'none'])
+  })
 })

@@ -6,6 +6,11 @@ import type { ReasoningEffort } from '../types';
 //   thinking mode matches. "Thinking" here means anything that isn't `instant`
 //   (i.e. `thinking` or `auto`), since for models with this constraint the
 //   API treats auto as thinking-on.
+// - `fixedWhenReasoning` applies for `effort-only` models when reasoning is
+//   actually on — i.e. the resolved effort is anything other than `none`
+//   (undefined falls back to the model's `defaultEffort`). OpenAI o-series /
+//   GPT-5.5 and Anthropic extended thinking both require temperature=1.0
+//   while reasoning is enabled.
 // - `recommended` is the default when the user has not configured a value
 //   and no fixed override fires.
 export interface ModelTemperatureSpec {
@@ -13,6 +18,7 @@ export interface ModelTemperatureSpec {
   fixed?: number;
   fixedWhenThinking?: number;
   fixedWhenInstant?: number;
+  fixedWhenReasoning?: number;
 }
 
 // Reasoning capability — discriminated union mirroring the existing strategies.
@@ -20,13 +26,17 @@ export interface ModelTemperatureSpec {
 export type ModelReasoningSpec =
   | { strategy: 'none' }
   | {
-      // DeepSeek V4 / Kimi K2.5: thinking is a binary toggle via a `thinking` field.
-      // `nativeShape` describes the on-API shape so the bridge knows which blob to emit.
+      // DeepSeek V4 / Kimi K2.5/K2.6: thinking is a binary toggle via a
+      // `thinking` field. `nativeShape` describes the on-API shape so the
+      // bridge knows which blob to emit.
       strategy: 'param-toggle';
       nativeShape: 'deepseek-v4' | 'moonshot-kimi';
-      // When the model also accepts a tunable depth (DeepSeek V4 Pro: ['high']),
-      // declare it here so the UI renders an effort selector.
+      // When the model also accepts a tunable depth (DeepSeek V4 Pro:
+      // ['high','max']), declare it here so the UI renders an effort selector.
       efforts?: ReasoningEffort[];
+      // Per-provider API default. UI uses this to pick a sensible value when
+      // the user has no explicit selection.
+      defaultEffort?: ReasoningEffort;
     }
   | {
       // Legacy DeepSeek chat/reasoner — same provider exposes two model ids.
@@ -35,11 +45,18 @@ export type ModelReasoningSpec =
       instantModelId: string;
     }
   | {
-      // OpenAI GPT-5.5 family — always reasons; only depth is tunable.
-      // Future: Anthropic Claude 4.6/4.7 will use this strategy too with a different nativeShape.
+      // OpenAI GPT-5.x / Anthropic Claude 4.x — model always reasons (or has
+      // a `none` opt-out within the same effort axis); only depth is tunable.
+      // `nativeShape` decides the on-API blob:
+      //   openai-reasoning           → { reasoning: { effort } }
+      //   anthropic-output-config    → { output_config: { effort }, thinking: { type: "adaptive" } }
       strategy: 'effort-only';
-      nativeShape: 'openai-reasoning';
+      nativeShape: 'openai-reasoning' | 'anthropic-output-config';
       efforts: ReasoningEffort[];
+      // REQUIRED for effort-only: the API's behavior when no effort is
+      // explicitly sent. OpenAI defaults to `medium`, Anthropic to `high`,
+      // GPT-5.4 family to `none`.
+      defaultEffort: ReasoningEffort;
     };
 
 export interface ModelMeta {
@@ -53,6 +70,12 @@ export interface ModelMeta {
   reasoning?: ModelReasoningSpec;
   /** Per-model temperature constraints. */
   temperature?: ModelTemperatureSpec;
+  /**
+   * Allowed `tool_choice` values when the model is reasoning. Currently
+   * descriptive only — opencode's bridge does not enforce this yet. Persisted
+   * here so future enforcement code can read it from the catalog.
+   */
+  toolChoiceConstraintsWhenThinking?: Array<'auto' | 'none' | 'required'>;
   /** Optional family grouping for UI (e.g. 'gpt-5.5', 'claude-opus', 'deepseek-thinking'). Reserved for W3. */
   family?: string;
   /** Display-only legacy hint. */
@@ -91,7 +114,13 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         contextWindow: 200000,
         supportsVision: true,
         supportsThinking: true,
-        reasoning: { strategy: 'none' },
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'anthropic-output-config',
+          efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+          defaultEffort: 'high',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       {
         id: 'claude-sonnet-4-6',
@@ -99,13 +128,47 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         contextWindow: 200000,
         supportsVision: true,
         supportsThinking: true,
-        reasoning: { strategy: 'none' },
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'anthropic-output-config',
+          efforts: ['low', 'medium', 'high', 'max'],
+          defaultEffort: 'high',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       {
         id: 'claude-haiku-4-5',
         name: 'Claude Haiku 4.5',
         contextWindow: 200000,
         supportsVision: true,
+      },
+      {
+        id: 'claude-opus-4-6',
+        name: 'Claude Opus 4.6',
+        contextWindow: 200000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'anthropic-output-config',
+          efforts: ['low', 'medium', 'high', 'max'],
+          defaultEffort: 'high',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
+      },
+      {
+        id: 'claude-opus-4-5',
+        name: 'Claude Opus 4.5',
+        contextWindow: 200000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'anthropic-output-config',
+          efforts: ['low', 'medium', 'high', 'max'],
+          defaultEffort: 'high',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
     ],
   },
@@ -126,8 +189,10 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         reasoning: {
           strategy: 'effort-only',
           nativeShape: 'openai-reasoning',
-          efforts: ['low', 'medium', 'high', 'xhigh'],
+          efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+          defaultEffort: 'medium',
         },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       {
         id: 'gpt-5.5',
@@ -138,31 +203,51 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         reasoning: {
           strategy: 'effort-only',
           nativeShape: 'openai-reasoning',
-          efforts: ['low', 'medium', 'high', 'xhigh'],
+          efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+          defaultEffort: 'medium',
         },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       {
         id: 'gpt-5.4',
-        name: 'GPT-5.4 (legacy)',
+        name: 'GPT-5.4',
         contextWindow: 400000,
         supportsVision: true,
-        legacy: true,
-        reasoning: { strategy: 'none' },
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'openai-reasoning',
+          efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+          defaultEffort: 'none',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       {
         id: 'gpt-5.4-mini',
-        name: 'GPT-5.4 Mini (legacy)',
+        name: 'GPT-5.4 Mini',
         contextWindow: 400000,
-        legacy: true,
-        reasoning: { strategy: 'none' },
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'openai-reasoning',
+          efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+          defaultEffort: 'none',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       {
         id: 'gpt-5',
-        name: 'GPT-5 (legacy)',
+        name: 'GPT-5',
         contextWindow: 400000,
         supportsVision: true,
-        legacy: true,
-        reasoning: { strategy: 'none' },
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'openai-reasoning',
+          efforts: ['none', 'low', 'medium', 'high', 'xhigh'],
+          defaultEffort: 'none',
+        },
+        temperature: { fixedWhenReasoning: 1.0 },
       },
       { id: 'gpt-4.1', name: 'GPT-4.1', contextWindow: 1047576, supportsVision: true },
       { id: 'gpt-4o', name: 'GPT-4o', contextWindow: 128000, supportsVision: true },
@@ -199,7 +284,7 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         reasoning: {
           strategy: 'param-toggle',
           nativeShape: 'deepseek-v4',
-          efforts: ['high'],
+          efforts: ['high', 'max'],
         },
       },
       {
@@ -301,6 +386,25 @@ export const OPENAI_COMPATIBLE_PRESETS: OpenAICompatiblePreset[] = [
     label: 'Moonshot (Kimi)',
     defaultBaseUrl: 'https://api.moonshot.cn/v1',
     models: [
+      {
+        id: 'kimi-k2.6',
+        name: 'Kimi K2.6',
+        contextWindow: 256000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'param-toggle',
+          nativeShape: 'moonshot-kimi',
+        },
+        temperature: {
+          fixedWhenThinking: 1.0,
+          fixedWhenInstant: 0.6,
+          recommended: 1.0,
+        },
+        // Confirmed in Moonshot's K2.6 docs: when thinking is enabled the
+        // model only honors `tool_choice: 'auto' | 'none'` (no `required`).
+        toolChoiceConstraintsWhenThinking: ['auto', 'none'],
+      },
       {
         id: 'kimi-k2.5',
         name: 'Kimi K2.5',

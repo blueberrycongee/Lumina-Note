@@ -31,19 +31,48 @@ describe('thinking-options (opencode bridge translator)', () => {
       ).toBeUndefined()
     })
 
-    it('does not patch legacy GPT-5.4', () => {
+    it('emits the openai-reasoning blob for GPT-5.4 (W2: now effort-only)', () => {
+      // W2: GPT-5.4 family is no longer treated as legacy/no-effort.
       expect(
         buildModelOptionsBlob({
           provider: 'openai',
           modelId: 'gpt-5.4',
           reasoningEffort: 'high',
         }),
-      ).toBeUndefined()
+      ).toEqual({ reasoning: { effort: 'high' } })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'openai',
+          modelId: 'gpt-5.4-mini',
+          reasoningEffort: 'low',
+        }),
+      ).toEqual({ reasoning: { effort: 'low' } })
+    })
+
+    it('accepts the new `none` and `xhigh` efforts', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'openai',
+          modelId: 'gpt-5.5',
+          reasoningEffort: 'none',
+        }),
+      ).toEqual({ reasoning: { effort: 'none' } })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'openai',
+          modelId: 'gpt-5.5',
+          reasoningEffort: 'xhigh',
+        }),
+      ).toEqual({ reasoning: { effort: 'xhigh' } })
     })
   })
 
   describe('DeepSeek V4', () => {
-    it('emits the flat reasoning_effort shape that DeepSeek SDK reads', () => {
+    it('wraps the `thinking` field under extra_body per official DeepSeek docs', () => {
+      // W2: DeepSeek's `thinking` field must be forwarded under
+      // `extra_body`. `reasoning_effort` stays at the top level.
       expect(
         buildModelOptionsBlob({
           provider: 'deepseek',
@@ -52,12 +81,26 @@ describe('thinking-options (opencode bridge translator)', () => {
           reasoningEffort: 'high',
         }),
       ).toEqual({
-        thinking: { type: 'enabled' },
+        extra_body: { thinking: { type: 'enabled' } },
         reasoning_effort: 'high',
       })
     })
 
-    it('Flash sends thinking enable but never reasoning_effort', () => {
+    it('Pro accepts the `max` effort tier (W2)', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'deepseek',
+          modelId: 'deepseek-v4-pro',
+          thinkingMode: 'thinking',
+          reasoningEffort: 'max',
+        }),
+      ).toEqual({
+        extra_body: { thinking: { type: 'enabled' } },
+        reasoning_effort: 'max',
+      })
+    })
+
+    it('Flash sends thinking enable (extra_body) but never reasoning_effort', () => {
       expect(
         buildModelOptionsBlob({
           provider: 'deepseek',
@@ -65,7 +108,7 @@ describe('thinking-options (opencode bridge translator)', () => {
           thinkingMode: 'thinking',
           reasoningEffort: 'high',
         }),
-      ).toEqual({ thinking: { type: 'enabled' } })
+      ).toEqual({ extra_body: { thinking: { type: 'enabled' } } })
     })
 
     it('returns undefined unless mode is thinking', () => {
@@ -92,6 +135,61 @@ describe('thinking-options (opencode bridge translator)', () => {
           provider: 'deepseek',
           modelId: 'deepseek-chat',
           thinkingMode: 'thinking',
+        }),
+      ).toBeUndefined()
+    })
+  })
+
+  describe('Anthropic effort-only (W2: anthropic-output-config)', () => {
+    it('emits output_config.effort + thinking.adaptive on non-default efforts', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'anthropic',
+          modelId: 'claude-opus-4-7',
+          reasoningEffort: 'low',
+        }),
+      ).toEqual({
+        output_config: { effort: 'low' },
+        thinking: { type: 'adaptive' },
+      })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'anthropic',
+          modelId: 'claude-sonnet-4-6',
+          reasoningEffort: 'max',
+        }),
+      ).toEqual({
+        output_config: { effort: 'max' },
+        thinking: { type: 'adaptive' },
+      })
+    })
+
+    it('omits output_config.effort when effort === high (Anthropic API default)', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'anthropic',
+          modelId: 'claude-opus-4-7',
+          reasoningEffort: 'high',
+        }),
+      ).toEqual({ thinking: { type: 'adaptive' } })
+    })
+
+    it('returns undefined when no effort is selected (defer to API default)', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'anthropic',
+          modelId: 'claude-opus-4-7',
+        }),
+      ).toBeUndefined()
+    })
+
+    it('returns undefined for Haiku 4.5 (no reasoning capability)', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'anthropic',
+          modelId: 'claude-haiku-4-5',
+          reasoningEffort: 'high',
         }),
       ).toBeUndefined()
     })

@@ -270,10 +270,12 @@ export function MainAIChatShell() {
   const effortSelectorVisible =
     !!availableEfforts && (!supportsBinaryToggle || displayThinkingMode === "thinking");
   const effortLabel: Record<ReasoningEffort, string> = {
+    none: t.aiSettings.reasoningEffortNone,
     low: t.aiSettings.reasoningEffortLow,
     medium: t.aiSettings.reasoningEffortMedium,
     high: t.aiSettings.reasoningEffortHigh,
     xhigh: t.aiSettings.reasoningEffortXHigh,
+    max: t.aiSettings.reasoningEffortMax,
   };
 
   // Wrap session hooks with local state side effects

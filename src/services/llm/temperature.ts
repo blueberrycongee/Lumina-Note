@@ -1,5 +1,9 @@
-import { findModelInCatalog, type ModelTemperatureSpec } from "./providers/models";
-import type { LLMProviderType, ThinkingMode } from "./types";
+import {
+  findModelInCatalog,
+  type ModelMeta,
+  type ModelTemperatureSpec,
+} from "./providers/models";
+import type { LLMProviderType, ReasoningEffort, ThinkingMode } from "./types";
 
 function includesAny(text: string, patterns: readonly string[]): boolean {
   return patterns.some((pattern) => text.includes(pattern));
@@ -10,18 +14,39 @@ function clampTemperature(value: number): number {
   return Math.min(2, Math.max(0, value));
 }
 
+// True iff this model's reasoning is actually on for the given selection.
+// For `effort-only` models, the resolved effort (user's selection falling back
+// to `defaultEffort`) must be anything other than `none`. Other strategies are
+// not currently subject to `fixedWhenReasoning`.
+function isReasoningOn(
+  meta: ModelMeta | undefined,
+  reasoningEffort: ReasoningEffort | undefined,
+): boolean {
+  const reasoning = meta?.reasoning;
+  if (!reasoning || reasoning.strategy !== "effort-only") return false;
+  const effective = reasoningEffort ?? reasoning.defaultEffort;
+  return effective !== "none";
+}
+
 // Resolve a fixed (forced) temperature from the catalog spec, given the user's
-// thinking mode. `fixed` always wins; otherwise `fixedWhenThinking` applies
-// for any non-instant mode (matches the existing K2.5 contract where `auto`
-// behaves as thinking-on at the API level).
+// thinking mode and reasoning effort. Order of precedence:
+//   1. `fixed` (unconditional)
+//   2. `fixedWhenInstant` when mode === instant
+//   3. `fixedWhenReasoning` when the model is effort-only and reasoning is on
+//   4. `fixedWhenThinking` otherwise (auto/thinking)
 function resolveFixedFromSpec(
   spec: ModelTemperatureSpec | undefined,
+  meta: ModelMeta | undefined,
   mode: ThinkingMode,
+  reasoningEffort: ReasoningEffort | undefined,
 ): number | undefined {
   if (!spec) return undefined;
   if (spec.fixed !== undefined) return spec.fixed;
   if (mode === "instant") {
     return spec.fixedWhenInstant;
+  }
+  if (spec.fixedWhenReasoning !== undefined && isReasoningOn(meta, reasoningEffort)) {
+    return spec.fixedWhenReasoning;
   }
   return spec.fixedWhenThinking;
 }
@@ -81,13 +106,15 @@ export function resolveTemperature(params: {
   model: string;
   configuredTemperature?: number;
   thinkingMode?: ThinkingMode;
+  reasoningEffort?: ReasoningEffort;
 }): number {
-  const { provider, model, configuredTemperature } = params;
+  const { provider, model, configuredTemperature, reasoningEffort } = params;
   const mode: ThinkingMode = params.thinkingMode === "instant" ? "instant"
     : params.thinkingMode === "thinking" ? "thinking"
     : "auto";
-  const spec = findModelInCatalog(provider, model)?.temperature;
-  const fixed = resolveFixedFromSpec(spec, mode);
+  const meta = findModelInCatalog(provider, model);
+  const spec = meta?.temperature;
+  const fixed = resolveFixedFromSpec(spec, meta, mode, reasoningEffort);
   if (fixed !== undefined) {
     return fixed;
   }

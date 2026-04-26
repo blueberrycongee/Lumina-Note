@@ -27,7 +27,8 @@ describe('openai-compatible', () => {
     expect(settings.baseUrl).toBe('https://api.moonshot.cn/v1')
     expect(settings.name).toBe('Moonshot (Kimi)')
     expect(settings.apiKey).toBe('')
-    expect(settings.modelId).toBe('kimi-k2.5') // first in preset list
+    // W2: kimi-k2.6 was added at the top of the moonshot preset.
+    expect(settings.modelId).toBe('kimi-k2.6')
     expect(settings.models.length).toBeGreaterThan(0)
   })
 
