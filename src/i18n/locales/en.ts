@@ -290,6 +290,31 @@ export default {
     skillsManagerSourceUnknown: "Unknown",
     quoteFrom: "Quote from",
     welcomeTitle: "Hi, I'm Lumina",
+    welcomeMorning: [
+      "Good morning. What's on your mind?",
+      "Morning — where shall we start?",
+      "Morning. Anything I can help with?",
+    ],
+    welcomeAfternoon: [
+      "Good afternoon. Need a hand?",
+      "Afternoon. Picking up where you left off?",
+      "Hi — what are we working on?",
+    ],
+    welcomeEvening: [
+      "Good evening. What would you like to do?",
+      "Evening — anything I can help with?",
+      "Hi. Got something to think through?",
+    ],
+    welcomeNight: [
+      "Late session. No rush.",
+      "Burning the midnight oil — what are we on?",
+      "Hello. Quiet hours — what shall we explore?",
+    ],
+    welcomeCurrentFile: "Working on \u201C{name}\u201D — need a hand?",
+    welcomeEmptyVault: [
+      "Lumina is ready. Where would you like to start?",
+      "Fresh vault. What would you like to write first?",
+    ],
     polishText: "Polish Text",
     polishTextDesc: "Chat: Optimize expression",
     summarizeNote: "Summarize Note",

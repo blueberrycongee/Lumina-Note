@@ -286,6 +286,31 @@ export default {
     skillsManagerSourceUnknown: "未知",
     quoteFrom: "引用自",
     welcomeTitle: "你好，我是 Lumina",
+    welcomeMorning: [
+      "早上好，今天想做点什么？",
+      "早安，从哪里开始？",
+      "早上好，需要帮忙吗？",
+    ],
+    welcomeAfternoon: [
+      "下午好，需要帮忙吗？",
+      "下午好，继续刚才的思路？",
+      "你好，今天聊点什么？",
+    ],
+    welcomeEvening: [
+      "晚上好，想做点什么？",
+      "晚上好，需要帮忙吗？",
+      "你好，有什么想理一理的？",
+    ],
+    welcomeNight: [
+      "夜深了，慢慢来。",
+      "深夜在写东西？我陪你。",
+      "你好，安静的时候，想聊点什么？",
+    ],
+    welcomeCurrentFile: "在《{name}》上需要帮忙吗？",
+    welcomeEmptyVault: [
+      "Lumina 准备好了，想从哪里开始？",
+      "空的笔记库，想先写点什么？",
+    ],
     polishText: "润色文字",
     polishTextDesc: "Chat: 优化表达",
     summarizeNote: "总结笔记",

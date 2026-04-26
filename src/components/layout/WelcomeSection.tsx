@@ -316,9 +316,74 @@ interface WelcomeSectionProps {
   fileTree?: FileEntry[];
 }
 
+// Time-of-day bucketing — fully client-side, uses the renderer's local clock
+// so it respects the user's OS timezone without any server roundtrip.
+function getTimeBucket(hour: number): "morning" | "afternoon" | "evening" | "night" {
+  if (hour >= 5 && hour < 11) return "morning";
+  if (hour >= 11 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 22) return "evening";
+  return "night";
+}
+
+function pickRandom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function pickWelcomeGreeting(
+  t: Translations,
+  currentFile: string | null | undefined,
+  fileTreeLength: number,
+): string {
+  const w = t.ai;
+  const hour = new Date().getHours();
+  const bucket = getTimeBucket(hour);
+  const timePool: string[] =
+    bucket === "morning"
+      ? w.welcomeMorning
+      : bucket === "afternoon"
+        ? w.welcomeAfternoon
+        : bucket === "evening"
+          ? w.welcomeEvening
+          : w.welcomeNight;
+
+  // Context-aware variants get a 50% chance when applicable, else fall through
+  // to the time-of-day pool. Keeps the rotation interesting without making the
+  // greeting feel scripted.
+  if (currentFile) {
+    if (Math.random() < 0.5) {
+      return w.welcomeCurrentFile.replace("{name}", extractName(currentFile));
+    }
+    return pickRandom(timePool);
+  }
+  if (fileTreeLength === 0) {
+    if (Math.random() < 0.5) {
+      return pickRandom(w.welcomeEmptyVault);
+    }
+    return pickRandom(timePool);
+  }
+  return pickRandom(timePool);
+}
+
 /** Welcome greeting shown before any conversation starts. */
-export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
+export function WelcomeGreeting({
+  hasStarted,
+  currentFile,
+  fileTree = [],
+}: {
+  hasStarted: boolean;
+  currentFile?: string | null;
+  fileTree?: FileEntry[];
+}) {
   const { t } = useLocaleStore();
+  // Pick once per mount. The component remounts when a new conversation
+  // starts (hasStarted flips false → true → false on session new), so each
+  // fresh session sees a new greeting; sitting on the same screen does not
+  // shuffle the text.
+  const greeting = useMemo(
+    () => pickWelcomeGreeting(t, currentFile ?? null, fileTree.length),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, currentFile, fileTree.length],
+  );
 
   return (
     <AnimatePresence>
@@ -339,7 +404,7 @@ export function WelcomeGreeting({ hasStarted }: { hasStarted: boolean }) {
           }}
         >
           <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-3xl font-semibold tracking-tight text-foreground">
-            {t.ai.welcomeTitle}
+            {greeting}
           </h1>
         </motion.div>
       )}
@@ -419,7 +484,11 @@ export function WelcomeSection({
 }: WelcomeSectionProps) {
   return (
     <>
-      <WelcomeGreeting hasStarted={hasStarted} />
+      <WelcomeGreeting
+        hasStarted={hasStarted}
+        currentFile={currentFile}
+        fileTree={fileTree}
+      />
       <WelcomeSuggestions
         hasStarted={hasStarted}
         onSetInput={onSetInput}

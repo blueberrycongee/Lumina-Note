@@ -287,6 +287,31 @@ export default {
     skillsManagerSourceUnknown: "不明",
     quoteFrom: "引用元",
     welcomeTitle: "こんにちは、Lumina です",
+    welcomeMorning: [
+      "おはよう。今日は何を？",
+      "おはようございます。どこから始めますか？",
+      "おはよう。お手伝いしましょうか？",
+    ],
+    welcomeAfternoon: [
+      "こんにちは。お手伝いしますか？",
+      "こんにちは。続きから進めますか？",
+      "やぁ。今日は何を考えていますか？",
+    ],
+    welcomeEvening: [
+      "こんばんは。何かお手伝いを？",
+      "こんばんは。何をしましょうか？",
+      "やぁ。整理したいことはありますか？",
+    ],
+    welcomeNight: [
+      "夜更けに。ゆっくり進めましょう。",
+      "夜遅くまでお疲れさま。何か手伝いますか？",
+      "静かな時間ですね。何か話しますか？",
+    ],
+    welcomeCurrentFile: "「{name}」で何かお手伝いしましょうか？",
+    welcomeEmptyVault: [
+      "Lumina の準備ができました。どこから始めますか？",
+      "新しいノート集。最初に何を書きますか？",
+    ],
     polishText: "文章を磨く",
     polishTextDesc: "Chat: 表現を最適化",
     summarizeNote: "ノートを要約",

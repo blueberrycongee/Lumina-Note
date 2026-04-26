@@ -989,7 +989,11 @@ export function MainAIChatShell() {
 
         {/* 主要内容区域 - 始终居中 */}
         <main className="h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0">
-          <WelcomeGreeting hasStarted={hasStarted} />
+          <WelcomeGreeting
+            hasStarted={hasStarted}
+            currentFile={currentFile}
+            fileTree={fileTree}
+          />
 
           {/* Spacer: push input + cards toward center when idle */}
           {!hasStarted && <div className="flex-1" />}
