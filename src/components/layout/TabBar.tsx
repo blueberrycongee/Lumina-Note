@@ -86,20 +86,20 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
 
   return (
     <div ref={containerRef} className="absolute inset-0 pointer-events-none">
-      {/* Inactive hover affordance — a rounded rectangle that occupies the
-          body region of the silhouette. Its insets and radius are tied to the
-          silhouette geometry so the rectangle's bottom corners land exactly
-          on each ear's inflection point (re, height-re), and the top corners
-          mirror the silhouette's top arc — making the hover button feel like
-          a coherent slice of the tab itself instead of a floating chip. */}
+      {/* Inactive hover affordance — a rounded rectangle that sits inside the
+          silhouette body. Horizontal insets match the ear radius so the rect
+          aligns with the body's vertical walls; vertical insets are a small
+          symmetric padding so the rect fully covers the icons, label, and
+          close button (which are centered across the full cell height, not
+          the body region). */}
       {!isActive && (
         <div
           aria-hidden
           style={{
             left: TAB_SHAPE_EAR_RADIUS,
             right: TAB_SHAPE_EAR_RADIUS,
-            top: 0,
-            bottom: TAB_SHAPE_EAR_RADIUS,
+            top: 4,
+            bottom: 4,
             borderRadius: TAB_SHAPE_TOP_RADIUS,
           }}
           className="absolute bg-transparent group-hover:bg-[hsl(var(--accent)/0.6)] transition-colors duration-150"
