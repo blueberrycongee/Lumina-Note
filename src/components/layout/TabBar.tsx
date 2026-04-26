@@ -19,8 +19,8 @@ const CLOSE_ANIMATION_MS = 150;
 // floor — the body's vertical edge meets the ear with no kink, giving the
 // "asymptotic" tan-like curve the user wanted. SVG width comes from a
 // ResizeObserver so the curves never distort when the tab shrinks under pressure.
-const TAB_SHAPE_TOP_RADIUS = 10;
-const TAB_SHAPE_EAR_RADIUS = 14;
+const TAB_SHAPE_TOP_RADIUS = 12;
+const TAB_SHAPE_EAR_RADIUS = 15;
 const TAB_SHAPE_HEIGHT = 38;
 const TAB_SHAPE_DEFAULT_WIDTH = 200;
 
