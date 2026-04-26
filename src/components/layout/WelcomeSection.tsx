@@ -351,7 +351,8 @@ function pickWelcomeGreeting(
   // greeting feel scripted.
   if (currentFile) {
     if (Math.random() < 0.5) {
-      return w.welcomeCurrentFile.replace("{name}", extractName(currentFile));
+      const template = pickRandom(w.welcomeCurrentFile);
+      return template.replace("{name}", extractName(currentFile));
     }
     return pickRandom(timePool);
   }
