@@ -490,6 +490,15 @@ body.resizing iframe[data-codex-iframe="true"] {
   .editor-scroll-shell {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
+    /* Reserve the scrollbar's inline space whether the bar is visible or
+       not. Without this, CM live (which renders blank lines as 28px
+       cm-lines and is usually taller) shows a vertical scrollbar while
+       reading mode (where the parser collapses blank lines) often does
+       not — toggling between modes silently shifts the mx-auto-centered
+       column 3px right because the available width changes. With stable
+       gutter, both modes lose the same 6px on the right and centering
+       lands at the same x. */
+    scrollbar-gutter: stable;
   }
 
   .sidebar-file-tree-scroll::-webkit-scrollbar {
