@@ -104,7 +104,7 @@ export function ChatToolbar({
           <button
             onClick={onToggleRightSidebar}
             className={iconButton}
-            title={t.sidebar.toggleAIPanel}
+            title={t.sidebar.toggleRightPanel}
           >
             <MessageSquare size={15} />
           </button>

@@ -68,7 +68,7 @@ export default {
     newFolder: "新增資料夾",
     refresh: "重新整理",
     toggleSidebar: "切換側邊欄",
-    toggleAIPanel: "切換 AI 面板",
+    toggleRightPanel: "切換右側面板",
   },
 
   favorites: {

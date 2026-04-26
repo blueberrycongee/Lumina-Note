@@ -68,7 +68,7 @@ export default {
     newFolder: "New Folder",
     refresh: "Refresh",
     toggleSidebar: "Toggle Sidebar",
-    toggleAIPanel: "Toggle AI Panel",
+    toggleRightPanel: "Toggle right panel",
   },
 
   favorites: {

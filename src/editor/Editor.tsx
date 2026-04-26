@@ -589,7 +589,7 @@ export function Editor() {
             <button
               onClick={toggleRightSidebar}
               className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-              title={t.sidebar.toggleAIPanel}
+              title={t.sidebar.toggleRightPanel}
             >
               <MessageSquare size={16} />
             </button>

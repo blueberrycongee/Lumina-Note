@@ -68,7 +68,7 @@ export default {
     newFolder: "新規フォルダ",
     refresh: "更新",
     toggleSidebar: "サイドバーを切替",
-    toggleAIPanel: "AI パネルを切替",
+    toggleRightPanel: "右パネルを切替",
   },
 
   favorites: {
