@@ -418,6 +418,132 @@ describe("LLM thinking mode capability", () => {
     });
   });
 
+  describe("Zhipu GLM param-toggle (W6)", () => {
+    it("glm-5 reports param-toggle (binary thinking) capability", () => {
+      expect(getThinkingCapability("glm", "glm-5")).toEqual({
+        strategy: "param-toggle",
+        parameter: "thinking",
+      });
+      expect(getThinkingCapability("glm", "glm-5-x")).toEqual({
+        strategy: "param-toggle",
+        parameter: "thinking",
+      });
+      expect(getThinkingCapability("glm", "glm-4.7")).toEqual({
+        strategy: "param-toggle",
+        parameter: "thinking",
+      });
+    });
+
+    it("glm-4.7-flash and glm-4.5-air report no reasoning capability", () => {
+      expect(getThinkingCapability("glm", "glm-4.7-flash")).toEqual({
+        strategy: "none",
+      });
+      expect(getThinkingCapability("glm", "glm-4.5-air")).toEqual({
+        strategy: "none",
+      });
+    });
+
+    it("emits the binary disable patch only when forcing instant", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "glm",
+          model: "glm-5",
+          thinkingMode: "instant",
+        }),
+      ).toEqual({ thinking: { type: "disabled" } });
+
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "glm",
+          model: "glm-5",
+          thinkingMode: "thinking",
+        }),
+      ).toBeUndefined();
+    });
+
+    it("preserves the binary-thinking capability for legacy openai-compatible+glm configs", () => {
+      // W6 drops the `zhipu` preset but findModelInCatalog falls back through
+      // [moonshot, glm, mimo] so existing user configs keep their thinking
+      // shape. The bridge mirror covers the same fallback via
+      // openai-compatible::glm-* entries.
+      expect(getThinkingCapability("openai-compatible", "glm-5")).toEqual({
+        strategy: "param-toggle",
+        parameter: "thinking",
+      });
+    });
+  });
+
+  describe("Xiaomi MiMo effort-only (W6)", () => {
+    it("mimo-v2.5-pro exposes low/medium/high with default 'medium'", () => {
+      expect(getThinkingCapability("mimo", "mimo-v2.5-pro")).toEqual({
+        strategy: "effort-only",
+        parameter: "reasoning",
+        efforts: ["low", "medium", "high"],
+      });
+      expect(getDefaultReasoningEffort("mimo", "mimo-v2.5-pro")).toBe("medium");
+      expect(supportedReasoningEfforts("mimo", "mimo-v2.5-pro")).toEqual([
+        "low",
+        "medium",
+        "high",
+      ]);
+    });
+
+    it("mimo-v2-pro and mimo-v2-omni share the same effort axis", () => {
+      for (const id of ["mimo-v2-pro", "mimo-v2-omni"]) {
+        expect(getThinkingCapability("mimo", id)).toEqual({
+          strategy: "effort-only",
+          parameter: "reasoning",
+          efforts: ["low", "medium", "high"],
+        });
+        expect(getDefaultReasoningEffort("mimo", id)).toBe("medium");
+      }
+    });
+
+    it("mimo-v2-flash has no reasoning capability", () => {
+      expect(getThinkingCapability("mimo", "mimo-v2-flash")).toEqual({
+        strategy: "none",
+      });
+      expect(getDefaultReasoningEffort("mimo", "mimo-v2-flash")).toBeNull();
+    });
+
+    it("emits the flat reasoning_effort field (NOT nested under `reasoning`)", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "mimo",
+          model: "mimo-v2.5-pro",
+          reasoningEffort: "high",
+        }),
+      ).toEqual({ reasoning_effort: "high" });
+
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "mimo",
+          model: "mimo-v2-omni",
+          reasoningEffort: "low",
+        }),
+      ).toEqual({ reasoning_effort: "low" });
+    });
+
+    it("omits the patch when no effort is selected", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "mimo",
+          model: "mimo-v2.5-pro",
+        }),
+      ).toBeUndefined();
+    });
+
+    it("ignores efforts outside the supported range", () => {
+      expect(
+        getThinkingRequestBodyPatch({
+          provider: "mimo",
+          model: "mimo-v2.5-pro",
+          reasoningEffort: "xhigh",
+        }),
+      ).toBeUndefined();
+    });
+  });
+
   describe("getDefaultReasoningEffort", () => {
     it("returns the per-model API default for effort-only models", () => {
       // OpenAI 5.5 family defaults to medium.

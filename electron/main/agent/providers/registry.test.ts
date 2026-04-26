@@ -9,15 +9,17 @@ import {
 } from './registry.js'
 
 describe('providers/registry', () => {
-  it('lists all 9 built-in providers (W5: moonshot is now top-level)', () => {
+  it('lists all 11 built-in providers (W5: moonshot top-level; W6: glm + mimo top-level)', () => {
     const providers = listProviders()
     const ids = providers.map((p) => p.id).sort()
     expect(ids).toEqual(
       [
         'anthropic',
         'deepseek',
+        'glm',
         'google',
         'groq',
+        'mimo',
         'moonshot',
         'ollama',
         'openai',
@@ -34,6 +36,24 @@ describe('providers/registry', () => {
     expect(moonshot?.requiresApiKey).toBe(true)
     expect(moonshot?.supportsBaseUrl).toBe(true)
     expect(moonshot?.defaultBaseUrl).toBe('https://api.moonshot.cn/v1')
+  })
+
+  it('glm has the documented defaults (W6)', () => {
+    const glm = getProvider('glm')
+    expect(glm).toBeDefined()
+    expect(glm?.label).toBe('Zhipu (GLM)')
+    expect(glm?.requiresApiKey).toBe(true)
+    expect(glm?.supportsBaseUrl).toBe(true)
+    expect(glm?.defaultBaseUrl).toBe('https://open.bigmodel.cn/api/paas/v4')
+  })
+
+  it('mimo has the documented defaults (W6)', () => {
+    const mimo = getProvider('mimo')
+    expect(mimo).toBeDefined()
+    expect(mimo?.label).toBe('Xiaomi MiMo')
+    expect(mimo?.requiresApiKey).toBe(true)
+    expect(mimo?.supportsBaseUrl).toBe(true)
+    expect(mimo?.defaultBaseUrl).toBe('https://api.xiaomimimo.com/v1')
   })
 
   it('every provider has label / description / requiresApiKey / supportsBaseUrl', () => {

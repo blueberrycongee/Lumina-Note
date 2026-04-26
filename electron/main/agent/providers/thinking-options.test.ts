@@ -222,6 +222,111 @@ describe('thinking-options (opencode bridge translator)', () => {
     })
   })
 
+  describe('Zhipu GLM (W6: top-level + legacy openai-compatible)', () => {
+    it('top-level glm provider emits binary-thinking shape on instant', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'glm',
+          modelId: 'glm-5',
+          thinkingMode: 'instant',
+        }),
+      ).toEqual({ thinking: { type: 'disabled' } })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'glm',
+          modelId: 'glm-5',
+          thinkingMode: 'thinking',
+        }),
+      ).toBeUndefined()
+    })
+
+    it('legacy openai-compatible+glm-5 keeps emitting the same blob (back-compat)', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'openai-compatible',
+          modelId: 'glm-5',
+          thinkingMode: 'instant',
+        }),
+      ).toEqual({ thinking: { type: 'disabled' } })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'openai-compatible',
+          modelId: 'glm-4.7',
+          thinkingMode: 'instant',
+        }),
+      ).toEqual({ thinking: { type: 'disabled' } })
+    })
+
+    it('returns undefined for non-thinking glm models', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'glm',
+          modelId: 'glm-4.7-flash',
+          thinkingMode: 'instant',
+        }),
+      ).toBeUndefined()
+    })
+  })
+
+  describe('Xiaomi MiMo (W6: mimo-reasoning shape)', () => {
+    it('emits the flat reasoning_effort field (NOT nested under `reasoning`)', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'mimo',
+          modelId: 'mimo-v2.5-pro',
+          reasoningEffort: 'high',
+        }),
+      ).toEqual({ reasoning_effort: 'high' })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'mimo',
+          modelId: 'mimo-v2-pro',
+          reasoningEffort: 'low',
+        }),
+      ).toEqual({ reasoning_effort: 'low' })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'mimo',
+          modelId: 'mimo-v2-omni',
+          reasoningEffort: 'medium',
+        }),
+      ).toEqual({ reasoning_effort: 'medium' })
+    })
+
+    it('omits the blob when no effort is selected', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'mimo',
+          modelId: 'mimo-v2.5-pro',
+        }),
+      ).toBeUndefined()
+    })
+
+    it('ignores efforts outside the supported [low, medium, high] range', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'mimo',
+          modelId: 'mimo-v2.5-pro',
+          reasoningEffort: 'xhigh',
+        }),
+      ).toBeUndefined()
+    })
+
+    it('returns undefined for the no-reasoning mimo-v2-flash variant', () => {
+      expect(
+        buildModelOptionsBlob({
+          provider: 'mimo',
+          modelId: 'mimo-v2-flash',
+          reasoningEffort: 'high',
+        }),
+      ).toBeUndefined()
+    })
+  })
+
   it('returns undefined for any model that does not expose a thinking axis', () => {
     expect(
       buildModelOptionsBlob({

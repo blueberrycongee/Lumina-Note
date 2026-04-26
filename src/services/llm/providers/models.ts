@@ -26,11 +26,14 @@ export interface ModelTemperatureSpec {
 export type ModelReasoningSpec =
   | { strategy: 'none' }
   | {
-      // DeepSeek V4 / Kimi K2.5/K2.6: thinking is a binary toggle via a
-      // `thinking` field. `nativeShape` describes the on-API shape so the
-      // bridge knows which blob to emit.
+      // DeepSeek V4 / Kimi K2.5/K2.6 / Zhipu GLM: thinking is a binary toggle
+      // via a `thinking` field. `nativeShape` describes the on-API shape so
+      // the bridge knows which blob to emit. `binary-thinking` is the
+      // provider-neutral OpenAI-compatible shape (`{ thinking: { type } }`)
+      // shared by Moonshot Kimi and Zhipu GLM thinking models; DeepSeek V4
+      // wraps the same field under `extra_body`.
       strategy: 'param-toggle';
-      nativeShape: 'deepseek-v4' | 'moonshot-kimi';
+      nativeShape: 'deepseek-v4' | 'binary-thinking';
       // When the model also accepts a tunable depth (DeepSeek V4 Pro:
       // ['high','max']), declare it here so the UI renders an effort selector.
       efforts?: ReasoningEffort[];
@@ -45,13 +48,14 @@ export type ModelReasoningSpec =
       instantModelId: string;
     }
   | {
-      // OpenAI GPT-5.x / Anthropic Claude 4.x — model always reasons (or has
-      // a `none` opt-out within the same effort axis); only depth is tunable.
-      // `nativeShape` decides the on-API blob:
+      // OpenAI GPT-5.x / Anthropic Claude 4.x / Xiaomi MiMo — model always
+      // reasons (or has a `none` opt-out within the same effort axis); only
+      // depth is tunable. `nativeShape` decides the on-API blob:
       //   openai-reasoning           → { reasoning: { effort } }
       //   anthropic-output-config    → { output_config: { effort }, thinking: { type: "adaptive" } }
+      //   mimo-reasoning             → { reasoning_effort: <effort> } (flat, OpenAI-compat)
       strategy: 'effort-only';
-      nativeShape: 'openai-reasoning' | 'anthropic-output-config';
+      nativeShape: 'openai-reasoning' | 'anthropic-output-config' | 'mimo-reasoning';
       efforts: ReasoningEffort[];
       // REQUIRED for effort-only: the API's behavior when no effort is
       // explicitly sent. OpenAI defaults to `medium`, Anthropic to `high`,
@@ -354,7 +358,7 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         contextWindow: 256000,
         supportsVision: true,
         supportsThinking: true,
-        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
         temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
         apiConstraints: {
           topP: { fixed: 0.95 },
@@ -370,7 +374,7 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         contextWindow: 256000,
         supportsVision: true,
         supportsThinking: true,
-        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
         temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
         apiConstraints: {
           topP: { fixed: 0.95 },
@@ -385,7 +389,7 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         name: 'Kimi K2 Thinking',
         contextWindow: 256000,
         supportsThinking: true,
-        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
         temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
         apiConstraints: {
           topP: { fixed: 0.95 },
@@ -400,7 +404,7 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         name: 'Kimi K2 Thinking Turbo',
         contextWindow: 256000,
         supportsThinking: true,
-        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
         temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
         apiConstraints: {
           topP: { fixed: 0.95 },
@@ -425,6 +429,102 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
         name: 'Moonshot v1 128K (legacy)',
         contextWindow: 128000,
         legacy: true,
+      },
+    ],
+  },
+  glm: {
+    id: 'glm',
+    label: 'Zhipu (GLM)',
+    description: '智谱 GLM 系列 (GLM-5 / GLM-4.7 / GLM-4.5 Air)',
+    defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    models: [
+      {
+        id: 'glm-5',
+        name: 'GLM-5',
+        contextWindow: 200000,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
+      },
+      {
+        id: 'glm-5-x',
+        name: 'GLM-5-X',
+        contextWindow: 200000,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
+      },
+      {
+        id: 'glm-4.7',
+        name: 'GLM-4.7',
+        contextWindow: 128000,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'binary-thinking' },
+      },
+      {
+        id: 'glm-4.7-flash',
+        name: 'GLM-4.7 Flash',
+        contextWindow: 128000,
+        // Preserved from the legacy openai-compatible Zhipu preset; users
+        // running this model expect the same low-temperature default.
+        temperature: { recommended: 0.6 },
+      },
+      {
+        id: 'glm-4.5-air',
+        name: 'GLM-4.5 Air',
+        contextWindow: 128000,
+      },
+    ],
+  },
+  mimo: {
+    id: 'mimo',
+    label: 'Xiaomi MiMo',
+    description: '小米 MiMo 系列 (V2.5 Pro / V2 Pro / V2 Omni / V2 Flash)',
+    defaultBaseUrl: 'https://api.xiaomimimo.com/v1',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    models: [
+      {
+        id: 'mimo-v2.5-pro',
+        name: 'MiMo V2.5 Pro',
+        contextWindow: 1000000,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'mimo-reasoning',
+          efforts: ['low', 'medium', 'high'],
+          defaultEffort: 'medium',
+        },
+      },
+      {
+        id: 'mimo-v2-pro',
+        name: 'MiMo V2 Pro',
+        contextWindow: 1000000,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'mimo-reasoning',
+          efforts: ['low', 'medium', 'high'],
+          defaultEffort: 'medium',
+        },
+      },
+      {
+        id: 'mimo-v2-omni',
+        name: 'MiMo V2 Omni',
+        contextWindow: 262144,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'mimo-reasoning',
+          efforts: ['low', 'medium', 'high'],
+          defaultEffort: 'medium',
+        },
+      },
+      {
+        id: 'mimo-v2-flash',
+        name: 'MiMo V2 Flash',
+        contextWindow: 262144,
       },
     ],
   },
@@ -478,7 +578,7 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
   'openai-compatible': {
     id: 'openai-compatible',
     label: 'OpenAI Compatible',
-    description: 'OpenAI protocol compatible (Moonshot / Zhipu / Qwen / vLLM / self-hosted)',
+    description: 'OpenAI protocol compatible (Qwen / vLLM / self-hosted)',
     requiresApiKey: true,
     supportsBaseUrl: true,
     models: [],
@@ -486,22 +586,6 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
 };
 
 export const OPENAI_COMPATIBLE_PRESETS: OpenAICompatiblePreset[] = [
-  {
-    id: 'zhipu',
-    label: 'Z.ai (GLM)',
-    defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    models: [
-      { id: 'glm-5', name: 'GLM-5', contextWindow: 128000, supportsVision: true },
-      { id: 'glm-4.7', name: 'GLM-4.7', contextWindow: 128000, supportsVision: true },
-      {
-        id: 'glm-4.7-flash',
-        name: 'GLM-4.7 Flash',
-        contextWindow: 128000,
-        supportsVision: true,
-        temperature: { recommended: 0.6 },
-      },
-    ],
-  },
   {
     id: 'qwen',
     label: 'Qwen (DashScope)',
@@ -539,12 +623,15 @@ export function findModel(providerId: string, modelId: string): ModelMeta | unde
 // to the moonshot catalog's "kimi-k2.5" entry. Used by capability lookups
 // (thinking.ts, temperature.ts) which historically used substring matching.
 //
-// W5: legacy users may still have `provider: 'openai-compatible'` configs with
-// a Kimi modelId from before moonshot was promoted to a top-level provider.
-// We fall back to the moonshot catalog for those so temperature locks /
-// thinking capabilities continue to apply (the bridge mirror keeps emitting
-// the right blob via openai-compatible::kimi-* entries in electron-side
-// model-capabilities).
+// W5/W6: legacy users may still have `provider: 'openai-compatible'` configs
+// targeting providers we have since promoted to first-class entries (Moonshot
+// in W5, Zhipu GLM in W6). For those we iterate the promoted catalogs in
+// order and return the first hit so temperature locks / thinking capabilities
+// continue to apply. The bridge mirror covers the same fallback via
+// openai-compatible::kimi-* / openai-compatible::glm-* entries in
+// electron-side model-capabilities.
+const OPENAI_COMPATIBLE_FALLBACK_PROVIDERS = ['moonshot', 'glm', 'mimo'] as const;
+
 export function findModelInCatalog(providerId: string, modelId: string): ModelMeta | undefined {
   const direct = findModel(providerId, modelId);
   if (direct) return direct;
@@ -564,10 +651,12 @@ export function findModelInCatalog(providerId: string, modelId: string): ModelMe
       const found = preset.models.find((m) => m.id.toLowerCase() === tail);
       if (found) return found;
     }
-    const moonshotMatch = PROVIDER_MODELS.moonshot?.models.find(
-      (m) => m.id.toLowerCase() === tail,
-    );
-    if (moonshotMatch) return moonshotMatch;
+    for (const fallbackId of OPENAI_COMPATIBLE_FALLBACK_PROVIDERS) {
+      const fallbackMatch = PROVIDER_MODELS[fallbackId]?.models.find(
+        (m) => m.id.toLowerCase() === tail,
+      );
+      if (fallbackMatch) return fallbackMatch;
+    }
   }
 
   return undefined;

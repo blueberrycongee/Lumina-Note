@@ -9,7 +9,8 @@
 //   Anthropic 4.x: { output_config: { effort: "low" }, thinking: { type: "adaptive" } }
 //                  (`high` is the API default — when it's the resolved effort
 //                   we omit `output_config.effort` entirely per Anthropic docs.)
-//   Kimi K2.5/6:   { thinking: { type: "disabled" } }             (only when forcing instant)
+//   Kimi / GLM:    { thinking: { type: "disabled" } }             (only when forcing instant)
+//   MiMo V2.x:     { reasoning_effort: "high" }                   (flat OpenAI-compat field)
 //
 // The renderer counterpart is src/services/llm/thinking.ts. The (provider,
 // modelId) → ModelReasoningSpec mapping is centralised in
@@ -56,6 +57,8 @@ export function buildModelOptionsBlob(params: {
         }
         return blob
       }
+      case 'mimo-reasoning':
+        return { reasoning_effort: reasoningEffort }
     }
   }
 
@@ -71,7 +74,10 @@ export function buildModelOptionsBlob(params: {
       }
       return blob
     }
-    case 'moonshot-kimi': {
+    case 'binary-thinking': {
+      // Shared OpenAI-compatible `{ thinking: { type } }` shape used by
+      // Moonshot Kimi and Zhipu GLM thinking models. Both default thinking-on,
+      // so we only emit a blob when the user explicitly forces instant.
       if (thinkingMode === 'instant') return { thinking: { type: 'disabled' } }
       return undefined
     }

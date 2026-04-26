@@ -155,14 +155,15 @@ export function getDefaultReasoningEffort(
 // it through as Vercel AI SDK `providerOptions`).
 //
 // Provider native shapes (intentionally NOT unified — each SDK reads its own):
-//   DeepSeek V4:  { extra_body: { thinking: { type: "enabled" } }, reasoning_effort: "high" }
-//                 (DeepSeek's `thinking` field is forwarded under `extra_body`,
-//                  while `reasoning_effort` stays at the top level.)
-//   OpenAI 5.5:   { reasoning: { effort: "high" } }    (nested object, not flat)
+//   DeepSeek V4:   { extra_body: { thinking: { type: "enabled" } }, reasoning_effort: "high" }
+//                  (DeepSeek's `thinking` field is forwarded under `extra_body`,
+//                   while `reasoning_effort` stays at the top level.)
+//   OpenAI 5.5:    { reasoning: { effort: "high" } }    (nested object, not flat)
 //   Anthropic 4.x: { output_config: { effort: "high" }, thinking: { type: "adaptive" } }
-//                 (`high` equals API default, so the `output_config.effort` field
-//                  is omitted in that case per Anthropic docs.)
-//   Kimi K2.5/6:  { thinking: { type: "disabled" } }  (only when forcing instant)
+//                  (`high` equals API default, so the `output_config.effort` field
+//                   is omitted in that case per Anthropic docs.)
+//   Kimi / GLM:    { thinking: { type: "disabled" } }   (only when forcing instant)
+//   MiMo V2.x:     { reasoning_effort: "high" }         (flat OpenAI-compat field)
 export function getThinkingRequestBodyPatch(params: {
   provider: LLMProviderType;
   model: string;
@@ -195,6 +196,8 @@ export function getThinkingRequestBodyPatch(params: {
         }
         return patch;
       }
+      case "mimo-reasoning":
+        return { reasoning_effort: reasoningEffort };
     }
   }
 
@@ -213,7 +216,11 @@ export function getThinkingRequestBodyPatch(params: {
       }
       return patch;
     }
-    case "moonshot-kimi": {
+    case "binary-thinking": {
+      // Shared OpenAI-compatible `{ thinking: { type } }` shape used by
+      // Moonshot Kimi and Zhipu GLM thinking models. Both providers default
+      // to thinking-on, so we only patch when the user explicitly forces
+      // instant mode.
       if (mode === "instant") {
         return { thinking: { type: "disabled" } };
       }

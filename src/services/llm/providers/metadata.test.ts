@@ -8,14 +8,16 @@ import {
 } from './metadata'
 
 describe('providers/metadata', () => {
-  it('covers all 9 provider ids (W5: moonshot is now top-level)', () => {
+  it('covers all 11 provider ids (W5: moonshot top-level; W6: glm + mimo top-level)', () => {
     const ids = Object.keys(PROVIDER_METADATA).sort()
     expect(ids).toEqual(
       [
         'anthropic',
         'deepseek',
+        'glm',
         'google',
         'groq',
+        'mimo',
         'moonshot',
         'ollama',
         'openai',
@@ -205,11 +207,84 @@ describe('providers/metadata', () => {
     expect(k25?.apiConstraints?.topP?.fixed).toBe(0.95)
   })
 
-  it('moonshot preset is removed from OPENAI_COMPATIBLE_PRESETS (W5); zhipu + qwen remain', async () => {
+  it('moonshot preset is removed (W5); zhipu preset is removed (W6); only qwen remains', async () => {
     const { OPENAI_COMPATIBLE_PRESETS } = await import('./models')
     const ids = OPENAI_COMPATIBLE_PRESETS.map((p) => p.id)
     expect(ids).not.toContain('moonshot')
-    expect(ids).toContain('zhipu')
+    expect(ids).not.toContain('zhipu')
     expect(ids).toContain('qwen')
+    expect(ids.length).toBe(1)
+  })
+
+  // ---- W6: glm + mimo are now top-level providers ----
+
+  it('glm is a top-level provider with the 5 expected models in order', () => {
+    const glm = getProviderModels('glm')
+    expect(glm).toBeDefined()
+    expect(glm?.label).toBe('Zhipu (GLM)')
+    expect(glm?.defaultBaseUrl).toBe('https://open.bigmodel.cn/api/paas/v4')
+    expect(glm?.requiresApiKey).toBe(true)
+
+    const ids = glm?.models.map((m) => m.id) ?? []
+    expect(ids).toEqual([
+      'glm-5',
+      'glm-5-x',
+      'glm-4.7',
+      'glm-4.7-flash',
+      'glm-4.5-air',
+    ])
+  })
+
+  it('glm-5 carries param-toggle reasoning with binary-thinking shape', () => {
+    const glm5 = findModel('glm', 'glm-5')
+    expect(glm5?.supportsThinking).toBe(true)
+    expect(glm5?.reasoning?.strategy).toBe('param-toggle')
+    if (glm5?.reasoning && glm5.reasoning.strategy === 'param-toggle') {
+      expect(glm5.reasoning.nativeShape).toBe('binary-thinking')
+    }
+  })
+
+  it('glm-4.7-flash and glm-4.5-air have no reasoning capability', () => {
+    expect(findModel('glm', 'glm-4.7-flash')?.reasoning).toBeUndefined()
+    expect(findModel('glm', 'glm-4.5-air')?.reasoning).toBeUndefined()
+    expect(findModel('glm', 'glm-4.7-flash')?.supportsThinking).toBeFalsy()
+  })
+
+  it('mimo is a top-level provider with the 4 expected models in order', () => {
+    const mimo = getProviderModels('mimo')
+    expect(mimo).toBeDefined()
+    expect(mimo?.label).toBe('Xiaomi MiMo')
+    expect(mimo?.defaultBaseUrl).toBe('https://api.xiaomimimo.com/v1')
+    expect(mimo?.requiresApiKey).toBe(true)
+
+    const ids = mimo?.models.map((m) => m.id) ?? []
+    expect(ids).toEqual([
+      'mimo-v2.5-pro',
+      'mimo-v2-pro',
+      'mimo-v2-omni',
+      'mimo-v2-flash',
+    ])
+  })
+
+  it('mimo-v2.5-pro carries effort-only reasoning with mimo-reasoning shape', () => {
+    const pro = findModel('mimo', 'mimo-v2.5-pro')
+    expect(pro?.supportsThinking).toBe(true)
+    expect(pro?.reasoning?.strategy).toBe('effort-only')
+    if (pro?.reasoning && pro.reasoning.strategy === 'effort-only') {
+      expect(pro.reasoning.nativeShape).toBe('mimo-reasoning')
+      expect(pro.reasoning.efforts).toEqual(['low', 'medium', 'high'])
+      expect(pro.reasoning.defaultEffort).toBe('medium')
+    }
+  })
+
+  it('mimo-v2-omni is the only MiMo with vision', () => {
+    expect(findModel('mimo', 'mimo-v2-omni')?.supportsVision).toBe(true)
+    expect(findModel('mimo', 'mimo-v2.5-pro')?.supportsVision).toBeFalsy()
+    expect(findModel('mimo', 'mimo-v2-pro')?.supportsVision).toBeFalsy()
+    expect(findModel('mimo', 'mimo-v2-flash')?.supportsVision).toBeFalsy()
+  })
+
+  it('mimo-v2-flash has no reasoning capability', () => {
+    expect(findModel('mimo', 'mimo-v2-flash')?.reasoning).toBeUndefined()
   })
 })

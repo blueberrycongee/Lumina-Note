@@ -9,38 +9,40 @@ import {
 } from './openai-compatible'
 
 describe('openai-compatible', () => {
-  it('listOpenAiCompatiblePresets returns all presets (W5: moonshot preset removed)', () => {
+  it('listOpenAiCompatiblePresets returns all presets (W5: moonshot removed; W6: zhipu removed)', () => {
     const presets = listOpenAiCompatiblePresets()
     expect(presets).toEqual(OPENAI_COMPATIBLE_PRESETS)
-    expect(presets.length).toBe(2)
-    expect(presets.map((p) => p.id).sort()).toEqual(['qwen', 'zhipu'])
+    expect(presets.length).toBe(1)
+    expect(presets.map((p) => p.id)).toEqual(['qwen'])
   })
 
   it('getOpenAiCompatiblePreset returns the correct preset', () => {
-    const zhipu = getOpenAiCompatiblePreset('zhipu')
-    expect(zhipu?.label).toBe('Z.ai (GLM)')
+    const qwen = getOpenAiCompatiblePreset('qwen')
+    expect(qwen?.label).toBe('Qwen (DashScope)')
     // W5: moonshot preset is gone (now a top-level provider).
     expect(getOpenAiCompatiblePreset('moonshot')).toBeUndefined()
+    // W6: zhipu preset is gone (glm is now a top-level provider).
+    expect(getOpenAiCompatiblePreset('zhipu')).toBeUndefined()
     expect(getOpenAiCompatiblePreset('nope')).toBeUndefined()
   })
 
   it('buildOpenAiCompatibleSettingsFromPreset fills in baseUrl + default model', () => {
-    const settings = buildOpenAiCompatibleSettingsFromPreset('zhipu')
-    expect(settings.presetId).toBe('zhipu')
-    expect(settings.baseUrl).toBe('https://open.bigmodel.cn/api/paas/v4')
-    expect(settings.name).toBe('Z.ai (GLM)')
+    const settings = buildOpenAiCompatibleSettingsFromPreset('qwen')
+    expect(settings.presetId).toBe('qwen')
+    expect(settings.baseUrl).toBe('https://dashscope.aliyuncs.com/compatible-mode/v1')
+    expect(settings.name).toBe('Qwen (DashScope)')
     expect(settings.apiKey).toBe('')
-    expect(settings.modelId).toBe('glm-5')
+    expect(settings.modelId).toBe('qwen-max')
     expect(settings.models.length).toBeGreaterThan(0)
   })
 
   it('buildOpenAiCompatibleSettingsFromPreset honors apiKey / modelId overrides', () => {
-    const settings = buildOpenAiCompatibleSettingsFromPreset('zhipu', {
+    const settings = buildOpenAiCompatibleSettingsFromPreset('qwen', {
       apiKey: 'sk-xxx',
-      modelId: 'glm-4.7-flash',
+      modelId: 'qwen-turbo',
     })
     expect(settings.apiKey).toBe('sk-xxx')
-    expect(settings.modelId).toBe('glm-4.7-flash')
+    expect(settings.modelId).toBe('qwen-turbo')
   })
 
   it('buildOpenAiCompatibleSettingsFromPreset falls back to custom when preset id unknown', () => {

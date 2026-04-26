@@ -61,6 +61,10 @@ const PROVIDER_ID_MAP: Partial<Record<ProviderId, string>> = {
   // models.dev id is `moonshotai`; opencode's registry pulls Kimi metadata
   // (context windows, pricing) from there.
   moonshot: "moonshotai",
+  // models.dev id is `zhipuai`; opencode picks up GLM model metadata from there.
+  glm: "zhipuai",
+  // models.dev id is `xiaomi`; opencode picks up MiMo model metadata from there.
+  mimo: "xiaomi",
   groq: "groq",
   openrouter: "openrouter",
   ollama: "ollama",

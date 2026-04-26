@@ -27,6 +27,8 @@ export type ProviderId =
   | 'google'
   | 'deepseek'
   | 'moonshot'
+  | 'glm'
+  | 'mimo'
   | 'groq'
   | 'openrouter'
   | 'ollama'
@@ -129,6 +131,40 @@ const entries: ProviderEntry[] = [
         name: 'moonshot',
         apiKey: settings.apiKey ?? '',
         baseURL: settings.baseUrl ?? 'https://api.moonshot.cn/v1',
+        headers: settings.headers,
+      })
+      return factory(modelId)
+    },
+  },
+  {
+    id: 'glm',
+    label: 'Zhipu (GLM)',
+    description: '智谱 GLM 系列(GLM-5 / GLM-4.7 / GLM-4.5 Air)',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    createModel(settings, modelId) {
+      const factory = createOpenAICompatible({
+        name: 'glm',
+        apiKey: settings.apiKey ?? '',
+        baseURL: settings.baseUrl ?? 'https://open.bigmodel.cn/api/paas/v4',
+        headers: settings.headers,
+      })
+      return factory(modelId)
+    },
+  },
+  {
+    id: 'mimo',
+    label: 'Xiaomi MiMo',
+    description: '小米 MiMo 系列(V2.5 Pro / V2 Pro / V2 Omni / V2 Flash)',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    defaultBaseUrl: 'https://api.xiaomimimo.com/v1',
+    createModel(settings, modelId) {
+      const factory = createOpenAICompatible({
+        name: 'mimo',
+        apiKey: settings.apiKey ?? '',
+        baseURL: settings.baseUrl ?? 'https://api.xiaomimimo.com/v1',
         headers: settings.headers,
       })
       return factory(modelId)

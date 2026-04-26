@@ -20,7 +20,7 @@ export type ModelReasoningSpec =
   | { strategy: 'none' }
   | {
       strategy: 'param-toggle'
-      nativeShape: 'deepseek-v4' | 'moonshot-kimi'
+      nativeShape: 'deepseek-v4' | 'binary-thinking'
       efforts?: ReasoningEffort[]
       defaultEffort?: ReasoningEffort
     }
@@ -31,7 +31,7 @@ export type ModelReasoningSpec =
     }
   | {
       strategy: 'effort-only'
-      nativeShape: 'openai-reasoning' | 'anthropic-output-config'
+      nativeShape: 'openai-reasoning' | 'anthropic-output-config' | 'mimo-reasoning'
       efforts: ReasoningEffort[]
       defaultEffort: ReasoningEffort
     }
@@ -106,33 +106,81 @@ const TABLE: Record<string, ModelReasoningSpec> = {
     strategy: 'param-toggle',
     nativeShape: 'deepseek-v4',
   },
-  // Top-level moonshot provider (W5). Same `moonshot-kimi` shape as the
+  // Top-level moonshot provider (W5). Same `binary-thinking` shape as the
   // openai-compatible entries below, just reachable via the new provider id.
   'moonshot::kimi-k2.6': {
     strategy: 'param-toggle',
-    nativeShape: 'moonshot-kimi',
+    nativeShape: 'binary-thinking',
   },
   'moonshot::kimi-k2.5': {
     strategy: 'param-toggle',
-    nativeShape: 'moonshot-kimi',
+    nativeShape: 'binary-thinking',
   },
   'moonshot::kimi-k2-thinking': {
     strategy: 'param-toggle',
-    nativeShape: 'moonshot-kimi',
+    nativeShape: 'binary-thinking',
   },
   'moonshot::kimi-k2-thinking-turbo': {
     strategy: 'param-toggle',
-    nativeShape: 'moonshot-kimi',
+    nativeShape: 'binary-thinking',
+  },
+  // Top-level Zhipu GLM provider (W6). Reuses the `binary-thinking` shape:
+  // GLM thinking models accept the same `{ thinking: { type } }` field.
+  'glm::glm-5': {
+    strategy: 'param-toggle',
+    nativeShape: 'binary-thinking',
+  },
+  'glm::glm-5-x': {
+    strategy: 'param-toggle',
+    nativeShape: 'binary-thinking',
+  },
+  'glm::glm-4.7': {
+    strategy: 'param-toggle',
+    nativeShape: 'binary-thinking',
+  },
+  // Top-level Xiaomi MiMo provider (W6). Effort-only with the flat
+  // `reasoning_effort` field on the OpenAI-compat path.
+  'mimo::mimo-v2.5-pro': {
+    strategy: 'effort-only',
+    nativeShape: 'mimo-reasoning',
+    efforts: ['low', 'medium', 'high'],
+    defaultEffort: 'medium',
+  },
+  'mimo::mimo-v2-pro': {
+    strategy: 'effort-only',
+    nativeShape: 'mimo-reasoning',
+    efforts: ['low', 'medium', 'high'],
+    defaultEffort: 'medium',
+  },
+  'mimo::mimo-v2-omni': {
+    strategy: 'effort-only',
+    nativeShape: 'mimo-reasoning',
+    efforts: ['low', 'medium', 'high'],
+    defaultEffort: 'medium',
   },
   // Back-compat: existing user configs that still target openai-compatible
   // with a moonshot baseUrl + Kimi modelId continue to emit the right blob.
   'openai-compatible::kimi-k2.5': {
     strategy: 'param-toggle',
-    nativeShape: 'moonshot-kimi',
+    nativeShape: 'binary-thinking',
   },
   'openai-compatible::kimi-k2.6': {
     strategy: 'param-toggle',
-    nativeShape: 'moonshot-kimi',
+    nativeShape: 'binary-thinking',
+  },
+  // Back-compat: legacy users on the openai-compatible+Zhipu preset (W6 drops
+  // it from the preset list but keeps these entries for already-saved configs).
+  'openai-compatible::glm-5': {
+    strategy: 'param-toggle',
+    nativeShape: 'binary-thinking',
+  },
+  'openai-compatible::glm-5-x': {
+    strategy: 'param-toggle',
+    nativeShape: 'binary-thinking',
+  },
+  'openai-compatible::glm-4.7': {
+    strategy: 'param-toggle',
+    nativeShape: 'binary-thinking',
   },
 }
 
