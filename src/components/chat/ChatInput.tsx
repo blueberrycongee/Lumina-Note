@@ -512,8 +512,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <button
                 onClick={() => setActiveCommand(null)}
                 className="hover:bg-primary/20 rounded p-0.5 ml-1"
-                aria-label="Remove command"
-                title="移除当前快捷命令"
+                aria-label={t.ai.removeCommand}
               >
                 <X size={10} />
               </button>
@@ -530,7 +529,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <button
                 onClick={() => removeReference(file.path)}
                 className="hover:bg-primary/20 rounded p-0.5"
-                title={`移除引用：${file.name}`}
+                aria-label={t.ai.removeReference.replace("{name}", file.name)}
               >
                 <X size={10} />
               </button>
@@ -549,7 +548,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               <button
                 onClick={() => removeTextSelection(sel.id)}
                 className="hover:bg-accent/80 rounded p-0.5 shrink-0"
-                title="移除这段引用文本"
+                aria-label={t.ai.removeQuotedText}
               >
                 <X size={10} />
               </button>
@@ -662,7 +661,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                         setFilePickerQuery("");
                       }}
                       className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors"
-                      title={`引用 ${file.name}`}
+                      title={t.ai.referenceFile.replace("{name}", file.name)}
                     >
                       {file.isFolder ? (
                         <Folder size={14} className="text-yellow-500 shrink-0" />
@@ -723,7 +722,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors",
                   index === mentionIndex && "bg-accent"
                 )}
-                title={`引用 ${file.name}`}
+                title={t.ai.referenceFile.replace("{name}", file.name)}
               >
                 {file.isFolder ? (
                   <Folder size={14} className="text-yellow-500 shrink-0" />
@@ -765,7 +764,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                   <button
                     onClick={() => selectCommand(cmd)}
                     className="flex-1 px-3 py-2 text-sm text-left flex flex-col gap-0.5"
-                    title={`使用快捷命令 /${cmd.key}`}
+                    title={t.ai.useCommand.replace("{key}", cmd.key)}
                   >
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground">/{cmd.key}</span>
