@@ -23,6 +23,17 @@ const TAB_SHAPE_TOP_RADIUS = 12;
 const TAB_SHAPE_EAR_RADIUS = 15;
 const TAB_SHAPE_HEIGHT = 38;
 const TAB_SHAPE_DEFAULT_WIDTH = 200;
+// How far each tab slides into the previous tab. With value === EAR_RADIUS
+// the two ears interlock exactly inside one (EAR_RADIUS × EAR_RADIUS) box,
+// like Chrome. Going slightly larger packs adjacent bodies tighter — the
+// trailing ear of the previous tab and the leading ear of this tab simply
+// shift past each other, and the active tab's silhouette (which sits on
+// z-10) cleanly covers any visual overhang. Must stay strictly less than
+// (2 × EAR_RADIUS) so adjacent bodies never touch or invert, and meaningfully
+// less than the minimum tab width (110px) so the negative margin can't
+// collapse the strip. 22px gives a ~7px tighter gap than the geometric
+// interlock without making the active tab "bite" into neighbors too far.
+const TAB_OVERLAP_PX = 22;
 
 function tabShapeSegments(width: number, height: number): string[] {
   const w = Math.max(width, TAB_SHAPE_TOP_RADIUS * 2 + TAB_SHAPE_EAR_RADIUS * 2);
@@ -355,11 +366,13 @@ export function TabBar() {
               <div
                 key={tab.id}
                 // Negative left-margin from the second tab onward so each
-                // tab's left ear overlaps the previous tab's right ear by the
-                // ear radius — same trick Chrome uses to merge adjacent
-                // silhouettes into a single "V" valley instead of two ears
-                // separated by a flat floor.
-                style={index > 0 ? { marginLeft: -TAB_SHAPE_EAR_RADIUS } : undefined}
+                // tab's left ear overlaps the previous tab's right ear —
+                // same trick Chrome uses to merge adjacent silhouettes
+                // instead of leaving a flat floor between them. The exact
+                // amount (TAB_OVERLAP_PX) is tuned slightly larger than
+                // EAR_RADIUS so the bodies pack tighter than the pure
+                // geometric interlock would give.
+                style={index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : undefined}
                 className={cn(
                   "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
                   isClosing
