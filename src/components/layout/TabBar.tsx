@@ -337,10 +337,10 @@ export function TabBar() {
               <div
                 key={tab.id}
                 className={cn(
-                  "flex-none transition-[width,min-width,opacity] duration-150 ease-out",
+                  "transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
                   isClosing
-                    ? "w-0 min-w-0 opacity-0 pointer-events-none overflow-hidden"
-                    : "w-[240px] min-w-[110px]"
+                    ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
+                    : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]"
                 )}
               >
                 <TabItem
