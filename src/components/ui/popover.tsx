@@ -178,7 +178,10 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 
       setStyle({
         position: "fixed",
-        zIndex: 50,
+        // 200 sits above Dialog (z-[100]) so popovers triggered from inside
+        // a dialog render on top, while still leaving Tooltip (z-9999) and
+        // ad-hoc app-level overlays room above.
+        zIndex: 200,
         ...(top !== undefined ? { top } : {}),
         ...(bottom !== undefined ? { bottom } : {}),
         ...(left !== undefined ? { left } : {}),
