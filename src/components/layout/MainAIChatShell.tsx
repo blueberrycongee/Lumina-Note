@@ -1368,17 +1368,16 @@ export function MainAIChatShell() {
                 </div>
               )}
 
-              {/* Input bar — pill when single-line, rounded rect when multi-line.
-                  Kept as the visual hero of the surface; uses a crisp solid
-                  background + token shadow instead of the old translucent +
-                  backdrop-blur pattern. */}
+              {/* Input bar — fixed rounded-rect shape regardless of content
+                  height. Earlier the bar was a pill on single-line and morphed
+                  into a rounded rect when the textarea grew past 1 line; the
+                  shape change felt abrupt ("the bar suddenly hardened").
+                  Locking to one shape removes that transition entirely. */}
               <div
                 ref={inputBarRef}
-                className={`relative border border-border bg-popover transition-[border-radius,box-shadow] duration-fast ease-out-subtle ${
-                  input.includes("\n") || input.length > 80
-                    ? "rounded-ui-xl"
-                    : "rounded-full"
-                } ${hasStarted ? "shadow-elev-1" : "shadow-elev-2"}`}
+                className={`relative border border-border bg-popover rounded-ui-xl transition-[box-shadow] duration-fast ease-out-subtle ${
+                  hasStarted ? "shadow-elev-1" : "shadow-elev-2"
+                }`}
               >
                 {/* Skill menu (slash command) */}
                 <Popover
