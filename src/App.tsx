@@ -43,6 +43,7 @@ import {
   startFileWatcher,
   homeDir,
   join,
+  exists,
 } from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
@@ -767,7 +768,9 @@ function App() {
     async (name: string) => {
       try {
         const home = await homeDir();
-        const parentPath = await join(home, "Documents");
+        const docsPath = await join(home, "Documents");
+        const docsExists = await exists(docsPath);
+        const parentPath = docsExists ? docsPath : home;
         const vaultPath = await join(parentPath, name);
         await createDir(vaultPath);
         await createDir(await join(vaultPath, ".lumina"));
