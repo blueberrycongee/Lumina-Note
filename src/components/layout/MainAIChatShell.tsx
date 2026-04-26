@@ -995,8 +995,12 @@ export function MainAIChatShell() {
             fileTree={fileTree}
           />
 
-          {/* Spacer: push input + cards toward center when idle */}
-          {!hasStarted && <div className="flex-1" />}
+          {/* Spacer: push input + cards toward center when idle.
+           * Spacer A : Spacer B = 2:3 lands the input bar at ~40% from the
+           * top — slightly above the geometric centre, matching the
+           * established ChatGPT / Notion welcome rhythm. min-h prevents
+           * collapse on very short viewports (split / docked panels). */}
+          {!hasStarted && <div className="flex-[2] min-h-[16px]" />}
 
           {/* 消息列表区域 (对话模式) */}
           <div
@@ -1612,7 +1616,7 @@ export function MainAIChatShell() {
             recentFiles={recentFiles}
             fileTree={fileTree}
           />
-          {!hasStarted && <div className="flex-[2]" />}
+          {!hasStarted && <div className="flex-[3] min-h-[16px]" />}
         </main>
 
         {/* 调试按钮（开发模式） */}

@@ -390,7 +390,7 @@ export function WelcomeGreeting({
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="relative text-center mt-10 md:mt-14 mb-10 space-y-3"
+          className="relative text-center mt-8 sm:mt-12 md:mt-16 mb-6 sm:mb-8 space-y-3"
           initial={{ opacity: 0, y: 16 }}
           animate={{
             opacity: 1,
@@ -404,7 +404,11 @@ export function WelcomeGreeting({
             transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-3xl font-semibold tracking-tight text-foreground">
+          {/* Greeting wraps gracefully on narrow viewports instead of
+           * truncating with an ellipsis. Wider viewports still get a
+           * single-line read because the max-w gives the longest English
+           * variants room before the wrap kicks in. */}
+          <h1 className="mx-auto max-w-[640px] px-4 text-balance text-2xl sm:text-3xl font-semibold leading-tight tracking-tight text-foreground">
             {greeting}
           </h1>
         </motion.div>
@@ -439,7 +443,7 @@ export function WelcomeSuggestions({
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="w-full max-w-3xl mx-auto px-4 mt-10"
+          className="w-full max-w-3xl mx-auto px-4 mt-8 sm:mt-10"
           initial={{ opacity: 0, y: 16 }}
           animate={{
             opacity: 1,
