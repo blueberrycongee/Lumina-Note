@@ -7,30 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-04-17
+## [1.1.0] - 2026-04-26
 
-本次更新是一次跨度较大的方向性演进：产品从综合笔记工具收敛为以「LLM Wiki + Agent 工作流」为核心的知识库桌面应用，桌面容器开始从 Tauri 扩展到 Electron，Agent 侧引入了分层的长期记忆管线。由于移除了相当多的既有模块，请在升级前阅读「破坏性变更」。
+本次更新是一次跨度较大的方向性演进：产品从综合笔记工具收敛为以「LLM Wiki + Agent 工作流」为核心的知识库桌面应用，桌面容器从 Tauri 切换到 Electron，Agent 侧引入了分层的长期记忆管线，并对欢迎页、TabBar、侧边栏、ChatInput、设置面板等核心 UI 做了系统性重设计。由于移除了相当多的既有模块，请在升级前阅读「破坏性变更」。
 
 ### 破坏性变更
 - 产品定位调整为 LLM Wiki 知识库：移除数据库视图、看板、日历、抽认卡、任务、团队协同编辑、深度研究、RAG 检索、Codex 等功能模块以及相关 store、服务与路由
 - AI 交互模型收敛为 Agent-only：移除 Chat 模式与 Codex 模式、下线 ModeToggle 切换入口，Agent 面板成为统一入口
 - 侧边栏与 Ribbon 精简：移除已废弃模块的入口、插件中对上述模块的引用，以及 RAG 状态栏
 - 深度研究（Deep Research）流程及其 orchestration stage / PlanCard 已全量移除
+- 应用更名 Neurone → Lumina Note，调整窗口标题与相关品牌字串
 
 ### 新功能
-- **Electron 迁移 Phase 1**：引入 Electron 打包脚手架、preload 桥、工作区相关 IPC 通道与更新检查管线，为后续跨平台发布打基础（Tauri 链路保持可用）
+- **Electron 迁移完成**：完整切换到 Electron 打包脚手架、preload 桥、工作区相关 IPC 通道与更新检查管线，并落地多平台发布产物（mac arm64/x64、win x64、linux x64）
+- **欢迎页全面重写**：双栏布局 + Recent Vaults + 内联创建 Vault 流程；新增 `RecentVaultStore` 本地持久化；Documents 默认目录与缺失时回退到 home；动态时段问候 + 工作区上下文文案；与主窗口一致的自定义 traffic lights/window controls
+- **编辑器 TabBar 浏览器化**：标签从底部"探出"到 ribbon 中、保留底部指示条；新增"+ 新建 Tab"按钮；标签关闭走宽度坍缩 + 渐隐动画；空闲时滚动条淡出；Tab 形态采用 Chrome 风格剪影并修正圆角接缝；编辑器 toolbar 与 TabBar 合并
+- **macOS 自定义窗口控件**：替换原生 traffic lights，统一 ribbon 表面与位置；WelcomeScreen 也接入自定义控件
+- **侧边栏 Vault 名 Popover**：在侧边栏直接发起 Rename / Switch Workspace；Vault 进入时左栏自动展开、右栏折叠；侧边栏动作按钮上移到 Mac 顶栏；ribbon 表面着色与分隔线统一
+- **AutoTooltipHost 全量替换 native title**：自定义品牌化 tooltip，支持 hover/focus/escape/delegate；窗口控件、Tab 关闭按钮、ChatInput 内文案完成本地化
+- **LLM 提供商扩展**：新增/提升 GPT-5.5 系列（接入 thinking config）、DeepSeek V4（reasoning-effort 轴）、Zhipu GLM、Xiaomi MiMo、Moonshot、K2.6；统一 `ModelMeta` 表达每模型约束（none/max effort、固定温度模型 lock、DeepSeek `extra_body` 等）
 - **分层持久记忆管线**：Session → Durable → Layered 分层记忆，支持按用途选择性加载、手动编辑 API，以及 Memory Wiki 站点入口
 - **编排式 Agent 框架**：引入多 Agent 工作流与状态编排骨架，Agent 面板支持记忆治理与审计
-- 大纲视图条目现可直接跳转到对应 Markdown 标题
 - 全局按钮补齐 tooltip，并新增 `audit:button-tooltips` 审计脚本
+- 大纲视图条目现可直接跳转到对应 Markdown 标题
 
 ### 改进
 - **设置页全面重写**：改为 Tab 布局，抽取 General / System / AI / WebDAV / Diagnostics / MobileGateway 等独立 Section，统一头部样式并去除外层边框
-- **设置项国际化**：WebDAVSettings、DiagnosticsSection、MobileGateway 状态、GeneralSection 标题等完成 zh-CN / zh-TW / en / ja 四语适配
-- **输入框重设计**：聊天输入框改为 ChatGPT 风格胶囊样式，`+` 菜单聚合附件/工具入口；减轻阴影强度、隐藏默认滚动条、支持多行自适应高度
-- **欢迎页布局**：问候文案置顶、输入区垂直居中，全屏模式下间距调整为 1:2；移除冗余副标题
-- **桌面体验**：全局禁用 UI 文本选择高亮，更贴近原生应用观感；消息气泡与 Chat Shell 视觉打磨
+- **AI Settings 弹层化**：模型/模式/effort 拆为独立 chip + popover，原生 `<select>` 替换为 Popover 自定义下拉；popover 与 dialog 改为不透明实体感；Popover z-index 抬到 Dialog 之上
+- **输入框重设计（ChatInput）**：圆角矩形锁形、多行时自动两行布局并把发送按钮固定在右下；`+` 菜单与 chip 下拉走 hover-with-delay；Spotify 风格 chip 抬升 + popover 锚定；Codex 风格 model+effort picker 替换原 ThinkingMode 切换
+- **设置项国际化**：WebDAVSettings、DiagnosticsSection、MobileGateway 状态、GeneralSection 标题等完成 zh-CN / zh-TW / en / ja 四语适配；颜色组切换 tooltip、ChatInput 中文硬编码、X 关闭按钮 a11y label 等补齐
+- **桌面体验**：全局禁用 UI 文本选择高亮，更贴近原生应用观感；消息气泡与 Chat Shell 视觉打磨；非编辑器区域字号统一为 3 档刻度
 - **文件系统健壮性**：`listDirRecursive` 增加过滤与错误处理，chokidar watcher 增加 ignore 规则和异常兜底，Vault 路径预检查 + EMFILE 降级
+- **全局搜索**：从模态框迁移到左侧栏 mode；搜索 Ribbon active 状态在 hover 时保持可见
 
 ### 修复
 - 修复 `useSkillSearch` 对空 skills 数组未防御导致的崩溃
@@ -39,15 +47,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 临时隐藏 VoiceInputBall 浮球，避免遮挡主界面操作
 - 修复 Electron 下 preload shim 未正确加载导致的 Tauri 桥不可用问题
 - 修复工作区创建/切换流程所需的 Electron IPC handler 缺失
+- 编辑器：阅读模式文本列与 live/source 的 42rem 几何对齐；标题行高与 leading margin 跨模式一致；加粗字重、行内代码 chip、链接 underline-offset 跨模式统一；模式切换时为滚动条预留 gutter 避免内容跳动；空文档 placeholder 推开光标避免重叠
+- 编辑器：切换文件时不再出现一闪的 loading；resize handle wrapper 宽度收紧使滚动条贴右边缘；preview tab 用稳定 key 避免双 tab 闪烁；非显式关闭时直接移除标签不走动画
+- TabBar：active 标签描边改用 foreground alpha；底边裁掉、与 ribbon 接缝平滑；关闭按钮固定右沿；Tab 内容置中以避免 hover rect 露出；Tab shrink 行为参照浏览器
+- 设置：Toggle 旋钮位置使用 Tailwind 任意值修正
+- 修复主窗口设置弹层导致下拉无法弹出的 z-index 顺序问题
+- WelcomeScreen i18n 按钮文案 + 移除多余 hover 动画
 
 ### 依赖与构建
+- 桌面容器全面切换到 Electron：用已发布的 `codemirror-live-markdown` 包，修复 electron 打包产物忽略规则
+- macOS 改为按架构发布（arm64 + x64 双 DMG/zip），避开 universal 打包对原生模块的限制
+- 移除已废弃前端模块和本地 assistant 会话残留；强化 typecheck 通行；忽略 `.hydra/` 工作台产物
 - Cargo：升级 `rustls-webpki` 至 0.103.12；修复 src-tauri 依赖解析问题；src-tauri 与 server 统一通过 `cargo fmt` / CI `rustfmt` 校验
-- 前端工具链：对齐 Electron 与 Vite 版本，使用已发布的 `codemirror-live-markdown` 包；修复 electron 打包产物忽略规则
+- CI：修复 Windows runner 上 bash heredoc 解析失败的问题（显式 `shell: bash`）
 
 ### 测试
 - 同步 SettingsModal Tab 化后的测试断言
 - 修复 WebDAVSettings 本地化后仍使用英文字面量查询的单测回归
 - AIStore 测试补充 `buildConfigOverrideForPurpose` mock 并稳定化 apiKey
+- 新增 AutoTooltipHost hover/focus/escape/delegate 行为测试
 
 ## [1.0.17] - 2026-03-17
 

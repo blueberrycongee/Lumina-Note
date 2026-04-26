@@ -51,6 +51,7 @@ jobs:
         run: npm ci
 
       - name: Stub opencode server bundle for CI
+        shell: bash
         run: |
           mkdir -p thirdparty/opencode/packages/opencode/dist/node
           cat > thirdparty/opencode/packages/opencode/dist/node/node.js << 'STUB'
