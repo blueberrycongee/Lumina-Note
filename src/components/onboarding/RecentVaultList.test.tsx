@@ -2,6 +2,18 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RecentVaultList } from "./RecentVaultList";
 
+vi.mock("@/stores/useLocaleStore", () => ({
+  useLocaleStore: () => ({
+    t: {
+      welcome: {
+        recentVaults: "Recent Vaults",
+        noRecentVaults: "No recent vaults",
+        clearHistory: "Clear History",
+      },
+    },
+  }),
+}));
+
 describe("RecentVaultList", () => {
   const mockVaults = [
     { path: "/home/user/notes", name: "notes", openedAt: Date.now() },

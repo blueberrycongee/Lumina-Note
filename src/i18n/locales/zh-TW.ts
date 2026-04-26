@@ -13,6 +13,13 @@ export default {
     featureAIDesc: "對話、搜尋、Agent 工作流",
     featureLocal: "本地優先",
     featureLocalDesc: "筆記始終保存在你的裝置上",
+    createVault: "新建倉庫",
+    createVaultDesc: "創建包含 Lumina 工作區結構的新文件夾",
+    vaultNamePlaceholder: "我的筆記",
+    recentVaults: "最近開啟",
+    noRecentVaults: "無最近倉庫",
+    clearHistory: "清除歷史",
+    selectParentFolder: "選擇父資料夾",
   },
 
   // 通用
@@ -1124,7 +1131,8 @@ export default {
     editorFontSize: "編輯器字體大小",
     editorFontSizeDesc: "調整編輯器的字體大小 (10-32px)",
     blockEditor: "區塊編輯器互動",
-    blockEditorDesc: "啟用區塊手柄、區塊選單和拖曳排序;關閉後編輯器為純 Markdown",
+    blockEditorDesc:
+      "啟用區塊手柄、區塊選單和拖曳排序;關閉後編輯器為純 Markdown",
     fontPreview: "預覽",
     aiAssistant: "AI 助手",
     currentModel: "目前模型",
@@ -1884,7 +1892,6 @@ export default {
       fileEnd: "檔案結束",
       contentNotLoaded: "(內容未載入)",
     },
-
 
     // 上下文壓縮提示詞
     contextSummary: {

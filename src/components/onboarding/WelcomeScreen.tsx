@@ -68,7 +68,7 @@ export function WelcomeScreen({
       const selected = await openDialog({
         directory: true,
         multiple: false,
-        title: "Select Parent Folder",
+        title: t.welcome.selectParentFolder,
       });
       if (selected && typeof selected === "string") {
         setCreateParentPath(selected);
@@ -164,8 +164,8 @@ export function WelcomeScreen({
                 {onCreateVault && (
                   <ActionCard
                     icon={FolderPlus}
-                    title="Create New Vault"
-                    description="Create a new folder with Lumina workspace structure"
+                    title={t.welcome.createVault}
+                    description={t.welcome.createVaultDesc}
                     action={{
                       label: "Create",
                       variant: "secondary",

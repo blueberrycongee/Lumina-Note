@@ -13,6 +13,13 @@ export default {
     featureAIDesc: "Chat, search, and agent workflows with AI",
     featureLocal: "Local First",
     featureLocalDesc: "Your notes stay on your device",
+    createVault: "Create New Vault",
+    createVaultDesc: "Create a new folder with Lumina workspace structure",
+    vaultNamePlaceholder: "My Notes",
+    recentVaults: "Recent Vaults",
+    noRecentVaults: "No recent vaults",
+    clearHistory: "Clear History",
+    selectParentFolder: "Select Parent Folder",
   },
 
   // Common
@@ -1662,10 +1669,12 @@ export default {
     temperature: "Temperature",
     temperatureLock: {
       title: "Locked by model",
-      fixed: "This model requires temperature = {value} (no other values accepted).",
+      fixed:
+        "This model requires temperature = {value} (no other values accepted).",
       "fixed-thinking": "Thinking mode requires temperature = {value}.",
       "fixed-instant": "Instant mode requires temperature = {value}.",
-      "fixed-reasoning": "Reasoning is on; this model requires temperature = {value}.",
+      "fixed-reasoning":
+        "Reasoning is on; this model requires temperature = {value}.",
     },
     apiConstraintsHint:
       "API constraints: top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",

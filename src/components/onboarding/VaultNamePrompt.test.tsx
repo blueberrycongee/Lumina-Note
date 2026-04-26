@@ -2,6 +2,22 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { VaultNamePrompt } from "./VaultNamePrompt";
 
+vi.mock("@/stores/useLocaleStore", () => ({
+  useLocaleStore: () => ({
+    t: {
+      welcome: {
+        createVault: "Create New Vault",
+        createVaultDesc: "Enter a name for your new vault",
+        vaultNamePlaceholder: "My Notes",
+      },
+      common: {
+        cancel: "Cancel",
+        create: "Create",
+      },
+    },
+  }),
+}));
+
 describe("VaultNamePrompt", () => {
   it("renders when open", () => {
     render(

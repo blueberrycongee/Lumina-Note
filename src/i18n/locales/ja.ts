@@ -13,6 +13,13 @@ export default {
     featureAIDesc: "チャット、検索、Agent ワークフロー",
     featureLocal: "ローカルファースト",
     featureLocalDesc: "ノートは常にあなたのデバイスに",
+    createVault: "新規ボールト作成",
+    createVaultDesc: "Lumina ワークスペース構造を持つ新しいフォルダを作成",
+    vaultNamePlaceholder: "マイノート",
+    recentVaults: "最近開いた",
+    noRecentVaults: "最近のボールトがありません",
+    clearHistory: "履歴をクリア",
+    selectParentFolder: "親フォルダを選択",
   },
 
   // 共通
@@ -1140,7 +1147,8 @@ export default {
     editorFontSize: "エディタのフォントサイズ",
     editorFontSizeDesc: "エディタのフォントサイズを調整 (10-32px)",
     blockEditor: "ブロックエディタ",
-    blockEditorDesc: "ブロックハンドル、ブロックメニュー、ドラッグ並べ替えを有効化",
+    blockEditorDesc:
+      "ブロックハンドル、ブロックメニュー、ドラッグ並べ替えを有効化",
     fontPreview: "プレビュー",
     aiAssistant: "AI アシスタント",
     currentModel: "現在のモデル",
@@ -1656,10 +1664,12 @@ export default {
     temperature: "Temperature",
     temperatureLock: {
       title: "モデルにより固定",
-      fixed: "このモデルは temperature = {value} を要求します（他の値は API で拒否されます）。",
+      fixed:
+        "このモデルは temperature = {value} を要求します（他の値は API で拒否されます）。",
       "fixed-thinking": "思考モードは temperature = {value} を要求します。",
       "fixed-instant": "高速応答モードは temperature = {value} を要求します。",
-      "fixed-reasoning": "推論が有効です。このモデルは temperature = {value} を要求します。",
+      "fixed-reasoning":
+        "推論が有効です。このモデルは temperature = {value} を要求します。",
     },
     apiConstraintsHint:
       "API 制約: top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
@@ -1923,7 +1933,6 @@ export default {
       fileEnd: "ファイル終了",
       contentNotLoaded: "(内容未読み込み)",
     },
-
 
     // コンテキスト圧縮プロンプト
     contextSummary: {

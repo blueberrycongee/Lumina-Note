@@ -13,6 +13,13 @@ export default {
     featureAIDesc: "对话、搜索、Agent 工作流",
     featureLocal: "本地优先",
     featureLocalDesc: "笔记始终保存在你的设备上",
+    createVault: "新建仓库",
+    createVaultDesc: "创建包含 Lumina 工作区结构的新文件夹",
+    vaultNamePlaceholder: "我的笔记",
+    recentVaults: "最近打开",
+    noRecentVaults: "无最近仓库",
+    clearHistory: "清除历史",
+    selectParentFolder: "选择父文件夹",
   },
 
   // 通用
@@ -1886,7 +1893,6 @@ export default {
       fileEnd: "文件结束",
       contentNotLoaded: "(内容未加载)",
     },
-
 
     // 上下文压缩提示词
     contextSummary: {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FolderPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface VaultNamePromptProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ export function VaultNamePrompt({
   onSubmit,
   onCancel,
 }: VaultNamePromptProps) {
+  const { t } = useLocaleStore();
   const [name, setName] = useState("");
 
   if (!isOpen) return null;
@@ -40,10 +42,10 @@ export function VaultNamePrompt({
           </div>
           <div>
             <h2 className="text-lg font-semibold text-foreground">
-              Create New Vault
+              {t.welcome.createVault}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Enter a name for your new vault
+              {t.welcome.createVaultDesc}
             </p>
           </div>
         </div>
@@ -52,7 +54,7 @@ export function VaultNamePrompt({
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="My Notes"
+            placeholder={t.welcome.vaultNamePlaceholder}
             className="w-full h-10 px-3 rounded-ui-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary mb-4"
             autoFocus
           />
@@ -63,7 +65,7 @@ export function VaultNamePrompt({
               onClick={handleCancel}
               type="button"
             >
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button
               variant="primary"
@@ -71,7 +73,7 @@ export function VaultNamePrompt({
               type="submit"
               disabled={!name.trim()}
             >
-              Create
+              {t.common.create}
             </Button>
           </div>
         </form>

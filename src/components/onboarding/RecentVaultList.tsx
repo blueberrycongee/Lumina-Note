@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Folder, X } from "lucide-react";
 import type { RecentVault } from "@/stores/useRecentVaultStore";
+import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface RecentVaultListProps {
   vaults: RecentVault[];
@@ -29,16 +30,18 @@ export function RecentVaultList({
   onRemove,
   onClear,
 }: RecentVaultListProps) {
+  const { t } = useLocaleStore();
+
   return (
     <div className="h-full flex flex-col">
       <div className="px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-        Recent Vaults
+        {t.welcome.recentVaults}
       </div>
 
       {vaults.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center px-4 text-muted-foreground">
           <Folder className="w-8 h-8 mb-2 opacity-40" />
-          <span className="text-sm">No recent vaults</span>
+          <span className="text-sm">{t.welcome.noRecentVaults}</span>
         </div>
       ) : (
         <motion.div
@@ -84,7 +87,7 @@ export function RecentVaultList({
             onClick={onClear}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Clear History
+            {t.welcome.clearHistory}
           </button>
         </div>
       )}
