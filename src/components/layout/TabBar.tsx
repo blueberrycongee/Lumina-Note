@@ -109,8 +109,8 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
           style={{
             left: TAB_SHAPE_EAR_RADIUS,
             right: TAB_SHAPE_EAR_RADIUS,
-            top: 4,
-            bottom: 4,
+            top: 2,
+            bottom: 2,
             borderRadius: TAB_SHAPE_TOP_RADIUS,
           }}
           className="absolute bg-transparent group-hover:bg-[hsl(var(--accent)/0.6)] transition-colors duration-150"
