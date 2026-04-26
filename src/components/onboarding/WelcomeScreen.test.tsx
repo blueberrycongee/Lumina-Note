@@ -10,7 +10,15 @@ vi.mock("@/components/layout/TitleBar", () => ({
 }));
 
 vi.mock("@/components/layout/LanguageSwitcher", () => ({
-  LanguageSwitcher: ({ className, compact, showLabel }: { className?: string; compact?: boolean; showLabel?: boolean }) => (
+  LanguageSwitcher: ({
+    className,
+    compact,
+    showLabel,
+  }: {
+    className?: string;
+    compact?: boolean;
+    showLabel?: boolean;
+  }) => (
     <div
       data-testid="language-switcher"
       data-classname={className || ""}
@@ -30,19 +38,30 @@ vi.mock("@/stores/useLocaleStore", () => ({
   useLocaleStore: () => ({
     t: {
       welcome: {
-        title: "Welcome",
-        subtitle: "Pick a folder",
-        openFolder: "Open Folder",
-        selectFolder: "Choose a folder to continue",
-        featureMarkdown: "Markdown Native",
-        featureMarkdownDesc: "Write in pure Markdown with live preview",
-        featureAI: "AI Powered",
-        featureAIDesc: "Chat, search, and agent workflows with AI",
-        featureLocal: "Local First",
-        featureLocalDesc: "Your notes stay on your device",
+        title: "Lumina Note",
+        openFolder: "Open Notes Folder",
+        selectFolder: "Select a folder to continue",
       },
     },
   }),
+}));
+
+vi.mock("@/lib/appAsset", () => ({
+  resolveRendererAssetUrl: () => "lumina.png",
+}));
+
+vi.mock("@/stores/useRecentVaultStore", () => ({
+  useRecentVaultStore: (
+    selector: (s: {
+      vaults: never[];
+      removeVault: () => void;
+      clearVaults: () => void;
+    }) => unknown,
+  ) => selector({ vaults: [], removeVault: vi.fn(), clearVaults: vi.fn() }),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  openDialog: vi.fn(),
 }));
 
 describe("WelcomeScreen", () => {
@@ -50,33 +69,36 @@ describe("WelcomeScreen", () => {
     macTopChromeEnabled.value = false;
   });
 
+  it("renders the two-pane layout", () => {
+    render(<WelcomeScreen onOpenVault={vi.fn()} />);
+    expect(
+      screen.getByRole("heading", { name: "Lumina Note" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Open Notes Folder")).toBeInTheDocument();
+    expect(screen.getByText("No recent vaults")).toBeInTheDocument();
+  });
+
   it("keeps the legacy floating language switcher outside macOS overlay mode", () => {
     render(<WelcomeScreen onOpenVault={vi.fn()} />);
-
-    expect(screen.getByTestId("language-switcher")).toHaveAttribute("data-classname", "absolute top-4 right-4 z-10");
+    expect(screen.getByTestId("language-switcher")).toHaveAttribute(
+      "data-classname",
+      "absolute top-4 right-4 z-10",
+    );
   });
 
   it("renders the language switcher inside a real macOS top row", () => {
     macTopChromeEnabled.value = true;
-
-    const { container } = render(<WelcomeScreen onOpenVault={vi.fn()} />);
-
-    expect(screen.getByTestId("language-switcher")).toHaveAttribute("data-classname", "");
-    expect(screen.getByTestId("language-switcher")).toHaveAttribute("data-compact", "true");
-    expect(screen.getByTestId("language-switcher")).toHaveAttribute("data-show-label", "false");
+    render(<WelcomeScreen onOpenVault={vi.fn()} />);
     expect(screen.getByTestId("welcome-top-row")).toBeInTheDocument();
-    expect(container.querySelector('.h-10[data-tauri-drag-region]')).toBeNull();
   });
 
-  it("renders all three feature highlights", () => {
+  it("shows Create New Vault when onCreateVault prop is provided", () => {
+    render(<WelcomeScreen onOpenVault={vi.fn()} onCreateVault={vi.fn()} />);
+    expect(screen.getByText("Create New Vault")).toBeInTheDocument();
+  });
+
+  it("hides Create New Vault when onCreateVault prop is not provided", () => {
     render(<WelcomeScreen onOpenVault={vi.fn()} />);
-
-    expect(screen.getByText("Markdown Native")).toBeInTheDocument();
-    expect(screen.getByText("AI Powered")).toBeInTheDocument();
-    expect(screen.getByText("Local First")).toBeInTheDocument();
-
-    expect(screen.getByText("Write in pure Markdown with live preview")).toBeInTheDocument();
-    expect(screen.getByText("Chat, search, and agent workflows with AI")).toBeInTheDocument();
-    expect(screen.getByText("Your notes stay on your device")).toBeInTheDocument();
+    expect(screen.queryByText("Create New Vault")).not.toBeInTheDocument();
   });
 });

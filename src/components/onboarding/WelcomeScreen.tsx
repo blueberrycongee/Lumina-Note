@@ -1,22 +1,26 @@
+import { useState, useCallback } from "react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { Bot, FileText, FolderOpen, HardDrive } from "lucide-react";
+import { FolderOpen, FolderPlus } from "lucide-react";
+import { openDialog } from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { WindowControls } from "@/components/layout/WindowControls";
-import { Button } from "@/components/ui/button";
+import { ActionCard } from "./ActionCard";
+import { RecentVaultList } from "./RecentVaultList";
+import { VaultNamePrompt } from "./VaultNamePrompt";
+import { useRecentVaultStore } from "@/stores/useRecentVaultStore";
 import { resolveRendererAssetUrl } from "@/lib/appAsset";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface WelcomeScreenProps {
-  onOpenVault: () => void;
+  onOpenVault: (path?: string) => void;
+  onCreateVault?: (parentPath: string, name: string) => void;
 }
 
 const containerVariants: Variants = {
   hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.08 },
-  },
+  visible: { transition: { staggerChildren: 0.08 } },
 };
 
 const fadeUpVariants: Variants = {
@@ -28,26 +32,63 @@ const fadeUpVariants: Variants = {
   },
 };
 
-const logoVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.28, ease: [0.2, 0.9, 0.1, 1] },
-  },
-};
-
-const features = [
-  { icon: FileText, titleKey: "featureMarkdown", descKey: "featureMarkdownDesc" },
-  { icon: Bot, titleKey: "featureAI", descKey: "featureAIDesc" },
-  { icon: HardDrive, titleKey: "featureLocal", descKey: "featureLocalDesc" },
-] as const;
-
-export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
+export function WelcomeScreen({
+  onOpenVault,
+  onCreateVault,
+}: WelcomeScreenProps) {
   const { t } = useLocaleStore();
   const showMacWindowInset = useMacTopChromeEnabled();
   const prefersReducedMotion = useReducedMotion();
   const logoUrl = resolveRendererAssetUrl("lumina.png");
+
+  const vaults = useRecentVaultStore((s) => s.vaults);
+  const removeVault = useRecentVaultStore((s) => s.removeVault);
+  const clearVaults = useRecentVaultStore((s) => s.clearVaults);
+
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [createParentPath, setCreateParentPath] = useState<string | null>(null);
+
+  const handleOpenExisting = useCallback(async () => {
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        title: t.welcome.openFolder,
+      });
+      if (selected && typeof selected === "string") {
+        onOpenVault(selected);
+      }
+    } catch (error) {
+      console.error("[WelcomeScreen] Open folder dialog failed:", error);
+    }
+  }, [onOpenVault, t.welcome.openFolder]);
+
+  const handleCreateVault = useCallback(async () => {
+    try {
+      const selected = await openDialog({
+        directory: true,
+        multiple: false,
+        title: "Select Parent Folder",
+      });
+      if (selected && typeof selected === "string") {
+        setCreateParentPath(selected);
+        setShowNamePrompt(true);
+      }
+    } catch (error) {
+      console.error("[WelcomeScreen] Create vault dialog failed:", error);
+    }
+  }, []);
+
+  const handleNameSubmit = useCallback(
+    (name: string) => {
+      if (createParentPath && onCreateVault) {
+        onCreateVault(createParentPath, name);
+      }
+      setShowNamePrompt(false);
+      setCreateParentPath(null);
+    },
+    [createParentPath, onCreateVault],
+  );
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -60,98 +101,100 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
             data-tauri-drag-region
             data-testid="welcome-top-row"
           >
-            <div className="w-16 flex justify-center shrink-0" data-tauri-drag-region="false">
+            <div
+              className="w-16 flex justify-center shrink-0"
+              data-tauri-drag-region="false"
+            >
               <WindowControls />
             </div>
             <div className="flex-1" />
             <LanguageSwitcher compact stopPropagation />
           </div>
         ) : (
-          <LanguageSwitcher
-            className="absolute top-4 right-4 z-10"
-            showLabel
-          />
+          <LanguageSwitcher className="absolute top-4 right-4 z-10" showLabel />
         )}
 
-        <div className="flex-1 flex items-center justify-center px-6 py-10">
-          <motion.div
-            variants={containerVariants}
-            initial={prefersReducedMotion ? "visible" : "hidden"}
-            animate="visible"
-            className="flex flex-col items-center gap-6 max-w-lg"
-          >
-            {/* Logo */}
-            <motion.div variants={logoVariants}>
-              <img
-                src={logoUrl}
-                alt="Lumina Note"
-                className="w-20 h-20"
-              />
-            </motion.div>
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left sidebar: Recent vaults */}
+          <div className="w-[280px] shrink-0 border-r border-border bg-ui-surface flex flex-col">
+            <RecentVaultList
+              vaults={vaults}
+              onSelect={(path) => onOpenVault(path)}
+              onRemove={removeVault}
+              onClear={clearVaults}
+            />
+          </div>
 
-            {/* Title */}
-            <motion.h1
-              variants={fadeUpVariants}
-              className="text-4xl font-semibold tracking-tight text-foreground"
-            >
-              {t.welcome.title}
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p
-              variants={fadeUpVariants}
-              className="text-base text-muted-foreground text-center max-w-[360px] -mt-2"
-            >
-              {t.welcome.subtitle}
-            </motion.p>
-
-            {/* Feature highlights */}
+          {/* Right pane: Brand + Actions */}
+          <div className="flex-1 flex items-center justify-center px-6 py-10 overflow-y-auto">
             <motion.div
-              variants={fadeUpVariants}
-              className="flex gap-8 mt-2"
-              data-testid="feature-highlights"
+              variants={containerVariants}
+              initial={prefersReducedMotion ? "visible" : "hidden"}
+              animate="visible"
+              className="flex flex-col items-center gap-6 w-full max-w-[640px]"
             >
-              {features.map(({ icon: Icon, titleKey, descKey }) => (
-                <div
-                  key={titleKey}
-                  className="flex flex-col items-center gap-1.5 text-center"
-                >
-                  <div className="w-10 h-10 rounded-ui-md bg-accent flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-primary" />
-                  </div>
-                  <span className="text-sm font-medium text-foreground">
-                    {t.welcome[titleKey]}
-                  </span>
-                  <span className="text-xs text-muted-foreground max-w-[140px]">
-                    {t.welcome[descKey]}
-                  </span>
-                </div>
-              ))}
-            </motion.div>
+              {/* Logo */}
+              <motion.div variants={fadeUpVariants}>
+                <img src={logoUrl} alt="Lumina Note" className="w-20 h-20" />
+              </motion.div>
 
-            {/* CTA */}
-            <motion.div variants={fadeUpVariants} className="mt-2">
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={onOpenVault}
-                className="w-64 justify-center"
+              {/* Title */}
+              <motion.h1
+                variants={fadeUpVariants}
+                className="text-3xl font-semibold tracking-tight text-foreground"
               >
-                <FolderOpen className="w-5 h-5" />
-                {t.welcome.openFolder}
-              </Button>
-            </motion.div>
+                {t.welcome.title}
+              </motion.h1>
 
-            {/* Hint */}
-            <motion.p
-              variants={fadeUpVariants}
-              className="text-sm text-muted-foreground text-center"
-            >
-              {t.welcome.selectFolder}
-            </motion.p>
-          </motion.div>
+              {/* Action cards */}
+              <motion.div
+                variants={fadeUpVariants}
+                className="w-full flex flex-col gap-3 mt-2"
+              >
+                <ActionCard
+                  icon={FolderOpen}
+                  title={t.welcome.openFolder}
+                  description={t.welcome.selectFolder}
+                  action={{
+                    label: "Open",
+                    variant: "primary",
+                    onClick: handleOpenExisting,
+                  }}
+                />
+                {onCreateVault && (
+                  <ActionCard
+                    icon={FolderPlus}
+                    title="Create New Vault"
+                    description="Create a new folder with Lumina workspace structure"
+                    action={{
+                      label: "Create",
+                      variant: "secondary",
+                      onClick: handleCreateVault,
+                    }}
+                  />
+                )}
+              </motion.div>
+
+              {/* Footer */}
+              <motion.div
+                variants={fadeUpVariants}
+                className="flex items-center justify-between w-full mt-4 text-xs text-muted-foreground"
+              >
+                <span>Lumina Note</span>
+              </motion.div>
+            </motion.div>
+          </div>
         </div>
       </div>
+
+      <VaultNamePrompt
+        isOpen={showNamePrompt}
+        onSubmit={handleNameSubmit}
+        onCancel={() => {
+          setShowNamePrompt(false);
+          setCreateParentPath(null);
+        }}
+      />
     </div>
   );
 }
