@@ -86,6 +86,25 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
 
   return (
     <div ref={containerRef} className="absolute inset-0 pointer-events-none">
+      {/* Inactive hover affordance — a rounded rectangle that occupies the
+          body region of the silhouette. Its insets and radius are tied to the
+          silhouette geometry so the rectangle's bottom corners land exactly
+          on each ear's inflection point (re, height-re), and the top corners
+          mirror the silhouette's top arc — making the hover button feel like
+          a coherent slice of the tab itself instead of a floating chip. */}
+      {!isActive && (
+        <div
+          aria-hidden
+          style={{
+            left: TAB_SHAPE_EAR_RADIUS,
+            right: TAB_SHAPE_EAR_RADIUS,
+            top: 0,
+            bottom: TAB_SHAPE_EAR_RADIUS,
+            borderRadius: TAB_SHAPE_TOP_RADIUS,
+          }}
+          className="absolute bg-transparent group-hover:bg-[hsl(var(--accent)/0.6)] transition-colors duration-150"
+        />
+      )}
       <svg
         className="w-full h-full"
         viewBox={`0 0 ${Math.max(size.width, 1)} ${Math.max(size.height, 1)}`}
@@ -96,9 +115,7 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
           stroke="none"
           className={cn(
             "transition-[fill] duration-150",
-            isActive
-              ? "fill-[hsl(var(--background))]"
-              : "fill-transparent group-hover:fill-[hsl(var(--accent)/0.6)]"
+            isActive ? "fill-[hsl(var(--background))]" : "fill-transparent"
           )}
         />
         <path
@@ -333,14 +350,25 @@ export function TabBar() {
           ) : null}
           {tabs.map((tab, index) => {
             const isClosing = closingIds.has(tab.id);
+            const isActive = index === activeTabIndex;
             return (
               <div
                 key={tab.id}
+                // Negative left-margin from the second tab onward so each
+                // tab's left ear overlaps the previous tab's right ear by the
+                // ear radius — same trick Chrome uses to merge adjacent
+                // silhouettes into a single "V" valley instead of two ears
+                // separated by a flat floor.
+                style={index > 0 ? { marginLeft: -TAB_SHAPE_EAR_RADIUS } : undefined}
                 className={cn(
-                  "transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
+                  "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
                   isClosing
                     ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
-                    : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]"
+                    : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]",
+                  // Active tab sits above its neighbors so its silhouette
+                  // outline (and white fill) cleanly overlays the overlapping
+                  // ears of the inactive tabs on either side.
+                  isActive ? "z-10" : "z-0 hover:z-[5]"
                 )}
               >
                 <TabItem
