@@ -239,7 +239,12 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent'
                   }`}
-                  title={`切换到颜色分组：${t.themeEditor[group.nameKey as keyof typeof t.themeEditor] || group.nameKey}`}
+                  title={t.themeEditor.switchToColorGroup.replace(
+                    "{name}",
+                    (t.themeEditor[
+                      group.nameKey as keyof typeof t.themeEditor
+                    ] as string | undefined) || group.nameKey,
+                  )}
                 >
                   {t.themeEditor[group.nameKey as keyof typeof t.themeEditor] || group.nameKey}
                 </button>

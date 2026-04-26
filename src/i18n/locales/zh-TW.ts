@@ -1615,6 +1615,7 @@ export default {
     title: "主題編輯器",
     switchToDark: "切換到暗色預覽",
     switchToLight: "切換到亮色預覽",
+    switchToColorGroup: "切換到顏色分組：{name}",
     themeName: "主題名稱",
     description: "描述",
     colorGroups: "顏色分組",

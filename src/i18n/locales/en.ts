@@ -1656,6 +1656,7 @@ export default {
     title: "Theme Editor",
     switchToDark: "Switch to dark preview",
     switchToLight: "Switch to light preview",
+    switchToColorGroup: "Switch to color group: {name}",
     themeName: "Theme Name",
     description: "Description",
     colorGroups: "Color Groups",

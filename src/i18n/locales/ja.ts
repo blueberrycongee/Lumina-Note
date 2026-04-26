@@ -1650,6 +1650,7 @@ export default {
     title: "テーマエディタ",
     switchToDark: "ダークプレビューに切替",
     switchToLight: "ライトプレビューに切替",
+    switchToColorGroup: "色グループに切替：{name}",
     themeName: "テーマ名",
     description: "説明",
     colorGroups: "カラーグループ",
