@@ -25,6 +25,11 @@ function getTooltipText(el: HTMLElement): string | null {
   if (aria) return aria;
   const data = el.getAttribute("data-tooltip")?.trim();
   if (data) return data;
+  // Fallback to title attribute so existing buttons that already declare
+  // their hover string the legacy way keep working until they're migrated
+  // to aria-label or data-tooltip.
+  const title = el.getAttribute("title")?.trim();
+  if (title) return title;
   return null;
 }
 

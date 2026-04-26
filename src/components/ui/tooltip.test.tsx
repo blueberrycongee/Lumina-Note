@@ -46,6 +46,28 @@ describe("AutoTooltipHost", () => {
     expect(screen.getByTestId("auto-tooltip")).toHaveTextContent("Open chat");
   });
 
+  it("falls back to title when neither aria-label nor data-tooltip is set", async () => {
+    renderWithButton(<button title="Run query">▶</button>);
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByTestId("auto-tooltip")).toHaveTextContent("Run query");
+  });
+
+  it("prefers aria-label over title", async () => {
+    renderWithButton(
+      <button aria-label="Save changes" title="Save (Ctrl+S)">
+        Save
+      </button>,
+    );
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByTestId("auto-tooltip")).toHaveTextContent("Save changes");
+  });
+
   it("renders nothing when the button has neither aria-label nor data-tooltip", async () => {
     renderWithButton(<button>Bare</button>);
     fireEvent.mouseOver(screen.getByRole("button"));
