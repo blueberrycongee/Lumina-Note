@@ -156,7 +156,7 @@ export function WelcomeScreen({
                   title={t.welcome.openFolder}
                   description={t.welcome.selectFolder}
                   action={{
-                    label: "Open",
+                    label: t.common.open,
                     variant: "primary",
                     onClick: handleOpenExisting,
                   }}
@@ -167,7 +167,7 @@ export function WelcomeScreen({
                     title={t.welcome.createVault}
                     description={t.welcome.createVaultDesc}
                     action={{
-                      label: "Create",
+                      label: t.common.create,
                       variant: "secondary",
                       onClick: handleCreateVault,
                     }}
