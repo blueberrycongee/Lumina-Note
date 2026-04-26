@@ -730,12 +730,18 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-link": {
       color: "hsl(var(--md-link, var(--primary)))",
       textDecoration: "underline",
+      // Match `.prose a` so links don't visibly settle/lift when toggling
+      // modes — both modes get the same 2px gap below the baseline.
+      textUnderlineOffset: "2px",
     },
     ".cm-code": {
       backgroundColor: "hsl(var(--muted))",
       padding: "2px 4px",
       borderRadius: "3px",
-      fontFamily: "monospace",
+      // Use the design-token mono stack (JetBrains Mono → fallbacks) so
+      // inline code renders in the same family as `.prose code` instead of
+      // the browser's generic `monospace` default.
+      fontFamily: "var(--font-mono)",
     },
     ".cm-wikilink": {
       color: "hsl(var(--primary))",

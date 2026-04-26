@@ -1190,14 +1190,15 @@ body {
   margin: 2rem 0;
 }
 
-/* 行内代码 — subtle chip, visible against both bg and muted surfaces */
+/* Inline code — match CodeMirrorEditor's .cm-code chip exactly so toggling
+   modes doesn't reflow inline code (different padding / border / size all
+   shifted neighboring text). Same muted background, same 2/4 padding,
+   same 3px radius, same monospace stack, same body-size font. */
 .prose code {
-  background: hsl(var(--md-code-bg, var(--foreground)) / 0.06);
+  background: hsl(var(--muted));
   color: hsl(var(--md-code, var(--foreground)));
-  border: 1px solid hsl(var(--border) / 0.7);
-  padding: 0.15rem 0.4rem;
-  border-radius: 0.25rem;
-  font-size: 0.8125rem;
+  padding: 2px 4px;
+  border-radius: 3px;
   font-family: var(--font-mono);
 }
 
@@ -1267,9 +1268,10 @@ body {
   font-size: 0.8125rem;
 }
 
-/* 粗体和斜体 */
+/* 粗体和斜体 — weight matches CodeMirrorEditor's .cm-strong (700) so bold
+   inline text doesn't visibly thin out when switching to reading mode. */
 .prose strong {
-  font-weight: 600;
+  font-weight: 700;
   color: hsl(var(--md-bold, var(--foreground)));
 }
 .prose em {
