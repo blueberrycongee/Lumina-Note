@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import {
@@ -11,7 +11,17 @@ import {
   resolveTemperatureLock,
   type TemperatureLock,
 } from "@/services/llm/temperature";
-import { Loader2, Check, X, Zap, Bot, Shield, Lock, Info } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  X,
+  Zap,
+  Bot,
+  Shield,
+  Lock,
+  Info,
+  ChevronDown,
+} from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 import {
@@ -19,6 +29,10 @@ import {
   DialogBody,
   DialogHeader,
   Field,
+  Popover,
+  PopoverContent,
+  PopoverList,
+  Row,
   SectionHeader,
   TextInput,
   Toggle,
@@ -95,6 +109,76 @@ function LabelRow({
         </span>
       ) : null}
     </span>
+  );
+}
+
+// Select — replaces native <select> so the dropdown popup gets the same
+// solid `bg-popover` + elev-2 surface as the rest of the app's overlays.
+// Native <select> renders an OS-level popup we can't style; users were
+// reading those popups as "transparent glass" against the dialog. The
+// trigger keeps the same visual size/border as the input controls so
+// vertical rhythm doesn't shift.
+interface SelectOption {
+  value: string;
+  label: React.ReactNode;
+}
+
+function Select({
+  id,
+  value,
+  onChange,
+  options,
+}: {
+  id?: string;
+  value: string;
+  onChange: (next: string) => void;
+  options: SelectOption[];
+}) {
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <>
+      <button
+        id={id}
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((p) => !p)}
+        className={[
+          "flex w-full items-center justify-between gap-2",
+          "rounded-ui-md border border-border bg-background px-3 py-2 text-sm text-foreground",
+          "transition-colors duration-fast ease-out-subtle",
+          "hover:bg-accent/40",
+          "focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/30",
+        ].join(" ")}
+      >
+        <span className="truncate text-left">
+          {selected?.label ?? value}
+        </span>
+        <ChevronDown size={14} className="shrink-0 opacity-70" />
+      </button>
+      <Popover open={open} onOpenChange={setOpen} anchor={triggerRef}>
+        <PopoverContent placement="bottom-start">
+          <PopoverList>
+            {options.map((opt) => (
+              <Row
+                key={opt.value}
+                title={opt.label}
+                selected={opt.value === value}
+                trailing={opt.value === value ? <Check size={14} /> : null}
+                onSelect={() => {
+                  onChange(opt.value);
+                  setOpen(false);
+                }}
+              />
+            ))}
+          </PopoverList>
+        </PopoverContent>
+      </Popover>
+    </>
   );
 }
 
@@ -223,11 +307,11 @@ export function AISettingsContent() {
           hint={providerMeta?.description}
         >
           {(id) => (
-            <select
+            <Select
               id={id}
               value={config.provider}
-              onChange={(e) => {
-                const provider = e.target.value as LLMProviderType;
+              onChange={(next) => {
+                const provider = next as LLMProviderType;
                 const defaultModel = getDefaultModelForProvider(provider);
                 setConfig({
                   provider,
@@ -237,14 +321,11 @@ export function AISettingsContent() {
                   temperature: getRecommendedTemperature(provider, defaultModel),
                 });
               }}
-              className="w-full rounded-ui-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/30"
-            >
-              {Object.entries(PROVIDER_MODELS).map(([key, meta]) => (
-                <option key={key} value={key}>
-                  {meta.label}
-                </option>
-              ))}
-            </select>
+              options={Object.entries(PROVIDER_MODELS).map(([key, meta]) => ({
+                value: key,
+                label: meta.label,
+              }))}
+            />
           )}
         </Field>
 
@@ -343,48 +424,43 @@ export function AISettingsContent() {
               </LabelRow>
             }
           >
-            {(id) => (
-              <select
-                id={id}
-                value={
-                  PROVIDER_MODELS[config.provider as LLMProviderType]?.models.some(
-                    (m) => m.id === config.model,
-                  )
-                    ? config.model
-                    : "custom"
-                }
-                onChange={(e) => {
-                  const newModel = e.target.value;
-                  if (newModel === "custom") {
-                    setConfig({
-                      model: newModel,
-                      customModelId: "",
-                      temperature: getRecommendedTemperature(
-                        config.provider as LLMProviderType,
-                        "custom",
-                      ),
-                    });
-                  } else {
-                    setConfig({
-                      model: newModel,
-                      temperature: getRecommendedTemperature(
-                        config.provider as LLMProviderType,
-                        newModel,
-                      ),
-                    });
-                  }
-                }}
-                className="w-full rounded-ui-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/30"
-              >
-                {PROVIDER_MODELS[config.provider as LLMProviderType]?.models.map(
-                  (model) => (
-                    <option key={model.id} value={model.id}>
-                      {formatModelOptionLabel(model)}
-                    </option>
-                  ),
-                )}
-              </select>
-            )}
+            {(id) => {
+              const providerModels =
+                PROVIDER_MODELS[config.provider as LLMProviderType]?.models ?? [];
+              const currentInList = providerModels.some(
+                (m) => m.id === config.model,
+              );
+              return (
+                <Select
+                  id={id}
+                  value={currentInList ? config.model : "custom"}
+                  onChange={(newModel) => {
+                    if (newModel === "custom") {
+                      setConfig({
+                        model: newModel,
+                        customModelId: "",
+                        temperature: getRecommendedTemperature(
+                          config.provider as LLMProviderType,
+                          "custom",
+                        ),
+                      });
+                    } else {
+                      setConfig({
+                        model: newModel,
+                        temperature: getRecommendedTemperature(
+                          config.provider as LLMProviderType,
+                          newModel,
+                        ),
+                      });
+                    }
+                  }}
+                  options={providerModels.map((model) => ({
+                    value: model.id,
+                    label: formatModelOptionLabel(model),
+                  }))}
+                />
+              );
+            }}
           </Field>
         )}
 
