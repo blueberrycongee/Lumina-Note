@@ -24,7 +24,7 @@ const TAB_SHAPE_EAR_RADIUS = 15;
 const TAB_SHAPE_HEIGHT = 38;
 const TAB_SHAPE_DEFAULT_WIDTH = 200;
 
-function buildTabShapePath(width: number, height: number): string {
+function tabShapeSegments(width: number, height: number): string[] {
   const w = Math.max(width, TAB_SHAPE_TOP_RADIUS * 2 + TAB_SHAPE_EAR_RADIUS * 2);
   const rt = TAB_SHAPE_TOP_RADIUS;
   const re = TAB_SHAPE_EAR_RADIUS;
@@ -37,8 +37,20 @@ function buildTabShapePath(width: number, height: number): string {
     `A ${rt} ${rt} 0 0 1 ${w - re} ${rt}`,
     `L ${w - re} ${height - re}`,
     `A ${re} ${re} 0 0 0 ${w} ${height}`,
-    "Z",
-  ].join(" ");
+  ];
+}
+
+// Closed shape — for fills that should cover the entire silhouette including
+// the bottom edge.
+function buildTabShapePath(width: number, height: number): string {
+  return [...tabShapeSegments(width, height), "Z"].join(" ");
+}
+
+// Open shape — left ear, body, top, right ear, but NO bottom closing line.
+// Used for the active outline so the silhouette merges into the editor
+// surface beneath instead of being capped off with a horizontal stroke.
+function buildTabShapeStrokePath(width: number, height: number): string {
+  return tabShapeSegments(width, height).join(" ");
 }
 
 interface TabShapeProps {
@@ -69,7 +81,8 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
     return () => observer.disconnect();
   }, []);
 
-  const path = useMemo(() => buildTabShapePath(size.width, size.height), [size.width, size.height]);
+  const fillPath = useMemo(() => buildTabShapePath(size.width, size.height), [size.width, size.height]);
+  const strokePath = useMemo(() => buildTabShapeStrokePath(size.width, size.height), [size.width, size.height]);
 
   return (
     <div ref={containerRef} className="absolute inset-0 pointer-events-none">
@@ -79,15 +92,26 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
         preserveAspectRatio="none"
       >
         <path
-          d={path}
+          d={fillPath}
+          stroke="none"
+          className={cn(
+            "transition-[fill] duration-150",
+            isActive
+              ? "fill-[hsl(var(--background))]"
+              : "fill-transparent group-hover:fill-[hsl(var(--accent)/0.6)]"
+          )}
+        />
+        <path
+          d={strokePath}
+          fill="none"
           vectorEffect="non-scaling-stroke"
           className={cn(
-            "transition-[fill,stroke,stroke-width] duration-150",
+            "transition-[stroke,stroke-width] duration-150",
             isDropTarget
-              ? "fill-transparent stroke-[hsl(var(--primary))] [stroke-width:2]"
+              ? "stroke-[hsl(var(--primary))] [stroke-width:2]"
               : isActive
-                ? "fill-[hsl(var(--background))] stroke-[hsl(var(--foreground)/0.3)] [stroke-width:1]"
-                : "fill-transparent group-hover:fill-[hsl(var(--accent)/0.6)] [stroke-width:0]"
+                ? "stroke-[hsl(var(--foreground)/0.3)] [stroke-width:1]"
+                : "[stroke-width:0]"
           )}
         />
       </svg>
