@@ -77,4 +77,25 @@ describe('providers/metadata', () => {
     expect(getProviderModels('anthropic')).toBeDefined()
     expect(getProviderModels('bogus')).toBeUndefined()
   })
+
+  it('deepseek catalog lists V4 models with 1M context and drops the /v1 suffix from the default base URL', () => {
+    const deepseek = getProviderModels('deepseek')
+    expect(deepseek).toBeDefined()
+    expect(deepseek?.defaultBaseUrl).toBe('https://api.deepseek.com')
+
+    const ids = deepseek?.models.map((m) => m.id) ?? []
+    expect(ids).toContain('deepseek-v4-pro')
+    expect(ids).toContain('deepseek-v4-flash')
+    // Legacy entries must remain until the 2026-07-24 deprecation deadline.
+    expect(ids).toContain('deepseek-chat')
+    expect(ids).toContain('deepseek-reasoner')
+
+    const pro = findModel('deepseek', 'deepseek-v4-pro')
+    expect(pro?.contextWindow).toBe(1000000)
+    expect(pro?.supportsThinking).toBe(true)
+
+    const flash = findModel('deepseek', 'deepseek-v4-flash')
+    expect(flash?.contextWindow).toBe(1000000)
+    expect(flash?.supportsThinking).toBe(true)
+  })
 })

@@ -27,6 +27,7 @@ export type {
   StreamChunk,
   LLMStream,
   ThinkingMode,
+  ReasoningEffort,
 } from "./types";
 
 export {
@@ -62,9 +63,11 @@ export {
   normalizeThinkingMode,
   getThinkingCapability,
   supportsThinkingModeSwitch,
+  supportedReasoningEfforts,
   resolveThinkingModel,
   getThinkingRequestBodyPatch,
 } from "./thinking";
+export type { ThinkingCapability } from "./thinking";
 
 import type {
   LLMConfig,

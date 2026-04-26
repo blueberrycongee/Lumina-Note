@@ -1540,6 +1540,11 @@ export default {
     thinkingModeInstant: "極速回應",
     thinkingModeHint:
       "所有支援模型統一使用此開關，不支援的模型會自動忽略此設定。",
+    reasoningEffort: "推理強度",
+    reasoningEffortDefault: "預設",
+    reasoningEffortLow: "低",
+    reasoningEffortMedium: "中",
+    reasoningEffortHigh: "高",
     temperature: "溫度 (Temperature)",
     agentSettings: "Agent 設定",
     autoApproveTools: "自動批准工具調用",

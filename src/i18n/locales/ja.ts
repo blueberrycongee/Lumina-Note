@@ -1574,6 +1574,11 @@ export default {
     thinkingModeInstant: "高速応答",
     thinkingModeHint:
       "対応モデルでは同じスイッチで制御し、未対応モデルでは安全に無視されます。",
+    reasoningEffort: "推論強度",
+    reasoningEffortDefault: "デフォルト",
+    reasoningEffortLow: "低",
+    reasoningEffortMedium: "中",
+    reasoningEffortHigh: "高",
     temperature: "Temperature",
     agentSettings: "Agent 設定",
     autoApproveTools: "ツール呼び出しを自動承認",

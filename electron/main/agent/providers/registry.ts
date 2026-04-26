@@ -103,10 +103,10 @@ const entries: ProviderEntry[] = [
   {
     id: 'deepseek',
     label: 'DeepSeek',
-    description: 'DeepSeek 官方原生通道(含 reasoner)',
+    description: 'DeepSeek 官方原生通道(V4 + 旧版 V3.2)',
     requiresApiKey: true,
     supportsBaseUrl: true,
-    defaultBaseUrl: 'https://api.deepseek.com/v1',
+    defaultBaseUrl: 'https://api.deepseek.com',
     createModel(settings, modelId) {
       const factory = createDeepSeek({
         apiKey: settings.apiKey ?? '',

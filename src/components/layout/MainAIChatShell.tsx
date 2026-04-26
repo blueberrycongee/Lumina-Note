@@ -78,8 +78,10 @@ import {
 } from "@/features/conversation-export/exportUtils";
 import {
   normalizeThinkingMode,
+  supportedReasoningEfforts,
   supportsThinkingModeSwitch,
   type LLMProviderType,
+  type ReasoningEffort,
   type ThinkingMode,
 } from "@/services/llm";
 
@@ -253,6 +255,15 @@ export function MainAIChatShell() {
     effectiveModelForThinking,
   );
   const displayThinkingMode = normalizeThinkingMode(config.thinkingMode);
+  const availableEfforts = supportedReasoningEfforts(
+    config.provider as LLMProviderType,
+    effectiveModelForThinking,
+  );
+  const effortLabel: Record<ReasoningEffort, string> = {
+    low: t.aiSettings.reasoningEffortLow,
+    medium: t.aiSettings.reasoningEffortMedium,
+    high: t.aiSettings.reasoningEffortHigh,
+  };
 
   // Wrap session hooks with local state side effects
   const handleSwitchSession = useCallback(
@@ -1511,6 +1522,34 @@ export function MainAIChatShell() {
                               </option>
                             </select>
                           </div>
+                          {availableEfforts && displayThinkingMode === "thinking" && (
+                            <div className="mt-2 flex items-center justify-between gap-2">
+                              <span className="text-sm text-muted-foreground pl-6">
+                                {t.aiSettings.reasoningEffort}
+                              </span>
+                              <select
+                                value={config.reasoningEffort ?? ""}
+                                onChange={(e) => {
+                                  const next = e.target.value;
+                                  setConfig({
+                                    reasoningEffort: next === ""
+                                      ? undefined
+                                      : (next as ReasoningEffort),
+                                  });
+                                }}
+                                className="h-7 rounded-ui-sm border border-border bg-background px-1.5 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                              >
+                                <option value="">
+                                  {t.aiSettings.reasoningEffortDefault}
+                                </option>
+                                {availableEfforts.map((level) => (
+                                  <option key={level} value={level}>
+                                    {effortLabel[level]}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                       )}
                       <div className="my-1 border-t border-border/60" />

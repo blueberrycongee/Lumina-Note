@@ -70,13 +70,15 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
   deepseek: {
     id: 'deepseek',
     label: 'DeepSeek',
-    description: 'DeepSeek official channel (reasoner supported)',
-    defaultBaseUrl: 'https://api.deepseek.com/v1',
+    description: 'DeepSeek official channel (V4 + legacy V3.2)',
+    defaultBaseUrl: 'https://api.deepseek.com',
     requiresApiKey: true,
     supportsBaseUrl: true,
     models: [
-      { id: 'deepseek-chat', name: 'DeepSeek V3.2 (Chat)', contextWindow: 128000 },
-      { id: 'deepseek-reasoner', name: 'DeepSeek V3.2 (Reasoner)', contextWindow: 128000, supportsThinking: true },
+      { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', contextWindow: 1000000, supportsThinking: true },
+      { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 1000000, supportsThinking: true },
+      { id: 'deepseek-chat', name: 'DeepSeek V3.2 Chat (legacy, retiring 2026-07-24)', contextWindow: 128000 },
+      { id: 'deepseek-reasoner', name: 'DeepSeek V3.2 Reasoner (legacy, retiring 2026-07-24)', contextWindow: 128000, supportsThinking: true },
     ],
   },
   groq: {

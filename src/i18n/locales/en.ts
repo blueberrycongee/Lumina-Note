@@ -1580,6 +1580,11 @@ export default {
     thinkingModeInstant: "Instant",
     thinkingModeHint:
       "One unified switch across models. Unsupported models safely ignore this option.",
+    reasoningEffort: "Reasoning Effort",
+    reasoningEffortDefault: "Default",
+    reasoningEffortLow: "Low",
+    reasoningEffortMedium: "Medium",
+    reasoningEffortHigh: "High",
     temperature: "Temperature",
     agentSettings: "Agent Settings",
     autoApproveTools: "Auto-approve tool calls",
