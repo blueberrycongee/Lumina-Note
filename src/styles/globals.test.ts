@@ -28,7 +28,7 @@ describe("fallback theme tokens", () => {
     expect(darkBlock).toContain("--muted: 222 16% 12%;");
     expect(darkBlock).toContain("--muted-foreground: 220 9% 58%;");
     expect(darkBlock).toContain("--accent: 222 14% 16%;");
-    expect(darkBlock).toContain("--border: 220 13% 22%;");
+    expect(darkBlock).toContain("--border: 220 13% 26%;");
     expect(darkBlock).toContain("--md-heading: 0 0% 93%;");
   });
 });

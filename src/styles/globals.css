@@ -101,14 +101,18 @@ body.resizing iframe[data-codex-iframe="true"] {
   --ui-radius-lg: 10px;                /* cards, popovers */
   --ui-radius-xl: 14px;                /* dialogs, welcome hero */
 
-  /* ── Elevation (three stops — no stacking more) ────────────────────── */
+  /* ── Elevation (three stops — no stacking more) ──────────────────────
+   * elev-2 / elev-3 are bumped so popovers and dialogs read as clearly
+   * lifted surfaces against the near-white bg instead of "floating glass".
+   * Diffuse shadow + tight contact shadow combo defines the lift without
+   * going dramatic. */
   --elev-1: 0 1px 2px 0 hsl(var(--foreground) / 0.04);
   --elev-2:
-    0 2px 8px -2px hsl(var(--foreground) / 0.08),
-    0 1px 2px hsl(var(--foreground) / 0.04);
+    0 4px 14px -3px hsl(var(--foreground) / 0.14),
+    0 1px 3px hsl(var(--foreground) / 0.08);
   --elev-3:
-    0 8px 24px -8px hsl(var(--foreground) / 0.14),
-    0 2px 4px hsl(var(--foreground) / 0.06);
+    0 12px 32px -8px hsl(var(--foreground) / 0.20),
+    0 2px 6px hsl(var(--foreground) / 0.10);
 
   /* ── Motion ─────────────────────────────────────────────────────────
    * Snappier than before. Keyboard selection stays unanimated (Linear rule).
@@ -142,9 +146,9 @@ body.resizing iframe[data-codex-iframe="true"] {
   --muted-foreground: 220 9% 58%;
   --accent: 222 14% 16%;
   --accent-foreground: 220 14% 95%;
-  --popover: 222 18% 10%;              /* lifted from bg */
+  --popover: 222 18% 14%;              /* clearly lifted from the 7% bg — was 10%, too close */
   --popover-foreground: 220 14% 95%;
-  --border: 220 13% 22%;
+  --border: 220 13% 26%;               /* slightly more defined edges in dark mode */
 
   --primary: 0 0% 98%;
   --primary-foreground: 0 0% 9%;
@@ -161,14 +165,15 @@ body.resizing iframe[data-codex-iframe="true"] {
   --md-heading: 0 0% 93%;
   --ui-ribbon: 222 16% 9%;               /* ribbon bar — one step darker than muted */
 
-  /* Shadows in dark mode — slightly heavier because bg is dark */
+  /* Shadows in dark mode — heavier because bg is dark; matches the bumped
+   * lift in light mode so popovers feel solid in both themes. */
   --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
   --elev-2:
-    0 2px 8px -2px rgba(0, 0, 0, 0.45),
-    0 1px 2px rgba(0, 0, 0, 0.3);
+    0 4px 14px -3px rgba(0, 0, 0, 0.55),
+    0 1px 3px rgba(0, 0, 0, 0.40);
   --elev-3:
-    0 8px 24px -8px rgba(0, 0, 0, 0.6),
-    0 2px 4px rgba(0, 0, 0, 0.35);
+    0 12px 32px -8px rgba(0, 0, 0, 0.70),
+    0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
 @layer base {
