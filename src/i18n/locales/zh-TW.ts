@@ -1546,7 +1546,6 @@ export default {
     baseUrl: "Base URL",
     baseUrlOptional: "可選，用於第三方代理",
     thinkingMode: "思考模式",
-    thinkingModeAuto: "自動",
     thinkingModeThinking: "深度思考",
     thinkingModeInstant: "極速回應",
     thinkingModeHint:
@@ -1562,6 +1561,7 @@ export default {
     modelPicker: {
       title: "切換模型",
       moreModels: "其他模型",
+      configureInSettings: "在 AI 設定中配置",
     },
     temperature: "溫度 (Temperature)",
     agentSettings: "Agent 設定",

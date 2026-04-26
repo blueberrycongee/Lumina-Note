@@ -1586,7 +1586,6 @@ export default {
     baseUrl: "Base URL",
     baseUrlOptional: "Optional, for third-party proxies",
     thinkingMode: "Thinking Mode",
-    thinkingModeAuto: "Auto",
     thinkingModeThinking: "Thinking",
     thinkingModeInstant: "Instant",
     thinkingModeHint:
@@ -1602,6 +1601,7 @@ export default {
     modelPicker: {
       title: "Switch model",
       moreModels: "More models",
+      configureInSettings: "Configure in AI Settings",
     },
     temperature: "Temperature",
     agentSettings: "Agent Settings",

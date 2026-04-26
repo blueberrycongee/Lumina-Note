@@ -88,7 +88,7 @@ export interface LLMOptions {
   tools?: unknown[];  // Function Calling 工具定义
 }
 
-export type ThinkingMode = "auto" | "thinking" | "instant";
+export type ThinkingMode = "thinking" | "instant";
 
 // Optional second axis: when a model supports tunable reasoning depth on top of
 // the binary thinking toggle (e.g. DeepSeek V4 Pro's `reasoning_effort: "high"`,

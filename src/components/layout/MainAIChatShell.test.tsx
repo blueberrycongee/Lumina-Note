@@ -70,7 +70,7 @@ describe("MainAIChatShell", () => {
         ...state.config,
         provider: "deepseek",
         model: "deepseek-chat",
-        thinkingMode: "auto",
+        thinkingMode: "thinking",
       },
     }));
 
@@ -84,6 +84,22 @@ describe("MainAIChatShell", () => {
     expect(screen.getByText("Reference file")).toBeTruthy();
     expect(screen.getByText("Skills")).toBeTruthy();
     expect(screen.getByText(t.ai.aiChatSettings)).toBeTruthy();
+  });
+
+  it("renders the model chip in the input pill", () => {
+    useAIStore.setState((state) => ({
+      config: {
+        ...state.config,
+        provider: "openai",
+        model: "gpt-5.5",
+      },
+    }));
+
+    render(<MainAIChatShell />);
+
+    const modelChip = document.querySelector('[data-chip="model"]');
+    expect(modelChip).toBeTruthy();
+    expect(modelChip?.textContent ?? "").toContain("GPT-5.5");
   });
 
   it("renders assistant thinking as collapsed block and expands on click", () => {

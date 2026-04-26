@@ -1,12 +1,11 @@
-import { useRef, useState } from "react";
-import { Check, ChevronRight, ChevronUp } from "lucide-react";
+import { useRef, useState, type MutableRefObject } from "react";
+import { Check, ChevronUp } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useAIStore } from "@/stores/useAIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
   Popover,
   PopoverContent,
-  PopoverHeader,
   PopoverList,
   Row,
 } from "@/components/ui";
@@ -21,19 +20,60 @@ import {
   type ThinkingMode,
 } from "@/services/llm";
 
-// Inline-show all models when the active provider has at most this many.
-// More than this and we collapse the tail into a "其他模型 ›" submenu so the
-// popover stays scannable.
-const INLINE_MODEL_LIMIT = 3;
+type OpenChip = "model" | "mode" | "effort" | null;
+
+const MODEL_POPOVER_WIDTH = 240;
+const AXIS_POPOVER_WIDTH = 200;
+
+interface ChipButtonProps {
+  triggerRef: MutableRefObject<HTMLButtonElement | null>;
+  label: string;
+  open: boolean;
+  onClick: () => void;
+  title: string;
+  testId: string;
+}
+
+function ChipButton({
+  triggerRef,
+  label,
+  open,
+  onClick,
+  title,
+  testId,
+}: ChipButtonProps) {
+  return (
+    <button
+      ref={triggerRef}
+      type="button"
+      onClick={onClick}
+      title={title}
+      data-chip={testId}
+      className={[
+        "flex h-7 shrink-0 items-center gap-1 self-end rounded-full px-2",
+        "text-xs transition-colors duration-fast ease-out-subtle",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+        open
+          ? "bg-accent text-foreground"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      ].join(" ")}
+    >
+      <span className="block max-w-[140px] truncate font-medium">{label}</span>
+      <ChevronUp size={12} className="shrink-0 opacity-70" />
+    </button>
+  );
+}
 
 export function ModelEffortPicker() {
   const { t } = useLocaleStore();
   const { config, setConfig } = useAIStore(
     useShallow((s) => ({ config: s.config, setConfig: s.setConfig })),
   );
-  const [open, setOpen] = useState(false);
-  const [showAllModels, setShowAllModels] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const [openChip, setOpenChip] = useState<OpenChip>(null);
+
+  const modelTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const modeTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const effortTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const provider = config.provider as LLMProviderType;
   const effectiveModelId =
@@ -51,10 +91,10 @@ export function ModelEffortPicker() {
     effectiveModelId,
   );
   const thinkingMode = normalizeThinkingMode(config.thinkingMode);
-  // Effort selector is shown whenever the model exposes effort levels. For
-  // models that ALSO have a binary toggle, it's gated to "thinking" mode; for
-  // pure effort-only models (e.g. GPT-5.5) it's the only thinking control and
-  // is always visible alongside the model list.
+  // Effort chip: visible whenever the model declares supported efforts. For
+  // param-toggle models the effort axis is gated to "thinking" mode (instant
+  // means no reasoning, so the depth selector is irrelevant). Effort-only
+  // models always expose efforts as their sole reasoning surface.
   const effortVisible =
     !!efforts && (!supportsBinaryToggle || thinkingMode === "thinking");
 
@@ -70,29 +110,20 @@ export function ModelEffortPicker() {
   const modelDisplayName =
     modelMeta?.name || effectiveModelId || t.aiSettings.model;
 
-  // Chip secondary segment (everything to the right of the model name):
-  //  - effort-only models  → effort label (e.g. "medium")
-  //  - param-toggle models → "thinking · effort" / "instant" / nothing for auto
-  //  - models with no thinking control → no secondary
-  let chipSecondary = "";
-  if (supportsBinaryToggle) {
-    if (thinkingMode === "thinking") {
-      chipSecondary =
-        efforts && config.reasoningEffort
-          ? `${t.aiSettings.thinkingModeThinking} · ${effortLabel[config.reasoningEffort]}`
-          : t.aiSettings.thinkingModeThinking;
-    } else if (thinkingMode === "instant") {
-      chipSecondary = t.aiSettings.thinkingModeInstant;
-    }
-  } else if (efforts && config.reasoningEffort) {
-    chipSecondary = effortLabel[config.reasoningEffort];
-  }
+  const modeOptions: ThinkingMode[] = ["thinking", "instant"];
+  const modeLabel = (mode: ThinkingMode): string =>
+    mode === "thinking"
+      ? t.aiSettings.thinkingModeThinking
+      : t.aiSettings.thinkingModeInstant;
 
-  const showMoreSubmenu = providerModels.length > INLINE_MODEL_LIMIT;
-  const inlineModels =
-    !showMoreSubmenu || showAllModels
-      ? providerModels
-      : providerModels.slice(0, INLINE_MODEL_LIMIT);
+  // Effort chip displays the resolved effort: explicit user selection if any,
+  // otherwise the model's API default (so the chip is never blank for
+  // effort-only models on first render).
+  const effortDefault = modelMeta?.reasoning && "defaultEffort" in modelMeta.reasoning
+    ? (modelMeta.reasoning.defaultEffort as ReasoningEffort | undefined)
+    : undefined;
+  const displayedEffort: ReasoningEffort | undefined =
+    config.reasoningEffort ?? effortDefault;
 
   const handleSelectModel = (modelId: string) => {
     // Pass only `model`. useAIStore.setConfig auto-resets reasoningEffort to
@@ -102,143 +133,149 @@ export function ModelEffortPicker() {
     if (modelId !== effectiveModelId) {
       void setConfig({ model: modelId });
     }
-    setShowAllModels(false);
-    setOpen(false);
+    setOpenChip(null);
   };
 
   const handleSelectEffort = (effort: ReasoningEffort) => {
     if (effort !== config.reasoningEffort) {
       void setConfig({ reasoningEffort: effort });
     }
+    setOpenChip(null);
   };
 
   const handleSelectMode = (mode: ThinkingMode) => {
     if (mode !== thinkingMode) {
       void setConfig({ thinkingMode: mode });
     }
+    setOpenChip(null);
   };
 
-  const modeLabel = (mode: ThinkingMode): string => {
-    if (mode === "thinking") return t.aiSettings.thinkingModeThinking;
-    if (mode === "instant") return t.aiSettings.thinkingModeInstant;
-    return t.aiSettings.thinkingModeAuto;
+  const toggleChip = (next: Exclude<OpenChip, null>) => {
+    setOpenChip((prev) => (prev === next ? null : next));
   };
 
   return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setOpen((p) => !p)}
+    <div className="flex items-end gap-1 self-end">
+      <ChipButton
+        triggerRef={modelTriggerRef}
+        label={modelDisplayName}
+        open={openChip === "model"}
+        onClick={() => toggleChip("model")}
         title={t.aiSettings.modelPicker.title}
-        data-model-picker-trigger
-        className={[
-          "flex h-7 shrink-0 items-center gap-1 self-end rounded-full px-2",
-          "text-xs transition-colors duration-fast ease-out-subtle",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-          open
-            ? "bg-accent text-foreground"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground",
-        ].join(" ")}
+        testId="model"
+      />
+      <Popover
+        open={openChip === "model"}
+        onOpenChange={(next) => setOpenChip(next ? "model" : null)}
+        anchor={modelTriggerRef}
       >
-        <span className="block max-w-[110px] truncate font-medium">
-          {modelDisplayName}
-        </span>
-        {chipSecondary ? (
-          <>
-            <span className="opacity-60">·</span>
-            <span className="block truncate text-muted-foreground">
-              {chipSecondary}
-            </span>
-          </>
-        ) : null}
-        <ChevronUp size={12} className="shrink-0 opacity-70" />
-      </button>
-
-      <Popover open={open} onOpenChange={setOpen} anchor={triggerRef}>
         <PopoverContent
           placement="top-end"
-          width={260}
-          data-model-picker-content
+          width={MODEL_POPOVER_WIDTH}
+          data-chip-popover="model"
         >
-          <PopoverHeader>{t.aiSettings.modelPicker.title}</PopoverHeader>
           <PopoverList>
-            {inlineModels.length === 0 ? (
+            {providerModels.length === 0 ? (
               <Row
-                title={modelDisplayName}
-                selected
-                trailing={<Check size={14} />}
-                onSelect={() => setOpen(false)}
+                title={t.aiSettings.modelPicker.configureInSettings}
+                disabled
               />
             ) : (
-              <>
-                {inlineModels.map((m) => (
-                  <Row
-                    key={m.id}
-                    title={m.name}
-                    selected={m.id === effectiveModelId}
-                    trailing={
-                      m.id === effectiveModelId ? <Check size={14} /> : null
-                    }
-                    onSelect={() => handleSelectModel(m.id)}
-                  />
-                ))}
-                {showMoreSubmenu && !showAllModels && (
-                  <Row
-                    title={t.aiSettings.modelPicker.moreModels}
-                    trailing={<ChevronRight size={14} />}
-                    onSelect={() => setShowAllModels(true)}
-                  />
-                )}
-              </>
+              providerModels.map((m) => (
+                <Row
+                  key={m.id}
+                  title={m.name}
+                  selected={m.id === effectiveModelId}
+                  trailing={
+                    m.id === effectiveModelId ? <Check size={14} /> : null
+                  }
+                  onSelect={() => handleSelectModel(m.id)}
+                />
+              ))
             )}
           </PopoverList>
+        </PopoverContent>
+      </Popover>
 
-          {supportsBinaryToggle && (
-            <>
-              <div className="border-t border-border/60" />
-              <PopoverHeader>{t.aiSettings.thinkingMode}</PopoverHeader>
+      {supportsBinaryToggle && (
+        <>
+          <ChipButton
+            triggerRef={modeTriggerRef}
+            label={modeLabel(thinkingMode)}
+            open={openChip === "mode"}
+            onClick={() => toggleChip("mode")}
+            title={t.aiSettings.thinkingMode}
+            testId="mode"
+          />
+          <Popover
+            open={openChip === "mode"}
+            onOpenChange={(next) => setOpenChip(next ? "mode" : null)}
+            anchor={modeTriggerRef}
+          >
+            <PopoverContent
+              placement="top-end"
+              width={AXIS_POPOVER_WIDTH}
+              data-chip-popover="mode"
+            >
               <PopoverList>
-                {(["auto", "thinking", "instant"] as ThinkingMode[]).map(
-                  (m) => (
-                    <Row
-                      key={m}
-                      title={modeLabel(m)}
-                      selected={thinkingMode === m}
-                      trailing={
-                        thinkingMode === m ? <Check size={14} /> : null
-                      }
-                      onSelect={() => handleSelectMode(m)}
-                    />
-                  ),
-                )}
+                {modeOptions.map((m) => (
+                  <Row
+                    key={m}
+                    title={modeLabel(m)}
+                    selected={thinkingMode === m}
+                    trailing={
+                      thinkingMode === m ? <Check size={14} /> : null
+                    }
+                    onSelect={() => handleSelectMode(m)}
+                  />
+                ))}
               </PopoverList>
-            </>
-          )}
+            </PopoverContent>
+          </Popover>
+        </>
+      )}
 
-          {efforts && effortVisible && (
-            <>
-              <div className="border-t border-border/60" />
-              <PopoverHeader>{t.aiSettings.reasoningEffort}</PopoverHeader>
+      {efforts && effortVisible && (
+        <>
+          <ChipButton
+            triggerRef={effortTriggerRef}
+            label={
+              displayedEffort
+                ? effortLabel[displayedEffort]
+                : t.aiSettings.reasoningEffort
+            }
+            open={openChip === "effort"}
+            onClick={() => toggleChip("effort")}
+            title={t.aiSettings.reasoningEffort}
+            testId="effort"
+          />
+          <Popover
+            open={openChip === "effort"}
+            onOpenChange={(next) => setOpenChip(next ? "effort" : null)}
+            anchor={effortTriggerRef}
+          >
+            <PopoverContent
+              placement="top-end"
+              width={AXIS_POPOVER_WIDTH}
+              data-chip-popover="effort"
+            >
               <PopoverList>
                 {efforts.map((eff) => (
                   <Row
                     key={eff}
                     title={effortLabel[eff]}
-                    selected={config.reasoningEffort === eff}
+                    selected={displayedEffort === eff}
                     trailing={
-                      config.reasoningEffort === eff ? (
-                        <Check size={14} />
-                      ) : null
+                      displayedEffort === eff ? <Check size={14} /> : null
                     }
                     onSelect={() => handleSelectEffort(eff)}
                   />
                 ))}
               </PopoverList>
-            </>
-          )}
-        </PopoverContent>
-      </Popover>
-    </>
+            </PopoverContent>
+          </Popover>
+        </>
+      )}
+    </div>
   );
 }

@@ -1021,6 +1021,15 @@ export const useAIStore = create<AIState>()(
               : "";
             const decryptedConfig = { ...state.config, apiKey: decryptedKey };
 
+            // W4 migration: the legacy `thinkingMode: "auto"` literal was
+            // dropped in favor of a binary thinking|instant union with
+            // `thinking` as the default. Existing persisted state may still
+            // carry "auto"; convert it once here so the rest of the renderer
+            // never has to handle the third state.
+            if ((decryptedConfig.thinkingMode as unknown) === "auto") {
+              decryptedConfig.thinkingMode = "thinking";
+            }
+
             // Fetch backend provider settings and override provider-related fields
             try {
               const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string }> }>("agent_get_provider_settings");

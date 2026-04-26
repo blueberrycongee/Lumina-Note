@@ -16,7 +16,14 @@ import type { ProviderId } from './registry.js'
 
 // Mirror of the renderer types in src/services/llm/types.ts. Kept inline to
 // avoid cross-tree imports — the literal sets are tiny and stable.
-export type ThinkingMode = 'auto' | 'thinking' | 'instant'
+//
+// Persisted JSON written by older clients may still carry the legacy `'auto'`
+// literal in `thinkingMode`. The bridge consumer (thinking-options.ts)
+// branches on `thinkingMode === 'thinking'` / `'instant'`, so any unrecognised
+// stale value falls through to the post-W4 default thinking-on behaviour.
+// The renderer's `normalizeThinkingMode` migrates `'auto'` to `'thinking'` on
+// hydrate, so new writes only ever produce one of the two current literals.
+export type ThinkingMode = 'thinking' | 'instant'
 export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 export interface ProviderPersistedSettings {

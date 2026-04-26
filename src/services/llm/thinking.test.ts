@@ -12,8 +12,11 @@ import {
 } from "./thinking";
 
 describe("LLM thinking mode capability", () => {
-  it("normalizes unsupported mode values to auto", () => {
-    expect(normalizeThinkingMode(undefined)).toBe("auto");
+  it("normalizes unsupported mode values to the thinking default", () => {
+    // W4: undefined and any unrecognised value (e.g. legacy "auto" persisted
+    // by older clients) collapse to "thinking" — the post-W4 default.
+    expect(normalizeThinkingMode(undefined)).toBe("thinking");
+    expect(normalizeThinkingMode("auto")).toBe("thinking");
     expect(normalizeThinkingMode("thinking")).toBe("thinking");
     expect(normalizeThinkingMode("instant")).toBe("instant");
   });
@@ -59,13 +62,14 @@ describe("LLM thinking mode capability", () => {
       })
     ).toBe("deepseek-chat");
 
+    // W4: with the binary union and default = "thinking", an undefined mode
+    // resolves to the thinking-side model (no more pass-through behavior).
     expect(
       resolveThinkingModel({
         provider: "deepseek",
         model: "deepseek-chat",
-        thinkingMode: "auto",
       })
-    ).toBe("deepseek-chat");
+    ).toBe("deepseek-reasoner");
   });
 
   it("only sends moonshot thinking disable patch in instant mode", () => {
@@ -153,13 +157,15 @@ describe("LLM thinking mode capability", () => {
         })
       ).toBeUndefined();
 
+      // W4: undefined mode normalizes to "thinking" (the new default),
+      // so DeepSeek V4 emits the enabled blob just like an explicit
+      // thinking selection. Pre-W4 this case yielded undefined.
       expect(
         getThinkingRequestBodyPatch({
           provider: "deepseek",
           model: "deepseek-v4-flash",
-          thinkingMode: "auto",
         })
-      ).toBeUndefined();
+      ).toEqual({ extra_body: { thinking: { type: "enabled" } } });
     });
 
     it("pro adds reasoning_effort when high is requested", () => {

@@ -3,6 +3,7 @@ import {
   type ModelMeta,
   type ModelTemperatureSpec,
 } from "./providers/models";
+import { normalizeThinkingMode } from "./thinking";
 import type { LLMProviderType, ReasoningEffort, ThinkingMode } from "./types";
 
 function includesAny(text: string, patterns: readonly string[]): boolean {
@@ -33,7 +34,7 @@ function isReasoningOn(
 //   1. `fixed` (unconditional)
 //   2. `fixedWhenInstant` when mode === instant
 //   3. `fixedWhenReasoning` when the model is effort-only and reasoning is on
-//   4. `fixedWhenThinking` otherwise (auto/thinking)
+//   4. `fixedWhenThinking` otherwise (mode === thinking, the default)
 function resolveFixedFromSpec(
   spec: ModelTemperatureSpec | undefined,
   meta: ModelMeta | undefined,
@@ -109,9 +110,10 @@ export function resolveTemperature(params: {
   reasoningEffort?: ReasoningEffort;
 }): number {
   const { provider, model, configuredTemperature, reasoningEffort } = params;
-  const mode: ThinkingMode = params.thinkingMode === "instant" ? "instant"
-    : params.thinkingMode === "thinking" ? "thinking"
-    : "auto";
+  // Normalize first so legacy persisted "auto" (and undefined) collapse to
+  // the default "thinking" — the fixed-temperature lookup expects the new
+  // two-state mode and `fixedWhenThinking` must apply to the default state.
+  const mode: ThinkingMode = normalizeThinkingMode(params.thinkingMode);
   const meta = findModelInCatalog(provider, model);
   const spec = meta?.temperature;
   const fixed = resolveFixedFromSpec(spec, meta, mode, reasoningEffort);

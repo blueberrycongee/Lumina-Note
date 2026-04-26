@@ -1580,7 +1580,6 @@ export default {
     baseUrl: "Base URL",
     baseUrlOptional: "オプション、サードパーティプロキシ用",
     thinkingMode: "思考モード",
-    thinkingModeAuto: "自動",
     thinkingModeThinking: "思考",
     thinkingModeInstant: "高速応答",
     thinkingModeHint:
@@ -1596,6 +1595,7 @@ export default {
     modelPicker: {
       title: "モデル切替",
       moreModels: "他のモデル",
+      configureInSettings: "AI 設定で構成",
     },
     temperature: "Temperature",
     agentSettings: "Agent 設定",

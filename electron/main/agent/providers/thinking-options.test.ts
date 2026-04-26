@@ -111,7 +111,7 @@ describe('thinking-options (opencode bridge translator)', () => {
       ).toEqual({ extra_body: { thinking: { type: 'enabled' } } })
     })
 
-    it('returns undefined unless mode is thinking', () => {
+    it('returns undefined when mode is instant', () => {
       expect(
         buildModelOptionsBlob({
           provider: 'deepseek',
@@ -119,14 +119,21 @@ describe('thinking-options (opencode bridge translator)', () => {
           thinkingMode: 'instant',
         }),
       ).toBeUndefined()
+    })
 
+    it('emits the enabled blob when mode is undefined (W4 default = thinking)', () => {
+      // W4: undefined collapses to "thinking" via the bridge's normalizer,
+      // so DeepSeek V4 emits the enabled blob even before the renderer's
+      // hydration migration writes a literal back. Pre-W4 this case yielded
+      // undefined because the persisted "auto" was treated as a no-op.
       expect(
         buildModelOptionsBlob({
           provider: 'deepseek',
           modelId: 'deepseek-v4-pro',
-          thinkingMode: 'auto',
         }),
-      ).toBeUndefined()
+      ).toEqual({
+        extra_body: { thinking: { type: 'enabled' } },
+      })
     })
 
     it('does not patch legacy chat / reasoner', () => {

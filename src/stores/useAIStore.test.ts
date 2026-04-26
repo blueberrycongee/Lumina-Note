@@ -29,9 +29,9 @@ vi.mock("@/services/llm", () => ({
     yield { type: "text", text: "pong" };
     yield { type: "usage", inputTokens: 1, outputTokens: 1, totalTokens: 2 };
   }),
-  normalizeThinkingMode: (mode?: "auto" | "thinking" | "instant") => {
+  normalizeThinkingMode: (mode?: string) => {
     if (mode === "thinking" || mode === "instant") return mode;
-    return "auto";
+    return "thinking";
   },
   supportsThinkingModeSwitch: () => true,
   // W2: useAIStore.setConfig consults these when the user switches model so it

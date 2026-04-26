@@ -27,9 +27,12 @@ export type ThinkingCapability =
       efforts: ReasoningEffort[];
     };
 
-const DEFAULT_THINKING_MODE: ThinkingMode = "auto";
+const DEFAULT_THINKING_MODE: ThinkingMode = "thinking";
 
-export function normalizeThinkingMode(mode?: ThinkingMode): ThinkingMode {
+// Accepts a wider input than `ThinkingMode` so persisted state from older
+// clients (which may still carry the legacy `"auto"` value) deserializes
+// cleanly — anything that isn't a current literal collapses to the default.
+export function normalizeThinkingMode(mode?: string): ThinkingMode {
   if (mode === "thinking" || mode === "instant") {
     return mode;
   }
@@ -126,11 +129,7 @@ export function resolveThinkingModel(params: {
   if (mode === "thinking") {
     return capability.thinkingModel;
   }
-  if (mode === "instant") {
-    return capability.instantModel;
-  }
-
-  return model;
+  return capability.instantModel;
 }
 
 // Returns the per-provider API default effort for a (provider, model) pair,

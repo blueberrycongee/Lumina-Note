@@ -19,13 +19,24 @@ import { lookupReasoningSpec } from './model-capabilities.js'
 import type { ProviderId } from './registry.js'
 import type { ReasoningEffort, ThinkingMode } from './settings-store.js'
 
+// Post-W4 the renderer migrates persisted `'auto'` → `'thinking'` on hydrate
+// and writes the new value back through, but the bridge can be invoked
+// before that migration runs (cold start) or against legacy JSON written by
+// older clients. Anything that isn't one of the current literals collapses
+// to the post-W4 default (`'thinking'`) so DeepSeek V4 emits the enabled
+// blob and Kimi K2.5 stays on its default-on side.
+function normalizeMode(mode: ThinkingMode | string | undefined): ThinkingMode {
+  return mode === 'instant' ? 'instant' : 'thinking'
+}
+
 export function buildModelOptionsBlob(params: {
   provider: ProviderId
   modelId: string
   thinkingMode?: ThinkingMode
   reasoningEffort?: ReasoningEffort
 }): Record<string, unknown> | undefined {
-  const { provider, modelId, thinkingMode, reasoningEffort } = params
+  const { provider, modelId, reasoningEffort } = params
+  const thinkingMode = normalizeMode(params.thinkingMode)
   const spec = lookupReasoningSpec(provider, modelId)
   if (!spec || spec.strategy === 'none' || spec.strategy === 'separate-model') {
     return undefined

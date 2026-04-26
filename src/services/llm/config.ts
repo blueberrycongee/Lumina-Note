@@ -9,7 +9,7 @@ const DEFAULT_CONFIG: LLMConfig = {
   provider: "openai",
   apiKey: "",
   model: "gpt-5.4",
-  thinkingMode: "auto",
+  thinkingMode: "thinking",
 };
 
 let config: LLMConfig = { ...DEFAULT_CONFIG };

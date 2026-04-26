@@ -3,9 +3,9 @@ import type { ReasoningEffort } from '../types';
 // Per-model temperature constraint. Each field is independently optional.
 // - `fixed` overrides user input unconditionally.
 // - `fixedWhenThinking` / `fixedWhenInstant` apply when the user-selected
-//   thinking mode matches. "Thinking" here means anything that isn't `instant`
-//   (i.e. `thinking` or `auto`), since for models with this constraint the
-//   API treats auto as thinking-on.
+//   thinking mode matches. With the post-W4 binary union (thinking|instant)
+//   `thinking` is the default state, so `fixedWhenThinking` covers both
+//   explicit selection and the default.
 // - `fixedWhenReasoning` applies for `effort-only` models when reasoning is
 //   actually on — i.e. the resolved effort is anything other than `none`
 //   (undefined falls back to the model's `defaultEffort`). OpenAI o-series /
