@@ -191,14 +191,6 @@ export function WelcomeScreen({
                       />
                     )}
                   </motion.div>
-
-                  {/* Footer */}
-                  <motion.div
-                    variants={fadeUpVariants}
-                    className="flex items-center justify-between w-full mt-4 text-xs text-muted-foreground"
-                  >
-                    <span>Lumina Note</span>
-                  </motion.div>
                 </motion.div>
               ) : (
                 <motion.div
