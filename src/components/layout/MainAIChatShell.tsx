@@ -1491,75 +1491,102 @@ export function MainAIChatShell() {
                   </PopoverContent>
                 </Popover>
 
-                {/* Pill inner layout: (+) | textarea | mic send */}
-                <div className="flex items-end gap-1 px-2 py-2">
-                  {/* "+" button */}
-                  <button
-                    ref={plusButtonRef}
-                    {...plusMenu.triggerHandlers}
-                    className={[
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      // Match the chip-row micro-motion: bg + 1px lift + soft
-                      // shadow ride together so the trigger "rises" smoothly on
-                      // hover and stays risen while the popover is open.
-                      "transition-[background-color,color,transform,box-shadow] duration-content ease-out-subtle",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-                      showPlusMenu
-                        ? "bg-accent text-foreground -translate-y-px shadow-elev-1"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground hover:-translate-y-px hover:shadow-elev-1",
-                    ].join(" ")}
-                    title={"More"}
-                  >
-                    <Plus size={17} />
-                  </button>
+                {/* Inner layout — same DOM tree always; CSS grid template
+                 * switches between two visual modes based on input content.
+                 *
+                 *   single-line:  [ + | textarea | chips | mic | send ]
+                 *   multi-line:     textarea spans the full row
+                 *                 [ + | (gap) | chips | mic | send ]
+                 *
+                 * Using `grid-template-areas` (not conditional JSX) keeps the
+                 * textarea's DOM identity stable across mode flips so React
+                 * doesn't unmount/remount it — typing past 80 chars or pressing
+                 * Enter keeps focus, scroll position, IME composition, etc.
+                 *
+                 * Two-row mode matches ChatGPT / Claude.ai / Cursor convention:
+                 * the send / chips lock to the bottom-right edge of the input
+                 * bar rather than floating beside a tall textarea.
+                 */}
+                {(() => {
+                  const isMultiLine =
+                    input.includes("\n") || input.length > 80;
+                  const hasPayload = Boolean(
+                    input.trim() ||
+                    referencedFiles.length > 0 ||
+                    textSelections.length > 0,
+                  );
+                  const queueSend = agentStatus === "running" && hasPayload;
+                  const stopCurrent = isLoading && !queueSend;
+                  const disabled =
+                    isAgentWaitingApproval || (!hasPayload && !stopCurrent);
 
-                  {/* Textarea */}
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) =>
-                      handleInputChange(e.target.value, e.target.selectionStart)
-                    }
-                    onKeyDown={handleKeyDown}
-                    placeholder={t.ai.agentInputPlaceholder}
-                    className="flex-1 resize-none outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] bg-transparent text-sm leading-relaxed py-1 overflow-y-auto scrollbar-hide"
-                    rows={1}
-                    autoFocus
-                  />
+                  return (
+                    <div
+                      className={[
+                        "grid gap-1",
+                        // 5 named columns; the 1fr column carries the textarea
+                        // in single-line mode and the empty gap below the
+                        // textarea in multi-line mode.
+                        isMultiLine
+                          ? "[grid-template-areas:'textarea_textarea_textarea_textarea_textarea''plus_._chips_mic_send'] px-3 pt-3 pb-2 items-center"
+                          : "[grid-template-areas:'plus_textarea_chips_mic_send'] px-2 py-2 items-end",
+                        "[grid-template-columns:auto_1fr_auto_auto_auto]",
+                      ].join(" ")}
+                    >
+                      <button
+                        ref={plusButtonRef}
+                        {...plusMenu.triggerHandlers}
+                        style={{ gridArea: "plus" }}
+                        className={[
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                          "transition-[background-color,color,transform,box-shadow] duration-content ease-out-subtle",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+                          showPlusMenu
+                            ? "bg-accent text-foreground -translate-y-px shadow-elev-1"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground hover:-translate-y-px hover:shadow-elev-1",
+                        ].join(" ")}
+                        title={"More"}
+                      >
+                        <Plus size={17} />
+                      </button>
 
-                  {/* Model + effort picker — Codex-style chip, sits to the
-                      left of mic/send so the per-message tuning surface is
-                      adjacent to the action it tunes. */}
-                  <ModelEffortPicker />
+                      <textarea
+                        ref={textareaRef}
+                        value={input}
+                        onChange={(e) =>
+                          handleInputChange(
+                            e.target.value,
+                            e.target.selectionStart,
+                          )
+                        }
+                        onKeyDown={handleKeyDown}
+                        placeholder={t.ai.agentInputPlaceholder}
+                        style={{ gridArea: "textarea" }}
+                        className="w-full min-w-0 resize-none outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] bg-transparent text-sm leading-relaxed py-1 overflow-y-auto scrollbar-hide"
+                        rows={1}
+                        autoFocus
+                      />
 
-                  {/* Mic button */}
-                  <button
-                    onClick={toggleRecording}
-                    className={[
-                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                      "transition-colors duration-fast ease-out-subtle",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-                      isRecording
-                        ? "bg-destructive/15 text-destructive hover:bg-destructive/20"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                    ].join(" ")}
-                    title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
-                  >
-                    {isRecording ? <MicOff size={15} /> : <Mic size={15} />}
-                  </button>
+                      <div style={{ gridArea: "chips" }} className="flex">
+                        <ModelEffortPicker />
+                      </div>
 
-                  {/* Send / Stop button */}
-                  {(() => {
-                    const hasPayload = Boolean(
-                      input.trim() ||
-                      referencedFiles.length > 0 ||
-                      textSelections.length > 0,
-                    );
-                    const queueSend = agentStatus === "running" && hasPayload;
-                    const stopCurrent = isLoading && !queueSend;
-                    const disabled =
-                      isAgentWaitingApproval || (!hasPayload && !stopCurrent);
-                    return (
+                      <button
+                        onClick={toggleRecording}
+                        style={{ gridArea: "mic" }}
+                        className={[
+                          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                          "transition-colors duration-fast ease-out-subtle",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+                          isRecording
+                            ? "bg-destructive/15 text-destructive hover:bg-destructive/20"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                        ].join(" ")}
+                        title={isRecording ? t.ai.stopVoice : t.ai.startVoice}
+                      >
+                        {isRecording ? <MicOff size={15} /> : <Mic size={15} />}
+                      </button>
+
                       <button
                         onClick={() => {
                           if (queueSend) {
@@ -1573,6 +1600,7 @@ export function MainAIChatShell() {
                           void handleSend();
                         }}
                         disabled={disabled}
+                        style={{ gridArea: "send" }}
                         title={
                           queueSend
                             ? t.ai.sendToQueue
@@ -1597,9 +1625,9 @@ export function MainAIChatShell() {
                           <ArrowUp size={15} strokeWidth={2.5} />
                         )}
                       </button>
-                    );
-                  })()}
-                </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Interim speech text */}
                 {interimText && (
