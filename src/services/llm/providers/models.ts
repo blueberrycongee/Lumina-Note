@@ -59,6 +59,17 @@ export type ModelReasoningSpec =
       defaultEffort: ReasoningEffort;
     };
 
+// Hard API constraints — the provider rejects with HTTP 400 if the user
+// supplies any value other than `fixed`. Currently descriptive: only the
+// temperature slider in AISettingsModal consumes them (W5). Bridge / agent
+// enforcement will follow as needed.
+export interface ModelApiConstraints {
+  topP?: { fixed: number };
+  presencePenalty?: { fixed: number };
+  frequencyPenalty?: { fixed: number };
+  n?: { fixed: number };
+}
+
 export interface ModelMeta {
   id: string;
   name: string;
@@ -70,6 +81,12 @@ export interface ModelMeta {
   reasoning?: ModelReasoningSpec;
   /** Per-model temperature constraints. */
   temperature?: ModelTemperatureSpec;
+  /**
+   * Hard API constraints other than temperature (top_p, penalties, n). See
+   * ModelApiConstraints. Renderer-only consumer for now (AISettingsModal's
+   * lock surface in W5); bridge enforcement may follow.
+   */
+  apiConstraints?: ModelApiConstraints;
   /**
    * Allowed `tool_choice` values when the model is reasoning. Currently
    * descriptive only — opencode's bridge does not enforce this yet. Persisted
@@ -323,6 +340,94 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
       },
     ],
   },
+  moonshot: {
+    id: 'moonshot',
+    label: 'Moonshot (Kimi)',
+    description: 'Moonshot Kimi 系列(K2.6 / K2.5 / Thinking)',
+    defaultBaseUrl: 'https://api.moonshot.cn/v1',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    models: [
+      {
+        id: 'kimi-k2.6',
+        name: 'Kimi K2.6',
+        contextWindow: 256000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
+        apiConstraints: {
+          topP: { fixed: 0.95 },
+          presencePenalty: { fixed: 0 },
+          frequencyPenalty: { fixed: 0 },
+          n: { fixed: 1 },
+        },
+        toolChoiceConstraintsWhenThinking: ['auto', 'none'],
+      },
+      {
+        id: 'kimi-k2.5',
+        name: 'Kimi K2.5',
+        contextWindow: 256000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
+        apiConstraints: {
+          topP: { fixed: 0.95 },
+          presencePenalty: { fixed: 0 },
+          frequencyPenalty: { fixed: 0 },
+          n: { fixed: 1 },
+        },
+        toolChoiceConstraintsWhenThinking: ['auto', 'none'],
+      },
+      {
+        id: 'kimi-k2-thinking',
+        name: 'Kimi K2 Thinking',
+        contextWindow: 256000,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
+        apiConstraints: {
+          topP: { fixed: 0.95 },
+          presencePenalty: { fixed: 0 },
+          frequencyPenalty: { fixed: 0 },
+          n: { fixed: 1 },
+        },
+        toolChoiceConstraintsWhenThinking: ['auto', 'none'],
+      },
+      {
+        id: 'kimi-k2-thinking-turbo',
+        name: 'Kimi K2 Thinking Turbo',
+        contextWindow: 256000,
+        supportsThinking: true,
+        reasoning: { strategy: 'param-toggle', nativeShape: 'moonshot-kimi' },
+        temperature: { fixedWhenThinking: 1.0, fixedWhenInstant: 0.6 },
+        apiConstraints: {
+          topP: { fixed: 0.95 },
+          presencePenalty: { fixed: 0 },
+          frequencyPenalty: { fixed: 0 },
+          n: { fixed: 1 },
+        },
+        toolChoiceConstraintsWhenThinking: ['auto', 'none'],
+      },
+      {
+        id: 'kimi-k2-turbo-preview',
+        name: 'Kimi K2 Turbo Preview',
+        contextWindow: 256000,
+      },
+      {
+        id: 'kimi-k2-0905-preview',
+        name: 'Kimi K2 0905 Preview',
+        contextWindow: 256000,
+      },
+      {
+        id: 'moonshot-v1-128k',
+        name: 'Moonshot v1 128K (legacy)',
+        contextWindow: 128000,
+        legacy: true,
+      },
+    ],
+  },
   groq: {
     id: 'groq',
     label: 'Groq',
@@ -382,53 +487,6 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
 
 export const OPENAI_COMPATIBLE_PRESETS: OpenAICompatiblePreset[] = [
   {
-    id: 'moonshot',
-    label: 'Moonshot (Kimi)',
-    defaultBaseUrl: 'https://api.moonshot.cn/v1',
-    models: [
-      {
-        id: 'kimi-k2.6',
-        name: 'Kimi K2.6',
-        contextWindow: 256000,
-        supportsVision: true,
-        supportsThinking: true,
-        reasoning: {
-          strategy: 'param-toggle',
-          nativeShape: 'moonshot-kimi',
-        },
-        temperature: {
-          fixedWhenThinking: 1.0,
-          fixedWhenInstant: 0.6,
-          recommended: 1.0,
-        },
-        // Confirmed in Moonshot's K2.6 docs: when thinking is enabled the
-        // model only honors `tool_choice: 'auto' | 'none'` (no `required`).
-        toolChoiceConstraintsWhenThinking: ['auto', 'none'],
-      },
-      {
-        id: 'kimi-k2.5',
-        name: 'Kimi K2.5',
-        contextWindow: 256000,
-        supportsVision: true,
-        supportsThinking: true,
-        reasoning: {
-          strategy: 'param-toggle',
-          nativeShape: 'moonshot-kimi',
-        },
-        temperature: {
-          fixedWhenThinking: 1.0,
-          fixedWhenInstant: 0.6,
-          recommended: 1.0,
-        },
-      },
-      { id: 'kimi-k2-0905-preview', name: 'Kimi K2 0905 Preview', contextWindow: 256000 },
-      { id: 'kimi-k2-turbo-preview', name: 'Kimi K2 Turbo Preview', contextWindow: 256000 },
-      { id: 'kimi-k2-thinking', name: 'Kimi K2 Thinking', contextWindow: 256000, supportsThinking: true },
-      { id: 'kimi-k2-thinking-turbo', name: 'Kimi K2 Thinking Turbo', contextWindow: 256000, supportsThinking: true },
-      { id: 'moonshot-v1-128k', name: 'Moonshot v1 128K', contextWindow: 128000 },
-    ],
-  },
-  {
     id: 'zhipu',
     label: 'Z.ai (GLM)',
     defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4',
@@ -478,8 +536,15 @@ export function findModel(providerId: string, modelId: string): ModelMeta | unde
 // Resolves a (provider, modelId) pair to a ModelMeta, additionally consulting
 // OPENAI_COMPATIBLE_PRESETS when the provider is `openai-compatible`, and
 // stripping a leading `vendor/` segment so e.g. "moonshotai/kimi-k2.5" resolves
-// to the moonshot preset's "kimi-k2.5" entry. Used by capability lookups
+// to the moonshot catalog's "kimi-k2.5" entry. Used by capability lookups
 // (thinking.ts, temperature.ts) which historically used substring matching.
+//
+// W5: legacy users may still have `provider: 'openai-compatible'` configs with
+// a Kimi modelId from before moonshot was promoted to a top-level provider.
+// We fall back to the moonshot catalog for those so temperature locks /
+// thinking capabilities continue to apply (the bridge mirror keeps emitting
+// the right blob via openai-compatible::kimi-* entries in electron-side
+// model-capabilities).
 export function findModelInCatalog(providerId: string, modelId: string): ModelMeta | undefined {
   const direct = findModel(providerId, modelId);
   if (direct) return direct;
@@ -499,6 +564,10 @@ export function findModelInCatalog(providerId: string, modelId: string): ModelMe
       const found = preset.models.find((m) => m.id.toLowerCase() === tail);
       if (found) return found;
     }
+    const moonshotMatch = PROVIDER_MODELS.moonshot?.models.find(
+      (m) => m.id.toLowerCase() === tail,
+    );
+    if (moonshotMatch) return moonshotMatch;
   }
 
   return undefined;

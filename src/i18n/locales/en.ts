@@ -1604,6 +1604,15 @@ export default {
       configureInSettings: "Configure in AI Settings",
     },
     temperature: "Temperature",
+    temperatureLock: {
+      title: "Locked by model",
+      fixed: "This model requires temperature = {value} (no other values accepted).",
+      "fixed-thinking": "Thinking mode requires temperature = {value}.",
+      "fixed-instant": "Instant mode requires temperature = {value}.",
+      "fixed-reasoning": "Reasoning is on; this model requires temperature = {value}.",
+    },
+    apiConstraintsHint:
+      "API constraints: top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
     agentSettings: "Agent Settings",
     autoApproveTools: "Auto-approve tool calls",
     noManualConfirm: "No manual confirmation needed",

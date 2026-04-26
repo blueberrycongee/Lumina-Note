@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getRecommendedTemperature, resolveTemperature } from "./temperature";
+import {
+  getRecommendedTemperature,
+  resolveTemperature,
+  resolveTemperatureLock,
+} from "./temperature";
 
 describe("LLM temperature strategy", () => {
   it("returns provider/model best-practice defaults", () => {
@@ -148,6 +152,127 @@ describe("LLM temperature strategy", () => {
           reasoningEffort: "max",
         })
       ).toBe(1.0);
+    });
+  });
+
+  describe("resolveTemperatureLock (W5: UI surface for fixed values)", () => {
+    it("returns null for unconstrained models", () => {
+      expect(
+        resolveTemperatureLock({ provider: "openai", model: "gpt-4o" })
+      ).toBeNull();
+      expect(
+        resolveTemperatureLock({
+          provider: "openai",
+          model: "gpt-4o",
+          thinkingMode: "thinking",
+        })
+      ).toBeNull();
+    });
+
+    it("locks Kimi K2.6 / K2.5 to 1.0 in thinking mode", () => {
+      expect(
+        resolveTemperatureLock({
+          provider: "moonshot",
+          model: "kimi-k2.6",
+          thinkingMode: "thinking",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-thinking" });
+
+      expect(
+        resolveTemperatureLock({
+          provider: "moonshot",
+          model: "kimi-k2.5",
+          thinkingMode: "thinking",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-thinking" });
+    });
+
+    it("locks Kimi to 0.6 in instant mode", () => {
+      expect(
+        resolveTemperatureLock({
+          provider: "moonshot",
+          model: "kimi-k2.6",
+          thinkingMode: "instant",
+        })
+      ).toEqual({ value: 0.6, reason: "fixed-instant" });
+    });
+
+    it("locks Kimi to 1.0 by default (post-W4 default mode is thinking)", () => {
+      expect(
+        resolveTemperatureLock({ provider: "moonshot", model: "kimi-k2.6" })
+      ).toEqual({ value: 1.0, reason: "fixed-thinking" });
+    });
+
+    it("preserves the lock for legacy openai-compatible+kimi configs", () => {
+      // W5 added a findModelInCatalog fallback so users who still have
+      // provider='openai-compatible' + modelId pointing at a Kimi model
+      // see the same lock behavior as the new top-level moonshot provider.
+      expect(
+        resolveTemperatureLock({
+          provider: "openai-compatible",
+          model: "kimi-k2.5",
+          thinkingMode: "thinking",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-thinking" });
+
+      expect(
+        resolveTemperatureLock({
+          provider: "openai-compatible",
+          model: "moonshotai/kimi-k2.6",
+          thinkingMode: "instant",
+        })
+      ).toEqual({ value: 0.6, reason: "fixed-instant" });
+    });
+
+    it("locks GPT-5.5 to 1.0 when reasoning is on", () => {
+      expect(
+        resolveTemperatureLock({
+          provider: "openai",
+          model: "gpt-5.5",
+          reasoningEffort: "medium",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-reasoning" });
+
+      expect(
+        resolveTemperatureLock({
+          provider: "openai",
+          model: "gpt-5.5",
+          reasoningEffort: "xhigh",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-reasoning" });
+    });
+
+    it("does NOT lock GPT-5.5 when effort is none (reasoning off)", () => {
+      expect(
+        resolveTemperatureLock({
+          provider: "openai",
+          model: "gpt-5.5",
+          reasoningEffort: "none",
+        })
+      ).toBeNull();
+    });
+
+    it("locks Anthropic Opus 4.7 / Sonnet 4.6 to 1.0 by default (no `none` effort means always reasoning)", () => {
+      expect(
+        resolveTemperatureLock({
+          provider: "anthropic",
+          model: "claude-opus-4-7",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-reasoning" });
+
+      expect(
+        resolveTemperatureLock({
+          provider: "anthropic",
+          model: "claude-sonnet-4-6",
+          reasoningEffort: "max",
+        })
+      ).toEqual({ value: 1.0, reason: "fixed-reasoning" });
+    });
+
+    it("returns null for an unknown model id", () => {
+      expect(
+        resolveTemperatureLock({ provider: "openai", model: "made-up-model" })
+      ).toBeNull();
     });
   });
 });

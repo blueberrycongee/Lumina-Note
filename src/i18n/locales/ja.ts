@@ -1598,6 +1598,15 @@ export default {
       configureInSettings: "AI 設定で構成",
     },
     temperature: "Temperature",
+    temperatureLock: {
+      title: "モデルにより固定",
+      fixed: "このモデルは temperature = {value} を要求します（他の値は API で拒否されます）。",
+      "fixed-thinking": "思考モードは temperature = {value} を要求します。",
+      "fixed-instant": "高速応答モードは temperature = {value} を要求します。",
+      "fixed-reasoning": "推論が有効です。このモデルは temperature = {value} を要求します。",
+    },
+    apiConstraintsHint:
+      "API 制約: top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
     agentSettings: "Agent 設定",
     autoApproveTools: "ツール呼び出しを自動承認",
     noManualConfirm: "手動確認不要",

@@ -9,6 +9,7 @@ const allProviders: LLMProviderType[] = [
   'openai',
   'google',
   'deepseek',
+  'moonshot',
   'groq',
   'openrouter',
   'ollama',
@@ -16,12 +17,14 @@ const allProviders: LLMProviderType[] = [
 ];
 
 describe('LLMProviderType', () => {
-  it('should be a valid union type with 8 providers', () => {
-    expect(allProviders.length).toBe(8);
+  it('should be a valid union type with 9 providers', () => {
+    expect(allProviders.length).toBe(9);
     expect(allProviders).toContain('anthropic');
     expect(allProviders).toContain('openai');
     expect(allProviders).toContain('google');
     expect(allProviders).toContain('deepseek');
+    // W5: moonshot promoted to top-level provider.
+    expect(allProviders).toContain('moonshot');
     expect(allProviders).toContain('groq');
     expect(allProviders).toContain('openrouter');
     expect(allProviders).toContain('ollama');
@@ -29,7 +32,7 @@ describe('LLMProviderType', () => {
   });
 
   it('should not include old provider IDs', () => {
-    const oldProviders = ['gemini', 'moonshot', 'zai', 'custom'];
+    const oldProviders = ['gemini', 'zai', 'custom'];
     for (const old of oldProviders) {
       expect(allProviders).not.toContain(old);
     }

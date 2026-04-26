@@ -26,6 +26,7 @@ export type ProviderId =
   | 'openai'
   | 'google'
   | 'deepseek'
+  | 'moonshot'
   | 'groq'
   | 'openrouter'
   | 'ollama'
@@ -111,6 +112,23 @@ const entries: ProviderEntry[] = [
       const factory = createDeepSeek({
         apiKey: settings.apiKey ?? '',
         baseURL: settings.baseUrl,
+        headers: settings.headers,
+      })
+      return factory(modelId)
+    },
+  },
+  {
+    id: 'moonshot',
+    label: 'Moonshot (Kimi)',
+    description: 'Moonshot Kimi 系列(K2.6 / K2.5 / Thinking)',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    defaultBaseUrl: 'https://api.moonshot.cn/v1',
+    createModel(settings, modelId) {
+      const factory = createOpenAICompatible({
+        name: 'moonshot',
+        apiKey: settings.apiKey ?? '',
+        baseURL: settings.baseUrl ?? 'https://api.moonshot.cn/v1',
         headers: settings.headers,
       })
       return factory(modelId)

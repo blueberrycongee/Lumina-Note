@@ -42,6 +42,7 @@ export type {
   ModelMeta as AgentModelMeta,
   ModelReasoningSpec,
   ModelTemperatureSpec,
+  ModelApiConstraints,
 } from "./providers/models";
 
 // 新的纯数据 provider metadata(Phase 2.3) — 用于 UI 展示,不绑实现

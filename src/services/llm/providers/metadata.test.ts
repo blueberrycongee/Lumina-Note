@@ -8,7 +8,7 @@ import {
 } from './metadata'
 
 describe('providers/metadata', () => {
-  it('covers all 8 provider ids', () => {
+  it('covers all 9 provider ids (W5: moonshot is now top-level)', () => {
     const ids = Object.keys(PROVIDER_METADATA).sort()
     expect(ids).toEqual(
       [
@@ -16,6 +16,7 @@ describe('providers/metadata', () => {
         'deepseek',
         'google',
         'groq',
+        'moonshot',
         'ollama',
         'openai',
         'openai-compatible',
@@ -164,17 +165,51 @@ describe('providers/metadata', () => {
     expect(haiku?.reasoning).toBeUndefined()
   })
 
-  it('Kimi K2.6 is present in the moonshot openai-compatible preset and carries the tool_choice constraint (W2)', async () => {
-    const { OPENAI_COMPATIBLE_PRESETS } = await import('./models')
-    const moonshot = OPENAI_COMPATIBLE_PRESETS.find((p) => p.id === 'moonshot')
-    expect(moonshot).toBeDefined()
-    const ids = moonshot?.models.map((m) => m.id) ?? []
-    expect(ids).toContain('kimi-k2.6')
-    expect(ids).toContain('kimi-k2.5')
+  // ---- W5: moonshot is now a top-level provider with apiConstraints ----
 
-    const k26 = moonshot?.models.find((m) => m.id === 'kimi-k2.6')
+  it('moonshot is a top-level provider with the 7 expected Kimi models in order', () => {
+    const moonshot = getProviderModels('moonshot')
+    expect(moonshot).toBeDefined()
+    expect(moonshot?.label).toBe('Moonshot (Kimi)')
+    expect(moonshot?.defaultBaseUrl).toBe('https://api.moonshot.cn/v1')
+    expect(moonshot?.requiresApiKey).toBe(true)
+
+    const ids = moonshot?.models.map((m) => m.id) ?? []
+    expect(ids).toEqual([
+      'kimi-k2.6',
+      'kimi-k2.5',
+      'kimi-k2-thinking',
+      'kimi-k2-thinking-turbo',
+      'kimi-k2-turbo-preview',
+      'kimi-k2-0905-preview',
+      'moonshot-v1-128k',
+    ])
+  })
+
+  it('kimi-k2.6 carries apiConstraints + tool_choice + fixed temperatures (W5)', () => {
+    const k26 = findModel('moonshot', 'kimi-k2.6')
     expect(k26?.supportsThinking).toBe(true)
     expect(k26?.reasoning?.strategy).toBe('param-toggle')
+    expect(k26?.apiConstraints?.topP?.fixed).toBe(0.95)
+    expect(k26?.apiConstraints?.presencePenalty?.fixed).toBe(0)
+    expect(k26?.apiConstraints?.frequencyPenalty?.fixed).toBe(0)
+    expect(k26?.apiConstraints?.n?.fixed).toBe(1)
     expect(k26?.toolChoiceConstraintsWhenThinking).toEqual(['auto', 'none'])
+    expect(k26?.temperature?.fixedWhenThinking).toBe(1.0)
+    expect(k26?.temperature?.fixedWhenInstant).toBe(0.6)
+  })
+
+  it('kimi-k2.5 now also carries the tool_choice constraint (W5: was K2.6-only in W2)', () => {
+    const k25 = findModel('moonshot', 'kimi-k2.5')
+    expect(k25?.toolChoiceConstraintsWhenThinking).toEqual(['auto', 'none'])
+    expect(k25?.apiConstraints?.topP?.fixed).toBe(0.95)
+  })
+
+  it('moonshot preset is removed from OPENAI_COMPATIBLE_PRESETS (W5); zhipu + qwen remain', async () => {
+    const { OPENAI_COMPATIBLE_PRESETS } = await import('./models')
+    const ids = OPENAI_COMPATIBLE_PRESETS.map((p) => p.id)
+    expect(ids).not.toContain('moonshot')
+    expect(ids).toContain('zhipu')
+    expect(ids).toContain('qwen')
   })
 })

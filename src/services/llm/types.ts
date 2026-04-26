@@ -56,6 +56,7 @@ export type LLMProviderType =
   | "openai"
   | "google"
   | "deepseek"
+  | "moonshot"
   | "groq"
   | "openrouter"
   | "ollama"

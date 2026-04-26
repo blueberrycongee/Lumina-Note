@@ -58,6 +58,9 @@ const PROVIDER_ID_MAP: Partial<Record<ProviderId, string>> = {
   openai: "openai",
   google: "google",
   deepseek: "deepseek",
+  // models.dev id is `moonshotai`; opencode's registry pulls Kimi metadata
+  // (context windows, pricing) from there.
+  moonshot: "moonshotai",
   groq: "groq",
   openrouter: "openrouter",
   ollama: "ollama",

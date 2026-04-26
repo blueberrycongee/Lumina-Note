@@ -106,6 +106,26 @@ const TABLE: Record<string, ModelReasoningSpec> = {
     strategy: 'param-toggle',
     nativeShape: 'deepseek-v4',
   },
+  // Top-level moonshot provider (W5). Same `moonshot-kimi` shape as the
+  // openai-compatible entries below, just reachable via the new provider id.
+  'moonshot::kimi-k2.6': {
+    strategy: 'param-toggle',
+    nativeShape: 'moonshot-kimi',
+  },
+  'moonshot::kimi-k2.5': {
+    strategy: 'param-toggle',
+    nativeShape: 'moonshot-kimi',
+  },
+  'moonshot::kimi-k2-thinking': {
+    strategy: 'param-toggle',
+    nativeShape: 'moonshot-kimi',
+  },
+  'moonshot::kimi-k2-thinking-turbo': {
+    strategy: 'param-toggle',
+    nativeShape: 'moonshot-kimi',
+  },
+  // Back-compat: existing user configs that still target openai-compatible
+  // with a moonshot baseUrl + Kimi modelId continue to emit the right blob.
   'openai-compatible::kimi-k2.5': {
     strategy: 'param-toggle',
     nativeShape: 'moonshot-kimi',

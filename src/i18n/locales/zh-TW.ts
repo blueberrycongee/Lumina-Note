@@ -1564,6 +1564,15 @@ export default {
       configureInSettings: "在 AI 設定中配置",
     },
     temperature: "溫度 (Temperature)",
+    temperatureLock: {
+      title: "由模型鎖定",
+      fixed: "此模型要求 temperature = {value}（其他取值會被 API 拒絕）。",
+      "fixed-thinking": "深度思考模式要求 temperature = {value}。",
+      "fixed-instant": "極速回應模式要求 temperature = {value}。",
+      "fixed-reasoning": "推理已開啟；此模型要求 temperature = {value}。",
+    },
+    apiConstraintsHint:
+      "API 限制：top_p={topP}, presence_penalty={presencePenalty}, frequency_penalty={frequencyPenalty}, n={n}",
     agentSettings: "Agent 設定",
     autoApproveTools: "自動批准工具調用",
     noManualConfirm: "無需手動確認",

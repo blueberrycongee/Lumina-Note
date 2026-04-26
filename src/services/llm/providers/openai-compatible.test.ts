@@ -9,26 +9,28 @@ import {
 } from './openai-compatible'
 
 describe('openai-compatible', () => {
-  it('listOpenAiCompatiblePresets returns all presets', () => {
+  it('listOpenAiCompatiblePresets returns all presets (W5: moonshot preset removed)', () => {
     const presets = listOpenAiCompatiblePresets()
     expect(presets).toEqual(OPENAI_COMPATIBLE_PRESETS)
-    expect(presets.length).toBe(3)
+    expect(presets.length).toBe(2)
+    expect(presets.map((p) => p.id).sort()).toEqual(['qwen', 'zhipu'])
   })
 
   it('getOpenAiCompatiblePreset returns the correct preset', () => {
-    const moonshot = getOpenAiCompatiblePreset('moonshot')
-    expect(moonshot?.label).toBe('Moonshot (Kimi)')
+    const zhipu = getOpenAiCompatiblePreset('zhipu')
+    expect(zhipu?.label).toBe('Z.ai (GLM)')
+    // W5: moonshot preset is gone (now a top-level provider).
+    expect(getOpenAiCompatiblePreset('moonshot')).toBeUndefined()
     expect(getOpenAiCompatiblePreset('nope')).toBeUndefined()
   })
 
   it('buildOpenAiCompatibleSettingsFromPreset fills in baseUrl + default model', () => {
-    const settings = buildOpenAiCompatibleSettingsFromPreset('moonshot')
-    expect(settings.presetId).toBe('moonshot')
-    expect(settings.baseUrl).toBe('https://api.moonshot.cn/v1')
-    expect(settings.name).toBe('Moonshot (Kimi)')
+    const settings = buildOpenAiCompatibleSettingsFromPreset('zhipu')
+    expect(settings.presetId).toBe('zhipu')
+    expect(settings.baseUrl).toBe('https://open.bigmodel.cn/api/paas/v4')
+    expect(settings.name).toBe('Z.ai (GLM)')
     expect(settings.apiKey).toBe('')
-    // W2: kimi-k2.6 was added at the top of the moonshot preset.
-    expect(settings.modelId).toBe('kimi-k2.6')
+    expect(settings.modelId).toBe('glm-5')
     expect(settings.models.length).toBeGreaterThan(0)
   })
 

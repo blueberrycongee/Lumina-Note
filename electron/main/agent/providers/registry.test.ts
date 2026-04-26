@@ -9,7 +9,7 @@ import {
 } from './registry.js'
 
 describe('providers/registry', () => {
-  it('lists all 8 built-in providers', () => {
+  it('lists all 9 built-in providers (W5: moonshot is now top-level)', () => {
     const providers = listProviders()
     const ids = providers.map((p) => p.id).sort()
     expect(ids).toEqual(
@@ -18,12 +18,22 @@ describe('providers/registry', () => {
         'deepseek',
         'google',
         'groq',
+        'moonshot',
         'ollama',
         'openai',
         'openai-compatible',
         'openrouter',
       ].sort(),
     )
+  })
+
+  it('moonshot has the documented defaults (W5)', () => {
+    const moonshot = getProvider('moonshot')
+    expect(moonshot).toBeDefined()
+    expect(moonshot?.label).toBe('Moonshot (Kimi)')
+    expect(moonshot?.requiresApiKey).toBe(true)
+    expect(moonshot?.supportsBaseUrl).toBe(true)
+    expect(moonshot?.defaultBaseUrl).toBe('https://api.moonshot.cn/v1')
   })
 
   it('every provider has label / description / requiresApiKey / supportsBaseUrl', () => {

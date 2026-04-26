@@ -6,8 +6,12 @@ import {
   type LLMProviderType,
 } from "@/services/llm";
 import { invoke } from "@/lib/host";
-import { getRecommendedTemperature } from "@/services/llm/temperature";
-import { Loader2, Check, X, Zap, Bot, Shield } from "lucide-react";
+import {
+  getRecommendedTemperature,
+  resolveTemperatureLock,
+  type TemperatureLock,
+} from "@/services/llm/temperature";
+import { Loader2, Check, X, Zap, Bot, Shield, Lock } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
 import {
@@ -47,6 +51,13 @@ function getModelMeta(provider: LLMProviderType, modelId?: string) {
   return PROVIDER_MODELS[provider]?.models.find((m) => m.id === modelId);
 }
 
+function formatTemperatureLockMessage(
+  template: string,
+  lock: TemperatureLock,
+): string {
+  return template.replace("{value}", lock.value.toFixed(1));
+}
+
 export function AISettingsContent() {
   const { config, setConfig } = useAIStore();
   const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useAgentPrefs();
@@ -59,7 +70,16 @@ export function AISettingsContent() {
     config.provider as LLMProviderType,
     effectiveModelForTemp
   );
-  const displayTemperature = config.temperature ?? recommendedTemperature;
+  const temperatureLock = resolveTemperatureLock({
+    provider: config.provider as LLMProviderType,
+    model: effectiveModelForTemp,
+    thinkingMode: config.thinkingMode,
+    reasoningEffort: config.reasoningEffort,
+  });
+  const displayTemperature = temperatureLock
+    ? temperatureLock.value
+    : (config.temperature ?? recommendedTemperature);
+  const apiConstraints = mainModelMeta?.apiConstraints;
 
   // 测试连接状态
   const [testResult, setTestResult] = useState<TestResult>({ status: "idle" });
@@ -371,8 +391,25 @@ export function AISettingsContent() {
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-foreground">
+            <label
+              className="flex items-center gap-1.5 text-sm font-medium text-foreground"
+              title={
+                temperatureLock
+                  ? formatTemperatureLockMessage(
+                      t.aiSettings.temperatureLock[temperatureLock.reason],
+                      temperatureLock,
+                    )
+                  : undefined
+              }
+            >
               {t.aiSettings.temperature}
+              {temperatureLock && (
+                <Lock
+                  size={11}
+                  aria-label={t.aiSettings.temperatureLock.title}
+                  className="text-muted-foreground"
+                />
+              )}
             </label>
             <span className="font-mono text-xs text-muted-foreground">
               {displayTemperature.toFixed(1)}
@@ -384,9 +421,45 @@ export function AISettingsContent() {
             max="2"
             step="0.1"
             value={displayTemperature}
+            disabled={!!temperatureLock}
             onChange={(e) => setConfig({ temperature: parseFloat(e.target.value) })}
-            className="h-1 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+            className="h-1 w-full appearance-none rounded-full bg-muted accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           />
+          {temperatureLock && (
+            <p className="text-xs text-muted-foreground">
+              {formatTemperatureLockMessage(
+                t.aiSettings.temperatureLock[temperatureLock.reason],
+                temperatureLock,
+              )}
+            </p>
+          )}
+          {apiConstraints && (
+            <p className="text-xs text-muted-foreground/80">
+              {t.aiSettings.apiConstraintsHint
+                .replace(
+                  "{topP}",
+                  apiConstraints.topP
+                    ? apiConstraints.topP.fixed.toString()
+                    : "—",
+                )
+                .replace(
+                  "{presencePenalty}",
+                  apiConstraints.presencePenalty
+                    ? apiConstraints.presencePenalty.fixed.toString()
+                    : "—",
+                )
+                .replace(
+                  "{frequencyPenalty}",
+                  apiConstraints.frequencyPenalty
+                    ? apiConstraints.frequencyPenalty.fixed.toString()
+                    : "—",
+                )
+                .replace(
+                  "{n}",
+                  apiConstraints.n ? apiConstraints.n.fixed.toString() : "—",
+                )}
+            </p>
+          )}
         </div>
       </div>
 

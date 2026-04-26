@@ -125,3 +125,53 @@ export function resolveTemperature(params: {
   }
   return clampTemperature(configuredTemperature);
 }
+
+export type TemperatureLockReason =
+  | "fixed"
+  | "fixed-thinking"
+  | "fixed-instant"
+  | "fixed-reasoning";
+
+export interface TemperatureLock {
+  value: number;
+  reason: TemperatureLockReason;
+}
+
+/**
+ * Returns the locked temperature for (model, thinkingMode, reasoningEffort)
+ * if any catalog constraint fires, plus a reason key the UI can localize.
+ *
+ * Mirrors `resolveFixedFromSpec` but reports WHICH constraint fired so the
+ * AI Settings UI can disable the slider, pin its value, and explain why.
+ * The underlying `resolveTemperature` continues to override silently as a
+ * defense-in-depth safety net regardless of what the UI surfaces.
+ */
+export function resolveTemperatureLock(params: {
+  provider: LLMProviderType;
+  model: string;
+  thinkingMode?: ThinkingMode;
+  reasoningEffort?: ReasoningEffort;
+}): TemperatureLock | null {
+  const { provider, model, reasoningEffort } = params;
+  const mode: ThinkingMode = normalizeThinkingMode(params.thinkingMode);
+  const meta = findModelInCatalog(provider, model);
+  const spec = meta?.temperature;
+  if (!spec) return null;
+
+  if (spec.fixed !== undefined) {
+    return { value: spec.fixed, reason: "fixed" };
+  }
+  if (mode === "instant" && spec.fixedWhenInstant !== undefined) {
+    return { value: spec.fixedWhenInstant, reason: "fixed-instant" };
+  }
+  if (
+    spec.fixedWhenReasoning !== undefined &&
+    isReasoningOn(meta, reasoningEffort)
+  ) {
+    return { value: spec.fixedWhenReasoning, reason: "fixed-reasoning" };
+  }
+  if (spec.fixedWhenThinking !== undefined && mode === "thinking") {
+    return { value: spec.fixedWhenThinking, reason: "fixed-thinking" };
+  }
+  return null;
+}
