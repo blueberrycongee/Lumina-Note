@@ -14,11 +14,13 @@ const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLA
 const CLOSE_ANIMATION_MS = 150;
 
 // Chrome-style tab silhouette: top corners curve in, bottom corners curve out
-// into "ears" that flush with the strip's bottom edge (touching the editor
-// surface beneath). Both radii fixed in px; SVG width comes from a ResizeObserver
-// so the curves never distort when the tab shrinks under pressure.
-const TAB_SHAPE_TOP_RADIUS = 8;
-const TAB_SHAPE_EAR_RADIUS = 8;
+// into "ears" that flush with the strip's bottom edge. Ear arcs use sweep-flag=0
+// so they are tangent-vertical at the body and tangent-horizontal at the strip
+// floor — the body's vertical edge meets the ear with no kink, giving the
+// "asymptotic" tan-like curve the user wanted. SVG width comes from a
+// ResizeObserver so the curves never distort when the tab shrinks under pressure.
+const TAB_SHAPE_TOP_RADIUS = 10;
+const TAB_SHAPE_EAR_RADIUS = 14;
 const TAB_SHAPE_HEIGHT = 38;
 const TAB_SHAPE_DEFAULT_WIDTH = 200;
 
@@ -28,13 +30,13 @@ function buildTabShapePath(width: number, height: number): string {
   const re = TAB_SHAPE_EAR_RADIUS;
   return [
     `M 0 ${height}`,
-    `A ${re} ${re} 0 0 1 ${re} ${height - re}`,
+    `A ${re} ${re} 0 0 0 ${re} ${height - re}`,
     `L ${re} ${rt}`,
     `A ${rt} ${rt} 0 0 1 ${re + rt} 0`,
     `L ${w - re - rt} 0`,
     `A ${rt} ${rt} 0 0 1 ${w - re} ${rt}`,
     `L ${w - re} ${height - re}`,
-    `A ${re} ${re} 0 0 1 ${w} ${height}`,
+    `A ${re} ${re} 0 0 0 ${w} ${height}`,
     "Z",
   ].join(" ");
 }
@@ -84,7 +86,7 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
             isDropTarget
               ? "fill-transparent stroke-[hsl(var(--primary))] [stroke-width:2]"
               : isActive
-                ? "fill-[hsl(var(--background))] stroke-[hsl(var(--foreground)/0.18)] [stroke-width:1]"
+                ? "fill-[hsl(var(--background))] stroke-[hsl(var(--foreground)/0.3)] [stroke-width:1]"
                 : "fill-transparent group-hover:fill-[hsl(var(--accent)/0.6)] [stroke-width:0]"
           )}
         />
