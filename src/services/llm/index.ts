@@ -35,8 +35,14 @@ export {
   listProviderModels,
   getProviderModels,
   findModel,
+  findModelInCatalog,
 } from "./providers/models";
-export type { ProviderMeta as AgentProviderMeta, ModelMeta as AgentModelMeta } from "./providers/models";
+export type {
+  ProviderMeta as AgentProviderMeta,
+  ModelMeta as AgentModelMeta,
+  ModelReasoningSpec,
+  ModelTemperatureSpec,
+} from "./providers/models";
 
 // 新的纯数据 provider metadata(Phase 2.3) — 用于 UI 展示,不绑实现
 export type {

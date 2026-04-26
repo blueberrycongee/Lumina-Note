@@ -1,3 +1,4 @@
+import { findModelInCatalog, type ModelReasoningSpec } from "./providers/models";
 import type { LLMProviderType, ReasoningEffort, ThinkingMode } from "./types";
 
 // Capability shape for a (provider, model) pair. Three real strategies plus none:
@@ -9,6 +10,9 @@ import type { LLMProviderType, ReasoningEffort, ThinkingMode } from "./types";
 //      Example: legacy DeepSeek (chat ↔ reasoner).
 //  - effort-only: model always reasons; only the depth is tunable. No binary toggle.
 //      Example: OpenAI GPT-5.5 family (efforts:["low","medium","high","xhigh"]).
+//
+// This is the renderer-facing capability shape. Per-model native shape lives in
+// ModelReasoningSpec (providers/models.ts) — translated below.
 export type ThinkingCapability =
   | { strategy: "none" }
   | {
@@ -24,36 +28,38 @@ export type ThinkingCapability =
     };
 
 const DEFAULT_THINKING_MODE: ThinkingMode = "auto";
-const KIMI_K25_MODEL = "kimi-k2.5";
-const DEEPSEEK_CHAT_MODEL = "deepseek-chat";
-const DEEPSEEK_REASONER_MODEL = "deepseek-reasoner";
-const DEEPSEEK_V4_PRO_MODEL = "deepseek-v4-pro";
-const DEEPSEEK_V4_FLASH_MODEL = "deepseek-v4-flash";
-const GPT_55_PRO_MODEL = "gpt-5.5-pro";
-const GPT_55_MODEL = "gpt-5.5";
-
-// All efforts OpenAI GPT-5.5 accepts. Both `gpt-5.5` and `gpt-5.5-pro` take the
-// same set today; if a future variant narrows the range, branch in getThinkingCapability.
-const GPT_55_EFFORTS: ReasoningEffort[] = ["low", "medium", "high", "xhigh"];
-
-function normalizeModelId(model: string): string {
-  return model.trim().toLowerCase();
-}
-
-function matchesModelId(model: string, target: string): boolean {
-  const normalizedModel = normalizeModelId(model);
-  const normalizedTarget = normalizeModelId(target);
-  return (
-    normalizedModel === normalizedTarget ||
-    normalizedModel.endsWith(`/${normalizedTarget}`)
-  );
-}
 
 export function normalizeThinkingMode(mode?: ThinkingMode): ThinkingMode {
   if (mode === "thinking" || mode === "instant") {
     return mode;
   }
   return DEFAULT_THINKING_MODE;
+}
+
+function specToCapability(spec: ModelReasoningSpec | undefined): ThinkingCapability {
+  if (!spec || spec.strategy === "none") {
+    return { strategy: "none" };
+  }
+  if (spec.strategy === "param-toggle") {
+    const out: ThinkingCapability = { strategy: "param-toggle", parameter: "thinking" };
+    if (spec.efforts && spec.efforts.length > 0) {
+      out.efforts = spec.efforts;
+    }
+    return out;
+  }
+  if (spec.strategy === "separate-model") {
+    return {
+      strategy: "separate-model",
+      thinkingModel: spec.thinkingModelId,
+      instantModel: spec.instantModelId,
+    };
+  }
+  // effort-only
+  return {
+    strategy: "effort-only",
+    parameter: "reasoning",
+    efforts: spec.efforts,
+  };
 }
 
 export function getThinkingCapability(
@@ -63,41 +69,8 @@ export function getThinkingCapability(
   if (!model) {
     return { strategy: "none" };
   }
-
-  if (provider === "openai-compatible" && matchesModelId(model, KIMI_K25_MODEL)) {
-    return { strategy: "param-toggle", parameter: "thinking" };
-  }
-
-  if (provider === "openai") {
-    if (
-      matchesModelId(model, GPT_55_PRO_MODEL) ||
-      matchesModelId(model, GPT_55_MODEL)
-    ) {
-      return { strategy: "effort-only", parameter: "reasoning", efforts: GPT_55_EFFORTS };
-    }
-  }
-
-  if (provider === "deepseek") {
-    if (matchesModelId(model, DEEPSEEK_V4_PRO_MODEL)) {
-      // V4 Pro is the only DeepSeek tier where `reasoning_effort: "high"` is honored.
-      return { strategy: "param-toggle", parameter: "thinking", efforts: ["high"] };
-    }
-    if (matchesModelId(model, DEEPSEEK_V4_FLASH_MODEL)) {
-      return { strategy: "param-toggle", parameter: "thinking" };
-    }
-    if (
-      matchesModelId(model, DEEPSEEK_CHAT_MODEL) ||
-      matchesModelId(model, DEEPSEEK_REASONER_MODEL)
-    ) {
-      return {
-        strategy: "separate-model",
-        thinkingModel: DEEPSEEK_REASONER_MODEL,
-        instantModel: DEEPSEEK_CHAT_MODEL,
-      };
-    }
-  }
-
-  return { strategy: "none" };
+  const spec = findModelInCatalog(provider, model)?.reasoning;
+  return specToCapability(spec);
 }
 
 // True when the model exposes ANY thinking-related control (binary toggle or
@@ -177,48 +150,39 @@ export function getThinkingRequestBodyPatch(params: {
 }): Record<string, unknown> | undefined {
   const { provider, model, reasoningEffort } = params;
   const mode = normalizeThinkingMode(params.thinkingMode);
-  const capability = getThinkingCapability(provider, model);
-
-  // OpenAI GPT-5.5: always reasoning, only effort is tunable. We omit the patch
-  // when no effort is selected so the API default (medium) applies.
-  if (capability.strategy === "effort-only") {
-    if (!reasoningEffort || !capability.efforts.includes(reasoningEffort)) {
-      return undefined;
-    }
-    return { reasoning: { effort: reasoningEffort } };
-  }
-
-  if (capability.strategy !== "param-toggle") {
+  const spec = findModelInCatalog(provider, model)?.reasoning;
+  if (!spec || spec.strategy === "none" || spec.strategy === "separate-model") {
     return undefined;
   }
 
-  // DeepSeek V4: `thinking` defaults to off; we explicitly enable it on
-  // thinking mode and additionally pass `reasoning_effort` when the model
-  // supports it (currently only V4 Pro accepts "high").
-  if (
-    provider === "deepseek" &&
-    (matchesModelId(model, DEEPSEEK_V4_PRO_MODEL) ||
-      matchesModelId(model, DEEPSEEK_V4_FLASH_MODEL))
-  ) {
-    if (mode !== "thinking") return undefined;
-    const patch: Record<string, unknown> = {
-      thinking: { type: "enabled" },
-    };
-    const allowed = capability.efforts;
-    if (reasoningEffort && allowed?.includes(reasoningEffort)) {
-      patch.reasoning_effort = reasoningEffort;
+  if (spec.strategy === "effort-only") {
+    if (!reasoningEffort || !spec.efforts.includes(reasoningEffort)) {
+      return undefined;
     }
-    return patch;
+    switch (spec.nativeShape) {
+      case "openai-reasoning":
+        return { reasoning: { effort: reasoningEffort } };
+    }
   }
 
-  // Moonshot Kimi K2.5: thinking is on by default; only explicitly disable
-  // when the user picked instant mode.
-  if (mode === "instant") {
-    return {
-      thinking: {
-        type: "disabled",
-      },
-    };
+  // param-toggle
+  switch (spec.nativeShape) {
+    case "deepseek-v4": {
+      if (mode !== "thinking") return undefined;
+      const patch: Record<string, unknown> = {
+        thinking: { type: "enabled" },
+      };
+      if (reasoningEffort && spec.efforts?.includes(reasoningEffort)) {
+        patch.reasoning_effort = reasoningEffort;
+      }
+      return patch;
+    }
+    case "moonshot-kimi": {
+      if (mode === "instant") {
+        return { thinking: { type: "disabled" } };
+      }
+      return undefined;
+    }
   }
 
   return undefined;

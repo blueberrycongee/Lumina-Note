@@ -1,9 +1,62 @@
+import type { ReasoningEffort } from '../types';
+
+// Per-model temperature constraint. Each field is independently optional.
+// - `fixed` overrides user input unconditionally.
+// - `fixedWhenThinking` / `fixedWhenInstant` apply when the user-selected
+//   thinking mode matches. "Thinking" here means anything that isn't `instant`
+//   (i.e. `thinking` or `auto`), since for models with this constraint the
+//   API treats auto as thinking-on.
+// - `recommended` is the default when the user has not configured a value
+//   and no fixed override fires.
+export interface ModelTemperatureSpec {
+  recommended?: number;
+  fixed?: number;
+  fixedWhenThinking?: number;
+  fixedWhenInstant?: number;
+}
+
+// Reasoning capability — discriminated union mirroring the existing strategies.
+// Each variant carries the data needed to produce the per-provider native option blob.
+export type ModelReasoningSpec =
+  | { strategy: 'none' }
+  | {
+      // DeepSeek V4 / Kimi K2.5: thinking is a binary toggle via a `thinking` field.
+      // `nativeShape` describes the on-API shape so the bridge knows which blob to emit.
+      strategy: 'param-toggle';
+      nativeShape: 'deepseek-v4' | 'moonshot-kimi';
+      // When the model also accepts a tunable depth (DeepSeek V4 Pro: ['high']),
+      // declare it here so the UI renders an effort selector.
+      efforts?: ReasoningEffort[];
+    }
+  | {
+      // Legacy DeepSeek chat/reasoner — same provider exposes two model ids.
+      strategy: 'separate-model';
+      thinkingModelId: string;
+      instantModelId: string;
+    }
+  | {
+      // OpenAI GPT-5.5 family — always reasons; only depth is tunable.
+      // Future: Anthropic Claude 4.6/4.7 will use this strategy too with a different nativeShape.
+      strategy: 'effort-only';
+      nativeShape: 'openai-reasoning';
+      efforts: ReasoningEffort[];
+    };
+
 export interface ModelMeta {
   id: string;
   name: string;
   contextWindow?: number;
   supportsVision?: boolean;
+  /** True iff this model exposes ANY thinking-related capability. Kept as a top-level boolean for the "show brain icon next to model" UI in AISettingsModal. */
   supportsThinking?: boolean;
+  /** Full reasoning capability descriptor. */
+  reasoning?: ModelReasoningSpec;
+  /** Per-model temperature constraints. */
+  temperature?: ModelTemperatureSpec;
+  /** Optional family grouping for UI (e.g. 'gpt-5.5', 'claude-opus', 'deepseek-thinking'). Reserved for W3. */
+  family?: string;
+  /** Display-only legacy hint. */
+  legacy?: boolean;
 }
 
 export interface OpenAICompatiblePreset {
@@ -32,9 +85,28 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
     requiresApiKey: true,
     supportsBaseUrl: true,
     models: [
-      { id: 'claude-opus-4-7', name: 'Claude Opus 4.7', contextWindow: 200000, supportsVision: true, supportsThinking: true },
-      { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', contextWindow: 200000, supportsVision: true, supportsThinking: true },
-      { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', contextWindow: 200000, supportsVision: true },
+      {
+        id: 'claude-opus-4-7',
+        name: 'Claude Opus 4.7',
+        contextWindow: 200000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: { strategy: 'none' },
+      },
+      {
+        id: 'claude-sonnet-4-6',
+        name: 'Claude Sonnet 4.6',
+        contextWindow: 200000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: { strategy: 'none' },
+      },
+      {
+        id: 'claude-haiku-4-5',
+        name: 'Claude Haiku 4.5',
+        contextWindow: 200000,
+        supportsVision: true,
+      },
     ],
   },
   openai: {
@@ -45,11 +117,53 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
     requiresApiKey: true,
     supportsBaseUrl: true,
     models: [
-      { id: 'gpt-5.5-pro', name: 'GPT-5.5 Pro', contextWindow: 400000, supportsVision: true, supportsThinking: true },
-      { id: 'gpt-5.5', name: 'GPT-5.5', contextWindow: 400000, supportsVision: true, supportsThinking: true },
-      { id: 'gpt-5.4', name: 'GPT-5.4 (legacy)', contextWindow: 400000, supportsVision: true },
-      { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini (legacy)', contextWindow: 400000 },
-      { id: 'gpt-5', name: 'GPT-5 (legacy)', contextWindow: 400000, supportsVision: true },
+      {
+        id: 'gpt-5.5-pro',
+        name: 'GPT-5.5 Pro',
+        contextWindow: 400000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'openai-reasoning',
+          efforts: ['low', 'medium', 'high', 'xhigh'],
+        },
+      },
+      {
+        id: 'gpt-5.5',
+        name: 'GPT-5.5',
+        contextWindow: 400000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'effort-only',
+          nativeShape: 'openai-reasoning',
+          efforts: ['low', 'medium', 'high', 'xhigh'],
+        },
+      },
+      {
+        id: 'gpt-5.4',
+        name: 'GPT-5.4 (legacy)',
+        contextWindow: 400000,
+        supportsVision: true,
+        legacy: true,
+        reasoning: { strategy: 'none' },
+      },
+      {
+        id: 'gpt-5.4-mini',
+        name: 'GPT-5.4 Mini (legacy)',
+        contextWindow: 400000,
+        legacy: true,
+        reasoning: { strategy: 'none' },
+      },
+      {
+        id: 'gpt-5',
+        name: 'GPT-5 (legacy)',
+        contextWindow: 400000,
+        supportsVision: true,
+        legacy: true,
+        reasoning: { strategy: 'none' },
+      },
       { id: 'gpt-4.1', name: 'GPT-4.1', contextWindow: 1047576, supportsVision: true },
       { id: 'gpt-4o', name: 'GPT-4o', contextWindow: 128000, supportsVision: true },
       { id: 'gpt-4o-mini', name: 'GPT-4o Mini', contextWindow: 128000, supportsVision: true },
@@ -77,10 +191,51 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
     requiresApiKey: true,
     supportsBaseUrl: true,
     models: [
-      { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', contextWindow: 1000000, supportsThinking: true },
-      { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', contextWindow: 1000000, supportsThinking: true },
-      { id: 'deepseek-chat', name: 'DeepSeek V3.2 Chat (legacy, retiring 2026-07-24)', contextWindow: 128000 },
-      { id: 'deepseek-reasoner', name: 'DeepSeek V3.2 Reasoner (legacy, retiring 2026-07-24)', contextWindow: 128000, supportsThinking: true },
+      {
+        id: 'deepseek-v4-pro',
+        name: 'DeepSeek V4 Pro',
+        contextWindow: 1000000,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'param-toggle',
+          nativeShape: 'deepseek-v4',
+          efforts: ['high'],
+        },
+      },
+      {
+        id: 'deepseek-v4-flash',
+        name: 'DeepSeek V4 Flash',
+        contextWindow: 1000000,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'param-toggle',
+          nativeShape: 'deepseek-v4',
+        },
+      },
+      {
+        id: 'deepseek-chat',
+        name: 'DeepSeek V3.2 Chat (legacy, retiring 2026-07-24)',
+        contextWindow: 128000,
+        legacy: true,
+        reasoning: {
+          strategy: 'separate-model',
+          thinkingModelId: 'deepseek-reasoner',
+          instantModelId: 'deepseek-chat',
+        },
+      },
+      {
+        id: 'deepseek-reasoner',
+        name: 'DeepSeek V3.2 Reasoner (legacy, retiring 2026-07-24)',
+        contextWindow: 128000,
+        supportsThinking: true,
+        legacy: true,
+        reasoning: {
+          strategy: 'separate-model',
+          thinkingModelId: 'deepseek-reasoner',
+          instantModelId: 'deepseek-chat',
+        },
+        temperature: { recommended: 1.0 },
+      },
     ],
   },
   groq: {
@@ -146,7 +301,22 @@ export const OPENAI_COMPATIBLE_PRESETS: OpenAICompatiblePreset[] = [
     label: 'Moonshot (Kimi)',
     defaultBaseUrl: 'https://api.moonshot.cn/v1',
     models: [
-      { id: 'kimi-k2.5', name: 'Kimi K2.5', contextWindow: 256000, supportsVision: true, supportsThinking: true },
+      {
+        id: 'kimi-k2.5',
+        name: 'Kimi K2.5',
+        contextWindow: 256000,
+        supportsVision: true,
+        supportsThinking: true,
+        reasoning: {
+          strategy: 'param-toggle',
+          nativeShape: 'moonshot-kimi',
+        },
+        temperature: {
+          fixedWhenThinking: 1.0,
+          fixedWhenInstant: 0.6,
+          recommended: 1.0,
+        },
+      },
       { id: 'kimi-k2-0905-preview', name: 'Kimi K2 0905 Preview', contextWindow: 256000 },
       { id: 'kimi-k2-turbo-preview', name: 'Kimi K2 Turbo Preview', contextWindow: 256000 },
       { id: 'kimi-k2-thinking', name: 'Kimi K2 Thinking', contextWindow: 256000, supportsThinking: true },
@@ -161,7 +331,13 @@ export const OPENAI_COMPATIBLE_PRESETS: OpenAICompatiblePreset[] = [
     models: [
       { id: 'glm-5', name: 'GLM-5', contextWindow: 128000, supportsVision: true },
       { id: 'glm-4.7', name: 'GLM-4.7', contextWindow: 128000, supportsVision: true },
-      { id: 'glm-4.7-flash', name: 'GLM-4.7 Flash', contextWindow: 128000, supportsVision: true },
+      {
+        id: 'glm-4.7-flash',
+        name: 'GLM-4.7 Flash',
+        contextWindow: 128000,
+        supportsVision: true,
+        temperature: { recommended: 0.6 },
+      },
     ],
   },
   {
@@ -172,7 +348,13 @@ export const OPENAI_COMPATIBLE_PRESETS: OpenAICompatiblePreset[] = [
       { id: 'qwen-max', name: 'Qwen Max', contextWindow: 131072 },
       { id: 'qwen-plus', name: 'Qwen Plus', contextWindow: 131072 },
       { id: 'qwen-turbo', name: 'Qwen Turbo', contextWindow: 131072 },
-      { id: 'qwq-32b-preview', name: 'QwQ 32B Preview', contextWindow: 32768, supportsThinking: true },
+      {
+        id: 'qwq-32b-preview',
+        name: 'QwQ 32B Preview',
+        contextWindow: 32768,
+        supportsThinking: true,
+        reasoning: { strategy: 'none' },
+      },
     ],
   },
 ];
@@ -187,4 +369,33 @@ export function getProviderModels(id: string): ProviderMeta | undefined {
 
 export function findModel(providerId: string, modelId: string): ModelMeta | undefined {
   return PROVIDER_MODELS[providerId]?.models.find((m) => m.id === modelId);
+}
+
+// Resolves a (provider, modelId) pair to a ModelMeta, additionally consulting
+// OPENAI_COMPATIBLE_PRESETS when the provider is `openai-compatible`, and
+// stripping a leading `vendor/` segment so e.g. "moonshotai/kimi-k2.5" resolves
+// to the moonshot preset's "kimi-k2.5" entry. Used by capability lookups
+// (thinking.ts, temperature.ts) which historically used substring matching.
+export function findModelInCatalog(providerId: string, modelId: string): ModelMeta | undefined {
+  const direct = findModel(providerId, modelId);
+  if (direct) return direct;
+
+  const normalized = modelId.trim().toLowerCase();
+  const tail = normalized.includes('/') ? normalized.split('/').pop()! : normalized;
+  if (!tail) return undefined;
+
+  const meta = PROVIDER_MODELS[providerId];
+  if (meta) {
+    const found = meta.models.find((m) => m.id.toLowerCase() === tail);
+    if (found) return found;
+  }
+
+  if (providerId === 'openai-compatible') {
+    for (const preset of OPENAI_COMPATIBLE_PRESETS) {
+      const found = preset.models.find((m) => m.id.toLowerCase() === tail);
+      if (found) return found;
+    }
+  }
+
+  return undefined;
 }
