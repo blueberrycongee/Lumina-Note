@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { WelcomeScreen } from "./WelcomeScreen";
@@ -113,5 +113,42 @@ describe("WelcomeScreen", () => {
   it("hides Create New Vault when onCreateVault prop is not provided", () => {
     render(<WelcomeScreen onOpenVault={vi.fn()} />);
     expect(screen.queryByText("Create New Vault")).not.toBeInTheDocument();
+  });
+
+  it("switches to create view when New is clicked", async () => {
+    render(<WelcomeScreen onOpenVault={vi.fn()} onCreateVault={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    expect(
+      await screen.findByRole("heading", {
+        name: "Create New Vault",
+        level: 2,
+      }),
+    ).toBeInTheDocument();
+    expect(await screen.findByPlaceholderText("My Notes")).toBeInTheDocument();
+  });
+
+  it("returns to welcome view when back arrow is clicked", async () => {
+    render(<WelcomeScreen onOpenVault={vi.fn()} onCreateVault={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    await screen.findByRole("heading", { name: "Create New Vault", level: 2 });
+    const backButton = await screen.findByRole("button", { name: /cancel/i });
+    fireEvent.click(backButton);
+    expect(
+      await screen.findByRole("heading", { name: "Lumina Note" }),
+    ).toBeInTheDocument();
+  });
+
+  it("calls onCreateVault when form is submitted", async () => {
+    const onCreateVault = vi.fn();
+    render(
+      <WelcomeScreen onOpenVault={vi.fn()} onCreateVault={onCreateVault} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "New" }));
+    const input = await screen.findByPlaceholderText("My Notes");
+    fireEvent.change(input, {
+      target: { value: "My Vault" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(onCreateVault).toHaveBeenCalledWith("My Vault"));
   });
 });

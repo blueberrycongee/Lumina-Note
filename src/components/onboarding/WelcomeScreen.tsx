@@ -1,14 +1,19 @@
 import { useState, useCallback } from "react";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { FolderOpen, FolderPlus } from "lucide-react";
+import {
+  motion,
+  AnimatePresence,
+  useReducedMotion,
+  type Variants,
+} from "framer-motion";
+import { FolderOpen, FolderPlus, ArrowLeft } from "lucide-react";
 import { openDialog } from "@/lib/host";
 import { TitleBar } from "@/components/layout/TitleBar";
 import { LanguageSwitcher } from "@/components/layout/LanguageSwitcher";
 import { useMacTopChromeEnabled } from "@/components/layout/MacTopChrome";
 import { WindowControls } from "@/components/layout/WindowControls";
+import { Button } from "@/components/ui/button";
 import { ActionCard } from "./ActionCard";
 import { RecentVaultList } from "./RecentVaultList";
-import { VaultNamePrompt } from "./VaultNamePrompt";
 import { useRecentVaultStore } from "@/stores/useRecentVaultStore";
 import { resolveRendererAssetUrl } from "@/lib/appAsset";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -32,6 +37,12 @@ const fadeUpVariants: Variants = {
   },
 };
 
+const viewVariants = {
+  enter: { opacity: 0, y: 8 },
+  center: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+};
+
 export function WelcomeScreen({
   onOpenVault,
   onCreateVault,
@@ -45,7 +56,8 @@ export function WelcomeScreen({
   const removeVault = useRecentVaultStore((s) => s.removeVault);
   const clearVaults = useRecentVaultStore((s) => s.clearVaults);
 
-  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [view, setView] = useState<"welcome" | "create">("welcome");
+  const [vaultName, setVaultName] = useState("");
 
   const handleOpenExisting = useCallback(async () => {
     try {
@@ -62,18 +74,25 @@ export function WelcomeScreen({
     }
   }, [onOpenVault, t.welcome.openFolder]);
 
-  const handleCreateVault = useCallback(() => {
-    setShowNamePrompt(true);
+  const handleShowCreate = useCallback(() => {
+    setVaultName("");
+    setView("create");
   }, []);
 
-  const handleNameSubmit = useCallback(
-    (name: string) => {
-      if (onCreateVault) {
-        onCreateVault(name);
+  const handleBack = useCallback(() => {
+    setVaultName("");
+    setView("welcome");
+  }, []);
+
+  const handleCreateSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmed = vaultName.trim();
+      if (trimmed && onCreateVault) {
+        onCreateVault(trimmed);
       }
-      setShowNamePrompt(false);
     },
-    [onCreateVault],
+    [vaultName, onCreateVault],
   );
 
   return (
@@ -111,73 +130,145 @@ export function WelcomeScreen({
             />
           </div>
 
-          {/* Right pane: Brand + Actions */}
+          {/* Right pane */}
           <div className="flex-1 flex items-center justify-center px-6 py-10 overflow-y-auto">
-            <motion.div
-              variants={containerVariants}
-              initial={prefersReducedMotion ? "visible" : "hidden"}
-              animate="visible"
-              className="flex flex-col items-center gap-6 w-full max-w-[640px]"
-            >
-              {/* Logo */}
-              <motion.div variants={fadeUpVariants}>
-                <img src={logoUrl} alt="Lumina Note" className="w-20 h-20" />
-              </motion.div>
+            <AnimatePresence mode="wait">
+              {view === "welcome" ? (
+                <motion.div
+                  key="welcome"
+                  variants={containerVariants}
+                  initial={prefersReducedMotion ? "visible" : "hidden"}
+                  animate="visible"
+                  exit={
+                    prefersReducedMotion
+                      ? {}
+                      : { opacity: 0, transition: { duration: 0.15 } }
+                  }
+                  className="flex flex-col items-center gap-6 w-full max-w-[640px]"
+                >
+                  {/* Logo */}
+                  <motion.div variants={fadeUpVariants}>
+                    <img
+                      src={logoUrl}
+                      alt="Lumina Note"
+                      className="w-20 h-20"
+                    />
+                  </motion.div>
 
-              {/* Title */}
-              <motion.h1
-                variants={fadeUpVariants}
-                className="text-3xl font-semibold tracking-tight text-foreground"
-              >
-                {t.welcome.title}
-              </motion.h1>
+                  {/* Title */}
+                  <motion.h1
+                    variants={fadeUpVariants}
+                    className="text-3xl font-semibold tracking-tight text-foreground"
+                  >
+                    {t.welcome.title}
+                  </motion.h1>
 
-              {/* Action cards */}
-              <motion.div
-                variants={fadeUpVariants}
-                className="w-full flex flex-col gap-3 mt-2"
-              >
-                <ActionCard
-                  icon={FolderOpen}
-                  title={t.welcome.openFolder}
-                  description={t.welcome.selectFolder}
-                  action={{
-                    label: t.common.open,
-                    variant: "primary",
-                    onClick: handleOpenExisting,
-                  }}
-                />
-                {onCreateVault && (
-                  <ActionCard
-                    icon={FolderPlus}
-                    title={t.welcome.createVault}
-                    description={t.welcome.createVaultDesc}
-                    action={{
-                      label: t.welcome.newVaultButton,
-                      variant: "secondary",
-                      onClick: handleCreateVault,
-                    }}
-                  />
-                )}
-              </motion.div>
+                  {/* Action cards */}
+                  <motion.div
+                    variants={fadeUpVariants}
+                    className="w-full flex flex-col gap-3 mt-2"
+                  >
+                    <ActionCard
+                      icon={FolderOpen}
+                      title={t.welcome.openFolder}
+                      description={t.welcome.selectFolder}
+                      action={{
+                        label: t.common.open,
+                        variant: "primary",
+                        onClick: handleOpenExisting,
+                      }}
+                    />
+                    {onCreateVault && (
+                      <ActionCard
+                        icon={FolderPlus}
+                        title={t.welcome.createVault}
+                        description={t.welcome.createVaultDesc}
+                        action={{
+                          label: t.welcome.newVaultButton,
+                          variant: "secondary",
+                          onClick: handleShowCreate,
+                        }}
+                      />
+                    )}
+                  </motion.div>
 
-              {/* Footer */}
-              <motion.div
-                variants={fadeUpVariants}
-                className="flex items-center justify-between w-full mt-4 text-xs text-muted-foreground"
-              >
-                <span>Lumina Note</span>
-              </motion.div>
-            </motion.div>
+                  {/* Footer */}
+                  <motion.div
+                    variants={fadeUpVariants}
+                    className="flex items-center justify-between w-full mt-4 text-xs text-muted-foreground"
+                  >
+                    <span>Lumina Note</span>
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="create"
+                  variants={viewVariants}
+                  initial={prefersReducedMotion ? "center" : "enter"}
+                  animate="center"
+                  exit={
+                    prefersReducedMotion
+                      ? {}
+                      : { opacity: 0, transition: { duration: 0.15 } }
+                  }
+                  transition={{ duration: 0.2, ease: [0.2, 0.9, 0.1, 1] }}
+                  className="flex flex-col items-center gap-6 w-full max-w-[640px]"
+                >
+                  {/* Back button */}
+                  <div className="w-full">
+                    <button
+                      onClick={handleBack}
+                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      {t.common.cancel}
+                    </button>
+                  </div>
+
+                  {/* Icon */}
+                  <div className="w-16 h-16 rounded-ui-lg bg-accent flex items-center justify-center">
+                    <FolderPlus className="w-8 h-8 text-primary" />
+                  </div>
+
+                  {/* Title */}
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                    {t.welcome.createVault}
+                  </h2>
+
+                  {/* Description */}
+                  <p className="text-sm text-muted-foreground text-center max-w-[360px] -mt-2">
+                    {t.welcome.createVaultDesc}
+                  </p>
+
+                  {/* Form */}
+                  <form
+                    onSubmit={handleCreateSubmit}
+                    className="w-full flex flex-col gap-3"
+                  >
+                    <input
+                      type="text"
+                      value={vaultName}
+                      onChange={(e) => setVaultName(e.target.value)}
+                      placeholder={t.welcome.vaultNamePlaceholder}
+                      className="w-full h-11 px-4 rounded-ui-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      autoFocus
+                    />
+                    <Button
+                      variant="primary"
+                      size="md"
+                      type="submit"
+                      disabled={!vaultName.trim()}
+                      className="w-full"
+                    >
+                      {t.common.create}
+                    </Button>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
-
-      <VaultNamePrompt
-        isOpen={showNamePrompt}
-        onSubmit={handleNameSubmit}
-        onCancel={() => setShowNamePrompt(false)}
-      />
     </div>
   );
 }
