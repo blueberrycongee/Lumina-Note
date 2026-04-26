@@ -138,7 +138,7 @@ function TabItem({
       <TabShape isActive={isActive} isDropTarget={isDropTarget} />
       <div
         className={cn(
-          "relative flex h-full items-center gap-1.5 pl-4 pr-2 text-[13px] transition-colors duration-150",
+          "relative flex h-full items-center gap-1.5 pl-4 pr-4 text-[13px] transition-colors duration-150",
           isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
         )}
       >
