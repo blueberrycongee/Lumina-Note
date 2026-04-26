@@ -53,7 +53,7 @@ export function WelcomeScreen({ onOpenVault }: WelcomeScreenProps) {
     <div className="h-full flex flex-col bg-background">
       <TitleBar />
 
-      <div className="relative flex-1 ui-app-bg overflow-hidden flex flex-col">
+      <div className="relative flex-1 overflow-hidden flex flex-col">
         {showMacWindowInset ? (
           <div
             className="flex items-center px-4 py-2"

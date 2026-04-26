@@ -962,7 +962,7 @@ function App() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background ui-app-bg">
+    <div className="h-full flex flex-col bg-background">
       <TitleBar />
       <PluginShellSlotHost slotId="app-top" />
       <div

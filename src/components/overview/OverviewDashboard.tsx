@@ -7,7 +7,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 export function OverviewDashboard() {
   const { t } = useLocaleStore();
   return (
-    <div className="flex-1 ui-app-bg overflow-auto">
+    <div className="flex-1 overflow-auto">
       <div className="mx-auto w-full max-w-6xl px-6 py-10 min-h-full flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, y: 8 }}

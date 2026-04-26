@@ -33,16 +33,6 @@ describe("fallback theme tokens", () => {
   });
 });
 
-describe("ui-app-bg", () => {
-  it("uses subtle primary glow layers in light and dark mode", () => {
-    const lightBlock = extractBlock(".ui-app-bg");
-    const darkBlock = extractBlock(".dark .ui-app-bg");
-
-    expect(lightBlock).toContain("hsl(var(--primary) / 0.035)");
-    expect(darkBlock).toContain("hsl(var(--primary) / 0.08)");
-  });
-});
-
 describe("Electron drag regions", () => {
   it("maps legacy drag-region markers to Electron app-region CSS", () => {
     const dragRegionBlock = extractBlock("[data-tauri-drag-region]");

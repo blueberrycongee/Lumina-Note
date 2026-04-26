@@ -205,50 +205,6 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 @layer components {
-  /* Soft, barely-there ambient tint — enough to give the app a
-     character but never enough to distract. The primary accent washes
-     in from the top-right corner and fades out within a third of the
-     viewport. */
-  .ui-app-bg {
-    background:
-      radial-gradient(
-        1100px 700px at 94% -4%,
-        hsl(var(--primary) / 0.035),
-        transparent 60%
-      ),
-      hsl(var(--background));
-  }
-
-  .dark .ui-app-bg {
-    background:
-      radial-gradient(
-        1100px 700px at 94% -4%,
-        hsl(var(--primary) / 0.08),
-        transparent 60%
-      ),
-      hsl(var(--background));
-  }
-
-  /* Welcome-hero ambient glow — used behind the WelcomeGreeting so
-     the empty state has character without being loud. Composes onto
-     ui-app-bg. */
-  .ui-hero-glow {
-    background:
-      radial-gradient(
-        600px 380px at 50% 20%,
-        hsl(var(--primary) / 0.05),
-        transparent 70%
-      );
-  }
-  .dark .ui-hero-glow {
-    background:
-      radial-gradient(
-        600px 380px at 50% 20%,
-        hsl(var(--primary) / 0.1),
-        transparent 70%
-      );
-  }
-
   .ui-card {
     @apply rounded-ui-lg border border-border bg-background;
   }
