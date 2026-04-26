@@ -110,7 +110,7 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
             isDropTarget
               ? "stroke-[hsl(var(--primary))] [stroke-width:2]"
               : isActive
-                ? "stroke-[hsl(var(--foreground)/0.3)] [stroke-width:1]"
+                ? "stroke-[hsl(var(--border))] [stroke-width:1]"
                 : "[stroke-width:0]"
           )}
         />
