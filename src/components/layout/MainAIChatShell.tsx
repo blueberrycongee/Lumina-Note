@@ -42,7 +42,6 @@ import { useSkillSearch } from "./hooks/useSkillSearch";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatToolbar } from "./ChatToolbar";
 import { WelcomeGreeting, WelcomeSuggestions, WelcomeDiscoverHints } from "./WelcomeSection";
-import { WelcomeAurora } from "../effects/WelcomeAurora";
 import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
@@ -995,8 +994,7 @@ export function MainAIChatShell() {
         </AnimatePresence>
 
         {/* 主要内容区域 - 始终居中 */}
-        <main className="relative h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0">
-          <WelcomeAurora visible={!hasStarted} />
+        <main className="h-full w-full flex flex-col overflow-hidden min-h-0 min-w-0">
           <WelcomeGreeting
             hasStarted={hasStarted}
             currentFile={currentFile}
