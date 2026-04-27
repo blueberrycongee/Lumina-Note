@@ -2420,6 +2420,18 @@ body.lumina-block-dragging .cm-editor {
   cursor: grabbing;
 }
 
+/* 文件拖拽：横跨整个窗口都应是 grabbing，所以走通配 + !important
+   覆盖 sidebar/editor/buttons 自带的光标 */
+body.lumina-file-dragging,
+body.lumina-file-dragging * {
+  cursor: grabbing !important;
+}
+
+/* 标签拖拽：仅 tab 条上有意义，body 一层就够 */
+body.lumina-tab-dragging {
+  cursor: grabbing;
+}
+
 .cm-block-dragging-source {
   opacity: 0.4;
   background-color: hsl(var(--muted) / 0.3) !important;

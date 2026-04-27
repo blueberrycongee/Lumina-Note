@@ -585,6 +585,7 @@ function App() {
 
       if (!dragData.isDragging && Math.sqrt(dx * dx + dy * dy) > 5) {
         dragData.isDragging = true;
+        document.body.classList.add("lumina-file-dragging");
 
         // 创建拖拽指示器 - VS Code/Cursor 风格
         dragIndicator = document.createElement("div");
@@ -617,6 +618,9 @@ function App() {
     const handleMouseUp = (e: MouseEvent) => {
       const dragData = getDragData();
       if (!dragData) return;
+
+      // 无论拖拽是否真正开始，都先把 body class 清掉，避免光标卡 grabbing
+      document.body.classList.remove("lumina-file-dragging");
 
       // 清理拖拽指示器
       if (dragIndicator) {
@@ -674,6 +678,8 @@ function App() {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
       if (dragIndicator) dragIndicator.remove();
+      // 卸载兜底
+      document.body.classList.remove("lumina-file-dragging");
     };
   }, []);
 

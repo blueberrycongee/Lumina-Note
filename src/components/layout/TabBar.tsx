@@ -171,7 +171,7 @@ function TabItem({
   return (
     <div
       data-tauri-drag-region="false"
-      className="group relative h-full w-full cursor-grab select-none active:cursor-grabbing"
+      className="group relative h-full w-full cursor-grab select-none"
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
@@ -305,6 +305,8 @@ export function TabBar() {
     return () => {
       for (const t of timeouts.current) clearTimeout(t);
       timeouts.current.clear();
+      // 卸载兜底：万一拖拽中组件被销毁，确保 body class 被清掉
+      document.body.classList.remove("lumina-tab-dragging");
     };
   }, []);
 
@@ -395,6 +397,8 @@ export function TabBar() {
                   drag={isClosing ? false : "x"}
                   dragElastic={0.05}
                   dragMomentum={false}
+                  onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
+                  onDragEnd={() => document.body.classList.remove("lumina-tab-dragging")}
                   whileDrag={
                     reduceMotion
                       ? undefined

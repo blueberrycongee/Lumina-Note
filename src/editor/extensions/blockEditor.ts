@@ -577,10 +577,16 @@ const blockDecorationsPlugin = ViewPlugin.fromClass(
         if (!this.dragState) return;
         const { sourceBlock, targetBlock, insertAfter } = this.dragState;
         let landedRange: { from: number; to: number } | null = null;
-        if (targetBlock) {
-          landedRange = this.moveBlock(view, sourceBlock, targetBlock, insertAfter);
+        try {
+          if (targetBlock) {
+            landedRange = this.moveBlock(view, sourceBlock, targetBlock, insertAfter);
+          }
+        } catch (err) {
+          // moveBlock 抛错时也要确保 body class 被清掉，否则光标永远卡 grabbing
+          console.error("[blockEditor] moveBlock failed during drag end", err);
+        } finally {
+          this.cleanupDrag();
         }
-        this.cleanupDrag();
 
         // 落地动效：给新位置的块添加动画
         if (landedRange) {
