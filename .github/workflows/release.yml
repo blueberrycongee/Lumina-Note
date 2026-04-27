@@ -22,12 +22,14 @@ jobs:
       - name: Check changelog exists for this version
         run: npx ts-node scripts/parse_changelog.ts check "${{ github.ref_name }}"
 
-  # Pre-create the GitHub release once, before the matrix kicks off.
-  # Otherwise three parallel runners race to POST /releases with the same
-  # tag — first one wins, the other two get HTTP 422 already_exists and
-  # the build job dies with no Windows installer published. Pre-creating
-  # the release means every matrix runner finds an existing release and
-  # only uploads assets to it (no create-race).
+  # Pre-create the GitHub release as a DRAFT before the matrix kicks off.
+  # Why draft and not published: electron-builder 26.x's GitHub publisher
+  # only treats DRAFT releases as "upload here, then promote." If a
+  # published release already exists for the tag, electron-builder still
+  # POSTs to /releases (looking for a draft slot) and crashes with HTTP 422
+  # already_exists — exactly what blew up v1.2.1 and v1.3.0. The draft is
+  # promoted to published by the final `publish-release` job after all
+  # matrix uploads complete, so there's no parallel publish-race either.
   create-release:
     needs: check-changelog
     runs-on: ubuntu-latest
@@ -44,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Create release if missing
+      - name: Create draft release if missing
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -54,7 +56,7 @@ jobs:
             exit 0
           fi
           NOTES="$(npx ts-node scripts/parse_changelog.ts get "$TAG")"
-          gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+          gh release create "$TAG" --title "$TAG" --notes "$NOTES" --draft
 
   build:
     needs: create-release
@@ -96,10 +98,12 @@ jobs:
       - name: Build renderer + main
         run: npm run build
 
-      - name: Package + publish via electron-builder
-        run: npm run ${{ matrix.script }} -- --publish always
+      # Build only — never publish from electron-builder. We upload assets
+      # ourselves below via `gh release upload`, which sidesteps electron-
+      # builder's GitHub publisher entirely (the source of the 422 race).
+      - name: Package via electron-builder (no publish)
+        run: npm run ${{ matrix.script }} -- --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Code signing is currently unsigned. Disable identity auto-discovery
           # so electron-builder doesn't try to load empty CSC_LINK as a file.
           CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -110,3 +114,48 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      # Each matrix runner uploads ONLY its own platform artifacts plus the
+      # matching `latest*.yml` electron-updater feed file. No two runners
+      # touch the same filename, so concurrent uploads are race-free.
+      - name: Upload platform artifacts to draft release
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          # Allowed extensions per platform — kept narrow to skip
+          # builder-debug.yml, builder-effective-config.yaml, and the
+          # unpacked .app / linux-unpacked / win-unpacked directories.
+          assets=(
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.blockmap
+            release/latest*.yml
+          )
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "No assets matched in release/ — nothing to upload"
+            exit 1
+          fi
+          echo "Uploading ${#assets[@]} files to $TAG:"
+          printf '  %s\n' "${assets[@]}"
+          gh release upload "$TAG" "${assets[@]}" --clobber
+
+  # Promote the draft to published once every platform has uploaded its
+  # assets. This avoids the parallel-publish race that would happen if
+  # each matrix runner tried to flip the draft itself.
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Promote draft to published
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$TAG" --draft=false
