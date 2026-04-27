@@ -11,8 +11,8 @@ import mermaid from "mermaid";
 import { useShallow } from "zustand/react/shallow";
 import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
 import { resolveWikiLinkPath } from "@/lib/wikiLinks";
-import { useWikiLinkHover } from "@/lib/useWikiLinkHover";
-import { WikiLinkHoverCard } from "@/components/wiki/WikiLinkHoverCard";
+import { useNoteHoverPreview } from "@/lib/useWikiLinkHover";
+import { NoteHoverPreview } from "@/components/wiki/WikiLinkHoverCard";
 
 // 初始化 mermaid
 mermaid.initialize({
@@ -191,11 +191,11 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
     setSplitView,
   ]);
 
-  // Wiki-link hover preview. Uses pointer-intent against the rendered
-  // body — the parseMarkdown() pass above tags every wikilink with
-  // `data-wikilink="<target>"`, which is what the hook listens for.
-  const { anchor: hoverAnchor, linkName: hoverLink, close: closeHover } =
-    useWikiLinkHover(containerRef);
+  // Hover preview against the rendered body — every wikilink emitted
+  // by parseMarkdown() carries `data-wikilink="<target>"`, which the
+  // hook listens for (alongside `data-note-path` from other surfaces).
+  const { anchor: hoverAnchor, path: hoverPath, label: hoverLabel, close: closeHover } =
+    useNoteHoverPreview(containerRef);
 
   return (
     <>
@@ -211,7 +211,12 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
         dangerouslySetInnerHTML={{ __html: html }}
         onClick={handleClick}
       />
-      <WikiLinkHoverCard anchor={hoverAnchor} linkName={hoverLink} onClose={closeHover} />
+      <NoteHoverPreview
+        anchor={hoverAnchor}
+        path={hoverPath}
+        label={hoverLabel}
+        onClose={closeHover}
+      />
     </>
   );
 }

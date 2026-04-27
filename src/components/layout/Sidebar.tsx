@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useFileStore } from "@/stores/useFileStore";
+import { useNoteHoverPreview } from "@/lib/useWikiLinkHover";
+import { NoteHoverPreview } from "@/components/wiki/WikiLinkHoverCard";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, setDragData } from "@/lib/dragState";
 import type { FileEntry } from "@/lib/host";
@@ -135,6 +137,11 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
   const [isRootDragOver, setIsRootDragOver] = useState(false);
   const [isFileTreeScrollActive, setIsFileTreeScrollActive] = useState(false);
   const fileTreeScrollFadeTimerRef = useRef<number | null>(null);
+  // Hover preview against the file tree — every .md row carries
+  // data-note-path; the hook delegates pointer events on the tree
+  // container so adjacent file rows share one timer & one card.
+  const fileTreeRef = useRef<HTMLDivElement | null>(null);
+  const fileTreeHover = useNoteHoverPreview(fileTreeRef);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, entry: FileEntry) => {
@@ -430,6 +437,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
 
       {/* File Tree */}
       <div
+        ref={fileTreeRef}
         className={cn(
           "sidebar-file-tree-scroll flex-1 overflow-auto py-2 px-2",
           isFileTreeScrollActive && "is-scroll-active",
@@ -499,6 +507,13 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
           onClose={closeContextMenu}
         />
       )}
+
+      <NoteHoverPreview
+        anchor={fileTreeHover.anchor}
+        path={fileTreeHover.path}
+        label={fileTreeHover.label}
+        onClose={fileTreeHover.close}
+      />
     </aside>
   );
 }
@@ -906,9 +921,15 @@ function FileTreeItem({
     });
   };
 
+  // Only markdown notes can preview (everything else has no rendered
+  // body to show). The data-note-path attribute is what
+  // useNoteHoverPreview listens for at the sidebar's tree container.
+  const isPreviewable = entry.name.toLowerCase().endsWith(".md");
+
   return (
     <div
       data-file-tree-item="true"
+      data-note-path={isPreviewable ? entry.path : undefined}
       onMouseDown={handleMouseDown}
       onClick={() => onSelect(entry)}
       onDoubleClick={() => onPermanentOpen(entry)}

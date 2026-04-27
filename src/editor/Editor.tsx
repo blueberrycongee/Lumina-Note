@@ -1,8 +1,8 @@
 import { useEffect, useCallback, useRef, useState, useLayoutEffect, type RefObject } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useFileStore } from "@/stores/useFileStore";
-import { useWikiLinkHover } from "@/lib/useWikiLinkHover";
-import { WikiLinkHoverCard } from "@/components/wiki/WikiLinkHoverCard";
+import { useNoteHoverPreview } from "@/lib/useWikiLinkHover";
+import { NoteHoverPreview } from "@/components/wiki/WikiLinkHoverCard";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -100,8 +100,8 @@ function restoreModeScrollSnapshot(
  * call remains conditional on the wrapper actually being mounted.
  */
 function LiveEditorWikiHover({ hostRef }: { hostRef: RefObject<HTMLDivElement | null> }) {
-  const { anchor, linkName, close } = useWikiLinkHover(hostRef);
-  return <WikiLinkHoverCard anchor={anchor} linkName={linkName} onClose={close} />;
+  const { anchor, path, label, close } = useNoteHoverPreview(hostRef);
+  return <NoteHoverPreview anchor={anchor} path={path} label={label} onClose={close} />;
 }
 
 export function Editor() {
