@@ -90,7 +90,6 @@ Récupérez la dernière version depuis [Releases](https://github.com/blueberryc
 <h3 align="center">Capacités supplémentaires</h3>
 
 - Saisie vocale en temps réel
-- Vues base de données (tableau / kanban)
 - Synchronisation WebDAV
 - Révision par flashcards
 - 15 thèmes

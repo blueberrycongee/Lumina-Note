@@ -90,7 +90,6 @@ Scarica l'ultima versione da [Releases](https://github.com/blueberrycongee/Lumin
 <h3 align="center">Capacità aggiuntive</h3>
 
 - Input vocale in tempo reale
-- Viste database (tabella / kanban)
 - Sincronizzazione WebDAV
 - Ripasso con flashcard
 - 15 temi

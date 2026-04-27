@@ -90,7 +90,6 @@ Die neueste Version findest du unter [Releases](https://github.com/blueberrycong
 <h3 align="center">Weitere Fähigkeiten</h3>
 
 - Spracheingabe in Echtzeit
-- Datenbankansichten (Tabelle / Kanban)
 - WebDAV-Synchronisierung
 - Flashcard-Wiederholung
 - 15 Themes

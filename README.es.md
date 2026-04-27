@@ -90,7 +90,6 @@ Obtén la versión más reciente desde [Releases](https://github.com/blueberryco
 <h3 align="center">Capacidades adicionales</h3>
 
 - Entrada de voz en tiempo real
-- Vistas de base de datos (tabla / kanban)
 - Sincronización WebDAV
 - Repaso con flashcards
 - 15 temas

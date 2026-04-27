@@ -90,7 +90,6 @@ Baixe a versão mais recente em [Releases](https://github.com/blueberrycongee/Lu
 <h3 align="center">Capacidades extras</h3>
 
 - Entrada de voz em tempo real
-- Visualizações de banco de dados (tabela / kanban)
 - Sincronização WebDAV
 - Revisão com flashcards
 - 15 temas
