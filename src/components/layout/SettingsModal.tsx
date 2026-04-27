@@ -87,7 +87,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
       />
 
       {/* 设置面板 */}
-      <div className="relative w-[720px] max-h-[80vh] rounded-xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 animate-spotlight-in flex flex-col">
+      <div className="relative w-[720px] h-[80vh] rounded-xl shadow-2xl overflow-hidden border border-border/60 bg-background/95 animate-spotlight-in flex flex-col">
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/50">
           <h2 className="text-lg font-semibold text-foreground/90">{t.settingsModal.title}</h2>
