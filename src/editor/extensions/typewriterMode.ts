@@ -90,8 +90,18 @@ class TypewriterPlugin {
 
   constructor(view: EditorView) {
     this.decorations = this.buildDecorations(view);
-    this.applyHostClass(view);
-    this.scrollIfNeeded(view, view.state.selection.main.head, /*force=*/ true);
+    // `coordsAtPos` reads layout, which CM forbids during the construction
+    // transaction. Defer the initial centering scroll into the next measure
+    // pass so the plugin doesn't crash on instantiation (which previously
+    // tore the whole plugin down — no decorations, no host class, nothing).
+    if (view.state.facet(typewriterEnabledFacet)) {
+      view.requestMeasure({
+        read: () => null,
+        write: () => {
+          this.scrollIfNeeded(view, view.state.selection.main.head, true);
+        },
+      });
+    }
   }
 
   update(update: ViewUpdate) {
@@ -129,8 +139,6 @@ class TypewriterPlugin {
       this.lastActiveRange = null;
     }
 
-    if (facetChanged) this.applyHostClass(update.view);
-
     if (typewriterEnabled && !isDragging && (update.selectionSet || facetChanged)) {
       this.scrollIfNeeded(
         update.view,
@@ -138,17 +146,6 @@ class TypewriterPlugin {
         facetChanged,
       );
     }
-  }
-
-  private applyHostClass(view: EditorView) {
-    view.dom.classList.toggle(
-      "cm-typewriter-on",
-      view.state.facet(typewriterEnabledFacet),
-    );
-    view.dom.classList.toggle(
-      "cm-focus-on",
-      view.state.facet(focusEnabledFacet),
-    );
   }
 
   private buildDecorations(view: EditorView): DecorationSet {
@@ -186,7 +183,8 @@ class TypewriterPlugin {
   }
 
   destroy() {
-    // Don't leave host classes behind on unmount.
+    // Host classes live on EditorView.editorAttributes (facet-driven), so they
+    // disappear automatically when the plugin is removed via reconfigure.
   }
 }
 
@@ -195,9 +193,19 @@ export const typewriterPlugin = ViewPlugin.fromClass(TypewriterPlugin, {
 });
 
 export function typewriterExtensions(typewriter: boolean, focus: boolean) {
+  // Host classes go through EditorView.editorAttributes — directly mutating
+  // view.dom.classList from the plugin doesn't survive CodeMirror's own
+  // attribute reconciliation, so the styles never visibly applied. Facet-
+  // driven attributes are merged by CM and stay in sync with reconfigures.
+  const hostClasses: string[] = [];
+  if (typewriter) hostClasses.push("cm-typewriter-on");
+  if (focus) hostClasses.push("cm-focus-on");
   return [
     typewriterEnabledFacet.of(typewriter),
     focusEnabledFacet.of(focus),
+    hostClasses.length > 0
+      ? EditorView.editorAttributes.of({ class: hostClasses.join(" ") })
+      : [],
     // Plugin is always registered when this extension set is applied;
     // the facets gate its behaviour. Compartment reconfiguration
     // re-runs `update` with the new facet values, which the plugin
