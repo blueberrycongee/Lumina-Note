@@ -270,7 +270,19 @@ export function AISettingsContent() {
                 id={id}
                 type="password"
                 value={config.apiKey}
-                onChange={(e) => setConfig({ apiKey: e.target.value })}
+                // Trim on every keystroke — paste-from-clipboard frequently
+                // brings trailing whitespace / newlines that the upstream
+                // rejects with the same 401 we'd get for a wrong key.
+                onChange={(e) =>
+                  setConfig({ apiKey: e.target.value.trim() })
+                }
+                // Select-all on focus so a paste into a field that already
+                // has a saved key REPLACES it instead of inserting beside.
+                // Without this, `<input type=password>` shows the old key as
+                // dots, the cursor lands at click position, and a paste
+                // merges old+new — produces a bogus concatenated "key" that
+                // fails 401 with the OLD key's last-4 in the upstream error.
+                onFocus={(e) => e.currentTarget.select()}
                 placeholder={
                   config.provider === "ollama"
                     ? t.aiSettings.localModelNoKey
@@ -398,7 +410,10 @@ export function AISettingsContent() {
                 id={id}
                 type="text"
                 value={config.customModelId || ""}
-                onChange={(e) => setConfig({ customModelId: e.target.value })}
+                onChange={(e) =>
+                  setConfig({ customModelId: e.target.value.trim() })
+                }
+                onFocus={(e) => e.currentTarget.select()}
                 placeholder={t.aiSettings.customModelHint}
               />
             )}
@@ -422,9 +437,11 @@ export function AISettingsContent() {
                 id={id}
                 type="text"
                 value={config.baseUrl || ""}
-                onChange={(e) =>
-                  setConfig({ baseUrl: e.target.value || undefined })
-                }
+                onChange={(e) => {
+                  const trimmed = e.target.value.trim();
+                  setConfig({ baseUrl: trimmed || undefined });
+                }}
+                onFocus={(e) => e.currentTarget.select()}
                 placeholder={
                   PROVIDER_MODELS[config.provider as LLMProviderType]
                     ?.defaultBaseUrl || "https://api.example.com/v1"

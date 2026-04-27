@@ -280,9 +280,13 @@ export const useAIStore = create<AIState>()(
             newConfig.apiKey !== undefined &&
             newConfig.apiKey !== currentConfig.apiKey
           ) {
+            // Defense-in-depth: trim on the IPC boundary as well as in the
+            // settings UI's onChange. Pasted keys often carry trailing
+            // whitespace or newlines that produce a 401 from the upstream
+            // with no useful diagnostic.
             await invoke("agent_set_provider_api_key", {
               provider_id: nextProvider,
-              api_key: newConfig.apiKey,
+              api_key: (newConfig.apiKey ?? "").trim(),
             });
           }
         } catch (err) {

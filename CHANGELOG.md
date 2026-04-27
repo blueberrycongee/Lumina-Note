@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-04-27
+
+紧跟 v1.3.3 的第三次发版——这次修的是 AI Settings 输入框处理 paste 的方式。
+
+### 修复
+- **API key 粘贴会跟旧值拼起来**：`<input type="password">` 会把已保存的 key 显示成圆点，但实际 value 还在。点击输入框时光标落在某个位置，**粘贴新 key 不会自动替换旧值，而是插在光标位置**——结果保存进去的是旧 key + 新 key 拼成的字符串。送到上游后鉴权失败，但错误里 last-4 显示的还是**旧** key 的最后 4 位，让用户根本想不到这是粘贴行为造成的拼接
+
+  全链路最佳实践修复（API Key / Base URL / 自定义 model id 三个输入框一起改）：
+  - `onFocus`：聚焦时 `e.currentTarget.select()` 选中已有内容，下一个粘贴/键入直接替换
+  - `onChange`：每次输入 `.trim()` 清掉粘贴可能带回的换行 / 空白（很多控制台和文档的复制操作会带尾部不可见字符，自身就是 401 高频源头）
+  - `useAIStore` IPC 边界也加 `.trim()` 做 defense-in-depth，未来其它路径塞进来的脏 key 也会被清掉
+
+### 用户操作建议
+- 升级到 v1.3.4 之后，重新打开 **AI Settings → API Key 输入框**，点一下，全选会自动发生，再粘贴新 key 就会**整段替换**，保存成功
+
 ## [1.3.3] - 2026-04-27
 
 紧跟 v1.3.2 的二次紧急修复——v1.3.2 装上之后启动还是直接挂在主进程。
