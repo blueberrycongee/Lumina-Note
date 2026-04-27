@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef, useState, useLayoutEffect } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useFileStore } from "@/stores/useFileStore";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
@@ -90,6 +91,7 @@ function restoreModeScrollSnapshot(
 
 export function Editor() {
   const { t } = useLocaleStore();
+  const reduceMotion = useReducedMotion();
 
   const modeLabels: Record<EditorMode, string> = {
     reading: t.editor.reading,
@@ -641,29 +643,45 @@ export function Editor() {
             }}
           />
 
-          {/* ReadingView — shown on top when in reading mode */}
-          {editorMode === "reading" && (
-            <div
-              ref={readingScrollContainerRef}
-              className="h-full overflow-auto editor-scroll-shell"
-              data-editor-scroll-container="reading"
-            >
-              <ReadingView
-                content={currentContent}
-                filePath={currentFile}
-              />
-            </div>
-          )}
+          {/* ReadingView — cross-fades on mode entry/exit so the swap with
+              CodeMirror reads as a continuation of the same document rather
+              than a hard cut. Anchor-based shared-element morph is a
+              follow-up; this baseline already removes the visual jolt. */}
+          <AnimatePresence>
+            {editorMode === "reading" && (
+              <motion.div
+                key="reading-view"
+                ref={readingScrollContainerRef}
+                className="absolute inset-0 overflow-auto editor-scroll-shell z-10"
+                data-editor-scroll-container="reading"
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0 }}
+                transition={{ duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }}
+              >
+                <ReadingView
+                  content={currentContent}
+                  filePath={currentFile}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* CodeMirror editor — always mounted to preserve scroll position
-              across mode switches; hidden via CSS in reading mode so its
-              scrollDOM.scrollTop and viewport anchor are retained. */}
-          <div
+              across mode switches. In reading mode the wrapper fades out and
+              becomes non-interactive, but the CM view itself stays alive so
+              scrollTop, IME, and viewport anchor are intact when we come back. */}
+          <motion.div
             className={
               editorMode === "reading"
-                ? "absolute inset-0 invisible pointer-events-none"
+                ? "absolute inset-0 pointer-events-none"
                 : "h-full"
             }
+            animate={{ opacity: editorMode === "reading" ? 0 : 1 }}
+            transition={{
+              duration: reduceMotion ? 0 : 0.18,
+              ease: [0.2, 0.9, 0.1, 1],
+            }}
           >
             <CodeMirrorEditor
               ref={editorRef}
@@ -675,7 +693,7 @@ export function Editor() {
               viewMode={editorMode as ViewMode}
               filePath={currentFile}
             />
-          </div>
+          </motion.div>
         </div>
       )}
     </div>
