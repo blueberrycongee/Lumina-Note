@@ -4,6 +4,8 @@ import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, setDragData } from "@/lib/dragState";
 import type { FileEntry } from "@/lib/host";
+import { writeBinaryFile, exists } from "@/lib/host";
+import { reportOperationError } from "@/lib/reportError";
 import { cn, getFileName } from "@/lib/utils";
 import { ContextMenu } from "../toolbar/ContextMenu";
 import {
@@ -133,6 +135,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
   const [rootContextMenu, setRootContextMenu] =
     useState<RootContextMenuState | null>(null);
   const [isRootDragOver, setIsRootDragOver] = useState(false);
+  const [isExternalDragOver, setIsExternalDragOver] = useState(false);
   const [isFileTreeScrollActive, setIsFileTreeScrollActive] = useState(false);
   const fileTreeScrollFadeTimerRef = useRef<number | null>(null);
 
@@ -270,6 +273,98 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
       }
     };
   }, []);
+
+  // External (OS) file drop — import dropped files into the vault.
+  // Internal drag-drop uses a separate mousemove-based system; these
+  // HTML5 handlers only fire for genuine OS drags (which carry "Files"
+  // in dataTransfer.types).
+  const isExternalFileDrag = useCallback((e: React.DragEvent) => {
+    return Array.from(e.dataTransfer.types).includes("Files");
+  }, []);
+
+  const handleExternalDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!vaultPath || !isExternalFileDrag(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setIsExternalDragOver(true);
+    },
+    [vaultPath, isExternalFileDrag],
+  );
+
+  const handleExternalDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear when the pointer leaves the container itself, not when
+    // it crosses into a child element.
+    if (e.currentTarget === e.target) {
+      setIsExternalDragOver(false);
+    }
+  }, []);
+
+  const handleExternalDrop = useCallback(
+    async (e: React.DragEvent) => {
+      if (!vaultPath || !isExternalFileDrag(e)) return;
+      e.preventDefault();
+      setIsExternalDragOver(false);
+
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length === 0) return;
+
+      const folderEl = (e.target as HTMLElement | null)?.closest(
+        "[data-folder-path]",
+      );
+      const targetFolder =
+        folderEl?.getAttribute("data-folder-path") ?? vaultPath;
+
+      const sep = targetFolder.includes("\\") ? "\\" : "/";
+      const join = (folder: string, name: string) =>
+        `${folder.replace(/[\\/]+$/, "")}${sep}${name}`;
+
+      const reserveUniqueName = async (
+        folder: string,
+        rawName: string,
+      ): Promise<string> => {
+        const dot = rawName.lastIndexOf(".");
+        const stem = dot > 0 ? rawName.slice(0, dot) : rawName;
+        const ext = dot > 0 ? rawName.slice(dot) : "";
+        let candidate = rawName;
+        let n = 1;
+        while (await exists(join(folder, candidate))) {
+          candidate = `${stem} (${n})${ext}`;
+          n += 1;
+        }
+        return candidate;
+      };
+
+      for (const file of files) {
+        try {
+          const safeName = await reserveUniqueName(targetFolder, file.name);
+          const buffer = await file.arrayBuffer();
+          await writeBinaryFile(
+            join(targetFolder, safeName),
+            new Uint8Array(buffer),
+          );
+        } catch (error) {
+          reportOperationError({
+            source: "Sidebar.externalDrop",
+            action: `Import dropped file ${file.name}`,
+            error,
+          });
+        }
+      }
+
+      try {
+        await refreshFileTree();
+      } catch (error) {
+        reportOperationError({
+          source: "Sidebar.externalDrop",
+          action: "Refresh file tree after import",
+          error,
+          level: "warning",
+        });
+      }
+    },
+    [vaultPath, isExternalFileDrag, refreshFileTree],
+  );
 
   if (leftSidebarMode === "search") {
     return (
@@ -432,10 +527,16 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
       <div
         className={cn(
           "sidebar-file-tree-scroll flex-1 overflow-auto py-2 px-2",
+          "transition-[box-shadow,background-color] duration-fast ease-out-subtle",
           isFileTreeScrollActive && "is-scroll-active",
+          isExternalDragOver &&
+            "bg-primary/5 ring-2 ring-inset ring-primary/40",
         )}
         onScroll={markFileTreeScrollActive}
         onClick={handleTreeBackgroundClick}
+        onDragOver={handleExternalDragOver}
+        onDragLeave={handleExternalDragLeave}
+        onDrop={handleExternalDrop}
       >
         {/* Root create input */}
         {creating && creating.parentPath === vaultPath && (
