@@ -28,7 +28,7 @@ export function MacLeftPaneTopBar() {
       </div>
 
       <div
-        className="flex h-full min-w-0 flex-1 items-center gap-0.5 px-2 border-b border-border/40"
+        className="flex h-full min-w-0 flex-1 items-center gap-0.5 px-2"
         data-tauri-drag-region
         data-testid="mac-left-pane-controls"
       >
