@@ -71,7 +71,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 <h3 align="center">AI workspace</h3>
 
 - Agent mode for editing, planning, and task automation
-- Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
+- Multi-provider: OpenAI, Anthropic (Claude), Google (Gemini), DeepSeek, Moonshot (Kimi), Zhipu (GLM), MiMo, Qwen, Groq, OpenRouter, Ollama, plus any OpenAI-compatible endpoint
 - Orchestrated agent runtime for heavier tasks, with a fast path for simpler requests
 
 <h3 align="center">Editor and knowledge graph</h3>
@@ -79,7 +79,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - Markdown source / live preview / reading modes
 - Bidirectional links with `[[WikiLinks]]`
 - LaTeX, Mermaid, and code highlighting
-- Graph visualization for relationships across notes
+- Knowledge graph (global) and local graph (per-note neighborhood)
 
 <h3 align="center">Reading and capture</h3>
 
@@ -93,7 +93,15 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - Database views (table / kanban)
 - WebDAV sync
 - Flashcard review
+- Conversation export
+- Skill manager (workspace / user / built-in agent skills)
 - 15 themes
+
+<h3 align="center">Mobile companions</h3>
+
+- Native iOS app (SwiftUI) and Android app (Kotlin + Jetpack Compose) under `mobile/`
+- Pair to your desktop with the built-in Mobile Gateway (QR code + token) for direct LAN sync
+- Cross-network access through the optional self-hosted relay — see `docs/self-host.md`
 
 <h3 align="center">Plugin ecosystem (Developer Preview)</h3>
 
@@ -133,7 +141,6 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 Requirements:
 
 - Node.js 22+
-- 
 
 ```bash
 git clone https://github.com/blueberrycongee/Lumina-Note.git
@@ -146,10 +153,13 @@ npm run dev
 
 <h2 align="center">Tech Stack</h2>
 
-- Framework: Electron 41 (Chromium + Node.js in the main process)
+- Desktop: Electron 41 (Chromium + Node.js main process)
 - Frontend: React 18, TypeScript, Tailwind CSS
 - Editor: CodeMirror 6
 - State: Zustand
+- Agent runtime: Vercel AI SDK (`ai`)
+- Mobile: SwiftUI (iOS), Kotlin + Jetpack Compose (Android) — `mobile/`
+- Self-host relay (optional): Rust + axum + sqlx + Yjs CRDT — `server/`
 
 ---
 
