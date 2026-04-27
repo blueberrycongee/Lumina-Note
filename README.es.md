@@ -10,7 +10,7 @@ Tus notas permanecen en tu dispositivo. Lumina Note te ayuda a escribir, conecta
 
 [![GitHub Release](https://img.shields.io/github/v/release/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
-[![Tauri](https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white)](https://tauri.app/)
+[![Electron](https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/blueberrycongee/Lumina-Note/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/blueberrycongee/Lumina-Note/actions/workflows/ci.yml)
 [![Security Audit](https://img.shields.io/github/actions/workflow/status/blueberrycongee/Lumina-Note/security-audit.yml?branch=main&style=flat-square&label=Security%20Audit)](https://github.com/blueberrycongee/Lumina-Note/actions/workflows/security-audit.yml)
@@ -18,7 +18,7 @@ Tus notas permanecen en tu dispositivo. Lumina Note te ayuda a escribir, conecta
 [![Last Commit](https://img.shields.io/github/last-commit/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
 [![GitHub Stars](https://img.shields.io/github/stars/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/stargazers)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)
 
 **Idioma**: [English](./README.md) · [简体中文](./README.zh-CN.md) · [繁體中文](./README.zh-TW.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · Español · [Français](./README.fr.md) · [Deutsch](./README.de.md) · [Italiano](./README.it.md) · [Português (Brasil)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
@@ -29,7 +29,7 @@ Tus notas permanecen en tu dispositivo. Lumina Note te ayuda a escribir, conecta
 <h2 align="center">Por qué Lumina Note</h2>
 
 - **Diseño local-first**: tu vault permanece en local y tú decides qué se envía a los proveedores de modelos.
-- **Flujo de trabajo centrado en el conocimiento**: edición Markdown, WikiLinks, vista de grafo y recuperación con IA funcionan como un solo sistema.
+- **Flujo de trabajo centrado en el conocimiento**: edición Markdown, WikiLinks, vista de grafo y agentes de IA funcionan como un solo sistema.
 - **IA que realmente actúa**: `Agent` apoya tareas reales de edición, planificación y automatización.
 
 ---
@@ -73,7 +73,6 @@ Obtén la versión más reciente desde [Releases](https://github.com/blueberryco
 - Modo Agent para edición, planificación y automatización de tareas
 - Soporte para múltiples proveedores: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - Runtime de agente orquestado para tareas más pesadas, con ruta rápida para solicitudes simples
-- Recuperación semántica local (RAG) sobre tu vault
 
 <h3 align="center">Editor y grafo de conocimiento</h3>
 
@@ -90,7 +89,6 @@ Obtén la versión más reciente desde [Releases](https://github.com/blueberryco
 
 <h3 align="center">Capacidades adicionales</h3>
 
-- Notas de video de Bilibili con sincronización de marcas de tiempo de danmaku
 - Entrada de voz en tiempo real
 - Vistas de base de datos (tabla / kanban)
 - Sincronización WebDAV

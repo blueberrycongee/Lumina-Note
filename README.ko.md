@@ -10,7 +10,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/releases)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat-square)](LICENSE)
-[![Tauri](https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white)](https://tauri.app/)
+[![Electron](https://img.shields.io/badge/Electron-41-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org/)
 
 [![CI](https://img.shields.io/github/actions/workflow/status/blueberrycongee/Lumina-Note/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/blueberrycongee/Lumina-Note/actions/workflows/ci.yml)
 [![Security Audit](https://img.shields.io/github/actions/workflow/status/blueberrycongee/Lumina-Note/security-audit.yml?branch=main&style=flat-square&label=Security%20Audit)](https://github.com/blueberrycongee/Lumina-Note/actions/workflows/security-audit.yml)
@@ -18,7 +18,7 @@
 [![Last Commit](https://img.shields.io/github/last-commit/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
 [![GitHub Stars](https://img.shields.io/github/stars/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/stargazers)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)
 
 **언어**: [English](./README.md) · [简体中文](./README.zh-CN.md) · [繁體中文](./README.zh-TW.md) · [日本語](./README.ja.md) · 한국어 · [Español](./README.es.md) · [Français](./README.fr.md) · [Deutsch](./README.de.md) · [Italiano](./README.it.md) · [Português (Brasil)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
@@ -29,7 +29,7 @@
 <h2 align="center">왜 Lumina Note 인가</h2>
 
 - **로컬 우선 설계**: 볼트는 로컬에 보관되며, 어떤 내용을 모델 제공자에게 보낼지 직접 결정할 수 있습니다.
-- **지식 작업 흐름 중심**: Markdown 편집, WikiLinks, 그래프 뷰, AI 검색이 하나의 시스템으로 이어집니다.
+- **지식 작업 흐름 중심**: Markdown 편집, WikiLinks, 그래프 뷰, AI 에이전트가 하나의 시스템으로 이어집니다.
 - **실제로 작업하는 AI**: `Agent` 모드가 실제 편집, 계획, 자동화 작업을 지원합니다.
 
 ---
@@ -73,7 +73,6 @@
 - Agent 모드: 편집, 계획 및 작업 자동화
 - 다중 모델 제공자 지원: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - 무거운 작업은 오케스트레이션 Agent 런타임으로 보내고, 단순 요청은 빠른 경로를 유지
-- 로컬 볼트를 대상으로 한 시맨틱 검색(RAG)
 
 <h3 align="center">에디터와 지식 그래프</h3>
 
@@ -90,7 +89,6 @@
 
 <h3 align="center">추가 기능</h3>
 
-- Bilibili 비디오 노트(탄막 타임스탬프 동기화)
 - 실시간 음성 입력
 - 데이터베이스 뷰(테이블 / 칸반)
 - WebDAV 동기화

@@ -18,7 +18,7 @@ Your notes stay on your device. Lumina Note helps you write, connect, search, an
 [![Last Commit](https://img.shields.io/github/last-commit/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
 [![GitHub Stars](https://img.shields.io/github/stars/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/stargazers)
 [![Commit Activity](https://img.shields.io/github/commit-activity/m/blueberrycongee/Lumina-Note?style=flat-square)](https://github.com/blueberrycongee/Lumina-Note/commits/main)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat-square)
 
 **Language**: English (default) · [简体中文](./README.zh-CN.md) · [繁體中文](./README.zh-TW.md) · [日本語](./README.ja.md) · [한국어](./README.ko.md) · [Español](./README.es.md) · [Français](./README.fr.md) · [Deutsch](./README.de.md) · [Italiano](./README.it.md) · [Português (Brasil)](./README.pt-BR.md) · [Русский](./README.ru.md)
 
@@ -29,7 +29,7 @@ Your notes stay on your device. Lumina Note helps you write, connect, search, an
 <h2 align="center">Why Lumina Note</h2>
 
 - **Local-first by design**: your vault is local, and you decide what gets sent to model providers.
-- **Knowledge-centered workflow**: Markdown editing, WikiLinks, graph view, and AI retrieval work as one system.
+- **Knowledge-centered workflow**: Markdown editing, WikiLinks, graph view, and AI agents work as one system.
 - **AI that can actually act**: Agent mode supports real editing, planning, and automation tasks.
 
 ---
@@ -73,7 +73,6 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - Agent mode for editing, planning, and task automation
 - Multi-provider support: OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - Orchestrated agent runtime for heavier tasks, with a fast path for simpler requests
-- Local semantic retrieval (RAG) from your vault
 
 <h3 align="center">Editor and knowledge graph</h3>
 
@@ -90,7 +89,6 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 <h3 align="center">Extra capabilities</h3>
 
-- Bilibili video notes with danmaku timestamp sync
 - Real-time voice input
 - Database views (table / kanban)
 - WebDAV sync
