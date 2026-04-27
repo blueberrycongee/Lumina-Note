@@ -564,7 +564,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
             <div className="pl-5 py-1 space-y-1 border-l border-muted-foreground/20 ml-1.5">
               {tool.params && (
                 <div>
-                  <div className="text-xs text-muted-foreground/50 mb-0.5">{t.agentMessage.params}:</div>
+                  <div className="text-xs text-muted-foreground/70 mb-0.5">{t.agentMessage.params}:</div>
                   <pre className="text-xs bg-muted/30 p-1.5 rounded overflow-x-auto">
                     {tool.params}
                   </pre>
@@ -572,7 +572,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
               )}
               {tool.result && (
                 <div>
-                  <div className="text-xs text-muted-foreground/50 mb-0.5">{t.agentMessage.result}:</div>
+                  <div className="text-xs text-muted-foreground/70 mb-0.5">{t.agentMessage.result}:</div>
                   <pre className="text-xs bg-muted/30 p-1.5 rounded overflow-x-auto max-h-32 overflow-y-auto">
                     {tool.result}
                   </pre>

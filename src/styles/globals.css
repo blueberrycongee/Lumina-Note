@@ -143,12 +143,22 @@ body.resizing iframe[data-codex-iframe="true"] {
   --background: 222 20% 7%;            /* near-black, slight cool tint */
   --foreground: 220 14% 95%;
   --muted: 222 16% 12%;
-  --muted-foreground: 220 9% 58%;
-  --accent: 222 14% 16%;
+  /* Bumped 58 → 64 so that the many `text-muted-foreground/80` and `/50`
+   * call-sites (and rendered prose secondary text) clear WCAG AA on dark
+   * surfaces with headroom — at /80 the effective L is ~51, comfortably
+   * above the 4.5:1 threshold on bg L=7. */
+  --muted-foreground: 220 10% 64%;
+  /* Bumped 16 → 21 so hover surfaces have a perceptible delta from
+   * --muted (L=12). Old 4-point gap was below the just-noticeable
+   * difference for grayscale, so hover/active states felt dead. */
+  --accent: 222 14% 21%;
   --accent-foreground: 220 14% 95%;
   --popover: 222 18% 14%;              /* clearly lifted from the 7% bg — was 10%, too close */
   --popover-foreground: 220 14% 95%;
-  --border: 220 13% 26%;               /* slightly more defined edges in dark mode */
+  /* Bumped 26 → 32 to absorb the cost of the many `border-border/60`
+   * (132 uses) and `/50` (23) call-sites — at L=26 those collapsed into
+   * the background. At L=32 even /50 leaves a visible edge. */
+  --border: 220 13% 32%;
 
   --primary: 0 0% 98%;
   --primary-foreground: 0 0% 9%;

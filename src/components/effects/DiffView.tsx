@@ -168,10 +168,10 @@ function SourceDiffView({ diffLines }: { diffLines: DiffLine[] }) {
                 line.type === "removed" && "bg-[hsl(var(--diff-remove-bg)/0.15)]"
               )}
             >
-              <td className="w-12 px-2 py-0.5 text-right text-muted-foreground/50 select-none border-r border-border/30">
+              <td className="w-12 px-2 py-0.5 text-right text-muted-foreground/70 select-none border-r border-border/40">
                 {line.lineNumber.old || ""}
               </td>
-              <td className="w-12 px-2 py-0.5 text-right text-muted-foreground/50 select-none border-r border-border/30">
+              <td className="w-12 px-2 py-0.5 text-right text-muted-foreground/70 select-none border-r border-border/40">
                 {line.lineNumber.new || ""}
               </td>
               <td className={cn(

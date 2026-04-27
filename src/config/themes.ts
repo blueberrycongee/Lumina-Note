@@ -114,12 +114,20 @@ function createThemeColors(
       background: `${hue} ${satDark}% 11%`,
       foreground: `${hue} ${satDark + 3}% 85%`,
       muted: `${hue} ${satDark}% 15%`,
-      mutedForeground: `${hue} ${satDark}% 55%`,
-      accent: `${hue} ${satDark}% 18%`,
+      // 55 → 62 — at L=55 muted text on muted bg (L=15) was ~4.2:1,
+      // below WCAG AA. 62 brings it to ~5.1:1 with no perceived
+      // brightness shift on the foreground prose (still clearly secondary).
+      mutedForeground: `${hue} ${satDark}% 62%`,
+      // 18 → 22 — old 3-point delta from muted (L=15) was below the JND
+      // for grayscale; hover/active states felt dead. 22 reads as a
+      // clear "lift" without becoming a separate surface tier.
+      accent: `${hue} ${satDark}% 22%`,
       accentForeground: `${hue} ${satDark + 3}% 92%`,
       primary: `${primaryHue} ${primarySat - 10}% 55%`,
       primaryForeground: `${hue} ${satDark}% 12%`,
-      border: `${hue} ${satDark}% 22%`,
+      // 22 → 28 — borders need to survive `border-border/60` (132 uses)
+      // and `/50` (23). At L=22 a 60% alpha flattened them into bg.
+      border: `${hue} ${satDark}% 28%`,
       heading: `${primaryHue} ${primarySat}% 70%`,
       link: `${primaryHue} ${primarySat + 5}% 65%`,
       linkHover: `${primaryHue} ${primarySat + 10}% 70%`,
