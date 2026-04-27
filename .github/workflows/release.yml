@@ -83,8 +83,37 @@ jobs:
           node-version: lts/*
           cache: 'npm'
 
+      # Manual bun install with --retry-all-errors. The official
+      # `oven-sh/setup-bun@v2` gives up after 3 attempts; we hit GitHub's
+      # release CDN returning 502 on the v1.3.2 Windows build and lost the
+      # whole platform's run. curl with `--retry 8 --retry-all-errors`
+      # handles transient 5xx and connection drops up to ~10 minutes total.
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        shell: bash
+        env:
+          BUN_VERSION: "1.3.13"
+        run: |
+          set -euo pipefail
+          case "$RUNNER_OS" in
+            Linux)   target="bun-linux-x64";      binname="bun";;
+            macOS)   target="bun-darwin-aarch64"; binname="bun";;
+            Windows) target="bun-windows-x64";    binname="bun.exe";;
+            *) echo "Unsupported runner: $RUNNER_OS"; exit 1;;
+          esac
+          url="https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/${target}.zip"
+          install_dir="$HOME/.bun/bin"
+          mkdir -p "$install_dir"
+          tmp="$(mktemp -d)"
+          echo "Downloading $url ..."
+          curl -fsSL \
+               --retry 8 --retry-delay 10 --retry-max-time 600 \
+               --retry-all-errors \
+               -o "$tmp/bun.zip" "$url"
+          unzip -o -q "$tmp/bun.zip" -d "$tmp/extract"
+          cp "$tmp/extract/${target}/$binname" "$install_dir/$binname"
+          chmod +x "$install_dir/$binname" || true
+          echo "$install_dir" >> "$GITHUB_PATH"
+          "$install_dir/$binname" --version
 
       # Opencode is the in-process AI server bundled into the Electron main
       # process. Its source isn't vendored in this repo (gitignored under
