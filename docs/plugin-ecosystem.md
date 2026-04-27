@@ -68,7 +68,24 @@ Each plugin lives in its own folder and must include `plugin.json`:
 
 - If `api_version` does not match host API version, plugin will not load.
 - If `min_app_version` is greater than current app version, plugin will not load.
-- Incompatible reasons are shown in `Settings -> Plugins`.
+- Incompatible reasons are shown in the Installed Plugins modal (Ribbon → Puzzle icon).
+
+### Theme plugins
+
+Theme plugins extend the manifest with a `theme` block:
+
+```json
+{
+  "theme": {
+    "auto_apply": true,
+    "tokens": { "--accent": "#ff7a59" },
+    "light": { "--background": "#fafafa" },
+    "dark":  { "--background": "#0e0f12" }
+  }
+}
+```
+
+`tokens` is shared between modes; `light` / `dark` override per mode. With `auto_apply: true` the runtime applies the preset on load.
 
 ## Entry contract
 
@@ -209,11 +226,10 @@ Data is namespaced by plugin id in local storage.
 
 Every sensitive API checks permissions declared in `plugin.json`.
 
-- `commands:*` / `commands:register`
-- `events:*` / `events:subscribe`
+- `commands:*` (`commands:register`)
+- `events:*` (`events:subscribe`)
 - `vault:*` (`vault:read`, `vault:write`, `vault:delete`, `vault:move`, `vault:list`)
 - `metadata:read`
-- `workspace:*` (`workspace:read`, `workspace:open`)
 - `workspace:*` (`workspace:read`, `workspace:open`, `workspace:panel`, `workspace:tab`)
 - `editor:*` (`editor:read`, `editor:write`, `editor:decorate`)
 - `ui:*` (`ui:notify`, `ui:theme`, `ui:decorate`)
@@ -226,19 +242,21 @@ You can also use `"*"` to allow all capabilities. `namespace:*` wildcard is also
 
 ## Plugin manager (UI)
 
-Open `Settings -> Plugins (Developer Preview)` to:
+Click the **Puzzle icon in the ribbon** to open the Installed Plugins modal. Two sections live there:
+
+**Plugins (Developer Preview)** — the top section:
 
 - Refresh plugin discovery
 - Reload plugin runtime
 - Enable/disable plugins
-- Open workspace plugin folder
+- Open the workspace plugin folder
 - Scaffold an example plugin
 - Scaffold a theme plugin template
 - Scaffold a UI-overhaul plugin template
-- Toggle `Appearance Safe Mode` (disables appearance-heavy plugins)
+- Toggle Appearance Safe Mode (disables appearance-heavy plugins)
 - Unload all plugin styles with one click
 
-Open `Settings -> Plugin Style Runtime (Dev)` to inspect:
+**Plugin Style Runtime (Dev)** — the bottom section, inspect:
 
 - active style layers
 - selector conflicts across plugins
@@ -246,14 +264,18 @@ Open `Settings -> Plugin Style Runtime (Dev)` to inspect:
 ## Quick start
 
 1. Open a workspace in Lumina.
-2. Go to `Settings -> Plugins (Developer Preview)`.
-3. Click `Scaffold Example Plugin`.
-4. Enable `hello-lumina` if needed.
-5. In chat input, type `/hello-lumina` and send.
+2. Click the Puzzle icon in the ribbon.
+3. Click **Scaffold Example Plugin**.
+4. Enable `hello-lumina` if it isn't already.
+5. In the AI chat input, type `/hello-lumina` and send.
 
-## Tauri commands (for frontend integrations)
+## Frontend IPC handlers
 
-- `plugin_list(workspace_path?)`
-- `plugin_read_entry(plugin_id, workspace_path?)`
-- `plugin_get_workspace_dir(workspace_path)`
-- `plugin_scaffold_example(workspace_path)`
+The plugin runtime is exposed to the renderer through Electron IPC handlers in `electron/main/handlers/plugins.ts`. You only need these if you're embedding the plugin system, not for writing a plugin (use `api.*` for that).
+
+- `plugin_list({ workspacePath? })` → `PluginInfo[]`
+- `plugin_read_entry({ pluginId, workspacePath? })` → `{ info, code }`
+- `plugin_get_workspace_dir({ workspacePath })` → `string`
+- `plugin_scaffold_example({ workspacePath })` → `string` (created dir)
+- `plugin_scaffold_theme({ workspacePath })` → `string`
+- `plugin_scaffold_ui_overhaul({ workspacePath })` → `string`
