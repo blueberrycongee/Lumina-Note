@@ -51,6 +51,44 @@ function stripFrontmatter(raw: string): string {
   return raw.slice(end + 4).replace(/^\s+/, "");
 }
 
+/**
+ * Skip leading heading lines so the preview starts with body content.
+ * The hover card already shows the note's title as its own header — if
+ * we leave the leading `# Title` in the body, the H1 takes up half the
+ * card and duplicates the same string.
+ *
+ * Handles both ATX (`# `, `## `, …) and Setext (`Title\n====` /
+ * `Title\n----`) heading styles, plus the blank lines between them.
+ * Falls back to the original text if stripping leaves nothing — for
+ * a heading-only note we'd rather show the title than a blank card.
+ */
+function stripLeadingHeadings(text: string): string {
+  const lines = text.split("\n");
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const trimmed = line.trim();
+    if (trimmed === "") {
+      i++;
+      continue;
+    }
+    // ATX heading: # / ## / ### …  up to 6
+    if (/^#{1,6}\s/.test(trimmed)) {
+      i++;
+      continue;
+    }
+    // Setext heading: this line is text, next line is === / ---
+    const next = i + 1 < lines.length ? lines[i + 1].trim() : "";
+    if (next && /^(=+|-+)$/.test(next)) {
+      i += 2;
+      continue;
+    }
+    break;
+  }
+  const stripped = lines.slice(i).join("\n").replace(/^\s+/, "");
+  return stripped || text;
+}
+
 function truncatePlain(text: string, max: number): string {
   if (text.length <= max) return text;
   // Don't cut mid-word if we can avoid it.
@@ -70,7 +108,7 @@ export async function getWikiPreview(path: string): Promise<string> {
   if (cached !== undefined) return cached;
 
   const raw = await readFile(path);
-  const body = stripFrontmatter(raw);
+  const body = stripLeadingHeadings(stripFrontmatter(raw));
   const truncated = truncatePlain(body, PREVIEW_PLAIN_CHARS);
   const html = parseMarkdown(truncated);
 
