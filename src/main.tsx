@@ -3,6 +3,9 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./styles/globals.css";
 import "katex/dist/katex.min.css";
+import { installGlobalScrollFade } from "@/lib/scrollFadeGlobal";
+
+installGlobalScrollFade();
 
 if (import.meta.env.DEV) {
   import("@/perf/devPerfMonitor")
