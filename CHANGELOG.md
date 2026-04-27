@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-04-27
+
+紧跟 v1.3.0 的小修复。
+
+### 改进
+- **AI 聊天面板整体提升到 popover 层**：根容器从 `bg-background` 切到 `bg-popover`——浅色模式下是纯白 `#ffffff`，深色模式下是浮起的 popover 灰；视觉上 AI 对话框跟编辑器画布有了一档清晰的高度差，靠近 ChatGPT / Claude 桌面版那种"对话框漂浮在画布之上"的层级
+- **聊天输入胶囊也走纯白**：原本是 `bg-muted`（浅色 `#f1f3f5`，跟面板对比偏闷），现在跟面板一致用 `bg-popover`，`#ffffff` 上靠 hairline 边框 + `shadow-elev-1` 形成轻微的"浮起"轮廓
+
+### CI / 发布
+- **Release workflow 真正修复 race condition**：v1.2.2 那次修复在 electron-builder 26.x 上失效——pre-create 的 published release 不被 electron-builder 当成上传目标，三个矩阵 runner 仍并发 `POST /releases` 撞 `422 already_exists`（v1.3.0 第一次发版就栽这）。改成 pre-create **draft** + 矩阵用 `--publish never` + 每个 runner 用 `gh release upload` 单独传自己平台的产物（文件名不冲突，并发安全）+ 收尾 job `gh release edit --draft=false` 翻成正式发布
+- **`publish-release` 翻发布步骤补 `--repo`**：那个 job 不做 actions/checkout，没有 `.git` 让 `gh` 自动推断 repo，必须显式指定才能完成
+
 ## [1.3.0] - 2026-04-27
 
 本次更新核心是**用 PRODUCT.md / DESIGN.md 把全应用 chrome 收敛到一套苹果 / OpenAI 风格的设计系统**——所有滚动条、所有下拉菜单、所有阴影、所有 list row 走同一套 token 与节奏。同时清理了一个一直没真正实现的"PDF 元素识别"功能（+23 / −1303 行）。
