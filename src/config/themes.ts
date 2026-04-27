@@ -169,13 +169,13 @@ export const OFFICIAL_THEMES: Theme[] = [
     id: "default",
     name: "Default",
     description: "Clean, neutral gray",
-    ...createThemeColors(220, 16, 12, 0, 0),
+    ...createThemeColors(220, 16, 5, 0, 0),
     // Override primary-derived colors to be truly achromatic — the
     // generator adds saturation offsets to primarySat which at 0 would
     // leak hue-0 warmth into headings/links. Explicit values match the
     // Notion/Linear achromatic pattern set in globals.css.
     light: {
-      ...createThemeColors(220, 16, 12, 0, 0).light,
+      ...createThemeColors(220, 16, 5, 0, 0).light,
       primary: "0 0% 9%",
       primaryForeground: "0 0% 100%",
       heading: "0 0% 9%",
@@ -186,7 +186,7 @@ export const OFFICIAL_THEMES: Theme[] = [
       tag: "0 0% 35%",
     },
     dark: {
-      ...createThemeColors(220, 16, 12, 0, 0).dark,
+      ...createThemeColors(220, 16, 5, 0, 0).dark,
       primary: "0 0% 98%",
       primaryForeground: "0 0% 9%",
       heading: "0 0% 93%",

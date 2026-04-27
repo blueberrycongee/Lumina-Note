@@ -158,9 +158,19 @@ body.resizing iframe[data-codex-iframe="true"] {
    * touch — without it, dark popovers feel like flat squares; with it,
    * they read as physical objects sitting above the page.
    */
-  --background: 222 18% 9%;
-  --foreground: 220 12% 96%;
-  --muted: 222 16% 14%;
+  /*
+   * Saturation dropped from 14-18 → 5-6 across the dark palette
+   * (Linear / Notion / VSCode Dark+ / Cursor sit in that range; iA
+   * Writer / Spotify go fully achromatic). At 14-18 the "tinted
+   * neutral" read more as "blue-gray UI" than "neutral surface,"
+   * which clashed against any colour in user notes — screenshots,
+   * callouts, highlights, syntax. A 5–6% sat keeps a barely-there
+   * cool hint for brand identity without competing with content.
+   * Hue 222 retained so any future sat bump goes cool, not random.
+   */
+  --background: 222 6% 9%;
+  --foreground: 220 5% 96%;
+  --muted: 222 6% 14%;
   /*
    * muted-foreground L=66 gives:
    *   /muted (L=14)   : 5.7:1  ✓ AA body
@@ -168,18 +178,18 @@ body.resizing iframe[data-codex-iframe="true"] {
    *   /accent (L=19)  : 4.9:1  ✓ AA body
    * Headroom for the many `/80` and `/70` call-sites to still pass AA.
    */
-  --muted-foreground: 220 8% 66%;
-  --accent: 222 14% 19%;
-  --accent-foreground: 220 14% 96%;
-  --popover: 222 18% 23%;              /* clearly lifted — popovers stand off the page */
-  --popover-foreground: 220 14% 96%;
+  --muted-foreground: 220 5% 66%;
+  --accent: 222 6% 19%;
+  --accent-foreground: 220 5% 96%;
+  --popover: 222 6% 23%;               /* clearly lifted — popovers stand off the page */
+  --popover-foreground: 220 5% 96%;
   /*
    * Border at L=28 reads as a quiet hairline at full opacity and stays
    * perceptible at /60 (132 call-sites use that). The inner top-highlight
    * carries most of the "edge of the card" signal for popovers/dialogs,
    * so the border itself can be muted without losing definition.
    */
-  --border: 222 12% 28%;
+  --border: 222 5% 28%;
 
   --primary: 0 0% 98%;
   --primary-foreground: 0 0% 9%;
@@ -194,7 +204,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info-foreground: 0 0% 100%;
 
   --md-heading: 0 0% 96%;
-  --ui-ribbon: 222 16% 6%;               /* recessed below canvas — ribbon reads as deep chrome */
+  --ui-ribbon: 222 6% 6%;                /* recessed below canvas — ribbon reads as deep chrome */
 
   /*
    * Shadows in dark mode — Apple's pattern.
