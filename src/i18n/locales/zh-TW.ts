@@ -133,7 +133,7 @@ export default {
     noteNotFound: "筆記不存在",
     mermaidRenderFailed: "渲染失敗",
     slashMenu: {
-      placeholder: "開始輸入，或按 / 叫出命令...",
+      placeholder: "開始輸入，或按 {kbd} 叫出命令…",
       noCommands: "未找到命令",
       categories: {
         ai: "AI",

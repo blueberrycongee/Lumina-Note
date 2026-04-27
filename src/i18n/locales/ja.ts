@@ -133,7 +133,7 @@ export default {
     noteNotFound: "ノートが見つかりません",
     mermaidRenderFailed: "レンダリングに失敗",
     slashMenu: {
-      placeholder: "入力を開始するか、/ でコマンドを開きます...",
+      placeholder: "入力を始めるか、{kbd} でコマンドを開きます…",
       noCommands: "コマンドが見つかりません",
       categories: {
         ai: "AI",

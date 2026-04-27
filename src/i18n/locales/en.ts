@@ -133,7 +133,7 @@ export default {
     noteNotFound: "Note not found",
     mermaidRenderFailed: "Render failed",
     slashMenu: {
-      placeholder: "Start typing, or press / to open commands...",
+      placeholder: "Start typing, or press {kbd} for commands…",
       noCommands: "No commands found",
       categories: {
         ai: "AI",

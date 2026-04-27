@@ -341,23 +341,67 @@ export const slashCommandPlugin = ViewPlugin.fromClass(
 
 // ============ 占位符 ============
 
+// Renders the empty-document placeholder. Strings can embed `{kbd}` to mark
+// where a small kbd-styled chip should be inserted (the chip itself always
+// renders the literal "/"). This converts a plain italic line into a real
+// affordance: the slash key reads as a key rather than punctuation, which
+// is the only signal new users get that the slash menu exists.
 class PlaceholderWidget extends WidgetType {
   constructor(readonly text: string) { super(); }
-  
+
+  eq(other: PlaceholderWidget) {
+    return other.text === this.text;
+  }
+
   toDOM() {
     const span = document.createElement("span");
     span.className = "cm-placeholder";
-    span.textContent = this.text;
     span.style.cssText = `
-      color: hsl(var(--muted-foreground) / 0.5);
+      color: hsl(var(--muted-foreground) / 0.55);
       pointer-events: none;
       position: absolute;
       left: 28px;
-      font-style: italic;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
     `;
+
+    const segments = this.text.split("{kbd}");
+    if (segments.length === 1) {
+      span.textContent = this.text;
+      span.style.fontStyle = "italic";
+      return span;
+    }
+
+    segments.forEach((segment, i) => {
+      if (segment) {
+        const text = document.createElement("span");
+        text.textContent = segment.replace(/^\s+|\s+$/g, " ").trim();
+        text.style.cssText = "font-style: italic;";
+        span.appendChild(text);
+      }
+      if (i < segments.length - 1) {
+        const kbd = document.createElement("kbd");
+        kbd.textContent = "/";
+        kbd.style.cssText = `
+          font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+          font-size: 0.85em;
+          font-style: normal;
+          padding: 0 0.4em;
+          line-height: 1.4;
+          border-radius: 4px;
+          background: hsl(var(--muted) / 0.8);
+          color: hsl(var(--foreground) / 0.7);
+          border: 1px solid hsl(var(--border) / 0.6);
+          box-shadow: inset 0 -1px 0 hsl(var(--border) / 0.4);
+        `;
+        span.appendChild(kbd);
+      }
+    });
+
     return span;
   }
-  
+
   ignoreEvent() { return true; }
 }
 
