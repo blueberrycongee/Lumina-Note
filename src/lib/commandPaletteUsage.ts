@@ -8,8 +8,6 @@ export const COMMAND_USAGE_EVENT = "lumina-command-palette-usage-updated";
 export const FEATURED_COMMAND_IDS = [
   "show-graph",
   "global-search",
-  "publish-site",
-  "profile-preview",
   "toggle-theme",
 ] as const;
 

@@ -6,30 +6,26 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { useFileStore } from "@/stores/useFileStore";
-import { Settings, Bot, RefreshCw, Globe, Upload, Info, X } from "lucide-react";
+import { Settings, Bot, RefreshCw, Globe, Info, X } from "lucide-react";
 import { GeneralSection } from "../settings/GeneralSection";
 import { SystemSection } from "../settings/SystemSection";
 import { AISettingsContent } from "../ai/AISettingsModal";
 import { WebDAVSettings } from "../settings/WebDAVSettings";
-import { ProfileSettingsSection } from "../settings/ProfileSettingsSection";
-import { PublishSettingsSection } from "../settings/PublishSettingsSection";
 import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { ProxySection } from "../settings/ProxySection";
 
-type TabId = "general" | "ai" | "sync" | "network" | "publish" | "system";
+type TabId = "general" | "ai" | "sync" | "network" | "system";
 
 const TAB_ICONS: Record<TabId, typeof Settings> = {
   general: Settings,
   ai: Bot,
   sync: RefreshCw,
   network: Globe,
-  publish: Upload,
   system: Info,
 };
 
-const TAB_ORDER: TabId[] = ["general", "ai", "sync", "network", "publish", "system"];
+const TAB_ORDER: TabId[] = ["general", "ai", "sync", "network", "system"];
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -39,7 +35,6 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsModalProps) {
   const { t } = useLocaleStore();
-  const { vaultPath, fileTree } = useFileStore();
   const [activeTab, setActiveTab] = useState<TabId>("general");
 
   if (!isOpen) return null;
@@ -64,13 +59,6 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
         return (
           <>
             <ProxySection />
-          </>
-        );
-      case "publish":
-        return (
-          <>
-            <PublishSettingsSection vaultPath={vaultPath} fileTree={fileTree} />
-            <ProfileSettingsSection fileTree={fileTree} />
           </>
         );
       case "system":

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { X, FileText, Network, Pin, Plus, User, Puzzle, Shapes, Images } from "lucide-react";
+import { X, FileText, Network, Pin, Plus, Puzzle, Shapes, Images } from "lucide-react";
 import { AnimatePresence, motion, Reorder, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
@@ -189,8 +189,6 @@ function TabItem({
           <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "diagram" ? (
           <Shapes size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-        ) : tab.type === "profile-preview" ? (
-          <User size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "plugin-view" ? (
           <Puzzle size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "image-manager" ? (

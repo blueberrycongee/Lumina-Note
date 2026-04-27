@@ -52,7 +52,6 @@ import { enableDebugLogger, disableDebugLogger } from "@/lib/debugLogger";
 import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import { AutoTooltipHost } from "@/components/ui/tooltip";
-import { ProfilePreview } from "@/components/profile/ProfilePreview";
 import { DevProfiler } from "@/perf/DevProfiler";
 import type { FsChangePayload } from "@/lib/fsChange";
 import { usePluginStore } from "@/stores/usePluginStore";
@@ -1033,11 +1032,6 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <ImageManagerView />
-            </div>
-          ) : activeTab?.type === "profile-preview" ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <ProfilePreview />
             </div>
           ) : activeTab?.type === "plugin-view" ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">

@@ -33,7 +33,6 @@ export type TabType =
   | "pdf"
   | "ai-chat"
   | "image-manager"
-  | "profile-preview"
   | "plugin-view";
 
 // 孤立视图节点信息
@@ -141,7 +140,6 @@ interface FileState {
 
   // Open special tabs
   openGraphTab: () => void;
-  openProfilePreviewTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openPDFTab: (pdfPath: string) => void;
   openDiagramTab: (diagramPath: string) => void;
@@ -984,60 +982,6 @@ export const useFileStore = create<FileState>()(
         };
 
         updatedTabs.push(graphTab);
-
-        set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
-          currentFile: null,
-          currentContent: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-          lastSavedContent: "",
-        });
-      },
-
-      openProfilePreviewTab: () => {
-        const {
-          tabs,
-          activeTabIndex,
-          currentContent,
-          isDirty,
-          undoStack,
-          redoStack,
-        } = get();
-
-        const existingIndex = tabs.findIndex(
-          (tab) => tab.type === "profile-preview",
-        );
-        if (existingIndex !== -1) {
-          get().switchTab(existingIndex);
-          return;
-        }
-
-        let updatedTabs = [...tabs];
-        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
-          updatedTabs[activeTabIndex] = {
-            ...updatedTabs[activeTabIndex],
-            content: currentContent,
-            isDirty,
-            undoStack,
-            redoStack,
-          };
-        }
-
-        const previewTab: Tab = {
-          id: "__profile_preview__",
-          type: "profile-preview",
-          path: "",
-          name: "Profile Preview",
-          content: "",
-          isDirty: false,
-          undoStack: [],
-          redoStack: [],
-        };
-
-        updatedTabs.push(previewTab);
 
         set({
           tabs: updatedTabs,

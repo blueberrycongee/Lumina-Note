@@ -1,7 +1,7 @@
 import type { FileEntry } from "@/lib/host";
 import { basename, dirname, extname, relative } from "@/lib/path";
 import { getRelativePath } from "@/lib/utils";
-import { extractAssetLinks, resolveAssetSourcePath, rewriteMarkdownAssetLinks } from "@/services/publish/assets";
+import { extractAssetLinks, resolveAssetSourcePath, rewriteMarkdownAssetLinks } from "@/services/markdown/assets";
 
 export const IMAGE_EXTENSIONS = new Set([
   ".png",

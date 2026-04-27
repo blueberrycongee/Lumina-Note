@@ -1,7 +1,7 @@
 import { basename, dirname, extname, join } from "@/lib/path";
 import { buildRelativeAssetReference } from "@/services/assets/imageManager";
-import { isExternalUrl, resolveAssetSourcePath } from "@/services/publish/assets";
-import { createStableSlug } from "@/services/publish/slug";
+import { isExternalUrl, resolveAssetSourcePath } from "@/services/markdown/assets";
+import { createStableSlug } from "@/services/markdown/slug";
 
 const normalizePath = (path: string): string => path.replace(/\\/g, "/");
 

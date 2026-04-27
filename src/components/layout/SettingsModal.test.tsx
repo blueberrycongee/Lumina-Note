@@ -110,7 +110,6 @@ vi.mock("@/stores/useLocaleStore", () => ({
           ai: "AI",
           sync: "Sync",
           network: "Network",
-          publish: "Publish",
           system: "System",
         },
       },
@@ -177,14 +176,6 @@ vi.mock("./LanguageSwitcher", () => ({
   LanguageSwitcher: () => <div>LanguageSwitcher</div>,
 }));
 
-vi.mock("../settings/ProfileSettingsSection", () => ({
-  ProfileSettingsSection: () => <div>ProfileSettings</div>,
-}));
-
-vi.mock("../settings/PublishSettingsSection", () => ({
-  PublishSettingsSection: () => <div>PublishSettings</div>,
-}));
-
 vi.mock("../settings/MobileGatewaySection", () => ({
   MobileGatewaySection: () => <div>MobileGateway</div>,
 }));
@@ -213,7 +204,7 @@ describe("SettingsModal", () => {
     onOpenUpdateModal.mockClear();
   });
 
-  it("renders tabbed navigation with 6 tabs", () => {
+  it("renders tabbed navigation with 5 tabs", () => {
     render(
       <SettingsModal
         isOpen
@@ -226,7 +217,6 @@ describe("SettingsModal", () => {
     expect(screen.getByText("AI")).toBeInTheDocument();
     expect(screen.getByText("Sync")).toBeInTheDocument();
     expect(screen.getByText("Network")).toBeInTheDocument();
-    expect(screen.getByText("Publish")).toBeInTheDocument();
     expect(screen.getByText("System")).toBeInTheDocument();
   });
 
@@ -291,21 +281,6 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByText("Network"));
 
     expect(screen.getByText("Proxy")).toBeInTheDocument();
-  });
-
-  it("switches to publish tab and shows publish section", () => {
-    render(
-      <SettingsModal
-        isOpen
-        onClose={() => undefined}
-        onOpenUpdateModal={onOpenUpdateModal}
-      />,
-    );
-
-    fireEvent.click(screen.getByText("Publish"));
-
-    expect(screen.getByText("PublishSettings")).toBeInTheDocument();
-    expect(screen.getByText("ProfileSettings")).toBeInTheDocument();
   });
 
   it("renders the block editor toggle and toggles state on click", async () => {
