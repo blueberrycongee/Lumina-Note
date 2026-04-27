@@ -158,4 +158,7 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "$TAG" --draft=false
+        # `--repo` is required because this job doesn't actions/checkout —
+        # without it `gh` falls back to reading the active repo from a local
+        # `.git` and exits non-zero.
+        run: gh release edit "$TAG" --draft=false --repo "${{ github.repository }}"
