@@ -1379,7 +1379,7 @@ export function MainAIChatShell() {
                   popover-tier status. */}
               <div
                 ref={inputBarRef}
-                className="relative border border-border bg-muted rounded-ui-xl shadow-elev-1 transition-[box-shadow] duration-fast ease-out-subtle"
+                className="relative border border-border bg-popover rounded-ui-xl shadow-elev-1 transition-[box-shadow] duration-fast ease-out-subtle"
               >
                 {/* Skill menu (slash command) */}
                 <Popover
