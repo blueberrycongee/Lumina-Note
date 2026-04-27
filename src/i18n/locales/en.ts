@@ -1474,6 +1474,7 @@ export default {
   // Knowledge Graph
   knowledgeGraph: {
     settings: "Graph Settings",
+    loadingPreview: "Loading preview…",
     physics: "Physics Engine",
     nodeRepulsion: "Node Repulsion",
     linkLength: "Link Length",

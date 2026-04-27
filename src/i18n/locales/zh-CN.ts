@@ -1443,6 +1443,7 @@ export default {
   // 知识图谱
   knowledgeGraph: {
     settings: "图谱设置",
+    loadingPreview: "正在加载内容预览…",
     physics: "物理引擎",
     nodeRepulsion: "节点斥力",
     linkLength: "链接长度",

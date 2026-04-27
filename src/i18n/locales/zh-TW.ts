@@ -1444,6 +1444,7 @@ export default {
   // 知識圖譜
   knowledgeGraph: {
     settings: "圖譜設定",
+    loadingPreview: "正在載入內容預覽…",
     physics: "物理引擎",
     nodeRepulsion: "節點斥力",
     linkLength: "鏈接長度",

@@ -11,8 +11,10 @@ import {
   MousePointer2,
   Settings,
   ChevronUp,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getWikiPreview } from "@/lib/wikiLinks";
 
 // Types
 interface GraphNode {
@@ -1025,6 +1027,34 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     ? nodesRef.current.find((node) => node.id === hoverPreview.nodeId) ?? null
     : null;
 
+  // Rendered-content preview for the hovered note. Reuses the FIFO cache
+  // built in iter 13's wikiLinks lib — every wiki-link hover already
+  // populates the same cache, so popular notes return instantly here.
+  const [previewHtml, setPreviewHtml] = useState<{ path: string; html: string } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewRequestRef = useRef(0);
+  useEffect(() => {
+    if (!hoverPreviewNode || hoverPreviewNode.isFolder) {
+      setPreviewHtml(null);
+      setPreviewLoading(false);
+      return;
+    }
+    const myId = ++previewRequestRef.current;
+    const path = hoverPreviewNode.path;
+    setPreviewLoading(true);
+    getWikiPreview(path)
+      .then((html) => {
+        if (previewRequestRef.current !== myId) return;
+        setPreviewHtml({ path, html });
+        setPreviewLoading(false);
+      })
+      .catch(() => {
+        if (previewRequestRef.current !== myId) return;
+        setPreviewHtml(null);
+        setPreviewLoading(false);
+      });
+  }, [hoverPreviewNode]);
+
   return (
     <div className={`flex h-full ${className}`}>
       {/* Settings Panel */}
@@ -1244,6 +1274,27 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
                     {hoverPreviewNode.isFolder ? "Folder" : "Note"}
                   </span>
                 </div>
+                {/* Rendered preview — only for notes, fed by the same
+                    cache iter 13's wiki-link hover preview uses. Cap
+                    height so very long intros don't push the card off-
+                    screen; the prose-sm reset gives Reading-View-
+                    compatible typography in a smaller package. */}
+                {!hoverPreviewNode.isFolder && (
+                  <>
+                    {previewLoading && !previewHtml && (
+                      <div className="flex items-center gap-2 pt-1.5 border-t border-border/50 text-xs text-muted-foreground">
+                        <Loader2 size={11} className="animate-spin" />
+                        <span>{t.knowledgeGraph.loadingPreview}</span>
+                      </div>
+                    )}
+                    {previewHtml && previewHtml.path === hoverPreviewNode.path && (
+                      <div
+                        className="pt-1.5 border-t border-border/50 prose prose-xs dark:prose-invert max-w-none text-xs leading-relaxed wiki-preview-body max-h-32 overflow-hidden"
+                        dangerouslySetInnerHTML={{ __html: previewHtml.html }}
+                      />
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>

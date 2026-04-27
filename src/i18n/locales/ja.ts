@@ -1468,6 +1468,7 @@ export default {
   // ナレッジグラフ
   knowledgeGraph: {
     settings: "グラフ設定",
+    loadingPreview: "プレビューを読み込み中…",
     physics: "物理エンジン",
     nodeRepulsion: "ノード反発力",
     linkLength: "リンク長",
