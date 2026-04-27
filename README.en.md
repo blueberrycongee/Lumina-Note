@@ -90,7 +90,6 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 <h3 align="center">Extra capabilities</h3>
 
 - Real-time voice input
-- Database views (table / kanban)
 - WebDAV sync
 - Flashcard review
 - Conversation export

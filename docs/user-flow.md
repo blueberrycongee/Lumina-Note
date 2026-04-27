@@ -1,91 +1,95 @@
-# Lumina Note User Flow Guide
+# Lumina Note User Guide
 
-This guide is for new users who want a practical workflow, not a full feature reference.
+This is a practical guide. The first section is a map of **where every feature lives**. The rest is a few starter workflows that string the pieces together.
 
-## Who This Is For
+## Where to find each feature
 
-- First-time Lumina Note users
-- Users who want to connect editor, AI, graph, and PDF workflows quickly
+The left **ribbon** is the column of icons running down the left edge of the window. The **command palette** is `Ctrl/Cmd + P`. The **selection toolbar** is the floating bar that appears when you select text in the editor.
 
-## 5-Minute Setup
+| You want to... | Where it lives |
+|---|---|
+| Open the command palette | `Ctrl/Cmd + P`, or the ⌘ icon at the top of the ribbon |
+| Search across your vault | Ribbon → Search icon (opens the search panel in the left sidebar) |
+| Open AI chat | Ribbon → Bot icon |
+| Browse files / open the editor | Ribbon → Files icon |
+| Manage all images in the vault | Ribbon → Images icon |
+| Open the knowledge graph (whole vault) | Ribbon → Network icon, or "Show graph" in the command palette |
+| See the local graph for the current note | Same panel as the knowledge graph; auto-switches based on what you have open |
+| Manage installed plugins | Ribbon → Puzzle icon |
+| Open settings | Ribbon → Settings (bottom of the ribbon) |
+| Toggle dark / light | Sun / Moon icon at the bottom of the ribbon |
+| Check for app updates | Download icon at the bottom of the ribbon |
+| Pick or edit a theme (15 official + custom) | Settings → General |
+| Configure model provider and API key | Settings → AI |
+| Sync (WebDAV, self-host cloud account, Mobile Gateway QR) | Settings → Sync |
+| HTTP / SOCKS proxy | Settings → Network |
+| Voice-record straight into a note | Mic button in the left sidebar quick actions |
+| Annotate a PDF | Open any `.pdf` from the file tree — the built-in PDF reader takes over the tab |
+| Send selected text to AI / generate flashcards | Select text in the editor → the floating selection toolbar |
+| Hover-preview a `[[WikiLink]]` | Hover the cursor over any wikilink (works in editor, reading mode, file tree, graph) |
+| Define / edit a custom slash command | Type `/` in the AI chat input → "Manage" |
+| Run an agent skill (workspace / user / built-in) | Command palette → "Open Skill Manager", or `/skill` in the AI chat input |
+| Export the current AI conversation | The toolbar above the chat thread |
+| Pair the iOS / Android companion app | Settings → Sync → Mobile Gateway → scan the QR with the mobile app |
+| Set up cross-network mobile access | Deploy `server/` (see `docs/self-host.md`), then sign in from Settings → Sync |
 
-### Prerequisites
+## 5-minute setup
 
-- Lumina Note installed from Releases
-- A local folder for your vault
-- An API key for your model provider (OpenAI / Claude / Gemini, etc.)
+1. Install Lumina Note from [Releases](https://github.com/blueberrycongee/Lumina-Note/releases) and launch it.
+2. Pick a local folder as your **vault**.
+3. Open **Settings → AI**, add an API key for your provider (OpenAI / Claude / Gemini / DeepSeek / Moonshot / Zhipu / Groq / OpenRouter / Ollama / any OpenAI-compatible endpoint…), and pick a model.
+4. Create your first note. Type `[[` to start a wikilink — autocompletion suggests existing notes; pressing Enter creates a new one if it doesn't exist.
+5. Open the **knowledge graph** (Network icon in the ribbon). Confirm both notes show up, connected.
+6. Open **AI chat** (Bot icon) and ask it something about the note you just wrote.
 
-### Steps
+When all six steps work, the rest of the app is just specialized surfaces for the same primitives: files + AI + graph + sync.
 
-1. Launch the app and choose a local folder as your vault.
-2. Configure model provider and API key in the right AI panel.
-3. Configure your preferred model in the AI settings.
-4. Create your first note and add some content.
-5. Add a `[[WikiLink]]` to another page and fill that page.
-6. Open Knowledge Graph and confirm both notes are connected.
+## Starter workflows
 
-### Expected Outcome
+### A. Daily notes → structured knowledge
 
-- You can create/edit/save Markdown notes
-- AI agent is available
-- You know how to use the AI agent panel
-- Graph shows relationships between notes
+1. Capture quickly in a daily note. Don't overthink structure.
+2. As topics repeat, link them with `[[WikiLinks]]`. Use hover-preview (just hover the link) to confirm you're pointing at the right page.
+3. In AI chat, ask the agent to extract action items or split sections. The agent edits the file directly when you accept its plan.
+4. Switch to the knowledge graph (ribbon → Network icon). Look for isolated nodes — those are notes you forgot to link.
 
-## Workflow A: Daily Notes to Structured Knowledge
+### B. PDFs → reusable Markdown notes
 
-### Goal
+1. Drop a PDF into your vault, then click it in the file tree. The PDF reader opens in place.
+2. Highlight, underline, and annotate. Save annotations out as Markdown when you're done.
+3. In AI chat, scope the request to the resulting Markdown page (e.g. "summarize the highlighted sections only").
+4. Add your own conclusions and tags before linking the page into your knowledge map with `[[WikiLinks]]`.
 
-Turn scattered notes into searchable and connected knowledge.
+### C. Agent-assisted refactor
 
-### Steps
+1. State scope **before** asking. "This file" or "everything under `notes/research/`".
+2. Ask for a plan first. The agent runtime supports planning; review the plan before letting it edit.
+3. Apply changes incrementally. The agent writes to disk through the same FS tools you'd use; nothing is hidden.
+4. Manually review the headings and any non-trivial rewrites before saving.
 
-1. Capture quickly in a daily note.
-2. Link important lines to topic pages via `[[WikiLinks]]`.
-3. Ask Agent to organize sections and action items.
-4. Use graph view to find isolated notes and add links.
+### D. Sync to your phone
 
-## Workflow B: PDF to Reusable Notes
+1. **Same Wi-Fi**: open **Settings → Sync → Mobile Gateway**. Scan the QR code with the iOS or Android companion app — done.
+2. **Different network**: deploy the relay server (`docs/self-host.md`), register an account, then sign into the same account on both desktop (Settings → Sync) and mobile.
 
-### Goal
+## Privacy and data boundary
 
-Convert reading highlights into long-term Markdown assets.
-
-### Steps
-
-1. Highlight and annotate inside PDF Reader.
-2. Save/export annotations into a Markdown page.
-3. Add your own conclusions and tags.
-4. Ask AI to summarize based on that page only.
-
-## Workflow C: Agent-Assisted Refactor
-
-### Goal
-
-Use AI for controlled restructuring, not one-shot rewrite.
-
-### Steps
-
-1. Define scope first (current file or a specific folder).
-2. Give a concrete task (for example, "restructure headings, keep facts unchanged").
-3. Ask for a plan, then apply edits.
-4. Manually review key sections before final save.
-
-## Privacy and Data Boundary
-
-- Notes are local-first by default.
-- Cloud model requests depend on your prompt and provider settings.
-- AI settings use your configured provider and model.
-- For sensitive data, use stricter provider/config separation.
+- The vault is local-first. Nothing leaves the device unless you opt into a cloud model or sync.
+- Cloud model requests carry whatever you put in the prompt; the agent does not exfiltrate the rest of the vault.
+- For sensitive material, consider keeping a separate vault tied to a different model provider, or sticking to a local model via Ollama.
 
 ## Quick FAQ
 
 ### AI is not responding
 
-- Check API key validity
-- Confirm model/provider config
-- If unsure, check that the model name matches your provider.
-- Verify network/proxy setup
+- Check the API key (Settings → AI).
+- Confirm the model id matches what your provider exposes.
+- Check proxy / network reachability (Settings → Network).
 
-### What should I learn first
+### I can't find a feature mentioned in the README
 
-- Start with `WikiLinks + AI panel + Knowledge Graph`
+Open the command palette (`Ctrl/Cmd + P`) and type a few letters. Most features have a command entry, including ones the ribbon doesn't surface.
+
+### What should I learn first?
+
+WikiLinks → AI chat → knowledge graph. Once those three feel natural, the rest of the app is just shortcuts.
