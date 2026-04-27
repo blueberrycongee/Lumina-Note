@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-04-27
+
+### 修复
+- **左侧 Ribbon 不再被横线切断**：`MacLeftPaneTopBar` 的 `border-b` 原本横跨整行宽度，会在 ribbon 列正上方画出横线，把"应贯通的竖向 chrome"切成两段。这条线现在只画在右侧的文件树工具区下方，traffic light 头部与 Ribbon 视觉合成连续竖条
+
+### 内部
+- 校正 `globals.test.ts` 里 dark-mode token 断言，匹配 v1.1.0 后已落地的 5–6% 饱和度调色板（CI 之前一直在这个用例上红）
+
 ## [1.2.0] - 2026-04-27
 
 本次更新主线是**收敛与打磨**：把维护停滞的发布功能、个人主页、半成品的斜杠菜单和重叠工具栏的打字机/聚焦模式从产品里清出去，统一了所有原生下拉的视觉语言，让常用交互（拖文件入侧栏、悬停预览 wiki 链接、命令面板的发现层）更顺手。深色模式按 Apple 的层级思路做了一次系统性重做。
