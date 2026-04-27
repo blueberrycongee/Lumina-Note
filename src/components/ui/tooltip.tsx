@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,14 @@ function computePosition(el: HTMLElement, text: string): TooltipState {
 
 export function AutoTooltipHost() {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  // `clampedX` lags one render behind `tooltip.x`: the first commit lays the
+  // tooltip out at the naive (centered-on-trigger) position, useLayoutEffect
+  // measures the rendered width, then a second commit shifts it to keep both
+  // edges inside the viewport. Both commits land before the next paint so the
+  // user never sees the unclamped frame.
+  const [clampedX, setClampedX] = useState<number | null>(null);
   const currentRef = useRef<HTMLElement | null>(null);
+  const tooltipElRef = useRef<HTMLDivElement | null>(null);
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -173,15 +180,42 @@ export function AutoTooltipHost() {
     };
   }, [tooltip]);
 
+  // Reset clamp state whenever the tooltip target changes so measurement
+  // re-runs against the new content's width.
+  useLayoutEffect(() => {
+    setClampedX(null);
+  }, [tooltip]);
+
+  // Clamp the tooltip's horizontal position so it can't escape the viewport
+  // on left- or right-edge triggers (e.g. the chat send button or the leftmost
+  // ribbon icon). The tooltip uses `translateX(-50%)`, so we measure its
+  // rendered width and constrain `x` to [margin + half, vw - margin - half].
+  useLayoutEffect(() => {
+    if (!tooltip || clampedX !== null) return;
+    const el = tooltipElRef.current;
+    if (!el) return;
+    const w = el.offsetWidth;
+    if (w === 0) return;
+    const margin = 8;
+    const half = w / 2;
+    const minX = margin + half;
+    const maxX = window.innerWidth - margin - half;
+    // If the viewport is narrower than the tooltip + margins, prefer the
+    // left edge (minX wins) — the tooltip will overflow right but stays
+    // anchored to a sensible side.
+    setClampedX(Math.max(minX, Math.min(tooltip.x, maxX)));
+  }, [tooltip, clampedX]);
+
   if (!tooltip || typeof document === "undefined") return null;
 
   return createPortal(
     <div
+      ref={tooltipElRef}
       role="tooltip"
       data-testid="auto-tooltip"
       style={{
         position: "fixed",
-        left: tooltip.x,
+        left: clampedX ?? tooltip.x,
         top: tooltip.y,
         transform:
           tooltip.side === "top"
