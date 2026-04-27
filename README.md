@@ -151,7 +151,7 @@ npm run dist:mac     # sign + package a dmg/zip (also dist:win, dist:linux)
 - Frontend: React 18, TypeScript, Tailwind CSS
 - Editor: CodeMirror 6
 - State: Zustand
-- Agent runtime: Vercel AI SDK + MCP TS SDK (`@modelcontextprotocol/sdk`)
+- Agent runtime: Vercel AI SDK (`ai`)
 
 ---
 
