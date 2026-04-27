@@ -23,12 +23,12 @@ function renderWithButton(button: React.ReactElement) {
 
 describe("AutoTooltipHost", () => {
   it("does not render anything before any interaction", () => {
-    renderWithButton(<button aria-label="Save file">Save</button>);
+    renderWithButton(<button aria-label="Save file" />);
     expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
   });
 
-  it("shows tooltip after the hover delay when button has aria-label", async () => {
-    renderWithButton(<button aria-label="Save file">Save</button>);
+  it("shows tooltip after the hover delay on an icon-only button", async () => {
+    renderWithButton(<button aria-label="Save file" />);
     fireEvent.mouseOver(screen.getByRole("button"));
     expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
     await act(async () => {
@@ -38,7 +38,7 @@ describe("AutoTooltipHost", () => {
   });
 
   it("falls back to data-tooltip when aria-label is absent", async () => {
-    renderWithButton(<button data-tooltip="Open chat">Chat</button>);
+    renderWithButton(<button data-tooltip="Open chat" />);
     fireEvent.mouseOver(screen.getByRole("button"));
     await act(async () => {
       vi.advanceTimersByTime(400);
@@ -52,15 +52,12 @@ describe("AutoTooltipHost", () => {
     await act(async () => {
       vi.advanceTimersByTime(400);
     });
+    // Glyph "▶" has no letter characters, so the tooltip still shows.
     expect(screen.getByTestId("auto-tooltip")).toHaveTextContent("Run query");
   });
 
   it("prefers aria-label over title", async () => {
-    renderWithButton(
-      <button aria-label="Save changes" title="Save (Ctrl+S)">
-        Save
-      </button>,
-    );
+    renderWithButton(<button aria-label="Save changes" title="Save (Ctrl+S)" />);
     fireEvent.mouseOver(screen.getByRole("button"));
     await act(async () => {
       vi.advanceTimersByTime(400);
@@ -77,8 +74,51 @@ describe("AutoTooltipHost", () => {
     expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
   });
 
+  it("suppresses the tooltip when the button has a visible text label", async () => {
+    // The aria-label is fine for screen readers, but repeating "Save" on
+    // hover of a button that already says "Save" is redundant chrome.
+    renderWithButton(<button aria-label="Save file">Save</button>);
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
+  });
+
+  it("suppresses the tooltip on labeled buttons under keyboard focus too", async () => {
+    renderWithButton(<button aria-label="Save file">Save</button>);
+    fireEvent.focusIn(screen.getByRole("button"));
+    expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
+  });
+
+  it("data-tooltip-force overrides the visible-label suppression", async () => {
+    renderWithButton(
+      <button aria-label="Zoom level" data-tooltip-force="true">
+        100%
+      </button>,
+    );
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.getByTestId("auto-tooltip")).toHaveTextContent("Zoom level");
+  });
+
+  it("data-tooltip-suppress hides the tooltip on otherwise-iconic buttons", async () => {
+    renderWithButton(
+      <button aria-label="Close" data-tooltip-suppress="true">
+        ×
+      </button>,
+    );
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
+  });
+
   it("hides the tooltip after the cursor leaves the button", async () => {
-    renderWithButton(<button aria-label="Pin tab">Pin</button>);
+    renderWithButton(<button aria-label="Pin tab" />);
     const button = screen.getByRole("button");
     fireEvent.mouseOver(button);
     await act(async () => {
@@ -93,7 +133,7 @@ describe("AutoTooltipHost", () => {
   });
 
   it("shows the tooltip immediately on keyboard focus and hides on blur", async () => {
-    renderWithButton(<button aria-label="Toggle sidebar">Sidebar</button>);
+    renderWithButton(<button aria-label="Toggle sidebar" />);
     const button = screen.getByRole("button");
     fireEvent.focusIn(button);
     // No timer advance needed — focus should not be delayed.
@@ -106,7 +146,7 @@ describe("AutoTooltipHost", () => {
   });
 
   it("hides on Escape key", async () => {
-    renderWithButton(<button aria-label="Run">Run</button>);
+    renderWithButton(<button aria-label="Run" />);
     fireEvent.mouseOver(screen.getByRole("button"));
     await act(async () => {
       vi.advanceTimersByTime(400);

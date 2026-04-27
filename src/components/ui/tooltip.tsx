@@ -33,6 +33,33 @@ function getTooltipText(el: HTMLElement): string | null {
   return null;
 }
 
+/**
+ * Decide whether to actually surface a tooltip on this trigger. We suppress
+ * for buttons that already render a word-character label inline — repeating
+ * "Send" on hover of a "Send" button is noise, and that's the bulk of the
+ * tooltips a user notices as visual clutter. Single-glyph buttons (▶ × +)
+ * fall through and still get tooltips because a glyph alone isn't a label.
+ *
+ * Two explicit overrides:
+ *   - `data-tooltip-force="true"`    — always show (for buttons whose
+ *                                      visible text is a value, not a label,
+ *                                      e.g. a "100%" zoom chip).
+ *   - `data-tooltip-suppress="true"` — never show (escape hatch for cases
+ *                                      where a glyph button still wants
+ *                                      no tooltip, e.g. inside a busy UI
+ *                                      where the glyph is contextual).
+ */
+function shouldShowTooltip(el: HTMLElement): boolean {
+  if (el.dataset.tooltipForce === "true") return true;
+  if (el.dataset.tooltipSuppress === "true") return false;
+  const text = el.textContent?.trim() ?? "";
+  if (!text) return true;
+  // \p{L} matches any unicode letter — Latin, CJK, Cyrillic, Greek, etc.
+  // Symbols like ▶ × + don't match, so iconic glyph buttons keep their
+  // tooltips while real text labels suppress theirs.
+  return !/\p{L}/u.test(text);
+}
+
 function computePosition(el: HTMLElement, text: string): TooltipState {
   const rect = el.getBoundingClientRect();
   const centerX = rect.left + rect.width / 2;
@@ -112,7 +139,7 @@ export function AutoTooltipHost() {
       const trigger = findTrigger(e.target);
       if (!trigger) return;
       const text = getTooltipText(trigger);
-      if (!text) {
+      if (!text || !shouldShowTooltip(trigger)) {
         if (currentRef.current) hideSoon();
         return;
       }
@@ -131,7 +158,7 @@ export function AutoTooltipHost() {
       const trigger = findTrigger(e.target);
       if (!trigger) return;
       const text = getTooltipText(trigger);
-      if (!text) return;
+      if (!text || !shouldShowTooltip(trigger)) return;
       showImmediate(trigger, text);
     };
 
