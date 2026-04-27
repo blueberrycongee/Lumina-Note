@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useRef, useState, type MutableRefObject } from "react";
 import { Check, ChevronUp } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 import { useAIStore } from "@/stores/useAIStore";
@@ -30,8 +30,6 @@ interface ChipButtonProps {
   label: string;
   open: boolean;
   onClick: () => void;
-  onMouseEnter?: () => void;
-  onMouseLeave?: () => void;
   title: string;
   testId: string;
 }
@@ -41,8 +39,6 @@ function ChipButton({
   label,
   open,
   onClick,
-  onMouseEnter,
-  onMouseLeave,
   title,
   testId,
 }: ChipButtonProps) {
@@ -51,8 +47,6 @@ function ChipButton({
       ref={triggerRef}
       type="button"
       onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       title={title}
       data-chip={testId}
       className={[
@@ -90,46 +84,6 @@ export function ModelEffortPicker() {
   const modelTriggerRef = useRef<HTMLButtonElement | null>(null);
   const modeTriggerRef = useRef<HTMLButtonElement | null>(null);
   const effortTriggerRef = useRef<HTMLButtonElement | null>(null);
-
-  // Hover-with-delay state machine — shared across the 3 chips so moving the
-  // mouse from one chip's popover into another sibling's trigger swaps cleanly
-  // (the close timer on chip A gets cancelled by the new schedule, no blink).
-  // openDelay 300ms filters incidental drift; closeDelay 200ms gives the user
-  // time to cross the gap into the popover content.
-  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearAllTimers = useCallback(() => {
-    if (openTimer.current) {
-      clearTimeout(openTimer.current);
-      openTimer.current = null;
-    }
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  }, []);
-  const scheduleOpen = useCallback((next: Exclude<OpenChip, null>) => {
-    clearAllTimers();
-    openTimer.current = setTimeout(() => {
-      openTimer.current = null;
-      setOpenChip(next);
-    }, 300);
-  }, [clearAllTimers]);
-  const scheduleClose = useCallback(() => {
-    clearAllTimers();
-    closeTimer.current = setTimeout(() => {
-      closeTimer.current = null;
-      setOpenChip(null);
-    }, 200);
-  }, [clearAllTimers]);
-  const cancelClose = useCallback(() => {
-    if (closeTimer.current) {
-      clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-  }, []);
-  // Clean up pending timers on unmount.
-  useEffect(() => () => clearAllTimers(), [clearAllTimers]);
 
   const provider = config.provider as LLMProviderType;
   const effectiveModelId =
@@ -207,8 +161,6 @@ export function ModelEffortPicker() {
   };
 
   const toggleChip = (next: Exclude<OpenChip, null>) => {
-    // Click cancels any pending hover timer and jumps straight to the new state.
-    clearAllTimers();
     setOpenChip((prev) => (prev === next ? null : next));
   };
 
@@ -219,25 +171,18 @@ export function ModelEffortPicker() {
         label={modelDisplayName}
         open={openChip === "model"}
         onClick={() => toggleChip("model")}
-        onMouseEnter={() => scheduleOpen("model")}
-        onMouseLeave={scheduleClose}
         title={t.aiSettings.modelPicker.title}
         testId="model"
       />
       <Popover
         open={openChip === "model"}
-        onOpenChange={(next) => {
-          clearAllTimers();
-          setOpenChip(next ? "model" : null);
-        }}
+        onOpenChange={(next) => setOpenChip(next ? "model" : null)}
         anchor={modelTriggerRef}
       >
         <PopoverContent
           placement="top-end"
           width={MODEL_POPOVER_WIDTH}
           data-chip-popover="model"
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
         >
           <PopoverList>
             {providerModels.length === 0 ? (
@@ -271,25 +216,18 @@ export function ModelEffortPicker() {
             label={modeLabel(thinkingMode)}
             open={openChip === "mode"}
             onClick={() => toggleChip("mode")}
-            onMouseEnter={() => scheduleOpen("mode")}
-            onMouseLeave={scheduleClose}
             title={t.aiSettings.thinkingMode}
             testId="mode"
           />
           <Popover
             open={openChip === "mode"}
-            onOpenChange={(next) => {
-              clearAllTimers();
-              setOpenChip(next ? "mode" : null);
-            }}
+            onOpenChange={(next) => setOpenChip(next ? "mode" : null)}
             anchor={modeTriggerRef}
           >
             <PopoverContent
               placement="top-end"
               width={AXIS_POPOVER_WIDTH}
               data-chip-popover="mode"
-              onMouseEnter={cancelClose}
-              onMouseLeave={scheduleClose}
             >
               <PopoverList>
                 {modeOptions.map((m) => (
@@ -321,25 +259,18 @@ export function ModelEffortPicker() {
             }
             open={openChip === "effort"}
             onClick={() => toggleChip("effort")}
-            onMouseEnter={() => scheduleOpen("effort")}
-            onMouseLeave={scheduleClose}
             title={t.aiSettings.reasoningEffort}
             testId="effort"
           />
           <Popover
             open={openChip === "effort"}
-            onOpenChange={(next) => {
-              clearAllTimers();
-              setOpenChip(next ? "effort" : null);
-            }}
+            onOpenChange={(next) => setOpenChip(next ? "effort" : null)}
             anchor={effortTriggerRef}
           >
             <PopoverContent
               placement="top-end"
               width={AXIS_POPOVER_WIDTH}
               data-chip-popover="effort"
-              onMouseEnter={cancelClose}
-              onMouseLeave={scheduleClose}
             >
               <PopoverList>
                 {efforts.map((eff) => (
