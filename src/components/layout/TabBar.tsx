@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 import { useMacTopChromeEnabled } from "./MacTopChrome";
+import { Popover, PopoverContent, PopoverList, Row } from "@/components/ui";
 
 const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 64;
 const MAC_COLLAPSED_RIBBON_WIDTH = 64;
@@ -259,6 +260,10 @@ export function TabBar() {
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // 1×1 invisible div positioned at the right-click coordinates so the
+  // Popover has a real DOM element to anchor against. Without it the menu
+  // would have no stable position to recompute against on resize / scroll.
+  const contextAnchorRef = useRef<HTMLDivElement>(null);
   const showMacTopActions = useMacTopChromeEnabled();
   const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
@@ -342,10 +347,6 @@ export function TabBar() {
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, tabIndex: index });
-  }, []);
-
-  const handleClickOutside = useCallback(() => {
-    setContextMenu(null);
   }, []);
 
   const handleClose = useCallback(
@@ -477,57 +478,94 @@ export function TabBar() {
         </div>
       </div>
 
-      {/* Context Menu */}
+      {/* Context menu — Popover anchored to a 1×1 virtual div at the
+       * right-click coordinates so it inherits the same animation, focus
+       * return, viewport clamp, and portal behaviour as every other popover
+       * in the app. */}
       {contextMenu && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={handleClickOutside} aria-hidden="true" />
-          <div
-            className="fixed z-50 bg-popover border border-border rounded-ui-md shadow-elev-2 py-1 min-w-[160px] animate-pop-in"
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-          >
-            <button
-              onClick={() => {
-                togglePinTab(contextMenu.tabIndex);
-                setContextMenu(null);
-              }}
-              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors flex items-center gap-2"
-            >
-              <Pin size={12} className={tabs[contextMenu.tabIndex]?.isPinned ? "" : "rotate-45"} />
-              {tabs[contextMenu.tabIndex]?.isPinned ? t.tabBar.unpin : t.tabBar.pin}
-            </button>
-            <div className="h-px bg-border my-1" />
-            <button
-              onClick={() => {
-                const tab = tabs[contextMenu.tabIndex];
-                if (tab) animateClose(tab.id);
-                setContextMenu(null);
-              }}
-              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={tabs[contextMenu.tabIndex]?.isPinned}
-            >
-              {t.tabBar.close}
-            </button>
-            <button
-              onClick={() => {
-                closeOtherTabs(contextMenu.tabIndex);
-                setContextMenu(null);
-              }}
-              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors"
-            >
-              {t.tabBar.closeOthers}
-            </button>
-            <button
-              onClick={() => {
-                closeAllTabs();
-                setContextMenu(null);
-              }}
-              className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors"
-            >
-              {t.tabBar.closeAll}
-            </button>
-          </div>
-        </>
+        <div
+          ref={contextAnchorRef}
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: contextMenu.x,
+            top: contextMenu.y,
+            width: 1,
+            height: 1,
+            pointerEvents: "none",
+          }}
+        />
       )}
+      <Popover
+        open={!!contextMenu}
+        onOpenChange={(next) => {
+          if (!next) setContextMenu(null);
+        }}
+        anchor={contextAnchorRef}
+      >
+        <PopoverContent placement="bottom-start" width={180}>
+          <PopoverList>
+            {contextMenu && (
+              <>
+                <Row
+                  density="compact"
+                  icon={
+                    <Pin
+                      size={12}
+                      className={
+                        tabs[contextMenu.tabIndex]?.isPinned ? "" : "rotate-45"
+                      }
+                    />
+                  }
+                  title={
+                    tabs[contextMenu.tabIndex]?.isPinned
+                      ? t.tabBar.unpin
+                      : t.tabBar.pin
+                  }
+                  role="menuitem"
+                  onSelect={() => {
+                    togglePinTab(contextMenu.tabIndex);
+                    setContextMenu(null);
+                  }}
+                />
+                <div
+                  role="separator"
+                  className="my-1 h-px bg-border/60"
+                />
+                <Row
+                  density="compact"
+                  title={t.tabBar.close}
+                  role="menuitem"
+                  disabled={tabs[contextMenu.tabIndex]?.isPinned}
+                  onSelect={() => {
+                    const tab = tabs[contextMenu.tabIndex];
+                    if (tab) animateClose(tab.id);
+                    setContextMenu(null);
+                  }}
+                />
+                <Row
+                  density="compact"
+                  title={t.tabBar.closeOthers}
+                  role="menuitem"
+                  onSelect={() => {
+                    closeOtherTabs(contextMenu.tabIndex);
+                    setContextMenu(null);
+                  }}
+                />
+                <Row
+                  density="compact"
+                  title={t.tabBar.closeAll}
+                  role="menuitem"
+                  onSelect={() => {
+                    closeAllTabs();
+                    setContextMenu(null);
+                  }}
+                />
+              </>
+            )}
+          </PopoverList>
+        </PopoverContent>
+      </Popover>
     </>
   );
 }
