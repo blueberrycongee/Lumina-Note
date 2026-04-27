@@ -17,7 +17,7 @@ Appearance plugins can now affect all key host surfaces:
 
 ## Start Fast
 
-1. Open `Settings -> Plugins (Developer Preview)`.
+1. Click the Puzzle icon in the ribbon to open the Installed Plugins modal.
 2. Scaffold a theme or UI plugin template.
 3. Enable the plugin and verify the first visual change.
 4. Add layered styles and shell slots.
@@ -155,7 +155,7 @@ Even with high freedom, keep recovery paths:
 - Theme not applied: check permission `ui:theme` and preset id.
 - Editor extension inert: ensure you passed a valid CodeMirror extension.
 - Reading DOM leaks: return cleanup from reading post-processor.
-- Conflicts: use `Settings -> Plugin Style Runtime (Dev)` to inspect style layer collisions.
+- Conflicts: open the Installed Plugins modal (Ribbon → Puzzle icon) and scroll to the Plugin Style Runtime (Dev) section to inspect style layer collisions.
 
 ## Recommended Permissions
 
