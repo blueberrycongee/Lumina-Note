@@ -91,7 +91,7 @@ export function PDFThumbnails({
             className={cn(
               "cursor-pointer rounded overflow-hidden border-2 transition-all",
               currentPage === pageNum
-                ? "border-primary shadow-md"
+                ? "border-primary shadow-elev-1"
                 : "border-transparent hover:border-primary/50"
             )}
           >

@@ -216,7 +216,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
                 onClick={() => setSelectedType('highlight')}
                 className={cn(
                   'p-1.5 rounded transition-colors',
-                  selectedType === 'highlight' && 'bg-background shadow-sm'
+                  selectedType === 'highlight' && 'bg-background shadow-elev-1'
                 )}
               >
                 <Highlighter size={14} />
@@ -225,7 +225,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
                 onClick={() => setSelectedType('underline')}
                 className={cn(
                   'p-1.5 rounded transition-colors',
-                  selectedType === 'underline' && 'bg-background shadow-sm'
+                  selectedType === 'underline' && 'bg-background shadow-elev-1'
                 )}
               >
                 <Underline size={14} />

@@ -13,7 +13,7 @@ export function PluginStatusBar() {
   if (left.length === 0 && right.length === 0) return null;
 
   return (
-    <footer className="h-7 border-t border-border/60 bg-background/75 backdrop-blur px-2 flex items-center justify-between text-[11px] text-muted-foreground">
+    <footer className="h-7 border-t border-border/60 bg-muted px-2 flex items-center justify-between text-xs text-muted-foreground">
       <div className="flex items-center gap-2 min-w-0">
         {left.map((item) => (
           <button

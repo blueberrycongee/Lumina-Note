@@ -272,7 +272,7 @@ export function DiffView({
               onClick={() => setViewMode("preview")}
               className={cn(
                 "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
-                viewMode === "preview" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                viewMode === "preview" ? "bg-background shadow-elev-1" : "text-muted-foreground hover:text-foreground"
               )}
               title={t.ai.diffView.previewMode}
             >
@@ -283,7 +283,7 @@ export function DiffView({
               onClick={() => setViewMode("source")}
               className={cn(
                 "px-2 py-1 text-xs rounded transition-colors flex items-center gap-1",
-                viewMode === "source" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                viewMode === "source" ? "bg-background shadow-elev-1" : "text-muted-foreground hover:text-foreground"
               )}
               title={t.ai.diffView.sourceMode}
             >

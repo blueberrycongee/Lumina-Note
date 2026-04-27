@@ -9,7 +9,7 @@ export function PluginPanelDock() {
       {panels.map((panel) => (
         <section
           key={`${panel.pluginId}:${panel.panelId}`}
-          className="rounded-lg border border-border/60 bg-background/95 shadow-lg backdrop-blur"
+          className="rounded-ui-lg border border-border bg-popover shadow-elev-2"
           data-lumina-plugin-scope={`${panel.pluginId}:${panel.panelId}`}
         >
           <header className="border-b border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground">

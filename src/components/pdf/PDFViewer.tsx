@@ -294,7 +294,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
         ) : (
           <button
             onClick={() => setShowOutline(true)}
-            className="absolute left-0 top-2 z-10 flex items-center justify-center w-5 h-6 bg-muted/80 border border-border/60 border-l-0 rounded-r shadow-sm hover:bg-background transition-colors"
+            className="absolute left-0 top-2 z-10 flex items-center justify-center w-5 h-6 bg-muted/80 border border-border/60 border-l-0 rounded-r shadow-elev-1 hover:bg-background transition-colors"
             title={t.pdfViewer.expandCatalog}
           >
             <ChevronRight size={14} className="text-muted-foreground" />

@@ -861,7 +861,7 @@ export function ImageManagerView() {
 
       {/* Toast success message */}
       {successMessage ? (
-        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-2.5 text-sm text-emerald-700 shadow-lg backdrop-blur-sm dark:text-emerald-300">
+        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-2 rounded-xl border border-success/25 bg-success/10 px-4 py-2.5 text-sm text-success shadow-elev-2">
           {successMessage}
         </div>
       ) : null}
@@ -899,7 +899,7 @@ function EmptyState({
 }) {
   return (
     <div className={cn("flex h-full flex-col items-center justify-center px-6 text-center", compact ? "min-h-[240px]" : "min-h-[360px]")}>
-      <div className="mb-3 rounded-full border border-border/60 bg-background/80 p-3 shadow-sm">
+      <div className="mb-3 rounded-full border border-border/60 bg-background/80 p-3 shadow-elev-1">
         <Icon className={cn("h-6 w-6 text-muted-foreground", spinning && "animate-spin")} />
       </div>
       <h2 className="text-base font-semibold">{title}</h2>
@@ -1313,7 +1313,7 @@ function ActionDialog({
 }) {
   const { t } = useLocaleStore();
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4">
       <div className="w-full max-w-2xl rounded-xl border border-border/60 bg-background shadow-ui-float">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
           <div>

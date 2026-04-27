@@ -176,7 +176,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-background border border-border/60 rounded-lg shadow-xl w-[900px] max-h-[85vh] flex flex-col">
+      <div className="bg-popover border border-border rounded-ui-lg shadow-elev-3 w-[900px] max-h-[85vh] flex flex-col">
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
           <div className="flex items-center gap-3">

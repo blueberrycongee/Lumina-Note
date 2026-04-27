@@ -442,7 +442,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         top: position.y,
       }}
     >
-      <div className="flex items-center gap-0.5 px-1.5 py-1 bg-background border border-border rounded-lg shadow-lg">
+      <div className="flex items-center gap-0.5 px-1.5 py-1 bg-popover border border-border rounded-ui-lg shadow-elev-2">
         <button
           onClick={handleAddToChat}
           className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"

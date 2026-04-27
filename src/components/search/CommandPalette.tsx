@@ -361,7 +361,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       
       {/* Palette */}
       <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50">
-        <div className="bg-background border border-border/60 rounded-xl shadow-2xl overflow-hidden animate-spotlight-in">
+        <div className="bg-popover border border-border rounded-xl shadow-elev-3 overflow-hidden animate-spotlight-in">
           {/* Input area */}
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
             <Command size={16} className="text-muted-foreground shrink-0" />

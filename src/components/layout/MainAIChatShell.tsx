@@ -1120,7 +1120,7 @@ export function MainAIChatShell() {
                           <button
                             key={file}
                             onClick={() => openFile(file)}
-                            className="group flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.07] hover:bg-primary/15 text-primary/80 hover:text-primary rounded-xl text-xs transition-[background-color,color,border-color,box-shadow] duration-fast ease-out-subtle border border-primary/10 hover:border-primary/25 hover:shadow-sm"
+                            className="group flex items-center gap-1.5 px-3 py-1.5 bg-primary/[0.07] hover:bg-primary/15 text-primary/80 hover:text-primary rounded-xl text-xs transition-[background-color,color,border-color,box-shadow] duration-fast ease-out-subtle border border-primary/10 hover:border-primary/25 hover:shadow-elev-1"
                           >
                             <FileText size={13} className="shrink-0" />
                             <span className="truncate max-w-[200px]">
@@ -1667,7 +1667,7 @@ export function MainAIChatShell() {
         {import.meta.env.DEV && (
           <button
             onClick={() => setShowDebug(!showDebug)}
-            className="fixed bottom-4 right-4 z-50 w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors text-xs font-bold"
+            className="fixed bottom-4 right-4 z-50 w-10 h-10 rounded-full bg-warning text-warning-foreground flex items-center justify-center shadow-elev-2 hover:bg-warning/90 transition-colors text-xs font-bold"
             title={t.ai.debugPanel}
           >
             🐛
@@ -1682,7 +1682,7 @@ export function MainAIChatShell() {
             const fullMessages = rustAgentMessages; // Rust Agent 消息
 
             return (
-              <div className="fixed inset-4 z-50 bg-background/95 backdrop-blur border border-border/60 rounded-xl shadow-2xl flex flex-col overflow-hidden">
+              <div className="fixed inset-4 z-50 bg-popover border border-border rounded-xl shadow-elev-3 flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/50">
                   <h2 className="font-bold text-lg">
                     🐛 {t.ai.agentDebugPanel} (🦀 Rust)

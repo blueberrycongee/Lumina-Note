@@ -284,7 +284,7 @@ export function PDFCanvas({
       >
         <div 
           ref={pageRef}
-          className="relative shadow-lg"
+          className="relative shadow-elev-2"
           onMouseUp={handleMouseUp}
         >
           <Page

@@ -589,7 +589,7 @@ function App() {
         // 创建拖拽指示器 - VS Code/Cursor 风格
         dragIndicator = document.createElement("div");
         dragIndicator.className =
-          "fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover/95 backdrop-blur-sm text-popover-foreground text-sm rounded-lg border border-border shadow-xl";
+          "fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover text-popover-foreground text-sm rounded-lg border border-border shadow-elev-2";
 
         // 根据是文件还是文件夹显示不同图标
         const icon = dragData.isFolder

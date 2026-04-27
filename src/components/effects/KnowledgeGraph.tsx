@@ -1242,7 +1242,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
           <div
             className={cn(
-              "absolute top-3 right-3 z-10 w-72 rounded-xl border border-border/70 bg-popover backdrop-blur-md shadow-elev-2 pointer-events-none transition-[opacity,transform] duration-150 ease-out",
+              "absolute top-3 right-3 z-10 w-72 rounded-xl border border-border bg-popover shadow-elev-2 pointer-events-none transition-[opacity,transform] duration-150 ease-out",
               hoverPreviewNode
                 ? "opacity-100 translate-y-0 scale-100"
                 : "opacity-0 translate-y-2 scale-[0.98]"
