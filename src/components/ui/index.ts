@@ -30,6 +30,7 @@ export {
   type TextInputProps,
   type ToggleProps,
 } from "./field";
+export { Select, type SelectOption, type SelectProps } from "./select";
 export { SectionHeader, type SectionHeaderProps } from "./section-header";
 export { CommandMenu } from "./command-menu";
 export { CommandMenuProvider } from "./command-menu-provider";

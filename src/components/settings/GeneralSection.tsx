@@ -9,6 +9,7 @@ import {
   deleteUserTheme,
 } from "@/config/themePlugin";
 import { Check, Plus, Trash2, Palette } from "lucide-react";
+import { Select } from "@/components/ui";
 import { ThemeEditor } from "../ai/ThemeEditor";
 import { LanguageSwitcher } from "../layout/LanguageSwitcher";
 
@@ -222,15 +223,16 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
               {t.settingsModal.defaultEditModeDesc}
             </p>
           </div>
-          <select
+          <Select
             value={editorMode}
-            onChange={(e) => setEditorMode(e.target.value as any)}
-            className="px-3 py-1.5 rounded-lg text-sm bg-background/60 border border-border/60 focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="live">{t.settingsModal.livePreview}</option>
-            <option value="source">{t.settingsModal.sourceMode}</option>
-            <option value="reading">{t.settingsModal.readingMode}</option>
-          </select>
+            onValueChange={(v) => setEditorMode(v as any)}
+            aria-label={t.settingsModal.defaultEditMode}
+            options={[
+              { value: "live", label: t.settingsModal.livePreview },
+              { value: "source", label: t.settingsModal.sourceMode },
+              { value: "reading", label: t.settingsModal.readingMode },
+            ]}
+          />
         </div>
 
         {/* 块编辑器交互 */}
