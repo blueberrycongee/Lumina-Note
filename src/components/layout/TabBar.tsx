@@ -3,6 +3,7 @@ import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { X, FileText, Network, Pin, Plus, User, Puzzle, Shapes, Images } from "lucide-react";
+import { Reorder, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
@@ -149,46 +150,33 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
 
 interface TabItemProps {
   tab: Tab;
-  index: number;
   isActive: boolean;
-  isDragging: boolean;
-  isDropTarget: boolean;
   displayName: string;
   onSelect: () => void;
   onDoubleClick: () => void;
   onClose: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
-  onMouseDown: (e: React.MouseEvent, index: number) => void;
 }
 
 function TabItem({
   tab,
-  index,
   isActive,
-  isDragging,
-  isDropTarget,
   displayName,
   onSelect,
   onDoubleClick,
   onClose,
   onContextMenu,
-  onMouseDown,
 }: TabItemProps) {
   const { t } = useLocaleStore();
   return (
     <div
-      data-tab-index={index}
       data-tauri-drag-region="false"
-      className={cn(
-        "group relative h-full w-full cursor-grab select-none",
-        isDragging && "opacity-50 cursor-grabbing"
-      )}
+      className="group relative h-full w-full cursor-grab select-none active:cursor-grabbing"
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
-      onMouseDown={(e) => onMouseDown(e, index)}
     >
-      <TabShape isActive={isActive} isDropTarget={isDropTarget} />
+      <TabShape isActive={isActive} isDropTarget={false} />
       <div
         className={cn(
           "relative flex h-full items-center gap-2 pl-7 pr-5 text-[13px] transition-colors duration-150",
@@ -221,10 +209,13 @@ function TabItem({
           <button
             data-tauri-drag-region="false"
             onClick={onClose}
+            onMouseDown={(e) => e.stopPropagation()}
             aria-label={t.tabBar.close}
             className={cn(
-              "shrink-0 p-0.5 rounded-ui-sm hover:bg-accent",
-              "opacity-0 group-hover:opacity-100 transition-opacity",
+              "shrink-0 p-0.5 rounded-ui-sm",
+              "transition-[background-color,color,opacity,transform] duration-fast ease-out-subtle",
+              "hover:bg-destructive/15 hover:text-destructive active:scale-90",
+              "opacity-0 group-hover:opacity-100",
               isActive && "opacity-100"
             )}
           >
@@ -258,14 +249,38 @@ export function TabBar() {
       })),
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dropTargetIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
-  const isDragging = useRef(false);
   const showMacTopActions = useMacTopChromeEnabled();
   const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
+  const reduceMotion = useReducedMotion();
+  const reorderTabs = useFileStore((state) => state.reorderTabs);
+
+  // Pinned tabs are confined to the prefix of the array; the store rejects
+  // moves that cross the boundary. We diff the new order against the current
+  // tabs to recover (fromIndex, toIndex) for the existing reorder API. If
+  // the move is illegal, the dispatch is a no-op and the next render snaps
+  // the tab back into place.
+  const handleReorder = useCallback(
+    (next: Tab[]) => {
+      if (next.length !== tabs.length) return;
+      let from = -1;
+      let to = -1;
+      for (let i = 0; i < next.length; i++) {
+        if (tabs[i]?.id !== next[i]?.id) {
+          if (from === -1) from = i;
+          to = i;
+        }
+      }
+      if (from === -1 || to === -1 || from === to) return;
+      const movedId = next[to].id;
+      const fromIndex = tabs.findIndex((t) => t.id === movedId);
+      const toIndex = next.findIndex((t) => t.id === movedId);
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+      reorderTabs(fromIndex, toIndex);
+    },
+    [tabs, reorderTabs],
+  );
 
   // IDs of tabs currently animating their close (shrinking out). The tab is
   // still in the store during this window — store removal happens after the
@@ -331,14 +346,6 @@ export function TabBar() {
     [tabs, animateClose]
   );
 
-  // 自定义鼠标拖拽（绕过 Tauri WebView 的 HTML5 拖拽限制）
-  const handleTabMouseDown = useCallback((e: React.MouseEvent, index: number) => {
-    if (e.button !== 0) return; // 只处理左键
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    setDraggedIndex(index);
-    isDragging.current = false;
-  }, []);
-
   // 即使没有标签页也显示空的标签栏（保持 UI 一致性）
   return (
     <>
@@ -359,59 +366,83 @@ export function TabBar() {
               data-testid="mac-tabbar-traffic-light-spacer"
             />
           ) : null}
-          {tabs.map((tab, index) => {
-            const isClosing = closingIds.has(tab.id);
-            const isActive = index === activeTabIndex;
-            return (
-              <div
-                key={tab.id}
-                // Negative left-margin from the second tab onward so each
-                // tab's left ear overlaps the previous tab's right ear —
-                // same trick Chrome uses to merge adjacent silhouettes
-                // instead of leaving a flat floor between them. The exact
-                // amount (TAB_OVERLAP_PX) is tuned slightly larger than
-                // EAR_RADIUS so the bodies pack tighter than the pure
-                // geometric interlock would give.
-                style={index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : undefined}
-                className={cn(
-                  "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
-                  isClosing
-                    ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
-                    : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]",
-                  // Active tab sits above its neighbors so its silhouette
-                  // outline (and white fill) cleanly overlays the overlapping
-                  // ears of the inactive tabs on either side.
-                  isActive ? "z-10" : "z-0 hover:z-[5]"
-                )}
-              >
-                <TabItem
-                  tab={tab}
-                  index={index}
-                  isActive={index === activeTabIndex}
-                  isDragging={index === draggedIndex && isDragging.current}
-                  isDropTarget={index === dropTargetIndex}
-                  displayName={
-                    tab.type === "ai-chat"
-                      ? t.common.aiChatTab
-                      : tab.type === "graph"
-                        ? t.graph.title
-                        : tab.name
+          <Reorder.Group
+            as="div"
+            axis="x"
+            values={tabs}
+            onReorder={handleReorder}
+            className="flex min-w-0 items-stretch"
+          >
+            {tabs.map((tab, index) => {
+              const isClosing = closingIds.has(tab.id);
+              const isActive = index === activeTabIndex;
+              return (
+                <Reorder.Item
+                  as="div"
+                  key={tab.id}
+                  value={tab}
+                  drag={isClosing ? false : "x"}
+                  dragElastic={0.05}
+                  dragMomentum={false}
+                  whileDrag={
+                    reduceMotion
+                      ? undefined
+                      : {
+                          // Lift + brighten so the dragged tab clearly leads.
+                          // zIndex must clear the active tab's z-10 so a
+                          // dragged inactive tab doesn't slip under it.
+                          scale: 1.02,
+                          y: -2,
+                          zIndex: 30,
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                        }
                   }
-                  onSelect={() => switchTab(index)}
-                  onDoubleClick={() => {
-                    if (tab.isPreview) {
-                      promotePreviewTab(tab.id);
-                    } else if (!tab.isPinned) {
-                      animateClose(tab.id);
+                  layout="position"
+                  transition={{ duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }}
+                  // Negative left-margin from the second tab onward so each
+                  // tab's left ear overlaps the previous tab's right ear —
+                  // same trick Chrome uses to merge adjacent silhouettes
+                  // instead of leaving a flat floor between them. The exact
+                  // amount (TAB_OVERLAP_PX) is tuned slightly larger than
+                  // EAR_RADIUS so the bodies pack tighter than the pure
+                  // geometric interlock would give.
+                  style={index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : undefined}
+                  className={cn(
+                    "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
+                    isClosing
+                      ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
+                      : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]",
+                    // Active tab sits above its neighbors so its silhouette
+                    // outline (and white fill) cleanly overlays the overlapping
+                    // ears of the inactive tabs on either side.
+                    isActive ? "z-10" : "z-0 hover:z-[5]"
+                  )}
+                >
+                  <TabItem
+                    tab={tab}
+                    isActive={index === activeTabIndex}
+                    displayName={
+                      tab.type === "ai-chat"
+                        ? t.common.aiChatTab
+                        : tab.type === "graph"
+                          ? t.graph.title
+                          : tab.name
                     }
-                  }}
-                  onClose={(e) => handleClose(e, index)}
-                  onContextMenu={(e) => handleContextMenu(e, index)}
-                  onMouseDown={handleTabMouseDown}
-                />
-              </div>
-            );
-          })}
+                    onSelect={() => switchTab(index)}
+                    onDoubleClick={() => {
+                      if (tab.isPreview) {
+                        promotePreviewTab(tab.id);
+                      } else if (!tab.isPinned) {
+                        animateClose(tab.id);
+                      }
+                    }}
+                    onClose={(e) => handleClose(e, index)}
+                    onContextMenu={(e) => handleContextMenu(e, index)}
+                  />
+                </Reorder.Item>
+              );
+            })}
+          </Reorder.Group>
           <button
             type="button"
             data-testid="mac-tabbar-new-tab"
