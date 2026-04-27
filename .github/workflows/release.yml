@@ -22,8 +22,42 @@ jobs:
       - name: Check changelog exists for this version
         run: npx ts-node scripts/parse_changelog.ts check "${{ github.ref_name }}"
 
-  build:
+  # Pre-create the GitHub release once, before the matrix kicks off.
+  # Otherwise three parallel runners race to POST /releases with the same
+  # tag — first one wins, the other two get HTTP 422 already_exists and
+  # the build job dies with no Windows installer published. Pre-creating
+  # the release means every matrix runner finds an existing release and
+  # only uploads assets to it (no create-race).
+  create-release:
     needs: check-changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create release if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — matrix builds will upload to it"
+            exit 0
+          fi
+          NOTES="$(npx ts-node scripts/parse_changelog.ts get "$TAG")"
+          gh release create "$TAG" --title "$TAG" --notes "$NOTES"
+
+  build:
+    needs: create-release
     permissions:
       contents: write
     strategy:

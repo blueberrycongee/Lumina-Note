@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.1] - 2026-04-27
+## [1.2.2] - 2026-04-27
+
+包含原本 v1.2.1 的内容 + 一项发布流程修复。v1.2.1 的 release 因 Windows / macOS / Linux 三个 runner 并发 `POST /releases` 撞到 422（`tag_name already_exists`），最终只有 Mac / Linux 安装包上传成功，Windows 缺失，那个 release 已回收。
 
 ### 修复
 - **左侧 Ribbon 不再被横线切断**：`MacLeftPaneTopBar` 的 `border-b` 原本横跨整行宽度，会在 ribbon 列正上方画出横线，把"应贯通的竖向 chrome"切成两段。这条线现在只画在右侧的文件树工具区下方，traffic light 头部与 Ribbon 视觉合成连续竖条
+- **Release workflow 不再有 race condition**：在 build 矩阵之前增加一步 `create-release`，由单独的 ubuntu runner 用 `gh release create` 先把 GitHub Release 建好；三个平台再并行用 `electron-builder --publish always` 把产物上传到这个已存在的 release，避免再撞 `tag_name already_exists`
 
 ### 内部
 - 校正 `globals.test.ts` 里 dark-mode token 断言，匹配 v1.1.0 后已落地的 5–6% 饱和度调色板（CI 之前一直在这个用例上红）
