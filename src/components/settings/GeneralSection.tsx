@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { SUPPORTED_LOCALES, type Locale } from "@/i18n";
 import { OFFICIAL_THEMES, Theme } from "@/config/themes";
 import {
   loadUserThemes,
@@ -11,14 +12,13 @@ import {
 import { Check, Plus, Trash2, Palette } from "lucide-react";
 import { Select } from "@/components/ui";
 import { ThemeEditor } from "../ai/ThemeEditor";
-import { LanguageSwitcher } from "../layout/LanguageSwitcher";
 
 interface GeneralSectionProps {
   isOpen: boolean;
 }
 
 export function GeneralSection({ isOpen }: GeneralSectionProps) {
-  const { t } = useLocaleStore();
+  const { t, locale, setLocale } = useLocaleStore();
   const {
     themeId,
     setThemeId,
@@ -209,9 +209,15 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
               {t.settings?.language || t.welcome?.language || "Language"}
             </p>
           </div>
-          <LanguageSwitcher
-            menuAlign="right"
-            buttonClassName="bg-background/60 border-border/60 hover:bg-muted"
+          <Select
+            value={locale}
+            onValueChange={(v) => setLocale(v as Locale)}
+            aria-label={t.settings?.language || "Language"}
+            options={SUPPORTED_LOCALES.map((l) => ({
+              value: l.code,
+              label: l.nativeName,
+              description: l.name,
+            }))}
           />
         </div>
 

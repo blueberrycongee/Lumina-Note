@@ -3,6 +3,7 @@ import { useWebDAVStore, useSyncStatusText } from '@/stores/useWebDAVStore';
 import { useFileStore } from '@/stores/useFileStore';
 import { useCloudSyncStore } from '@/stores/useCloudSyncStore';
 import { useLocaleStore } from '@/stores/useLocaleStore';
+import { Select } from '@/components/ui';
 import {
   AlertCircle,
   Check,
@@ -322,21 +323,22 @@ export function WebDAVSettings({ compact = false }: WebDAVSettingsProps) {
             <label htmlFor="cloud-workspace" className="text-xs text-muted-foreground">
               {t.settingsModal.cloudWorkspace}
             </label>
-            <select
-              id="cloud-workspace"
-              value={currentWorkspaceId}
-              onChange={(event) => selectWorkspace(event.target.value)}
+            <Select
+              value={currentWorkspaceId ?? ''}
+              onValueChange={(v) => selectWorkspace(v)}
               disabled={!hasSession || workspaces.length === 0}
-              className={`${inputClass} disabled:opacity-60`}
-            >
-              {!hasSession && <option value="">{t.settingsModal.cloudSignInFirst}</option>}
-              {hasSession && workspaces.length === 0 && <option value="">{t.settingsModal.cloudNoWorkspace}</option>}
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
+              aria-label={t.settingsModal.cloudWorkspace}
+              className="w-full"
+              placeholder={
+                !hasSession
+                  ? t.settingsModal.cloudSignInFirst
+                  : t.settingsModal.cloudNoWorkspace
+              }
+              options={workspaces.map((workspace) => ({
+                value: workspace.id,
+                label: workspace.name,
+              }))}
+            />
           </div>
           <div className="space-y-1.5">
             <label htmlFor="new-cloud-workspace" className="text-xs text-muted-foreground">

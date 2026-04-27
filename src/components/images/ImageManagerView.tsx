@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/ui";
 import { showInExplorer } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { useLocaleStore, getCurrentTranslations } from "@/stores/useLocaleStore";
@@ -611,40 +612,36 @@ export function ImageManagerView() {
               className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <select
+          <Select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as ImageManagerStatusFilter)}
-            className="ui-input h-8 min-w-[120px] bg-background text-xs"
-          >
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
+            onValueChange={(v) => setStatusFilter(v as ImageManagerStatusFilter)}
+            className="h-8 min-w-[120px] text-xs"
+            options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))}
+          />
+          <Select
             value={folderFilter}
-            onChange={(event) => setFolderFilter(event.target.value)}
-            className="ui-input h-8 min-w-[120px] bg-background text-xs"
-          >
-            <option value="all">{t.imageManager.allFolders}</option>
-            {folderOptions.map((folder) => (
-              <option key={folder} value={folder}>
-                {folder === "." ? t.imageManager.vaultRoot : folder}
-              </option>
-            ))}
-          </select>
-          <select
+            onValueChange={(v) => setFolderFilter(v)}
+            className="h-8 min-w-[120px] text-xs"
+            options={[
+              { value: "all", label: t.imageManager.allFolders },
+              ...folderOptions.map((folder) => ({
+                value: folder,
+                label: folder === "." ? t.imageManager.vaultRoot : folder,
+              })),
+            ]}
+          />
+          <Select
             value={sortBy}
-            onChange={(event) => setSortBy(event.target.value as ImageManagerSortBy)}
-            className="ui-input h-8 min-w-[120px] bg-background text-xs"
-          >
-            {SORT_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+            onValueChange={(v) => setSortBy(v as ImageManagerSortBy)}
+            className="h-8 min-w-[120px] text-xs"
+            options={SORT_OPTIONS.map((option) => ({
+              value: option.value,
+              label: option.label,
+            }))}
+          />
           <button
             onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
             className="ui-icon-btn h-8 w-8"

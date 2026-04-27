@@ -101,7 +101,8 @@ describe('WebDAVSettings cloud sync flow', () => {
 
     render(<WebDAVSettings compact />);
 
-    fireEvent.change(screen.getByLabelText('云工作区'), { target: { value: 'workspace-2' } });
+    fireEvent.click(screen.getByLabelText('云工作区'));
+    fireEvent.click(screen.getByRole('option', { name: 'Research' }));
 
     expect(useCloudSyncStore.getState().session?.currentWorkspaceId).toBe('workspace-2');
     expect(useWebDAVStore.getState().config.remote_base_path).toBe('/workspace-2');

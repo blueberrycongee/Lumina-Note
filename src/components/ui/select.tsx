@@ -38,6 +38,7 @@ export interface SelectProps<T extends string> {
   placeholder?: ReactNode;
   disabled?: boolean;
   className?: string;
+  id?: string;
   "aria-label"?: string;
 }
 
@@ -48,6 +49,7 @@ export function Select<T extends string>({
   placeholder,
   disabled,
   className,
+  id,
   "aria-label": ariaLabel,
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
@@ -146,6 +148,7 @@ export function Select<T extends string>({
     <Popover open={open} onOpenChange={setOpen} anchor={triggerRef}>
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         role="combobox"
         aria-expanded={open}

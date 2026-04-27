@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import {
@@ -20,7 +20,6 @@ import {
   Shield,
   Lock,
   Info,
-  ChevronDown,
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
@@ -29,11 +28,8 @@ import {
   DialogBody,
   DialogHeader,
   Field,
-  Popover,
-  PopoverContent,
-  PopoverList,
-  Row,
   SectionHeader,
+  Select,
   TextInput,
   Toggle,
 } from "@/components/ui";
@@ -109,76 +105,6 @@ function LabelRow({
         </span>
       ) : null}
     </span>
-  );
-}
-
-// Select — replaces native <select> so the dropdown popup gets the same
-// solid `bg-popover` + elev-2 surface as the rest of the app's overlays.
-// Native <select> renders an OS-level popup we can't style; users were
-// reading those popups as "transparent glass" against the dialog. The
-// trigger keeps the same visual size/border as the input controls so
-// vertical rhythm doesn't shift.
-interface SelectOption {
-  value: string;
-  label: React.ReactNode;
-}
-
-function Select({
-  id,
-  value,
-  onChange,
-  options,
-}: {
-  id?: string;
-  value: string;
-  onChange: (next: string) => void;
-  options: SelectOption[];
-}) {
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const [open, setOpen] = useState(false);
-  const selected = options.find((o) => o.value === value);
-
-  return (
-    <>
-      <button
-        id={id}
-        ref={triggerRef}
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((p) => !p)}
-        className={[
-          "flex w-full items-center justify-between gap-2",
-          "rounded-ui-md border border-border bg-background px-3 py-2 text-sm text-foreground",
-          "transition-colors duration-fast ease-out-subtle",
-          "hover:bg-accent/40",
-          "focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/30",
-        ].join(" ")}
-      >
-        <span className="truncate text-left">
-          {selected?.label ?? value}
-        </span>
-        <ChevronDown size={14} className="shrink-0 opacity-70" />
-      </button>
-      <Popover open={open} onOpenChange={setOpen} anchor={triggerRef}>
-        <PopoverContent placement="bottom-start">
-          <PopoverList>
-            {options.map((opt) => (
-              <Row
-                key={opt.value}
-                title={opt.label}
-                selected={opt.value === value}
-                trailing={opt.value === value ? <Check size={14} /> : null}
-                onSelect={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
-              />
-            ))}
-          </PopoverList>
-        </PopoverContent>
-      </Popover>
-    </>
   );
 }
 
@@ -310,7 +236,7 @@ export function AISettingsContent() {
             <Select
               id={id}
               value={config.provider}
-              onChange={(next) => {
+              onValueChange={(next) => {
                 const provider = next as LLMProviderType;
                 const defaultModel = getDefaultModelForProvider(provider);
                 setConfig({
@@ -434,7 +360,7 @@ export function AISettingsContent() {
                 <Select
                   id={id}
                   value={currentInList ? config.model : "custom"}
-                  onChange={(newModel) => {
+                  onValueChange={(newModel) => {
                     if (newModel === "custom") {
                       setConfig({
                         model: newModel,

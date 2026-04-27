@@ -16,6 +16,7 @@ import {
 import { useUIStore } from '@/stores/useUIStore';
 import { useFileStore } from '@/stores/useFileStore';
 import { useLocaleStore } from '@/stores/useLocaleStore';
+import { Select } from '@/components/ui';
 
 interface ThemeEditorProps {
   isOpen: boolean;
@@ -245,20 +246,20 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
             {/* 基于官方主题 */}
             <div className="mt-6">
               <div className="text-xs text-muted-foreground mb-2">{t.themeEditor.basedOnTheme}</div>
-              <select
-                onChange={e => {
-                  const base = OFFICIAL_THEMES.find(t => t.id === e.target.value);
+              <Select
+                value=""
+                onValueChange={(id) => {
+                  const base = OFFICIAL_THEMES.find((t) => t.id === id);
                   if (base) handleReset(base);
                 }}
-                className="w-full px-2 py-1.5 text-sm bg-muted border border-border/60 rounded"
-              >
-                <option value="">{t.themeEditor.selectBaseTheme}</option>
-                {OFFICIAL_THEMES.map((theme) => (
-                  <option key={theme.id} value={theme.id}>
-                    {theme.name}
-                  </option>
-                ))}
-              </select>
+                aria-label={t.themeEditor.basedOnTheme}
+                placeholder={t.themeEditor.selectBaseTheme}
+                className="w-full"
+                options={OFFICIAL_THEMES.map((theme) => ({
+                  value: theme.id,
+                  label: theme.name,
+                }))}
+              />
             </div>
           </div>
 

@@ -7,6 +7,7 @@ import {
   Maximize,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Select } from "@/components/ui";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface PDFToolbarProps {
@@ -112,15 +113,16 @@ export function PDFToolbar({
           <ZoomOut size={18} />
         </button>
         
-        <select
-          value={scale}
-          onChange={(e) => onScaleChange(parseFloat(e.target.value))}
-          className="bg-background border border-border/60 rounded px-2 py-1 text-sm min-w-[80px]"
-        >
-          {SCALE_PRESETS.map(s => (
-            <option key={s} value={s}>{Math.round(s * 100)}%</option>
-          ))}
-        </select>
+        <Select
+          value={String(scale)}
+          onValueChange={(v) => onScaleChange(parseFloat(v))}
+          className="min-w-[80px]"
+          aria-label={t.pdfViewer.toolbar.zoomIn}
+          options={SCALE_PRESETS.map((s) => ({
+            value: String(s),
+            label: `${Math.round(s * 100)}%`,
+          }))}
+        />
         
         <button
           onClick={handleZoomIn}
