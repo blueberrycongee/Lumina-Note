@@ -7,7 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-04-26
+## [1.2.0] - 2026-04-27
+
+本次更新主线是**收敛与打磨**：把维护停滞的发布功能、个人主页、半成品的斜杠菜单和重叠工具栏的打字机/聚焦模式从产品里清出去，统一了所有原生下拉的视觉语言，让常用交互（拖文件入侧栏、悬停预览 wiki 链接、命令面板的发现层）更顺手。深色模式按 Apple 的层级思路做了一次系统性重做。
+
+### 破坏性变更
+- **发布功能整体下线**：`services/publish/`、Cloud Publish、PublishSettingsSection 全量移除。配套的"个人主页"功能（useProfileStore / ProfileSettingsSection / ProfilePreview tab / 命令面板的"打开 Profile 预览"项）随之删除——它们的唯一用途是为发布站点提供数据
+- **打字机模式 + 聚焦模式移除**：与现有工具栏布局冲突且实际生效逻辑不稳定，整体回退（首次发布于 v1.1 之后的开发分支，不影响 1.1.0 用户）
+- **主题描述字段移除**：`Theme.description` 与每个官方主题"温暖的米黄色"那种说明文案不再存在；主题卡片只保留色块 + 名字。自定义主题编辑器同步去掉描述输入框
+- **主题国际化收敛**：`settingsModal.themes.*` 与顶层 `themes.*` 两个本地化命名空间删除，主题名直接来自 `themes.ts`（约定保持英文规范名）
+- 设置页签从 6 个收敛到 5 个：`Publish` 标签整体移除
+
+### 新功能
+- **文件拖入文件树即可导入**：从 Finder/Explorer 拖文件落到左侧文件树会被复制进 vault；落在文件夹行上时进入该文件夹，落在空白处则进 vault 根；重名自动加 `(1)` `(2)` 后缀避免覆盖
+- **Wiki 链接悬停预览**：`[[wiki-link]]` 鼠标悬停弹出真实渲染的笔记预览卡（跳过前导标题），覆盖编辑器、阅读模式、文件树、图谱等所有出现 wiki 链接的场景
+- **图谱节点悬停预览**：图谱中的节点也走同一套 hover-preview 系统，预览渲染后的笔记内容
+- **行内"Ask AI"选区弹层**：在编辑器选中文字后弹出快捷操作，直接把选区送进 Chat
+- **空 Cmd+P 变成探索面板**：未输入查询时，命令面板渲染 Discover / Recent 分区，并配合 Ribbon 的命令面板按钮显示"未发现"脉冲提示
+- **Tab 真正可拖拽重排** + 关闭按钮反馈、固定 Tab 缩放进入、脏标小圆点脉冲（基于 framer-motion Reorder）
+- **保存状态指示器**：编辑器顶部的指示器从文字改成图标驱动
+- **欢迎页非 AI 能力提示**：在建议下方提示非 AI 路径上的能力入口
+
+### 改进
+- **统一所有原生 `<select>` 视觉**：新增 `components/ui/Select` primitive（基于现有 Popover + Row），并把设置-默认编辑模式 / 语言 / 云端工作区、图片管理器三个过滤、PDF 工具栏缩放、主题编辑器基础主题、AI 设置 Provider+Model 全部迁过去；`AISettingsModal` 中本地实现的 Select 也合并到共享 primitive
+- **深色模式按 Apple 风格重做**：建立 canvas/panel/popover 三档抬升层级，添加内层 1px 顶部高光、收紧饱和度（14–18 → 5–6）以走"内容优先"的中性色路线
+- **Floating element 阶层规则统一**：popover 与 dialog 的不透明度、阴影、边框策略统一，避免叠层透出
+- **Sidebar 与 canvas 同色**：去掉跨区色调拼接，让左栏与编辑区视觉连贯
+- **Tab 切换走交叉淡入**：reading ↔ editor 模式切换不再硬切
+- **侧栏文件夹展开走高度 morph + 箭头旋转**
+- **"系统"页签里的 Diagnostics 分级**：诊断日志开关 + 导出（用户上报 bug 用得到）保持可见；编辑器交互 trace 录制 / 清除 / 导出仅在 DEV 构建中显示
+- **主题面板**：当用户没有自定义主题时，"Official Themes"小标题不再渲染（单组列表不需要分组标题）
+- 设置面板锁定 `h-[80vh]`，切换 tab 不再让面板高度抖动
+- ChatInput 输入条移到 muted 表面，跟 popover 区分
+
+### 修复
+- **斜杠菜单默认关闭**：菜单滚动时不跟随光标位置，加上几条 AI 命令实际价值有限——整套功能用 `useUIStore.slashCommandsEnabled` flag 默认关掉；实现保留在树里，问题修好后翻一个 flag 即可恢复
+- **拖动光标状态统一**：blocks / tabs / files 三种拖动场景的光标视觉对齐
+- **设置面板高度抖动修复**（同上 `h-[80vh]`）
+
+### 内部
+- 编辑器交互 trace 仅 DEV 显示
+- 主题数据/类型/校验/创建模板的 description 字段一并清理
+- 命令面板的 "publish-site" / "profile-preview" 命令移除
+
 
 本次更新是一次跨度较大的方向性演进：产品从综合笔记工具收敛为以「LLM Wiki + Agent 工作流」为核心的知识库桌面应用，桌面容器从 Tauri 切换到 Electron，Agent 侧引入了分层的长期记忆管线，并对欢迎页、TabBar、侧边栏、ChatInput、设置面板等核心 UI 做了系统性重设计。由于移除了相当多的既有模块，请在升级前阅读「破坏性变更」。
 
