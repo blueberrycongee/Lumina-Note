@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-04-27
+
+紧跟 v1.3.2 的二次紧急修复——v1.3.2 装上之后启动还是直接挂在主进程。
+
+### 修复
+- **node-pty native package 路径在 packaged build 里失效**：opencode 启动时通过 `electron/main/vendor/opencode-node-pty.ts` 加载平台专用的 `@lydell/node-pty-${platform}-${arch}` native binding。原本路径走 `path.resolve(process.cwd(), 'thirdparty/opencode/node_modules/.bun/...')`——dev 模式从项目根能找到，packaged 模式 `process.cwd()` 是 `/`（macOS .app 启动 cwd 默认就是这个），结果路径解析成 `/thirdparty/...`，binary 不存在，主进程未捕获异常直接退出，启动报错 `Failed to load opencode node-pty package from /thirdparty/...`
+
+  修法分三层：
+  - **Vendor 切换分发模式**：`app.isPackaged ? process.resourcesPath/opencode-node-pty/... : <dev-fallback>`
+  - **新增 staging 流程**：`scripts/stage_native_modules.mjs`（`npm run stage:native`）在 build 之前把需要的 `@lydell/node-pty-*` 从 dev-only 的 `thirdparty/opencode/...` 拷到 `release-staging/native/`。`electron-builder.yml` 只引用 staging 目录，**production build 配置完全不再触碰 thirdparty/**，dev 工具树跟 release config 解耦
+  - **macOS 多 arch 自动补齐**：bun 在 arm64 runner 上只装了 darwin-arm64，但 builder 同时打 arm64 + x64 dmg。staging 脚本检测到这种情况后从 npm registry 拉同版本的 darwin-x64 补到 staging 目录
+
+### 内部
+- 新增 `npm run stage:native`，CI 在 `npm run opencode:bundle` 后调用一次
+- `release-staging/` 加进 `.gitignore`
+
+### 影响范围
+- v1.3.2 装机用户启动直接挂，必须手动升 v1.3.3
+- v1.3.2 是 v1.2.0 起第一个真的把 opencode bundle 打进二进制的版本，所以这个 bug 之前一直被 stub 掩盖（stub 不需要 node-pty，从来没走到这个加载路径）
+
 ## [1.3.2] - 2026-04-27
 
 紧急修复——v1.2.0 起的所有发布版本 AI 聊天**实际上都不工作**。

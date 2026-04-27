@@ -146,6 +146,17 @@ jobs:
         shell: bash
         run: npm run opencode:bundle
 
+      # Stage the platform-specific native node-pty package(s) into
+      # release-staging/native/. The script reads from the dev-only
+      # thirdparty/ tree but writes to a clean staging path that
+      # electron-builder.yml references — so the production build config
+      # never depends on developer-only directory layout. On macOS the
+      # script also pulls darwin-x64 from npm so the x64 dmg slice has
+      # its native binary (bun on the arm64 runner only installed arm64).
+      - name: Stage native modules for electron-builder
+        shell: bash
+        run: npm run stage:native
+
       - name: Build renderer + main
         run: npm run build
 

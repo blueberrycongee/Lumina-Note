@@ -15,6 +15,7 @@ scripts/run-ios-sim.sh
 
 # Electron packaging
 release/
+release-staging/
 
 # IDE
 .vscode/

@@ -30,6 +30,13 @@ extraResources:
     to: agent
     filter: ['**/*']
 
+# Per-platform extraResources for opencode's native node-pty addon.
+# `release-staging/native/` is populated by `npm run stage:native` (see
+# scripts/stage_native_modules.mjs) before electron-builder runs — that
+# script is the only thing that reads from the dev-only `thirdparty/`
+# tree. Production build config stays dev-tooling-agnostic. The vendor
+# at `electron/main/vendor/opencode-node-pty.ts` resolves these via
+# `process.resourcesPath` in packaged builds.
 mac:
   category: public.app-category.productivity
   target:
@@ -43,12 +50,20 @@ mac:
   identity: null
   hardenedRuntime: false
   gatekeeperAssess: false
+  extraResources:
+    - from: release-staging/native/node-pty-darwin-${arch}
+      to: opencode-node-pty/node-pty-darwin-${arch}
+      filter: ['**/*']
 
 win:
   target:
     - target: nsis
       arch: [x64]
   icon: build-resources/icon.ico
+  extraResources:
+    - from: release-staging/native/node-pty-win32-x64
+      to: opencode-node-pty/node-pty-win32-x64
+      filter: ['**/*']
 
 nsis:
   oneClick: false
@@ -62,3 +77,7 @@ linux:
       arch: [x64]
   icon: build-resources/icon.png
   category: Office
+  extraResources:
+    - from: release-staging/native/node-pty-linux-x64
+      to: opencode-node-pty/node-pty-linux-x64
+      filter: ['**/*']

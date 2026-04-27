@@ -1,25 +1,51 @@
 import { createRequire } from 'node:module'
 import path from 'path'
+import { app } from 'electron'
 
 const require = createRequire(import.meta.url)
-const packageEntry = path.resolve(
-  process.cwd(),
-  'thirdparty',
-  'opencode',
-  'node_modules',
-  '.bun',
-  'node_modules',
-  '@lydell',
-  `node-pty-${process.platform}-${process.arch}`,
-  'lib',
-  'index.js',
-)
+const platformPkg = `node-pty-${process.platform}-${process.arch}`
+
+// Resolve where the platform-specific @lydell/node-pty package lives on disk.
+//
+// In dev (`npm run dev`): opencode is checked out at `thirdparty/opencode/`
+// next to the project root. `bun install` placed the platform package under
+// `thirdparty/opencode/node_modules/.bun/node_modules/@lydell/...`.
+//
+// In a packaged build: that path doesn't exist — the production app's CWD is
+// typically `/` on macOS — so the vendor was crashing every install at
+// startup with `Failed to load opencode node-pty package from /thirdparty/...`.
+// We now copy the platform package into `<app>/Contents/Resources/opencode-
+// node-pty/` via `electron-builder.yml`'s `extraResources` and resolve to it
+// via `process.resourcesPath` here.
+function resolvePackageEntry(): string {
+  if (app.isPackaged) {
+    return path.join(
+      process.resourcesPath,
+      'opencode-node-pty',
+      platformPkg,
+      'lib',
+      'index.js',
+    )
+  }
+  return path.resolve(
+    process.cwd(),
+    'thirdparty',
+    'opencode',
+    'node_modules',
+    '.bun',
+    'node_modules',
+    '@lydell',
+    platformPkg,
+    'lib',
+    'index.js',
+  )
+}
+
+const packageEntry = resolvePackageEntry()
 
 let nodePty: Record<string, unknown>
 
 try {
-  // Load the platform package from opencode's own Bun workspace so its native
-  // module keeps resolving relative to the original package layout.
   nodePty = require(packageEntry) as Record<string, unknown>
 } catch (error) {
   const wrapped = new Error(
