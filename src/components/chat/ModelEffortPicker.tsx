@@ -242,6 +242,7 @@ export function ModelEffortPicker() {
           <PopoverList>
             {providerModels.length === 0 ? (
               <Row
+                density="compact"
                 title={t.aiSettings.modelPicker.configureInSettings}
                 disabled
               />
@@ -249,6 +250,7 @@ export function ModelEffortPicker() {
               providerModels.map((m) => (
                 <Row
                   key={m.id}
+                  density="compact"
                   title={m.name}
                   selected={m.id === effectiveModelId}
                   trailing={
@@ -293,6 +295,7 @@ export function ModelEffortPicker() {
                 {modeOptions.map((m) => (
                   <Row
                     key={m}
+                    density="compact"
                     title={modeLabel(m)}
                     selected={thinkingMode === m}
                     trailing={
@@ -342,6 +345,7 @@ export function ModelEffortPicker() {
                 {efforts.map((eff) => (
                   <Row
                     key={eff}
+                    density="compact"
                     title={effortLabel[eff]}
                     selected={displayedEffort === eff}
                     trailing={

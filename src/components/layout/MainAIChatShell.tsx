@@ -1414,7 +1414,8 @@ export function MainAIChatShell() {
                         filteredSkills.map((skill) => (
                           <Row
                             key={`${skill.source ?? "skill"}:${skill.name}`}
-                            icon={<Sparkles size={16} />}
+                            density="compact"
+                            icon={<Sparkles size={14} />}
                             title={skill.title}
                             description={skill.description || skill.name}
                             onSelect={() => handleSelectSkill(skill)}
@@ -1443,7 +1444,8 @@ export function MainAIChatShell() {
                         filteredMentionFiles.map((file, index) => (
                           <Row
                             key={file.path}
-                            icon={<FileText size={16} />}
+                            density="compact"
+                            icon={<FileText size={14} />}
                             title={file.name}
                             selected={index === mentionIndex}
                             onSelect={() => handleSelectMention(file)}
@@ -1468,7 +1470,8 @@ export function MainAIChatShell() {
                   >
                     <PopoverList>
                       <Row
-                        icon={<Paperclip size={16} />}
+                        density="compact"
+                        icon={<Paperclip size={14} />}
                         title="Reference file"
                         trailing={<Kbd>@</Kbd>}
                         onSelect={() => {
@@ -1478,7 +1481,8 @@ export function MainAIChatShell() {
                         }}
                       />
                       <Row
-                        icon={<Sparkles size={16} />}
+                        density="compact"
+                        icon={<Sparkles size={14} />}
                         title="Skills"
                         trailing={<Kbd>/</Kbd>}
                         onSelect={() => {
@@ -1487,7 +1491,8 @@ export function MainAIChatShell() {
                         }}
                       />
                       <Row
-                        icon={<Settings size={16} />}
+                        density="compact"
+                        icon={<Settings size={14} />}
                         title={t.ai.aiChatSettings}
                         onSelect={() => {
                           setShowSettings(true);

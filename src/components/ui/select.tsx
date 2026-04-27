@@ -190,6 +190,7 @@ export function Select<T extends string>({
             return (
               <Row
                 key={option.value}
+                density="compact"
                 role="option"
                 title={option.label}
                 description={option.description}

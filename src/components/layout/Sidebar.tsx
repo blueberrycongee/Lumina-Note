@@ -1152,14 +1152,16 @@ function VaultNameSection({
         <PopoverContent placement="bottom-start" width={200}>
           <PopoverList>
             <Row
-              icon={<Pencil className="w-4 h-4" />}
+              density="compact"
+              icon={<Pencil className="w-3.5 h-3.5" />}
               title={t.workspace?.rename || "Rename"}
               onSelect={handleRenameClick}
               role="menuitem"
             />
             {onSwitchVault && (
               <Row
-                icon={<ArrowLeftRight className="w-4 h-4" />}
+                density="compact"
+                icon={<ArrowLeftRight className="w-3.5 h-3.5" />}
                 title={t.workspace?.switch || "Switch"}
                 onSelect={handleSwitchClick}
                 role="menuitem"

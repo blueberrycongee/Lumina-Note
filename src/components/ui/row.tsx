@@ -12,10 +12,20 @@ import { cn } from "@/lib/utils";
  *   [icon] [title + optional description]          [trailing]
  *    16px           ───── grows ─────              auto
  *
+ * Density:
+ *   - default:  px-3 py-2, gap-2.5, 16px icon slot — sidebars, settings rows
+ *   - compact:  px-2.5 py-1.5, gap-2, 14px icon slot — popovers, menus
+ *
+ * Typography (Apple/OpenAI-aligned):
+ *   - title is 13px regular by default; 13px medium when `selected`.
+ *     Weight is the selection signal — paired with bg-accent — so we don't
+ *     need a left accent bar fighting for the user's eye.
+ *   - description is 12px muted.
+ *
  * States (never stack — pick one):
  *   - default
- *   - hovered       (bg-accent)
- *   - selected      (bg-accent + 2px accent bar inset on the left)
+ *   - hovered       (bg-foreground/5, very quiet)
+ *   - selected      (bg-accent + medium-weight title)
  *   - disabled      (opacity 50, pointer-events none)
  *
  * Motion: hover transitions at 100ms. Keyboard-driven selection is
@@ -23,7 +33,7 @@ import { cn } from "@/lib/utils";
  */
 
 export interface RowProps {
-  /** Optional left icon. Sized 16px — pass a 16px lucide icon. */
+  /** Optional left icon. Pass a 16px lucide icon (default density) or 14px (compact). */
   icon?: ReactNode;
   /** Main label. */
   title: ReactNode;
@@ -45,6 +55,11 @@ export interface RowProps {
    */
   role?: "button" | "option" | "menuitem";
   id?: string;
+  /**
+   * Density — `default` for sidebars/settings rows, `compact` for popovers
+   * and menu surfaces where the parent container is intrinsically small.
+   */
+  density?: "default" | "compact";
 }
 
 export const Row = forwardRef<HTMLButtonElement, RowProps>(function Row(
@@ -59,10 +74,12 @@ export const Row = forwardRef<HTMLButtonElement, RowProps>(function Row(
     className,
     role = "button",
     id,
+    density = "default",
     "data-selected": dataSelected,
   },
   ref,
 ) {
+  const compact = density === "compact";
   return (
     <button
       ref={ref}
@@ -75,33 +92,35 @@ export const Row = forwardRef<HTMLButtonElement, RowProps>(function Row(
       data-selected={dataSelected ?? selected}
       onClick={onSelect}
       className={cn(
-        // base — reset button default, grid layout
         "group relative w-full text-left",
-        "flex items-center gap-2.5 px-3 py-2",
-        "rounded-ui-md",
-        // typography
-        "text-sm",
-        // color + transition (hover on background only, per design system)
+        "flex items-center rounded-ui-md",
         "text-foreground",
         "transition-colors duration-fast ease-out-subtle",
-        // hover (when not disabled and not already selected — avoids jitter)
-        "hover:bg-accent",
-        // focus ring only on keyboard
+        compact ? "gap-2 px-2.5 py-1.5" : "gap-2.5 px-3 py-2",
+        "hover:bg-foreground/5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-        // selected — background + left accent bar (inset via ::before)
-        selected &&
-          "bg-accent before:absolute before:inset-y-1 before:left-1 before:w-[2px] before:rounded-full before:bg-primary",
+        selected && "bg-accent hover:bg-accent",
         disabled && "pointer-events-none opacity-50",
         className,
       )}
     >
       {icon ? (
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground">
+        <span
+          className={cn(
+            "shrink-0 flex items-center justify-center text-muted-foreground",
+            compact ? "h-3.5 w-3.5" : "h-4 w-4",
+          )}
+        >
           {icon}
         </span>
       ) : null}
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-medium text-foreground">
+        <span
+          className={cn(
+            "block truncate text-[13px] text-foreground",
+            selected ? "font-medium" : "font-normal",
+          )}
+        >
           {title}
         </span>
         {description ? (

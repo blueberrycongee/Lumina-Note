@@ -69,8 +69,9 @@ they name. Info is not decoration.
 
 | Token | Usage |
 |---|---|
-| `text-xs` (12px) | hints, timestamps, kbd, tag labels |
-| `text-sm` (14px) | body chrome, popover rows, button labels, form inputs |
+| `text-xs` (12px) | hints, timestamps, kbd, tag labels, row descriptions |
+| `text-[13px]` | popover/menu rows, sidebar items, form inputs (desktop control standard) |
+| `text-sm` (14px) | button labels, settings labels, body chrome |
 | `text-base` (16px) | conversation messages, editor body |
 | `text-lg` (18px) | card titles, section titles |
 | `text-xl` (20px) | dialog titles, page titles |
@@ -79,9 +80,12 @@ they name. Info is not decoration.
 
 **Rules**
 
-- No arbitrary `text-[10px]` / `text-[11px]`. If 12 feels too big, your row
-  padding is too tight.
-- Weight: **400 body, 500 titles, 600 emphasis only.** No 700+.
+- 13px is our desktop control type (Apple/OpenAI standard for menus and
+  list rows). Don't go below 12px — if 12 feels too big, the row padding is
+  too tight, fix that first.
+- Weight: **400 body, 500 selected/titles, 600 emphasis only.** No 700+.
+  Default Row title is 400; 500 is reserved as a *selection signal*, not a
+  decorative emphasis.
 - `font-sans` = Inter everywhere in chrome. `font-mono` = JetBrains Mono for
   code/keyboard-shortcuts-inside-prose. No serif display font (yet).
 
@@ -89,8 +93,9 @@ they name. Info is not decoration.
 
 4px base. Prefer these increments:
 
-- Row padding: `px-3 py-2` (popover rows, sidebar items) — 12 × 8
-- Row min-height: 32px (list items), 40px preferred where density allows
+- Row padding (default density): `px-3 py-2` — 12 × 8 — sidebars, settings rows
+- Row padding (compact density): `px-2.5 py-1.5` — 10 × 6 — popovers, menus
+- Row min-height: 28px (compact), 32px (default), 40px preferred where density allows
 - Card padding: `p-4` (16) — internal
 - Dialog padding: `p-6` (24) — generous, never cramped
 - Section gap inside dialog: `space-y-6`
@@ -154,9 +159,11 @@ Tailwind):
   Pattern: `focus-visible:outline-none focus-visible:ring-2
   focus-visible:ring-primary/40 focus-visible:ring-offset-2
   focus-visible:ring-offset-background`.
-- **Selected row** (keyboard or persistent state): `bg-accent` + a 2px left
-  accent-colored bar inset. Hover state uses `bg-accent` only (no bar).
-  This keeps them distinguishable.
+- **Selected row** (keyboard or persistent state): `bg-accent` + title weight
+  steps from 400 to 500. Hover state uses a quiet `bg-foreground/5` tint —
+  the bg-intensity gap (and weight diff) keeps hover and selected
+  distinguishable without an extra accent bar. We dropped the legacy left
+  accent bar in favor of this single-signal pattern (Apple/OpenAI menus).
 - **ESC always dismisses** overlays. **Outside click** dismisses popovers but
   not dialogs (dialogs require explicit confirm/cancel).
 
@@ -194,12 +201,22 @@ Canonical primitives live in `src/components/ui/`:
 Any list item (popover, sidebar, settings row) uses `<Row>`:
 
 ```tsx
+// Default density — sidebar / settings, 16px icon
 <Row
   icon={<FileText size={16} />}
   title="workspace.md"
   description="recently edited"
   trailing={<Kbd>⌘O</Kbd>}
   selected={isSelected}
+  onSelect={handle}
+/>
+
+// Compact density — popover / menu, 14px icon
+<Row
+  density="compact"
+  icon={<Sparkles size={14} />}
+  title="Skills"
+  trailing={<Kbd>/</Kbd>}
   onSelect={handle}
 />
 ```

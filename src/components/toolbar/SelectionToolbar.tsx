@@ -511,25 +511,29 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         >
           <PopoverList>
             <Row
-              icon={<MessagesSquare size={16} />}
+              density="compact"
+              icon={<MessagesSquare size={14} />}
               title={t.selectionToolbar.askActions.discuss}
               description={t.selectionToolbar.askActions.discussDesc}
               onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.discuss)}
             />
             <Row
-              icon={<HelpCircle size={16} />}
+              density="compact"
+              icon={<HelpCircle size={14} />}
               title={t.selectionToolbar.askActions.explain}
               description={t.selectionToolbar.askActions.explainDesc}
               onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.explain)}
             />
             <Row
-              icon={<GraduationCap size={16} />}
+              density="compact"
+              icon={<GraduationCap size={14} />}
               title={t.selectionToolbar.askActions.quiz}
               description={t.selectionToolbar.askActions.quizDesc}
               onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.quiz)}
             />
             <Row
-              icon={<Layers size={16} />}
+              density="compact"
+              icon={<Layers size={14} />}
               title={t.selectionToolbar.askActions.flashcards}
               description={t.selectionToolbar.askActions.flashcardsDesc}
               onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.flashcards)}
