@@ -3,7 +3,7 @@ import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { X, FileText, Network, Pin, Plus, User, Puzzle, Shapes, Images } from "lucide-react";
-import { Reorder, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, Reorder, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
@@ -199,11 +199,22 @@ function TabItem({
           <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         )}
         <span className={cn("flex-1 truncate min-w-0", tab.isPreview && "italic")}>{displayName}</span>
-        {tab.isPinned && (
-          <Pin size={10} className="shrink-0 text-primary rotate-45" />
-        )}
+        <AnimatePresence initial={false}>
+          {tab.isPinned && (
+            <motion.span
+              key="pin"
+              className="shrink-0 inline-flex"
+              initial={{ scale: 0.4, opacity: 0, rotate: 0 }}
+              animate={{ scale: 1, opacity: 1, rotate: 45 }}
+              exit={{ scale: 0.4, opacity: 0, rotate: 0 }}
+              transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+            >
+              <Pin size={10} className="text-primary" />
+            </motion.span>
+          )}
+        </AnimatePresence>
         {tab.isDirty && (
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0 animate-pulse" />
         )}
         {!tab.isPinned && (
           <button
