@@ -390,7 +390,7 @@ export function WelcomeGreeting({
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="relative text-center mt-8 sm:mt-12 md:mt-16 mb-6 sm:mb-8 space-y-3"
+          className="relative z-10 text-center mt-8 sm:mt-12 md:mt-16 mb-6 sm:mb-8 space-y-3"
           initial={{ opacity: 0, y: 16 }}
           animate={{
             opacity: 1,
@@ -443,7 +443,7 @@ export function WelcomeSuggestions({
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="w-full max-w-3xl mx-auto px-4 mt-8 sm:mt-10"
+          className="relative z-10 w-full max-w-3xl mx-auto px-4 mt-8 sm:mt-10"
           initial={{ opacity: 0, y: 16 }}
           animate={{
             opacity: 1,
