@@ -29,6 +29,8 @@ import {
   Download,
   Network,
   X,
+  Check,
+  Loader2,
 } from "lucide-react";
 import { exportToPdf, getExportFileName } from "@/services/pdf/exportPdf";
 import { TabBar } from "@/components/layout/TabBar";
@@ -579,12 +581,35 @@ export function Editor() {
               {modeIcons[editorMode]}
             </button>
 
-            <span className="ui-compact-hide text-xs text-muted-foreground">
-              {isSaving
-                ? t.editor.saving
-                : isDirty
-                  ? t.editor.edited
-                  : t.common.saved}
+            {/* Save state — icon-led so it's glanceable, label kept for
+                clarity. Dirty state uses a small primary-tinted dot that
+                breathes; saving is a spinning ring; saved is a faint
+                check. The whole row is muted-foreground so it never
+                competes with the mode toggle next to it. */}
+            <span
+              className={cn(
+                "ui-compact-hide flex items-center gap-1.5 text-xs transition-colors",
+                isDirty || isSaving ? "text-foreground/70" : "text-muted-foreground",
+              )}
+              aria-live="polite"
+            >
+              {isSaving ? (
+                <Loader2 size={11} className="animate-spin text-primary/80 shrink-0" />
+              ) : isDirty ? (
+                <span
+                  aria-hidden
+                  className="w-1.5 h-1.5 rounded-full bg-primary/80 shrink-0 animate-pulse"
+                />
+              ) : (
+                <Check size={11} className="text-muted-foreground/70 shrink-0" />
+              )}
+              <span>
+                {isSaving
+                  ? t.editor.saving
+                  : isDirty
+                    ? t.editor.edited
+                    : t.common.saved}
+              </span>
             </span>
             <button
               onClick={toggleSplitView}
