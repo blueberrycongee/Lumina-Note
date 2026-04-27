@@ -131,26 +131,28 @@ export function DiagnosticsSection() {
         </button>
       </div>
 
-      <div className="flex items-center justify-between py-2 gap-4">
-        <div className="min-w-0">
-          <p className="font-medium">{t.settingsModal.diagnosticsEditorTrace}</p>
-          <p className="text-sm text-muted-foreground">
-            {t.settingsModal.diagnosticsEditorTraceDesc}
-          </p>
+      {import.meta.env.DEV && (
+        <div className="flex items-center justify-between py-2 gap-4">
+          <div className="min-w-0">
+            <p className="font-medium">{t.settingsModal.diagnosticsEditorTrace}</p>
+            <p className="text-sm text-muted-foreground">
+              {t.settingsModal.diagnosticsEditorTraceDesc}
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Toggle editor interaction trace"
+            onClick={() => setEditorInteractionTraceEnabled(!editorInteractionTraceEnabled)}
+            className={`h-9 px-3 rounded-lg text-sm font-medium border transition-colors ${
+              editorInteractionTraceEnabled
+                ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
+                : "bg-background/60 border-border hover:bg-muted"
+            }`}
+          >
+            {editorInteractionTraceEnabled ? t.settingsModal.diagnosticsRecording : t.settingsModal.diagnosticsOff}
+          </button>
         </div>
-        <button
-          type="button"
-          aria-label="Toggle editor interaction trace"
-          onClick={() => setEditorInteractionTraceEnabled(!editorInteractionTraceEnabled)}
-          className={`h-9 px-3 rounded-lg text-sm font-medium border transition-colors ${
-            editorInteractionTraceEnabled
-              ? "bg-primary text-primary-foreground border-primary/40 hover:bg-primary/90"
-              : "bg-background/60 border-border hover:bg-muted"
-          }`}
-        >
-          {editorInteractionTraceEnabled ? t.settingsModal.diagnosticsRecording : t.settingsModal.diagnosticsOff}
-        </button>
-      </div>
+      )}
 
       <div className="flex gap-2 flex-wrap">
         <button
@@ -161,24 +163,28 @@ export function DiagnosticsSection() {
         >
           {busy ? t.settingsModal.diagnosticsExporting : t.settingsModal.diagnosticsExport}
         </button>
-        <button
-          type="button"
-          aria-label="Clear editor interaction trace"
-          onClick={clearInteractionTrace}
-          disabled={!editorInteractionTraceEnabled || traceBusy}
-          className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {t.settingsModal.diagnosticsClearTrace}
-        </button>
-        <button
-          type="button"
-          aria-label="Export editor interaction trace"
-          onClick={exportInteractionTrace}
-          disabled={!editorInteractionTraceEnabled || traceBusy}
-          className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {traceBusy ? t.settingsModal.diagnosticsExporting : t.settingsModal.diagnosticsExportTrace}
-        </button>
+        {import.meta.env.DEV && (
+          <>
+            <button
+              type="button"
+              aria-label="Clear editor interaction trace"
+              onClick={clearInteractionTrace}
+              disabled={!editorInteractionTraceEnabled || traceBusy}
+              className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {t.settingsModal.diagnosticsClearTrace}
+            </button>
+            <button
+              type="button"
+              aria-label="Export editor interaction trace"
+              onClick={exportInteractionTrace}
+              disabled={!editorInteractionTraceEnabled || traceBusy}
+              className="h-9 px-3 rounded-lg text-sm font-medium border border-border bg-background/60 hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {traceBusy ? t.settingsModal.diagnosticsExporting : t.settingsModal.diagnosticsExportTrace}
+            </button>
+          </>
+        )}
       </div>
     </section>
   );
