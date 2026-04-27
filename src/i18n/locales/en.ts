@@ -367,6 +367,12 @@ export default {
     writeArticleDesc: "Agent: Create new note",
     studyNotes: "Study Notes",
     studyNotesDesc: "Agent: Organize knowledge",
+    discoverHints: {
+      label: "Or explore:",
+      graph: "Knowledge graph",
+      palette: "Command palette",
+      search: "Global search",
+    },
     history: "History",
     historyChats: "History",
     newChat: "New Chat",

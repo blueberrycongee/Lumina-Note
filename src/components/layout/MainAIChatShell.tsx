@@ -41,7 +41,7 @@ import { useSessionManagement } from "./hooks/useSessionManagement";
 import { useSkillSearch } from "./hooks/useSkillSearch";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatToolbar } from "./ChatToolbar";
-import { WelcomeGreeting, WelcomeSuggestions } from "./WelcomeSection";
+import { WelcomeGreeting, WelcomeSuggestions, WelcomeDiscoverHints } from "./WelcomeSection";
 import { WelcomeAurora } from "../effects/WelcomeAurora";
 import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { StreamingOutput } from "../chat/StreamingMessage";
@@ -1655,6 +1655,7 @@ export function MainAIChatShell() {
             recentFiles={recentFiles}
             fileTree={fileTree}
           />
+          <WelcomeDiscoverHints hasStarted={hasStarted} />
           {!hasStarted && <div className="flex-[3] min-h-[16px]" />}
         </main>
 

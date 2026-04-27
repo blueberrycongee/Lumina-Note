@@ -9,8 +9,13 @@ import {
   MessageSquare,
   PenLine,
   BookOpen,
+  Network,
+  Command,
+  Search,
+  ArrowUpRight,
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useFileStore } from "@/stores/useFileStore";
 import type { FileEntry } from "@/lib/host";
 
 // Emoji array removed — the welcome screen now uses a clean text-only
@@ -479,6 +484,88 @@ export function WelcomeSuggestions({
   );
 }
 
+/** Subtle "more to explore" pill row beneath the AI suggestions —
+ * surfaces non-AI capabilities (graph, palette, search) so the welcome
+ * surface doesn't tell users that AI is the only thing here.
+ */
+export function WelcomeDiscoverHints({ hasStarted }: { hasStarted: boolean }) {
+  const { t } = useLocaleStore();
+  const openGraphTab = useFileStore((s) => s.openGraphTab);
+
+  const hints = useMemo(
+    () => [
+      {
+        id: "graph",
+        icon: Network,
+        label: t.ai.discoverHints.graph,
+        action: () => openGraphTab(),
+      },
+      {
+        id: "palette",
+        icon: Command,
+        label: t.ai.discoverHints.palette,
+        action: () =>
+          window.dispatchEvent(new CustomEvent("open-command-palette")),
+      },
+      {
+        id: "search",
+        icon: Search,
+        label: t.ai.discoverHints.search,
+        action: () =>
+          window.dispatchEvent(new CustomEvent("open-global-search")),
+      },
+    ],
+    [t, openGraphTab],
+  );
+
+  return (
+    <AnimatePresence>
+      {!hasStarted && (
+        <motion.div
+          className="relative z-10 w-full max-w-3xl mx-auto px-4 mt-5 sm:mt-6 flex items-center justify-center flex-wrap gap-2 text-xs text-muted-foreground/80"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{
+            opacity: 1,
+            y: 0,
+            transition: {
+              delay: 0.22,
+              duration: 0.28,
+              ease: [0.2, 0.9, 0.1, 1],
+            },
+          }}
+          exit={{
+            opacity: 0,
+            transition: { duration: 0.14, ease: [0.4, 0, 0.2, 1] },
+          }}
+        >
+          <span className="opacity-70">{t.ai.discoverHints.label}</span>
+          {hints.map((hint) => (
+            <button
+              key={hint.id}
+              type="button"
+              onClick={hint.action}
+              className={[
+                "group inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40",
+                "px-2.5 py-1 transition-[background-color,border-color,color,transform] duration-fast ease-out-subtle",
+                "hover:border-primary/40 hover:bg-accent/50 hover:text-foreground",
+                "active:scale-[0.97]",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+              ].join(" ")}
+            >
+              <hint.icon size={12} className="opacity-80 group-hover:text-primary transition-colors" />
+              <span>{hint.label}</span>
+              <ArrowUpRight
+                size={11}
+                className="opacity-0 -translate-x-0.5 group-hover:opacity-70 group-hover:translate-x-0 transition-[opacity,transform] duration-fast"
+              />
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /** Combined component (for backward compat). */
 export function WelcomeSection({
   hasStarted,
@@ -501,6 +588,7 @@ export function WelcomeSection({
         recentFiles={recentFiles}
         fileTree={fileTree}
       />
+      <WelcomeDiscoverHints hasStarted={hasStarted} />
     </>
   );
 }

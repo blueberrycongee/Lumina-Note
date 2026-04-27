@@ -363,6 +363,12 @@ export default {
     writeArticleDesc: "Agent: 创建新笔记",
     studyNotes: "学习笔记",
     studyNotesDesc: "Agent: 整理知识点",
+    discoverHints: {
+      label: "或继续探索：",
+      graph: "知识图谱",
+      palette: "命令面板",
+      search: "全局搜索",
+    },
     history: "历史记录",
     historyChats: "历史对话",
     newChat: "新建对话",

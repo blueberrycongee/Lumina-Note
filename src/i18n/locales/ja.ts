@@ -364,6 +364,12 @@ export default {
     writeArticleDesc: "Agent: 新規ノート作成",
     studyNotes: "学習ノート",
     studyNotesDesc: "Agent: 知識を整理",
+    discoverHints: {
+      label: "他にも：",
+      graph: "ナレッジグラフ",
+      palette: "コマンドパレット",
+      search: "全文検索",
+    },
     history: "履歴",
     historyChats: "履歴チャット",
     newChat: "新規チャット",
