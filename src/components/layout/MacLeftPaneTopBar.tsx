@@ -18,7 +18,7 @@ export function MacLeftPaneTopBar() {
   const refreshFileTree = useFileStore((state) => state.refreshFileTree);
 
   return (
-    <div className="flex h-11 items-stretch bg-background border-b border-border/40">
+    <div className="flex h-11 items-stretch bg-background">
       <div
         className="h-full w-16 shrink-0 flex items-center justify-center bg-ribbon border-r border-border/30"
         data-tauri-drag-region
@@ -28,7 +28,7 @@ export function MacLeftPaneTopBar() {
       </div>
 
       <div
-        className="flex h-full min-w-0 flex-1 items-center gap-0.5 px-2"
+        className="flex h-full min-w-0 flex-1 items-center gap-0.5 px-2 border-b border-border/40"
         data-tauri-drag-region
         data-testid="mac-left-pane-controls"
       >
