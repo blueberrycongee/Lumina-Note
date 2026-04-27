@@ -1566,10 +1566,28 @@ export default {
   // 選択ツールバー
   selectionToolbar: {
     addToChat: "チャットに追加",
+    ask: "AI に聞く",
+    askAI: "この一節を AI と扱う",
     summary: "要約",
     translate: "翻訳",
     polish: "推敲",
     todos: "TODO",
+    askActions: {
+      discuss: "深く議論する",
+      discussDesc: "AI と一緒に読み解いて深掘りする",
+      explain: "やさしく解説",
+      explainDesc: "AI にわかりやすく言い換えてもらう",
+      quiz: "理解度クイズ",
+      quizDesc: "この内容から3問の確認問題を作る",
+      flashcards: "暗記カード化",
+      flashcardsDesc: "Q/A 形式の記憶カードにまとめる",
+    },
+    askPrompts: {
+      discuss: "次の文章について一緒にじっくり考えたいです。まず要点を挙げ、続いて掘り下げる価値のある問いを提案してください：\n\n{text}",
+      explain: "以下の文章を、平易で直截な言葉で説明してください。必要なら具体例も添えてください：\n\n{text}",
+      quiz: "以下の文章をもとに、理解度を測るための簡答付き設問を3問作ってください：\n\n{text}",
+      flashcards: "以下の内容を、Q/A 形式の暗記カード4〜6枚にまとめてください。各カードは1つの要点に絞ってください：\n\n{text}",
+    },
     videoNote: "ビデオノート",
     summaryTitle: "要約",
     translateTitle: "翻訳",

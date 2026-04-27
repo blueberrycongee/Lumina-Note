@@ -1572,10 +1572,28 @@ export default {
   // Selection Toolbar
   selectionToolbar: {
     addToChat: "Add to Chat",
+    ask: "Ask AI",
+    askAI: "Have AI work with this passage",
     summary: "Summary",
     translate: "Translate",
     polish: "Polish",
     todos: "Todos",
+    askActions: {
+      discuss: "Discuss",
+      discussDesc: "Hand this to AI and dig in together",
+      explain: "Explain plainly",
+      explainDesc: "Ask AI to break it down in simple words",
+      quiz: "Quiz me",
+      quizDesc: "Generate 3 comprehension questions",
+      flashcards: "Make flashcards",
+      flashcardsDesc: "Turn this into Q/A memory cards",
+    },
+    askPrompts: {
+      discuss: "I'd like to discuss this passage with you. First call out the key ideas, then suggest questions worth pushing further on:\n\n{text}",
+      explain: "Please explain the following passage in plain, direct language. Use a concrete example if it helps:\n\n{text}",
+      quiz: "Generate 3 comprehension questions (with short answers) based on the passage below to help me check my understanding:\n\n{text}",
+      flashcards: "Turn the passage below into 4–6 Q/A flashcards. Each card should focus on a single core point:\n\n{text}",
+    },
     videoNote: "Video Note",
     summaryTitle: "Summary",
     translateTitle: "Translation",

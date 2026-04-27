@@ -4,12 +4,22 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MessageSquarePlus, Sparkles, Languages } from "lucide-react";
+import {
+  MessageSquarePlus,
+  Sparkles,
+  Languages,
+  MessagesSquare,
+  HelpCircle,
+  GraduationCap,
+  Layers,
+} from "lucide-react";
 import { useAIStore } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { callLLM, type Message } from '@/services/llm';
 import { useLocaleStore } from '@/stores/useLocaleStore';
 import { pluginEditorRuntime } from "@/services/plugins/editorRuntime";
+import { Popover, PopoverContent, PopoverList } from "@/components/ui/popover";
+import { Row } from "@/components/ui/row";
 
 function summarizeSelection(text: string): string {
   const normalized = text.replace(/\s+/g, " ").trim();
@@ -33,10 +43,12 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   const [isTranslating, setIsTranslating] = useState(false);
   const [isPolishing, setIsPolishing] = useState(false);
   const [isTodoing, setIsTodoing] = useState(false);
+  const [showAskMenu, setShowAskMenu] = useState(false);
   const { addTextSelection } = useAIStore();
   const { currentFile } = useFileStore();
 
   const toolbarRef = useRef<HTMLDivElement | null>(null);
+  const askAnchorRef = useRef<HTMLButtonElement | null>(null);
 
   const handleSelectionChange = useCallback(() => {
     const selection = window.getSelection();
@@ -142,12 +154,18 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-selection-toolbar]")) {
+      // The Ask popover lives in a portal (fixed positioning outside the toolbar
+      // node), so it's also tagged so clicks inside it don't dismiss the bar.
+      if (
+        !target.closest("[data-selection-toolbar]") &&
+        !target.closest("[data-selection-toolbar-popover]")
+      ) {
         // 延迟隐藏，让按钮点击事件先执行
         setTimeout(() => {
           const selection = window.getSelection();
           if (!selection || selection.isCollapsed) {
             setPosition(null);
+            setShowAskMenu(false);
           }
         }, 100);
       }
@@ -157,11 +175,26 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
+  // Pre-fill the AI chat with a templated prompt and switch to that tab.
+  // Distinct from the inline summary/translate/polish/todo actions: those
+  // mutate the document; these open a conversation about the selection so
+  // the user can keep iterating.
+  const sendToChatWithPrompt = (template: string) => {
+    if (!selectedText) return;
+    const prompt = template.replace("{text}", selectedText);
+    useFileStore.getState().openAIMainTab();
+    useAIStore.getState().enqueueInputAppend(prompt);
+    setShowAskMenu(false);
+    setPosition(null);
+    setSelectedText("");
+    window.getSelection()?.removeAllRanges();
+  };
+
   const handleAddToChat = () => {
     if (!selectedText) return;
-    
+
     // 获取当前文件名
-    const fileName = currentFile 
+    const fileName = currentFile
       ? currentFile.split(/[/\\]/).pop()?.replace(".md", "") || t.selectionToolbar.unknown
       : t.selectionToolbar.unknown;
     const selectionSnapshot = pluginEditorRuntime.getSelection();
@@ -419,6 +452,18 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
           <span>{t.selectionToolbar.addToChat}</span>
         </button>
         <button
+          ref={askAnchorRef}
+          onClick={() => setShowAskMenu((v) => !v)}
+          className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap"
+          title={t.selectionToolbar.askAI}
+          aria-haspopup="menu"
+          aria-expanded={showAskMenu}
+        >
+          <Sparkles size={13} className="text-primary" />
+          <span>{t.selectionToolbar.ask}</span>
+          <span className="opacity-60 -ml-0.5">▾</span>
+        </button>
+        <button
           onClick={handleSummarize}
           disabled={isSummarizing}
           className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium text-foreground hover:bg-accent rounded transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-wait"
@@ -457,6 +502,41 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
       </div>
       {/* 左侧小三角指向选中文字 */}
       <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-r-4 border-t-transparent border-b-transparent border-r-border" />
+
+      <Popover open={showAskMenu} onOpenChange={setShowAskMenu} anchor={askAnchorRef}>
+        <PopoverContent
+          placement="bottom-start"
+          width={240}
+          data-selection-toolbar-popover
+        >
+          <PopoverList>
+            <Row
+              icon={<MessagesSquare size={16} />}
+              title={t.selectionToolbar.askActions.discuss}
+              description={t.selectionToolbar.askActions.discussDesc}
+              onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.discuss)}
+            />
+            <Row
+              icon={<HelpCircle size={16} />}
+              title={t.selectionToolbar.askActions.explain}
+              description={t.selectionToolbar.askActions.explainDesc}
+              onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.explain)}
+            />
+            <Row
+              icon={<GraduationCap size={16} />}
+              title={t.selectionToolbar.askActions.quiz}
+              description={t.selectionToolbar.askActions.quizDesc}
+              onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.quiz)}
+            />
+            <Row
+              icon={<Layers size={16} />}
+              title={t.selectionToolbar.askActions.flashcards}
+              description={t.selectionToolbar.askActions.flashcardsDesc}
+              onSelect={() => sendToChatWithPrompt(t.selectionToolbar.askPrompts.flashcards)}
+            />
+          </PopoverList>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

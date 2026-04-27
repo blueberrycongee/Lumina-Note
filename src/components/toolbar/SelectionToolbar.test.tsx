@@ -16,6 +16,8 @@ vi.mock('@/stores/useLocaleStore', () => ({
     t: {
       selectionToolbar: {
         addToChat: 'Add to Chat',
+        ask: 'Ask AI',
+        askAI: 'Ask AI about this',
         selectionSummary: 'Summary',
         selectionTranslate: 'Translate',
         selectionPolish: 'Polish',
@@ -27,6 +29,22 @@ vi.mock('@/stores/useLocaleStore', () => ({
         todos: 'Todos',
         summaryTitle: 'Summary',
         summaryFailed: 'Summary Failed',
+        askActions: {
+          discuss: 'Discuss',
+          discussDesc: 'Discuss with AI',
+          explain: 'Explain',
+          explainDesc: 'Explain plainly',
+          quiz: 'Quiz me',
+          quizDesc: 'Generate quiz questions',
+          flashcards: 'Make flashcards',
+          flashcardsDesc: 'Make Q/A cards',
+        },
+        askPrompts: {
+          discuss: 'Discuss: {text}',
+          explain: 'Explain: {text}',
+          quiz: 'Quiz: {text}',
+          flashcards: 'Flashcards: {text}',
+        },
       },
     },
   }),

@@ -1540,10 +1540,28 @@ export default {
   // 选中工具栏
   selectionToolbar: {
     addToChat: "添加到对话",
+    ask: "问 AI",
+    askAI: "用 AI 处理这段文字",
     summary: "总结",
     translate: "翻译",
     polish: "润色",
     todos: "待办",
+    askActions: {
+      discuss: "深入讨论",
+      discussDesc: "把这段交给 AI 一起讨论、追问",
+      explain: "通俗解释",
+      explainDesc: "请 AI 用更直白的话讲清楚",
+      quiz: "出题练习",
+      quizDesc: "围绕这段生成 3 道理解题",
+      flashcards: "制作闪卡",
+      flashcardsDesc: "整理为问答式记忆卡片",
+    },
+    askPrompts: {
+      discuss: "我想就这段内容和你深入聊聊，先帮我点出关键观点，再提出值得继续追问的问题：\n\n{text}",
+      explain: "请用通俗、直白的语言解释下面这段内容，必要时举一个例子：\n\n{text}",
+      quiz: "请围绕下面这段内容出 3 道理解性题目（含简答），帮我检验掌握情况：\n\n{text}",
+      flashcards: "请把下面这段内容整理成 4-6 张问答式记忆卡片（Q/A 格式，每张聚焦一个核心点）：\n\n{text}",
+    },
     videoNote: "视频笔记",
     summaryTitle: "总结",
     translateTitle: "翻译",

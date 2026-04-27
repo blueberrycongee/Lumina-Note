@@ -1541,10 +1541,28 @@ export default {
   // 選中工具列
   selectionToolbar: {
     addToChat: "添加到對話",
+    ask: "問 AI",
+    askAI: "用 AI 處理這段文字",
     summary: "總結",
     translate: "翻譯",
     polish: "潤色",
     todos: "待辦",
+    askActions: {
+      discuss: "深入討論",
+      discussDesc: "把這段交給 AI 一起討論、追問",
+      explain: "通俗解釋",
+      explainDesc: "請 AI 用更直白的話講清楚",
+      quiz: "出題練習",
+      quizDesc: "圍繞這段生成 3 道理解題",
+      flashcards: "製作閃卡",
+      flashcardsDesc: "整理為問答式記憶卡片",
+    },
+    askPrompts: {
+      discuss: "我想就這段內容和你深入聊聊，先幫我點出關鍵觀點，再提出值得繼續追問的問題：\n\n{text}",
+      explain: "請用通俗、直白的語言解釋下面這段內容，必要時舉一個例子：\n\n{text}",
+      quiz: "請圍繞下面這段內容出 3 道理解性題目（含簡答），幫我檢驗掌握情況：\n\n{text}",
+      flashcards: "請把下面這段內容整理成 4-6 張問答式記憶卡片（Q/A 格式，每張聚焦一個核心點）：\n\n{text}",
+    },
     videoNote: "視頻筆記",
     summaryTitle: "總結",
     translateTitle: "翻譯",
