@@ -43,16 +43,19 @@ curl -X POST https://YOUR_DOMAIN/auth/register \
 
 ## Desktop App Setup
 
-Open **Settings → Cloud Relay** and use:
+Open **Settings → Sync**. In the WebDAV section:
 
-- Relay URL: `wss://YOUR_DOMAIN/relay`
+- Cloud server: `https://YOUR_DOMAIN`
 - Email / Password: the account you registered
 
-Click **Start** and ensure the status shows **Connected**.
+Click **Register** or **Login**, pick a Cloud workspace, then run **Test Connection** before **Preview Sync / Sync Now**. The desktop derives the WebDAV URL (`https://YOUR_DOMAIN/dav`) and remote path (`/<workspace_id>`) for you.
 
 ## Mobile Pairing
 
-Scan the QR code from the desktop app or paste the pairing payload into the mobile app.
+Two options, both reachable from **Settings → Sync**:
+
+- **Same Wi-Fi**: open the Mobile Gateway panel, scan the QR code with the mobile app — no relay needed.
+- **Different network**: the mobile app signs into the same self-hosted account; data flows through your relay.
 
 ## Hosted Deployment (Official / Existing TLS)
 

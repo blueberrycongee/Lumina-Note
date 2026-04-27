@@ -86,11 +86,6 @@ Use AI for controlled restructuring, not one-shot rewrite.
 - If unsure, check that the model name matches your provider.
 - Verify network/proxy setup
 
-### Retrieval quality is weak
-
-- Use clearer headings and shorter sections
-- Add consistent tags and WikiLinks
-
 ### What should I learn first
 
 - Start with `WikiLinks + AI panel + Knowledge Graph`
