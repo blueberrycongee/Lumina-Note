@@ -65,6 +65,10 @@ interface UIState {
   blockEditorEnabled: boolean;
   setBlockEditorEnabled: (enabled: boolean) => void;
 
+  // Editor slash-command menu (typing "/" pops up a command palette)
+  slashCommandsEnabled: boolean;
+  setSlashCommandsEnabled: (enabled: boolean) => void;
+
   // Split view
   splitView: boolean;
   splitDirection: "horizontal" | "vertical";
@@ -114,6 +118,7 @@ const partializeUIState = (state: UIState) => ({
   mainView: state.mainView,
   editorMode: state.editorMode,
   blockEditorEnabled: state.blockEditorEnabled,
+  slashCommandsEnabled: state.slashCommandsEnabled,
   splitView: state.splitView,
   splitDirection: state.splitDirection,
   diagnosticsEnabled: state.diagnosticsEnabled,
@@ -205,6 +210,12 @@ export const useUIStore = create<UIState>()(
       // Block editor — default off; user opts in via Settings
       blockEditorEnabled: false,
       setBlockEditorEnabled: (enabled) => set({ blockEditorEnabled: enabled }),
+
+      // Off by default — the slash menu was unfinished and its popup
+      // didn't track the slash position when the editor scrolled.
+      slashCommandsEnabled: false,
+      setSlashCommandsEnabled: (enabled) =>
+        set({ slashCommandsEnabled: enabled }),
 
       // Split view
       splitView: false,

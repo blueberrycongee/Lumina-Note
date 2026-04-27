@@ -4336,6 +4336,7 @@ export const CodeMirrorEditor = forwardRef<
   const { setSplitView, editorFontSize, editorInteractionTraceEnabled } =
     useUIStore();
   const blockEditorEnabled = useUIStore((s) => s.blockEditorEnabled);
+  const slashCommandsEnabled = useUIStore((s) => s.slashCommandsEnabled);
 
   const markTransitionTrace = useCallback(
     (type: string, payload: Record<string, unknown>) => {
@@ -4634,8 +4635,8 @@ export const CodeMirrorEditor = forwardRef<
         voicePreviewField,
         markdownStylePlugin,
         imageInfoField,
-        // Slash Command 扩展
-        ...slashCommandExtensions,
+        // Slash Command 扩展（默认关闭，未完工：滚动时弹层不跟随光标）
+        ...(slashCommandsEnabled ? slashCommandExtensions : []),
         placeholderExtension(t.editor.slashMenu.placeholder),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !isExternalChange.current) {
@@ -5718,7 +5719,7 @@ export const CodeMirrorEditor = forwardRef<
         ref={containerRef}
         className={`codemirror-wrapper h-full ${className}`}
       />
-      <SlashMenu view={viewRef.current} />
+      {slashCommandsEnabled && <SlashMenu view={viewRef.current} />}
       {blockMenu && viewRef.current && (
         <BlockMenu
           key={`block-menu-${blockMenu.blockFrom}-${blockMenu.blockTo}`}
