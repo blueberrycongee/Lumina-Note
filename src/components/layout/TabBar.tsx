@@ -12,21 +12,7 @@ import { useMacTopChromeEnabled } from "./MacTopChrome";
 const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 64;
 const MAC_COLLAPSED_RIBBON_WIDTH = 64;
 const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLAPSED_RIBBON_WIDTH;
-
-// Apple-style motion tokens. SwiftUI's smooth/snappy springs are critically
-// damped (no overshoot) and settle in ~200–250 ms; we thread a single
-// duration + easing through every transform on a tab — open, close, drag,
-// pin, layout — so the strip behaves like one coherent surface instead of
-// a stack of competing animation systems.
-const TAB_EASE = [0.32, 0.72, 0, 1] as const;
-const TAB_DURATION = 0.22;
-const TAB_DURATION_FAST = 0.16;
-const TAB_LAYOUT_TRANSITION = { duration: TAB_DURATION, ease: TAB_EASE };
-const TAB_DRAG_LIFT_TRANSITION = { duration: TAB_DURATION_FAST, ease: TAB_EASE };
-
-const TAB_BASIS_PX = 240;
-const TAB_MIN_WIDTH_PX = 110;
-const TAB_MAX_WIDTH_PX = 240;
+const CLOSE_ANIMATION_MS = 150;
 
 // Chrome-style tab silhouette: top corners curve in, bottom corners curve out
 // into "ears" that flush with the strip's bottom edge. Ear arcs use sweep-flag=0
@@ -215,20 +201,13 @@ function TabItem({
           {tab.isPinned && (
             <motion.span
               key="pin"
-              // Animate width + marginLeft together so the Pin's appearance
-              // / disappearance doesn't snap the dirty dot and close button
-              // by a full icon-plus-gap (~18 px) on a single frame. The
-              // negative left margin at width 0 cancels out the gap-2 the
-              // parent flex would otherwise reserve, so the trailing items
-              // glide instead of jump.
-              className="shrink-0 inline-flex items-center justify-center"
-              initial={{ width: 0, marginLeft: -8, scale: 0.4, opacity: 0, rotate: 0 }}
-              animate={{ width: 10, marginLeft: 0, scale: 1, opacity: 1, rotate: 45 }}
-              exit={{ width: 0, marginLeft: -8, scale: 0.4, opacity: 0, rotate: 0 }}
-              transition={{ duration: TAB_DURATION_FAST, ease: TAB_EASE }}
-              style={{ overflow: "visible" }}
+              className="shrink-0 inline-flex"
+              initial={{ scale: 0.4, opacity: 0, rotate: 0 }}
+              animate={{ scale: 1, opacity: 1, rotate: 45 }}
+              exit={{ scale: 0.4, opacity: 0, rotate: 0 }}
+              transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
             >
-              <Pin size={10} className="text-primary shrink-0" />
+              <Pin size={10} className="text-primary" />
             </motion.span>
           )}
         </AnimatePresence>
@@ -265,13 +244,12 @@ interface ContextMenuState {
 
 export function TabBar() {
   const { t } = useLocaleStore();
-  const { tabs, activeTabIndex, switchTab, closeTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab, createNewFile } =
+  const { tabs, activeTabIndex, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab, createNewFile } =
     useFileStore(
       useShallow((state) => ({
         tabs: state.tabs,
         activeTabIndex: state.activeTabIndex,
         switchTab: state.switchTab,
-        closeTab: state.closeTab,
         closeOtherTabs: state.closeOtherTabs,
         closeAllTabs: state.closeAllTabs,
         togglePinTab: state.togglePinTab,
@@ -313,30 +291,53 @@ export function TabBar() {
     [tabs, reorderTabs],
   );
 
-  // 卸载兜底：万一拖拽中组件被销毁，确保 body class 被清掉
+  // IDs of tabs currently animating their close (shrinking out). The tab is
+  // still in the store during this window — store removal happens after the
+  // animation finishes. This is what lets the component own the animation
+  // semantics: only user-initiated closes get an animation; preview replaces
+  // and external removals just unmount instantly via React reconciliation.
+  const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
+  const timeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
   useEffect(() => {
     return () => {
+      for (const t of timeouts.current) clearTimeout(t);
+      timeouts.current.clear();
+      // 卸载兜底：万一拖拽中组件被销毁，确保 body class 被清掉
       document.body.classList.remove("lumina-tab-dragging");
     };
   }, []);
 
-  // Single close path. Drives a normal store mutation; the tab's
-  // exit transform (flexBasis → 0, opacity → 0, marginLeft → 0) is
-  // owned by AnimatePresence on the Reorder.Item below, so the
-  // imperative timeout-driven shrink animation is no longer needed.
-  const closeTabAt = useCallback(
-    (index: number) => {
-      void closeTab(index).catch((error) => {
-        reportOperationError({
-          source: "TabBar.closeTab",
-          action: "Close tab",
-          error,
-          context: { index },
+  const animateClose = useCallback((tabId: string) => {
+    setClosingIds((prev) => {
+      if (prev.has(tabId)) return prev;
+      const next = new Set(prev);
+      next.add(tabId);
+      return next;
+    });
+    const timeout = setTimeout(() => {
+      timeouts.current.delete(timeout);
+      const state = useFileStore.getState();
+      const idx = state.tabs.findIndex((t) => t.id === tabId);
+      if (idx >= 0) {
+        void state.closeTab(idx).catch((error) => {
+          reportOperationError({
+            source: "TabBar.animateClose",
+            action: "Close tab",
+            error,
+            context: { tabId },
+          });
         });
+      }
+      setClosingIds((prev) => {
+        if (!prev.has(tabId)) return prev;
+        const next = new Set(prev);
+        next.delete(tabId);
+        return next;
       });
-    },
-    [closeTab],
-  );
+    }, CLOSE_ANIMATION_MS);
+    timeouts.current.add(timeout);
+  }, []);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -350,9 +351,10 @@ export function TabBar() {
   const handleClose = useCallback(
     (e: React.MouseEvent, index: number) => {
       e.stopPropagation();
-      closeTabAt(index);
+      const tab = tabs[index];
+      if (tab) animateClose(tab.id);
     },
-    [closeTabAt],
+    [tabs, animateClose]
   );
 
   // 即使没有标签页也显示空的标签栏（保持 UI 一致性）
@@ -382,108 +384,77 @@ export function TabBar() {
             onReorder={handleReorder}
             className="flex min-w-0 items-stretch"
           >
-            <AnimatePresence initial={false}>
-              {tabs.map((tab, index) => {
-                const isActive = index === activeTabIndex;
-                // Negative left-margin from the second tab onward so each
-                // tab's left ear overlaps the previous tab's right ear —
-                // same trick Chrome uses to merge adjacent silhouettes
-                // instead of leaving a flat floor between them. We animate
-                // marginLeft alongside flexBasis so the overlap collapses
-                // smoothly as the tab shrinks during exit, instead of
-                // snapping 22 px when the element finally unmounts.
-                const targetMarginLeft = index > 0 ? -TAB_OVERLAP_PX : 0;
-                return (
-                  <Reorder.Item
-                    as="div"
-                    key={tab.id}
-                    value={tab}
-                    drag="x"
-                    dragElastic={0.05}
-                    dragMomentum={false}
-                    onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
-                    onDragEnd={() => document.body.classList.remove("lumina-tab-dragging")}
-                    whileDrag={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            // Subtle Apple-style lift: a small scale, a
-                            // hairline upward translate, and a soft layered
-                            // shadow that reads as depth without leaning on
-                            // a heavy drop. zIndex clears the active tab's
-                            // z-10 so a dragged inactive tab leads cleanly.
-                            scale: 1.02,
-                            y: -2,
-                            zIndex: 30,
-                            boxShadow:
-                              "0 4px 14px -4px rgba(0, 0, 0, 0.14), 0 2px 6px -2px rgba(0, 0, 0, 0.08)",
-                            transition: TAB_DRAG_LIFT_TRANSITION,
-                          }
-                    }
-                    layout="position"
-                    initial={
-                      reduceMotion
-                        ? false
-                        : {
-                            flexBasis: 0,
-                            opacity: 0,
-                            marginLeft: 0,
-                            minWidth: 0,
-                            maxWidth: 0,
-                          }
-                    }
-                    animate={{
-                      flexBasis: TAB_BASIS_PX,
-                      opacity: 1,
-                      marginLeft: targetMarginLeft,
-                      minWidth: TAB_MIN_WIDTH_PX,
-                      maxWidth: TAB_MAX_WIDTH_PX,
-                    }}
-                    exit={
-                      reduceMotion
-                        ? { opacity: 0 }
-                        : {
-                            flexBasis: 0,
-                            opacity: 0,
-                            marginLeft: 0,
-                            minWidth: 0,
-                            maxWidth: 0,
-                          }
-                    }
-                    transition={TAB_LAYOUT_TRANSITION}
-                    className={cn(
-                      "relative grow-0 shrink overflow-hidden",
-                      // Active tab sits above its neighbors so its silhouette
-                      // outline (and white fill) cleanly overlays the overlapping
-                      // ears of the inactive tabs on either side.
-                      isActive ? "z-10" : "z-0 hover:z-[5]",
-                    )}
-                  >
-                    <TabItem
-                      tab={tab}
-                      isActive={isActive}
-                      displayName={
-                        tab.type === "ai-chat"
-                          ? t.common.aiChatTab
-                          : tab.type === "graph"
-                            ? t.graph.title
-                            : tab.name
-                      }
-                      onSelect={() => switchTab(index)}
-                      onDoubleClick={() => {
-                        if (tab.isPreview) {
-                          promotePreviewTab(tab.id);
-                        } else if (!tab.isPinned) {
-                          closeTabAt(index);
+            {tabs.map((tab, index) => {
+              const isClosing = closingIds.has(tab.id);
+              const isActive = index === activeTabIndex;
+              return (
+                <Reorder.Item
+                  as="div"
+                  key={tab.id}
+                  value={tab}
+                  drag={isClosing ? false : "x"}
+                  dragElastic={0.05}
+                  dragMomentum={false}
+                  onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
+                  onDragEnd={() => document.body.classList.remove("lumina-tab-dragging")}
+                  whileDrag={
+                    reduceMotion
+                      ? undefined
+                      : {
+                          // Lift + brighten so the dragged tab clearly leads.
+                          // zIndex must clear the active tab's z-10 so a
+                          // dragged inactive tab doesn't slip under it.
+                          scale: 1.02,
+                          y: -2,
+                          zIndex: 30,
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
                         }
-                      }}
-                      onClose={(e) => handleClose(e, index)}
-                      onContextMenu={(e) => handleContextMenu(e, index)}
-                    />
-                  </Reorder.Item>
-                );
-              })}
-            </AnimatePresence>
+                  }
+                  layout="position"
+                  transition={{ duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }}
+                  // Negative left-margin from the second tab onward so each
+                  // tab's left ear overlaps the previous tab's right ear —
+                  // same trick Chrome uses to merge adjacent silhouettes
+                  // instead of leaving a flat floor between them. The exact
+                  // amount (TAB_OVERLAP_PX) is tuned slightly larger than
+                  // EAR_RADIUS so the bodies pack tighter than the pure
+                  // geometric interlock would give.
+                  style={index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : undefined}
+                  className={cn(
+                    "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
+                    isClosing
+                      ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
+                      : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]",
+                    // Active tab sits above its neighbors so its silhouette
+                    // outline (and white fill) cleanly overlays the overlapping
+                    // ears of the inactive tabs on either side.
+                    isActive ? "z-10" : "z-0 hover:z-[5]"
+                  )}
+                >
+                  <TabItem
+                    tab={tab}
+                    isActive={index === activeTabIndex}
+                    displayName={
+                      tab.type === "ai-chat"
+                        ? t.common.aiChatTab
+                        : tab.type === "graph"
+                          ? t.graph.title
+                          : tab.name
+                    }
+                    onSelect={() => switchTab(index)}
+                    onDoubleClick={() => {
+                      if (tab.isPreview) {
+                        promotePreviewTab(tab.id);
+                      } else if (!tab.isPinned) {
+                        animateClose(tab.id);
+                      }
+                    }}
+                    onClose={(e) => handleClose(e, index)}
+                    onContextMenu={(e) => handleContextMenu(e, index)}
+                  />
+                </Reorder.Item>
+              );
+            })}
           </Reorder.Group>
           <button
             type="button"
@@ -527,7 +498,8 @@ export function TabBar() {
             <div className="h-px bg-border my-1" />
             <button
               onClick={() => {
-                closeTabAt(contextMenu.tabIndex);
+                const tab = tabs[contextMenu.tabIndex];
+                if (tab) animateClose(tab.id);
                 setContextMenu(null);
               }}
               className="w-full px-3 py-1.5 text-[13px] text-left hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
