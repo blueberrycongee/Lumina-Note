@@ -109,6 +109,11 @@ export default {
     save: "Save",
   },
 
+  // Wiki-link hover preview
+  wikiPreview: {
+    notFound: "No note named \"{name}\"",
+  },
+
   // Editor
   editor: {
     reading: "Reading",

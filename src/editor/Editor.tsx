@@ -1,6 +1,8 @@
-import { useEffect, useCallback, useRef, useState, useLayoutEffect } from "react";
+import { useEffect, useCallback, useRef, useState, useLayoutEffect, type RefObject } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useFileStore } from "@/stores/useFileStore";
+import { useWikiLinkHover } from "@/lib/useWikiLinkHover";
+import { WikiLinkHoverCard } from "@/components/wiki/WikiLinkHoverCard";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -89,6 +91,17 @@ function restoreModeScrollSnapshot(
   return { scrollTop, maxScrollTop };
 }
 
+/**
+ * Wires `useWikiLinkHover` against the live-editor wrapper so hovers
+ * over CodeMirror's [[wikilink]] decorations open the same preview
+ * card the reading view uses. Kept as its own component so the hook
+ * call remains conditional on the wrapper actually being mounted.
+ */
+function LiveEditorWikiHover({ hostRef }: { hostRef: RefObject<HTMLDivElement | null> }) {
+  const { anchor, linkName, close } = useWikiLinkHover(hostRef);
+  return <WikiLinkHoverCard anchor={anchor} linkName={linkName} onClose={close} />;
+}
+
 export function Editor() {
   const { t } = useLocaleStore();
   const reduceMotion = useReducedMotion();
@@ -148,6 +161,7 @@ export function Editor() {
   const editorRef = useRef<CodeMirrorEditorRef>(null);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const readingScrollContainerRef = useRef<HTMLDivElement>(null);
+  const liveEditorHostRef = useRef<HTMLDivElement>(null);
   useScrollFade(useCallback(() => readingScrollContainerRef.current, []));
   const pendingModeScrollSnapshotRef = useRef<ModeScrollSnapshot | null>(null);
   const lastOuterScrollTraceAtRef = useRef(0);
@@ -672,6 +686,7 @@ export function Editor() {
               becomes non-interactive, but the CM view itself stays alive so
               scrollTop, IME, and viewport anchor are intact when we come back. */}
           <motion.div
+            ref={liveEditorHostRef}
             className={
               editorMode === "reading"
                 ? "absolute inset-0 pointer-events-none"
@@ -694,6 +709,7 @@ export function Editor() {
               filePath={currentFile}
             />
           </motion.div>
+          <LiveEditorWikiHover hostRef={liveEditorHostRef} />
         </div>
       )}
     </div>

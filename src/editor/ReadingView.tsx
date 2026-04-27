@@ -10,6 +10,9 @@ import { getImageMimeType, resolveEditorImagePath } from "@/services/assets/edit
 import mermaid from "mermaid";
 import { useShallow } from "zustand/react/shallow";
 import { pluginRenderRuntime } from "@/services/plugins/renderRuntime";
+import { resolveWikiLinkPath } from "@/lib/wikiLinks";
+import { useWikiLinkHover } from "@/lib/useWikiLinkHover";
+import { WikiLinkHoverCard } from "@/components/wiki/WikiLinkHoverCard";
 
 // 初始化 mermaid
 mermaid.initialize({
@@ -160,23 +163,7 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
       e.preventDefault();
       const linkName = target.getAttribute("data-wikilink");
       if (linkName) {
-        // Find the file in fileTree
-        const findFile = (entries: typeof fileTree): string | null => {
-          for (const entry of entries) {
-            if (entry.is_dir && entry.children) {
-              const found = findFile(entry.children);
-              if (found) return found;
-            } else if (!entry.is_dir) {
-              const fileName = entry.name.replace(".md", "");
-              if (fileName.toLowerCase() === linkName.toLowerCase()) {
-                return entry.path;
-              }
-            }
-          }
-          return null;
-        };
-        
-        const filePath = findFile(fileTree);
+        const filePath = resolveWikiLinkPath(fileTree, linkName);
         if (filePath) {
           openFile(filePath);
         } else {
@@ -204,18 +191,27 @@ export function ReadingView({ content, className = "", filePath = null }: Readin
     setSplitView,
   ]);
 
+  // Wiki-link hover preview. Uses pointer-intent against the rendered
+  // body — the parseMarkdown() pass above tags every wikilink with
+  // `data-wikilink="<target>"`, which is what the hook listens for.
+  const { anchor: hoverAnchor, linkName: hoverLink, close: closeHover } =
+    useWikiLinkHover(containerRef);
+
   return (
-    <div
-      ref={containerRef}
-      // Match the live/source editor's centered text column so the
-      // reading-mode layout doesn't visibly shift when the user toggles
-      // modes, and stays identical as sidebars collapse/expand. The actual
-      // max-width and padding live on `.reading-view` in globals.css so
-      // they can stay in lock-step with the CM .cm-sizer / .cm-content /
-      // .cm-line stack.
-      className={`reading-view prose prose-neutral dark:prose-invert mx-auto ${className}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-      onClick={handleClick}
-    />
+    <>
+      <div
+        ref={containerRef}
+        // Match the live/source editor's centered text column so the
+        // reading-mode layout doesn't visibly shift when the user toggles
+        // modes, and stays identical as sidebars collapse/expand. The actual
+        // max-width and padding live on `.reading-view` in globals.css so
+        // they can stay in lock-step with the CM .cm-sizer / .cm-content /
+        // .cm-line stack.
+        className={`reading-view prose prose-neutral dark:prose-invert mx-auto ${className}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+        onClick={handleClick}
+      />
+      <WikiLinkHoverCard anchor={hoverAnchor} linkName={hoverLink} onClose={closeHover} />
+    </>
   );
 }

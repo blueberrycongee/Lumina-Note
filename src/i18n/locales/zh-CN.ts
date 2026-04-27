@@ -109,6 +109,11 @@ export default {
     save: "保存",
   },
 
+  // 维基链接悬浮预览
+  wikiPreview: {
+    notFound: "找不到笔记「{name}」",
+  },
+
   // 编辑器
   editor: {
     reading: "阅读",

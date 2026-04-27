@@ -109,6 +109,11 @@ export default {
     save: "保存",
   },
 
+  // ウィキリンクのホバープレビュー
+  wikiPreview: {
+    notFound: "ノート「{name}」が見つかりません",
+  },
+
   // エディター
   editor: {
     reading: "閲覧",

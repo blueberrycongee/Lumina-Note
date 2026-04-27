@@ -109,6 +109,11 @@ export default {
     save: "儲存",
   },
 
+  // 維基連結懸浮預覽
+  wikiPreview: {
+    notFound: "找不到筆記「{name}」",
+  },
+
   // 編輯器
   editor: {
     reading: "閱讀",
