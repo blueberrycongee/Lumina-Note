@@ -610,6 +610,8 @@ export default {
 
   // 顶部功能栏
   ribbon: {
+    commandPaletteTrigger: "命令面板 (Ctrl+P) — 一键唤起所有功能",
+    commandPaletteNewBadge: "项功能尚未尝试",
     globalSearch: "全局搜索 (Ctrl+Shift+F)",
     aiChatMain: "AI 聊天（主视图）",
     fileEditor: "文件编辑器",

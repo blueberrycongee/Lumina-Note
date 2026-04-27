@@ -616,6 +616,8 @@ export default {
 
   // リボン
   ribbon: {
+    commandPaletteTrigger: "コマンドパレット (Ctrl+P) — すべての機能をワンタップで",
+    commandPaletteNewBadge: "件の未体験機能",
     globalSearch: "全体検索 (Ctrl+Shift+F)",
     aiChatMain: "AI チャット（メインビュー）",
     fileEditor: "ファイルエディタ",

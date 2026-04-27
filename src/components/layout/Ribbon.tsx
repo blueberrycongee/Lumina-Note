@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useUIStore } from "@/stores/useUIStore";
 import { useFileStore } from "@/stores/useFileStore";
@@ -6,6 +6,7 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import { usePluginStore } from "@/stores/usePluginStore";
 import {
   AlertCircle,
+  Command,
   FileText,
   Network,
   Puzzle,
@@ -21,6 +22,11 @@ import {
   RefreshCw,
   RotateCcw,
 } from "lucide-react";
+import {
+  COMMAND_USAGE_EVENT,
+  countUnseenFeatured,
+  readUsage,
+} from "@/lib/commandPaletteUsage";
 import { openExternal } from "@/lib/host";
 
 import { cn } from "@/lib/utils";
@@ -96,6 +102,25 @@ export function Ribbon({
   const imageManagerTitle =
     (t.ribbon as typeof t.ribbon & { imageManager?: string }).imageManager ??
     "Image Manager";
+
+  // Pulse cue on the palette trigger when there are featured commands the
+  // user hasn't tried yet. Source of truth is localStorage, kept in sync via
+  // the COMMAND_USAGE_EVENT broadcast by the palette itself when a command
+  // is executed (so the dot decays in real time as the user discovers).
+  const [unseenFeatured, setUnseenFeatured] = useState(() =>
+    countUnseenFeatured(readUsage()),
+  );
+  useEffect(() => {
+    const refresh = () => setUnseenFeatured(countUnseenFeatured(readUsage()));
+    window.addEventListener(COMMAND_USAGE_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener(COMMAND_USAGE_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
 
   // 当前激活的标签
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
@@ -301,6 +326,34 @@ export function Ribbon({
       >
         {/* Top icons */}
         <div className="flex flex-col items-center gap-1">
+          {/* Command Palette (⌘P) — discovery affordance for users who don't
+              know the keyboard shortcut. The pulse dot decays as the user
+              tries each featured capability. */}
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent("open-command-palette"));
+            }}
+            className="w-9 h-9 ui-icon-btn relative"
+            title={t.ribbon.commandPaletteTrigger}
+          >
+            <Command size={20} />
+            {unseenFeatured > 0 && (
+              <>
+                <span
+                  aria-hidden
+                  className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary animate-ping opacity-60"
+                />
+                <span
+                  aria-hidden
+                  className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary"
+                />
+                <span className="sr-only">
+                  {unseenFeatured} {t.ribbon.commandPaletteNewBadge}
+                </span>
+              </>
+            )}
+          </button>
+
           {/* Search */}
           <button
             onClick={() => {

@@ -24,41 +24,14 @@ import {
   Sparkles,
   Clock,
 } from "lucide-react";
+import {
+  FEATURED_COMMAND_IDS,
+  readUsage,
+  writeUsage,
+  type UsageMap,
+} from "@/lib/commandPaletteUsage";
 
 export type PaletteMode = "command" | "file" | "search";
-
-const COMMAND_USAGE_KEY = "lumina:commandPaletteUsage";
-const FEATURED_COMMAND_IDS = [
-  "show-graph",
-  "global-search",
-  "publish-site",
-  "profile-preview",
-  "toggle-theme",
-] as const;
-
-type UsageEntry = { count: number; lastUsed: number };
-type UsageMap = Record<string, UsageEntry>;
-
-function readUsage(): UsageMap {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(COMMAND_USAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeUsage(map: UsageMap) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(COMMAND_USAGE_KEY, JSON.stringify(map));
-  } catch {
-    // ignore storage failures (private mode, quota)
-  }
-}
 
 interface CommandItem {
   id: string;

@@ -617,6 +617,8 @@ export default {
 
   // Ribbon tooltips
   ribbon: {
+    commandPaletteTrigger: "Command Palette (Ctrl+P) — every action, one tap away",
+    commandPaletteNewBadge: "features you haven't tried yet",
     globalSearch: "Global Search (Ctrl+Shift+F)",
     aiChatMain: "AI Chat (Main View)",
     fileEditor: "File Editor",
