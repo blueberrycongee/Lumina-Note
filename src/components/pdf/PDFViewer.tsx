@@ -3,17 +3,12 @@ import { PDFToolbar } from "./PDFToolbar";
 import { PDFCanvas } from "./PDFCanvas";
 import { PDFOutline } from "./PDFOutline";
 import { PDFSearch } from "./PDFSearch";
-import { ElementPanel } from "./ElementPanel";
 import { AnnotationPopover } from "./AnnotationPopover";
 import { usePDFStore } from "@/stores/usePDFStore";
-import { useElementSelection } from "@/hooks/useElementSelection";
-import { usePDFStructure } from "@/hooks/usePDFStructure";
-import { useAIStore } from "@/stores/useAIStore";
-import { useUIStore } from "@/stores/useUIStore";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, ListTree, Loader2, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, FileText } from 'lucide-react';
 import { useLocaleStore } from '@/stores/useLocaleStore';
-import { readBinaryFile as readFile, fsStat as stat } from "@/lib/host";
+import { readBinaryFile as readFile } from "@/lib/host";
 
 interface PDFViewerProps {
   filePath: string;
@@ -26,26 +21,8 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showOutline, setShowOutline] = useState(false);
-  const [interactiveMode, setInteractiveMode] = useState(false);
   const { currentPage, scale, setCurrentPage, setScale } = usePDFStore();
   const { t } = useLocaleStore();
-  
-  // 元素选择
-  const {
-    selectedElements,
-    selectedElementIds,
-    hoveredElementId,
-    selectElement,
-    clearSelection,
-    removeFromSelection,
-    setHoveredElementById,
-  } = useElementSelection();
-  
-  // PDF 结构解析
-  const {
-    parseStructure,
-    getAllElements,
-  } = usePDFStructure();
 
   // 加载 PDF 文件
   useEffect(() => {
@@ -60,27 +37,6 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
           // 不要共享 ArrayBuffer，直接存储原始数据
           setPdfData(data);
           setLoading(false);
-          
-          // 自动解析 PDF 结构
-          // 'none': 模拟数据, 'pp-structure': PP-Structure 服务
-          let modifiedTime: number | undefined;
-          try {
-            const info = await stat(filePath);
-            if (info.mtime instanceof Date) {
-              modifiedTime = info.mtime.getTime();
-            } else if (typeof info.mtime === 'number') {
-              modifiedTime = info.mtime;
-            } else if (typeof info.mtime === 'string') {
-              const parsed = new Date(info.mtime).getTime();
-              if (!Number.isNaN(parsed)) {
-                modifiedTime = parsed;
-              }
-            }
-          } catch (err) {
-            console.warn('Failed to read PDF modified time:', err);
-          }
-
-          parseStructure(filePath, 'pp-structure', modifiedTime);
         }
       } catch (err) {
         console.error("Failed to read PDF file:", err);
@@ -94,7 +50,7 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
 
     loadPdf();
     return () => { cancelled = true; };
-  }, [filePath, parseStructure, t]);
+  }, [filePath, t]);
 
   const handleDocumentLoad = useCallback((pages: number) => {
     setNumPages(pages);
@@ -109,65 +65,6 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   const handleScaleChange = useCallback((newScale: number) => {
     setScale(newScale);
   }, [setScale]);
-
-  // 处理元素悬浮
-  const handleElementHover = useCallback((elementId: string | null) => {
-    const allElements = getAllElements();
-    setHoveredElementById(elementId, allElements);
-  }, [getAllElements, setHoveredElementById]);
-
-  // 处理元素点击
-  const handleElementClick = useCallback((element: any, isMultiSelect: boolean) => {
-    selectElement(element, isMultiSelect);
-  }, [selectElement]);
-
-  // 处理复制为引用
-  const handleCopyAsReference = useCallback(() => {
-    const references = selectedElements.map(el => {
-      return `[PDF:${el.type}:P${el.pageIndex}] ${el.content || el.caption || ''}`;
-    }).join('\n\n');
-    navigator.clipboard.writeText(references);
-  }, [selectedElements]);
-
-  // 处理与 AI 对话
-  const handleChatWithAI = useCallback(() => {
-    if (selectedElements.length === 0) return;
-    
-    // 格式化选中的元素为引用文本
-    const pdfFileName = filePath.split(/[/\\]/).pop() || t.pdfViewer.defaultFileName;
-    const citations = selectedElements.map((el, index) => {
-      const typeLabels = t.pdfViewer.elementTypes as Record<string, string> | undefined;
-      const typeLabel = typeLabels?.[el.type] || el.type;
-      
-      const content = el.content ? `\n${el.content}` : '';
-      return `[${index + 1}] ${typeLabel} (P${el.pageIndex})${content}`;
-    }).join('\n\n');
-    
-    const referenceText = `# ${t.pdfViewer.referenceHeader} - ${pdfFileName}\n\n${citations}`;
-    
-    // 添加到 AI Store 的结构化引用
-    const pages = Array.from(new Set(selectedElements.map((el) => el.pageIndex))).sort((a, b) => a - b);
-    const locator = pages.length === 1
-      ? `P${pages[0]}`
-      : `P${pages[0]}-${pages[pages.length - 1]}`;
-    useAIStore.getState().addTextSelection({
-      text: referenceText,
-      source: pdfFileName,
-      sourcePath: filePath,
-      summary: `${t.pdfViewer.referenceHeader} (${selectedElements.length})`,
-      locator,
-      range: {
-        kind: "pdf",
-        page: pages[0] || currentPage,
-      },
-    });
-    
-    // 打开 AI 悬浮面板
-    useUIStore.getState().setFloatingPanelOpen(true);
-    
-    // 清空选择
-    clearSelection();
-  }, [selectedElements, filePath, clearSelection, t, currentPage]);
 
   // 为不同组件创建独立的数据副本，避免 ArrayBuffer detached 错误
   const pdfDataForSearch = useMemo(() => {
@@ -226,29 +123,11 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* 文件名标题 */}
-      <div className="h-9 flex items-center justify-between px-3 gap-2 border-b border-border/60 bg-muted/30 shrink-0">
-        <div className="flex items-center gap-2">
-          <FileText size={14} className="text-red-500" />
-          <span className="text-sm font-medium truncate">
-            {filePath.split(/[\/\\]/).pop() || "PDF"}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* 交互模式切换 */}
-          <button
-            onClick={() => setInteractiveMode(!interactiveMode)}
-            className={cn(
-              "flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors",
-              interactiveMode
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-accent"
-            )}
-            title={t.pdfViewer.elementRecognition}
-          >
-            <ListTree size={16} />
-            <span>{interactiveMode ? t.pdfViewer.interacting : t.pdfViewer.elementRecognition}</span>
-          </button>
-        </div>
+      <div className="h-9 flex items-center px-3 gap-2 border-b border-border/60 bg-muted/30 shrink-0">
+        <FileText size={14} className="text-red-500" />
+        <span className="text-sm font-medium truncate">
+          {filePath.split(/[\/\\]/).pop() || "PDF"}
+        </span>
       </div>
 
       {/* 工具栏 */}
@@ -310,26 +189,8 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
           onDocumentLoad={handleDocumentLoad}
           onPageChange={handlePageChange}
           onScaleChange={handleScaleChange}
-          showInteractiveLayer={interactiveMode}
-          elements={getAllElements()}
-          selectedElementIds={selectedElementIds}
-          hoveredElementId={hoveredElementId}
-          onElementHover={handleElementHover}
-          onElementClick={handleElementClick}
           className="flex-1"
         />
-
-        {/* 元素面板 */}
-        {interactiveMode && selectedElements.length > 0 && (
-          <ElementPanel
-            elements={selectedElements}
-            onRemove={removeFromSelection}
-            onClear={clearSelection}
-            onCopyAsReference={handleCopyAsReference}
-            onChatWithAI={handleChatWithAI}
-            className="w-64"
-          />
-        )}
       </div>
       
       {/* 批注弹窗 */}

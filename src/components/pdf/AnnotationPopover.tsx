@@ -166,7 +166,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
           <button
             onClick={handleSendAsReference}
             className="p-2 hover:bg-accent rounded transition-colors"
-            title={t.pdfViewer.elementPanel.chatWithAi}
+            title={t.pdfViewer.annotation.chatWithAi}
           >
             <Sparkles size={16} />
           </button>

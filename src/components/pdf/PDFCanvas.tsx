@@ -3,11 +3,9 @@ import "@/pdfWorker";
 import { Document, Page } from "react-pdf";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { InteractiveLayer } from "./InteractiveLayer";
 import { AnnotationLayer } from "./AnnotationLayer";
 import { usePDFAnnotationStore } from "@/stores/usePDFAnnotationStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import type { PDFElement } from "@/types/pdf";
 import type { TextPosition } from "@/types/annotation";
 
 // 引入 react-pdf 样式
@@ -22,13 +20,6 @@ interface PDFCanvasProps {
   onDocumentLoad?: (numPages: number) => void;
   onPageChange?: (page: number) => void;
   onScaleChange?: (scale: number) => void;
-  // 交互层相关
-  showInteractiveLayer?: boolean;
-  elements?: PDFElement[];
-  selectedElementIds?: string[];
-  hoveredElementId?: string | null;
-  onElementHover?: (elementId: string | null) => void;
-  onElementClick?: (element: PDFElement, isMultiSelect: boolean) => void;
   // 批注相关
   enableAnnotations?: boolean;
   className?: string;
@@ -42,12 +33,6 @@ export function PDFCanvas({
   onDocumentLoad,
   onPageChange,
   onScaleChange,
-  showInteractiveLayer = false,
-  elements = [],
-  selectedElementIds = [],
-  hoveredElementId = null,
-  onElementHover,
-  onElementClick,
   enableAnnotations = true,
   className,
 }: PDFCanvasProps) {
@@ -306,21 +291,6 @@ export function PDFCanvas({
               pageWidth={pageSize.width}
               pageHeight={pageSize.height}
               scale={scale}
-            />
-          )}
-          
-          {/* 交互层 */}
-          {showInteractiveLayer && pageSize && onElementHover && onElementClick && (
-            <InteractiveLayer
-              pageIndex={currentPage}
-              pageWidth={pageSize.width}
-              pageHeight={pageSize.height}
-              scale={scale}
-              elements={elements}
-              selectedElementIds={selectedElementIds}
-              hoveredElementId={hoveredElementId}
-              onElementHover={onElementHover}
-              onElementClick={onElementClick}
             />
           )}
         </div>
