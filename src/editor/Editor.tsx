@@ -528,7 +528,7 @@ export function Editor() {
                   "p-1 rounded transition-colors",
                   canGoBack()
                     ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                    : "text-muted-foreground/30 cursor-not-allowed",
+                    : "text-muted-foreground/60 cursor-not-allowed",
                 )}
                 title={t.editor.goBackShortcut}
               >
@@ -541,7 +541,7 @@ export function Editor() {
                   "p-1 rounded transition-colors",
                   canGoForward()
                     ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                    : "text-muted-foreground/30 cursor-not-allowed",
+                    : "text-muted-foreground/60 cursor-not-allowed",
                 )}
                 title={t.editor.goForwardShortcut}
               >

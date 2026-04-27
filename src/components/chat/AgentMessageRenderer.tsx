@@ -493,10 +493,10 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({
     : (t.agentMessage.thinkingDone || t.agentMessage.thinking);
 
   return (
-    <div className="text-xs text-muted-foreground/70">
+    <div className="text-xs text-muted-foreground">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors py-0.5"
+        className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5"
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Brain size={12} />
@@ -510,7 +510,7 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pl-5 py-1 text-xs text-muted-foreground/60 whitespace-pre-wrap border-l border-muted-foreground/20 ml-1.5">
+            <div className="pl-5 py-1 text-xs text-muted-foreground whitespace-pre-wrap border-l border-border ml-1.5">
               {thinking || t.agentMessage.thinkingWaiting}
             </div>
           </motion.div>
@@ -529,10 +529,10 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
   const summary = getToolSummary(tool.name, tool.params, tool.result);
 
   return (
-    <div className="text-xs text-muted-foreground/70">
+    <div className="text-xs text-muted-foreground">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 hover:text-muted-foreground transition-colors py-0.5 w-full text-left"
+        className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
         <Wrench size={12} />
@@ -541,16 +541,16 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
         {/* 状态图标 */}
         {isComplete ? (
           tool.success ? (
-            <Check size={12} className="text-success/70" />
+            <Check size={12} className="text-success" />
           ) : (
-            <X size={12} className="text-destructive/70" />
+            <X size={12} className="text-destructive" />
           )
         ) : (
           <Loader2 size={12} className="animate-spin" />
         )}
 
         {/* 摘要 */}
-        <span className="truncate flex-1 opacity-70">{summary}</span>
+        <span className="truncate flex-1">{summary}</span>
       </button>
 
       <AnimatePresence>
@@ -561,7 +561,7 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="pl-5 py-1 space-y-1 border-l border-muted-foreground/20 ml-1.5">
+            <div className="pl-5 py-1 space-y-1 border-l border-border ml-1.5">
               {tool.params && (
                 <div>
                   <div className="text-xs text-muted-foreground/70 mb-0.5">{t.agentMessage.params}:</div>
