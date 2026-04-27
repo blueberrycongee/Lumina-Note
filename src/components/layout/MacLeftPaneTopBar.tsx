@@ -18,7 +18,7 @@ export function MacLeftPaneTopBar() {
   const refreshFileTree = useFileStore((state) => state.refreshFileTree);
 
   return (
-    <div className="flex h-11 items-stretch bg-muted">
+    <div className="flex h-11 items-stretch bg-background border-b border-border/40">
       <div
         className="h-full w-16 shrink-0 flex items-center justify-center bg-ribbon border-r border-border/30"
         data-tauri-drag-region
