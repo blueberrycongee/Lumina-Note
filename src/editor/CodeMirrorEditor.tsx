@@ -35,7 +35,6 @@ import {
   slashCommandExtensions,
   placeholderExtension,
 } from "./extensions/slashCommand";
-import { typewriterExtensions } from "./extensions/typewriterMode";
 import {
   blockEditorExtensions,
   blockEditorStateField,
@@ -94,7 +93,6 @@ const readOnlyCompartment = new Compartment();
 const themeCompartment = new Compartment();
 const pluginExtensionsCompartment = new Compartment();
 const fontSizeCompartment = new Compartment();
-const typewriterCompartment = new Compartment();
 const EXTERNAL_JUMP_Y_MARGIN_PX = 24;
 
 // ============ 2. 全局状态 ============
@@ -4338,8 +4336,6 @@ export const CodeMirrorEditor = forwardRef<
   const { setSplitView, editorFontSize, editorInteractionTraceEnabled } =
     useUIStore();
   const blockEditorEnabled = useUIStore((s) => s.blockEditorEnabled);
-  const typewriterMode = useUIStore((s) => s.typewriterMode);
-  const focusMode = useUIStore((s) => s.focusMode);
 
   const markTransitionTrace = useCallback(
     (type: string, payload: Record<string, unknown>) => {
@@ -4632,7 +4628,6 @@ export const CodeMirrorEditor = forwardRef<
         blockWidgetSelectionSyncPlugin,
         tableRowSelectionPlugin,
         fontSizeCompartment.of(createEditorTheme(editorFontSize)),
-        typewriterCompartment.of(typewriterExtensions(false, false)),
         mouseSelectingField,
         selectionStatePlugin,
         wikiLinkStateField,
@@ -5392,19 +5387,6 @@ export const CodeMirrorEditor = forwardRef<
       ),
     });
   }, [editorFontSize]);
-
-  // Typewriter / focus mode — reconfigure the compartment whenever
-  // either flag flips. The plugin itself notices the facet change and
-  // (re-)applies decorations + scroll-to-center.
-  useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    view.dispatch({
-      effects: typewriterCompartment.reconfigure(
-        typewriterExtensions(typewriterMode, focusMode),
-      ),
-    });
-  }, [typewriterMode, focusMode]);
 
   useEffect(() => {
     const view = viewRef.current;

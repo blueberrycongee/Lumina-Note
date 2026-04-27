@@ -23,8 +23,6 @@ import {
   UploadCloud,
   Sparkles,
   Clock,
-  AlignCenter,
-  Crosshair,
 } from "lucide-react";
 import {
   FEATURED_COMMAND_IDS,
@@ -82,10 +80,6 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     toggleRightSidebar,
     toggleTheme,
     isDarkMode,
-    typewriterMode,
-    focusMode,
-    toggleTypewriterMode,
-    toggleFocusMode,
   } = useUIStore();
 
   const publishConfig = usePublishStore((state) => state.config);
@@ -175,27 +169,6 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
       action: () => {
         onClose();
         toggleTheme();
-      },
-    },
-    {
-      id: "toggle-typewriter-mode",
-      label: t.commandPalette.toggleTypewriter,
-      description: t.commandPalette.toggleTypewriterDesc,
-      icon: <AlignCenter size={16} className={typewriterMode ? "text-primary" : undefined} />,
-      shortcut: "Ctrl+Alt+T",
-      action: () => {
-        onClose();
-        toggleTypewriterMode();
-      },
-    },
-    {
-      id: "toggle-focus-mode",
-      label: t.commandPalette.toggleFocus,
-      description: t.commandPalette.toggleFocusDesc,
-      icon: <Crosshair size={16} className={focusMode ? "text-primary" : undefined} />,
-      action: () => {
-        onClose();
-        toggleFocusMode();
       },
     },
     {
@@ -290,10 +263,6 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
     toggleRightSidebar,
     toggleTheme,
     isDarkMode,
-    typewriterMode,
-    focusMode,
-    toggleTypewriterMode,
-    toggleFocusMode,
     openGraphTab,
     isGraphOpen,
     vaultPath,

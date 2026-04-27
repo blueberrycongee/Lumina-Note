@@ -452,14 +452,6 @@ export function Editor() {
         return;
       }
 
-      // Ctrl/Cmd + Alt + T: 打字机模式
-      // Mod+T alone is taken by every browser/tab UI on the planet, so we
-      // pair it with Alt for an unambiguous focus-mode shortcut.
-      if (isMod && e.altKey && key === "t") {
-        e.preventDefault();
-        useUIStore.getState().toggleTypewriterMode();
-        return;
-      }
     },
     [undo, redo, canUndo, canRedo, goBack, goForward],
   );
