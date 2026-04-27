@@ -72,7 +72,9 @@ export async function getOpencodeClient(): Promise<OpencodeClient> {
       authorization: buildAuthHeader(info),
     };
     if (defaultDirectory) {
-      headers["x-opencode-directory"] = defaultDirectory;
+      // encodeURI so non-ASCII characters (e.g. CJK paths) don't crash the
+      // browser Headers API which only accepts ISO-8859-1 code points.
+      headers["x-opencode-directory"] = encodeURI(defaultDirectory);
     }
     cachedClient = createOpencodeClient({
       baseUrl: info.url,
