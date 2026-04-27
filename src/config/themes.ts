@@ -111,22 +111,19 @@ function createThemeColors(
       diffRemoveText: `350 50% 35%`,
     },
     dark: {
-      background: `${hue} ${satDark}% 11%`,
-      foreground: `${hue} ${satDark + 3}% 85%`,
-      muted: `${hue} ${satDark}% 15%`,
-      // 55 → 62 — at L=55 muted text on muted bg (L=15) was ~4.2:1,
-      // below WCAG AA. 62 brings it to ~5.1:1 with no perceived
-      // brightness shift on the foreground prose (still clearly secondary).
-      mutedForeground: `${hue} ${satDark}% 62%`,
-      // 18 → 22 — old 3-point delta from muted (L=15) was below the JND
-      // for grayscale; hover/active states felt dead. 22 reads as a
-      // clear "lift" without becoming a separate surface tier.
-      accent: `${hue} ${satDark}% 22%`,
-      accentForeground: `${hue} ${satDark + 3}% 92%`,
+      // Aligned with globals.css `.dark` — same elevation hierarchy
+      // (canvas / panel / accent / popover) just shifted to the theme's
+      // hue + saturation. Popover surface bumped to L=23 so lifted
+      // cards clearly stand off the panel tier (L=15); see globals.css
+      // `--elev-2/3` for the matching inner-top-highlight.
+      background: `${hue} ${satDark}% 9%`,
+      foreground: `${hue} ${satDark + 3}% 96%`,
+      muted: `${hue} ${satDark}% 14%`,
+      mutedForeground: `${hue} ${satDark}% 66%`,
+      accent: `${hue} ${satDark}% 19%`,
+      accentForeground: `${hue} ${satDark + 3}% 96%`,
       primary: `${primaryHue} ${primarySat - 10}% 55%`,
       primaryForeground: `${hue} ${satDark}% 12%`,
-      // 22 → 28 — borders need to survive `border-border/60` (132 uses)
-      // and `/50` (23). At L=22 a 60% alpha flattened them into bg.
       border: `${hue} ${satDark}% 28%`,
       heading: `${primaryHue} ${primarySat}% 70%`,
       link: `${primaryHue} ${primarySat + 5}% 65%`,

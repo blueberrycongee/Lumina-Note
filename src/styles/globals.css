@@ -140,25 +140,46 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 .dark {
-  --background: 222 20% 7%;            /* near-black, slight cool tint */
-  --foreground: 220 14% 95%;
-  --muted: 222 16% 12%;
-  /* Bumped 58 → 64 so that the many `text-muted-foreground/80` and `/50`
-   * call-sites (and rendered prose secondary text) clear WCAG AA on dark
-   * surfaces with headroom — at /80 the effective L is ~51, comfortably
-   * above the 4.5:1 threshold on bg L=7. */
-  --muted-foreground: 220 10% 64%;
-  /* Bumped 16 → 21 so hover surfaces have a perceptible delta from
-   * --muted (L=12). Old 4-point gap was below the just-noticeable
-   * difference for grayscale, so hover/active states felt dead. */
-  --accent: 222 14% 21%;
-  --accent-foreground: 220 14% 95%;
-  --popover: 222 18% 14%;              /* clearly lifted from the 7% bg — was 10%, too close */
-  --popover-foreground: 220 14% 95%;
-  /* Bumped 26 → 32 to absorb the cost of the many `border-border/60`
-   * (132 uses) and `/50` (23) call-sites — at L=26 those collapsed into
-   * the background. At L=32 even /50 leaves a visible edge. */
-  --border: 220 13% 32%;
+  /*
+   * Dark palette — Apple-style elevation hierarchy.
+   *
+   * Four deliberate tiers, each a clear step apart, all sharing a slight
+   * cool-blue tint (hue 222) so neutrals don't feel muddy gray:
+   *
+   *   ribbon   L= 6%   recessed toolbar (ribbon bar) — feels "set into" the chrome
+   *   bg       L= 9%   the canvas — the user's editing space
+   *   muted    L=14%   side panels (sidebar, status bar) — clearly lifted from canvas
+   *   accent   L=19%   hover/active state on muted — perceptible delta (5L)
+   *   popover  L=23%   floating cards / popovers / dialogs — clearly above panels
+   *
+   * The popover tier also picks up an inset top-highlight via --elev-2/3
+   * below: a 1px line of white at 7% alpha that simulates light hitting
+   * the upper edge of a lifted surface. This is the signature Apple
+   * touch — without it, dark popovers feel like flat squares; with it,
+   * they read as physical objects sitting above the page.
+   */
+  --background: 222 18% 9%;
+  --foreground: 220 12% 96%;
+  --muted: 222 16% 14%;
+  /*
+   * muted-foreground L=66 gives:
+   *   /muted (L=14)   : 5.7:1  ✓ AA body
+   *   /background     : 7.1:1  ✓ AAA
+   *   /accent (L=19)  : 4.9:1  ✓ AA body
+   * Headroom for the many `/80` and `/70` call-sites to still pass AA.
+   */
+  --muted-foreground: 220 8% 66%;
+  --accent: 222 14% 19%;
+  --accent-foreground: 220 14% 96%;
+  --popover: 222 18% 23%;              /* clearly lifted — popovers stand off the page */
+  --popover-foreground: 220 14% 96%;
+  /*
+   * Border at L=28 reads as a quiet hairline at full opacity and stays
+   * perceptible at /60 (132 call-sites use that). The inner top-highlight
+   * carries most of the "edge of the card" signal for popovers/dialogs,
+   * so the border itself can be muted without losing definition.
+   */
+  --border: 222 12% 28%;
 
   --primary: 0 0% 98%;
   --primary-foreground: 0 0% 9%;
@@ -172,16 +193,29 @@ body.resizing iframe[data-codex-iframe="true"] {
   --info: 217 80% 65%;
   --info-foreground: 0 0% 100%;
 
-  --md-heading: 0 0% 93%;
-  --ui-ribbon: 222 16% 9%;               /* ribbon bar — one step darker than muted */
+  --md-heading: 0 0% 96%;
+  --ui-ribbon: 222 16% 6%;               /* recessed below canvas — ribbon reads as deep chrome */
 
-  /* Shadows in dark mode — heavier because bg is dark; matches the bumped
-   * lift in light mode so popovers feel solid in both themes. */
-  --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.35);
+  /*
+   * Shadows in dark mode — Apple's pattern.
+   *
+   * Drop shadows alone fail in dark mode (low contrast against dark bg),
+   * so we layer in an *inset* top-highlight on elev-2 / elev-3: a 1px
+   * line of white at 6–8% alpha that simulates light catching the upper
+   * edge of a lifted surface. This is what makes popovers / dialogs
+   * read as solid lifted objects rather than slightly-different-color
+   * rectangles.
+   *
+   * elev-1 stays as a flat drop (no inner highlight) — for tiny lifts
+   * like inputs and small buttons, the highlight would feel busy.
+   */
+  --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.40);
   --elev-2:
+    inset 0 1px 0 hsl(0 0% 100% / 0.06),
     0 4px 14px -3px rgba(0, 0, 0, 0.55),
     0 1px 3px rgba(0, 0, 0, 0.40);
   --elev-3:
+    inset 0 1px 0 hsl(0 0% 100% / 0.08),
     0 12px 32px -8px rgba(0, 0, 0, 0.70),
     0 2px 6px rgba(0, 0, 0, 0.45);
 }
