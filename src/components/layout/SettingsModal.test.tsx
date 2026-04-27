@@ -80,7 +80,6 @@ vi.mock("@/stores/useLocaleStore", () => ({
         title: "Settings",
         theme: "Theme",
         createTheme: "Create Theme",
-        themeDescription: "Theme description",
         myThemes: "My Themes",
         officialThemes: "Official Themes",
         themes: {},

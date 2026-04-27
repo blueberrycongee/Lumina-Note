@@ -54,7 +54,6 @@ export interface ThemeColors {
 export interface Theme {
   id: string;
   name: string;
-  description: string;
   light: ThemeColors;
   dark: ThemeColors;
 }
@@ -168,7 +167,6 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "default",
     name: "Default",
-    description: "Clean, neutral gray",
     ...createThemeColors(220, 16, 5, 0, 0),
     // Override primary-derived colors to be truly achromatic — the
     // generator adds saturation offsets to primarySat which at 0 would
@@ -200,61 +198,51 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "ocean",
     name: "Ocean",
-    description: "Fresh blue tones",
     ...createThemeColors(210, 15, 12, 210, 65),
   },
   {
     id: "forest",
     name: "Forest",
-    description: "Natural green tones",
     ...createThemeColors(140, 10, 8, 150, 45),
   },
   {
     id: "lavender",
     name: "Lavender",
-    description: "Elegant purple tones",
     ...createThemeColors(270, 12, 10, 270, 50),
   },
   {
     id: "rose",
     name: "Rose",
-    description: "Soft pink tones",
     ...createThemeColors(350, 12, 8, 350, 55),
   },
   {
     id: "amber",
     name: "Sunset",
-    description: "Vibrant orange-yellow tones",
     ...createThemeColors(35, 15, 10, 30, 80),
   },
   {
     id: "mint",
     name: "Mint",
-    description: "Cool cyan tones",
     ...createThemeColors(170, 15, 10, 165, 55),
   },
   {
     id: "indigo",
     name: "Indigo",
-    description: "Deep blue-purple tones",
     ...createThemeColors(235, 15, 12, 240, 60),
   },
   {
     id: "coffee",
     name: "Latte",
-    description: "Vintage coffee tones",
     ...createThemeColors(30, 20, 12, 25, 45),
   },
   {
     id: "nord",
     name: "Aurora",
-    description: "Cool gray-blue tones",
     ...createThemeColors(220, 10, 15, 195, 45),
   },
   {
     id: "mono",
     name: "Minimal",
-    description: "Pure black and white",
     ...createThemeColors(0, 0, 0, 0, 0),
   },
 
@@ -264,7 +252,6 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "cyberpunk",
     name: "Cyberpunk",
-    description: "Neon colors: purple-black + hot pink + cyan",
     light: {
        background: "280 20% 96%",
        foreground: "280 80% 10%",
@@ -354,7 +341,6 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "dracula",
     name: "Dracula",
-    description: "Classic colors: cool gray + purple + green + orange mix",
     light: {
        background: "220 20% 97%",
        foreground: "230 15% 30%",
@@ -446,7 +432,6 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "solarized",
     name: "Solarized",
-    description: "Eye-friendly: warm beige + blue/orange/red/green",
     light: {
        background: "44 87% 94%",
        foreground: "192 81% 14%",
@@ -538,7 +523,6 @@ export const OFFICIAL_THEMES: Theme[] = [
   {
     id: "gruvbox",
     name: "Retro",
-    description: "Nostalgic: earth tones + red/green/blue/yellow accents",
     light: {
        background: "45 25% 94%",  // 暖米色
        foreground: "20 15% 25%",  // 深褐色文字

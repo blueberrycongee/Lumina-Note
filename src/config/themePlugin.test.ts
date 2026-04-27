@@ -10,7 +10,6 @@ vi.mock('@/stores/useLocaleStore', () => ({
   getCurrentTranslations: () => ({
     themeEditor: {
       defaultThemeName: 'New Theme',
-      defaultThemeDescription: 'Theme description',
     },
   }),
 }));
@@ -101,7 +100,6 @@ describe('themePlugin', () => {
 
     expect(template.id).toContain('custom-');
     expect(template.name).toBe('New Theme');
-    expect(template.description).toBe('Theme description');
     expect(template.dark.background).toBe(base.dark.background);
     expect(base.light.background).not.toBe('modified');
   });

@@ -77,8 +77,7 @@ function validateTheme(theme: unknown): theme is Theme {
   
   if (typeof t.id !== 'string' || !t.id) return false;
   if (typeof t.name !== 'string' || !t.name) return false;
-  if (typeof t.description !== 'string') return false;
-  
+
   if (!validateThemeColors(t.light)) return false;
   if (!validateThemeColors(t.dark)) return false;
   
@@ -268,7 +267,6 @@ export function createThemeTemplate(basedOn?: Theme): Theme {
   return {
     id: `custom-${Date.now()}`,
     name: t.themeEditor.defaultThemeName,
-    description: t.themeEditor.defaultThemeDescription,
     light: { ...base.light },
     dark: { ...base.dark }
   };

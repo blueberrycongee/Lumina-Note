@@ -1069,40 +1069,8 @@ export default {
     title: "設定",
     theme: "テーマ",
     createTheme: "テーマを作成",
-    themeDescription: "配色を選択、各テーマはライト/ダークモードに自動適応",
     myThemes: "マイテーマ",
     officialThemes: "公式テーマ",
-    // テーマ名と説明
-    themes: {
-      default: { name: "デフォルト", description: "暖かみのあるベージュ調" },
-      ocean: { name: "オーシャン", description: "爽やかなブルー調" },
-      forest: { name: "フォレスト", description: "自然なグリーン調" },
-      lavender: { name: "ラベンダー", description: "エレガントなパープル調" },
-      rose: { name: "ローズ", description: "優しいピンク調" },
-      amber: { name: "サンセット", description: "活気あるオレンジイエロー調" },
-      mint: { name: "ミント", description: "涼しげなシアン調" },
-      indigo: { name: "インディゴ", description: "深みのあるブルーパープル調" },
-      coffee: { name: "ラテ", description: "ヴィンテージなコーヒー調" },
-      nord: { name: "オーロラ", description: "クールなグレーブルー調" },
-      mono: { name: "ミニマル", description: "ピュアなモノクロ" },
-      cyberpunk: {
-        name: "サイバーパンク",
-        description: "ネオンカラー：紫黒 + ホットピンク + シアン",
-      },
-      dracula: {
-        name: "ドラキュラ",
-        description: "クラシック：クールグレー + 紫 + 緑 + オレンジ",
-      },
-      solarized: {
-        name: "ソラライズド",
-        description: "目に優しい：暖かいベージュ + 青/橙/赤/緑",
-      },
-      gruvbox: {
-        name: "レトロ",
-        description: "ノスタルジック：アースカラー + 赤緑青黄アクセント",
-      },
-    },
-
     editor: "エディター",
     defaultEditMode: "デフォルト編集モード",
     defaultEditModeDesc: "ファイルを開くときのデフォルトビュー",
@@ -1717,7 +1685,6 @@ export default {
     switchToLight: "ライトプレビューに切替",
     switchToColorGroup: "色グループに切替：{name}",
     themeName: "テーマ名",
-    description: "説明",
     colorGroups: "カラーグループ",
     baseUI: "基本 UI",
     markdownText: "Markdown テキスト",
@@ -1737,7 +1704,6 @@ export default {
     openVaultFirst: "先に Vault を開いてください",
     saveFailed: "保存に失敗しました",
     defaultThemeName: "マイテーマ",
-    defaultThemeDescription: "カスタムテーマ",
     background: "背景",
     foreground: "前景テキスト",
     muted: "二次背景",
@@ -1834,44 +1800,6 @@ export default {
     allLoaded: "— {total} 件のノートをすべて読み込みました —",
     searchPlaceholder: "カードを検索...",
     previewUnavailable: "プレビューできません",
-  },
-
-  // テーマ名
-  themes: {
-    default: "デフォルト",
-    defaultDesc: "温かみのあるベージュ調",
-    ocean: "オーシャン",
-    oceanDesc: "爽やかなブルー調",
-    forest: "フォレスト",
-    forestDesc: "ナチュラルなグリーン調",
-    lavender: "ラベンダー",
-    lavenderDesc: "エレガントなパープル調",
-    rose: "ローズ",
-    roseDesc: "優しいピンク調",
-    amber: "アンバー",
-    amberDesc: "活力あるオレンジイエロー調",
-    mint: "ミント",
-    mintDesc: "爽やかなシアン調",
-    indigo: "インディゴ",
-    indigoDesc: "深みのあるブルーパープル調",
-    coffee: "コーヒー",
-    coffeeDesc: "レトロなコーヒー調",
-    nord: "ノルド",
-    nordDesc: "クールなグレーブルー調",
-    mono: "モノ",
-    monoDesc: "ピュアなモノクロ",
-    cyberpunk: "サイバーパンク",
-    cyberpunkDesc:
-      "ネオンカラー：パープルブラック背景 + 蛍光ピンク + シアンハイライト",
-    dracula: "ドラキュラ",
-    draculaDesc:
-      "クラシック配色：クールグレー背景 + パープル + グリーン + オレンジミックス",
-    solarized: "ソラライズド",
-    solarizedDesc:
-      "目に優しい高コントラスト：ベージュ背景 + ブルー/オレンジ/レッド/グリーン",
-    gruvbox: "グルーヴボックス",
-    gruvboxDesc:
-      "レトロウォーム：アースカラー背景 + レッド/グリーン/ブルー/イエロー",
   },
 
   // システムプロンプト

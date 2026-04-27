@@ -216,15 +216,6 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                   className="w-full mt-1 px-2 py-1.5 text-sm bg-muted border border-border/60 rounded"
                 />
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground">{t.themeEditor.description}</label>
-                <input
-                  type="text"
-                  value={theme.description}
-                  onChange={e => setTheme(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full mt-1 px-2 py-1.5 text-sm bg-muted border border-border/60 rounded"
-                />
-              </div>
             </div>
 
             {/* 颜色分组 */}
@@ -264,7 +255,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
                 <option value="">{t.themeEditor.selectBaseTheme}</option>
                 {OFFICIAL_THEMES.map((theme) => (
                   <option key={theme.id} value={theme.id}>
-                    {(t.settingsModal.themes as any)?.[theme.id]?.name || theme.name}
+                    {theme.name}
                   </option>
                 ))}
               </select>

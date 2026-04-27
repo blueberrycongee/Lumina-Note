@@ -50,7 +50,6 @@ describe('OFFICIAL_THEMES', () => {
     it.each(OFFICIAL_THEMES)('$id should have valid structure', (theme) => {
       expect(theme.id).toBeTruthy();
       expect(theme.name).toBeTruthy();
-      expect(typeof theme.description).toBe('string');
       expect(theme.light).toBeDefined();
       expect(theme.dark).toBeDefined();
     });

@@ -86,9 +86,6 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
             {t.settingsModal.createTheme}
           </button>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {t.settingsModal.themeDescription}
-        </p>
 
         {/* 用户主题 */}
         {userThemes.length > 0 && (
@@ -129,9 +126,6 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                       />
                     </div>
                     <p className="font-medium text-sm">{theme.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {theme.description}
-                    </p>
                   </button>
 
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -163,9 +157,11 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
         )}
 
         {/* 官方主题 */}
-        <p className="text-xs text-muted-foreground mt-4">
-          {t.settingsModal.officialThemes}
-        </p>
+        {userThemes.length > 0 && (
+          <p className="text-xs text-muted-foreground mt-4">
+            {t.settingsModal.officialThemes}
+          </p>
+        )}
         <div className="grid grid-cols-3 gap-3">
           {OFFICIAL_THEMES.map((theme) => (
             <button
@@ -176,10 +172,7 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                   ? "ring-2 ring-primary bg-primary/10"
                   : "bg-background/60 hover:bg-muted/50"
               }`}
-              title={t.settingsModal.applyTheme.replace(
-                "{name}",
-                (t.settingsModal.themes as any)?.[theme.id]?.name || theme.name,
-              )}
+              title={t.settingsModal.applyTheme.replace("{name}", theme.name)}
             >
               <div className="flex gap-1 mb-2">
                 <div
@@ -191,14 +184,7 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
                   style={{ backgroundColor: `hsl(${theme.dark.primary})` }}
                 />
               </div>
-              <p className="font-medium text-sm">
-                {(t.settingsModal.themes as any)?.[theme.id]?.name ||
-                  theme.name}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {(t.settingsModal.themes as any)?.[theme.id]?.description ||
-                  theme.description}
-              </p>
+              <p className="font-medium text-sm">{theme.name}</p>
               {themeId === theme.id && (
                 <div className="absolute top-2 right-2">
                   <Check size={16} className="text-primary" />
