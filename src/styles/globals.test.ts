@@ -23,13 +23,13 @@ describe("fallback theme tokens", () => {
     expect(rootBlock).toContain("--border: 220 13% 88%;");
     expect(rootBlock).toContain("--md-heading: 0 0% 9%;");
 
-    expect(darkBlock).toContain("--background: 222 20% 7%;");
-    expect(darkBlock).toContain("--foreground: 220 14% 95%;");
-    expect(darkBlock).toContain("--muted: 222 16% 12%;");
-    expect(darkBlock).toContain("--muted-foreground: 220 9% 58%;");
-    expect(darkBlock).toContain("--accent: 222 14% 16%;");
-    expect(darkBlock).toContain("--border: 220 13% 26%;");
-    expect(darkBlock).toContain("--md-heading: 0 0% 93%;");
+    expect(darkBlock).toContain("--background: 222 6% 9%;");
+    expect(darkBlock).toContain("--foreground: 220 5% 96%;");
+    expect(darkBlock).toContain("--muted: 222 6% 14%;");
+    expect(darkBlock).toContain("--muted-foreground: 220 5% 66%;");
+    expect(darkBlock).toContain("--accent: 222 6% 19%;");
+    expect(darkBlock).toContain("--border: 222 5% 28%;");
+    expect(darkBlock).toContain("--md-heading: 0 0% 96%;");
   });
 });
 
