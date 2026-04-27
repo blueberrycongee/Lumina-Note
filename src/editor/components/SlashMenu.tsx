@@ -167,7 +167,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-background border border-border rounded-lg shadow-lg overflow-hidden"
+      className="fixed z-50 bg-popover border border-border rounded-lg shadow-elev-2 overflow-hidden"
       style={{
         left: position.x,
         top: position.y,

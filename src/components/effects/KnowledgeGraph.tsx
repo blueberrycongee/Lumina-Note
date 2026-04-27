@@ -1242,7 +1242,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
           <div
             className={cn(
-              "absolute top-3 right-3 z-10 w-72 rounded-xl border border-border/70 bg-background/88 backdrop-blur-md shadow-lg pointer-events-none transition-[opacity,transform] duration-150 ease-out",
+              "absolute top-3 right-3 z-10 w-72 rounded-xl border border-border/70 bg-popover backdrop-blur-md shadow-elev-2 pointer-events-none transition-[opacity,transform] duration-150 ease-out",
               hoverPreviewNode
                 ? "opacity-100 translate-y-0 scale-100"
                 : "opacity-0 translate-y-2 scale-[0.98]"
@@ -1302,7 +1302,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           {/* 右键菜单 */}
           {contextMenu && (
             <div
-              className="fixed z-50 bg-background border border-border/60 rounded-md shadow-lg py-1 min-w-[140px]"
+              className="fixed z-50 bg-popover border border-border/60 rounded-md shadow-elev-2 py-1 min-w-[140px]"
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
               <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border/60 mb-1">

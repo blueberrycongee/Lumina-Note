@@ -480,7 +480,7 @@ export function TabBar() {
         <>
           <div className="fixed inset-0 z-40" onClick={handleClickOutside} aria-hidden="true" />
           <div
-            className="fixed z-50 bg-background border border-border rounded-ui-md shadow-ui-float py-1 min-w-[160px] animate-pop-in"
+            className="fixed z-50 bg-popover border border-border rounded-ui-md shadow-elev-2 py-1 min-w-[160px] animate-pop-in"
             style={{ left: contextMenu.x, top: contextMenu.y }}
           >
             <button

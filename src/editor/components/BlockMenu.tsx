@@ -194,7 +194,7 @@ export function BlockMenu({
   return (
     <div
       ref={menuRef}
-      className={`fixed z-[100] min-w-[200px] max-w-[240px] bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg p-1.5 transition-[opacity,transform] duration-150 ${
+      className={`fixed z-[100] min-w-[200px] max-w-[240px] bg-popover backdrop-blur-sm border border-border rounded-xl shadow-elev-2 p-1.5 transition-[opacity,transform] duration-150 ${
         isVisible
           ? "opacity-100 translate-y-0 scale-100"
           : "opacity-0 translate-y-1.5 scale-[0.96]"

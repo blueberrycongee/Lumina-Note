@@ -386,7 +386,7 @@ export function ThemeEditor({ isOpen, onClose, editingTheme, onSave }: ThemeEdit
 
         {/* 导入面板 */}
         {showImport && (
-          <div className="absolute bottom-16 left-4 w-80 p-3 bg-background border border-border/60 rounded-lg shadow-lg">
+          <div className="absolute bottom-16 left-4 w-80 p-3 bg-popover border border-border/60 rounded-lg shadow-elev-2">
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}

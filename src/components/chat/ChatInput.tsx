@@ -633,7 +633,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
 
           {/* 文件选择下拉菜单 */}
           {showFilePicker && (
-            <div className="absolute bottom-full right-0 mb-1 w-72 bg-background border border-border/60 rounded-lg shadow-lg z-50">
+            <div className="absolute bottom-full right-0 mb-1 w-72 bg-popover border border-border/60 rounded-lg shadow-elev-2 z-50">
               <div className="p-2 border-b border-border/60">
                 <input
                   type="text"
@@ -706,7 +706,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       {showMention && (
         <div
           ref={mentionRef}
-          className="absolute bottom-full left-0 mb-1 w-64 max-h-60 overflow-y-auto bg-background border border-border/60 rounded-lg shadow-lg z-50"
+          className="absolute bottom-full left-0 mb-1 w-64 max-h-60 overflow-y-auto bg-popover border border-border/60 rounded-lg shadow-elev-2 z-50"
         >
           {filteredFiles.length === 0 ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">
@@ -740,7 +740,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       {showCommand && (
         <div
           ref={commandRef}
-          className="absolute bottom-full left-0 mb-1 w-64 bg-background border border-border/60 rounded-lg shadow-lg z-50 flex flex-col overflow-hidden"
+          className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border/60 rounded-lg shadow-elev-2 z-50 flex flex-col overflow-hidden"
         >
           <div className="px-3 py-2 text-xs text-muted-foreground font-medium bg-muted/30 border-b border-border/60">
             {t.ai.slashCommands.shortcuts}

@@ -40,7 +40,7 @@ export function PluginContextMenuHost() {
 
   return (
     <div
-      className="fixed z-[240] min-w-[220px] rounded-lg border border-border bg-background shadow-lg p-1"
+      className="fixed z-[240] min-w-[220px] rounded-lg border border-border bg-popover shadow-elev-2 p-1"
       style={{ left: Math.min(menu.x, window.innerWidth - 240), top: Math.min(menu.y, window.innerHeight - 220) }}
     >
       {sorted.map((item) => (

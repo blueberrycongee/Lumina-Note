@@ -288,7 +288,7 @@ function SuggestionCard({
       onClick={onClick}
       className={[
         "group relative flex flex-col items-start gap-2 text-left",
-        "rounded-ui-lg border border-border bg-popover p-4",
+        "rounded-ui-lg border border-border bg-muted/40 p-4",
         "transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-subtle",
         "hover:border-primary/35 hover:bg-accent/60 hover:shadow-elev-1",
         "active:scale-[0.97]",

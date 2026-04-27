@@ -129,7 +129,7 @@ export function AnnotationPopover({ className }: AnnotationPopoverProps) {
     <div
       ref={popoverRef}
       className={cn(
-        'bg-popover border border-border rounded-lg shadow-lg p-2',
+        'bg-popover border border-border rounded-lg shadow-elev-2 p-2',
         'animate-in fade-in-0 zoom-in-95 duration-100',
         className
       )}

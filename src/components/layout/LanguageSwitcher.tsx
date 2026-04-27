@@ -107,7 +107,7 @@ export function LanguageSwitcher({
         <div
           ref={menuRef}
           className={clsx(
-            "absolute mt-1 w-44 rounded-ui-md border border-border bg-background shadow-ui-float py-1 z-50",
+            "absolute mt-1 w-44 rounded-ui-md border border-border bg-popover shadow-elev-2 py-1 z-50",
             menuAlign === "right" ? "right-0" : "left-0",
             menuClassName
           )}
