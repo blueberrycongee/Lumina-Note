@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-04-27
+
+本次更新核心是**用 PRODUCT.md / DESIGN.md 把全应用 chrome 收敛到一套苹果 / OpenAI 风格的设计系统**——所有滚动条、所有下拉菜单、所有阴影、所有 list row 走同一套 token 与节奏。同时清理了一个一直没真正实现的"PDF 元素识别"功能（+23 / −1303 行）。
+
+### 改进
+- **滚动条全局统一为 auto-hide**：滚动时淡入、停顿 720ms 后淡出。原本只有侧栏文件树和编辑器走这套规则，现在全 app 包括聊天面板、Diff、概览仪表盘、图片管理、插件面板等任何 `overflow-auto` 容器都自动接管。靠一个文档级捕获阶段的 scroll 监听器统一加 `is-scroll-active` class，零组件改动
+- **List row 按 Apple/OpenAI 排版规范重做**：title 从 14px medium 降到 13px regular，selected 时升到 medium——把字重当作选中信号；删除左侧 accent bar；新增 `density="compact"` 变体（`px-2.5 py-1.5`、14px 图标）；把模型 / 模式 / effort、+ 菜单、@ 提及、/ skill、SelectionToolbar Ask、Sidebar workspace、通用 Select 全部切到 compact
+- **ChatInput 三个手写下拉迁到 Popover + Row**：@ 提及、/ skill、文件选择器原本是绝对定位 div + 手写外点击，现在走统一的 Popover——portal、spring 动效、focus return、viewport clamp 全部到位。slash 命令的 hover edit/delete 按钮、skill badge、底部"创建命令"footer 全部保留
+- **TabBar 右键菜单迁到 Popover**：用 1×1 虚拟 anchor 锚到点击坐标，复用所有 popover 行为；之前的占位 `animate-pop-in` class 实际不存在，改完才有了真正的入场动画
+- **Tooltip viewport clamp**：`AutoTooltipHost` 现在测量实际宽度，把 x 限制在 `[8, vw-8]`，靠右下的发送按钮、最左 ribbon icon 的 tooltip 不再溢出窗口
+- **Tooltip 自动抑制带可见 label 的按钮**：用 `\p{L}` 检测可见文字（含 CJK / Cyrillic / Greek）；"Send" 按钮旁边的 tooltip 不再重复读一遍可见文字。两个显式 override：`data-tooltip-force="true"` 强制显示、`data-tooltip-suppress="true"` 强制隐藏
+- **聊天 chip 菜单改为点击触发**：模型 / 模式 / effort 三个 chip 不再有 hover-intent 的延迟开合，点击切换更明确
+- **全局 chrome 按 DESIGN.md token 收敛**：删除 14 处装饰性 `backdrop-blur`（"glass" 效果在产品 UI 里被禁），22 处 `shadow-md/lg/xl/2xl/sm` 全部映射到 `shadow-elev-1/2/3`；半透明背景配套换成 solid `bg-popover`，modal 暗层保留 `bg-black/30`；调试浮层和图片管理 toast 顺手把硬编码颜色（`bg-orange-500`、`bg-emerald-500`）换成语义 token
+
+### 移除
+- **PDF "元素识别模式" 整体移除**：这个功能从来没真正实现——所谓的 PP-Structure / Cloud API / DeepSeek OCR 三个后端全是 stub，只有一个 mock 数据后端在跑；前端却带着完整脚手架（toggle 按钮、ElementPanel、InteractiveLayer、useElementSelection、usePDFStructure、parser、types、store 字段、4 份 i18n 命名空间）。一次性删除 8 个文件、瘦身 5 个文件、清理 4 份 locale 中的 8 个键
+
+### 文档
+- 新增 `PRODUCT.md` / `DESIGN.md`（Stitch DESIGN.md 格式）：把 register 锁成 product、Inter 13px regular、无显示字体、no-brand-color、no-accent-bar、Apple/OpenAI 克制等约束固化下来
+- README、用户指南、插件生态文档、外观插件指南全面校准——剔除 Tauri / RAG / MCP / Database views 等已经不存在的特性
+
+### 内部
+- 全局滚动条由新加的 `src/lib/scrollFadeGlobal.ts` 单一文档级监听器驱动；per-component 的 `useScrollFade` 仍兼容但已成冗余
+
 ## [1.2.2] - 2026-04-27
 
 包含原本 v1.2.1 的内容 + 一项发布流程修复。v1.2.1 的 release 因 Windows / macOS / Linux 三个 runner 并发 `POST /releases` 撞到 422（`tag_name already_exists`），最终只有 Mac / Linux 安装包上传成功，Windows 缺失，那个 release 已回收。
