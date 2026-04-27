@@ -1059,6 +1059,10 @@ export default {
     confirm: "确认",
     switchMode: "切换模式",
     close: "关闭",
+    discoverSection: "精选",
+    recentSection: "最近使用",
+    allCommandsSection: "全部命令",
+    newBadge: "新",
   },
 
   // 标签栏

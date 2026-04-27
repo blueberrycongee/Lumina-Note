@@ -1381,6 +1381,10 @@ export default {
     confirm: "確認",
     switchMode: "モード切替",
     close: "閉じる",
+    discoverSection: "ピックアップ",
+    recentSection: "最近の操作",
+    allCommandsSection: "すべてのコマンド",
+    newBadge: "新着",
   },
 
   // タブバー

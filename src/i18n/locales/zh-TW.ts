@@ -1357,6 +1357,10 @@ export default {
     confirm: "確認",
     switchMode: "切換模式",
     close: "關閉",
+    discoverSection: "精選",
+    recentSection: "最近使用",
+    allCommandsSection: "全部命令",
+    newBadge: "新",
   },
 
   // 標籤列

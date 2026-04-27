@@ -1076,6 +1076,10 @@ export default {
     confirm: "Confirm",
     switchMode: "Switch mode",
     close: "Close",
+    discoverSection: "Discover",
+    recentSection: "Recently used",
+    allCommandsSection: "All commands",
+    newBadge: "New",
   },
 
   // Tab Bar

@@ -21,9 +21,44 @@ import {
   FileText,
   User,
   UploadCloud,
+  Sparkles,
+  Clock,
 } from "lucide-react";
 
 export type PaletteMode = "command" | "file" | "search";
+
+const COMMAND_USAGE_KEY = "lumina:commandPaletteUsage";
+const FEATURED_COMMAND_IDS = [
+  "show-graph",
+  "global-search",
+  "publish-site",
+  "profile-preview",
+  "toggle-theme",
+] as const;
+
+type UsageEntry = { count: number; lastUsed: number };
+type UsageMap = Record<string, UsageEntry>;
+
+function readUsage(): UsageMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(COMMAND_USAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeUsage(map: UsageMap) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(COMMAND_USAGE_KEY, JSON.stringify(map));
+  } catch {
+    // ignore storage failures (private mode, quota)
+  }
+}
 
 interface CommandItem {
   id: string;
@@ -52,6 +87,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [pluginCommandVersion, setPluginCommandVersion] = useState(0);
+  const [usage, setUsage] = useState<UsageMap>(() => readUsage());
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -79,11 +115,12 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   // Check if graph tab is open
   const isGraphOpen = tabs.some(tab => tab.type === "graph");
 
-  // Focus input when opened
+  // Focus input when opened, refresh usage from storage in case other panes wrote
   useEffect(() => {
     if (isOpen) {
       setQuery("");
       setSelectedIndex(0);
+      setUsage(readUsage());
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen, mode]);
@@ -266,25 +303,56 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   // Filter items based on query and mode
   const filteredItems = useMemo(() => {
     const q = query.toLowerCase().trim();
-    
+
     if (mode === "command") {
-      if (!q) return commands;
-      return commands.filter(cmd => 
-        cmd.label.toLowerCase().includes(q) || 
+      if (!q) {
+        // Empty-query command mode renders sectioned (Discover/Recent/All).
+        // Build a flat order that mirrors visual order so keyboard nav stays in sync.
+        const featuredSet = new Set<string>(FEATURED_COMMAND_IDS);
+        const featured = commands.filter((c) => featuredSet.has(c.id));
+        const recent = [...commands]
+          .filter((c) => !featuredSet.has(c.id) && (usage[c.id]?.count ?? 0) > 0)
+          .sort((a, b) => (usage[b.id]?.lastUsed ?? 0) - (usage[a.id]?.lastUsed ?? 0))
+          .slice(0, 4);
+        const recentIds = new Set(recent.map((c) => c.id));
+        const rest = commands.filter((c) => !featuredSet.has(c.id) && !recentIds.has(c.id));
+        return [...featured, ...recent, ...rest];
+      }
+      return commands.filter(cmd =>
+        cmd.label.toLowerCase().includes(q) ||
         cmd.description?.toLowerCase().includes(q)
       );
     }
-    
+
     if (mode === "file") {
       if (!q) return allFiles.slice(0, 20);
-      return allFiles.filter(f => 
+      return allFiles.filter(f =>
         f.name.toLowerCase().includes(q) ||
         f.path.toLowerCase().includes(q)
       ).slice(0, 20);
     }
-    
+
     return [];
-  }, [mode, query, commands, allFiles]);
+  }, [mode, query, commands, allFiles, usage]);
+
+  // Sectioning metadata for the empty-query command view.
+  // Maps the visual section header to the index of its first item in `filteredItems`,
+  // so we can splat headers into the existing flat render loop without rewriting nav.
+  const sectionHeaders = useMemo(() => {
+    if (mode !== "command" || query.trim()) return new Map<number, string>();
+    const featuredSet = new Set<string>(FEATURED_COMMAND_IDS);
+    const featuredCount = commands.filter((c) => featuredSet.has(c.id)).length;
+    const recentCount = commands
+      .filter((c) => !featuredSet.has(c.id) && (usage[c.id]?.count ?? 0) > 0)
+      .slice(0, 4).length;
+    const headers = new Map<number, string>();
+    if (featuredCount > 0) headers.set(0, "discover");
+    if (recentCount > 0) headers.set(featuredCount, "recent");
+    if (filteredItems.length > featuredCount + recentCount) {
+      headers.set(featuredCount + recentCount, "all");
+    }
+    return headers;
+  }, [mode, query, commands, usage, filteredItems.length]);
 
   // Reset selection when filter changes
   useEffect(() => {
@@ -303,7 +371,17 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
   const executeItem = useCallback((index: number) => {
     if (mode === "command") {
       const cmd = filteredItems[index] as CommandItem;
-      cmd?.action();
+      if (!cmd) return;
+      const next: UsageMap = {
+        ...usage,
+        [cmd.id]: {
+          count: (usage[cmd.id]?.count ?? 0) + 1,
+          lastUsed: Date.now(),
+        },
+      };
+      setUsage(next);
+      writeUsage(next);
+      cmd.action();
     } else if (mode === "file") {
       const file = filteredItems[index] as FileItem;
       if (file) {
@@ -311,7 +389,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
         openFile(file.path);
       }
     }
-  }, [mode, filteredItems, onClose, openFile]);
+  }, [mode, filteredItems, onClose, openFile, usage]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -412,36 +490,65 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
               filteredItems.map((item, index) => {
                 if (mode === "command") {
                   const cmd = item as CommandItem;
+                  const headerKey = sectionHeaders.get(index);
+                  const isFeatured = (FEATURED_COMMAND_IDS as readonly string[]).includes(cmd.id);
+                  const showNewBadge = isFeatured && !usage[cmd.id];
+                  const headerLabel =
+                    headerKey === "discover"
+                      ? t.commandPalette.discoverSection
+                      : headerKey === "recent"
+                      ? t.commandPalette.recentSection
+                      : headerKey === "all"
+                      ? t.commandPalette.allCommandsSection
+                      : null;
+                  const HeaderIcon =
+                    headerKey === "discover" ? Sparkles : headerKey === "recent" ? Clock : null;
                   return (
-                    <button
-                      key={cmd.id}
-                      data-index={index}
-                      onClick={() => executeItem(index)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
-                        index === selectedIndex 
-                          ? "bg-accent text-accent-foreground" 
-                          : "hover:bg-muted"
+                    <div key={cmd.id}>
+                      {headerLabel && (
+                        <div className="flex items-center gap-1.5 px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/80">
+                          {HeaderIcon ? <HeaderIcon size={11} className="opacity-70" /> : null}
+                          <span>{headerLabel}</span>
+                        </div>
                       )}
-                    >
-                      <span className="text-muted-foreground">{cmd.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium">{cmd.label}</div>
-                        {cmd.description && (
-                          <div className="text-xs text-muted-foreground truncate">
-                            {cmd.description}
+                      <button
+                        data-index={index}
+                        onClick={() => executeItem(index)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                          index === selectedIndex
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <span className={cn("text-muted-foreground", isFeatured && "text-primary/80")}>
+                          {cmd.icon}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium flex items-center gap-2">
+                            <span className="truncate">{cmd.label}</span>
+                            {showNewBadge && (
+                              <span className="shrink-0 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
+                                {t.commandPalette.newBadge}
+                              </span>
+                            )}
                           </div>
+                          {cmd.description && (
+                            <div className="text-xs text-muted-foreground truncate">
+                              {cmd.description}
+                            </div>
+                          )}
+                          {cmd.groupTitle && (
+                            <div className="text-xs text-primary/80 truncate">{cmd.groupTitle}</div>
+                          )}
+                        </div>
+                        {cmd.shortcut && (
+                          <kbd className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                            {cmd.shortcut}
+                          </kbd>
                         )}
-                        {cmd.groupTitle && (
-                          <div className="text-xs text-primary/80 truncate">{cmd.groupTitle}</div>
-                        )}
-                      </div>
-                      {cmd.shortcut && (
-                        <kbd className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          {cmd.shortcut}
-                        </kbd>
-                      )}
-                    </button>
+                      </button>
+                    </div>
                   );
                 } else {
                   const file = item as FileItem;
