@@ -90,6 +90,14 @@ interface UIState {
   editorFontSize: number;
   setEditorFontSize: (size: number) => void;
 
+  // Typewriter / focus mode (independent toggles, both off by default)
+  typewriterMode: boolean;
+  focusMode: boolean;
+  setTypewriterMode: (enabled: boolean) => void;
+  setFocusMode: (enabled: boolean) => void;
+  toggleTypewriterMode: () => void;
+  toggleFocusMode: () => void;
+
   // Proxy
   proxyUrl: string;
   proxyEnabled: boolean;
@@ -119,6 +127,8 @@ const partializeUIState = (state: UIState) => ({
   diagnosticsEnabled: state.diagnosticsEnabled,
   editorInteractionTraceEnabled: state.editorInteractionTraceEnabled,
   editorFontSize: state.editorFontSize,
+  typewriterMode: state.typewriterMode,
+  focusMode: state.focusMode,
   proxyUrl: state.proxyUrl,
   proxyEnabled: state.proxyEnabled,
 });
@@ -232,6 +242,15 @@ export const useUIStore = create<UIState>()(
       editorFontSize: 16,
       setEditorFontSize: (size) =>
         set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
+
+      // Typewriter / focus — both off by default
+      typewriterMode: false,
+      focusMode: false,
+      setTypewriterMode: (enabled) => set({ typewriterMode: enabled }),
+      setFocusMode: (enabled) => set({ focusMode: enabled }),
+      toggleTypewriterMode: () =>
+        set((s) => ({ typewriterMode: !s.typewriterMode })),
+      toggleFocusMode: () => set((s) => ({ focusMode: !s.focusMode })),
 
       // Proxy
       proxyUrl: "",

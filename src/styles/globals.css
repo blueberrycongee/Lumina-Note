@@ -1904,6 +1904,32 @@ mark {
   max-width: 42rem;
 }
 
+/*
+ * Typewriter / focus mode.
+ *
+ * `.cm-focus-on` is added to the editor's host node by the
+ * typewriterPlugin when focus mode is on. Every line dims to 0.35;
+ * lines marked `.cm-typewriter-active` (the lines inside the active
+ * block) restore to full opacity. 200ms transition keeps the
+ * activation feel calm while the editor is being typed in.
+ *
+ * `.cm-typewriter-on` is set by the same plugin when typewriter mode
+ * is on; the JS theme also pads the content top/bottom by 30/50vh
+ * so the last lines can actually reach centre.
+ */
+.cm-focus-on .cm-line {
+  opacity: 0.35;
+  transition: opacity 200ms ease-out;
+}
+.cm-focus-on .cm-line.cm-typewriter-active {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-focus-on .cm-line {
+    transition: none;
+  }
+}
+
 /* 暗色模式适配 */
 .dark .codemirror-wrapper .cm-editor {
   background-color: hsl(var(--background));
