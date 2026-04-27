@@ -1373,11 +1373,19 @@ export function MainAIChatShell() {
                   into a rounded rect when the textarea grew past 1 line; the
                   shape change felt abrupt ("the bar suddenly hardened").
                   Locking to one shape removes that transition entirely. */}
+              {/* The input bar sits *in* the canvas, not floating above it,
+                  so it lives on the muted (secondary-surface) tier rather
+                  than popover (lifted-card) tier. Using popover here gave
+                  it the iter 12 elev-2 inner-top white highlight — a
+                  technique meant for cards and dialogs that visually
+                  detach from the page; on a permanent input element it
+                  read as an out-of-place shine. shadow-elev-1 is a flat
+                  drop-only shadow (no inner highlight) and keeps the
+                  field pleasantly lifted off the canvas without claiming
+                  popover-tier status. */}
               <div
                 ref={inputBarRef}
-                className={`relative border border-border bg-popover rounded-ui-xl transition-[box-shadow] duration-fast ease-out-subtle ${
-                  hasStarted ? "shadow-elev-1" : "shadow-elev-2"
-                }`}
+                className="relative border border-border bg-muted rounded-ui-xl shadow-elev-1 transition-[box-shadow] duration-fast ease-out-subtle"
               >
                 {/* Skill menu (slash command) */}
                 <Popover
