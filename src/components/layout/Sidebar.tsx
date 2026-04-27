@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, setDragData } from "@/lib/dragState";
@@ -625,6 +626,7 @@ function FileTreeItem({
   vaultPath,
 }: FileTreeItemProps) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const reduceMotion = useReducedMotion();
   const { moveFileToFolder, moveFolderToFolder } = useFileStore(
     useShallow((state) => ({
       moveFileToFolder: state.moveFileToFolder,
@@ -765,11 +767,13 @@ function FileTreeItem({
           )}
           style={{ paddingLeft }}
         >
-          {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
-          )}
+          <ChevronRight
+            className={cn(
+              "w-4 h-4 text-muted-foreground shrink-0 pointer-events-none",
+              "transition-transform duration-150 ease-out motion-reduce:transition-none",
+              isExpanded && "rotate-90",
+            )}
+          />
           {isExpanded ? (
             <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
           ) : (
@@ -778,45 +782,62 @@ function FileTreeItem({
           <span className="truncate pointer-events-none">{entry.name}</span>
         </div>
 
-        {isExpanded && (
-          <div>
-            {isCreatingHere && (
-              <CreateInputRow
-                type={creating.type}
-                value={createValue}
-                onChange={setCreateValue}
-                onSubmit={onCreateSubmit}
-                onCancel={onCreateCancel}
-                level={level + 1}
-              />
-            )}
-            {entry.children?.map((child) => (
-              <FileTreeItem
-                key={child.path}
-                entry={child}
-                currentFile={currentFile}
-                selectedPath={selectedPath}
-                onSelect={onSelect}
-                onPermanentOpen={onPermanentOpen}
-                onContextMenu={onContextMenu}
-                level={level + 1}
-                renamingPath={renamingPath}
-                renameValue={renameValue}
-                setRenameValue={setRenameValue}
-                onRenameSubmit={onRenameSubmit}
-                onRenameCancel={onRenameCancel}
-                expandedPaths={expandedPaths}
-                toggleExpanded={toggleExpanded}
-                creating={creating}
-                createValue={createValue}
-                setCreateValue={setCreateValue}
-                onCreateSubmit={onCreateSubmit}
-                onCreateCancel={onCreateCancel}
-                vaultPath={vaultPath}
-              />
-            ))}
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              key="children"
+              initial={
+                reduceMotion ? { opacity: 1 } : { height: 0, opacity: 0 }
+              }
+              animate={
+                reduceMotion
+                  ? { opacity: 1 }
+                  : { height: "auto", opacity: 1 }
+              }
+              exit={
+                reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }
+              }
+              transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+              className="overflow-hidden"
+            >
+              {isCreatingHere && (
+                <CreateInputRow
+                  type={creating.type}
+                  value={createValue}
+                  onChange={setCreateValue}
+                  onSubmit={onCreateSubmit}
+                  onCancel={onCreateCancel}
+                  level={level + 1}
+                />
+              )}
+              {entry.children?.map((child) => (
+                <FileTreeItem
+                  key={child.path}
+                  entry={child}
+                  currentFile={currentFile}
+                  selectedPath={selectedPath}
+                  onSelect={onSelect}
+                  onPermanentOpen={onPermanentOpen}
+                  onContextMenu={onContextMenu}
+                  level={level + 1}
+                  renamingPath={renamingPath}
+                  renameValue={renameValue}
+                  setRenameValue={setRenameValue}
+                  onRenameSubmit={onRenameSubmit}
+                  onRenameCancel={onRenameCancel}
+                  expandedPaths={expandedPaths}
+                  toggleExpanded={toggleExpanded}
+                  creating={creating}
+                  createValue={createValue}
+                  setCreateValue={setCreateValue}
+                  onCreateSubmit={onCreateSubmit}
+                  onCreateCancel={onCreateCancel}
+                  vaultPath={vaultPath}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
