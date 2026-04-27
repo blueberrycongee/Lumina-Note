@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-04-27
+
+紧急修复——v1.2.0 起的所有发布版本 AI 聊天**实际上都不工作**。
+
+### 修复
+- **AI 聊天 server 终于真正打包进二进制**：自 v1.2.0（commit `7f93784`，2026-04-25）起，release workflow 出于"让 build 不挂掉"的目的临时塞了一个 stub 替换 `thirdparty/opencode/packages/opencode/dist/node/node.js`，结果每次发版打包的都是占位符——`Server.listen()` 返回的是个伪造的 `http://localhost:0`，health-check 永远失败，renderer 端轮询不到 server 凭证，统一报 `"opencode server never reported ready from main process"`。无论配 OpenAI / DeepSeek / Anthropic / OpenAI-compatible 哪个 provider 结果一样（**根本不是 provider 层面的问题**）。
+
+  Release workflow 现在在 CI 里安装 `bun` + 把 opencode 上游 checkout 到 pinned commit `6aa475fcac39cacda4730142314985c64b200bb5` + `bun install` + `npm run opencode:bundle` 生成真正的 ~18MB server bundle，再交给 electron-builder 打包。Stub 步骤删掉。
+
+### 影响范围
+- v1.2.0 / v1.2.1 / v1.2.2 / v1.3.0 / v1.3.1 装机用户的 AI 聊天均**不可用**，必须手动升级到 v1.3.2 才能恢复
+- 任何依赖 opencode server 的能力（chat、agent run、skill 调用、tool use）都受影响
+- 不依赖 opencode 的功能（编辑器、Markdown 渲染、wiki 链接、批注、PDF 阅读、设置面板等）不受此 bug 影响
+
 ## [1.3.1] - 2026-04-27
 
 紧跟 v1.3.0 的小修复。

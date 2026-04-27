@@ -1,6 +1,6 @@
 {
   "name": "lumina-note",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "private": true,
   "type": "module",
   "main": "out/main/index.js",

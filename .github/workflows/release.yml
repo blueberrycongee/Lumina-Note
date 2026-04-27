@@ -83,17 +83,39 @@ jobs:
           node-version: lts/*
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      # Opencode is the in-process AI server bundled into the Electron main
+      # process. Its source isn't vendored in this repo (gitignored under
+      # thirdparty/) — pin it at a known-good commit and check it out fresh
+      # every release. Bumping opencode = update this `ref` and verify
+      # locally with `npm run opencode:smoke`.
+      - name: Checkout opencode at pinned commit
+        uses: actions/checkout@v6
+        with:
+          repository: anomalyco/opencode
+          ref: 6aa475fcac39cacda4730142314985c64b200bb5
+          path: thirdparty/opencode
+
+      - name: Install Lumina dependencies
         run: npm ci
 
-      - name: Stub opencode server bundle for CI
+      - name: Install opencode dependencies
         shell: bash
-        run: |
-          mkdir -p thirdparty/opencode/packages/opencode/dist/node
-          cat > thirdparty/opencode/packages/opencode/dist/node/node.js << 'STUB'
-          export const Log = { init: async () => {} };
-          export const Server = { listen: async () => ({ url: new URL("http://localhost:0"), stop: () => {} }) };
-          STUB
+        working-directory: thirdparty/opencode
+        run: bun install --frozen-lockfile
+
+      # Produces thirdparty/opencode/packages/opencode/dist/node/node.js
+      # (~18MB) plus the tree-sitter wasm files that
+      # electron.vite.config.ts copies into out/main during the next step.
+      # This replaces the stub that v1.2.0–v1.3.1 shipped, where the bundle
+      # at this path was a fake `Server.listen` returning localhost:0 — so
+      # every released binary's AI chat failed at startup with
+      # "opencode server never reported ready from main process".
+      - name: Build opencode server bundle
+        shell: bash
+        run: npm run opencode:bundle
 
       - name: Build renderer + main
         run: npm run build
