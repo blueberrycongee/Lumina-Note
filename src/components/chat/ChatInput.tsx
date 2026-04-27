@@ -9,6 +9,14 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { Send, FileText, Folder, X, Loader2, Paperclip, Quote, Image as ImageIcon, AlertCircle, Terminal, Plus, Pencil, Trash2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverEmpty,
+  PopoverHeader,
+  PopoverList,
+  Row,
+} from "@/components/ui";
 import { useCommandStore, SlashCommand } from "@/stores/useCommandStore";
 import { CommandManagerModal } from "./CommandManagerModal";
 import { invoke } from "@/lib/host";
@@ -129,6 +137,11 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const commandRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Anchor refs for the three Popovers. The @ and / menus anchor to the
+  // input bar so they sit visually below/above whatever the user typed; the
+  // file picker anchors to its own paperclip button.
+  const inputBarRef = useRef<HTMLDivElement>(null);
+  const filePickerButtonRef = useRef<HTMLButtonElement>(null);
 
   // 监听文件拖拽事件，支持从文件树拖拽文件引用
   useEffect(() => {
@@ -449,25 +462,6 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     getAttachedImages: () => attachedImages,
   }), [handleSend, referencedFiles, attachedImages]);
 
-  // 点击外部关闭菜单
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (mentionRef.current && !mentionRef.current.contains(e.target as Node)) {
-        setShowMention(false);
-      }
-      if (commandRef.current && !commandRef.current.contains(e.target as Node)) {
-        setShowCommand(false);
-      }
-      // 关闭文件选择器（检查是否点击在选择器外部）
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-file-picker]')) {
-        setShowFilePicker(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // @ 菜单自动滚动到选中项
   useEffect(() => {
     if (!showMention || !mentionRef.current) return;
@@ -579,7 +573,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       )}
 
       {/* 输入区域 */}
-      <div className="flex gap-2 relative">
+      <div ref={inputBarRef} className="flex gap-2 relative">
         <textarea
           ref={textareaRef}
           value={value}
@@ -622,63 +616,65 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
         </button>
 
         {/* 附加文件按钮 */}
-        <div className="relative self-end" data-file-picker>
-          <button
-            onClick={() => setShowFilePicker(!showFilePicker)}
-            className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
-            title={t.ai.attachFile}
-          >
-            <Paperclip size={16} />
-          </button>
-
-          {/* 文件选择下拉菜单 */}
-          {showFilePicker && (
-            <div className="absolute bottom-full right-0 mb-1 w-72 bg-popover border border-border/60 rounded-lg shadow-elev-2 z-50">
-              <div className="p-2 border-b border-border/60">
-                <input
-                  type="text"
-                  value={filePickerQuery}
-                  onChange={(e) => setFilePickerQuery(e.target.value)}
-                  placeholder={t.ai.searchFiles}
-                  className="w-full px-2 py-1.5 text-sm bg-muted/50 border border-border/60 rounded outline-none focus:ring-1 focus:ring-primary/50"
-                  autoFocus
-                />
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                {pickerFilteredFiles.length === 0 ? (
-                  <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                    {t.ai.noFilesFound}
-                  </div>
-                ) : (
-                  pickerFilteredFiles.map((file) => (
-                    <button
-                      key={file.path}
-                      onClick={() => {
-                        if (!referencedFiles.some(f => f.path === file.path)) {
-                          setReferencedFiles([...referencedFiles, file]);
-                        }
-                        setShowFilePicker(false);
-                        setFilePickerQuery("");
-                      }}
-                      className="w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors"
-                      title={t.ai.referenceFile.replace("{name}", file.name)}
-                    >
-                      {file.isFolder ? (
-                        <Folder size={14} className="text-yellow-500 shrink-0" />
-                      ) : (
-                        <FileText size={14} className="text-muted-foreground shrink-0" />
-                      )}
-                      <span className="truncate">{file.name}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-              <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border/60">
-                {t.ai.totalFiles.replace('{count}', String(allFiles.length))}
-              </div>
+        <button
+          ref={filePickerButtonRef}
+          onClick={() => setShowFilePicker((v) => !v)}
+          className="self-end p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+          aria-label={t.ai.attachFile}
+        >
+          <Paperclip size={16} />
+        </button>
+        <Popover
+          open={showFilePicker}
+          onOpenChange={(next) => {
+            setShowFilePicker(next);
+            if (!next) setFilePickerQuery("");
+          }}
+          anchor={filePickerButtonRef}
+        >
+          <PopoverContent placement="top-end" width={288}>
+            <div className="border-b border-border/40 p-2">
+              <input
+                type="text"
+                value={filePickerQuery}
+                onChange={(e) => setFilePickerQuery(e.target.value)}
+                placeholder={t.ai.searchFiles}
+                className="w-full rounded-ui-sm bg-muted/50 px-2 py-1.5 text-[13px] outline-none focus:ring-1 focus:ring-primary/50"
+                autoFocus
+              />
             </div>
-          )}
-        </div>
+            <PopoverList>
+              {pickerFilteredFiles.length === 0 ? (
+                <PopoverEmpty>{t.ai.noFilesFound}</PopoverEmpty>
+              ) : (
+                pickerFilteredFiles.map((file) => (
+                  <Row
+                    key={file.path}
+                    density="compact"
+                    icon={
+                      file.isFolder ? (
+                        <Folder size={14} className="text-yellow-500" />
+                      ) : (
+                        <FileText size={14} />
+                      )
+                    }
+                    title={file.name}
+                    onSelect={() => {
+                      if (!referencedFiles.some((f) => f.path === file.path)) {
+                        setReferencedFiles([...referencedFiles, file]);
+                      }
+                      setShowFilePicker(false);
+                      setFilePickerQuery("");
+                    }}
+                  />
+                ))
+              )}
+            </PopoverList>
+            <div className="border-t border-border/40 px-3 py-2 text-xs text-muted-foreground">
+              {t.ai.totalFiles.replace("{count}", String(allFiles.length))}
+            </div>
+          </PopoverContent>
+        </Popover>
 
         {!hideSendButton && (
           isStreaming ? (
@@ -703,136 +699,154 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
       </div>
 
       {/* @ 提及下拉菜单 */}
-      {showMention && (
-        <div
-          ref={mentionRef}
-          className="absolute bottom-full left-0 mb-1 w-64 max-h-60 overflow-y-auto bg-popover border border-border/60 rounded-lg shadow-elev-2 z-50"
+      <Popover
+        open={showMention}
+        onOpenChange={setShowMention}
+        anchor={inputBarRef}
+      >
+        <PopoverContent
+          ref={mentionRef as React.Ref<HTMLDivElement>}
+          placement="top-start"
+          width={256}
         >
-          {filteredFiles.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              {t.ai.noFilesFound}
-            </div>
-          ) : (
-            filteredFiles.map((file, index) => (
-              <button
-                key={file.path}
-                data-selected={index === mentionIndex}
-                onClick={() => selectMention(file)}
-                className={cn(
-                  "w-full px-3 py-2 text-sm text-left flex items-center gap-2 hover:bg-accent transition-colors",
-                  index === mentionIndex && "bg-accent"
-                )}
-                title={t.ai.referenceFile.replace("{name}", file.name)}
-              >
-                {file.isFolder ? (
-                  <Folder size={14} className="text-yellow-500 shrink-0" />
-                ) : (
-                  <FileText size={14} className="text-muted-foreground shrink-0" />
-                )}
-                <span className="truncate">{file.name}</span>
-              </button>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* / 命令下拉菜单 */}
-      {showCommand && (
-        <div
-          ref={commandRef}
-          className="absolute bottom-full left-0 mb-1 w-64 bg-popover border border-border/60 rounded-lg shadow-elev-2 z-50 flex flex-col overflow-hidden"
-        >
-          <div className="px-3 py-2 text-xs text-muted-foreground font-medium bg-muted/30 border-b border-border/60">
-            {t.ai.slashCommands.shortcuts}
-          </div>
-
-          <div className="max-h-52 overflow-y-auto">
-            {filteredCommands.length === 0 ? (
-              <div className="px-3 py-4 text-sm text-muted-foreground text-center">
-                {t.ai.slashCommands.noCommandsFound}
-              </div>
+          <PopoverList>
+            {filteredFiles.length === 0 ? (
+              <PopoverEmpty>{t.ai.noFilesFound}</PopoverEmpty>
             ) : (
-              filteredCommands.map((cmd, index) => (
-                <div
-                  key={cmd.id}
-                  data-selected={index === commandIndex}
-                  className={cn(
-                    "group flex items-center justify-between hover:bg-accent transition-colors pr-2",
-                    index === commandIndex && "bg-accent"
-                  )}
-                >
-                  <button
-                    onClick={() => selectCommand(cmd)}
-                    className="flex-1 px-3 py-2 text-sm text-left flex flex-col gap-0.5"
-                    title={t.ai.useCommand.replace("{key}", cmd.key)}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">/{cmd.key}</span>
-                      {cmd.id.startsWith("skill:") && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/70">
-                          <Sparkles size={10} />
-                          skill
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {cmd.description}
-                    </div>
-                  </button>
-                  {!cmd.id.startsWith("skill:") && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingCommand(cmd);
-                        setIsModalOpen(true);
-                        setShowCommand(false);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-foreground hover:bg-background rounded-md transition-[opacity,color,background-color] duration-fast ease-out-subtle"
-                      title={t.common.edit}
-                    >
-                      <Pencil size={12} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm(t.ai.slashCommands.deleteConfirm)) {
-                          deleteCommand(cmd.id);
-                          setCommandIndex((index) => {
-                            if (filteredCommands.length <= 1) return 0;
-                            if (index >= filteredCommands.length - 1) {
-                              return filteredCommands.length - 2;
-                            }
-                            return index;
-                          });
-                        }
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-destructive hover:bg-background rounded-md transition-[opacity,color,background-color] duration-fast ease-out-subtle"
-                      title={t.common.delete}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                  )}
-                </div>
+              filteredFiles.map((file, index) => (
+                <Row
+                  key={file.path}
+                  density="compact"
+                  icon={
+                    file.isFolder ? (
+                      <Folder size={14} className="text-yellow-500" />
+                    ) : (
+                      <FileText size={14} />
+                    )
+                  }
+                  title={file.name}
+                  selected={index === mentionIndex}
+                  data-selected={index === mentionIndex}
+                  onSelect={() => selectMention(file)}
+                />
               ))
             )}
-          </div>
+          </PopoverList>
+        </PopoverContent>
+      </Popover>
 
+      {/* / 命令下拉菜单 — custom row markup because each row hosts edit/delete
+       * action buttons on hover, which Row's single-button shape can't carry. */}
+      <Popover
+        open={showCommand}
+        onOpenChange={setShowCommand}
+        anchor={inputBarRef}
+      >
+        <PopoverContent
+          ref={commandRef as React.Ref<HTMLDivElement>}
+          placement="top-start"
+          width={256}
+        >
+          <PopoverHeader>{t.ai.slashCommands.shortcuts}</PopoverHeader>
+          <PopoverList>
+            {filteredCommands.length === 0 ? (
+              <PopoverEmpty>{t.ai.slashCommands.noCommandsFound}</PopoverEmpty>
+            ) : (
+              filteredCommands.map((cmd, index) => {
+                const isSkill = cmd.id.startsWith("skill:");
+                const selected = index === commandIndex;
+                return (
+                  <div
+                    key={cmd.id}
+                    data-selected={selected}
+                    className={cn(
+                      "group relative flex items-center rounded-ui-md transition-colors",
+                      selected ? "bg-accent" : "hover:bg-foreground/5",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => selectCommand(cmd)}
+                      className="min-w-0 flex-1 px-2.5 py-1.5 text-left"
+                      title={t.ai.useCommand.replace("{key}", cmd.key)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "block truncate text-[13px] text-foreground",
+                            selected ? "font-medium" : "font-normal",
+                          )}
+                        >
+                          /{cmd.key}
+                        </span>
+                        {isSkill && (
+                          <span className="inline-flex items-center gap-0.5 rounded-ui-sm bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary/70">
+                            <Sparkles size={10} />
+                            skill
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {cmd.description}
+                      </div>
+                    </button>
+                    {!isSkill && (
+                      <div className="flex shrink-0 items-center gap-1 pr-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingCommand(cmd);
+                            setIsModalOpen(true);
+                            setShowCommand(false);
+                          }}
+                          className="rounded-ui-sm p-1.5 text-muted-foreground opacity-0 transition-[opacity,color,background-color] duration-fast ease-out-subtle hover:bg-background hover:text-foreground group-hover:opacity-100"
+                          aria-label={t.common.edit}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(t.ai.slashCommands.deleteConfirm)) {
+                              deleteCommand(cmd.id);
+                              setCommandIndex((idx) => {
+                                if (filteredCommands.length <= 1) return 0;
+                                if (idx >= filteredCommands.length - 1) {
+                                  return filteredCommands.length - 2;
+                                }
+                                return idx;
+                              });
+                            }
+                          }}
+                          className="rounded-ui-sm p-1.5 text-muted-foreground opacity-0 transition-[opacity,color,background-color] duration-fast ease-out-subtle hover:bg-background hover:text-destructive group-hover:opacity-100"
+                          aria-label={t.common.delete}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </PopoverList>
           <button
+            type="button"
             onClick={() => {
               setEditingCommand(null);
               setIsModalOpen(true);
               setShowCommand(false);
             }}
-            className="w-full text-left px-3 py-2.5 text-sm hover:bg-accent border-t border-border/60 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-            title={t.ai.slashCommands.createShortcut}
+            className="flex w-full items-center gap-2 border-t border-border/40 px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+            aria-label={t.ai.slashCommands.createShortcut}
           >
             <Plus size={14} />
             {t.ai.slashCommands.createShortcut}
           </button>
-        </div>
-      )}
+        </PopoverContent>
+      </Popover>
 
       {/* 命令管理弹窗 */}
       <CommandManagerModal
