@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { ThinkingModelIcon } from "@/components/ai/ThinkingModelIcon";
+import { ImageModelsSettings } from "@/components/ai/ImageModelsSettings";
 import {
   Dialog,
   DialogBody,
@@ -524,6 +525,9 @@ export function AISettingsContent() {
           )}
         </div>
       </div>
+
+      {/* Image Models — gpt-image-2 / Nano Banana / Seedream */}
+      <ImageModelsSettings />
 
       {/* Agent 设置 */}
       <div className="space-y-3 pt-4 border-t border-border/60">

@@ -18,6 +18,7 @@ import { createPluginsHandlers } from "./handlers/plugins.js";
 import { session } from "electron";
 import electronUpdater from "electron-updater";
 import type { ProviderSettingsStore } from "./agent/providers/settings-store.js";
+import type { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
 import type { SkillLoader } from "./agent/skills/loader.js";
 import type { WikiSettingsStore } from "./wiki/settings-store.js";
 import type { WikiManager } from "./wiki/manager.js";
@@ -64,6 +65,7 @@ const eventStubs: Record<string, () => unknown> = {
 export interface IpcHandlersOptions {
   getMainWindow: () => BrowserWindow | null;
   providerSettings?: ProviderSettingsStore;
+  imageProviderSettings?: ImageProviderSettingsStore;
   skillLoader?: SkillLoader;
   wikiSettings?: WikiSettingsStore;
   wikiManager?: WikiManager;
@@ -79,6 +81,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
   const {
     getMainWindow,
     providerSettings,
+    imageProviderSettings,
     skillLoader,
     wikiSettings,
     wikiManager,
@@ -170,6 +173,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
         return dispatchAgentCommand(
           {
             providerSettings,
+            imageProviderSettings,
             skillLoader,
             wikiSettings,
             wikiManager,

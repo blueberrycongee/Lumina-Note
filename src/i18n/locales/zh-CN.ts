@@ -1629,6 +1629,18 @@ export default {
     filesProgress: "已处理 {count} 个文件",
     processing: "处理中",
     indexSummary: "已索引 {count} 个片段",
+    imageModels: {
+      title: "图像模型",
+      description:
+        "为 AI 接通图像生成 API。配置后由 image-gen skill 自动选择合适的模型——你不用管路由。",
+      statusConfigured: "已连接",
+      statusNotConfigured: "未配置",
+      apiKeyPlaceholder: "API Key",
+      baseUrlLabel: "Base URL",
+      baseUrlHint: "用于代理或区域端点，留空使用默认值",
+      advanced: "高级",
+      clearKey: "移除 API Key",
+    },
     errors: {
       "401": "认证失败 (401)",
       "403": "无权限 (403)",

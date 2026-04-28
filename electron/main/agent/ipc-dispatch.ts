@@ -27,9 +27,20 @@ import type { SkillLoader } from './skills/loader.js'
 import type { WikiManager } from '../wiki/manager.js'
 import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
 import { loadWikiIndex } from '../wiki/index-loader.js'
+import type { ImageProviderId } from './image-providers/registry.js'
+import {
+  isImageProviderId,
+  listImageProviders,
+} from './image-providers/registry.js'
+import type {
+  ImageProviderPersistedSettings,
+  ImageProviderSettingsStore,
+} from './image-providers/settings-store.js'
+import { testImageProviderConnection } from './image-providers/test-connection.js'
 
 export interface AgentDispatchContext {
   providerSettings?: ProviderSettingsStore
+  imageProviderSettings?: ImageProviderSettingsStore
   skillLoader?: SkillLoader
   wikiSettings?: WikiSettingsStore
   wikiManager?: WikiManager
@@ -47,7 +58,8 @@ export function isAgentCommand(cmd: string): boolean {
   return (
     cmd.startsWith('agent_') ||
     cmd.startsWith('vault_') ||
-    cmd.startsWith('wiki_')
+    cmd.startsWith('wiki_') ||
+    cmd.startsWith('image_')
   )
 }
 
@@ -58,6 +70,7 @@ export async function dispatchAgentCommand(
 ): Promise<unknown> {
   const {
     providerSettings,
+    imageProviderSettings,
     skillLoader,
     wikiSettings,
     wikiManager,
@@ -149,6 +162,88 @@ export async function dispatchAgentCommand(
         return { success: false, error: 'missing model_id' }
       }
       return testProviderConnection(provider_id as ProviderId, model_id, settings ?? {})
+    }
+
+    // Image-generation providers (gpt-image-2 / Nano Banana / Seedream).
+    // The opencode plugin's `generate_image` tool reads these settings at
+    // tool-execute time — they do NOT need to flow through the opencode
+    // bridge env, because the plugin runs in the same Node process and can
+    // access the singleton store directly.
+    case 'image_list_providers': {
+      const providers = listImageProviders()
+      // Augment with "configured" flag the UI uses to show a green dot.
+      const out = await Promise.all(
+        providers.map(async (entry) => ({
+          ...entry,
+          configured: imageProviderSettings
+            ? await imageProviderSettings.isConfigured(entry.id)
+            : false,
+        })),
+      )
+      return out
+    }
+    case 'image_get_provider_settings': {
+      if (!imageProviderSettings) return null
+      return imageProviderSettings.getAll()
+    }
+    case 'image_set_provider_settings': {
+      if (!imageProviderSettings) return null
+      const { provider_id, settings } = args as {
+        provider_id?: string
+        settings?: ImageProviderPersistedSettings
+      }
+      if (!provider_id || !isImageProviderId(provider_id)) {
+        throw new Error(`Unknown image provider: ${provider_id}`)
+      }
+      imageProviderSettings.setProviderSettings(
+        provider_id as ImageProviderId,
+        settings ?? {},
+      )
+      return null
+    }
+    case 'image_set_provider_api_key': {
+      if (!imageProviderSettings) return null
+      const { provider_id, api_key } = args as {
+        provider_id?: string
+        api_key?: string
+      }
+      if (!provider_id || !isImageProviderId(provider_id)) {
+        throw new Error(`Unknown image provider: ${provider_id}`)
+      }
+      if (api_key === undefined || api_key === null || api_key === '') {
+        await imageProviderSettings.deleteProviderApiKey(
+          provider_id as ImageProviderId,
+        )
+      } else {
+        await imageProviderSettings.setProviderApiKey(
+          provider_id as ImageProviderId,
+          api_key.trim(),
+        )
+      }
+      return null
+    }
+    case 'image_has_provider_api_key': {
+      if (!imageProviderSettings) return false
+      const { provider_id } = args as { provider_id?: string }
+      if (!provider_id || !isImageProviderId(provider_id)) return false
+      return imageProviderSettings.isConfigured(
+        provider_id as ImageProviderId,
+      )
+    }
+    case 'image_test_provider': {
+      const { provider_id, settings } = args as {
+        provider_id?: string
+        settings?: { apiKey?: string; baseUrl?: string }
+      }
+      if (!provider_id || !isImageProviderId(provider_id)) {
+        return { success: false, error: `Unknown image provider: ${provider_id}` }
+      }
+      const apiKey = settings?.apiKey ?? ''
+      return testImageProviderConnection({
+        providerId: provider_id as ImageProviderId,
+        apiKey,
+        baseUrl: settings?.baseUrl,
+      })
     }
 
     // Skills — read-only skill discovery for the Skill Manager UI.

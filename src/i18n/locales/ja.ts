@@ -1662,6 +1662,18 @@ export default {
     filesProgress: "{count} 件のファイルを処理済み",
     processing: "処理中",
     indexSummary: "{count} チャンクをインデックス済み",
+    imageModels: {
+      title: "画像モデル",
+      description:
+        "AI に画像生成 API を接続します。image-gen skill が用途に応じて最適なモデルを選びます。",
+      statusConfigured: "接続済み",
+      statusNotConfigured: "未設定",
+      apiKeyPlaceholder: "API Key",
+      baseUrlLabel: "Base URL",
+      baseUrlHint: "プロキシや地域エンドポイント用。空欄でデフォルトを使用。",
+      advanced: "詳細",
+      clearKey: "API Key を削除",
+    },
     errors: {
       "401": "認証失敗 (401)",
       "403": "権限なし (403)",

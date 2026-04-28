@@ -33,6 +33,7 @@ import {
   ProviderSettingsStore,
   type SecretStore,
 } from "./agent/providers/settings-store.js";
+import { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
 import { SkillLoader } from "./agent/skills/loader.js";
 import type { ProviderInterface } from "./agent/types.js";
 import { WikiSettingsStore } from "./wiki/settings-store.js";
@@ -139,6 +140,10 @@ app.whenReady().then(() => {
     baseDir: app.getPath("userData"),
     secretStore,
   });
+  const imageProviderSettings = new ImageProviderSettingsStore({
+    baseDir: app.getPath("userData"),
+    secretStore,
+  });
 
   // Provider selector is still used by WikiManager for background wiki-note
   // synthesis — the embedded opencode server runs the chat agent, but Lumina's
@@ -201,6 +206,7 @@ app.whenReady().then(() => {
   registerIpcHandlers({
     getMainWindow,
     providerSettings,
+    imageProviderSettings,
     skillLoader,
     wikiSettings,
     wikiManager,

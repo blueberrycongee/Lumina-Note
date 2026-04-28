@@ -1667,6 +1667,18 @@ export default {
     filesProgress: "{count} files processed",
     processing: "Processing",
     indexSummary: "Indexed {count} chunks",
+    imageModels: {
+      title: "Image Models",
+      description:
+        "Connect image-generation APIs. The image-gen skill picks the right one for each request — you don't manage routing.",
+      statusConfigured: "Connected",
+      statusNotConfigured: "Not configured",
+      apiKeyPlaceholder: "API Key",
+      baseUrlLabel: "Base URL",
+      baseUrlHint: "For proxies or regional endpoints. Leave blank for default.",
+      advanced: "Advanced",
+      clearKey: "Remove API key",
+    },
     errors: {
       "401": "Unauthorized (401)",
       "403": "Forbidden (403)",
