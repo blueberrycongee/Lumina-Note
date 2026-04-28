@@ -37,6 +37,11 @@ import type {
   ImageProviderSettingsStore,
 } from './image-providers/settings-store.js'
 import { testImageProviderConnection } from './image-providers/test-connection.js'
+import {
+  deleteSkill,
+  writeSkill,
+  type SkillFrontmatter,
+} from '../agent-v2/skills/handlers.js'
 
 export interface AgentDispatchContext {
   providerSettings?: ProviderSettingsStore
@@ -66,7 +71,8 @@ export function isAgentCommand(cmd: string): boolean {
     cmd.startsWith('agent_') ||
     cmd.startsWith('vault_') ||
     cmd.startsWith('wiki_') ||
-    cmd.startsWith('image_')
+    cmd.startsWith('image_') ||
+    cmd.startsWith('skill_')
   )
 }
 
@@ -254,7 +260,40 @@ export async function dispatchAgentCommand(
       })
     }
 
-    // Skills — read-only skill discovery for the Skill Manager UI.
+    // Vault skill CRUD — listing/reading goes through opencode's /skill
+    // endpoint directly (the renderer hits it via the cached server info).
+    // Writes are gated through this dispatch so we can validate names and
+    // constrain output to <vault>/.claude/skills/<name>/SKILL.md.
+    case 'skill_write': {
+      const { vault_path, name, frontmatter, body } = args as {
+        vault_path?: string
+        name?: string
+        frontmatter?: SkillFrontmatter
+        body?: string
+      }
+      if (!vault_path || !name || !frontmatter) {
+        throw new Error('skill_write: missing vault_path / name / frontmatter')
+      }
+      return writeSkill({
+        vaultPath: vault_path,
+        name,
+        frontmatter,
+        body: body ?? '',
+      })
+    }
+    case 'skill_delete': {
+      const { vault_path, name } = args as {
+        vault_path?: string
+        name?: string
+      }
+      if (!vault_path || !name) {
+        throw new Error('skill_delete: missing vault_path / name')
+      }
+      await deleteSkill({ vaultPath: vault_path, name })
+      return null
+    }
+
+    // Skills — read-only skill discovery for the Skill Manager UI (LEGACY).
     case 'agent_list_skills': {
       if (!skillLoader) return []
       const { workspace_path } = args as { workspace_path?: string }

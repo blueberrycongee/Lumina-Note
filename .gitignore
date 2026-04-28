@@ -81,6 +81,10 @@ src-tauri/target/
 !src-tauri/resources/skills/**
 !electron/main/agent/skills/
 !electron/main/agent/skills/**
+!electron/main/agent-v2/skills/
+!electron/main/agent-v2/skills/**
+!electron/main/agent-v2/builtin-skills/
+!electron/main/agent-v2/builtin-skills/**
 tmp.txt
 .plan-loop/
 scripts/plan-loop*.ps1
