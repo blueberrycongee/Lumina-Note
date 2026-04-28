@@ -259,6 +259,10 @@ export async function syncWorkspaceAccessRoots(path: string): Promise<void> {
   await invoke("fs_set_allowed_roots", { roots: workspacePaths });
 }
 
+export async function initializeAgentVault(path: string): Promise<void> {
+  await invoke("vault_initialize", { workspacePath: path });
+}
+
 // 限制 undoStack 大小的辅助函数
 function trimUndoStack(stack: HistoryEntry[]): HistoryEntry[] {
   if (stack.length <= MAX_UNDO_HISTORY) return stack;
@@ -367,6 +371,17 @@ export const useFileStore = create<FileState>()(
           });
         }
         set({ vaultPath: path, isLoadingTree: true });
+        try {
+          await initializeAgentVault(path);
+        } catch (error) {
+          reportOperationError({
+            source: "FileStore.setVaultPath",
+            action: "Initialize agent workspace",
+            error,
+            level: "warning",
+            context: { path },
+          });
+        }
         try {
           try {
             await createDir(`${path}/.lumina`);
@@ -2240,6 +2255,17 @@ export const useFileStore = create<FileState>()(
           reportOperationError({
             source: "FileStore.rehydrate",
             action: "Sync workspace access roots after restore",
+            error,
+            level: "warning",
+            context: { vaultPath: state.vaultPath },
+          });
+        }
+        try {
+          await initializeAgentVault(state.vaultPath);
+        } catch (error) {
+          reportOperationError({
+            source: "FileStore.rehydrate",
+            action: "Initialize agent workspace after restore",
             error,
             level: "warning",
             context: { vaultPath: state.vaultPath },

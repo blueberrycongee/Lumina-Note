@@ -1,16 +1,34 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { invoke } from "@/lib/host";
-import { syncWorkspaceAccessRoots } from "@/stores/useFileStore";
+import { createDir, estimateDirSize, invoke, listDirectory } from "@/lib/host";
+import {
+  initializeAgentVault,
+  syncWorkspaceAccessRoots,
+  useFileStore,
+} from "@/stores/useFileStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 
 // Mock Tauri invoke
 vi.mock("@/lib/host", () => ({
   invoke: vi.fn(),
+  listDirectory: vi.fn(),
+  readFile: vi.fn(),
+  saveFile: vi.fn(),
+  createFile: vi.fn(),
+  createDir: vi.fn(),
+  estimateDirSize: vi.fn(),
 }));
 
 describe("syncWorkspaceAccessRoots timing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(invoke).mockResolvedValue(undefined);
+    vi.mocked(listDirectory).mockResolvedValue([]);
+    vi.mocked(createDir).mockResolvedValue(undefined);
+    vi.mocked(estimateDirSize).mockResolvedValue({
+      warning: false,
+      isSystemDir: false,
+      topLevelCount: 0,
+    });
   });
 
   afterEach(() => {
@@ -184,6 +202,48 @@ describe("syncWorkspaceAccessRoots timing", () => {
     });
     expect(invoke).toHaveBeenCalledWith("fs_set_allowed_roots", {
       roots: [mediaPath],
+    });
+  });
+
+  it("initializes the agent vault context after opening a workspace", async () => {
+    const mockPath = "/test/vault";
+    const callOrder: string[] = [];
+    const mockRegisterWorkspace = vi.fn();
+    vi.spyOn(useWorkspaceStore, "getState").mockReturnValue({
+      workspaces: [],
+      registerWorkspace: mockRegisterWorkspace,
+    } as any);
+    vi.mocked(invoke).mockImplementation(async (cmd: string) => {
+      callOrder.push(cmd);
+      return undefined;
+    });
+    vi.mocked(listDirectory).mockImplementation(async () => {
+      callOrder.push("list_directory");
+      return [];
+    });
+    vi.mocked(createDir).mockImplementation(async () => {
+      callOrder.push("create_dir");
+      return undefined;
+    });
+
+    await useFileStore.getState().setVaultPath(mockPath);
+
+    expect(invoke).toHaveBeenCalledWith("vault_initialize", {
+      workspacePath: mockPath,
+    });
+    expect(callOrder.indexOf("fs_set_allowed_roots")).toBeLessThan(
+      callOrder.indexOf("vault_initialize"),
+    );
+    expect(callOrder.indexOf("vault_initialize")).toBeLessThan(
+      callOrder.indexOf("list_directory"),
+    );
+  });
+
+  it("exposes agent vault initialization as a focused IPC helper", async () => {
+    await initializeAgentVault("/test/vault");
+
+    expect(invoke).toHaveBeenCalledWith("vault_initialize", {
+      workspacePath: "/test/vault",
     });
   });
 });
