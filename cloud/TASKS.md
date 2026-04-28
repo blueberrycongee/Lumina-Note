@@ -54,7 +54,7 @@
   - Tests cover all four `status` transitions.
 
 ### C5 — Lumina Cloud HTTP client
-- [ ] **Goal:** `client.ts` exports a typed client for `CONTRACT.md` §2.1, §2.2 (chat — see C7), §2.3, §2.4, §2.5.
+- [x] **Goal:** `client.ts` exports a typed client for `CONTRACT.md` §2.1, §2.2 (chat — see C7), §2.3, §2.4, §2.5.
 - **Acceptance:**
   - `verifyLicenseOnline(license)` → `§2.1` shape.
   - `getModels(license)` → `§2.3` shape.
@@ -128,3 +128,4 @@
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
 
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
+[x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
