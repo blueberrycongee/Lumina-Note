@@ -23,7 +23,19 @@ export default defineConfig({
     build: {
       externalizeDeps: { include: ['electron'] },
       rollupOptions: {
-        input: path.resolve(__dirname, 'electron/main/index.ts'),
+        // Two entries: the Electron main process AND a sibling bundle for
+        // Lumina's opencode plugin. The plugin is loaded by opencode at
+        // startup via `cfg.plugin = [<absolute path to lumina-plugin.js>]`,
+        // so it must be a real file on disk that opencode can dynamic-
+        // import. Bundling it here keeps it in lockstep with the rest of
+        // the main process (same dep versions, same TS settings).
+        input: {
+          index: path.resolve(__dirname, 'electron/main/index.ts'),
+          'lumina-plugin': path.resolve(
+            __dirname,
+            'electron/main/agent-v2/plugin/index.ts',
+          ),
+        },
         external: ['electron'],
       },
     },

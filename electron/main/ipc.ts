@@ -70,6 +70,11 @@ export interface IpcHandlersOptions {
   wikiSettings?: WikiSettingsStore;
   wikiManager?: WikiManager;
   /**
+   * Called by `vault_initialize` so main/index.ts can update the active
+   * vault path (read by the opencode plugin via globalThis).
+   */
+  onActiveVaultChanged?: (vaultPath: string) => void;
+  /**
    * Called after a renderer-initiated mutation to provider settings
    * (active provider / per-provider baseUrl / per-provider apiKey).
    * Hooked from main/index.ts to rebuild opencode env and restart its server.
@@ -85,6 +90,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     skillLoader,
     wikiSettings,
     wikiManager,
+    onActiveVaultChanged,
     onProviderSettingsChanged,
   } = options;
 
@@ -177,6 +183,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
             skillLoader,
             wikiSettings,
             wikiManager,
+            onActiveVaultChanged,
             onProviderSettingsChanged,
           },
           cmd,

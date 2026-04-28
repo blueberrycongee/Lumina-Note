@@ -34,6 +34,11 @@ import {
   type SecretStore,
 } from "./agent/providers/settings-store.js";
 import { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
+import {
+  getImageProvider,
+  type ImageProviderId,
+} from "./agent/image-providers/registry.js";
+import { setLuminaPluginContext } from "./agent-v2/plugin/context.js";
 import { SkillLoader } from "./agent/skills/loader.js";
 import type { ProviderInterface } from "./agent/types.js";
 import { WikiSettingsStore } from "./wiki/settings-store.js";
@@ -145,6 +150,28 @@ app.whenReady().then(() => {
     secretStore,
   });
 
+  // Active vault path tracked here and exposed to the opencode plugin via
+  // globalThis. The plugin reads this at tool-execute time so generate_image
+  // always writes to the user's currently-open vault, not the one bound at
+  // server-start time.
+  let activeVaultPath: string | null = null;
+  setLuminaPluginContext({
+    resolveImageSettings: (id) =>
+      imageProviderSettings.resolveSettings(id as ImageProviderId),
+    getImageProviderDefaults: (id) => {
+      const entry = getImageProvider(id as ImageProviderId);
+      if (!entry) {
+        throw new Error(`Unknown image provider: ${id}`);
+      }
+      return {
+        defaultModelId: entry.defaultModelId,
+        defaultBaseUrl: entry.defaultBaseUrl,
+        marketingName: entry.marketingName,
+      };
+    },
+    getActiveVaultPath: () => activeVaultPath,
+  });
+
   // Provider selector is still used by WikiManager for background wiki-note
   // synthesis — the embedded opencode server runs the chat agent, but Lumina's
   // own wiki synthesizer calls an AI SDK provider directly.
@@ -210,6 +237,9 @@ app.whenReady().then(() => {
     skillLoader,
     wikiSettings,
     wikiManager,
+    onActiveVaultChanged: (vaultPath: string) => {
+      activeVaultPath = vaultPath;
+    },
     onProviderSettingsChanged: () => scheduleOpencodeRestart(),
   });
   registerOpencodeIpc();

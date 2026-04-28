@@ -9,6 +9,9 @@
 //   config     — thirdparty/opencode/packages/opencode/src/config/config.ts:585
 //                process.env.OPENCODE_CONFIG_CONTENT is merged as global config.
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { ProviderSettingsStore } from "../agent/providers/settings-store.js";
 import type { ProviderId } from "../agent/providers/registry.js";
 import { buildModelOptionsBlob } from "../agent/providers/thinking-options.js";
@@ -16,6 +19,25 @@ import { buildModelOptionsBlob } from "../agent/providers/thinking-options.js";
 const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 
 let _autoApproveToolCalls = false;
+
+/**
+ * Absolute path to the bundled Lumina opencode plugin (lumina-plugin.js).
+ * It sits next to the main bundle (electron.vite.config.ts emits both as
+ * sibling rollup entries). At runtime we resolve relative to import.meta.url
+ * so the path works in both dev (out/main/) and packaged builds.
+ */
+function resolveLuminaPluginPath(): string {
+  // import.meta.url isn't available in CJS; fall back to __dirname when so.
+  // electron-vite's main bundle is ESM by default — the import.meta path is
+  // the safe one — but the fallback handles legacy CJS bundles too.
+  let dir: string;
+  try {
+    dir = path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    dir = typeof __dirname === "string" ? __dirname : process.cwd();
+  }
+  return path.join(dir, "lumina-plugin.js");
+}
 
 export function setAutoApproveToolCalls(value: boolean): void {
   _autoApproveToolCalls = value;
@@ -200,6 +222,12 @@ export async function buildOpencodeBridge(
     provider: {
       [opencodeId]: providerEntry,
     },
+    // Lumina-side plugin sitting in the same Node process. Currently
+    // registers the `generate_image` tool. Any future agent-runtime
+    // extensions (custom hooks, additional tools) live in this single
+    // plugin entry — keeping us aligned with opencode's plugin model
+    // instead of inventing a parallel framework.
+    plugin: [resolveLuminaPluginPath()],
   };
 
   if (_autoApproveToolCalls) {

@@ -45,6 +45,13 @@ export interface AgentDispatchContext {
   wikiSettings?: WikiSettingsStore
   wikiManager?: WikiManager
   /**
+   * Called from `vault_initialize` so main/index.ts can track the active
+   * vault path. The opencode plugin (lumina-plugin.js) reads this via
+   * globalThis when generate_image runs, since the plugin doesn't share a
+   * module graph with the main bundle.
+   */
+  onActiveVaultChanged?: (vaultPath: string) => void
+  /**
    * Fired (fire-and-forget) after the user mutates provider state via any of:
    *   agent_set_active_provider / agent_set_provider_settings / agent_set_provider_api_key
    * Wired from main/index.ts to rebuild OPENCODE_CONFIG_CONTENT +
@@ -74,6 +81,7 @@ export async function dispatchAgentCommand(
     skillLoader,
     wikiSettings,
     wikiManager,
+    onActiveVaultChanged,
     onProviderSettingsChanged,
   } = ctx
   const triggerProviderRefresh = (): void => {
@@ -267,13 +275,16 @@ export async function dispatchAgentCommand(
 
     // Vault — bind wiki manager to active vault, load wiki index, placeholder lint.
     case 'vault_initialize': {
-      if (wikiManager) {
-        const { workspacePath, workspace_path } = args as {
-          workspacePath?: string
-          workspace_path?: string
-        }
-        const vaultPath = workspacePath ?? workspace_path
-        if (typeof vaultPath === 'string' && vaultPath.length > 0) {
+      const { workspacePath, workspace_path } = args as {
+        workspacePath?: string
+        workspace_path?: string
+      }
+      const vaultPath = workspacePath ?? workspace_path
+      if (typeof vaultPath === 'string' && vaultPath.length > 0) {
+        // Notify main/index.ts so the opencode plugin (which reads vault
+        // path off globalThis at tool-execute time) sees the latest value.
+        onActiveVaultChanged?.(vaultPath)
+        if (wikiManager) {
           await wikiManager.bind(vaultPath).catch(() => undefined)
           await wikiManager.start().catch(() => undefined)
         }
