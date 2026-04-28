@@ -66,7 +66,7 @@
 - **Dep:** add `msw` to `devDependencies` if not present, or use a simple manual fetch mock.
 
 ### C6 — Revocation cache
-- [ ] **Goal:** `revocations.ts` keeps a daily-refreshed local cache and exports `isRevoked(lid): Promise<boolean>`.
+- [x] **Goal:** `revocations.ts` keeps a daily-refreshed local cache and exports `isRevoked(lid): Promise<boolean>`.
 - **Storage:** under `app.getPath('userData')/lumina-cloud-revocations.json`, `{ as_of, revoked_lids: [...] }`.
 - **Acceptance:**
   - Refreshes if cache age > 24h (and quietly succeeds with stale cache on network failure).
@@ -129,3 +129,4 @@
 
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
 [x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
+[x] C6 — 2026-04-28 — f015911 — createRevocationCache + in-memory default (pending C3 IPC for disk persistence); 7 tests cover cold/warm/expired/network-fail/coalesce
