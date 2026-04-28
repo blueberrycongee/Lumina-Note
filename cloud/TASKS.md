@@ -94,7 +94,7 @@
 - **Acceptance:** Tests cover the three status states. Component renders without throwing in jsdom.
 
 ### C9 — `CloudUsagePanel.tsx`
-- [ ] **Goal:** Show "X / Y tokens used this month, resets on …".
+- [x] **Goal:** Show "X / Y tokens used this month, resets on …".
 - **Files:** `src/components/settings/CloudUsagePanel.tsx` + test.
 - **Behavior:**
   - When license valid: fetch `client.getUsage()` on mount + every 60s while open.
@@ -131,3 +131,4 @@
 [x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
 [x] C4 — 2026-04-28 — 3144bd5 — useLicenseStore (zustand) with mocked luminaCloud; 9 tests cover all four status transitions
 [x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
+[x] C9 — 2026-04-28 — ae19918 — CloudUsagePanel with 60s polling and stale-cache-on-error; 7 tests cover loading/success/error-with-cache + cold error + cadence + cleanup
