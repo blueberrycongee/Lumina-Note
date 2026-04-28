@@ -15,6 +15,8 @@
 import { create } from "zustand";
 import type { Event, Message, Part } from "@opencode-ai/sdk/client";
 import type { MessageAttachment } from "@/services/llm";
+import { reportError } from "@/services/errors";
+import { useErrorBanner } from "@/stores/useErrorBanner";
 import {
   getCachedServerInfo,
   getDefaultDirectory,
@@ -231,8 +233,13 @@ async function replyPermission(
     // handler no-ops.
     set({ pendingTool: null, status: "running" });
   } catch (err) {
-    console.error("[opencode] permission reply failed", err);
-    set({ error: String(err) });
+    reportError({
+      kind: "permission.reply",
+      severity: "blocker",
+      message: `Tool approval failed: ${String(err)}`,
+      cause: err,
+      retryable: false,
+    });
   }
 }
 
@@ -493,8 +500,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         } else if (typeof raw === "string") {
           message = raw;
         }
-        console.error("[opencode-sse] session.error:", message);
-        set({ status: "error", error: message });
+        reportError({
+          kind: "session.provider_error",
+          severity: "blocker",
+          message,
+          cause: raw,
+          retryable: false,
+          sessionId: event.properties.sessionID ?? undefined,
+        });
         return;
       }
       case "message.updated": {
@@ -634,10 +647,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             console.log("[opencode-sse] aborted");
             return;
           }
-          console.error("[opencode-sse] stream failed", err);
+          reportError({
+            kind: "session.provider_error",
+            severity: "blocker",
+            message: `Event stream connection failed: ${String(err)}. New messages from the agent won't appear until you reconnect.`,
+            cause: err,
+            retryable: true,
+          });
           set({
-            error: String(err),
-            status: "error",
             _subscribed: false,
             _abortController: null,
           });
@@ -661,7 +678,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         }>;
         set({ sessions: list.map(sessionSummary) });
       } catch (err) {
-        set({ error: String(err) });
+        // Background refresh — keep the previous sessions list visible
+        // and don't escalate to the global banner. Diagnostics panel
+        // and console still see the envelope.
+        reportError({
+          kind: "session.list",
+          severity: "background",
+          message: `Failed to refresh session list: ${String(err)}`,
+          cause: err,
+          retryable: true,
+        });
       }
     },
 
@@ -694,7 +720,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         await get().loadSessions();
         return id;
       } catch (err) {
-        set({ error: String(err) });
+        reportError({
+          kind: "session.create",
+          severity: "transient",
+          message: `Couldn't create a new session: ${String(err)}`,
+          cause: err,
+          retryable: true,
+        });
         return null;
       }
     },
@@ -710,6 +742,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const messages: AgentMessage[] = raw.map((entry) =>
           makeAgentMessage(entry.info, entry.parts),
         );
+        useErrorBanner.getState().clearBanner();
         set({
           currentSessionId: id,
           messages,
@@ -718,7 +751,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           pendingTool: null,
         });
       } catch (err) {
-        set({ error: String(err) });
+        reportError({
+          kind: "session.switch",
+          severity: "transient",
+          message: `Couldn't load session: ${String(err)}`,
+          cause: err,
+          retryable: true,
+          sessionId: id,
+        });
       }
     },
 
@@ -731,12 +771,20 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         }
         await get().loadSessions();
       } catch (err) {
-        set({ error: String(err) });
+        reportError({
+          kind: "session.delete",
+          severity: "transient",
+          message: `Couldn't delete session: ${String(err)}`,
+          cause: err,
+          retryable: true,
+          sessionId: id,
+        });
       }
     },
 
     async startTask(task: string, ctx?: StartTaskContext) {
       try {
+        useErrorBanner.getState().clearBanner();
         set({ status: "running", error: null });
         if (!get()._subscribed) await get().subscribe();
         let sessionId = get().currentSessionId;
@@ -788,9 +836,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       } catch (err) {
         // Drop any optimistic entry on failure so the UI doesn't show a
         // phantom user message.
+        reportError({
+          kind: "task.start",
+          severity: "blocker",
+          message: `Couldn't send message: ${String(err)}`,
+          cause: err,
+          retryable: true,
+          sessionId: get().currentSessionId ?? undefined,
+        });
         set((state) => ({
-          status: "error",
-          error: String(err),
+          status: "idle",
           messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
         }));
       }
@@ -804,7 +859,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         await client.session.abort({ path: { id: sessionId } });
         set({ status: "aborted" });
       } catch (err) {
-        set({ error: String(err) });
+        reportError({
+          kind: "session.abort",
+          severity: "blocker",
+          message: `Failed to stop the agent: ${String(err)}. The agent may still be running.`,
+          cause: err,
+          retryable: true,
+          sessionId,
+        });
       }
     },
 

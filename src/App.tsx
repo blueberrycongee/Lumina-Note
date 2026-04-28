@@ -34,6 +34,7 @@ import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
 import { useAIStore } from "@/stores/useAIStore";
 import { initOpencodeAgentListeners } from "@/stores/useOpencodeAgent";
+import { wireErrorBanner } from "@/stores/useErrorBanner";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
 import {
@@ -233,6 +234,7 @@ function App() {
   // is warm before MainAIChatShell mounts. Idempotent.
   useEffect(() => {
     initOpencodeAgentListeners();
+    wireErrorBanner();
   }, []);
 
   // 启动时自动检查更新（延迟 5 秒，避免影响启动性能）

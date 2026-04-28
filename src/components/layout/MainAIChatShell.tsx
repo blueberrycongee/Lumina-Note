@@ -13,6 +13,7 @@ import {
   useOpencodeAgent,
   initOpencodeAgentListeners,
 } from "@/stores/useOpencodeAgent";
+import { useErrorBanner } from "@/stores/useErrorBanner";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -200,6 +201,10 @@ export function MainAIChatShell() {
     initOpencodeAgentListeners();
   }, []);
 
+  // 阻塞型错误信封 — 取代旧的 agentStatus==="error" 门控
+  const bannerError = useErrorBanner((s) => s.active);
+  const dismissBanner = useErrorBanner((s) => s.dismiss);
+
   // 工具审批 - 提取 tool 对象
   const pendingTool = rustPendingTool?.tool;
   const [retryNow, setRetryNow] = useState(Date.now());
@@ -282,7 +287,7 @@ export function MainAIChatShell() {
   );
 
   // 判断是否有对话历史（用于控制动画状态）
-  const hasStarted = agentMessages.length > 0 || agentStatus === "error";
+  const hasStarted = agentMessages.length > 0 || bannerError !== null;
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof performance === "undefined") {
@@ -1185,17 +1190,32 @@ export function MainAIChatShell() {
               {/* 流式输出 - Agent 和 Chat 模式统一使用 StreamingOutput 组件 */}
               {!isExportSelectionMode && <StreamingOutput />}
 
-              {/* Agent 错误提示 */}
-              {agentStatus === "error" && (
+              {/* Agent 错误提示 — 由 useErrorBanner 驱动，覆盖所有 blocker
+                  级别的错误信封（task.start / session.provider_error /
+                  permission.reply / session.abort）。 */}
+              {bannerError && (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-start gap-2.5 text-sm text-destructive/90 px-4 py-3 bg-destructive/[0.06] border border-destructive/15 rounded-xl mb-5"
                 >
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span className="leading-relaxed">
-                    {_rustError || t.ai.errorRetry}
-                  </span>
+                  <div className="flex-1 min-w-0 leading-relaxed">
+                    <div className="font-medium">
+                      {bannerError.message || t.ai.errorRetry}
+                    </div>
+                    <div className="mt-0.5 text-xs text-destructive/70 font-mono">
+                      {bannerError.kind}
+                      {bannerError.traceId ? ` · ${bannerError.traceId}` : ""}
+                    </div>
+                  </div>
+                  <button
+                    onClick={dismissBanner}
+                    className="shrink-0 p-1 rounded hover:bg-destructive/10 transition-colors"
+                    aria-label="dismiss"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </motion.div>
               )}
 
