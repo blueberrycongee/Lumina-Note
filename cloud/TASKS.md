@@ -38,7 +38,7 @@
 - **Dep:** add `@noble/ed25519` to `package.json` `dependencies`.
 
 ### C3 — License storage in OS keychain
-- [ ] **Goal:** `store.ts` exports `saveLicense`, `loadLicense`, `removeLicense` backed by Electron `safeStorage`.
+- [x] **Goal:** `store.ts` exports `saveLicense`, `loadLicense`, `removeLicense` backed by Electron `safeStorage`.
 - **Files:** `src/services/luminaCloud/store.ts`, IPC handlers in `electron/` (additive only — new file `electron/ipc/luminaCloudLicense.ts` and a single import line in the existing main entry).
 - **Acceptance:**
   - On macOS / Windows: encrypts via `safeStorage`.
@@ -136,3 +136,4 @@
 [x] C8 — 2026-04-28 — 6fc20d1 — LicenseSettings panel (Tailwind, standalone, no AISettingsModal dep); 7 tests cover idle/loading/invalid/valid + remove confirmation
 [x] C9 — 2026-04-28 — ae19918 — CloudUsagePanel with 60s polling and stale-cache-on-error; 7 tests cover loading/success/error-with-cache + cold error + cadence + cleanup
 [x] C12 — 2026-04-28 — 381004c — e2e test (license → setLicense → visible → mock chat → usage delta) + invalid-signature + lifetime-only-no-cloud_ai paths; 3 tests
+[x] C3 — 2026-04-28 — d684a85 — license storage via safeStorage + Linux 0600 fallback; 3 additive lines in ipc.ts; 16 tests (11 main, 5 renderer)

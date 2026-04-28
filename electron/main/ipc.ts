@@ -15,7 +15,8 @@ import { createProxyHandlers } from "./handlers/proxy.js";
 import { createUpdaterHandlers } from "./handlers/updater.js";
 import { createDiagnosticsHandlers } from "./handlers/diagnostics.js";
 import { createPluginsHandlers } from "./handlers/plugins.js";
-import { session } from "electron";
+import { createLuminaCloudLicenseHandlers } from "./handlers/luminaCloudLicense.js";
+import { session, safeStorage } from "electron";
 import electronUpdater from "electron-updater";
 import type { ProviderSettingsStore } from "./agent/providers/settings-store.js";
 import type { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
@@ -112,6 +113,11 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
       : null,
   });
 
+  const luminaCloudLicenseHandlers = createLuminaCloudLicenseHandlers({
+    filePath: path.join(app.getPath("userData"), "lumina-cloud-license.bin"),
+    safeStorage,
+  });
+
   const diagnosticsHandlers = createDiagnosticsHandlers({
     getAppInfo: () => ({
       version: app.getVersion(),
@@ -169,6 +175,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
       // ── Plugins ─────────────────────────────────────────────────────────
       if (cmd in pluginsHandlers) return pluginsHandlers[cmd](args);
+
+      // ── Lumina Cloud license storage ────────────────────────────────────
+      if (cmd in luminaCloudLicenseHandlers) return luminaCloudLicenseHandlers[cmd](args);
 
       // ── Agent IPC surface (provider settings, skills, vault, wiki).
       // The agent runtime itself is gone; the main chat runs on opencode.
