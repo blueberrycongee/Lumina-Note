@@ -51,18 +51,28 @@ avoid readable text, letters, captions, labels, and speech bubbles.
 
 ## Reference images
 
-The user's existing notes/assets are often the best reference material — especially when they say things like "match the style of X" or "I made one like this before."
+Reference images are file paths. `generate_image` reads those files and sends their bytes to the image-generation provider; the chat model does not need vision capability for the references to affect generation.
 
-**Workflow when references are likely useful:**
+Most requests do not need automatic reference search. Prefer explicit or high-confidence references:
 
-1. Use `glob` to find image files in the vault: `**/*.png`, `**/*.jpg`, scope with a relevant subdirectory if the user named one.
-2. Use `grep` to find notes mentioning the subject the user described — image embeds in those notes are strong candidates.
-3. Use `read` to look at the candidate images (you can see them — they're real multimodal input) and pick the 1–3 that match the user's intent.
-4. Pass the absolute paths in `reference_images`.
+- Images the user explicitly mentioned or attached.
+- The previous generated image when the user is iterating ("more X", "less Y", "like that one").
+- Images embedded in the active note when the user refers to the current note, cover, header, or visual style.
+- Image files the user selected with `@` or named directly.
 
-**Cap at 3 references.** Nano Banana stops paying attention beyond that, and gpt-image-2 / Seedream don't gain much either. If you have more candidates, pick the most recent + most stylistically aligned.
+Only search for candidates when the user asks for an existing style/image without naming a specific file ("like my earlier cyberpunk cover", "match this project's visual style").
 
-**Don't fabricate paths.** If you can't find a real reference file matching the user's description, ask them to point you at one or proceed without references.
+**Workflow when reference search is actually needed:**
+
+1. Use `glob` to find image files in a narrow scope: current note folder first, then `assets/generated/**`, then user-named subdirectories.
+2. Use `grep` to find notes, embeds, filenames, and sidecar metadata mentioning the subject/style the user described.
+3. If your current model has vision capability, use `read` on a small candidate set and extract visual traits that improve the prompt: subject, composition, palette, lighting, material, style, typography, and framing.
+4. If your current model does not have vision capability, do not use `read` to judge what images depict. Choose only from explicit references or textual evidence: filename, path, nearby note text, embeds, recency, and sidecar prompt/metadata.
+5. Pass the selected absolute paths in `reference_images`.
+
+**Cap at 3 references.** Nano Banana stops paying attention beyond that, and gpt-image-2 / Seedream don't gain much either. If you have more candidates, pick the explicit/high-confidence ones first.
+
+**Don't fabricate paths or visual facts.** If you can't find a reliable reference file, ask the user to point you at one or proceed without references.
 
 ---
 

@@ -14,6 +14,7 @@ import {
   generateImageDirect,
   pickConfiguredImageProvider,
 } from "@/services/imageGen/direct";
+import { findModelInCatalog } from "@/services/llm/providers/models";
 import { toast } from "sonner";
 import {
   useOpencodeAgent,
@@ -96,6 +97,8 @@ type AgentImageModeConfig = Pick<
   "provider" | "model" | "customModelId" | "baseUrl" | "apiKey"
 >;
 
+export type AgentVisionMode = "vision" | "metadata-only" | "unknown";
+
 export function isAgentConfigUsableForImageMode(
   config: AgentImageModeConfig,
 ): boolean {
@@ -111,6 +114,26 @@ export function isAgentConfigUsableForImageMode(
   return !!config.apiKey?.trim();
 }
 
+function getConfiguredAgentModelId(
+  config: AgentImageModeConfig,
+): string | undefined {
+  if (config.provider === "openai-compatible" && config.model === "custom") {
+    return config.customModelId?.trim() || undefined;
+  }
+  return config.model?.trim() || undefined;
+}
+
+export function getAgentVisionModeForImageMode(
+  config: AgentImageModeConfig,
+): AgentVisionMode {
+  const modelId = getConfiguredAgentModelId(config);
+  if (!config.provider || !modelId) return "unknown";
+
+  const meta = findModelInCatalog(config.provider, modelId);
+  if (!meta) return "unknown";
+  return meta.supportsVision ? "vision" : "metadata-only";
+}
+
 type ImageModeProviderHint = {
   id: string;
   marketingName: string;
@@ -119,7 +142,24 @@ type ImageModeProviderHint = {
 export function buildImageModeAgentPrompt(
   fullMessage: string,
   provider: ImageModeProviderHint,
+  visionMode: AgentVisionMode = "unknown",
 ): string {
+  const visionInstructions =
+    visionMode === "vision"
+      ? [
+          "Agent vision capability for this request: enabled.",
+          "You may inspect explicitly provided reference images and a small, high-confidence candidate set when reference selection is needed.",
+          "If you inspect reference images, extract visual traits that improve the prompt: subject, composition, color palette, lighting, material, style, mood, typography, and framing.",
+          "Do not scan the whole vault. Prefer explicit references, the previous generation, current-note embeds, mentioned files, and sidecar metadata before any search.",
+        ]
+      : [
+          `Agent vision capability for this request: ${visionMode}.`,
+          "You can still use reference_images. They are file paths; generate_image will read the referenced image bytes and send them to the image-generation backend.",
+          "Do not call read on image files to decide what they depict, and do not claim visual facts about images unless the user described them or they appear in textual metadata.",
+          "Use references only when they are explicitly selected, mentioned, embedded in the active note, from the previous generation, or supported by filename/path/sidecar/note text.",
+          "If multiple plausible images exist and the choice depends on visual similarity, ask the user which reference to use instead of guessing.",
+        ];
+
   return [
     "Use the image-gen skill to generate an image.",
     provider
@@ -128,7 +168,8 @@ export function buildImageModeAgentPrompt(
     "Keep provider routing separate from prompt interpretation: the language the user typed in is not by itself a reason to switch providers.",
     "Preserve explicit visual constraints from the user, including medium, region, era, genre, culture, composition, subject, mood, palette, and style descriptors. Do not replace a specific descriptor with a nearby default style unless the user asked for that.",
     "Handle visible text as its own requirement: if the user asks for readable text, preserve the requested text and language; if they do not ask for readable text, ask the image model to avoid readable text, letters, captions, labels, and speech bubbles.",
-    "Refine the user's prompt for visual clarity, infer the aspect ratio, use relevant vault reference images when useful, then call generate_image.",
+    ...visionInstructions,
+    "Refine the user's prompt for visual clarity, infer the aspect ratio, use explicit/high-confidence vault reference images when useful, then call generate_image.",
     "After generate_image returns, do not repeat the generated image as markdown in the chat reply. Lumina renders the generated image card automatically; mention the saved path in plain text only if helpful.",
     "User prompt:",
     fullMessage,
@@ -319,6 +360,15 @@ export function MainAIChatShell() {
   const aiBaseUrl = useAIStore((s) => s.config.baseUrl);
   const isAgentConfigured = useMemo(() => {
     return isAgentConfigUsableForImageMode({
+      provider: aiProvider,
+      apiKey: aiApiKey,
+      model: aiModel,
+      customModelId: aiCustomModelId,
+      baseUrl: aiBaseUrl,
+    });
+  }, [aiProvider, aiApiKey, aiBaseUrl, aiCustomModelId, aiModel]);
+  const agentVisionMode = useMemo(() => {
+    return getAgentVisionModeForImageMode({
       provider: aiProvider,
       apiKey: aiApiKey,
       model: aiModel,
@@ -949,7 +999,11 @@ export function MainAIChatShell() {
       // for the image-gen skill (which it sees in <available_skills>)
       // even when the user's prompt is short or ambiguous.
       const wrappedFullMessage = imageMode
-        ? buildImageModeAgentPrompt(fullMessage, configuredImageProvider)
+        ? buildImageModeAgentPrompt(
+            fullMessage,
+            configuredImageProvider,
+            agentVisionMode,
+          )
         : fullMessage;
 
       await rustStartTask(wrappedFullMessage, {
@@ -977,6 +1031,7 @@ export function MainAIChatShell() {
       isExportSelectionMode,
       imageMode,
       isAgentConfigured,
+      agentVisionMode,
       imageProviders,
       imageProvidersLoaded,
       refreshImageProviders,

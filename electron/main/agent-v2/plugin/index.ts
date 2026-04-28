@@ -44,8 +44,10 @@ Provider routing (pick the best configured provider for the request):
 
 Reference images:
 - Pass file paths in 'reference_images' to use existing vault images as style/subject references.
-- Use this when the user mentions "like that other image", "in the style of", "based on", or when continuing iteration on a previous generation.
-- Use opencode's read/glob tools first to locate candidate references — don't guess paths.
+- Prefer explicit references: user-selected image files, current-note embeds, and the previous generation during iteration.
+- If your model has vision input, you may inspect a small candidate set before selecting references.
+- If your model lacks vision input, use only filenames, paths, note text, embeds, sidecar metadata, and explicit user choices. Do not claim visual facts about images you cannot inspect.
+- Do not scan the whole vault or guess paths.
 
 Errors:
 - "no API key" → tell the user which provider needs configuring (AI Settings → Image Models).
