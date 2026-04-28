@@ -16,9 +16,9 @@
 // modelId) → ModelReasoningSpec mapping is centralised in
 // ./model-capabilities.ts; this file only knows how to emit the native shapes.
 
-import { lookupReasoningSpec } from './model-capabilities.js'
-import type { ProviderId } from './registry.js'
-import type { ReasoningEffort, ThinkingMode } from './settings-store.js'
+import { lookupReasoningSpec } from "./model-capabilities.js";
+import type { ProviderId } from "./registry.js";
+import type { ReasoningEffort, ThinkingMode } from "./settings-store.js";
 
 // Post-W4 the renderer migrates persisted `'auto'` → `'thinking'` on hydrate
 // and writes the new value back through, but the bridge can be invoked
@@ -27,67 +27,77 @@ import type { ReasoningEffort, ThinkingMode } from './settings-store.js'
 // to the post-W4 default (`'thinking'`) so DeepSeek V4 emits the enabled
 // blob and Kimi K2.5 stays on its default-on side.
 function normalizeMode(mode: ThinkingMode | string | undefined): ThinkingMode {
-  return mode === 'instant' ? 'instant' : 'thinking'
+  return mode === "instant" ? "instant" : "thinking";
 }
 
 export function buildModelOptionsBlob(params: {
-  provider: ProviderId
-  modelId: string
-  thinkingMode?: ThinkingMode
-  reasoningEffort?: ReasoningEffort
+  provider: ProviderId;
+  modelId: string;
+  thinkingMode?: ThinkingMode;
+  reasoningEffort?: ReasoningEffort;
 }): Record<string, unknown> | undefined {
-  const { provider, modelId, reasoningEffort } = params
-  const thinkingMode = normalizeMode(params.thinkingMode)
-  const spec = lookupReasoningSpec(provider, modelId)
-  if (!spec || spec.strategy === 'none' || spec.strategy === 'separate-model') {
-    return undefined
+  const { provider, modelId, reasoningEffort } = params;
+  const thinkingMode = normalizeMode(params.thinkingMode);
+  const spec = lookupReasoningSpec(provider, modelId);
+  if (!spec || spec.strategy === "none" || spec.strategy === "separate-model") {
+    return undefined;
   }
 
-  if (spec.strategy === 'effort-only') {
-    if (!reasoningEffort || !spec.efforts.includes(reasoningEffort)) return undefined
+  if (spec.strategy === "effort-only") {
+    if (!reasoningEffort || !spec.efforts.includes(reasoningEffort))
+      return undefined;
     switch (spec.nativeShape) {
-      case 'openai-reasoning':
-        return { reasoning: { effort: reasoningEffort } }
-      case 'anthropic-output-config': {
+      case "openai-reasoning":
+        return { reasoning: { effort: reasoningEffort } };
+      case "anthropic-output-config": {
         const blob: Record<string, unknown> = {
-          thinking: { type: 'adaptive' },
+          thinking: { type: "adaptive" },
+        };
+        if (reasoningEffort !== "high") {
+          blob.output_config = { effort: reasoningEffort };
         }
-        if (reasoningEffort !== 'high') {
-          blob.output_config = { effort: reasoningEffort }
-        }
-        return blob
+        return blob;
       }
-      case 'mimo-reasoning':
-        return { reasoning_effort: reasoningEffort }
+      case "mimo-reasoning":
+        return { reasoning_effort: reasoningEffort };
     }
   }
 
   // param-toggle
   switch (spec.nativeShape) {
-    case 'deepseek-v4': {
+    case "deepseek-v4": {
       // DeepSeek V4 hybrid models (Pro / Flash) default to thinking-on at
       // the API. Symmetrically with binary-thinking, we must actively send
       // `disabled` to honour the user's "instant" pick — otherwise the
       // toggle is one-way and Flash keeps reasoning despite the UI.
-      if (thinkingMode === 'instant') {
-        return { extra_body: { thinking: { type: 'disabled' } } }
+      if (thinkingMode === "instant") {
+        // `extra_body` is the Python OpenAI SDK convention (ignored by
+        // @ai-sdk/openai-compatible, which forwards unknown keys directly
+        // into the request body). `thinking` at the top level is what
+        // the DeepSeek HTTP API actually reads when called through Vercel
+        // AI SDK.
+        return {
+          extra_body: { thinking: { type: "disabled" } },
+          thinking: { type: "disabled" },
+        };
       }
       const blob: Record<string, unknown> = {
-        extra_body: { thinking: { type: 'enabled' } },
-      }
+        extra_body: { thinking: { type: "enabled" } },
+        thinking: { type: "enabled" },
+      };
       if (reasoningEffort && spec.efforts?.includes(reasoningEffort)) {
-        blob.reasoning_effort = reasoningEffort
+        blob.reasoning_effort = reasoningEffort;
       }
-      return blob
+      return blob;
     }
-    case 'binary-thinking': {
+    case "binary-thinking": {
       // Shared OpenAI-compatible `{ thinking: { type } }` shape used by
       // Moonshot Kimi and Zhipu GLM thinking models. Both default thinking-on,
       // so we only emit a blob when the user explicitly forces instant.
-      if (thinkingMode === 'instant') return { thinking: { type: 'disabled' } }
-      return undefined
+      if (thinkingMode === "instant") return { thinking: { type: "disabled" } };
+      return undefined;
     }
   }
 
-  return undefined
+  return undefined;
 }
