@@ -144,6 +144,9 @@ describe("MainAIChatShell", () => {
     render(<MainAIChatShell />);
 
     const { t } = useLocaleStore.getState();
+    const workSessionToggle = screen.getByText(/1 个步骤/);
+    expect(screen.queryByText("step by step")).toBeNull();
+    fireEvent.click(workSessionToggle);
     const thinkingToggle = screen.getByText(t.agentMessage.thinkingDone);
     expect(screen.queryByText("step by step")).toBeNull();
     fireEvent.click(thinkingToggle);
