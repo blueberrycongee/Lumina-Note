@@ -32,6 +32,7 @@ import {
 import { useFileStore } from "@/stores/useFileStore";
 import { getAIConfig } from "@/services/ai/ai";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import type { LLMConfig, LLMProviderType } from "@/services/llm";
 
 export type AgentStatus =
   | "idle"
@@ -73,6 +74,37 @@ type StartTaskContext = {
   // to keep the MainAIChatShell call-site compiling.
   attachments?: unknown[];
 };
+
+type OpencodePromptModel = {
+  providerID: string;
+  modelID: string;
+};
+
+const OPENCODE_PROVIDER_ID_MAP: Partial<Record<LLMProviderType, string>> = {
+  anthropic: "anthropic",
+  openai: "openai",
+  google: "google",
+  deepseek: "deepseek",
+  moonshot: "moonshotai",
+  glm: "zhipuai",
+  mimo: "xiaomi",
+  groq: "groq",
+  openrouter: "openrouter",
+  ollama: "ollama",
+  "openai-compatible": "lumina-compat",
+};
+
+export function resolveOpencodePromptModel(
+  config: Pick<LLMConfig, "provider" | "model" | "customModelId">,
+): OpencodePromptModel | undefined {
+  const providerID = OPENCODE_PROVIDER_ID_MAP[config.provider];
+  const modelID =
+    config.model === "custom"
+      ? config.customModelId?.trim()
+      : config.model?.trim();
+  if (!providerID || !modelID) return undefined;
+  return { providerID, modelID };
+}
 
 // Shape-parity with the legacy store so existing UI code that reaches into
 // these fields keeps compiling. All populated from opencode events once the
@@ -871,6 +903,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         }));
 
         const client = await getOpencodeClient();
+        const promptModel = resolveOpencodePromptModel(cfg);
+        const body = {
+          agent: "build",
+          ...(promptModel ? { model: promptModel } : {}),
+          parts: [{ type: "text", text: task } as never],
+        };
         // promptAsync returns as soon as the HTTP request is accepted;
         // the actual response tokens arrive over the SSE stream.
         // Explicit `agent: "build"` sidesteps any user-side opencode config
@@ -882,10 +920,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           () =>
             client.session.promptAsync({
               path: { id: sessionId! },
-              body: {
-                agent: "build",
-                parts: [{ type: "text", text: task } as never],
-              } as never,
+              body: body as never,
               query: ctx?.workspace_path
                 ? { directory: ctx.workspace_path }
                 : undefined,
