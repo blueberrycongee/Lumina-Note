@@ -73,7 +73,7 @@
   - Tests: cold cache, warm cache, expired cache, network failure with stale cache.
 
 ### C7 — "Lumina Cloud" as 12th LLM provider
-- [ ] **Goal:** `src/services/llm/providers/luminaCloud.ts` registers a provider that reuses the existing `@ai-sdk/openai-compatible` plumbing with `baseURL = api.lumina-note.com/v1/ai` and `apiKey = <license>`.
+- [x] **Goal:** `src/services/llm/providers/luminaCloud.ts` registers a provider that reuses the existing `@ai-sdk/openai-compatible` plumbing with `baseURL = api.lumina-note.com/v1/ai` and `apiKey = <license>`.
 - **Files:**
   - New: `src/services/llm/providers/luminaCloud.ts`, test.
   - Edit (minimal, additive only): the existing provider registry — open `src/services/llm/providers/` and follow the pattern of the smallest existing provider. If the registry pattern requires non-trivial edits, append `**[BLOCKED: registry pattern unclear — Lead, please specify]**` and stop.
@@ -131,4 +131,5 @@
 [x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
 [x] C4 — 2026-04-28 — 3144bd5 — useLicenseStore (zustand) with mocked luminaCloud; 9 tests cover all four status transitions
 [x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
+[x] C7 — 2026-04-28 — d879380 — Lumina Cloud provider def + isLuminaCloudVisible + fetchLuminaCloudModels; 8 tests; PRD §3 forbids models.ts edit so wiring lands in C11
 [x] C9 — 2026-04-28 — ae19918 — CloudUsagePanel with 60s polling and stale-cache-on-error; 7 tests cover loading/success/error-with-cache + cold error + cadence + cleanup
