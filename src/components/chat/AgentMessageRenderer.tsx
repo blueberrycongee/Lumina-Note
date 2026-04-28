@@ -1,18 +1,32 @@
 /**
  * Agent 消息渲染组件
- * 
+ *
  * Render agent output as a strict timeline:
  * - Thinking blocks (collapsible)
  * - Tool calls/results (collapsible)
  * - Text segments (Markdown)
  */
 
-import { useState, useMemo, useCallback, useEffect, memo, type MouseEvent } from "react";
+import {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  memo,
+  type MouseEvent,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useLocaleStore, getCurrentTranslations } from '@/stores/useLocaleStore';
+import {
+  useLocaleStore,
+  getCurrentTranslations,
+} from "@/stores/useLocaleStore";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import type { Part as OpencodePart } from "@opencode-ai/sdk/client";
-import type { ImageContent, MessageAttachment, MessageContent } from "@/services/llm";
+import type {
+  ImageContent,
+  MessageAttachment,
+  MessageContent,
+} from "@/services/llm";
 import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
 import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
@@ -20,7 +34,11 @@ import { useFileStore } from "@/stores/useFileStore";
 import { readBinaryFileBase64, saveFile } from "@/lib/host";
 import { join } from "@/lib/path";
 import { getImageMimeType } from "@/services/assets/editorImages";
-import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
+import {
+  getImagesFromContent,
+  getTextFromContent,
+  getUserMessageDisplay,
+} from "./messageContentUtils";
 import { AssistantDiagramPanels } from "./AssistantDiagramPanels";
 import { getDiagramAttachmentFilePaths } from "./diagramAttachmentUtils";
 import { UserMessageBubbleContent } from "./UserMessageBubbleContent";
@@ -87,14 +105,24 @@ interface ThinkingItem {
 }
 
 type WorkItem =
-  | { type: "thinking"; content: string; status?: "streaming" | "done"; time?: PartTime }
+  | {
+      type: "thinking";
+      content: string;
+      status?: "streaming" | "done";
+      time?: PartTime;
+    }
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] };
 
 type TimelinePart =
   | { type: "text"; content: string }
-  | { type: "thinking"; content: string; status?: "streaming" | "done"; time?: PartTime }
+  | {
+      type: "thinking";
+      content: string;
+      status?: "streaming" | "done";
+      time?: PartTime;
+    }
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] }
@@ -120,7 +148,9 @@ export function makeGeneratedImageMarker(image: GeneratedImageInfo): string {
   return `${GENERATED_IMAGE_PREFIX}${encodeURIComponent(JSON.stringify(image))}`;
 }
 
-export function parseGeneratedImageMarker(content: string): GeneratedImageInfo | null {
+export function parseGeneratedImageMarker(
+  content: string,
+): GeneratedImageInfo | null {
   if (!content.startsWith(GENERATED_IMAGE_PREFIX)) return null;
   const payload = content.slice(GENERATED_IMAGE_PREFIX.length).trim();
   if (!payload) return null;
@@ -284,7 +314,9 @@ export function isPendingImageGenerationTool(tool: ToolCallInfo): boolean {
   return tool.name === "generate_image" && tool.result === undefined;
 }
 
-export function getImageGenerationProviderLabel(tool: ToolCallInfo): string | null {
+export function getImageGenerationProviderLabel(
+  tool: ToolCallInfo,
+): string | null {
   if (tool.title) {
     const label = tool.title
       .replace(/^Generating with\s+/i, "")
@@ -299,7 +331,9 @@ export function getImageGenerationProviderLabel(tool: ToolCallInfo): string | nu
   return null;
 }
 
-function getPendingImageGenerationTool(part: TimelinePart): ToolCallInfo | null {
+function getPendingImageGenerationTool(
+  part: TimelinePart,
+): ToolCallInfo | null {
   if (part.type === "tool" && isPendingImageGenerationTool(part.tool)) {
     return part.tool;
   }
@@ -309,7 +343,9 @@ function getPendingImageGenerationTool(part: TimelinePart): ToolCallInfo | null 
   return null;
 }
 
-function insertImageGenerationProgressParts(parts: TimelinePart[]): TimelinePart[] {
+function insertImageGenerationProgressParts(
+  parts: TimelinePart[],
+): TimelinePart[] {
   const out: TimelinePart[] = [];
   for (const part of parts) {
     out.push(part);
@@ -325,17 +361,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function stringValue(record: Record<string, unknown> | undefined, key: string): string | undefined {
+function stringValue(
+  record: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
   const value = record?.[key];
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function normalizeGeneratedImageInfo(value: unknown): GeneratedImageInfo | null {
+function normalizeGeneratedImageInfo(
+  value: unknown,
+): GeneratedImageInfo | null {
   if (!isRecord(value)) return null;
   const absolutePath = stringValue(value, "absolutePath");
   const relativePath = stringValue(value, "relativePath");
   if (!absolutePath && !relativePath) return null;
-  const markdown = stringValue(value, "markdown") ?? (relativePath ? `![](${relativePath})` : undefined);
+  const markdown =
+    stringValue(value, "markdown") ??
+    (relativePath ? `![](${relativePath})` : undefined);
   return {
     absolutePath,
     relativePath,
@@ -366,10 +409,12 @@ function parseGeneratedModel(output: string): string | undefined {
 
 function cleanGeneratingTitle(title: string | undefined): string | undefined {
   if (!title) return undefined;
-  return title
-    .replace(/^Generating with\s+/i, "")
-    .replace(/[.…]+$/g, "")
-    .trim() || undefined;
+  return (
+    title
+      .replace(/^Generating with\s+/i, "")
+      .replace(/[.…]+$/g, "")
+      .trim() || undefined
+  );
 }
 
 function extractGeneratedImageInfo(
@@ -426,7 +471,11 @@ function parseTagAttributes(raw: string): Record<string, string> {
   return attrs;
 }
 
-function pushTextPart(parts: TimelinePart[], text: string, includeText: boolean) {
+function pushTextPart(
+  parts: TimelinePart[],
+  text: string,
+  includeText: boolean,
+) {
   if (!includeText) return;
   const cleaned = text.replace(/<\|end_of_thinking\|>/g, "");
   if (cleaned.trim().length === 0) return;
@@ -437,7 +486,7 @@ function appendPartsFromContent(
   content: string,
   parts: TimelinePart[],
   lastToolCall: { current: ToolCallInfo | null },
-  includeText: boolean
+  includeText: boolean,
 ) {
   const trimmed = content.trim();
 
@@ -534,7 +583,10 @@ function appendPartsFromContent(
       if (thinkingText.length > 0) {
         parts.push({ type: "thinking", content: thinkingText });
       }
-    } else if (tagNameLower === "tool_result" || tagNameLower === "tool_error") {
+    } else if (
+      tagNameLower === "tool_result" ||
+      tagNameLower === "tool_error"
+    ) {
       const attrs = parseTagAttributes(attrsRaw);
       const name = attrs.name ?? lastToolCall.current?.name ?? tagName;
       const paramsRaw = attrs.params ?? lastToolCall.current?.params ?? "";
@@ -634,7 +686,9 @@ const ATTACHABLE_MIME = new Set([
   "image/webp",
 ]);
 
-function inferImageMime(src: string): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
+function inferImageMime(
+  src: string,
+): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
   const lower = src.toLowerCase().split(/[?#]/)[0];
   if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
   if (lower.endsWith(".gif")) return "image/gif";
@@ -661,20 +715,28 @@ async function attachClickedImage(img: HTMLImageElement): Promise<void> {
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.warn(`[chat] failed to fetch image for attach: HTTP ${res.status}`);
+      console.warn(
+        `[chat] failed to fetch image for attach: HTTP ${res.status}`,
+      );
       return;
     }
     const blob = await res.blob();
     const mimeFromBlob = blob.type;
     const mediaType = ATTACHABLE_MIME.has(mimeFromBlob)
-      ? (mimeFromBlob as "image/png" | "image/jpeg" | "image/gif" | "image/webp")
+      ? (mimeFromBlob as
+          | "image/png"
+          | "image/jpeg"
+          | "image/gif"
+          | "image/webp")
       : inferImageMime(url);
-    const dataUrl: string = await new Promise((resolveDataUrl, rejectReader) => {
-      const reader = new FileReader();
-      reader.onerror = () => rejectReader(reader.error);
-      reader.onload = () => resolveDataUrl(reader.result as string);
-      reader.readAsDataURL(blob);
-    });
+    const dataUrl: string = await new Promise(
+      (resolveDataUrl, rejectReader) => {
+        const reader = new FileReader();
+        reader.onerror = () => rejectReader(reader.error);
+        reader.onload = () => resolveDataUrl(reader.result as string);
+        reader.readAsDataURL(blob);
+      },
+    );
     const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
     window.dispatchEvent(
       new CustomEvent("lumina:attach-image", {
@@ -686,9 +748,7 @@ async function attachClickedImage(img: HTMLImageElement): Promise<void> {
   }
 }
 
-const handleAssistantContentClick = (
-  e: MouseEvent<HTMLDivElement>,
-): void => {
+const handleAssistantContentClick = (e: MouseEvent<HTMLDivElement>): void => {
   const target = e.target as HTMLElement | null;
   if (!target || target.tagName !== "IMG") return;
   if (!target.classList.contains("markdown-image")) return;
@@ -750,7 +810,10 @@ function formatToolParams(params: string): string {
     return parts.join(" | ");
   }
 
-  return params.replace(/<[^>]+>/g, " ").trim().slice(0, 100);
+  return params
+    .replace(/<[^>]+>/g, " ")
+    .trim()
+    .slice(0, 100);
 }
 
 /**
@@ -758,18 +821,25 @@ function formatToolParams(params: string): string {
  */
 function getToolSummary(name: string, params: string, result?: string): string {
   const t = getCurrentTranslations().agentMessage;
-  const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapeRegExp = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // 优先从参数中提取关键信息
   if (name === "list") {
-    const dirMatch = params.match(new RegExp(`${escapeRegExp(t.directory)}:\\s*([^\\s|]+)`));
+    const dirMatch = params.match(
+      new RegExp(`${escapeRegExp(t.directory)}:\\s*([^\\s|]+)`),
+    );
     if (dirMatch) return `${t.directory}: ${dirMatch[1] || "/"}`;
   }
   if (name === "read") {
-    const fileMatch = params.match(new RegExp(`${escapeRegExp(t.file)}:\\s*([^\\s|]+)`));
+    const fileMatch = params.match(
+      new RegExp(`${escapeRegExp(t.file)}:\\s*([^\\s|]+)`),
+    );
     if (fileMatch) return `${t.file}: ${fileMatch[1]}`;
   }
   if (name === "write" || name === "edit") {
-    const fileMatch = params.match(new RegExp(`${escapeRegExp(t.file)}:\\s*([^\\s|]+)`));
+    const fileMatch = params.match(
+      new RegExp(`${escapeRegExp(t.file)}:\\s*([^\\s|]+)`),
+    );
     if (fileMatch) return `${t.file}: ${fileMatch[1]}`;
   }
   if (name === "grep" || name === "glob" || name === "fetch") {
@@ -816,15 +886,19 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
       case "reasoning": {
         const text = (part as { text?: string }).text ?? "";
         if (text.length === 0) continue;
-        const time = (part as { time?: { start?: number; end?: number } })
-          .time;
+        const time = (part as { time?: { start?: number; end?: number } }).time;
         const status: "streaming" | "done" =
           time && time.end === undefined ? "streaming" : "done";
         const reasoningTime: PartTime | undefined =
           time && typeof time.start === "number"
             ? { start: time.start, end: time.end }
             : undefined;
-        out.push({ type: "thinking", content: text, status, time: reasoningTime });
+        out.push({
+          type: "thinking",
+          content: text,
+          status,
+          time: reasoningTime,
+        });
         break;
       }
       case "tool": {
@@ -861,7 +935,14 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
             : undefined;
         out.push({
           type: "tool",
-          tool: { name, params, title: state.title, result, success, time: toolTime },
+          tool: {
+            name,
+            params,
+            title: state.title,
+            result,
+            success,
+            time: toolTime,
+          },
         });
         const generatedImage = extractGeneratedImageInfo(name, state);
         if (generatedImage) {
@@ -878,7 +959,9 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
   return out;
 }
 
-function parseToolMessage(content: string): { tool: ToolCallInfo; isStart: boolean } | null {
+function parseToolMessage(
+  content: string,
+): { tool: ToolCallInfo; isStart: boolean } | null {
   const match = content.match(/^(🔧|✅|❌)\s+(\w+):\s*([\s\S]*)$/);
   if (!match) return null;
   const symbol = match[1];
@@ -902,13 +985,15 @@ function parseToolMessage(content: string): { tool: ToolCallInfo; isStart: boole
  * 判断 user 消息是否应该跳过（工具结果、系统提示等）
  */
 function shouldSkipUserMessage(content: string): boolean {
-  return content.includes("<tool_result") ||
+  return (
+    content.includes("<tool_result") ||
     content.includes("<tool_error") ||
     content.includes("你的响应没有包含有效的工具调用") ||
     content.includes("请使用 <thinking> 标签分析错误原因") ||
     content.includes("系统错误:") ||
     content.includes("系统拒绝执行") ||
-    content.includes("用户拒绝了工具调用");
+    content.includes("用户拒绝了工具调用")
+  );
 }
 
 /**
@@ -928,12 +1013,18 @@ export function cleanUserMessage(content: string): string {
       /^Use the image-gen skill to generate an image\.\n(?:The configured image provider available for this request is `[^`]+` \([^)]+\)\. Use only this provider\. Do not switch to Google, Seedream, ByteDance, or any other provider unless Lumina explicitly lists it as configured\.\n)?A Chinese-language prompt does not mean the image must render Chinese text\. Only choose a text-rendering-specialized provider if that provider is configured\.\nRefine the user's prompt for visual clarity, infer the aspect ratio, use relevant vault reference images when useful, then call generate_image\.\nUser prompt:\n/,
       "",
     )
-    .replace(/^Use the image-gen skill to generate an image\. User prompt:\n/, "")
+    .replace(
+      /^Use the image-gen skill to generate an image\. User prompt:\n/,
+      "",
+    )
     .replace(/<task>([\s\S]*?)<\/task>/g, "$1")
     .replace(/<current_note[^>]*>[\s\S]*?<\/current_note>/g, "")
     .replace(/<related_notes[^>]*>[\s\S]*?<\/related_notes>/g, "")
     .replace(/\n\n\[Quoted references\][\s\S]*$/g, "")
-    .replace(/\n\n\[(User referenced file content|用户引用的文件内容|使用者引用的檔案內容|ユーザーが参照したファイル内容)\][\s\S]*$/g, "")
+    .replace(
+      /\n\n\[(User referenced file content|用户引用的文件内容|使用者引用的檔案內容|ユーザーが参照したファイル内容)\][\s\S]*$/g,
+      "",
+    )
     .trim();
 }
 
@@ -952,9 +1043,10 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({
   status?: "thinking" | "done";
 }) {
   const [expanded, setExpanded] = useState(false);
-  const title = status === "thinking"
-    ? t.agentMessage.thinking
-    : (t.agentMessage.thinkingDone || t.agentMessage.thinking);
+  const title =
+    status === "thinking"
+      ? t.agentMessage.thinking
+      : t.agentMessage.thinkingDone || t.agentMessage.thinking;
 
   return (
     <div className="text-xs text-muted-foreground">
@@ -1005,7 +1097,9 @@ const ThinkingGroupCollapsible = memo(function ThinkingGroupCollapsible({
   const anyStreaming = items.some((item) => item.status === "streaming");
   const title = anyStreaming
     ? t.agentMessage.thinking
-    : (t.agentMessage.thinkingGroup || t.agentMessage.thinkingDone || t.agentMessage.thinking);
+    : t.agentMessage.thinkingGroup ||
+      t.agentMessage.thinkingDone ||
+      t.agentMessage.thinking;
 
   return (
     <div className="text-xs text-muted-foreground">
@@ -1046,7 +1140,13 @@ const ThinkingGroupCollapsible = memo(function ThinkingGroupCollapsible({
 /**
  * 工具调用折叠卡片
  */
-const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { tool: ToolCallInfo, t: any }) {
+const ToolCallCollapsible = memo(function ToolCallCollapsible({
+  tool,
+  t,
+}: {
+  tool: ToolCallInfo;
+  t: any;
+}) {
   const [expanded, setExpanded] = useState(false);
   const isComplete = tool.result !== undefined;
   const summary = getToolSummary(tool.name, tool.params, tool.result);
@@ -1087,7 +1187,9 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
             <div className="pl-5 py-1 space-y-1 border-l border-border ml-1.5">
               {tool.params && (
                 <div>
-                  <div className="text-xs text-muted-foreground/70 mb-0.5">{t.agentMessage.params}:</div>
+                  <div className="text-xs text-muted-foreground/70 mb-0.5">
+                    {t.agentMessage.params}:
+                  </div>
                   <pre className="text-xs bg-muted/30 p-1.5 rounded overflow-x-auto">
                     {tool.params}
                   </pre>
@@ -1095,7 +1197,9 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
               )}
               {tool.result && (
                 <div>
-                  <div className="text-xs text-muted-foreground/70 mb-0.5">{t.agentMessage.result}:</div>
+                  <div className="text-xs text-muted-foreground/70 mb-0.5">
+                    {t.agentMessage.result}:
+                  </div>
                   <pre className="text-xs bg-muted/30 p-1.5 rounded overflow-x-auto max-h-32 overflow-y-auto">
                     {tool.result}
                   </pre>
@@ -1208,41 +1312,39 @@ const ImageGenerationProgress = memo(function ImageGenerationProgress({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -6, scale: 0.99 }}
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-      className="image-generation-progress relative mb-4 w-full max-w-[34rem] overflow-hidden rounded-[2rem] bg-muted/35 p-5 shadow-sm sm:p-6"
+      className="image-generation-progress relative mb-4 w-full max-w-[28rem] overflow-hidden rounded-[1.7rem] aspect-square min-h-[14rem]"
       role="status"
       aria-live="polite"
     >
-      <div className="image-generation-canvas relative aspect-square min-h-[18rem] overflow-hidden rounded-[1.7rem]">
-        <div className="image-generation-dotfield" aria-hidden />
-        <div className="image-generation-fade" aria-hidden />
-        <div className="relative z-10 flex h-full flex-col p-6 sm:p-7">
-          <div className="flex min-w-0 flex-wrap items-start gap-2">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeMessage}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22 }}
-                className="min-w-[12rem] flex-1 break-words text-base font-semibold leading-snug tracking-[-0.02em] text-foreground/75 sm:text-lg"
-              >
-                {activeMessage}
-              </motion.div>
-            </AnimatePresence>
-            {providerLabel && (
-              <span className="rounded-full border border-foreground/10 bg-background/65 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
-                {providerLabel}
-              </span>
-            )}
-          </div>
-          <div className="mt-auto">
-            {elapsedLabel && (
-              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground/75">
-                <span className="streaming-dot" aria-hidden />
-                <span>{elapsedLabel}</span>
-              </div>
-            )}
-          </div>
+      <div className="image-generation-dotfield" aria-hidden />
+      <div className="image-generation-fade" aria-hidden />
+      <div className="relative z-10 flex h-full flex-col p-6 sm:p-7">
+        <div className="flex min-w-0 flex-wrap items-start gap-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeMessage}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22 }}
+              className="min-w-[12rem] flex-1 break-words text-base font-semibold leading-snug tracking-[-0.02em] text-foreground/75 sm:text-lg"
+            >
+              {activeMessage}
+            </motion.div>
+          </AnimatePresence>
+          {providerLabel && (
+            <span className="rounded-full border border-foreground/10 bg-background/65 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+              {providerLabel}
+            </span>
+          )}
+        </div>
+        <div className="mt-auto">
+          {elapsedLabel && (
+            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground/75">
+              <span className="streaming-dot" aria-hidden />
+              <span>{elapsedLabel}</span>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -1260,10 +1362,14 @@ const ImageGenerationToolProgress = memo(function ImageGenerationToolProgress({
   llmRequestStartTime?: number | null;
   isRunning?: boolean;
 }) {
-  const start = tool.time?.start ?? (llmRequestStartTime != null ? llmRequestStartTime : null);
+  const start =
+    tool.time?.start ??
+    (llmRequestStartTime != null ? llmRequestStartTime : null);
   const showLive = !!isRunning && start != null;
   const [elapsed, setElapsed] = useState(() =>
-    showLive ? Math.max(0, Math.floor((Date.now() - (start as number)) / 1000)) : 0,
+    showLive
+      ? Math.max(0, Math.floor((Date.now() - (start as number)) / 1000))
+      : 0,
   );
 
   useEffect(() => {
@@ -1279,7 +1385,13 @@ const ImageGenerationToolProgress = memo(function ImageGenerationToolProgress({
   return (
     <ImageGenerationProgress
       providerLabel={getImageGenerationProviderLabel(tool)}
-      elapsedLabel={showLive ? formatElapsed(elapsed) : isRunning ? t.agentMessage.working : null}
+      elapsedLabel={
+        showLive
+          ? formatElapsed(elapsed)
+          : isRunning
+            ? t.agentMessage.working
+            : null
+      }
       t={t}
     />
   );
@@ -1296,7 +1408,8 @@ const GeneratedImageCard = memo(function GeneratedImageCard({
 }) {
   const sourcePath = useMemo(() => {
     if (image.absolutePath) return image.absolutePath;
-    if (vaultPath && image.relativePath) return join(vaultPath, image.relativePath);
+    if (vaultPath && image.relativePath)
+      return join(vaultPath, image.relativePath);
     return null;
   }, [image.absolutePath, image.relativePath, vaultPath]);
   const [src, setSrc] = useState<string | null>(null);
@@ -1337,14 +1450,23 @@ const GeneratedImageCard = memo(function GeneratedImageCard({
   }, [sourcePath, t.agentMessage.imageGeneratedMissingPath]);
 
   const providerLabel =
-    image.providerLabel ?? image.model ?? image.provider ?? t.agentMessage.imageGeneratedTitle;
-  const title = t.ai.imageDirect.successTitle.replace("{provider}", providerLabel);
+    image.providerLabel ??
+    image.model ??
+    image.provider ??
+    t.agentMessage.imageGeneratedTitle;
+  const title = t.ai.imageDirect.successTitle.replace(
+    "{provider}",
+    providerLabel,
+  );
 
-  const handleImageClick = useCallback((event: MouseEvent<HTMLImageElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    void attachClickedImage(event.currentTarget);
-  }, []);
+  const handleImageClick = useCallback(
+    (event: MouseEvent<HTMLImageElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void attachClickedImage(event.currentTarget);
+    },
+    [],
+  );
 
   return (
     <motion.figure
@@ -1352,9 +1474,19 @@ const GeneratedImageCard = memo(function GeneratedImageCard({
       initial={{ opacity: 0, y: 10, scale: 0.99 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-      className={src ? "mb-4 inline-block max-w-full align-top" : "mb-4 w-full max-w-[34rem]"}
+      className={
+        src
+          ? "mb-4 inline-block max-w-[28rem] align-top"
+          : "mb-4 w-full max-w-[28rem]"
+      }
     >
-      <div className={src ? "relative inline-block max-w-full align-top" : "relative min-h-[18rem]"}>
+      <div
+        className={
+          src
+            ? "relative inline-block max-w-full align-top"
+            : "relative min-h-[14rem]"
+        }
+      >
         {src ? (
           <motion.img
             src={src}
@@ -1363,14 +1495,16 @@ const GeneratedImageCard = memo(function GeneratedImageCard({
             initial={{ opacity: 0, scale: 0.985 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="block h-auto max-h-[72vh] max-w-full cursor-pointer rounded-[1.25rem] object-contain"
+            className="block h-auto max-h-[50vh] max-w-full cursor-pointer rounded-[1.25rem] object-contain"
             onClick={handleImageClick}
           />
         ) : error ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 rounded-[1.35rem] bg-muted/35 p-6 text-center text-sm text-muted-foreground">
             <AlertTriangle size={20} />
             <span>{t.editor.imageLoadFailed}</span>
-            <span className="max-w-full truncate text-xs opacity-70">{error}</span>
+            <span className="max-w-full truncate text-xs opacity-70">
+              {error}
+            </span>
           </div>
         ) : (
           <div className="flex h-full items-center justify-center rounded-[1.35rem] bg-muted/35 text-muted-foreground">
@@ -1414,7 +1548,8 @@ const WorkSession = memo(function WorkSession({
   // llmRequestStartTime, which represents the whole turn) and fall back to
   // llmRequestStartTime if no item carries timing data yet.
   const liveStart =
-    timeRange.start ?? (llmRequestStartTime != null ? llmRequestStartTime : null);
+    timeRange.start ??
+    (llmRequestStartTime != null ? llmRequestStartTime : null);
   const showLive = inProgress && !!isRunning && liveStart != null;
 
   const [elapsed, setElapsed] = useState(() =>
@@ -1492,13 +1627,23 @@ const WorkSession = memo(function WorkSession({
                   );
                 }
                 if (item.type === "thinking_group") {
-                  return <ThinkingGroupCollapsible key={key} items={item.items} t={t} />;
+                  return (
+                    <ThinkingGroupCollapsible
+                      key={key}
+                      items={item.items}
+                      t={t}
+                    />
+                  );
                 }
                 if (item.type === "tool") {
-                  return <ToolCallCollapsible key={key} tool={item.tool} t={t} />;
+                  return (
+                    <ToolCallCollapsible key={key} tool={item.tool} t={t} />
+                  );
                 }
                 if (item.type === "tool_group") {
-                  return <ToolGroupCollapsible key={key} tools={item.tools} t={t} />;
+                  return (
+                    <ToolGroupCollapsible key={key} tools={item.tools} t={t} />
+                  );
                 }
                 return null;
               })}
@@ -1527,7 +1672,7 @@ const TIMEOUT_THRESHOLD_MS = 2 * 60 * 1000;
 
 /**
  * Agent 消息列表渲染器
- * 
+ *
  * 核心逻辑：将消息按"轮次"分组并按时间顺序渲染
  * - 每轮以用户消息开始
  * - assistant/user 内部系统消息按原始顺序展开为时间线片段
@@ -1540,7 +1685,6 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
   llmRequestStartTime,
   onRetryTimeout,
 }: AgentMessageRendererProps) {
-
   // 使用可复用的超时检测 hook
   const { isTimeout: isLongRunning } = useTimeout(llmRequestStartTime ?? null, {
     threshold: TIMEOUT_THRESHOLD_MS,
@@ -1566,7 +1710,8 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     [onPromptLinkClick],
   );
 
-  const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } = useAIStore();
+  const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } =
+    useAIStore();
   const openFile = useFileStore((state) => state.openFile);
   const vaultPath = useFileStore((state) => state.vaultPath);
   const { t } = useLocaleStore();
@@ -1577,14 +1722,17 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     try {
       await saveFile(pendingDiff.filePath, pendingDiff.modified);
       clearPendingEdits();
-      await openFile(pendingDiff.filePath, { addToHistory: false, forceReload: true });
+      await openFile(pendingDiff.filePath, {
+        addToHistory: false,
+        forceReload: true,
+      });
 
       if (diffResolver) {
         diffResolver(true);
       }
     } catch (error) {
       console.error("Failed to apply edit:", error);
-      alert(t.ai.applyEditFailed.replace('{error}', String(error)));
+      alert(t.ai.applyEditFailed.replace("{error}", String(error)));
     }
   }, [pendingDiff, clearPendingEdits, openFile, diffResolver, t]);
 
@@ -1615,18 +1763,29 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     // 找到所有用户消息的索引
     const userMessageIndices: number[] = [];
     messages.forEach((msg, idx) => {
-      if (msg.role === "user" && !shouldSkipUserMessage(getTextFromContent(msg.content))) {
+      if (
+        msg.role === "user" &&
+        !shouldSkipUserMessage(getTextFromContent(msg.content))
+      ) {
         userMessageIndices.push(idx);
       }
     });
 
     userMessageIndices.forEach((userIdx, roundIndex) => {
       const userMsg = messages[userIdx];
-      const normalizedUserMessage = getUserMessageDisplay(userMsg.content, userMsg.attachments);
+      const normalizedUserMessage = getUserMessageDisplay(
+        userMsg.content,
+        userMsg.attachments,
+      );
       const userImages = getImagesFromContent(userMsg.content);
       const displayContent = cleanUserMessage(normalizedUserMessage.text);
 
-      if (!displayContent && normalizedUserMessage.attachments.length === 0 && userImages.length === 0) return;
+      if (
+        !displayContent &&
+        normalizedUserMessage.attachments.length === 0 &&
+        userImages.length === 0
+      )
+        return;
 
       const nextUserIdx = userMessageIndices[roundIndex + 1] ?? messages.length;
       const parts: TimelinePart[] = [];
@@ -1654,7 +1813,12 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         if (msg.role === "tool") {
           const parsed = parseToolMessage(content);
           if (parsed) {
-            if (!parsed.isStart && lastToolCall.current && lastToolCall.current.name === parsed.tool.name && !lastToolCall.current.result) {
+            if (
+              !parsed.isStart &&
+              lastToolCall.current &&
+              lastToolCall.current.name === parsed.tool.name &&
+              !lastToolCall.current.result
+            ) {
               lastToolCall.current.result = parsed.tool.result;
               lastToolCall.current.success = parsed.tool.success;
             } else {
@@ -1681,7 +1845,10 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         }
 
         if (lastEditNoteIndex >= 0) {
-          parts.splice(lastEditNoteIndex + 1, 0, { type: "diff", diff: pendingDiff });
+          parts.splice(lastEditNoteIndex + 1, 0, {
+            type: "diff",
+            diff: pendingDiff,
+          });
           pendingDiffInserted = true;
         } else if (roundIndex === userMessageIndices.length - 1) {
           parts.push({ type: "diff", diff: pendingDiff });
@@ -1711,7 +1878,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         userContent: displayContent,
         userAttachments: normalizedUserMessage.attachments,
         userImages,
-        diagramPaths: getDiagramAttachmentFilePaths(normalizedUserMessage.attachments),
+        diagramPaths: getDiagramAttachmentFilePaths(
+          normalizedUserMessage.attachments,
+        ),
         parts: collapsedParts,
         assistantCopyText: getAssistantCopyText(collapsedParts),
         roundKey,
@@ -1725,155 +1894,163 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
   return (
     <div className={className} onClick={handlePromptLinkClick}>
       <AnimatePresence initial={false}>
-      {rounds.map((round) => (
-        <motion.div
-          key={round.roundKey}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: [0.2, 0.9, 0.1, 1] }}
-          layout="position"
-        >
-          {/* 用户消息 */}
-          <div className="flex justify-end mb-5">
-            <div className="flex max-w-[80%] flex-col items-end gap-1">
-              <div className="rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-[15px] leading-relaxed text-foreground">
-                <UserMessageBubbleContent
-                  text={round.userContent}
-                  attachments={round.userAttachments}
-                  images={round.userImages}
-                />
-              </div>
-              {round.userContent.trim().length > 0 && (
-                <CopyButton
-                  text={round.userContent}
-                  className="opacity-70 hover:opacity-100"
-                />
-              )}
-            </div>
-          </div>
-
-          {/* AI 回复 - 只有在有内容时才显示 */}
-          {round.hasAIContent && (
-            <div className="flex gap-3 mb-6">
-              <div className="flex-1 min-w-0 space-y-2">
-                {round.diagramPaths.length > 0 && (
-                  <AssistantDiagramPanels filePaths={round.diagramPaths} />
-                )}
-                {(() => {
-                  let lastTextIndex = -1;
-                  for (let i = 0; i < round.parts.length; i++) {
-                    if (round.parts[i].type === "text") {
-                      lastTextIndex = i;
-                    }
-                  }
-
-                  return round.parts.map((part, partIndex) => {
-                  const key = `${round.roundKey}-part-${partIndex}`;
-                  if (part.type === "work_session") {
-                    return (
-                      <WorkSession
-                        key={key}
-                        items={part.items}
-                        t={t}
-                        llmRequestStartTime={llmRequestStartTime}
-                        isRunning={isRunning}
-                      />
-                    );
-                  }
-                  if (part.type === "diff") {
-                    return (
-                      <div
-                        key={key}
-                        className="border border-border rounded-lg overflow-hidden bg-background/70"
-                      >
-                        <DiffView
-                          fileName={part.diff.fileName}
-                          original={part.diff.original}
-                          modified={part.diff.modified}
-                          description={part.diff.description}
-                          onAccept={handleAcceptDiff}
-                          onReject={handleRejectDiff}
-                        />
-                      </div>
-                    );
-                  }
-                  if (part.type === "generated_image") {
-                    return (
-                      <GeneratedImageCard
-                        key={key}
-                        image={part.image}
-                        vaultPath={vaultPath}
-                        t={t}
-                      />
-                    );
-                  }
-                  if (part.type === "image_generation_progress") {
-                    return (
-                      <ImageGenerationToolProgress
-                        key={key}
-                        tool={part.tool}
-                        t={t}
-                        llmRequestStartTime={llmRequestStartTime}
-                        isRunning={isRunning}
-                      />
-                    );
-                  }
-                  if (part.type === "text") {
-                    const generatingProvider = parseImageGeneratingMarker(part.content);
-                    if (generatingProvider) {
-                      return (
-                        <ImageGenerationProgress
-                          key={key}
-                          providerLabel={generatingProvider}
-                          elapsedLabel={isRunning ? t.agentMessage.working : null}
-                          t={t}
-                        />
-                      );
-                    }
-                    const generatedImage = parseGeneratedImageMarker(part.content);
-                    if (generatedImage) {
-                      return (
-                        <GeneratedImageCard
-                          key={key}
-                          image={generatedImage}
-                          vaultPath={vaultPath}
-                          t={t}
-                        />
-                      );
-                    }
-                    const isFinalText = partIndex === lastTextIndex;
-                    return (
-                      <div
-                        key={key}
-                        onClick={handleAssistantContentClick}
-                        className={[
-                          "chat-attach-images",
-                          isFinalText
-                            ? "prose dark:prose-invert max-w-none leading-relaxed text-base font-medium"
-                            : "prose prose-sm dark:prose-invert max-w-none leading-relaxed",
-                        ].join(" ")}
-                        dangerouslySetInnerHTML={{
-                          __html: parseMarkdown(formatMarkdownContent(part.content)),
-                        }}
-                      />
-                    );
-                  }
-                  return null;
-                });
-                })()}
-                {round.assistantCopyText.trim().length > 0 && (
-                  <div className="flex items-center">
-                    <CopyButton
-                      text={round.assistantCopyText}
-                      className="opacity-70 hover:opacity-100"
-                    />
-                  </div>
+        {rounds.map((round) => (
+          <motion.div
+            key={round.roundKey}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, ease: [0.2, 0.9, 0.1, 1] }}
+            layout="position"
+          >
+            {/* 用户消息 */}
+            <div className="flex justify-end mb-5">
+              <div className="flex max-w-[80%] flex-col items-end gap-1">
+                <div className="rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-[15px] leading-relaxed text-foreground">
+                  <UserMessageBubbleContent
+                    text={round.userContent}
+                    attachments={round.userAttachments}
+                    images={round.userImages}
+                  />
+                </div>
+                {round.userContent.trim().length > 0 && (
+                  <CopyButton
+                    text={round.userContent}
+                    className="opacity-70 hover:opacity-100"
+                  />
                 )}
               </div>
             </div>
-          )}
-        </motion.div>
-      ))}
+
+            {/* AI 回复 - 只有在有内容时才显示 */}
+            {round.hasAIContent && (
+              <div className="flex gap-3 mb-6">
+                <div className="flex-1 min-w-0 space-y-2">
+                  {round.diagramPaths.length > 0 && (
+                    <AssistantDiagramPanels filePaths={round.diagramPaths} />
+                  )}
+                  {(() => {
+                    let lastTextIndex = -1;
+                    for (let i = 0; i < round.parts.length; i++) {
+                      if (round.parts[i].type === "text") {
+                        lastTextIndex = i;
+                      }
+                    }
+
+                    return round.parts.map((part, partIndex) => {
+                      const key = `${round.roundKey}-part-${partIndex}`;
+                      if (part.type === "work_session") {
+                        return (
+                          <WorkSession
+                            key={key}
+                            items={part.items}
+                            t={t}
+                            llmRequestStartTime={llmRequestStartTime}
+                            isRunning={isRunning}
+                          />
+                        );
+                      }
+                      if (part.type === "diff") {
+                        return (
+                          <div
+                            key={key}
+                            className="border border-border rounded-lg overflow-hidden bg-background/70"
+                          >
+                            <DiffView
+                              fileName={part.diff.fileName}
+                              original={part.diff.original}
+                              modified={part.diff.modified}
+                              description={part.diff.description}
+                              onAccept={handleAcceptDiff}
+                              onReject={handleRejectDiff}
+                            />
+                          </div>
+                        );
+                      }
+                      if (part.type === "generated_image") {
+                        return (
+                          <GeneratedImageCard
+                            key={key}
+                            image={part.image}
+                            vaultPath={vaultPath}
+                            t={t}
+                          />
+                        );
+                      }
+                      if (part.type === "image_generation_progress") {
+                        return (
+                          <ImageGenerationToolProgress
+                            key={key}
+                            tool={part.tool}
+                            t={t}
+                            llmRequestStartTime={llmRequestStartTime}
+                            isRunning={isRunning}
+                          />
+                        );
+                      }
+                      if (part.type === "text") {
+                        const generatingProvider = parseImageGeneratingMarker(
+                          part.content,
+                        );
+                        if (generatingProvider) {
+                          return (
+                            <ImageGenerationProgress
+                              key={key}
+                              providerLabel={generatingProvider}
+                              elapsedLabel={
+                                isRunning ? t.agentMessage.working : null
+                              }
+                              t={t}
+                            />
+                          );
+                        }
+                        const generatedImage = parseGeneratedImageMarker(
+                          part.content,
+                        );
+                        if (generatedImage) {
+                          return (
+                            <GeneratedImageCard
+                              key={key}
+                              image={generatedImage}
+                              vaultPath={vaultPath}
+                              t={t}
+                            />
+                          );
+                        }
+                        const isFinalText = partIndex === lastTextIndex;
+                        return (
+                          <div
+                            key={key}
+                            onClick={handleAssistantContentClick}
+                            className={[
+                              "chat-attach-images",
+                              isFinalText
+                                ? "prose dark:prose-invert max-w-none leading-relaxed text-base font-medium"
+                                : "prose prose-sm dark:prose-invert max-w-none leading-relaxed",
+                            ].join(" ")}
+                            dangerouslySetInnerHTML={{
+                              __html: parseMarkdown(
+                                formatMarkdownContent(part.content),
+                              ),
+                            }}
+                          />
+                        );
+                      }
+                      return null;
+                    });
+                  })()}
+                  {round.assistantCopyText.trim().length > 0 && (
+                    <div className="flex items-center">
+                      <CopyButton
+                        text={round.assistantCopyText}
+                        className="opacity-70 hover:opacity-100"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </motion.div>
+        ))}
       </AnimatePresence>
 
       {/* 超时提示 */}
@@ -1932,7 +2109,11 @@ export function CopyButton({
       title={t.agentMessage.copy}
       aria-label={t.agentMessage.copy}
     >
-      {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+      {copied ? (
+        <Check size={14} className="text-success" />
+      ) : (
+        <Copy size={14} />
+      )}
     </button>
   );
 }
