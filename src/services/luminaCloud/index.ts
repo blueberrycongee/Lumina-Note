@@ -27,8 +27,12 @@ export { isRevoked } from './revocations';
 
 export {
   DEFAULT_BASE_URL,
+  getBaseUrl,
   getModels,
   getRevocations,
   getUsage,
+  LuminaCloudError,
   verifyLicenseOnline,
 } from './client';
+
+export type { LuminaCloudErrorCode } from './client';
