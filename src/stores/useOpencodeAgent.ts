@@ -462,13 +462,18 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         if (event.properties.sessionID !== get().currentSessionId) return;
         const status = event.properties.status;
         if (status.type === "busy") set({ status: "running" });
-        else if (status.type === "idle") set({ status: "idle" });
+        else if (status.type === "idle") {
+          // session.error and the trailing session.status:idle arrive
+          // back-to-back; let the error stay sticky so the red banner
+          // actually renders. Cleared on the next startTask/switchSession.
+          if (get().status !== "error") set({ status: "idle" });
+        }
         else if (status.type === "retry") set({ status: "running" });
         return;
       }
       case "session.idle": {
         if (event.properties.sessionID === get().currentSessionId) {
-          set({ status: "idle" });
+          if (get().status !== "error") set({ status: "idle" });
         }
         return;
       }
