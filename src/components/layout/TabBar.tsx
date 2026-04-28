@@ -192,7 +192,7 @@ function TabItem({
           <Shapes size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "plugin-view" ? (
           <Puzzle size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-        ) : tab.type === "image-manager" ? (
+        ) : tab.type === "image-manager" || tab.type === "image" ? (
           <Images size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : (
           <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />

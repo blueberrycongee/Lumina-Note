@@ -31,6 +31,7 @@ export type TabType =
   | "graph"
   | "isolated-graph"
   | "pdf"
+  | "image"
   | "ai-chat"
   | "image-manager"
   | "plugin-view";
@@ -143,6 +144,7 @@ interface FileState {
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
   openPDFTab: (pdfPath: string) => void;
   openDiagramTab: (diagramPath: string) => void;
+  openImageTab: (imagePath: string) => void;
   openAIMainTab: () => void;
   openImageManagerTab: () => void;
   openPluginViewTab: (viewType: string, title: string, html: string) => void;
@@ -197,6 +199,25 @@ const DIAGRAM_FILE_SUFFIXES = [
 const isDiagramPath = (path: string) => {
   const normalized = path.toLowerCase();
   return DIAGRAM_FILE_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+};
+
+const IMAGE_TAB_EXTENSIONS = [
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".svg",
+  ".bmp",
+  ".avif",
+  ".tif",
+  ".tiff",
+  ".ico",
+] as const;
+
+const isImageTabPath = (path: string): boolean => {
+  const normalized = path.toLowerCase();
+  return IMAGE_TAB_EXTENSIONS.some((suffix) => normalized.endsWith(suffix));
 };
 
 const getDiagramDisplayName = (path: string) => {
@@ -489,6 +510,11 @@ export const useFileStore = create<FileState>()(
 
         if (isDiagramPath(path)) {
           get().openDiagramTab(path);
+          return;
+        }
+
+        if (isImageTabPath(path)) {
+          get().openImageTab(path);
           return;
         }
 
@@ -825,21 +851,27 @@ export const useFileStore = create<FileState>()(
         // 查找并更新所有匹配的标签页
         const updatedTabs = tabs.map((tab) => {
           if (
-            (tab.type === "file" || tab.type === "diagram") &&
+            (tab.type === "file" ||
+              tab.type === "diagram" ||
+              tab.type === "image") &&
             tab.path === oldPath
           ) {
             const nextName =
               tab.type === "diagram"
                 ? getDiagramDisplayName(newPath)
-                : newPath
-                    .split(/[/\\]/)
-                    .pop()
-                    ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+                : tab.type === "image"
+                  ? newPath.split(/[/\\]/).pop() || tab.name
+                  : newPath
+                      .split(/[/\\]/)
+                      .pop()
+                      ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
+            const nextId =
+              tab.type === "image" ? `__image_${newPath}__` : newPath;
             return {
               ...tab,
               path: newPath,
               name: nextName,
-              id: newPath, // 更新 id 以匹配新路径
+              id: nextId,
             };
           }
           return tab;
@@ -1263,6 +1295,82 @@ export const useFileStore = create<FileState>()(
           tabs: updatedTabs,
           activeTabIndex: updatedTabs.length - 1,
           currentFile: diagramPath,
+          currentContent: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
+        });
+      },
+
+      openImageTab: (imagePath: string) => {
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
+
+        const existingIndex = tabs.findIndex(
+          (t) => t.type === "image" && t.path === imagePath,
+        );
+
+        if (existingIndex >= 0) {
+          const updatedTabs = [...tabs];
+          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+            updatedTabs[activeTabIndex] = {
+              ...updatedTabs[activeTabIndex],
+              content: currentContent,
+              isDirty,
+              undoStack,
+              redoStack,
+            };
+          }
+          set({
+            tabs: updatedTabs,
+            activeTabIndex: existingIndex,
+            currentFile: imagePath,
+            currentContent: "",
+            isDirty: false,
+            undoStack: [],
+            redoStack: [],
+            lastSavedContent: "",
+          });
+          return;
+        }
+
+        const imageName = imagePath.split(/[/\\]/).pop() || "Image";
+
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        const imageTab: Tab = {
+          id: `__image_${imagePath}__`,
+          type: "image",
+          path: imagePath,
+          name: imageName,
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+        };
+
+        updatedTabs.push(imageTab);
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: imagePath,
           currentContent: "",
           isDirty: false,
           undoStack: [],

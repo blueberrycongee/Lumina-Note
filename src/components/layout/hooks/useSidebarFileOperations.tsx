@@ -18,6 +18,7 @@ import {
 } from "@/lib/host";
 import { invoke } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
+import { IMAGE_EXTENSIONS } from "@/services/assets/imageManager";
 import { FolderOpen, AppWindow, Shapes, Star, StarOff } from "lucide-react";
 import type { MenuItem } from "../../toolbar/ContextMenu";
 import { menuItems } from "../../toolbar/ContextMenu";
@@ -55,6 +56,7 @@ export function useSidebarFileOperations() {
     closeFile,
     openPDFTab,
     openDiagramTab,
+    openImageTab,
     promotePreviewTab,
     moveFileToFolder,
     moveFolderToFolder,
@@ -68,6 +70,7 @@ export function useSidebarFileOperations() {
       closeFile: state.closeFile,
       openPDFTab: state.openPDFTab,
       openDiagramTab: state.openDiagramTab,
+      openImageTab: state.openImageTab,
       promotePreviewTab: state.promotePreviewTab,
       moveFileToFolder: state.moveFileToFolder,
       moveFolderToFolder: state.moveFolderToFolder,
@@ -275,20 +278,25 @@ export function useSidebarFileOperations() {
           if (
             tab.type === "file" ||
             tab.type === "diagram" ||
-            tab.type === "pdf"
+            tab.type === "pdf" ||
+            tab.type === "image"
           ) {
             const nextPath = replaceFolderPrefix(tab.path);
             if (nextPath !== tab.path) {
               const nextName =
                 tab.type === "file"
                   ? nextPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || tab.name
-                  : tab.name;
+                  : tab.type === "image"
+                    ? nextPath.split(/[/\\]/).pop() || tab.name
+                    : tab.name;
               const nextId =
                 tab.type === "diagram"
                   ? `__diagram_${nextPath}__`
                   : tab.type === "pdf"
                     ? `__pdf_${nextPath}__`
-                    : nextPath;
+                    : tab.type === "image"
+                      ? `__image_${nextPath}__`
+                      : nextPath;
               return {
                 ...tab,
                 path: nextPath,
@@ -608,6 +616,12 @@ export function useSidebarFileOperations() {
   }, []);
 
   // ── Select / Open ─────────────────────────────────────────────────────
+  const isImageEntryName = (name: string): boolean => {
+    const dot = name.lastIndexOf(".");
+    if (dot < 0) return false;
+    return IMAGE_EXTENSIONS.has(name.slice(dot).toLowerCase());
+  };
+
   const handleSelect = useCallback(
     (entry: FileEntry) => {
       setSelectedPath(entry.path);
@@ -621,6 +635,8 @@ export function useSidebarFileOperations() {
           } else {
             openPDFTab(entry.path);
           }
+        } else if (isImageEntryName(name)) {
+          openImageTab(entry.path);
         } else {
           if (splitView && activePane === "secondary") {
             openSecondaryFile(entry.path);
@@ -630,14 +646,20 @@ export function useSidebarFileOperations() {
         }
       }
     },
-    [openFile, openPDFTab, openDiagramTab, splitView, activePane, openSecondaryFile, openSecondaryPdf],
+    [openFile, openPDFTab, openDiagramTab, openImageTab, splitView, activePane, openSecondaryFile, openSecondaryPdf],
   );
 
   const handlePermanentOpen = useCallback(
     (entry: FileEntry) => {
       if (entry.is_dir) return;
       const name = entry.name.toLowerCase();
-      if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json") || name.endsWith(".pdf")) {
+      if (
+        name.endsWith(".excalidraw.json") ||
+        name.endsWith(".diagram.json") ||
+        name.endsWith(".drawio.json") ||
+        name.endsWith(".pdf") ||
+        isImageEntryName(name)
+      ) {
         return;
       }
       if (splitView && activePane === "secondary") return;

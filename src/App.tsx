@@ -32,6 +32,7 @@ import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { CommandMenu, CommandMenuProvider } from "@/components/ui";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
+import { ImageViewer } from "@/components/images/ImageViewer";
 import { PanelErrorBoundary } from "@/components/system/PanelErrorBoundary";
 import { useAIStore } from "@/stores/useAIStore";
 import { initOpencodeAgentListeners } from "@/stores/useOpencodeAgent";
@@ -1021,6 +1022,11 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
+            </div>
+          ) : activeTab?.type === "image" && activeTab.path ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <TabBar />
+              <ImageViewer filePath={activeTab.path} className="flex-1" />
             </div>
           ) : activeTab?.type === "diagram" && activeTab.path ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
