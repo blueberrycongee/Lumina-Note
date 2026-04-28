@@ -84,7 +84,7 @@
   - A unit test verifies the provider object's shape and visibility logic.
 
 ### C8 — License entry UI: `LicenseSettings.tsx`
-- [ ] **Goal:** A settings panel where the user can paste a license, see status, see SKU/email/expiry, and remove it.
+- [x] **Goal:** A settings panel where the user can paste a license, see status, see SKU/email/expiry, and remove it.
 - **Files:** `src/components/settings/LicenseSettings.tsx` + test, `src/components/settings/LicenseSettings.module.css` if needed (prefer Tailwind).
 - **Behavior:**
   - Paste license → calls `useLicenseStore.setLicense` → shows status (Verifying / Valid / Invalid + reason).
@@ -133,3 +133,4 @@
 [x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
 [x] C6 — 2026-04-28 — f015911 — createRevocationCache + in-memory default (pending C3 IPC for disk persistence); 7 tests cover cold/warm/expired/network-fail/coalesce
 [x] C7 — 2026-04-28 — d879380 — Lumina Cloud provider def + isLuminaCloudVisible + fetchLuminaCloudModels; 8 tests; PRD §3 forbids models.ts edit so wiring lands in C11
+[x] C8 — 2026-04-28 — 6fc20d1 — LicenseSettings panel (Tailwind, standalone, no AISettingsModal dep); 7 tests cover idle/loading/invalid/valid + remove confirmation
