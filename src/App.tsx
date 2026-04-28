@@ -35,6 +35,8 @@ import { ImageManagerView } from "@/components/images/ImageManagerView";
 import { useAIStore } from "@/stores/useAIStore";
 import { initOpencodeAgentListeners } from "@/stores/useOpencodeAgent";
 import { wireErrorBanner } from "@/stores/useErrorBanner";
+import { wireErrorToasts } from "@/services/errors";
+import { Toaster } from "sonner";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
 import {
@@ -235,6 +237,7 @@ function App() {
   useEffect(() => {
     initOpencodeAgentListeners();
     wireErrorBanner();
+    wireErrorToasts();
   }, []);
 
   // 启动时自动检查更新（延迟 5 秒，避免影响启动性能）
@@ -938,6 +941,7 @@ function App() {
           onCreateVault={handleCreateVault}
         />
         <AutoTooltipHost />
+        <Toaster position="bottom-right" theme="system" richColors closeButton />
       </>
     );
   }
@@ -947,6 +951,7 @@ function App() {
       <TitleBar />
       <PluginShellSlotHost slotId="app-top" />
       <AutoTooltipHost />
+      <Toaster position="bottom-right" theme="system" richColors closeButton />
       <div
         ref={layoutRef}
         className="flex-1 flex overflow-hidden transition-colors duration-300"

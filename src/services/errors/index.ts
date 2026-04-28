@@ -9,3 +9,4 @@ export {
   reportError,
   subscribeErrors,
 } from "./reporter";
+export { wireErrorToasts } from "./toastBridge";
