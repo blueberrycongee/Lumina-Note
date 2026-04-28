@@ -50,7 +50,11 @@ import { useSkillSearch } from "./hooks/useSkillSearch";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatToolbar } from "./ChatToolbar";
 import { WelcomeGreeting, WelcomeStarters } from "./WelcomeSection";
-import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
+import {
+  AgentMessageRenderer,
+  makeGeneratedImageMarker,
+  makeImageGeneratingMarker,
+} from "../chat/AgentMessageRenderer";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
 import { getTextFromContent } from "../chat/messageContentUtils";
@@ -85,6 +89,52 @@ import {
   type ExportMessage,
   type RawConversationMessage,
 } from "@/features/conversation-export/exportUtils";
+import type { AIConfig } from "@/services/ai/ai";
+
+type AgentImageModeConfig = Pick<
+  AIConfig,
+  "provider" | "model" | "customModelId" | "baseUrl" | "apiKey"
+>;
+
+export function isAgentConfigUsableForImageMode(
+  config: AgentImageModeConfig,
+): boolean {
+  if (!config.provider) return false;
+  if (config.provider === "ollama") return true;
+  if (config.provider === "openai-compatible") {
+    const modelId =
+      config.model === "custom"
+        ? config.customModelId?.trim()
+        : config.model?.trim();
+    return !!modelId && !!config.baseUrl?.trim();
+  }
+  return !!config.apiKey?.trim();
+}
+
+type ImageModeProviderHint = {
+  id: string;
+  marketingName: string;
+} | null;
+
+export function buildImageModeAgentPrompt(
+  fullMessage: string,
+  provider: ImageModeProviderHint,
+): string {
+  return [
+    "Use the image-gen skill to generate an image.",
+    provider
+      ? `The configured image provider available for this request is \`${provider.id}\` (${provider.marketingName}). Use only this provider. Do not switch to Google, Seedream, ByteDance, or any other provider unless Lumina explicitly lists it as configured.`
+      : null,
+    "Keep provider routing separate from prompt interpretation: the language the user typed in is not by itself a reason to switch providers.",
+    "Preserve explicit visual constraints from the user, including medium, region, era, genre, culture, composition, subject, mood, palette, and style descriptors. Do not replace a specific descriptor with a nearby default style unless the user asked for that.",
+    "Handle visible text as its own requirement: if the user asks for readable text, preserve the requested text and language; if they do not ask for readable text, ask the image model to avoid readable text, letters, captions, labels, and speech bubbles.",
+    "Refine the user's prompt for visual clarity, infer the aspect ratio, use relevant vault reference images when useful, then call generate_image.",
+    "User prompt:",
+    fullMessage,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
@@ -256,19 +306,25 @@ export function MainAIChatShell() {
     })),
   );
 
-  // Image-mode bypass: when the user is in image-mode but the chat agent
-  // isn't usable (no provider key, etc.), we still want them to be able
-  // to generate. The direct path skips opencode entirely and calls the
-  // image API straight from main process.
+  // Image mode is agent-assisted when the chat provider is usable: the
+  // agent can refine the prompt, choose aspect ratio, and gather references
+  // before calling generate_image. If the chat provider is not usable, we
+  // fall back to a direct image-provider call so BYOK image generation still
+  // works independently.
   const aiProvider = useAIStore((s) => s.config.provider);
   const aiApiKey = useAIStore((s) => s.config.apiKey);
+  const aiModel = useAIStore((s) => s.config.model);
+  const aiCustomModelId = useAIStore((s) => s.config.customModelId);
+  const aiBaseUrl = useAIStore((s) => s.config.baseUrl);
   const isAgentConfigured = useMemo(() => {
-    if (!aiProvider) return false;
-    if (aiProvider === "ollama" || aiProvider === "openai-compatible") {
-      return true;
-    }
-    return !!aiApiKey?.trim();
-  }, [aiProvider, aiApiKey]);
+    return isAgentConfigUsableForImageMode({
+      provider: aiProvider,
+      apiKey: aiApiKey,
+      model: aiModel,
+      customModelId: aiCustomModelId,
+      baseUrl: aiBaseUrl,
+    });
+  }, [aiProvider, aiApiKey, aiBaseUrl, aiCustomModelId, aiModel]);
 
   const imageProviders = useImageProvidersStore((s) => s.providers);
   const imageProvidersLoaded = useImageProvidersStore((s) => s.loaded);
@@ -729,6 +785,26 @@ export function MainAIChatShell() {
       }
 
       const message = effectiveInput;
+      let configuredImageProvider = imageMode
+        ? pickConfiguredImageProvider(imageProviders)
+        : null;
+      if (imageMode && !configuredImageProvider && !imageProvidersLoaded) {
+        await refreshImageProviders();
+        configuredImageProvider = pickConfiguredImageProvider(
+          useImageProvidersStore.getState().providers,
+        );
+      }
+      if (imageMode && !vaultPath) {
+        toast.error(t.ai.imageDirect.noVault);
+        finalizePerf();
+        return;
+      }
+      if (imageMode && !configuredImageProvider) {
+        toast.error(t.ai.imageDirect.noImageProvider);
+        finalizePerf();
+        return;
+      }
+
       isNearBottom.current = true;
       setInput("");
       autoSendMessageRef.current = null;
@@ -747,39 +823,62 @@ export function MainAIChatShell() {
         performance.mark("lumina:send:processed");
       }
 
-      // Image-mode bypass: if the user is in image-mode AND the chat
-      // agent isn't usable (no API key, no provider), skip opencode
-      // entirely and call the image API directly. Same dispatch code,
-      // no LLM in the middle. The user gets a toast pointing at the
-      // saved file so they can drop it into a note manually.
-      if (imageMode && !isAgentConfigured) {
-        const provider = pickConfiguredImageProvider(imageProviders);
-        if (!provider) {
-          toast.error(t.ai.imageDirect.noImageProvider);
-          finalizePerf();
-          return;
-        }
-        if (!vaultPath) {
-          toast.error(t.ai.imageDirect.noVault);
-          finalizePerf();
-          return;
-        }
+      if (imageMode && !isAgentConfigured && configuredImageProvider && vaultPath) {
+        const provider = configuredImageProvider;
+        useErrorBanner.getState().clearBanner();
+        const userMessageId = `direct-image-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const assistantMessageId = `direct-image-assistant-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const pendingText = t.ai.imageDirect.generating.replace(
+          "{provider}",
+          provider.marketingName,
+        );
+        useOpencodeAgent.setState((state) => ({
+          status: "running",
+          error: null,
+          messages: [
+            ...state.messages,
+            {
+              id: userMessageId,
+              role: "user",
+              content: displayMessage,
+              rawParts: [],
+              attachments,
+            },
+            {
+              id: assistantMessageId,
+              role: "assistant",
+              content: makeImageGeneratingMarker(provider.marketingName),
+              rawParts: [],
+            },
+          ],
+        }));
         const toastId = toast.loading(
-          t.ai.imageDirect.generating.replace(
-            "{provider}",
-            provider.marketingName,
-          ),
+          pendingText,
         );
         try {
           const result = await generateImageDirect({
-            prompt: message,
+            prompt: fullMessage || message,
             providerId: provider.id,
             vaultPath,
-            // attachedImages from input chips aren't plumbed here yet
-            // (they live in the inline input state); future work.
           });
           if (result.ok) {
             const markdown = `![](${result.relativePath})`;
+            const assistantText = makeGeneratedImageMarker({
+              absolutePath: result.absolutePath,
+              relativePath: result.relativePath,
+              provider: result.providerId,
+              providerLabel: result.marketingName,
+              model: result.modelUsed,
+              markdown,
+            });
+            useOpencodeAgent.setState((state) => ({
+              status: "completed",
+              messages: state.messages.map((msg) =>
+                msg.id === assistantMessageId
+                  ? { ...msg, content: assistantText }
+                  : msg,
+              ),
+            }));
             toast.success(
               t.ai.imageDirect.successTitle.replace(
                 "{provider}",
@@ -802,6 +901,17 @@ export function MainAIChatShell() {
             // sidebar without the user having to manually refresh.
             void refreshFileTree();
           } else {
+            useOpencodeAgent.setState((state) => ({
+              status: "error",
+              messages: state.messages.map((msg) =>
+                msg.id === assistantMessageId
+                  ? {
+                      ...msg,
+                      content: `${t.ai.imageDirect.failureGeneric}: ${result.error}`,
+                    }
+                  : msg,
+              ),
+            }));
             toast.error(
               t.ai.imageDirect.failureTitle.replace(
                 "{provider}",
@@ -811,9 +921,21 @@ export function MainAIChatShell() {
             );
           }
         } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          useOpencodeAgent.setState((state) => ({
+            status: "error",
+            messages: state.messages.map((msg) =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    content: `${t.ai.imageDirect.failureGeneric}: ${message}`,
+                  }
+                : msg,
+            ),
+          }));
           toast.error(t.ai.imageDirect.failureGeneric, {
             id: toastId,
-            description: err instanceof Error ? err.message : String(err),
+            description: message,
           });
         }
         finalizePerf();
@@ -826,7 +948,7 @@ export function MainAIChatShell() {
       // for the image-gen skill (which it sees in <available_skills>)
       // even when the user's prompt is short or ambiguous.
       const wrappedFullMessage = imageMode
-        ? `Use the image-gen skill to generate an image. User prompt:\n${fullMessage}`
+        ? buildImageModeAgentPrompt(fullMessage, configuredImageProvider)
         : fullMessage;
 
       await rustStartTask(wrappedFullMessage, {
@@ -855,6 +977,8 @@ export function MainAIChatShell() {
       imageMode,
       isAgentConfigured,
       imageProviders,
+      imageProvidersLoaded,
+      refreshImageProviders,
       refreshFileTree,
       t,
     ],

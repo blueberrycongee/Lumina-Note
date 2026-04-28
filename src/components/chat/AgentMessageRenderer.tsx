@@ -17,7 +17,9 @@ import { useTimeout } from "@/hooks/useTimeout";
 import { DiffView } from "@/components/effects/DiffView";
 import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { saveFile } from "@/lib/host";
+import { readBinaryFileBase64, saveFile } from "@/lib/host";
+import { join } from "@/lib/path";
+import { getImageMimeType } from "@/services/assets/editorImages";
 import { getImagesFromContent, getTextFromContent, getUserMessageDisplay } from "./messageContentUtils";
 import { AssistantDiagramPanels } from "./AssistantDiagramPanels";
 import { getDiagramAttachmentFilePaths } from "./diagramAttachmentUtils";
@@ -43,15 +45,25 @@ interface PartTime {
   end?: number;
 }
 
-interface ToolCallInfo {
+export interface ToolCallInfo {
   name: string;
   params: string;
+  title?: string;
   result?: string;
   success?: boolean;
   // Populated only on the opencode path (state.time on ToolStateRunning /
   // Completed / Error). Lets WorkSession show "took 0:42" on finished
   // sessions even after remount, since the data is in rawParts.
   time?: PartTime;
+}
+
+export interface GeneratedImageInfo {
+  absolutePath?: string;
+  relativePath?: string;
+  provider?: string;
+  providerLabel?: string;
+  model?: string;
+  markdown?: string;
 }
 
 type AgentMessage = {
@@ -86,8 +98,37 @@ type TimelinePart =
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] }
+  | { type: "generated_image"; image: GeneratedImageInfo }
   | { type: "work_session"; items: WorkItem[] }
   | { type: "diff"; diff: PendingDiff };
+
+const DIRECT_IMAGE_GENERATING_PREFIX = "__lumina_image_generating__:";
+const GENERATED_IMAGE_PREFIX = "__lumina_generated_image__:";
+
+export function makeImageGeneratingMarker(providerLabel: string): string {
+  return `${DIRECT_IMAGE_GENERATING_PREFIX}${providerLabel}`;
+}
+
+export function parseImageGeneratingMarker(content: string): string | null {
+  if (!content.startsWith(DIRECT_IMAGE_GENERATING_PREFIX)) return null;
+  const provider = content.slice(DIRECT_IMAGE_GENERATING_PREFIX.length).trim();
+  return provider || null;
+}
+
+export function makeGeneratedImageMarker(image: GeneratedImageInfo): string {
+  return `${GENERATED_IMAGE_PREFIX}${encodeURIComponent(JSON.stringify(image))}`;
+}
+
+export function parseGeneratedImageMarker(content: string): GeneratedImageInfo | null {
+  if (!content.startsWith(GENERATED_IMAGE_PREFIX)) return null;
+  const payload = content.slice(GENERATED_IMAGE_PREFIX.length).trim();
+  if (!payload) return null;
+  try {
+    return normalizeGeneratedImageInfo(JSON.parse(decodeURIComponent(payload)));
+  } catch {
+    return null;
+  }
+}
 
 // Threshold above which a run of consecutive tool calls is folded into one
 // outer ToolGroupCollapsible. Two tools in a row aren't worth the extra layer.
@@ -236,6 +277,116 @@ function getSessionTimeRange(items: WorkItem[]): {
       item.tools.forEach((tool) => ingest(tool.time));
   }
   return { start, end, hasPending };
+}
+
+export function isPendingImageGenerationTool(tool: ToolCallInfo): boolean {
+  return tool.name === "generate_image" && tool.result === undefined;
+}
+
+function findPendingImageGenerationTool(items: WorkItem[]): ToolCallInfo | null {
+  for (const item of items) {
+    if (item.type === "tool" && isPendingImageGenerationTool(item.tool)) {
+      return item.tool;
+    }
+    if (item.type === "tool_group") {
+      const tool = item.tools.find(isPendingImageGenerationTool);
+      if (tool) return tool;
+    }
+  }
+  return null;
+}
+
+export function getImageGenerationProviderLabel(tool: ToolCallInfo): string | null {
+  if (tool.title) {
+    const label = tool.title
+      .replace(/^Generating with\s+/i, "")
+      .replace(/[.…]+$/g, "")
+      .trim();
+    if (label) return label;
+  }
+  const providerMatch = tool.params.match(/"provider"\s*:\s*"([^"]+)"/);
+  if (providerMatch?.[1]) return providerMatch[1];
+  const modelMatch = tool.params.match(/"model_id"\s*:\s*"([^"]+)"/);
+  if (modelMatch?.[1]) return modelMatch[1];
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function stringValue(record: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = record?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function normalizeGeneratedImageInfo(value: unknown): GeneratedImageInfo | null {
+  if (!isRecord(value)) return null;
+  const absolutePath = stringValue(value, "absolutePath");
+  const relativePath = stringValue(value, "relativePath");
+  if (!absolutePath && !relativePath) return null;
+  const markdown = stringValue(value, "markdown") ?? (relativePath ? `![](${relativePath})` : undefined);
+  return {
+    absolutePath,
+    relativePath,
+    provider: stringValue(value, "provider"),
+    providerLabel: stringValue(value, "providerLabel"),
+    model: stringValue(value, "model"),
+    markdown,
+  };
+}
+
+function cleanGeneratedPath(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return value.replace(/^`|`$/g, "").trim() || undefined;
+}
+
+function parseGeneratedRelativePath(output: string): string | undefined {
+  const markdownMatch = output.match(/!\[\]\(([^)]+)\)/);
+  if (markdownMatch?.[1]) return cleanGeneratedPath(markdownMatch[1]);
+  const savedMatch = output.match(/(?:Generated and saved|Path):\s*([^\n]+)/i);
+  return cleanGeneratedPath(savedMatch?.[1]);
+}
+
+function parseGeneratedModel(output: string): string | undefined {
+  const providerLine = output.match(/^Provider:\s*(.+)$/im)?.[1];
+  const modelMatch = providerLine?.match(/\(([^)]+)\)/);
+  return modelMatch?.[1]?.trim() || undefined;
+}
+
+function cleanGeneratingTitle(title: string | undefined): string | undefined {
+  if (!title) return undefined;
+  return title
+    .replace(/^Generating with\s+/i, "")
+    .replace(/[.…]+$/g, "")
+    .trim() || undefined;
+}
+
+function extractGeneratedImageInfo(
+  name: string,
+  state: {
+    status?: string;
+    output?: string;
+    title?: string;
+    metadata?: Record<string, unknown>;
+  },
+): GeneratedImageInfo | null {
+  if (name !== "generate_image" || state.status !== "completed") return null;
+  const metadata = isRecord(state.metadata) ? state.metadata : undefined;
+  const output = state.output ?? "";
+  return normalizeGeneratedImageInfo({
+    absolutePath: stringValue(metadata, "absolutePath"),
+    relativePath:
+      stringValue(metadata, "vaultRelativePath") ??
+      stringValue(metadata, "relativePath") ??
+      parseGeneratedRelativePath(output),
+    provider: stringValue(metadata, "provider"),
+    providerLabel:
+      cleanGeneratingTitle(state.title) ??
+      stringValue(metadata, "model") ??
+      stringValue(metadata, "provider"),
+    model: stringValue(metadata, "model") ?? parseGeneratedModel(output),
+  });
 }
 
 // ============ 解析函数 ============
@@ -432,6 +583,38 @@ function formatMarkdownContent(content: string): string {
       .trim();
   }
   return output;
+}
+
+function getGeneratedImageCopyText(image: GeneratedImageInfo): string {
+  if (image.markdown?.trim()) return image.markdown.trim();
+  if (image.relativePath?.trim()) return `![](${image.relativePath.trim()})`;
+  return image.absolutePath?.trim() ?? "";
+}
+
+function getAssistantCopyText(parts: TimelinePart[]): string {
+  const chunks: string[] = [];
+
+  for (const part of parts) {
+    if (part.type === "text") {
+      const generatingProvider = parseImageGeneratingMarker(part.content);
+      if (generatingProvider) continue;
+
+      const generatedImage = parseGeneratedImageMarker(part.content);
+      if (generatedImage) {
+        chunks.push(getGeneratedImageCopyText(generatedImage));
+        continue;
+      }
+
+      chunks.push(part.content.trim());
+      continue;
+    }
+
+    if (part.type === "generated_image") {
+      chunks.push(getGeneratedImageCopyText(part.image));
+    }
+  }
+
+  return chunks.filter(Boolean).join("\n\n");
 }
 
 const ATTACHABLE_MIME = new Set([
@@ -643,6 +826,7 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
             output?: string;
             error?: string;
             title?: string;
+            metadata?: Record<string, unknown>;
             time?: { start?: number; end?: number };
           };
         };
@@ -667,8 +851,12 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
             : undefined;
         out.push({
           type: "tool",
-          tool: { name, params, result, success, time: toolTime },
+          tool: { name, params, title: state.title, result, success, time: toolTime },
         });
+        const generatedImage = extractGeneratedImageInfo(name, state);
+        if (generatedImage) {
+          out.push({ type: "generated_image", image: generatedImage });
+        }
         break;
       }
       default:
@@ -716,8 +904,21 @@ function shouldSkipUserMessage(content: string): boolean {
 /**
  * 清理 user 消息显示内容
  */
-function cleanUserMessage(content: string): string {
+export function cleanUserMessage(content: string): string {
   return content
+    .replace(
+      /^Use the image-gen skill to generate an image\.\n[\s\S]*?User prompt:\n/,
+      "",
+    )
+    .replace(
+      /^Use the image-gen skill to generate an image\.\n(?:Use the configured image provider `[^`]+` \([^)]+\) unless the user explicitly asks for another configured provider\.\n)?Refine the user's prompt for visual clarity, infer the aspect ratio, use relevant vault reference images when useful, then call generate_image\.\nUser prompt:\n/,
+      "",
+    )
+    .replace(
+      /^Use the image-gen skill to generate an image\.\n(?:The configured image provider available for this request is `[^`]+` \([^)]+\)\. Use only this provider\. Do not switch to Google, Seedream, ByteDance, or any other provider unless Lumina explicitly lists it as configured\.\n)?A Chinese-language prompt does not mean the image must render Chinese text\. Only choose a text-rendering-specialized provider if that provider is configured\.\nRefine the user's prompt for visual clarity, infer the aspect ratio, use relevant vault reference images when useful, then call generate_image\.\nUser prompt:\n/,
+      "",
+    )
+    .replace(/^Use the image-gen skill to generate an image\. User prompt:\n/, "")
     .replace(/<task>([\s\S]*?)<\/task>/g, "$1")
     .replace(/<current_note[^>]*>[\s\S]*?<\/current_note>/g, "")
     .replace(/<related_notes[^>]*>[\s\S]*?<\/related_notes>/g, "")
@@ -964,6 +1165,177 @@ const ToolGroupCollapsible = memo(function ToolGroupCollapsible({
   );
 });
 
+const ImageGenerationProgress = memo(function ImageGenerationProgress({
+  providerLabel,
+  elapsedLabel,
+  t,
+}: {
+  providerLabel?: string | null;
+  elapsedLabel?: string | null;
+  t: any;
+}) {
+  const messages =
+    Array.isArray(t.agentMessage.imageGeneratingMessages) &&
+    t.agentMessage.imageGeneratingMessages.length > 0
+      ? t.agentMessage.imageGeneratingMessages
+      : [t.agentMessage.imageGeneratingDescription];
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (messages.length <= 1) return;
+    const id = window.setInterval(() => {
+      setMessageIndex((idx) => (idx + 1) % messages.length);
+    }, 2400);
+    return () => window.clearInterval(id);
+  }, [messages.length]);
+
+  const activeMessage = messages[messageIndex % messages.length];
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.99 }}
+      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+      className="image-generation-progress relative mb-4 w-full max-w-[34rem] overflow-hidden rounded-[2rem] bg-muted/35 p-5 shadow-sm sm:p-6"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="image-generation-canvas relative aspect-square min-h-[18rem] overflow-hidden rounded-[1.7rem]">
+        <div className="image-generation-dotfield" aria-hidden />
+        <div className="image-generation-fade" aria-hidden />
+        <div className="relative z-10 flex h-full flex-col p-6 sm:p-7">
+          <div className="flex min-w-0 flex-wrap items-start gap-2">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeMessage}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.22 }}
+                className="min-w-[12rem] flex-1 break-words text-base font-semibold leading-snug tracking-[-0.02em] text-foreground/75 sm:text-lg"
+              >
+                {activeMessage}
+              </motion.div>
+            </AnimatePresence>
+            {providerLabel && (
+              <span className="rounded-full border border-foreground/10 bg-background/65 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+                {providerLabel}
+              </span>
+            )}
+          </div>
+          <div className="mt-auto">
+            {elapsedLabel && (
+              <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground/75">
+                <span className="streaming-dot" aria-hidden />
+                <span>{elapsedLabel}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+const GeneratedImageCard = memo(function GeneratedImageCard({
+  image,
+  vaultPath,
+  t,
+}: {
+  image: GeneratedImageInfo;
+  vaultPath: string | null;
+  t: any;
+}) {
+  const sourcePath = useMemo(() => {
+    if (image.absolutePath) return image.absolutePath;
+    if (vaultPath && image.relativePath) return join(vaultPath, image.relativePath);
+    return null;
+  }, [image.absolutePath, image.relativePath, vaultPath]);
+  const [src, setSrc] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSrc(null);
+    setError(null);
+    if (!sourcePath) {
+      setError(t.agentMessage.imageGeneratedMissingPath);
+      return;
+    }
+
+    const load = async () => {
+      try {
+        const base64 = await readBinaryFileBase64(sourcePath);
+        if (cancelled) return;
+        const dataUrl = `data:${getImageMimeType(sourcePath)};base64,${base64}`;
+        await new Promise<void>((resolve) => {
+          const probe = new Image();
+          probe.onload = () => resolve();
+          probe.onerror = () => resolve();
+          probe.src = dataUrl;
+        });
+        if (cancelled) return;
+        setSrc(dataUrl);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [sourcePath, t.agentMessage.imageGeneratedMissingPath]);
+
+  const providerLabel =
+    image.providerLabel ?? image.model ?? image.provider ?? t.agentMessage.imageGeneratedTitle;
+  const title = t.ai.imageDirect.successTitle.replace("{provider}", providerLabel);
+
+  const handleImageClick = useCallback((event: MouseEvent<HTMLImageElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void attachClickedImage(event.currentTarget);
+  }, []);
+
+  return (
+    <motion.figure
+      layout
+      initial={{ opacity: 0, y: 10, scale: 0.99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className={src ? "mb-4 inline-block max-w-full align-top" : "mb-4 w-full max-w-[34rem]"}
+    >
+      <div className={src ? "relative inline-block max-w-full align-top" : "relative min-h-[18rem]"}>
+        {src ? (
+          <motion.img
+            src={src}
+            alt={title}
+            title={t.agentMessage.imageGeneratedReuseHint}
+            initial={{ opacity: 0, scale: 0.985 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="block h-auto max-h-[72vh] max-w-full cursor-pointer rounded-[1.25rem] object-contain"
+            onClick={handleImageClick}
+          />
+        ) : error ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 rounded-[1.35rem] bg-muted/35 p-6 text-center text-sm text-muted-foreground">
+            <AlertTriangle size={20} />
+            <span>{t.editor.imageLoadFailed}</span>
+            <span className="max-w-full truncate text-xs opacity-70">{error}</span>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center rounded-[1.35rem] bg-muted/35 text-muted-foreground">
+            <Loader2 size={22} className="animate-spin" />
+          </div>
+        )}
+      </div>
+    </motion.figure>
+  );
+});
+
 /**
  * WorkSession：每轮里所有非文本/非 diff 的中间步骤的统一外壳。
  *
@@ -1026,6 +1398,10 @@ const WorkSession = memo(function WorkSession({
     "{count}",
     String(stepCount),
   );
+  const pendingImageTool = findPendingImageGenerationTool(items);
+  const imageProviderLabel = pendingImageTool
+    ? getImageGenerationProviderLabel(pendingImageTool)
+    : null;
 
   let headerLabel: string;
   if (showLive) {
@@ -1038,6 +1414,13 @@ const WorkSession = memo(function WorkSession({
 
   return (
     <div className="text-xs text-muted-foreground">
+      {pendingImageTool && (
+        <ImageGenerationProgress
+          providerLabel={imageProviderLabel}
+          elapsedLabel={showLive ? formatElapsed(elapsed) : null}
+          t={t}
+        />
+      )}
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
@@ -1150,6 +1533,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
   const { pendingDiff, setPendingDiff, clearPendingEdits, diffResolver } = useAIStore();
   const openFile = useFileStore((state) => state.openFile);
+  const vaultPath = useFileStore((state) => state.vaultPath);
   const { t } = useLocaleStore();
 
   const handleAcceptDiff = useCallback(async () => {
@@ -1187,6 +1571,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       userImages: ImageContent[];
       diagramPaths: string[];
       parts: TimelinePart[];
+      assistantCopyText: string;
       roundKey: string;
       hasAIContent: boolean;
     }> = [];
@@ -1292,6 +1677,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         userImages,
         diagramPaths: getDiagramAttachmentFilePaths(normalizedUserMessage.attachments),
         parts: collapsedParts,
+        assistantCopyText: getAssistantCopyText(collapsedParts),
         roundKey,
         hasAIContent,
       });
@@ -1313,12 +1699,20 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         >
           {/* 用户消息 */}
           <div className="flex justify-end mb-5">
-            <div className="max-w-[80%] rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-[15px] leading-relaxed text-foreground">
-              <UserMessageBubbleContent
-                text={round.userContent}
-                attachments={round.userAttachments}
-                images={round.userImages}
-              />
+            <div className="flex max-w-[80%] flex-col items-end gap-1">
+              <div className="rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-[15px] leading-relaxed text-foreground">
+                <UserMessageBubbleContent
+                  text={round.userContent}
+                  attachments={round.userAttachments}
+                  images={round.userImages}
+                />
+              </div>
+              {round.userContent.trim().length > 0 && (
+                <CopyButton
+                  text={round.userContent}
+                  className="opacity-70 hover:opacity-100"
+                />
+              )}
             </div>
           </div>
 
@@ -1367,7 +1761,39 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                       </div>
                     );
                   }
+                  if (part.type === "generated_image") {
+                    return (
+                      <GeneratedImageCard
+                        key={key}
+                        image={part.image}
+                        vaultPath={vaultPath}
+                        t={t}
+                      />
+                    );
+                  }
                   if (part.type === "text") {
+                    const generatingProvider = parseImageGeneratingMarker(part.content);
+                    if (generatingProvider) {
+                      return (
+                        <ImageGenerationProgress
+                          key={key}
+                          providerLabel={generatingProvider}
+                          elapsedLabel={isRunning ? t.agentMessage.working : null}
+                          t={t}
+                        />
+                      );
+                    }
+                    const generatedImage = parseGeneratedImageMarker(part.content);
+                    if (generatedImage) {
+                      return (
+                        <GeneratedImageCard
+                          key={key}
+                          image={generatedImage}
+                          vaultPath={vaultPath}
+                          t={t}
+                        />
+                      );
+                    }
                     const isFinalText = partIndex === lastTextIndex;
                     return (
                       <div
@@ -1388,6 +1814,14 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                   return null;
                 });
                 })()}
+                {round.assistantCopyText.trim().length > 0 && (
+                  <div className="flex items-center">
+                    <CopyButton
+                      text={round.assistantCopyText}
+                      className="opacity-70 hover:opacity-100"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1420,21 +1854,36 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 /**
  * 复制按钮组件
  */
-export function CopyButton({ text }: { text: string }) {
+export function CopyButton({
+  text,
+  className = "",
+}: {
+  text: string;
+  className?: string;
+}) {
   const { t } = useLocaleStore();
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.warn("Failed to copy message:", error);
+    }
   };
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
-      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${className}`}
       title={t.agentMessage.copy}
+      aria-label={t.agentMessage.copy}
     >
       {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
     </button>

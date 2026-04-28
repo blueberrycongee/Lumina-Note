@@ -652,6 +652,21 @@ body.resizing iframe[data-codex-iframe="true"] {
     }
   }
 
+  @keyframes image-generation-dots-drift {
+    0% {
+      transform: translate3d(-10px, -6px, 0) scale(1);
+      opacity: 0.5;
+    }
+    50% {
+      transform: translate3d(10px, 8px, 0) scale(1.035);
+      opacity: 0.85;
+    }
+    100% {
+      transform: translate3d(-10px, -6px, 0) scale(1);
+      opacity: 0.5;
+    }
+  }
+
   .streaming-content-enter {
     animation: stream-fade-in 200ms var(--motion-ease-spring);
   }
@@ -663,6 +678,66 @@ body.resizing iframe[data-codex-iframe="true"] {
     background: hsl(var(--muted-foreground));
     animation: stream-dot-pulse 1.1s ease-in-out infinite;
     will-change: transform, opacity;
+  }
+
+  .image-generation-canvas {
+    background:
+      radial-gradient(circle at 50% 5%, hsl(var(--background) / 0.92) 0%, transparent 42%),
+      linear-gradient(180deg, hsl(var(--muted) / 0.35), hsl(var(--background) / 0.7));
+  }
+
+  .image-generation-dotfield {
+    position: absolute;
+    inset: 12% -3% 28% -3%;
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      black 16%,
+      black 64%,
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      180deg,
+      transparent 0%,
+      black 16%,
+      black 64%,
+      transparent 100%
+    );
+    background-image:
+      radial-gradient(circle, hsl(var(--foreground) / 0.2) 0 2.2px, transparent 2.8px),
+      radial-gradient(circle, hsl(var(--foreground) / 0.12) 0 1.5px, transparent 2.1px);
+    background-position:
+      0 0,
+      12px 12px;
+    background-size:
+      24px 24px,
+      24px 24px;
+    animation: image-generation-dots-drift 4.8s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+
+  .image-generation-dotfield::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    background:
+      radial-gradient(ellipse at 50% 0%, hsl(var(--background) / 0) 0%, hsl(var(--background) / 0.88) 72%),
+      radial-gradient(ellipse at 30% 20%, transparent 0%, hsl(var(--background) / 0.78) 66%);
+  }
+
+  .image-generation-fade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, transparent 0%, transparent 38%, hsl(var(--background) / 0.7) 78%, hsl(var(--background) / 0.96) 100%),
+      radial-gradient(circle at 50% 50%, transparent 0%, hsl(var(--background) / 0.4) 72%);
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .image-generation-dotfield {
+      animation: none;
+    }
   }
 }
 

@@ -474,20 +474,34 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       }
       case "session.status": {
         if (event.properties.sessionID !== get().currentSessionId) return;
-        const status = event.properties.status;
-        if (status.type === "busy") set({ status: "running" });
+        const status = event.properties.status as {
+          type?: string;
+          attempt?: number;
+          message?: string;
+          next?: number;
+        };
+        if (status.type === "busy") set({ status: "running", llmRetryState: null });
         else if (status.type === "idle") {
           // session.error and the trailing session.status:idle arrive
           // back-to-back; let the error stay sticky so the red banner
           // actually renders. Cleared on the next startTask/switchSession.
-          if (get().status !== "error") set({ status: "idle" });
+          if (get().status !== "error") set({ status: "idle", llmRetryState: null });
+        } else if (status.type === "retry") {
+          set({
+            status: "running",
+            llmRetryState: {
+              attempt: status.attempt ?? 1,
+              maxRetries: Math.max(3, status.attempt ?? 1),
+              reason: status.message ?? "network retry",
+              nextRetryAt: status.next ?? Date.now(),
+            },
+          });
         }
-        else if (status.type === "retry") set({ status: "running" });
         return;
       }
       case "session.idle": {
         if (event.properties.sessionID === get().currentSessionId) {
-          if (get().status !== "error") set({ status: "idle" });
+          if (get().status !== "error") set({ status: "idle", llmRetryState: null });
         }
         return;
       }
@@ -515,6 +529,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           retryable: false,
           sessionId: event.properties.sessionID ?? undefined,
         });
+        set({ status: "error", error: message, llmRetryState: null });
         return;
       }
       case "message.updated": {
@@ -532,6 +547,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             const idx = cleaned.findIndex((m) => m.id === info.id);
             const existingParts = idx >= 0 ? cleaned[idx].rawParts : [];
             const merged = makeAgentMessage(info, existingParts);
+            if (optimistic?.content) {
+              merged.content = optimistic.content;
+            }
             if (optimistic?.attachments?.length) {
               merged.attachments = optimistic.attachments;
             }
@@ -821,7 +839,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
       try {
         useErrorBanner.getState().clearBanner();
-        set({ status: "running", error: null });
+        set({ status: "running", error: null, llmRetryState: null });
         if (!get()._subscribed) await get().subscribe();
         let sessionId = get().currentSessionId;
         if (!sessionId) {
