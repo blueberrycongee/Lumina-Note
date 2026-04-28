@@ -47,7 +47,7 @@
   - **[BLOCKED: must NOT touch existing electron entry beyond a single named import]** — if the existing electron main is structured such that adding the new IPC handler requires non-additive edits, block and ask Lead.
 
 ### C4 — Zustand store `useLicenseStore`
-- [ ] **Goal:** `src/stores/useLicenseStore.ts` with: `license: string | null`, `payload: LicensePayload | null`, `status: 'idle' | 'loading' | 'valid' | 'invalid'`, actions `setLicense(token)`, `clearLicense()`, `refreshFromKeychain()`.
+- [x] **Goal:** `src/stores/useLicenseStore.ts` with: `license: string | null`, `payload: LicensePayload | null`, `status: 'idle' | 'loading' | 'valid' | 'invalid'`, actions `setLicense(token)`, `clearLicense()`, `refreshFromKeychain()`.
 - **Acceptance:**
   - `setLicense` calls `verifyLicense` and updates `payload`/`status` accordingly.
   - Hydrates from keychain on app start (calls `refreshFromKeychain` once).
@@ -129,3 +129,4 @@
 
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
 [x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
+[x] C4 — 2026-04-28 — 3144bd5 — useLicenseStore (zustand) with mocked luminaCloud; 9 tests cover all four status transitions
