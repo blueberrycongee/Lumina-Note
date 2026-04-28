@@ -19,7 +19,7 @@
 ## P1 — Lumina Cloud client integration
 
 ### C1 — Scaffold `src/services/luminaCloud/`
-- [ ] **Goal:** Empty-but-typed module structure: `client.ts`, `types.ts`, `PUBLIC_KEY.ts`, `verify.ts`, `store.ts`, `revocations.ts`, `index.ts` (barrel).
+- [x] **Goal:** Empty-but-typed module structure: `client.ts`, `types.ts`, `PUBLIC_KEY.ts`, `verify.ts`, `store.ts`, `revocations.ts`, `index.ts` (barrel).
 - **Acceptance:**
   - `types.ts` mirrors `cloud/CONTRACT.md` §1.1 license payload + §2.4 usage response + §6 error shapes.
   - `index.ts` re-exports the public surface.
@@ -126,3 +126,5 @@
 ## Done log
 
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
+
+[x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
