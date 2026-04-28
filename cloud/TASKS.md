@@ -138,3 +138,4 @@
 [x] C3 — 2026-04-28 — d684a85 — license storage via safeStorage + Linux 0600 fallback; 3 additive lines in ipc.ts; 16 tests (11 main, 5 renderer)
 [x] C10 — 2026-04-28 — 9873ab7 — Account tab mounted in SettingsModal between Network and System; locale strings in en/zh-CN/zh-TW/ja; 7 tests pass (existing modal tests + new account-tab assertion)
 [x] C13 — 2026-04-28 — 0a47e8f — Optional: Lumina Cloud subsection added to README.en.md and README.zh-CN.md (4 lines each, brand-voice paragraph)
+[x] C11 — 2026-04-28 — 101c3a1 — Lumina Cloud row added to AISettingsModal providers Select; visibility-gated by isLuminaCloudVisible; display-only, no rehydrate / dirty-tracking changes
