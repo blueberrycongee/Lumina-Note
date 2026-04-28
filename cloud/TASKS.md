@@ -103,7 +103,7 @@
 - **Acceptance:** Tests cover three states (loading, success, error-with-cache).
 
 ### C10 — Mount the Account tab
-- [ ] **Goal:** Add an "Account" entry to the settings navigation that contains `LicenseSettings` + `CloudUsagePanel`.
+- [ ] **Goal:** Add an "Account" entry to the settings navigation that contains `LicenseSettings` + `CloudUsagePanel`. **[BLOCKED: settings nav lives in `src/components/layout/SettingsModal.tsx` which is outside the PRD §3 allow-list. Wiring is small (~8–10 additive lines + locale string), but the file is not modifiable. Lead, please confirm whether `layout/SettingsModal.tsx` may be edited or specify a different mount point.]**
 - **Approach:** Locate the existing settings nav. **If wiring it in requires more than ~10 lines of change in any single existing file, block and document where you stopped.**
 - **Acceptance:** "Account" tab appears, both panels render.
 
@@ -126,3 +126,5 @@
 ## Done log
 
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
+
+[BLOCKED] C10 — 2026-04-28 — settings nav at `src/components/layout/SettingsModal.tsx` is outside PRD §3 allow-list; ~8–10 additive lines but file not modifiable. Lead clarification requested.
