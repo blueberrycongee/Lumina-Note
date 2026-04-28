@@ -112,7 +112,7 @@
 - **When unblocked:** Add Lumina Cloud to the providers list display **only**. Do not touch the rehydrate / dirty-tracking logic that's currently being fixed.
 
 ### C12 — End-to-end test: license → chat → usage
-- [ ] **Goal:** Vitest e2e test that exercises: insert fixture license → setLicense → verify visible in provider list → mock chat round-trip → assert usage counter would update.
+- [x] **Goal:** Vitest e2e test that exercises: insert fixture license → setLicense → verify visible in provider list → mock chat round-trip → assert usage counter would update.
 - **Files:** `src/__tests__/luminaCloud.e2e.test.ts`.
 - **Acceptance:** `npm test -- src/__tests__/luminaCloud.e2e.test.ts` passes.
 
@@ -133,3 +133,4 @@
 [x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
 [x] C7 — 2026-04-28 — d879380 — Lumina Cloud provider def + isLuminaCloudVisible + fetchLuminaCloudModels; 8 tests; PRD §3 forbids models.ts edit so wiring lands in C11
 [x] C9 — 2026-04-28 — ae19918 — CloudUsagePanel with 60s polling and stale-cache-on-error; 7 tests cover loading/success/error-with-cache + cold error + cadence + cleanup
+[x] C12 — 2026-04-28 — 381004c — e2e test (license → setLicense → visible → mock chat → usage delta) + invalid-signature + lifetime-only-no-cloud_ai paths; 3 tests
