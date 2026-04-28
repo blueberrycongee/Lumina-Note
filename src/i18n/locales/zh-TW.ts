@@ -1441,7 +1441,7 @@ export default {
     copy: "複製",
     toolGroup: "工具呼叫",
     thinkingGroup: "思考過程",
-    working: "正在工作",
+    working: "正在工作中",
     errors: {
       generic: "出錯了，請重試",
       retry: "重試",

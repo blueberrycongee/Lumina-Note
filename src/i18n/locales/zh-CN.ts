@@ -1440,7 +1440,7 @@ export default {
     copy: "复制",
     toolGroup: "工具调用",
     thinkingGroup: "思考过程",
-    working: "正在工作",
+    working: "正在工作中",
     errors: {
       generic: "出错了，请重试",
       retry: "重试",

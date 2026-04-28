@@ -38,11 +38,20 @@ import {
 
 // ============ 类型定义 ============
 
+interface PartTime {
+  start: number;
+  end?: number;
+}
+
 interface ToolCallInfo {
   name: string;
   params: string;
   result?: string;
   success?: boolean;
+  // Populated only on the opencode path (state.time on ToolStateRunning /
+  // Completed / Error). Lets WorkSession show "took 0:42" on finished
+  // sessions even after remount, since the data is in rawParts.
+  time?: PartTime;
 }
 
 type AgentMessage = {
@@ -62,17 +71,18 @@ type AgentMessage = {
 interface ThinkingItem {
   content: string;
   status?: "streaming" | "done";
+  time?: PartTime;
 }
 
 type WorkItem =
-  | { type: "thinking"; content: string; status?: "streaming" | "done" }
+  | { type: "thinking"; content: string; status?: "streaming" | "done"; time?: PartTime }
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] };
 
 type TimelinePart =
   | { type: "text"; content: string }
-  | { type: "thinking"; content: string; status?: "streaming" | "done" }
+  | { type: "thinking"; content: string; status?: "streaming" | "done"; time?: PartTime }
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] }
@@ -119,14 +129,19 @@ function collapseConsecutiveThinking(parts: TimelinePart[]): TimelinePart[] {
       out.push({ type: "thinking_group", items: run });
     } else {
       for (const item of run) {
-        out.push({ type: "thinking", content: item.content, status: item.status });
+        out.push({
+          type: "thinking",
+          content: item.content,
+          status: item.status,
+          time: item.time,
+        });
       }
     }
     run = [];
   };
   for (const part of parts) {
     if (part.type === "thinking") {
-      run.push({ content: part.content, status: part.status });
+      run.push({ content: part.content, status: part.status, time: part.time });
     } else {
       flush();
       out.push(part);
@@ -185,6 +200,42 @@ function isWorkSessionInProgress(items: WorkItem[]): boolean {
       return item.tools.some((t) => t.result === undefined);
     return false;
   });
+}
+
+/**
+ * Walk every WorkItem and collect (min start, max end) across the embedded
+ * opencode timestamps. Used to render "took 0:42" durably even after the
+ * component remounts — the timestamps live in rawParts so they survive.
+ *
+ * Returns null start if no item carries time info (e.g., legacy non-opencode
+ * messages); callers fall back to step-count-only display in that case.
+ */
+function getSessionTimeRange(items: WorkItem[]): {
+  start: number | null;
+  end: number | null;
+  hasPending: boolean;
+} {
+  let start: number | null = null;
+  let end: number | null = null;
+  let hasPending = false;
+  const ingest = (time: PartTime | undefined) => {
+    if (!time) return;
+    if (start === null || time.start < start) start = time.start;
+    if (time.end !== undefined) {
+      if (end === null || time.end > end) end = time.end;
+    } else {
+      hasPending = true;
+    }
+  };
+  for (const item of items) {
+    if (item.type === "thinking") ingest(item.time);
+    else if (item.type === "thinking_group")
+      item.items.forEach((i) => ingest(i.time));
+    else if (item.type === "tool") ingest(item.tool.time);
+    else if (item.type === "tool_group")
+      item.tools.forEach((tool) => ingest(tool.time));
+  }
+  return { start, end, hasPending };
 }
 
 // ============ 解析函数 ============
@@ -576,7 +627,11 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
           .time;
         const status: "streaming" | "done" =
           time && time.end === undefined ? "streaming" : "done";
-        out.push({ type: "thinking", content: text, status });
+        const reasoningTime: PartTime | undefined =
+          time && typeof time.start === "number"
+            ? { start: time.start, end: time.end }
+            : undefined;
+        out.push({ type: "thinking", content: text, status, time: reasoningTime });
         break;
       }
       case "tool": {
@@ -588,6 +643,7 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
             output?: string;
             error?: string;
             title?: string;
+            time?: { start?: number; end?: number };
           };
         };
         const state = toolPart.state ?? {};
@@ -604,9 +660,14 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
           result = state.error ?? "";
           success = false;
         }
+        const stateTime = state.time;
+        const toolTime: PartTime | undefined =
+          stateTime && typeof stateTime.start === "number"
+            ? { start: stateTime.start, end: stateTime.end }
+            : undefined;
         out.push({
           type: "tool",
-          tool: { name, params, result, success },
+          tool: { name, params, result, success, time: toolTime },
         });
         break;
       }
@@ -929,30 +990,51 @@ const WorkSession = memo(function WorkSession({
   const [expanded, setExpanded] = useState(false);
   const stepCount = countWorkSteps(items);
   const inProgress = isWorkSessionInProgress(items);
-  const showLive = inProgress && !!isRunning && llmRequestStartTime != null;
+  const timeRange = getSessionTimeRange(items);
+
+  // For the live tick, prefer the earliest item's start (more accurate than
+  // llmRequestStartTime, which represents the whole turn) and fall back to
+  // llmRequestStartTime if no item carries timing data yet.
+  const liveStart =
+    timeRange.start ?? (llmRequestStartTime != null ? llmRequestStartTime : null);
+  const showLive = inProgress && !!isRunning && liveStart != null;
 
   const [elapsed, setElapsed] = useState(() =>
     showLive
-      ? Math.max(0, Math.floor((Date.now() - (llmRequestStartTime as number)) / 1000))
+      ? Math.max(0, Math.floor((Date.now() - (liveStart as number)) / 1000))
       : 0,
   );
   useEffect(() => {
     if (!showLive) return;
-    const start = llmRequestStartTime as number;
+    const start = liveStart as number;
     const tick = () =>
       setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [showLive, llmRequestStartTime]);
+  }, [showLive, liveStart]);
+
+  // Once the session is fully done, derive duration from item timestamps.
+  // Survives remount / scroll because the data lives in rawParts, unlike
+  // the live useState clock.
+  const finalDurationSec =
+    !inProgress && timeRange.start !== null && timeRange.end !== null
+      ? Math.max(0, Math.floor((timeRange.end - timeRange.start) / 1000))
+      : null;
 
   const stepsLabel = (t.agentMessage.steps as string).replace(
     "{count}",
     String(stepCount),
   );
-  const headerLabel = showLive
-    ? `${t.agentMessage.working} · ${formatElapsed(elapsed)}`
-    : stepsLabel;
+
+  let headerLabel: string;
+  if (showLive) {
+    headerLabel = `${t.agentMessage.working} · ${formatElapsed(elapsed)}`;
+  } else if (finalDurationSec !== null) {
+    headerLabel = `${formatElapsed(finalDurationSec)} · ${stepsLabel}`;
+  } else {
+    headerLabel = stepsLabel;
+  }
 
   return (
     <div className="text-xs text-muted-foreground">
