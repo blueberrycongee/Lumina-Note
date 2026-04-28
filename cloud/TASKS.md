@@ -117,7 +117,7 @@
 - **Acceptance:** `npm test -- src/__tests__/luminaCloud.e2e.test.ts` passes.
 
 ### C13 — README mention (subtle, not pushy)
-- [ ] **Goal:** Add a small "Optional: Lumina Cloud (paid)" subsection under the Features section in `README.en.md` and `README.zh-CN.md` only.
+- [ ] **Goal:** Add a small "Optional: Lumina Cloud (paid)" subsection under the Features section in `README.en.md` and `README.zh-CN.md` only. **[BLOCKED: `README.en.md` and `README.zh-CN.md` are outside the PRD §3 allow-list. Lead, please confirm whether marketing-style README edits are exempt from §3 (intent of "blast radius" is code-internal) or specify a different mention surface.]**
 - **Tone:** Match the existing brand voice (quiet, precise — see `PRODUCT.md` §3). One paragraph max. Link to the marketing site (placeholder URL `https://lumina-note.com` for now).
 - **Acceptance:** Diff is ≤ 15 lines per file.
 
@@ -126,3 +126,5 @@
 ## Done log
 
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
+
+[BLOCKED] C13 — 2026-04-28 — `README.en.md` / `README.zh-CN.md` outside PRD §3 allow-list. Pure-docs edit, but rule applies. Lead clarification requested.
