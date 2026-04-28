@@ -65,7 +65,13 @@ export function buildModelOptionsBlob(params: {
   // param-toggle
   switch (spec.nativeShape) {
     case 'deepseek-v4': {
-      if (thinkingMode !== 'thinking') return undefined
+      // DeepSeek V4 hybrid models (Pro / Flash) default to thinking-on at
+      // the API. Symmetrically with binary-thinking, we must actively send
+      // `disabled` to honour the user's "instant" pick — otherwise the
+      // toggle is one-way and Flash keeps reasoning despite the UI.
+      if (thinkingMode === 'instant') {
+        return { extra_body: { thinking: { type: 'disabled' } } }
+      }
       const blob: Record<string, unknown> = {
         extra_body: { thinking: { type: 'enabled' } },
       }

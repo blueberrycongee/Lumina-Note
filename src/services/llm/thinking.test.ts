@@ -138,7 +138,7 @@ describe("LLM thinking mode capability", () => {
       ]);
     });
 
-    it("emits enabled patch wrapped in extra_body on thinking, omits on instant", () => {
+    it("emits enabled on thinking and disabled on instant, both wrapped in extra_body", () => {
       // W2: DeepSeek's `thinking` field is forwarded under `extra_body`
       // per the official DeepSeek docs. `reasoning_effort` stays top-level.
       expect(
@@ -149,13 +149,16 @@ describe("LLM thinking mode capability", () => {
         })
       ).toEqual({ extra_body: { thinking: { type: "enabled" } } });
 
+      // V4 Pro / Flash default to reasoning-on at the API, so instant must
+      // actively send `disabled` — otherwise the toggle is one-way and
+      // Flash keeps emitting reasoning despite the UI selection.
       expect(
         getThinkingRequestBodyPatch({
           provider: "deepseek",
           model: "deepseek-v4-flash",
           thinkingMode: "instant",
         })
-      ).toBeUndefined();
+      ).toEqual({ extra_body: { thinking: { type: "disabled" } } });
 
       // W4: undefined mode normalizes to "thinking" (the new default),
       // so DeepSeek V4 emits the enabled blob just like an explicit

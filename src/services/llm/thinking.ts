@@ -204,7 +204,13 @@ export function getThinkingRequestBodyPatch(params: {
   // param-toggle
   switch (spec.nativeShape) {
     case "deepseek-v4": {
-      if (mode !== "thinking") return undefined;
+      // DeepSeek V4 hybrid models (Pro / Flash) default to thinking-on at
+      // the API. Symmetrically with binary-thinking, we must actively send
+      // `disabled` to honour the user's "instant" pick — otherwise the
+      // toggle is one-way and Flash keeps reasoning despite the UI.
+      if (mode === "instant") {
+        return { extra_body: { thinking: { type: "disabled" } } };
+      }
       // DeepSeek wraps the `thinking` field under `extra_body` per the
       // official OpenAI-compatible docs. `reasoning_effort` stays at the
       // top level.

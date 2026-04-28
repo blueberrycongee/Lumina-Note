@@ -111,14 +111,25 @@ describe('thinking-options (opencode bridge translator)', () => {
       ).toEqual({ extra_body: { thinking: { type: 'enabled' } } })
     })
 
-    it('returns undefined when mode is instant', () => {
+    it('emits the disabled blob when mode is instant (V4 hybrid defaults to thinking-on)', () => {
+      // DeepSeek V4 Pro / Flash both default to reasoning-on at the API,
+      // so we must actively emit `disabled` to honour the user's instant
+      // pick — symmetrical with the binary-thinking (Kimi / GLM) shape.
       expect(
         buildModelOptionsBlob({
           provider: 'deepseek',
           modelId: 'deepseek-v4-pro',
           thinkingMode: 'instant',
         }),
-      ).toBeUndefined()
+      ).toEqual({ extra_body: { thinking: { type: 'disabled' } } })
+
+      expect(
+        buildModelOptionsBlob({
+          provider: 'deepseek',
+          modelId: 'deepseek-v4-flash',
+          thinkingMode: 'instant',
+        }),
+      ).toEqual({ extra_body: { thinking: { type: 'disabled' } } })
     })
 
     it('emits the enabled blob when mode is undefined (W4 default = thinking)', () => {
