@@ -241,6 +241,37 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
     setAttachedImages(prev => prev.filter(img => img.id !== id));
   }, []);
 
+  // Listen for "attach this image to the chat" events fired from
+  // AgentMessageRenderer when the user clicks an image inside an
+  // assistant message. The chip area expands to show the new image as
+  // a small thumbnail (line 549+ below) — same UX as drag-drop /
+  // paperclip / paste, just sourced from a click on a previous image.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if (!supportsVision) return;
+      const ce = e as CustomEvent<{
+        data: string;
+        mediaType: AttachedImage["mediaType"];
+        preview: string;
+      }>;
+      if (!ce.detail?.data) return;
+      const next: AttachedImage = {
+        id: `img_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        data: ce.detail.data,
+        mediaType: ce.detail.mediaType,
+        preview: ce.detail.preview,
+      };
+      setAttachedImages((prev) =>
+        prev.some((existing) => existing.preview === next.preview)
+          ? prev
+          : [...prev, next],
+      );
+      window.requestAnimationFrame(() => textareaRef.current?.focus());
+    };
+    window.addEventListener("lumina:attach-image", handler);
+    return () => window.removeEventListener("lumina:attach-image", handler);
+  }, [supportsVision]);
+
   // 获取所有文件和文件夹
   const allFiles = React.useMemo(() => flattenFileTreeToReferences(fileTree), [fileTree]);
 

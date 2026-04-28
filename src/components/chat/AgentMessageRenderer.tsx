@@ -64,12 +64,19 @@ interface ThinkingItem {
   status?: "streaming" | "done";
 }
 
+type WorkItem =
+  | { type: "thinking"; content: string; status?: "streaming" | "done" }
+  | { type: "thinking_group"; items: ThinkingItem[] }
+  | { type: "tool"; tool: ToolCallInfo }
+  | { type: "tool_group"; tools: ToolCallInfo[] };
+
 type TimelinePart =
   | { type: "text"; content: string }
   | { type: "thinking"; content: string; status?: "streaming" | "done" }
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] }
+  | { type: "work_session"; items: WorkItem[] }
   | { type: "diff"; diff: PendingDiff };
 
 // Threshold above which a run of consecutive tool calls is folded into one
@@ -324,6 +331,76 @@ function formatMarkdownContent(content: string): string {
   }
   return output;
 }
+
+const ATTACHABLE_MIME = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+]);
+
+function inferImageMime(src: string): "image/png" | "image/jpeg" | "image/gif" | "image/webp" {
+  const lower = src.toLowerCase().split(/[?#]/)[0];
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "image/png";
+}
+
+/**
+ * Click delegation for assistant message bodies: when the user clicks an
+ * `<img class="markdown-image">` rendered inside the message, fetch the
+ * image bytes, encode as base64, and dispatch a `lumina:attach-image`
+ * event. ChatInput listens for that event and adds the image to its
+ * `attachedImages` chip row — same UX as drag-drop / paperclip / paste.
+ *
+ * Use case: the agent generated an image, you want to iterate. Click
+ * the image, type "make it darker", send. The new request carries the
+ * previous frame as a reference image.
+ */
+async function attachClickedImage(img: HTMLImageElement): Promise<void> {
+  // currentSrc reflects what the browser actually loaded (including
+  // resolved relative paths). Fall back to src for older browsers.
+  const url = img.currentSrc || img.src;
+  if (!url) return;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.warn(`[chat] failed to fetch image for attach: HTTP ${res.status}`);
+      return;
+    }
+    const blob = await res.blob();
+    const mimeFromBlob = blob.type;
+    const mediaType = ATTACHABLE_MIME.has(mimeFromBlob)
+      ? (mimeFromBlob as "image/png" | "image/jpeg" | "image/gif" | "image/webp")
+      : inferImageMime(url);
+    const dataUrl: string = await new Promise((resolveDataUrl, rejectReader) => {
+      const reader = new FileReader();
+      reader.onerror = () => rejectReader(reader.error);
+      reader.onload = () => resolveDataUrl(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+    const base64 = dataUrl.includes(",") ? dataUrl.split(",")[1] : dataUrl;
+    window.dispatchEvent(
+      new CustomEvent("lumina:attach-image", {
+        detail: { data: base64, mediaType, preview: dataUrl },
+      }),
+    );
+  } catch (err) {
+    console.warn("[chat] attachClickedImage threw:", err);
+  }
+}
+
+const handleAssistantContentClick = (
+  e: MouseEvent<HTMLDivElement>,
+): void => {
+  const target = e.target as HTMLElement | null;
+  if (!target || target.tagName !== "IMG") return;
+  if (!target.classList.contains("markdown-image")) return;
+  e.preventDefault();
+  e.stopPropagation();
+  void attachClickedImage(target as HTMLImageElement);
+};
 
 /**
  * 格式化工具参数为可读形式
@@ -1093,11 +1170,13 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                     return (
                       <div
                         key={key}
-                        className={
+                        onClick={handleAssistantContentClick}
+                        className={[
+                          "chat-attach-images",
                           isFinalText
                             ? "prose dark:prose-invert max-w-none leading-relaxed text-base font-medium"
-                            : "prose prose-sm dark:prose-invert max-w-none leading-relaxed"
-                        }
+                            : "prose prose-sm dark:prose-invert max-w-none leading-relaxed",
+                        ].join(" ")}
                         dangerouslySetInnerHTML={{
                           __html: parseMarkdown(formatMarkdownContent(part.content)),
                         }}

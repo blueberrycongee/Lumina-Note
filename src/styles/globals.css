@@ -1838,6 +1838,28 @@ mark {
   display: block;
 }
 
+/* Click-to-attach affordance for images inside an assistant chat message.
+   AgentMessageRenderer wraps each markdown text part in `.chat-attach-images`
+   and a click delegate fires `lumina:attach-image`, which ChatInput catches
+   and turns into an attached-image chip in the input row. */
+.chat-attach-images .markdown-image {
+  cursor: pointer;
+  transition:
+    transform var(--ui-motion-fast, 120ms) var(--ui-ease-out-subtle, ease-out),
+    box-shadow var(--ui-motion-fast, 120ms) var(--ui-ease-out-subtle, ease-out),
+    outline-color var(--ui-motion-fast, 120ms) var(--ui-ease-out-subtle, ease-out);
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+}
+.chat-attach-images .markdown-image:hover {
+  transform: scale(1.005);
+  outline-color: hsl(var(--primary) / 0.45);
+  box-shadow: 0 4px 16px -4px hsl(var(--primary) / 0.25);
+}
+.chat-attach-images .markdown-image:active {
+  transform: scale(0.99);
+}
+
 /* Center images */
 .prose p > img:only-child,
 .live-preview p > img:only-child {
