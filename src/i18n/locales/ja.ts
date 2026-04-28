@@ -1597,6 +1597,10 @@ export default {
   aiSettings: {
     title: "AI チャット設定",
     close: "閉じる",
+    saveButton: "保存",
+    resetButton: "リセット",
+    saved: "保存しました",
+    saveFailed: "保存に失敗しました",
     mainModel: "メインモデル",
     provider: "プロバイダー",
     apiKey: "API Key",

@@ -1566,6 +1566,10 @@ export default {
   aiSettings: {
     title: "AI 對話設定",
     close: "關閉",
+    saveButton: "儲存",
+    resetButton: "重設",
+    saved: "已儲存",
+    saveFailed: "儲存失敗",
     mainModel: "主模型 (Main Model)",
     provider: "服務商",
     apiKey: "API Key",

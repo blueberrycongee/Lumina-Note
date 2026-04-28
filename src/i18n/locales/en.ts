@@ -1603,6 +1603,10 @@ export default {
   aiSettings: {
     title: "AI Chat Settings",
     close: "Close",
+    saveButton: "Save",
+    resetButton: "Reset",
+    saved: "Saved",
+    saveFailed: "Failed to save",
     mainModel: "Main Model",
     provider: "Provider",
     apiKey: "API Key",

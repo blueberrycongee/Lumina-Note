@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { toast } from "sonner";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
+import type { AIConfig } from "@/services/ai/ai";
 import {
   PROVIDER_MODELS,
   type LLMProviderType,
@@ -110,9 +112,60 @@ function LabelRow({
 }
 
 export function AISettingsContent() {
-  const { config, setConfig } = useAIStore();
+  // Saved config = the source of truth in the store. Draft config = what's
+  // currently in the form. Edits land in the draft; the explicit Save
+  // button below the temperature slider commits the draft to the store
+  // (which then triggers the encrypt + IPC + opencode-restart pipeline).
+  const { config: savedConfig, setConfig: commitConfig } = useAIStore();
   const { autoApprove, setAutoApprove, autoCompactEnabled, setAutoCompactEnabled } = useAgentPrefs();
   const { t } = useLocaleStore();
+
+  const [draftConfig, setDraftConfig] = useState<AIConfig>(savedConfig);
+  const isDirty = useMemo(() => {
+    const keys = Object.keys(draftConfig) as (keyof AIConfig)[];
+    return keys.some((k) => draftConfig[k] !== savedConfig[k]);
+  }, [draftConfig, savedConfig]);
+  // Sync draft when the saved config changes externally (e.g. on rehydrate
+  // or after Save commits and the store re-emits). We avoid stomping on
+  // an in-flight edit by only re-syncing when nothing's dirty — the
+  // clobber would feel like the form "snapping back" mid-edit.
+  useEffect(() => {
+    if (!isDirty) setDraftConfig(savedConfig);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [savedConfig]);
+  const config = draftConfig;
+  const setConfig = useCallback((patch: Partial<AIConfig>) => {
+    setDraftConfig((prev) => ({ ...prev, ...patch }));
+  }, []);
+  const [saving, setSaving] = useState(false);
+  const handleSave = useCallback(async () => {
+    if (!isDirty) return;
+    setSaving(true);
+    try {
+      // Compute the diff so we don't re-fire side effects (encrypt, IPC,
+      // server restart) for fields that didn't change.
+      const diff: Partial<AIConfig> = {};
+      const keys = Object.keys(draftConfig) as (keyof AIConfig)[];
+      for (const k of keys) {
+        if (draftConfig[k] !== savedConfig[k]) {
+          (diff as Record<string, unknown>)[k as string] = draftConfig[k];
+        }
+      }
+      if (Object.keys(diff).length === 0) return;
+      await commitConfig(diff);
+      toast.success(t.aiSettings.saved);
+    } catch (err) {
+      toast.error(t.aiSettings.saveFailed, {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [draftConfig, savedConfig, isDirty, commitConfig, t]);
+  const handleReset = useCallback(() => {
+    setDraftConfig(savedConfig);
+  }, [savedConfig]);
+
   const errorMessages = t.aiSettings.errors as Record<string, string>;
   const providerMeta = PROVIDER_MODELS[config.provider as LLMProviderType];
   const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);
@@ -523,6 +576,41 @@ export function AISettingsContent() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Explicit save controls for the main-model fields. Drafts above
+            commit only when the user clicks Save (matches the image
+            settings pattern). Reset reverts drafts to the persisted state. */}
+        <div className="flex items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={!isDirty || saving}
+            className={[
+              "rounded-ui-md border border-border bg-background px-3 py-1.5 text-xs",
+              "text-muted-foreground transition-colors duration-fast ease-out-subtle",
+              "hover:bg-accent hover:text-foreground",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+            ].join(" ")}
+          >
+            {t.aiSettings.resetButton}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={!isDirty || saving}
+            className={[
+              "inline-flex items-center gap-1.5 rounded-ui-md border border-primary bg-primary px-3 py-1.5 text-xs",
+              "text-primary-foreground transition-colors duration-fast ease-out-subtle",
+              "hover:bg-primary/90",
+              "disabled:opacity-50 disabled:cursor-not-allowed",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+            ].join(" ")}
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : null}
+            {t.aiSettings.saveButton}
+          </button>
         </div>
       </div>
 
