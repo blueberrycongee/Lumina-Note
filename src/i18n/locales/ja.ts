@@ -1461,6 +1461,7 @@ export default {
     timeoutWarning: "LLM リクエストの応答時間が長すぎます（2分以上）",
     interruptRetry: "中断してリトライ",
     copy: "コピー",
+    toolGroup: "ツール呼び出し",
   },
 
   // 選択ツールバー

@@ -1467,6 +1467,7 @@ export default {
     timeoutWarning: "Current LLM request is taking too long (over 2 minutes)",
     interruptRetry: "Interrupt & Retry",
     copy: "Copy",
+    toolGroup: "Tool calls",
   },
 
   // Selection Toolbar

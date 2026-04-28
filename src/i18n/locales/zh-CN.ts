@@ -1436,6 +1436,7 @@ export default {
     timeoutWarning: "当前 LLM 请求响应时间过长（超过 2 分钟）",
     interruptRetry: "中断并重试",
     copy: "复制",
+    toolGroup: "工具调用",
   },
 
   // 选中工具栏

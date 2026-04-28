@@ -63,7 +63,36 @@ type TimelinePart =
   | { type: "text"; content: string }
   | { type: "thinking"; content: string; status?: "streaming" | "done" }
   | { type: "tool"; tool: ToolCallInfo }
+  | { type: "tool_group"; tools: ToolCallInfo[] }
   | { type: "diff"; diff: PendingDiff };
+
+// Threshold above which a run of consecutive tool calls is folded into one
+// outer ToolGroupCollapsible. Two tools in a row aren't worth the extra layer.
+const TOOL_GROUP_THRESHOLD = 3;
+
+function collapseConsecutiveTools(parts: TimelinePart[]): TimelinePart[] {
+  const out: TimelinePart[] = [];
+  let run: ToolCallInfo[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    if (run.length >= TOOL_GROUP_THRESHOLD) {
+      out.push({ type: "tool_group", tools: run });
+    } else {
+      for (const tool of run) out.push({ type: "tool", tool });
+    }
+    run = [];
+  };
+  for (const part of parts) {
+    if (part.type === "tool") {
+      run.push(part.tool);
+    } else {
+      flush();
+      out.push(part);
+    }
+  }
+  flush();
+  return out;
+}
 
 // ============ 解析函数 ============
 
@@ -586,6 +615,72 @@ const ToolCallCollapsible = memo(function ToolCallCollapsible({ tool, t }: { too
   );
 });
 
+/**
+ * 连续工具调用的外层折叠
+ */
+const ToolGroupCollapsible = memo(function ToolGroupCollapsible({
+  tools,
+  t,
+}: {
+  tools: ToolCallInfo[];
+  t: any;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const allDone = tools.every((tool) => tool.result !== undefined);
+  const anyFailed = tools.some(
+    (tool) => tool.result !== undefined && tool.success === false,
+  );
+  const tally = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tool of tools) {
+      map.set(tool.name, (map.get(tool.name) ?? 0) + 1);
+    }
+    return Array.from(map.entries())
+      .map(([name, count]) => (count > 1 ? `${name} ×${count}` : name))
+      .join(", ");
+  }, [tools]);
+
+  return (
+    <div className="text-xs text-muted-foreground">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
+      >
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <Wrench size={12} />
+        <span className="font-medium">{t.agentMessage.toolGroup}</span>
+        {!allDone ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : anyFailed ? (
+          <X size={12} className="text-destructive" />
+        ) : (
+          <Check size={12} className="text-success" />
+        )}
+        <span className="truncate flex-1">
+          · {tools.length} ({tally})
+        </span>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-5 py-1 space-y-1 border-l border-border ml-1.5">
+              {tools.map((tool, i) => (
+                <ToolCallCollapsible key={i} tool={tool} t={t} />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+});
+
 // ============ 主组件 ============
 
 interface AgentMessageRendererProps {
@@ -766,8 +861,12 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       // 使用用户消息索引作为稳定且唯一的 key
       const roundKey = `round-${userIdx}`;
 
+      // 折叠连续的工具调用 (≥3 才合并，pendingDiff 已经插入完毕，
+      // 它会自然地把前后的 tool run 切开，所以不会被吞进同一组)
+      const collapsedParts = collapseConsecutiveTools(parts);
+
       // 判断是否有 AI 回复内容
-      const hasAIContent = parts.length > 0;
+      const hasAIContent = collapsedParts.length > 0;
 
       result.push({
         userIdx,
@@ -775,7 +874,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         userAttachments: normalizedUserMessage.attachments,
         userImages,
         diagramPaths: getDiagramAttachmentFilePaths(normalizedUserMessage.attachments),
-        parts,
+        parts: collapsedParts,
         roundKey,
         hasAIContent,
       });
@@ -835,6 +934,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                   }
                   if (part.type === "tool") {
                     return <ToolCallCollapsible key={key} tool={part.tool} t={t} />;
+                  }
+                  if (part.type === "tool_group") {
+                    return <ToolGroupCollapsible key={key} tools={part.tools} t={t} />;
                   }
                   if (part.type === "diff") {
                     return (

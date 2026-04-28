@@ -1437,6 +1437,7 @@ export default {
     timeoutWarning: "目前 LLM 請求響應時間過長（超過 2 分鐘）",
     interruptRetry: "中斷並重試",
     copy: "複製",
+    toolGroup: "工具呼叫",
   },
 
   // 選中工具列
