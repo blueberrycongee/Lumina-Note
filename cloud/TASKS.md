@@ -54,7 +54,7 @@
   - Tests cover all four `status` transitions.
 
 ### C5 — Lumina Cloud HTTP client
-- [ ] **Goal:** `client.ts` exports a typed client for `CONTRACT.md` §2.1, §2.2 (chat — see C7), §2.3, §2.4, §2.5.
+- [x] **Goal:** `client.ts` exports a typed client for `CONTRACT.md` §2.1, §2.2 (chat — see C7), §2.3, §2.4, §2.5.
 - **Acceptance:**
   - `verifyLicenseOnline(license)` → `§2.1` shape.
   - `getModels(license)` → `§2.3` shape.
@@ -130,3 +130,4 @@
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
 [x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
 [x] C4 — 2026-04-28 — 3144bd5 — useLicenseStore (zustand) with mocked luminaCloud; 9 tests cover all four status transitions
+[x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
