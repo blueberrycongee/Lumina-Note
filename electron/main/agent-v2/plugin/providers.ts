@@ -48,7 +48,8 @@ const SEEDREAM_SIZE_MAP: Record<NonNullable<ImageGenRequest['aspectRatio']>, str
   '9:16': '1152x2048',
 }
 
-const IMAGE_FETCH_RETRY_DELAYS_MS = [500, 1500]
+const IMAGE_FETCH_RETRY_DELAYS_MS = [750, 2000]
+const AMBIGUOUS_NETWORK_FAILURE_MS = 30_000
 
 export class ImageProviderHttpError extends Error {
   constructor(
@@ -61,15 +62,39 @@ export class ImageProviderHttpError extends Error {
   }
 }
 
+export class ImageProviderNetworkError extends Error {
+  readonly rootCause?: unknown
+
+  constructor(
+    readonly providerLabel: string,
+    readonly retryable: boolean,
+    readonly elapsedMs: number,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message)
+    this.name = 'ImageProviderNetworkError'
+    this.rootCause = options?.cause
+  }
+}
+
 export async function fetchImageProvider(
   url: string | URL,
   init: RequestInit = {},
-  options: { retryDelaysMs?: number[] } = {},
+  options: {
+    retryDelaysMs?: number[]
+    providerLabel?: string
+    ambiguousNetworkFailureMs?: number
+  } = {},
 ): Promise<Response> {
   const retryDelays = options.retryDelaysMs ?? IMAGE_FETCH_RETRY_DELAYS_MS
+  const providerLabel = options.providerLabel ?? 'Image provider'
+  const ambiguousNetworkFailureMs =
+    options.ambiguousNetworkFailureMs ?? AMBIGUOUS_NETWORK_FAILURE_MS
   let lastError: unknown
 
   for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+    const attemptStartedAt = Date.now()
     try {
       const res = await fetch(url, init)
       if (!isRetryableImageResponseStatus(res.status) || attempt === retryDelays.length) {
@@ -77,8 +102,10 @@ export async function fetchImageProvider(
       }
       await res.body?.cancel().catch(() => undefined)
     } catch (err) {
-      if (isAbortError(err) || !isRetryableFetchError(err) || attempt === retryDelays.length) {
-        throw err
+      const elapsedMs = Date.now() - attemptStartedAt
+      const retryable = isRetryableFetchError(err) && elapsedMs < ambiguousNetworkFailureMs
+      if (isAbortError(err) || !retryable || attempt === retryDelays.length) {
+        throw toImageProviderNetworkError(providerLabel, err, elapsedMs, retryable)
       }
       lastError = err
     }
@@ -86,7 +113,7 @@ export async function fetchImageProvider(
     await waitForRetry(retryDelays[attempt], init.signal)
   }
 
-  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+  throw toImageProviderNetworkError(providerLabel, lastError, 0, false)
 }
 
 export function isRetryableImageResponseStatus(status: number): boolean {
@@ -102,6 +129,42 @@ function isAbortError(err: unknown): boolean {
   return (
     err instanceof Error &&
     (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
+  )
+}
+
+function toImageProviderNetworkError(
+  providerLabel: string,
+  err: unknown,
+  elapsedMs: number,
+  retryable: boolean,
+): ImageProviderNetworkError {
+  if (err instanceof ImageProviderNetworkError) return err
+  const rawMessage = err instanceof Error ? err.message : String(err)
+  const cause = err instanceof Error ? (err as { cause?: unknown }).cause : undefined
+  const causeMessage =
+    cause && typeof cause === 'object' && 'message' in cause
+      ? String((cause as { message?: unknown }).message)
+      : ''
+  const detail = [rawMessage, causeMessage].filter(Boolean).join(': ')
+  const lower = detail.toLowerCase()
+  const closedByPeer =
+    lower.includes('other side closed') ||
+    lower.includes('socket hang up') ||
+    lower.includes('connection closed') ||
+    lower.includes('connection terminated')
+  const elapsed =
+    elapsedMs > 0 ? ` after ${Math.round(elapsedMs / 1000)}s` : ''
+  const retryNote = retryable
+    ? 'Lumina will retry this transient network failure.'
+    : closedByPeer
+      ? 'The provider or proxy closed a long-running image request before it completed. Lumina did not blindly retry this ambiguous failure to avoid duplicate image charges. Try the official provider endpoint or a proxy with a longer request timeout, then retry.'
+      : 'Lumina could not complete the image provider request.'
+  return new ImageProviderNetworkError(
+    providerLabel,
+    retryable,
+    elapsedMs,
+    `${providerLabel} image request failed${elapsed}: ${detail || 'network error'}. ${retryNote}`,
+    { cause: err },
   )
 }
 
@@ -196,6 +259,8 @@ async function generateOpenAI(input: {
         size,
       }),
       signal,
+    }, {
+      providerLabel: 'OpenAI',
     })
     return parseOpenAIResponse(res, modelId, 'OpenAI')
   }
@@ -216,6 +281,8 @@ async function generateOpenAI(input: {
     headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
     signal,
+  }, {
+    providerLabel: 'OpenAI',
   })
   return parseOpenAIResponse(res, modelId, 'OpenAI')
 }
@@ -240,7 +307,9 @@ async function parseOpenAIResponse(
     if (item.b64_json) {
       images.push(Buffer.from(item.b64_json, 'base64'))
     } else if (item.url) {
-      const r = await fetchImageProvider(item.url)
+      const r = await fetchImageProvider(item.url, {}, {
+        providerLabel: 'Generated image download',
+      })
       if (!r.ok) {
         const text = await r.text().catch(() => '')
         throw new ImageProviderHttpError('Generated image download', r.status, text)
@@ -289,6 +358,8 @@ async function generateGoogle(input: {
       },
     }),
     signal,
+  }, {
+    providerLabel: 'Gemini',
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -356,6 +427,8 @@ async function generateByteDance(input: {
     },
     body: JSON.stringify(body),
     signal,
+  }, {
+    providerLabel: 'ByteDance',
   })
   return parseOpenAIResponse(res, modelId, 'ByteDance') // Ark reuses the OpenAI shape
 }

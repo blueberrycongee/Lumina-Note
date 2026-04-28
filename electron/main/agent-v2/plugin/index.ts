@@ -51,7 +51,8 @@ Reference images:
 
 Errors:
 - "no API key" → tell the user which provider needs configuring (AI Settings → Image Models).
-- "no vault open" → ask the user to open a vault first.`
+- "no vault open" → ask the user to open a vault first.
+- Network/proxy failures are classified and retried by Lumina where safe. If generate_image returns a network/proxy timeout or connection-closed error, explain it once and do not call generate_image again unless the user explicitly asks to retry.`
 
 const pluginFn: Plugin = async () => {
   return {
