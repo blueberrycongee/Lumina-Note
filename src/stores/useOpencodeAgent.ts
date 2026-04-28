@@ -757,7 +757,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // middleware spins up a different Instance — `sessions.get(id)`
         // hits a not-found path silently and the SSE stream goes dead.
         // Tie both calls to the same directory.
-        const query = directory ? { directory } : undefined;
+        const query = directory ? { directory: encodeURI(directory) } : undefined;
         const res = await client.session.create({ query, throwOnError: true });
         const data = res.data as { id?: string } | undefined;
         const id = data?.id ?? null;
@@ -922,7 +922,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
               path: { id: sessionId! },
               body: body as never,
               query: ctx?.workspace_path
-                ? { directory: ctx.workspace_path }
+                ? { directory: encodeURI(ctx.workspace_path) }
                 : undefined,
               throwOnError: true,
             }),
