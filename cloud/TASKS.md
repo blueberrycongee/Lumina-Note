@@ -94,7 +94,7 @@
 - **Acceptance:** Tests cover the three status states. Component renders without throwing in jsdom.
 
 ### C9 — `CloudUsagePanel.tsx`
-- [ ] **Goal:** Show "X / Y tokens used this month, resets on …".
+- [x] **Goal:** Show "X / Y tokens used this month, resets on …".
 - **Files:** `src/components/settings/CloudUsagePanel.tsx` + test.
 - **Behavior:**
   - When license valid: fetch `client.getUsage()` on mount + every 60s while open.
@@ -134,3 +134,4 @@
 [x] C6 — 2026-04-28 — f015911 — createRevocationCache + in-memory default (pending C3 IPC for disk persistence); 7 tests cover cold/warm/expired/network-fail/coalesce
 [x] C7 — 2026-04-28 — d879380 — Lumina Cloud provider def + isLuminaCloudVisible + fetchLuminaCloudModels; 8 tests; PRD §3 forbids models.ts edit so wiring lands in C11
 [x] C8 — 2026-04-28 — 6fc20d1 — LicenseSettings panel (Tailwind, standalone, no AISettingsModal dep); 7 tests cover idle/loading/invalid/valid + remove confirmation
+[x] C9 — 2026-04-28 — ae19918 — CloudUsagePanel with 60s polling and stale-cache-on-error; 7 tests cover loading/success/error-with-cache + cold error + cadence + cleanup
