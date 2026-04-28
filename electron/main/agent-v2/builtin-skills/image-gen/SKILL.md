@@ -30,15 +30,22 @@ Trigger on intent, not specific words. Plausible signals:
 
 ## Provider routing
 
-Pick the `provider` parameter based on what the request is *for*:
+Pick the `provider` parameter based on what the request is *for* and what is configured. When Lumina tells you a configured provider in the user message wrapper, use only that provider unless Lumina explicitly lists another configured provider. Never switch to an unconfigured provider.
 
 | Use this provider | When the request is… |
 |---|---|
-| `google-image` (Nano Banana — default) | General-purpose, iterating with reference images, anything where consistency across multiple frames matters. **Use this unless one of the rows below applies.** |
-| `bytedance-image` (Seedream 4.5) | The image needs to render Chinese text, dense typography, or poster-style layouts. Seedream's text rendering is the strongest of the three. |
-| `openai-image` (gpt-image-2) | Photorealism is essential, OR the user is composing 4+ reference images into one scene (Nano Banana caps at 3), OR the user explicitly asks for "OpenAI / DALL-E / GPT". |
+| `openai-image` (gpt-image-2) | Photorealism is essential, the user explicitly asks for OpenAI / DALL-E / GPT, or Lumina says OpenAI is the configured image provider. |
+| `google-image` (Nano Banana) | General-purpose, iterating with reference images, anything where consistency across multiple frames matters, when Google image generation is configured. |
+| `bytedance-image` (Seedream 4.5) | The image needs to render readable text, dense typography, or poster-style layouts, and Seedream is configured. The language the user typed in is not by itself a visible-text requirement. |
 
-When the user doesn't specify, **don't pick eagerly** — Nano Banana is fine for almost everything. Switch only when the request hits one of the specific rows above.
+When the user doesn't specify, **don't invent a different provider**. Use the provider Lumina identified as configured in the wrapped prompt; otherwise omit `provider` and let Lumina route to the first configured image provider.
+
+Preserve the user's explicit visual constraints. Medium, region, era,
+genre, culture, composition, subject, mood, palette, and style descriptors are
+part of the image request — do not replace them with a nearby default style
+unless the user asked for that. Treat readable text separately: if the user
+asks for visible text, preserve the requested text and language; otherwise
+avoid readable text, letters, captions, labels, and speech bubbles.
 
 ---
 

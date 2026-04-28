@@ -252,7 +252,14 @@ export async function dispatchAgentCommand(
       if (!provider_id || !isImageProviderId(provider_id)) {
         return { success: false, error: `Unknown image provider: ${provider_id}` }
       }
-      const apiKey = settings?.apiKey ?? ''
+      const draftApiKey = settings?.apiKey?.trim() ?? ''
+      const storedApiKey =
+        !draftApiKey && imageProviderSettings
+          ? ((await imageProviderSettings.getProviderApiKey(
+              provider_id as ImageProviderId,
+            )) ?? '')
+          : ''
+      const apiKey = draftApiKey || storedApiKey
       return testImageProviderConnection({
         providerId: provider_id as ImageProviderId,
         apiKey,

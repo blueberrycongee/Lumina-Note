@@ -1,11 +1,11 @@
 /**
  * Direct image-generation path — bypasses the chat agent entirely.
  *
- * Called by MainAIChatShell when the user is in image-mode AND the chat
- * agent isn't usable (no API key, no opencode session, etc.). The result
- * is the same as going through the generate_image opencode tool: a PNG
- * saved under <vault>/assets/generated/<YYYY-MM>/<id>.png plus a sidecar
- * JSON. Just no LLM in between.
+ * Called by MainAIChatShell when image-mode should bypass the chat agent
+ * (for example, no usable main-model key). The result is the same as going
+ * through the generate_image opencode tool: a PNG saved under
+ * <vault>/assets/generated/<YYYY-MM>/<id>.png plus a sidecar JSON. Just no
+ * LLM in between.
  */
 
 import { invoke } from "@/lib/host";
@@ -53,14 +53,13 @@ export async function generateImageDirect(
 }
 
 /**
- * Pick a configured image provider in priority order. Nano Banana first
- * (default for the image-gen skill), then OpenAI's gpt-image-2, then
- * Seedream. Returns null if nothing is configured — caller should toast
+ * Pick a configured image provider in the same editorial order as the
+ * registry. Returns null if nothing is configured — caller should toast
  * "go open AI Settings".
  */
 const PROVIDER_PRIORITY: ImageProviderId[] = [
-  "google-image",
   "openai-image",
+  "google-image",
   "bytedance-image",
 ];
 

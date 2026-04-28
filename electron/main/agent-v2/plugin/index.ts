@@ -16,7 +16,11 @@
 
 import fs from 'node:fs/promises'
 
-import { getLuminaPluginContext, type PluginImageProviderId } from './context.js'
+import {
+  getLuminaPluginContext,
+  type PluginImageProviderId,
+  type ResolvedImageSettings,
+} from './context.js'
 import { dispatchImageGeneration } from './providers.js'
 import { writeImageToVault } from './output.js'
 import { tool, type Plugin, type PluginModule, type ToolContext } from './types.js'
@@ -33,9 +37,9 @@ const GENERATE_IMAGE_DESCRIPTION = `Generate a new image and save it to the vaul
 
 Use this tool when the user wants new visual content — note illustrations, design exploration, mood images, posters, anything pictorial. The image is saved to assets/generated/ inside the vault and returned as a vault-relative path the user (or you, in a follow-up edit) can reference via standard markdown image syntax: ![](assets/generated/...)
 
-Provider routing (pick the best for the request):
-- google-image (Nano Banana, Gemini 2.5 Flash Image) — DEFAULT for most requests. Fast, strong multi-image consistency, best for iterative edits with reference images. Max 3 reference images.
+Provider routing (pick the best configured provider for the request):
 - openai-image (gpt-image-2) — best for precise photorealistic outputs and when you need many reference images stitched together. Supports flexible sizes.
+- google-image (Nano Banana, Gemini 2.5 Flash Image) — fast, strong multi-image consistency, best for iterative edits with reference images. Max 3 reference images.
 - bytedance-image (Seedream 4.5) — best for Chinese text rendering, posters, and dense typography. Up to 2048².
 
 Reference images:
@@ -63,7 +67,7 @@ const pluginFn: Plugin = async () => {
             .enum(VALID_PROVIDERS)
             .optional()
             .describe(
-              'Which image-generation provider to use. Defaults to google-image. See description for routing guidance.',
+              'Which image-generation provider to use. If omitted or unconfigured, Lumina uses the first configured provider.',
             ),
           aspect_ratio: tool.schema
             .enum(ASPECT_RATIOS)
@@ -81,7 +85,7 @@ const pluginFn: Plugin = async () => {
             .string()
             .optional()
             .describe(
-              'Optional override for the provider-specific model id. Leave empty to use the registry default.',
+              'Optional provider-specific model id override. Only honored when the requested provider is configured; otherwise Lumina uses the configured provider model.',
             ),
         },
         async execute(args, ctx: ToolContext) {
@@ -93,9 +97,13 @@ const pluginFn: Plugin = async () => {
             )
           }
 
-          const providerId: PluginImageProviderId = args.provider ?? 'google-image'
+          const providerChoice = await resolveProviderForRequest(
+            lumina,
+            args.provider,
+          )
+          const providerId = providerChoice.providerId
           const defaults = lumina.getImageProviderDefaults(providerId)
-          const settings = await lumina.resolveImageSettings(providerId)
+          const settings = providerChoice.settings
 
           const referencePaths = args.reference_images ?? []
           // Cap to 3 references for Nano Banana / generally-useful working set.
@@ -115,16 +123,24 @@ const pluginFn: Plugin = async () => {
             }
           }
 
-          // Model id precedence: per-call agent arg > user-persisted
-          // override > registry default. Persisted lets users adopt a new
-          // model variant (e.g. gpt-image-3) without us shipping a release.
-          const effectiveModelId =
-            args.model_id ?? settings.modelId ?? defaults.defaultModelId
+          // Model id is provider-specific. If the agent requested an
+          // unconfigured provider, ignore its model_id while falling back so
+          // we don't call the configured endpoint with a stale foreign model.
+          const effectiveModelId = resolveEffectiveModelId({
+            requestedProvider: args.provider,
+            requestedModelId: args.model_id,
+            providerId,
+            fellBack: providerChoice.fellBack,
+            settings,
+            defaults,
+          })
 
           ctx.metadata({
             title: `Generating with ${defaults.marketingName}…`,
             metadata: {
               provider: providerId,
+              requestedProvider: args.provider,
+              providerFallback: providerChoice.fellBack,
               model: effectiveModelId,
               referenceCount: referenceImages.length,
             },
@@ -179,6 +195,69 @@ const pluginFn: Plugin = async () => {
       }),
     },
   }
+}
+
+export async function pickDefaultProvider(
+  lumina: ReturnType<typeof getLuminaPluginContext>,
+): Promise<PluginImageProviderId> {
+  for (const id of VALID_PROVIDERS) {
+    const settings = await lumina.resolveImageSettings(id)
+    if (settings.apiKey?.trim()) return id
+  }
+  return 'openai-image'
+}
+
+export async function resolveProviderForRequest(
+  lumina: ReturnType<typeof getLuminaPluginContext>,
+  requested?: PluginImageProviderId,
+): Promise<{
+  providerId: PluginImageProviderId
+  settings: ResolvedImageSettings
+  fellBack: boolean
+}> {
+  if (requested) {
+    const requestedSettings = await lumina.resolveImageSettings(requested)
+    if (requestedSettings.apiKey?.trim()) {
+      return {
+        providerId: requested,
+        settings: requestedSettings,
+        fellBack: false,
+      }
+    }
+
+    const fallbackProvider = await pickDefaultProvider(lumina)
+    const fallbackSettings =
+      fallbackProvider === requested
+        ? requestedSettings
+        : await lumina.resolveImageSettings(fallbackProvider)
+    return {
+      providerId: fallbackProvider,
+      settings: fallbackSettings,
+      fellBack: fallbackProvider !== requested,
+    }
+  }
+
+  const providerId = await pickDefaultProvider(lumina)
+  return {
+    providerId,
+    settings: await lumina.resolveImageSettings(providerId),
+    fellBack: false,
+  }
+}
+
+export function resolveEffectiveModelId(input: {
+  requestedProvider?: PluginImageProviderId
+  requestedModelId?: string
+  providerId: PluginImageProviderId
+  fellBack: boolean
+  settings: ResolvedImageSettings
+  defaults: { defaultModelId: string }
+}): string {
+  const configuredModelId = input.settings.modelId ?? input.defaults.defaultModelId
+  if (input.fellBack || input.requestedProvider !== input.providerId) {
+    return configuredModelId
+  }
+  return input.requestedModelId ?? configuredModelId
 }
 
 function detectMimeType(filePath: string): string {

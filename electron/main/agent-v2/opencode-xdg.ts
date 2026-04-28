@@ -49,6 +49,8 @@ process.env.XDG_CONFIG_HOME = path.join(base, "config");
 process.env.XDG_DATA_HOME = path.join(base, "data");
 process.env.XDG_CACHE_HOME = path.join(base, "cache");
 process.env.XDG_STATE_HOME = path.join(base, "state");
+process.env.OPENCODE_DISABLE_EXTERNAL_SKILLS = "1";
+process.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS = "1";
 
 // Opencode's global/index.ts does `fs.mkdir(..., {recursive: true})` on
 // all four roots at module load, so we don't pre-create them here.

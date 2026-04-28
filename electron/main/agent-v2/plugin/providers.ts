@@ -48,6 +48,94 @@ const SEEDREAM_SIZE_MAP: Record<NonNullable<ImageGenRequest['aspectRatio']>, str
   '9:16': '1152x2048',
 }
 
+const IMAGE_FETCH_RETRY_DELAYS_MS = [500, 1500]
+
+export class ImageProviderHttpError extends Error {
+  constructor(
+    readonly providerLabel: string,
+    readonly status: number,
+    readonly body: string,
+  ) {
+    super(`${providerLabel} image API ${status}: ${body.slice(0, 300)}`)
+    this.name = 'ImageProviderHttpError'
+  }
+}
+
+export async function fetchImageProvider(
+  url: string | URL,
+  init: RequestInit = {},
+  options: { retryDelaysMs?: number[] } = {},
+): Promise<Response> {
+  const retryDelays = options.retryDelaysMs ?? IMAGE_FETCH_RETRY_DELAYS_MS
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
+    try {
+      const res = await fetch(url, init)
+      if (!isRetryableImageResponseStatus(res.status) || attempt === retryDelays.length) {
+        return res
+      }
+      await res.body?.cancel().catch(() => undefined)
+    } catch (err) {
+      if (isAbortError(err) || !isRetryableFetchError(err) || attempt === retryDelays.length) {
+        throw err
+      }
+      lastError = err
+    }
+
+    await waitForRetry(retryDelays[attempt], init.signal)
+  }
+
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
+}
+
+export function isRetryableImageResponseStatus(status: number): boolean {
+  return status === 408 || status === 425 || status === 429 || status >= 500
+}
+
+function isRetryableFetchError(err: unknown): boolean {
+  if (isAbortError(err)) return false
+  return err instanceof TypeError || err instanceof Error
+}
+
+function isAbortError(err: unknown): boolean {
+  return (
+    err instanceof Error &&
+    (err.name === 'AbortError' || err.message.toLowerCase().includes('aborted'))
+  )
+}
+
+function waitForRetry(ms: number, signal?: AbortSignal | null): Promise<void> {
+  if (!ms) return Promise.resolve()
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error
+      ? signal.reason
+      : new Error('The operation was aborted')
+  }
+  return new Promise((resolve, reject) => {
+    let timer: ReturnType<typeof setTimeout>
+    let cleanup = () => {}
+    const onAbort = () => {
+      clearTimeout(timer)
+      cleanup()
+      reject(
+        signal?.reason instanceof Error
+          ? signal.reason
+          : new Error('The operation was aborted'),
+      )
+    }
+    cleanup = () => {
+      signal?.removeEventListener('abort', onAbort)
+    }
+    timer = setTimeout(() => {
+      cleanup()
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+    if (signal?.aborted) onAbort()
+  })
+}
+
 export async function dispatchImageGeneration(input: {
   providerId: PluginImageProviderId
   defaults: { defaultModelId: string; defaultBaseUrl: string }
@@ -95,7 +183,7 @@ async function generateOpenAI(input: {
 
   if (request.referenceImages.length === 0) {
     // Pure text-to-image: JSON body to /images/generations.
-    const res = await fetch(`${baseUrl}/images/generations`, {
+    const res = await fetchImageProvider(`${baseUrl}/images/generations`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -109,7 +197,7 @@ async function generateOpenAI(input: {
       }),
       signal,
     })
-    return parseOpenAIResponse(res, modelId)
+    return parseOpenAIResponse(res, modelId, 'OpenAI')
   }
 
   // With reference images: multipart/form-data to /images/edits.
@@ -123,19 +211,23 @@ async function generateOpenAI(input: {
     form.append('image[]', blob, `reference-${idx}.png`)
   })
 
-  const res = await fetch(`${baseUrl}/images/edits`, {
+  const res = await fetchImageProvider(`${baseUrl}/images/edits`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
     signal,
   })
-  return parseOpenAIResponse(res, modelId)
+  return parseOpenAIResponse(res, modelId, 'OpenAI')
 }
 
-async function parseOpenAIResponse(res: Response, modelId: string): Promise<ImageGenResult> {
+async function parseOpenAIResponse(
+  res: Response,
+  modelId: string,
+  providerLabel: string,
+): Promise<ImageGenResult> {
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`OpenAI image API ${res.status}: ${text.slice(0, 300)}`)
+    throw new ImageProviderHttpError(providerLabel, res.status, text)
   }
   const json = (await res.json()) as {
     data?: Array<{ b64_json?: string; url?: string }>
@@ -148,8 +240,11 @@ async function parseOpenAIResponse(res: Response, modelId: string): Promise<Imag
     if (item.b64_json) {
       images.push(Buffer.from(item.b64_json, 'base64'))
     } else if (item.url) {
-      const r = await fetch(item.url)
-      if (!r.ok) throw new Error(`Failed to download generated image: ${r.status}`)
+      const r = await fetchImageProvider(item.url)
+      if (!r.ok) {
+        const text = await r.text().catch(() => '')
+        throw new ImageProviderHttpError('Generated image download', r.status, text)
+      }
       images.push(Buffer.from(await r.arrayBuffer()))
     }
   }
@@ -184,7 +279,7 @@ async function generateGoogle(input: {
   }
 
   const url = `${baseUrl}/models/${encodeURIComponent(modelId)}:generateContent?key=${encodeURIComponent(apiKey)}`
-  const res = await fetch(url, {
+  const res = await fetchImageProvider(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -197,7 +292,7 @@ async function generateGoogle(input: {
   })
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`Gemini image API ${res.status}: ${text.slice(0, 300)}`)
+    throw new ImageProviderHttpError('Gemini', res.status, text)
   }
   const json = (await res.json()) as {
     candidates?: Array<{
@@ -253,7 +348,7 @@ async function generateByteDance(input: {
     )
   }
 
-  const res = await fetch(`${baseUrl}/images/generations`, {
+  const res = await fetchImageProvider(`${baseUrl}/images/generations`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -262,5 +357,5 @@ async function generateByteDance(input: {
     body: JSON.stringify(body),
     signal,
   })
-  return parseOpenAIResponse(res, modelId) // Ark reuses the OpenAI shape
+  return parseOpenAIResponse(res, modelId, 'ByteDance') // Ark reuses the OpenAI shape
 }

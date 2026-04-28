@@ -268,19 +268,22 @@ export async function buildOpencodeBridge(
     // plugin entry — keeping us aligned with opencode's plugin model
     // instead of inventing a parallel framework.
     plugin: [resolveLuminaPluginPath()],
-    // Skills opencode will auto-discover at session start.
+    // Skills opencode will load at session start.
     //  - Absolute: bundled built-ins (image-gen, etc.) shipped with the app.
-    //  - Relative `.skills`: vault-local skills written by the user.
+    //  - Relative paths: vault-local skills written by the user.
     //    opencode resolves relative paths against the session's directory
     //    (which Lumina sets to the vault root in useOpencodeAgent), so
-    //    `.skills` becomes `<vault>/.skills/**/SKILL.md`.
-    //
-    // Vault skills under `.claude/skills/` and `.agents/skills/` are also
-    // auto-discovered by opencode without needing a path entry — see
-    // skill/index.ts:EXTERNAL_DIRS — so users who follow the Claude Code
-    // convention need zero config.
+    //    `.claude/skills` becomes `<vault>/.claude/skills/**/SKILL.md`.
+    // Global ~/.claude and ~/.agents skills are disabled in opencode-xdg.ts;
+    // Lumina should not let a broken external skill crash an in-app session.
     skills: {
-      paths: [resolveBuiltinSkillsPath(), ".skills"],
+      paths: [
+        resolveBuiltinSkillsPath(),
+        ".claude/skills",
+        ".agents/skills",
+        ".skills",
+        ".lumina/skills",
+      ],
     },
   };
 
