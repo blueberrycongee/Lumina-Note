@@ -1,317 +1,27 @@
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles,
-  FileText,
-  Zap,
-  Bot,
-  Lightbulb,
-  MessageSquare,
-  PenLine,
-  BookOpen,
-  Network,
-  Command,
-  Search,
   ArrowUpRight,
+  ChevronRight,
+  Image as ImageIcon,
+  Network,
+  PenLine,
+  Search,
+  Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import type { FileEntry } from "@/lib/host";
 
-// Emoji array removed — the welcome screen now uses a clean text-only
-// greeting without the random emoji avatar disc.
-
-// ── Types ──
-
-interface QuickAction {
-  icon: React.ElementType;
-  label: string;
-  desc: string;
-  prompt: string;
-}
-
-type ActionType = "polish" | "summarize" | "write" | "study";
-
-interface ScoredFile {
-  path: string;
-  name: string;
-  recencyScore: number;
-  freshnessScore: number;
-}
-
-// ── Recommendation Engine ──
+// ── Helpers ──
 
 function extractName(filePath: string): string {
   const name = filePath.split(/[/\\]/).pop() ?? "";
   return name.replace(/\.md$/, "") || name;
 }
 
-function collectFiles(
-  fileTree: FileEntry[],
-): { path: string; modified_at?: number | null }[] {
-  const result: { path: string; modified_at?: number | null }[] = [];
-  const walk = (entries: FileEntry[]) => {
-    for (const entry of entries) {
-      if (!entry.is_dir && entry.name.endsWith(".md")) {
-        result.push({ path: entry.path, modified_at: entry.modified_at });
-      }
-      if (entry.children) walk(entry.children);
-    }
-  };
-  walk(fileTree);
-  return result;
-}
-
-function scoreFiles(
-  fileTree: FileEntry[],
-  recentFiles: string[],
-  currentFile: string | null,
-): ScoredFile[] {
-  const treeFiles = collectFiles(fileTree);
-  const recentSet = new Map(recentFiles.map((path, i) => [path, i]));
-  const now = Date.now();
-
-  const scored: ScoredFile[] = treeFiles.map((f) => {
-    const recentIdx = recentSet.get(f.path);
-    // Recency: higher score for more recently accessed files (0-1)
-    const recencyScore =
-      recentIdx !== undefined
-        ? 1 - recentIdx / Math.max(recentFiles.length, 1)
-        : 0;
-    // Freshness: higher score for recently modified files (exponential decay over 7 days)
-    const age = f.modified_at ? now - f.modified_at : Infinity;
-    const freshnessScore =
-      age === Infinity ? 0 : Math.exp(-age / (7 * 24 * 60 * 60 * 1000));
-
-    return {
-      path: f.path,
-      name: extractName(f.path),
-      recencyScore,
-      freshnessScore,
-    };
-  });
-
-  // Exclude current file (user already sees it), sort by combined score
-  return scored
-    .filter((f) => f.path !== currentFile)
-    .sort((a, b) => {
-      const scoreA = a.recencyScore * 0.6 + a.freshnessScore * 0.4;
-      const scoreB = b.recencyScore * 0.6 + b.freshnessScore * 0.4;
-      return scoreB - scoreA;
-    });
-}
-
-/** Pick top N files with slight randomness to keep recommendations fresh. */
-function pickDiverseFiles(ranked: ScoredFile[], count: number): ScoredFile[] {
-  // Take top candidates (2x what we need), then shuffle and pick
-  const pool = ranked.slice(0, Math.max(count * 2, 6));
-  // Fisher-Yates partial shuffle
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return pool.slice(0, count);
-}
-
-const ACTION_TYPES: ActionType[] = ["polish", "summarize", "write", "study"];
-
-const ACTION_ICONS: Record<ActionType, React.ElementType> = {
-  polish: Sparkles,
-  summarize: FileText,
-  write: Zap,
-  study: Bot,
-};
-
-const GENERIC_ICONS: Record<string, React.ElementType> = {
-  brainstorm: Lightbulb,
-  chat: MessageSquare,
-  write: PenLine,
-  learn: BookOpen,
-};
-
 type Translations = ReturnType<typeof useLocaleStore.getState>["t"];
-
-function buildFileAction(
-  type: ActionType,
-  file: ScoredFile,
-  t: Translations,
-): QuickAction {
-  const p = t.ai.quickPrompts;
-  const fill = (tpl: string) => tpl.replace("{noteName}", file.name);
-  switch (type) {
-    case "polish":
-      return {
-        icon: ACTION_ICONS.polish,
-        label: t.ai.polishText,
-        desc: file.name,
-
-        prompt: fill(p.polishText),
-      };
-    case "summarize":
-      return {
-        icon: ACTION_ICONS.summarize,
-        label: t.ai.summarizeNote,
-        desc: file.name,
-
-        prompt: fill(p.summarizeNote),
-      };
-    case "write":
-      return {
-        icon: ACTION_ICONS.write,
-        label: t.ai.writeArticle,
-        desc: file.name,
-
-        prompt: fill(p.writeArticle),
-      };
-    case "study":
-      return {
-        icon: ACTION_ICONS.study,
-        label: t.ai.studyNotes,
-        desc: file.name,
-
-        prompt: fill(p.studyNotes),
-      };
-  }
-}
-
-function buildGenericActions(t: Translations): QuickAction[] {
-  const p = t.ai.quickPrompts;
-  return [
-    {
-      icon: GENERIC_ICONS.brainstorm,
-      label: t.ai.polishText,
-      desc: t.ai.polishTextDesc,
-      prompt: p.polishTextGeneric,
-    },
-    {
-      icon: GENERIC_ICONS.chat,
-      label: t.ai.summarizeNote,
-      desc: t.ai.summarizeNoteDesc,
-      prompt: p.summarizeNoteGeneric,
-    },
-    {
-      icon: GENERIC_ICONS.write,
-      label: t.ai.writeArticle,
-      desc: t.ai.writeArticleDesc,
-      prompt: p.writeArticleGeneric,
-    },
-    {
-      icon: GENERIC_ICONS.learn,
-      label: t.ai.studyNotes,
-      desc: t.ai.studyNotesDesc,
-      prompt: p.studyNotesGeneric,
-    },
-  ];
-}
-
-function buildCurrentFileAction(
-  currentFile: string | null,
-  t: Translations,
-): QuickAction | null {
-  if (!currentFile) return null;
-  const name = extractName(currentFile);
-  // Randomly pick one action type for the current file
-  const type = ACTION_TYPES[Math.floor(Math.random() * ACTION_TYPES.length)];
-  return buildFileAction(
-    type,
-    { path: currentFile, name, recencyScore: 1, freshnessScore: 1 },
-    t,
-  );
-}
-
-function recommendActions(
-  fileTree: FileEntry[],
-  recentFiles: string[],
-  currentFile: string | null,
-  t: Translations,
-): QuickAction[] {
-  const ranked = scoreFiles(fileTree, recentFiles, currentFile);
-
-  // No files at all → all generic
-  if (ranked.length === 0 && !currentFile) {
-    return buildGenericActions(t);
-  }
-
-  const actions: QuickAction[] = [];
-  const usedTypes = new Set<ActionType>();
-
-  // Slot 1: current file gets a dedicated action
-  const currentAction = buildCurrentFileAction(currentFile, t);
-  if (currentAction) {
-    actions.push(currentAction);
-    // Find which type was used
-    const idx = ACTION_TYPES.findIndex((type) => {
-      const icons = ACTION_ICONS[type];
-      return currentAction.icon === icons;
-    });
-    if (idx >= 0) usedTypes.add(ACTION_TYPES[idx]);
-  }
-
-  // Remaining slots: pick diverse files with different action types
-  const remaining = 4 - actions.length;
-  const pickedFiles = pickDiverseFiles(ranked, remaining);
-  const availableTypes = ACTION_TYPES.filter((t) => !usedTypes.has(t));
-
-  for (let i = 0; i < remaining; i++) {
-    if (i < pickedFiles.length && availableTypes.length > 0) {
-      const type = availableTypes.shift()!;
-      actions.push(buildFileAction(type, pickedFiles[i], t));
-    } else {
-      // Fill remaining with generic actions
-      const generics = buildGenericActions(t);
-      const unused = generics.filter(
-        (g) => !actions.some((a) => a.prompt === g.prompt),
-      );
-      if (unused.length > 0) actions.push(unused[0]);
-    }
-  }
-
-  return actions.slice(0, 4);
-}
-
-// ── Components ──
-
-function SuggestionCard({
-  icon: Icon,
-  title,
-  desc,
-  onClick,
-}: {
-  icon: React.ElementType;
-  title: string;
-  desc: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "group relative flex flex-col items-start gap-2 text-left",
-        "rounded-ui-lg border border-border bg-muted/40 p-4",
-        "transition-[background-color,border-color,box-shadow,transform] duration-fast ease-out-subtle",
-        "hover:border-primary/35 hover:bg-accent/60 hover:shadow-elev-1",
-        "active:scale-[0.97]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-      ].join(" ")}
-    >
-      <div
-        className={[
-          "flex h-9 w-9 items-center justify-center rounded-ui-md",
-          "bg-primary/10 text-primary",
-          "transition-colors duration-fast ease-out-subtle",
-          "group-hover:bg-primary/15",
-        ].join(" ")}
-      >
-        <Icon size={18} />
-      </div>
-      <span className="text-sm font-medium text-foreground">{title}</span>
-      <span className="truncate w-full text-xs text-muted-foreground">
-        {desc}
-      </span>
-    </button>
-  );
-}
 
 interface WelcomeSectionProps {
   hasStarted: boolean;
@@ -321,8 +31,8 @@ interface WelcomeSectionProps {
   fileTree?: FileEntry[];
 }
 
-// Time-of-day bucketing — fully client-side, uses the renderer's local clock
-// so it respects the user's OS timezone without any server roundtrip.
+// ── Greeting ──
+
 function getTimeBucket(hour: number): "morning" | "afternoon" | "evening" | "night" {
   if (hour >= 5 && hour < 11) return "morning";
   if (hour >= 11 && hour < 17) return "afternoon";
@@ -351,9 +61,6 @@ function pickWelcomeGreeting(
           ? w.welcomeEvening
           : w.welcomeNight;
 
-  // Context-aware variants get a 50% chance when applicable, else fall through
-  // to the time-of-day pool. Keeps the rotation interesting without making the
-  // greeting feel scripted.
   if (currentFile) {
     if (Math.random() < 0.5) {
       const template = pickRandom(w.welcomeCurrentFile);
@@ -381,10 +88,6 @@ export function WelcomeGreeting({
   fileTree?: FileEntry[];
 }) {
   const { t } = useLocaleStore();
-  // Pick once per mount. The component remounts when a new conversation
-  // starts (hasStarted flips false → true → false on session new), so each
-  // fresh session sees a new greeting; sitting on the same screen does not
-  // shuffle the text.
   const greeting = useMemo(
     () => pickWelcomeGreeting(t, currentFile ?? null, fileTree.length),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -409,10 +112,6 @@ export function WelcomeGreeting({
             transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          {/* Greeting wraps gracefully on narrow viewports instead of
-           * truncating with an ellipsis. Wider viewports still get a
-           * single-line read because the max-w gives the longest English
-           * variants room before the wrap kicks in. */}
           <h1 className="mx-auto max-w-[640px] px-4 text-balance text-2xl sm:text-3xl font-semibold leading-tight tracking-tight text-foreground">
             {greeting}
           </h1>
@@ -422,144 +121,182 @@ export function WelcomeGreeting({
   );
 }
 
-/** Quick-action suggestion cards with workspace-aware recommendations. */
-export function WelcomeSuggestions({
-  hasStarted,
-  onSetInput,
+// ── Starters: a single quiet list that replaces the old 4-card grid +
+// 3-pill explore row. Mixes AI prompts (fill input) and navigation. Each
+// row is a clickable line with a left icon + label + optional dim
+// context fragment + trailing arrow that surfaces on hover.
+
+type StarterVariant = "ai" | "nav";
+
+interface Starter {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  /** Optional dim context that lives on the right of the label — e.g. the
+   *  filename for "Help with this note · finals-prep.md". */
+  context?: string;
+  variant: StarterVariant;
+  onClick: () => void;
+}
+
+interface BuildStartersInput {
+  t: Translations;
+  hasFiles: boolean;
+  currentFile: string | null | undefined;
+  onSetInput: (value: string) => void;
+  openGraphTab: () => void;
+}
+
+function buildStarters({
+  t,
+  hasFiles,
   currentFile,
-  recentFiles = [],
-  fileTree = [],
-}: WelcomeSectionProps) {
-  const { t } = useLocaleStore();
+  onSetInput,
+  openGraphTab,
+}: BuildStartersInput): Starter[] {
+  const w = t.ai.welcomeStarters;
+  const out: Starter[] = [];
 
-  // Memoize with a stable key that changes when workspace context changes
-  // (current file, recent files count, file tree length)
-  const actions = useMemo(
-    () => recommendActions(fileTree, recentFiles, currentFile ?? null, t),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentFile, recentFiles.length, fileTree.length, t],
-  );
+  if (currentFile) {
+    const name = extractName(currentFile);
+    out.push({
+      id: "help-with-note",
+      icon: PenLine,
+      label: w.helpWithNote,
+      context: name,
+      variant: "ai",
+      onClick: () => onSetInput(w.helpWithNotePrompt.replace("{name}", name)),
+    });
+  }
 
-  const handleQuickAction = (action: QuickAction) => {
-    onSetInput(action.prompt);
-  };
+  out.push({
+    id: "generate-image",
+    icon: ImageIcon,
+    label: w.generateImage,
+    variant: "ai",
+    onClick: () => onSetInput(w.generateImagePrompt),
+  });
 
+  if (hasFiles) {
+    out.push({
+      id: "find-notes",
+      icon: Search,
+      label: w.findNotes,
+      variant: "ai",
+      onClick: () => onSetInput(w.findNotesPrompt),
+    });
+  } else {
+    out.push({
+      id: "brainstorm",
+      icon: Sparkles,
+      label: w.brainstorm,
+      variant: "ai",
+      onClick: () => onSetInput(w.brainstormPrompt),
+    });
+  }
+
+  out.push({
+    id: "open-graph",
+    icon: Network,
+    label: w.openGraph,
+    variant: "nav",
+    onClick: openGraphTab,
+  });
+
+  return out.slice(0, 4);
+}
+
+function StarterRow({ starter }: { starter: Starter }) {
+  const { icon: Icon, label, context, variant, onClick } = starter;
   return (
-    <AnimatePresence>
-      {!hasStarted && (
-        <motion.div
-          className="w-full max-w-3xl mx-auto px-4 mt-8 sm:mt-10"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{
-            opacity: 1,
-            y: 0,
-            transition: {
-              delay: 0.1,
-              duration: 0.28,
-              ease: [0.2, 0.9, 0.1, 1],
-            },
-          }}
-          exit={{
-            opacity: 0,
-            y: 12,
-            scale: 0.98,
-            pointerEvents: "none",
-            transition: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
-          }}
-        >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-children">
-            {actions.map((action, idx) => (
-              <SuggestionCard
-                key={idx}
-                icon={action.icon}
-                title={action.label}
-                desc={action.desc}
-                onClick={() => handleQuickAction(action)}
-              />
-            ))}
-          </div>
-        </motion.div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "group relative w-full flex items-center gap-3 px-3 py-2.5",
+        "rounded-ui-md text-left",
+        "transition-[background-color,color] duration-fast ease-out-subtle",
+        "hover:bg-muted/50",
+        "focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-primary/30",
+        "active:scale-[0.99]",
+      ].join(" ")}
+    >
+      <Icon
+        size={14}
+        className="shrink-0 text-muted-foreground transition-colors duration-fast ease-out-subtle group-hover:text-primary"
+      />
+      <span className="flex-1 truncate text-sm text-foreground">{label}</span>
+      {context && (
+        <span className="shrink-0 truncate max-w-[40%] text-xs text-muted-foreground/80 font-mono">
+          {context}
+        </span>
       )}
-    </AnimatePresence>
+      {variant === "nav" ? (
+        <ArrowUpRight
+          size={12}
+          className="shrink-0 text-muted-foreground/50 transition-[color,transform] duration-fast ease-out-subtle group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        />
+      ) : (
+        <ChevronRight
+          size={12}
+          className="shrink-0 text-muted-foreground/40 opacity-0 -translate-x-1 transition-[opacity,transform] duration-fast ease-out-subtle group-hover:opacity-100 group-hover:translate-x-0"
+        />
+      )}
+    </button>
   );
 }
 
-/** Subtle "more to explore" pill row beneath the AI suggestions —
- * surfaces non-AI capabilities (graph, palette, search) so the welcome
- * surface doesn't tell users that AI is the only thing here.
- */
-export function WelcomeDiscoverHints({ hasStarted }: { hasStarted: boolean }) {
+/** Quick-starters list — the welcome-screen replacement for the old
+ *  4-card prescriptive grid + 3-pill explore row. */
+export function WelcomeStarters({
+  hasStarted,
+  onSetInput,
+  currentFile,
+  fileTree = [],
+}: WelcomeSectionProps) {
   const { t } = useLocaleStore();
   const openGraphTab = useFileStore((s) => s.openGraphTab);
 
-  const hints = useMemo(
-    () => [
-      {
-        id: "graph",
-        icon: Network,
-        label: t.ai.discoverHints.graph,
-        action: () => openGraphTab(),
-      },
-      {
-        id: "palette",
-        icon: Command,
-        label: t.ai.discoverHints.palette,
-        action: () =>
-          window.dispatchEvent(new CustomEvent("open-command-palette")),
-      },
-      {
-        id: "search",
-        icon: Search,
-        label: t.ai.discoverHints.search,
-        action: () =>
-          window.dispatchEvent(new CustomEvent("open-global-search")),
-      },
-    ],
-    [t, openGraphTab],
+  const starters = useMemo(
+    () =>
+      buildStarters({
+        t,
+        hasFiles: fileTree.length > 0,
+        currentFile,
+        onSetInput,
+        openGraphTab,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t, fileTree.length, currentFile, onSetInput, openGraphTab],
   );
 
   return (
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="relative z-10 w-full max-w-3xl mx-auto px-4 mt-5 sm:mt-6 flex items-center justify-center flex-wrap gap-2 text-xs text-muted-foreground/80"
-          initial={{ opacity: 0, y: 8 }}
+          className="mx-auto w-full max-w-md px-4 mt-6 sm:mt-8"
+          initial={{ opacity: 0, y: 12 }}
           animate={{
             opacity: 1,
             y: 0,
             transition: {
-              delay: 0.22,
+              delay: 0.12,
               duration: 0.28,
               ease: [0.2, 0.9, 0.1, 1],
             },
           }}
           exit={{
             opacity: 0,
-            transition: { duration: 0.14, ease: [0.4, 0, 0.2, 1] },
+            y: 8,
+            pointerEvents: "none",
+            transition: { duration: 0.16, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          <span className="opacity-70">{t.ai.discoverHints.label}</span>
-          {hints.map((hint) => (
-            <button
-              key={hint.id}
-              type="button"
-              onClick={hint.action}
-              className={[
-                "group inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/40",
-                "px-2.5 py-1 transition-[background-color,border-color,color,transform] duration-fast ease-out-subtle",
-                "hover:border-primary/40 hover:bg-accent/50 hover:text-foreground",
-                "active:scale-[0.97]",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-              ].join(" ")}
-            >
-              <hint.icon size={12} className="opacity-80 group-hover:text-primary transition-colors" />
-              <span>{hint.label}</span>
-              <ArrowUpRight
-                size={11}
-                className="opacity-0 -translate-x-0.5 group-hover:opacity-70 group-hover:translate-x-0 transition-[opacity,transform] duration-fast"
-              />
-            </button>
-          ))}
+          <div className="space-y-0.5">
+            {starters.map((s) => (
+              <StarterRow key={s.id} starter={s} />
+            ))}
+          </div>
         </motion.div>
       )}
     </AnimatePresence>
@@ -581,14 +318,13 @@ export function WelcomeSection({
         currentFile={currentFile}
         fileTree={fileTree}
       />
-      <WelcomeSuggestions
+      <WelcomeStarters
         hasStarted={hasStarted}
         onSetInput={onSetInput}
         currentFile={currentFile}
         recentFiles={recentFiles}
         fileTree={fileTree}
       />
-      <WelcomeDiscoverHints hasStarted={hasStarted} />
     </>
   );
 }

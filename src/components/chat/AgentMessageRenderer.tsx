@@ -7,7 +7,7 @@
  * - Text segments (Markdown)
  */
 
-import { useState, useMemo, useCallback, memo, type MouseEvent } from "react";
+import { useState, useMemo, useCallback, useEffect, memo, type MouseEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocaleStore, getCurrentTranslations } from '@/stores/useLocaleStore';
 import { parseMarkdown } from "@/services/markdown/markdown";
@@ -59,9 +59,15 @@ type AgentMessage = {
   rawParts?: OpencodePart[];
 };
 
+interface ThinkingItem {
+  content: string;
+  status?: "streaming" | "done";
+}
+
 type TimelinePart =
   | { type: "text"; content: string }
   | { type: "thinking"; content: string; status?: "streaming" | "done" }
+  | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] }
   | { type: "diff"; diff: PendingDiff };
@@ -69,6 +75,9 @@ type TimelinePart =
 // Threshold above which a run of consecutive tool calls is folded into one
 // outer ToolGroupCollapsible. Two tools in a row aren't worth the extra layer.
 const TOOL_GROUP_THRESHOLD = 3;
+// Reasoning chunks pile up faster than tools and each one is just a button
+// row, so collapse at 2.
+const THINKING_GROUP_THRESHOLD = 2;
 
 function collapseConsecutiveTools(parts: TimelinePart[]): TimelinePart[] {
   const out: TimelinePart[] = [];
@@ -85,6 +94,32 @@ function collapseConsecutiveTools(parts: TimelinePart[]): TimelinePart[] {
   for (const part of parts) {
     if (part.type === "tool") {
       run.push(part.tool);
+    } else {
+      flush();
+      out.push(part);
+    }
+  }
+  flush();
+  return out;
+}
+
+function collapseConsecutiveThinking(parts: TimelinePart[]): TimelinePart[] {
+  const out: TimelinePart[] = [];
+  let run: ThinkingItem[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    if (run.length >= THINKING_GROUP_THRESHOLD) {
+      out.push({ type: "thinking_group", items: run });
+    } else {
+      for (const item of run) {
+        out.push({ type: "thinking", content: item.content, status: item.status });
+      }
+    }
+    run = [];
+  };
+  for (const part of parts) {
+    if (part.type === "thinking") {
+      run.push({ content: part.content, status: part.status });
     } else {
       flush();
       out.push(part);
@@ -549,6 +584,99 @@ export const ThinkingCollapsible = memo(function ThinkingCollapsible({
   );
 });
 
+function formatElapsed(seconds: number): string {
+  const safe = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/**
+ * 工作进度提示：展示一个呼吸点 + 流逝的时间，
+ * 让长时间无文本输出（仅工具/思考）时也有 "正在工作" 的反馈。
+ */
+const WorkingClock = memo(function WorkingClock({
+  startTime,
+  t,
+}: {
+  startTime: number;
+  t: any;
+}) {
+  const [elapsed, setElapsed] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - startTime) / 1000)),
+  );
+  useEffect(() => {
+    const tick = () =>
+      setElapsed(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+
+  return (
+    <div
+      className="flex items-center gap-2 text-xs text-muted-foreground py-1"
+      aria-live="off"
+    >
+      <span className="streaming-dot" aria-hidden />
+      <span>{t.agentMessage.working}</span>
+      <span className="tabular-nums opacity-70">{formatElapsed(elapsed)}</span>
+    </div>
+  );
+});
+
+/**
+ * 连续思考块的外层折叠
+ */
+const ThinkingGroupCollapsible = memo(function ThinkingGroupCollapsible({
+  items,
+  t,
+}: {
+  items: ThinkingItem[];
+  t: any;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const anyStreaming = items.some((item) => item.status === "streaming");
+  const title = anyStreaming
+    ? t.agentMessage.thinking
+    : (t.agentMessage.thinkingGroup || t.agentMessage.thinkingDone || t.agentMessage.thinking);
+
+  return (
+    <div className="text-xs text-muted-foreground">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
+      >
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <Brain size={12} />
+        <span className="font-medium">{title}</span>
+        <span className="truncate flex-1">· {items.length}</span>
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-5 py-1 space-y-2 border-l border-border ml-1.5">
+              {items.map((item, i) => (
+                <div
+                  key={i}
+                  className="text-xs text-muted-foreground whitespace-pre-wrap"
+                >
+                  {item.content || t.agentMessage.thinkingWaiting}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+});
+
 /**
  * 工具调用折叠卡片
  */
@@ -863,7 +991,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
       // 折叠连续的工具调用 (≥3 才合并，pendingDiff 已经插入完毕，
       // 它会自然地把前后的 tool run 切开，所以不会被吞进同一组)
-      const collapsedParts = collapseConsecutiveTools(parts);
+      // 思考块同样折叠 (≥2)，避免一连串 "Thinking..." 行堆叠。
+      let collapsedParts = collapseConsecutiveTools(parts);
+      collapsedParts = collapseConsecutiveThinking(collapsedParts);
 
       // 判断是否有 AI 回复内容
       const hasAIContent = collapsedParts.length > 0;
@@ -932,6 +1062,9 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                       />
                     );
                   }
+                  if (part.type === "thinking_group") {
+                    return <ThinkingGroupCollapsible key={key} items={part.items} t={t} />;
+                  }
                   if (part.type === "tool") {
                     return <ToolCallCollapsible key={key} tool={part.tool} t={t} />;
                   }
@@ -980,6 +1113,11 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         </motion.div>
       ))}
       </AnimatePresence>
+
+      {/* 工作进度（流逝时间） */}
+      {isRunning && llmRequestStartTime != null && (
+        <WorkingClock startTime={llmRequestStartTime} t={t} />
+      )}
 
       {/* 超时提示 */}
       {isRunning && isLongRunning && onRetryTimeout && (

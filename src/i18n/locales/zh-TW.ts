@@ -381,19 +381,16 @@ export default {
       "白紙一張，先記些什麼？",
       "新開始，先聊聊想做什麼？",
     ],
-    polishText: "潤色文字",
-    polishTextDesc: "Chat: 優化表達",
-    summarizeNote: "總結筆記",
-    summarizeNoteDesc: "Chat: 提煉要點",
-    writeArticle: "寫篇文章",
-    writeArticleDesc: "Agent: 建立新筆記",
-    studyNotes: "學習筆記",
-    studyNotesDesc: "Agent: 整理知識點",
-    discoverHints: {
-      label: "或繼續探索：",
-      graph: "知識圖譜",
-      palette: "命令面板",
-      search: "全域搜尋",
+    welcomeStarters: {
+      helpWithNote: "幫我處理這篇筆記",
+      helpWithNotePrompt: "幫我看一下《{name}》，按你覺得最有價值的方向開始——",
+      generateImage: "生成一張圖",
+      generateImagePrompt: "幫我生成一張這樣的圖：",
+      findNotes: "在筆記裡找點東西",
+      findNotesPrompt: "幫我從筆記裡找一下關於",
+      brainstorm: "陪我想點新東西",
+      brainstormPrompt: "我想聊一下",
+      openGraph: "打開知識圖譜",
     },
     history: "歷史記錄",
     historyChats: "歷史對話",
@@ -464,24 +461,6 @@ export default {
     unsupportedProvider: "不支援的 AI 提供商: {provider}",
     providerError: "{provider} 請求失敗：{error}",
     apiErrorWithStatus: "API 錯誤 ({status}): {error}",
-    quickPrompts: {
-      polishText:
-        "請潤色《{noteName}》這篇筆記的文字，優化表達方式，使語言更加流暢、精準，同時保持原意不變。請直接輸出潤色後的全文。",
-      polishTextGeneric:
-        "請潤色我的文字，優化表達方式，使語言更加流暢、精準，同時保持原意不變。我會在下一條訊息中提供內容。",
-      summarizeNote:
-        "請閱讀《{noteName}》這篇筆記，提煉核心要點，生成一份結構清晰的摘要，包含關鍵概念、主要論點和結論。",
-      summarizeNoteGeneric:
-        "請幫我總結一篇筆記的核心要點，生成結構清晰的摘要。我會在下一條訊息中提供內容。",
-      writeArticle:
-        "請根據《{noteName}》中的素材和思路，撰寫一篇結構完整、邏輯通順的文章。如果素材不足，請先向我確認主題和寫作風格。",
-      writeArticleGeneric:
-        "請幫我撰寫一篇文章。請先問我想寫什麼主題、目標讀者和寫作風格。",
-      studyNotes:
-        "請分析《{noteName}》中的知識點，整理成系統化的學習筆記，包含概念解釋、要點歸納、易混淆點對比和記憶提示。",
-      studyNotesGeneric:
-        "請幫我整理學習筆記。我會在下一條訊息中提供內容，請分析其中的知識點並系統化整理。",
-    },
     diffView: {
       title: "AI 修改預覽",
       previewMode: "預覽",

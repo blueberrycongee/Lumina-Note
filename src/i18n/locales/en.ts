@@ -384,19 +384,16 @@ export default {
       "Empty notebook. Where shall we begin?",
       "A blank canvas. What would you like to capture?",
     ],
-    polishText: "Polish Text",
-    polishTextDesc: "Chat: Optimize expression",
-    summarizeNote: "Summarize Note",
-    summarizeNoteDesc: "Chat: Extract key points",
-    writeArticle: "Write Article",
-    writeArticleDesc: "Agent: Create new note",
-    studyNotes: "Study Notes",
-    studyNotesDesc: "Agent: Organize knowledge",
-    discoverHints: {
-      label: "Or explore:",
-      graph: "Knowledge graph",
-      palette: "Command palette",
-      search: "Global search",
+    welcomeStarters: {
+      helpWithNote: "Help me with this note",
+      helpWithNotePrompt: "Help me with {name} — start wherever you think the most value is.",
+      generateImage: "Generate an image",
+      generateImagePrompt: "Generate an image of ",
+      findNotes: "Find something in my vault",
+      findNotesPrompt: "Find notes about ",
+      brainstorm: "Help me think through something",
+      brainstormPrompt: "I want to think through ",
+      openGraph: "Open the knowledge graph",
     },
     history: "History",
     historyChats: "History",
@@ -469,24 +466,6 @@ export default {
     unsupportedProvider: "Unsupported AI provider: {provider}",
     providerError: "{provider} request failed: {error}",
     apiErrorWithStatus: "API error ({status}): {error}",
-    quickPrompts: {
-      polishText:
-        'Please polish the text in "{noteName}". Improve clarity, flow, and word choice while preserving the original meaning. Output the full revised text.',
-      polishTextGeneric:
-        "Please polish my text. Improve clarity, flow, and word choice while preserving the original meaning. I'll provide the content in my next message.",
-      summarizeNote:
-        'Please read "{noteName}" and produce a clear, structured summary highlighting the key concepts, main arguments, and conclusions.',
-      summarizeNoteGeneric:
-        "Please help me summarize a note into a clear, structured summary. I'll provide the content in my next message.",
-      writeArticle:
-        'Please write a well-structured article based on the material in "{noteName}". If there isn\'t enough context, ask me about the topic and preferred writing style first.',
-      writeArticleGeneric:
-        "Please help me write an article. Ask me about the topic, target audience, and preferred writing style first.",
-      studyNotes:
-        'Please analyze the knowledge points in "{noteName}" and organize them into systematic study notes with concept explanations, key takeaways, comparisons of easily confused points, and memory aids.',
-      studyNotesGeneric:
-        "Please help me create study notes. I'll provide the content in my next message — analyze the knowledge points and organize them systematically.",
-    },
     diffView: {
       title: "AI edit preview",
       previewMode: "Preview",
@@ -1488,6 +1467,8 @@ export default {
     interruptRetry: "Interrupt & Retry",
     copy: "Copy",
     toolGroup: "Tool calls",
+    thinkingGroup: "Thinking",
+    working: "Working",
     errors: {
       generic: "Something went wrong. Please try again.",
       retry: "Try again",

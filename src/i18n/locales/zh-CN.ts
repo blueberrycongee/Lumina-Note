@@ -381,19 +381,16 @@ export default {
       "白纸一张，先记些什么？",
       "新开始，先聊聊想做什么？",
     ],
-    polishText: "润色文字",
-    polishTextDesc: "Chat: 优化表达",
-    summarizeNote: "总结笔记",
-    summarizeNoteDesc: "Chat: 提炼要点",
-    writeArticle: "写篇文章",
-    writeArticleDesc: "Agent: 创建新笔记",
-    studyNotes: "学习笔记",
-    studyNotesDesc: "Agent: 整理知识点",
-    discoverHints: {
-      label: "或继续探索：",
-      graph: "知识图谱",
-      palette: "命令面板",
-      search: "全局搜索",
+    welcomeStarters: {
+      helpWithNote: "帮我处理这篇笔记",
+      helpWithNotePrompt: "帮我看一下《{name}》，按你觉得最有价值的方向开始——",
+      generateImage: "生成一张图",
+      generateImagePrompt: "帮我生成一张这样的图：",
+      findNotes: "在笔记里找点东西",
+      findNotesPrompt: "帮我从笔记里找一下关于",
+      brainstorm: "陪我想点新东西",
+      brainstormPrompt: "我想聊一下",
+      openGraph: "打开知识图谱",
     },
     history: "历史记录",
     historyChats: "历史对话",
@@ -464,24 +461,6 @@ export default {
     unsupportedProvider: "不支持的 AI 提供商: {provider}",
     providerError: "{provider} 请求失败：{error}",
     apiErrorWithStatus: "API 错误 ({status}): {error}",
-    quickPrompts: {
-      polishText:
-        "请润色《{noteName}》这篇笔记的文字，优化表达方式，使语言更加流畅、精准，同时保持原意不变。请直接输出润色后的全文。",
-      polishTextGeneric:
-        "请润色我的文字，优化表达方式，使语言更加流畅、精准，同时保持原意不变。我会在下一条消息中提供内容。",
-      summarizeNote:
-        "请阅读《{noteName}》这篇笔记，提炼核心要点，生成一份结构清晰的摘要，包含关键概念、主要论点和结论。",
-      summarizeNoteGeneric:
-        "请帮我总结一篇笔记的核心要点，生成结构清晰的摘要。我会在下一条消息中提供内容。",
-      writeArticle:
-        "请根据《{noteName}》中的素材和思路，撰写一篇结构完整、逻辑通顺的文章。如果素材不足，请先向我确认主题和写作风格。",
-      writeArticleGeneric:
-        "请帮我撰写一篇文章。请先问我想写什么主题、目标读者和写作风格。",
-      studyNotes:
-        "请分析《{noteName}》中的知识点，整理成系统化的学习笔记，包含概念解释、要点归纳、易混淆点对比和记忆提示。",
-      studyNotesGeneric:
-        "请帮我整理学习笔记。我会在下一条消息中提供内容，请分析其中的知识点并系统化整理。",
-    },
     diffView: {
       title: "AI 修改预览",
       previewMode: "预览",

@@ -42,7 +42,7 @@ import { useSessionManagement } from "./hooks/useSessionManagement";
 import { useSkillSearch } from "./hooks/useSkillSearch";
 import { ChatHistorySidebar } from "./ChatHistorySidebar";
 import { ChatToolbar } from "./ChatToolbar";
-import { WelcomeGreeting, WelcomeSuggestions, WelcomeDiscoverHints } from "./WelcomeSection";
+import { WelcomeGreeting, WelcomeStarters } from "./WelcomeSection";
 import { AgentMessageRenderer } from "../chat/AgentMessageRenderer";
 import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
@@ -1671,14 +1671,13 @@ export function MainAIChatShell() {
             </motion.div>
           </div>
 
-          <WelcomeSuggestions
+          <WelcomeStarters
             hasStarted={hasStarted}
             onSetInput={setInput}
             currentFile={currentFile}
             recentFiles={recentFiles}
             fileTree={fileTree}
           />
-          <WelcomeDiscoverHints hasStarted={hasStarted} />
           {!hasStarted && <div className="flex-[3] min-h-[16px]" />}
         </main>
 

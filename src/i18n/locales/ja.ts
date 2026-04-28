@@ -381,19 +381,16 @@ export default {
       "白紙ですね。何から記録しますか？",
       "新しい始まり。まず何を話しましょうか？",
     ],
-    polishText: "文章を磨く",
-    polishTextDesc: "Chat: 表現を最適化",
-    summarizeNote: "ノートを要約",
-    summarizeNoteDesc: "Chat: 要点を抽出",
-    writeArticle: "記事を書く",
-    writeArticleDesc: "Agent: 新規ノート作成",
-    studyNotes: "学習ノート",
-    studyNotesDesc: "Agent: 知識を整理",
-    discoverHints: {
-      label: "他にも：",
-      graph: "ナレッジグラフ",
-      palette: "コマンドパレット",
-      search: "全文検索",
+    welcomeStarters: {
+      helpWithNote: "このノートを手伝って",
+      helpWithNotePrompt: "「{name}」を見て、価値があると思う方向から始めてください。",
+      generateImage: "画像を生成",
+      generateImagePrompt: "次のような画像を生成してください：",
+      findNotes: "ノートから探す",
+      findNotesPrompt: "ノートから次について探してください：",
+      brainstorm: "一緒に考える",
+      brainstormPrompt: "次について考えたい：",
+      openGraph: "ナレッジグラフを開く",
     },
     history: "履歴",
     historyChats: "履歴チャット",
@@ -468,24 +465,6 @@ export default {
     unsupportedProvider: "サポートされていない AI プロバイダー: {provider}",
     providerError: "{provider} リクエストに失敗しました: {error}",
     apiErrorWithStatus: "API エラー ({status}): {error}",
-    quickPrompts: {
-      polishText:
-        "「{noteName}」の文章を推敲してください。表現を洗練させ、読みやすく正確にしつつ、元の意味を保ってください。推敲後の全文を出力してください。",
-      polishTextGeneric:
-        "文章を推敲してください。表現を洗練させ、読みやすく正確にしつつ、元の意味を保ってください。次のメッセージで内容を提供します。",
-      summarizeNote:
-        "「{noteName}」を読み、重要な概念・主な論点・結論を含む、構造的で明確な要約を作成してください。",
-      summarizeNoteGeneric:
-        "ノートの要約を作成してください。次のメッセージで内容を提供しますので、構造的で明確な要約にまとめてください。",
-      writeArticle:
-        "「{noteName}」の素材に基づいて、構成がしっかりした記事を書いてください。内容が不十分な場合は、まずテーマと文体について確認してください。",
-      writeArticleGeneric:
-        "記事を書くのを手伝ってください。まずテーマ、対象読者、文体について聞いてください。",
-      studyNotes:
-        "「{noteName}」の知識ポイントを分析し、概念の説明・要点の整理・紛らわしい点の比較・記憶のヒントを含む体系的な学習ノートにまとめてください。",
-      studyNotesGeneric:
-        "学習ノートの整理を手伝ってください。次のメッセージで内容を提供しますので、知識ポイントを分析して体系的にまとめてください。",
-    },
     diffView: {
       title: "AI 編集プレビュー",
       previewMode: "プレビュー",
