@@ -6,10 +6,16 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { useImageProvidersStore } from "@/stores/useImageProvidersStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { Field, SectionHeader, TextInput } from "@/components/ui";
+import {
+  Field,
+  SectionHeader,
+  Select,
+  TextInput,
+} from "@/components/ui";
 import type {
   ImageProviderId,
   ImageProviderInfo,
@@ -17,7 +23,7 @@ import type {
 
 type TestStatus = "idle" | "testing" | "success" | "error";
 
-interface RowState {
+interface DraftState {
   apiKeyDraft: string;
   apiKeyDirty: boolean;
   modelDraft: string;
@@ -32,20 +38,44 @@ interface ImageModelsStrings {
   description: string;
   statusConfigured: string;
   statusNotConfigured: string;
+  providerLabel: string;
+  apiKeyLabel: string;
   apiKeyPlaceholder: string;
   modelLabel: string;
   modelHint: string;
   baseUrlLabel: string;
   baseUrlHint: string;
-  apiKeyLabel: string;
+  saveButton: string;
+  resetButton: string;
+  saved: string;
+  saveFailed: string;
   clearKey: string;
 }
 
+function makeBlankDraft(provider: ImageProviderInfo): DraftState {
+  return {
+    apiKeyDraft: "",
+    apiKeyDirty: false,
+    modelDraft: "",
+    baseUrlDraft: "",
+    test: { status: "idle" },
+  };
+  // Note: model + baseUrl drafts get hydrated from persisted settings via
+  // the syncing useEffect below. Starting blank avoids stale data when
+  // the persisted values change between renders (e.g., after Save).
+  void provider; // suppress unused
+}
+
 /**
- * Image-models section in AI Settings — labeled-field form per provider,
- * matching the chat provider settings pattern (Provider / Model / API Key /
- * Base URL). No marketing cards; the section reads as three small sub-forms
- * stacked vertically with a status dot in each header.
+ * Image Models settings — single-provider picker pattern that mirrors the
+ * chat provider settings above it. Pick a provider from the dropdown,
+ * edit Model / API Key / Base URL, hit Save. Same JSON-on-disk
+ * persistence as chat keys (see store.ts → lumina-store.json), just
+ * scoped under a different prefix.
+ *
+ * No "active" concept on the backend: all configured providers stay
+ * simultaneously available to the agent. The picker is purely a view
+ * selector — saving each provider's keys is independent.
  */
 export function ImageModelsSettings() {
   const { t } = useLocaleStore();
@@ -69,112 +99,216 @@ export function ImageModelsSettings() {
     if (!loaded) void refresh();
   }, [loaded, refresh]);
 
-  const [rows, setRows] = useState<Record<ImageProviderId, RowState>>(
-    () => ({}) as Record<ImageProviderId, RowState>,
+  // Picker state — initial selection prefers a configured provider so the
+  // user lands on a populated form rather than an empty default.
+  const [selectedId, setSelectedId] = useState<ImageProviderId | null>(null);
+  const selectedProvider = useMemo<ImageProviderInfo | null>(
+    () => providers.find((p) => p.id === selectedId) ?? providers[0] ?? null,
+    [providers, selectedId],
   );
 
-  // Sync local drafts with the latest server snapshot. Untouched rows
-  // adopt persisted values; rows the user is actively editing keep theirs.
   useEffect(() => {
-    setRows((prev) => {
+    if (selectedId !== null) return;
+    if (providers.length === 0) return;
+    const firstConfigured = providers.find((p) => p.configured);
+    setSelectedId((firstConfigured ?? providers[0]).id);
+  }, [providers, selectedId]);
+
+  // Drafts are per-provider so switching the picker doesn't lose what the
+  // user typed in another section. API key drafts reset on switch (we
+  // never want to leak one provider's pending key to another).
+  const [drafts, setDrafts] = useState<Record<ImageProviderId, DraftState>>(
+    () => ({}) as Record<ImageProviderId, DraftState>,
+  );
+
+  // Hydrate drafts from persisted settings on first load and after Save.
+  useEffect(() => {
+    setDrafts((prev) => {
       const next = { ...prev };
       for (const p of providers) {
-        const existing = next[p.id];
         const persisted = settings.perProvider[p.id];
+        const existing = next[p.id];
         if (!existing) {
           next[p.id] = {
-            apiKeyDraft: "",
-            apiKeyDirty: false,
+            ...makeBlankDraft(p),
             modelDraft: persisted?.modelId ?? "",
             baseUrlDraft: persisted?.baseUrl ?? "",
-            test: { status: "idle" },
           };
-        } else {
-          // Pull through fresh persisted values for fields the user hasn't
-          // touched. Comparing to "" is the heuristic for "untouched."
-          let updated = existing;
-          if (existing.modelDraft === "" && persisted?.modelId) {
-            updated = { ...updated, modelDraft: persisted.modelId };
-          }
-          if (existing.baseUrlDraft === "" && persisted?.baseUrl) {
-            updated = { ...updated, baseUrlDraft: persisted.baseUrl };
-          }
-          if (updated !== existing) next[p.id] = updated;
+        } else if (!existing.apiKeyDirty) {
+          // Only sync model/baseUrl when the apiKey isn't being actively
+          // edited — otherwise an in-flight refresh races with the user's
+          // typing.
+          next[p.id] = {
+            ...existing,
+            modelDraft:
+              existing.modelDraft === ""
+                ? persisted?.modelId ?? ""
+                : existing.modelDraft,
+            baseUrlDraft:
+              existing.baseUrlDraft === ""
+                ? persisted?.baseUrl ?? ""
+                : existing.baseUrlDraft,
+          };
         }
       }
       return next;
     });
   }, [providers, settings]);
 
-  const updateRow = useCallback(
-    (id: ImageProviderId, patch: Partial<RowState>) => {
-      setRows((prev) => {
-        const existing =
-          prev[id] ??
-          ({
+  const draft = selectedProvider ? drafts[selectedProvider.id] : undefined;
+  const persistedForSelected = selectedProvider
+    ? settings.perProvider[selectedProvider.id] ?? {}
+    : {};
+
+  const isDirty = useMemo(() => {
+    if (!draft || !selectedProvider) return false;
+    if (draft.apiKeyDirty && draft.apiKeyDraft.trim().length > 0) return true;
+    const modelChanged =
+      (draft.modelDraft || "") !== (persistedForSelected.modelId || "");
+    const baseUrlChanged =
+      (draft.baseUrlDraft || "") !== (persistedForSelected.baseUrl || "");
+    return modelChanged || baseUrlChanged;
+  }, [draft, selectedProvider, persistedForSelected]);
+
+  const updateDraft = useCallback(
+    (id: ImageProviderId, patch: Partial<DraftState>) => {
+      setDrafts((prev) => ({
+        ...prev,
+        [id]: {
+          ...(prev[id] ?? {
             apiKeyDraft: "",
             apiKeyDirty: false,
             modelDraft: "",
             baseUrlDraft: "",
-            test: { status: "idle" } as RowState["test"],
-          } satisfies RowState);
-        return { ...prev, [id]: { ...existing, ...patch } };
-      });
+            test: { status: "idle" } as DraftState["test"],
+          }),
+          ...patch,
+        },
+      }));
     },
     [],
   );
 
-  const persistSettings = useCallback(
-    async (provider: ImageProviderInfo, row: RowState) => {
-      const modelId = row.modelDraft.trim() || undefined;
-      const baseUrl = row.baseUrlDraft.trim() || undefined;
-      // Skip when nothing actually changed.
-      const persisted = settings.perProvider[provider.id] ?? {};
-      if (persisted.modelId === modelId && persisted.baseUrl === baseUrl) {
-        return;
-      }
-      await setProviderSettings(provider.id, { modelId, baseUrl });
-    },
-    [settings, setProviderSettings],
-  );
+  const [saving, setSaving] = useState(false);
 
-  const handleTest = useCallback(
-    async (provider: ImageProviderInfo, row: RowState) => {
-      const draftKey = row.apiKeyDraft.trim();
-      const apiKey = draftKey.length > 0 ? draftKey : "";
-      if (!apiKey && !provider.configured) {
-        updateRow(provider.id, {
-          test: { status: "error", message: errorMessages.no_key },
-        });
-        return;
+  const handleSave = useCallback(async () => {
+    if (!selectedProvider || !draft) return;
+    setSaving(true);
+    try {
+      // API key first — it's the secret-store write. Only commit when
+      // user actually typed something; an empty draft means "leave the
+      // existing key alone."
+      if (draft.apiKeyDirty && draft.apiKeyDraft.trim().length > 0) {
+        await setProviderApiKey(selectedProvider.id, draft.apiKeyDraft.trim());
       }
-      updateRow(provider.id, { test: { status: "testing" } });
-      try {
-        const baseUrl = row.baseUrlDraft.trim() || undefined;
-        const result = await testProvider(provider.id, apiKey, baseUrl);
-        updateRow(provider.id, {
-          test: result.success
-            ? { status: "success", latency: result.latencyMs }
-            : {
-                status: "error",
-                message:
-                  result.error ?? errorMessages.network ?? "Test failed",
-              },
-        });
-      } catch (err) {
-        updateRow(provider.id, {
-          test: {
-            status: "error",
-            message: err instanceof Error ? err.message : String(err),
-          },
-        });
+      // Then non-secret settings — only when changed, to avoid
+      // touching the JSON file unnecessarily.
+      const modelId = draft.modelDraft.trim() || undefined;
+      const baseUrl = draft.baseUrlDraft.trim() || undefined;
+      const before = persistedForSelected;
+      if (
+        (modelId ?? undefined) !== (before.modelId ?? undefined) ||
+        (baseUrl ?? undefined) !== (before.baseUrl ?? undefined)
+      ) {
+        await setProviderSettings(selectedProvider.id, { modelId, baseUrl });
       }
-    },
-    [testProvider, updateRow, errorMessages],
-  );
+      // Drop the apiKey draft — it's now in keychain. Keep the
+      // model/baseUrl drafts so the form continues to show what the
+      // user typed (matching what's now persisted).
+      updateDraft(selectedProvider.id, {
+        apiKeyDraft: "",
+        apiKeyDirty: false,
+      });
+      toast.success(tImg?.saved ?? "Saved");
+    } catch (err) {
+      toast.error(tImg?.saveFailed ?? "Failed to save", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    selectedProvider,
+    draft,
+    persistedForSelected,
+    setProviderApiKey,
+    setProviderSettings,
+    updateDraft,
+    tImg,
+  ]);
+
+  const handleReset = useCallback(() => {
+    if (!selectedProvider) return;
+    updateDraft(selectedProvider.id, {
+      apiKeyDraft: "",
+      apiKeyDirty: false,
+      modelDraft: persistedForSelected.modelId ?? "",
+      baseUrlDraft: persistedForSelected.baseUrl ?? "",
+      test: { status: "idle" },
+    });
+  }, [selectedProvider, persistedForSelected, updateDraft]);
+
+  const handleClearKey = useCallback(async () => {
+    if (!selectedProvider) return;
+    await setProviderApiKey(selectedProvider.id, "");
+    updateDraft(selectedProvider.id, {
+      apiKeyDraft: "",
+      apiKeyDirty: false,
+      test: { status: "idle" },
+    });
+  }, [selectedProvider, setProviderApiKey, updateDraft]);
+
+  const handleTest = useCallback(async () => {
+    if (!selectedProvider || !draft) return;
+    const apiKey = draft.apiKeyDraft.trim();
+    if (!apiKey && !selectedProvider.configured) {
+      updateDraft(selectedProvider.id, {
+        test: { status: "error", message: errorMessages.no_key },
+      });
+      return;
+    }
+    updateDraft(selectedProvider.id, { test: { status: "testing" } });
+    try {
+      const baseUrl = draft.baseUrlDraft.trim() || undefined;
+      const result = await testProvider(selectedProvider.id, apiKey, baseUrl);
+      updateDraft(selectedProvider.id, {
+        test: result.success
+          ? { status: "success", latency: result.latencyMs }
+          : {
+              status: "error",
+              message:
+                result.error ?? errorMessages.network ?? "Test failed",
+            },
+      });
+    } catch (err) {
+      updateDraft(selectedProvider.id, {
+        test: {
+          status: "error",
+          message: err instanceof Error ? err.message : String(err),
+        },
+      });
+    }
+  }, [selectedProvider, draft, testProvider, updateDraft, errorMessages]);
+
+  if (!selectedProvider || !draft) {
+    return (
+      <div className="space-y-3 pt-4 border-t border-border/60">
+        <SectionHeader
+          icon={<ImageIcon size={14} />}
+          title={tImg?.title ?? "Image Models"}
+        />
+        {tImg?.description && (
+          <p className="text-xs text-muted-foreground -mt-1">{tImg.description}</p>
+        )}
+      </div>
+    );
+  }
+
+  const isConfigured = selectedProvider.configured;
+  const apiKeyPlaceholder = isConfigured ? PLACEHOLDER_MASK : "sk-...";
 
   return (
-    <div className="space-y-3 pt-4 border-t border-border/60">
+    <div className="space-y-4 pt-4 border-t border-border/60">
       <SectionHeader
         icon={<ImageIcon size={14} />}
         title={tImg?.title ?? "Image Models"}
@@ -183,252 +317,195 @@ export function ImageModelsSettings() {
         <p className="text-xs text-muted-foreground -mt-1">{tImg.description}</p>
       )}
 
-      <div className="space-y-5">
-        {providers.map((p) => {
-          const row =
-            rows[p.id] ??
-            ({
-              apiKeyDraft: "",
-              apiKeyDirty: false,
-              modelDraft: settings.perProvider[p.id]?.modelId ?? "",
-              baseUrlDraft: settings.perProvider[p.id]?.baseUrl ?? "",
-              test: { status: "idle" } as RowState["test"],
-            } satisfies RowState);
-          return (
-            <ProviderForm
-              key={p.id}
-              provider={p}
-              row={row}
-              tImg={tImg}
-              onApiKeyChange={(value) =>
-                updateRow(p.id, {
-                  apiKeyDraft: value,
-                  apiKeyDirty: true,
-                  test: { status: "idle" },
-                })
-              }
-              onApiKeyCommit={async () => {
-                const draft = row.apiKeyDraft.trim();
-                if (!draft) return;
-                await setProviderApiKey(p.id, draft);
-                updateRow(p.id, { apiKeyDraft: "", apiKeyDirty: false });
-              }}
-              onClearKey={async () => {
-                await setProviderApiKey(p.id, "");
-                updateRow(p.id, {
-                  apiKeyDraft: "",
-                  apiKeyDirty: false,
-                  test: { status: "idle" },
-                });
-              }}
-              onModelChange={(value) =>
-                updateRow(p.id, { modelDraft: value })
-              }
-              onModelCommit={async () => {
-                await persistSettings(p, row);
-              }}
-              onBaseUrlChange={(value) =>
-                updateRow(p.id, { baseUrlDraft: value })
-              }
-              onBaseUrlCommit={async () => {
-                await persistSettings(p, row);
-              }}
-              onTest={() => handleTest(p, row)}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-interface ProviderFormProps {
-  provider: ImageProviderInfo;
-  row: RowState;
-  tImg: ImageModelsStrings | undefined;
-  onApiKeyChange: (value: string) => void;
-  onApiKeyCommit: () => void | Promise<void>;
-  onClearKey: () => void | Promise<void>;
-  onModelChange: (value: string) => void;
-  onModelCommit: () => void | Promise<void>;
-  onBaseUrlChange: (value: string) => void;
-  onBaseUrlCommit: () => void | Promise<void>;
-  onTest: () => void | Promise<void>;
-}
-
-function ProviderForm({
-  provider,
-  row,
-  tImg,
-  onApiKeyChange,
-  onApiKeyCommit,
-  onClearKey,
-  onModelChange,
-  onModelCommit,
-  onBaseUrlChange,
-  onBaseUrlCommit,
-  onTest,
-}: ProviderFormProps) {
-  const { t } = useLocaleStore();
-  const isConfigured = provider.configured;
-  const apiKeyPlaceholder = useMemo(
-    () => (isConfigured ? PLACEHOLDER_MASK : "sk-..."),
-    [isConfigured],
-  );
-
-  return (
-    <div className="space-y-3">
-      {/* Provider header — label + marketing name + status dot */}
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <span className="text-sm font-medium text-foreground">
-            {provider.label}
+      <Field
+        label={
+          <span className="flex items-center justify-between gap-3">
+            <span>{tImg?.providerLabel ?? "Provider"}</span>
+            <span
+              className={[
+                "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-normal",
+                isConfigured ? "text-success" : "text-muted-foreground/70",
+              ].join(" ")}
+            >
+              <span
+                className={[
+                  "inline-block h-1.5 w-1.5 rounded-full",
+                  isConfigured ? "bg-success" : "bg-muted-foreground/40",
+                ].join(" ")}
+                aria-hidden
+              />
+              {isConfigured
+                ? tImg?.statusConfigured ?? "Configured"
+                : tImg?.statusNotConfigured ?? "Not configured"}
+            </span>
           </span>
-          <span className="truncate font-mono text-xs text-muted-foreground/70">
-            {provider.marketingName}
-          </span>
-        </div>
-        <span
+        }
+      >
+        {(id) => (
+          <Select
+            id={id}
+            value={selectedProvider.id}
+            onValueChange={(next) => setSelectedId(next as ImageProviderId)}
+            options={providers.map((p) => ({
+              value: p.id,
+              label: `${p.label} · ${p.marketingName}`,
+            }))}
+          />
+        )}
+      </Field>
+
+      <Field label={tImg?.apiKeyLabel ?? "API Key"}>
+        {(id) => (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <TextInput
+                id={id}
+                type="password"
+                value={draft.apiKeyDraft}
+                onChange={(e) =>
+                  updateDraft(selectedProvider.id, {
+                    apiKeyDraft: e.target.value.trim(),
+                    apiKeyDirty: true,
+                    test: { status: "idle" },
+                  })
+                }
+                onFocus={(e) => e.currentTarget.select()}
+                placeholder={apiKeyPlaceholder}
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => void handleTest()}
+                disabled={draft.test.status === "testing"}
+                className={[
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-ui-md border px-3 py-2 text-xs",
+                  "transition-colors duration-fast ease-out-subtle",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  draft.test.status === "success"
+                    ? "border-success/40 bg-success/5 text-success"
+                    : draft.test.status === "error"
+                      ? "border-destructive/40 bg-destructive/5 text-destructive"
+                      : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+                ].join(" ")}
+                title={t.aiSettings.testButton}
+              >
+                {draft.test.status === "testing" ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin" />
+                    {t.aiSettings.testing}
+                  </>
+                ) : draft.test.status === "success" ? (
+                  <>
+                    <Check size={12} />
+                    {t.aiSettings.testSuccessShort}
+                  </>
+                ) : draft.test.status === "error" ? (
+                  <>
+                    <X size={12} />
+                    {t.aiSettings.testFailed}
+                  </>
+                ) : (
+                  <>
+                    <Zap size={12} />
+                    {t.aiSettings.testButton}
+                  </>
+                )}
+              </button>
+            </div>
+            {draft.test.status === "error" && draft.test.message ? (
+              <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+                <X size={12} className="mt-0.5 shrink-0" />
+                <span>{draft.test.message}</span>
+              </div>
+            ) : draft.test.status === "success" ? (
+              <div className="flex items-center gap-1.5 rounded-ui-sm bg-success/10 px-2 py-1.5 text-xs text-success">
+                <Check size={12} />
+                <span>
+                  {t.aiSettings.testSuccessDetail}
+                  {draft.test.latency
+                    ? ` · ${(draft.test.latency / 1000).toFixed(1)}s`
+                    : ""}
+                </span>
+              </div>
+            ) : null}
+            {isConfigured ? (
+              <button
+                type="button"
+                onClick={() => void handleClearKey()}
+                className="text-[11px] text-destructive/80 hover:text-destructive transition-colors duration-fast ease-out-subtle"
+              >
+                {tImg?.clearKey ?? "Remove API key"}
+              </button>
+            ) : null}
+          </div>
+        )}
+      </Field>
+
+      <Field label={tImg?.modelLabel ?? "Model"} hint={tImg?.modelHint}>
+        {(id) => (
+          <TextInput
+            id={id}
+            type="text"
+            value={draft.modelDraft}
+            onChange={(e) =>
+              updateDraft(selectedProvider.id, {
+                modelDraft: e.target.value.trim(),
+              })
+            }
+            onFocus={(e) => e.currentTarget.select()}
+            placeholder={selectedProvider.defaultModelId}
+          />
+        )}
+      </Field>
+
+      <Field label={tImg?.baseUrlLabel ?? "Base URL"} hint={tImg?.baseUrlHint}>
+        {(id) => (
+          <TextInput
+            id={id}
+            type="text"
+            value={draft.baseUrlDraft}
+            onChange={(e) =>
+              updateDraft(selectedProvider.id, {
+                baseUrlDraft: e.target.value.trim(),
+              })
+            }
+            onFocus={(e) => e.currentTarget.select()}
+            placeholder={selectedProvider.defaultBaseUrl}
+          />
+        )}
+      </Field>
+
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          onClick={handleReset}
+          disabled={!isDirty || saving}
           className={[
-            "inline-flex shrink-0 items-center gap-1.5 text-[11px]",
-            isConfigured ? "text-success" : "text-muted-foreground/70",
+            "rounded-ui-md border border-border bg-background px-3 py-1.5 text-xs",
+            "text-muted-foreground transition-colors duration-fast ease-out-subtle",
+            "hover:bg-accent hover:text-foreground",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
           ].join(" ")}
         >
-          <span
-            className={[
-              "inline-block h-1.5 w-1.5 rounded-full",
-              isConfigured ? "bg-success" : "bg-muted-foreground/40",
-            ].join(" ")}
-            aria-hidden
-          />
-          {isConfigured
-            ? tImg?.statusConfigured ?? "Configured"
-            : tImg?.statusNotConfigured ?? "Not configured"}
-        </span>
-      </div>
-
-      {/* Form fields — Provider / Model / API Key / Base URL pattern */}
-      <div className="space-y-3">
-        <Field label={tImg?.modelLabel ?? "Model"}>
-          {(id) => (
-            <TextInput
-              id={id}
-              type="text"
-              value={row.modelDraft}
-              onChange={(e) => onModelChange(e.target.value.trim())}
-              onBlur={() => void onModelCommit()}
-              onFocus={(e) => e.currentTarget.select()}
-              placeholder={provider.defaultModelId}
-            />
-          )}
-        </Field>
-
-        <Field label={tImg?.apiKeyLabel ?? "API Key"}>
-          {(id) => (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <TextInput
-                  id={id}
-                  type="password"
-                  value={row.apiKeyDraft}
-                  onChange={(e) => onApiKeyChange(e.target.value.trim())}
-                  onBlur={() => {
-                    if (row.apiKeyDirty && row.apiKeyDraft.trim().length > 0) {
-                      void onApiKeyCommit();
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void onApiKeyCommit();
-                    }
-                  }}
-                  onFocus={(e) => e.currentTarget.select()}
-                  placeholder={apiKeyPlaceholder}
-                  className="flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={() => void onTest()}
-                  disabled={row.test.status === "testing"}
-                  className={[
-                    "inline-flex shrink-0 items-center gap-1.5 rounded-ui-md border px-3 py-2 text-xs",
-                    "transition-colors duration-fast ease-out-subtle",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    row.test.status === "success"
-                      ? "border-success/40 bg-success/5 text-success"
-                      : row.test.status === "error"
-                        ? "border-destructive/40 bg-destructive/5 text-destructive"
-                        : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-                  ].join(" ")}
-                  title={t.aiSettings.testButton}
-                >
-                  {row.test.status === "testing" ? (
-                    <>
-                      <Loader2 size={12} className="animate-spin" />
-                      {t.aiSettings.testing}
-                    </>
-                  ) : row.test.status === "success" ? (
-                    <>
-                      <Check size={12} />
-                      {t.aiSettings.testSuccessShort}
-                    </>
-                  ) : row.test.status === "error" ? (
-                    <>
-                      <X size={12} />
-                      {t.aiSettings.testFailed}
-                    </>
-                  ) : (
-                    <>
-                      <Zap size={12} />
-                      {t.aiSettings.testButton}
-                    </>
-                  )}
-                </button>
-              </div>
-              {row.test.status === "error" && row.test.message ? (
-                <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
-                  <X size={12} className="mt-0.5 shrink-0" />
-                  <span>{row.test.message}</span>
-                </div>
-              ) : row.test.status === "success" ? (
-                <div className="flex items-center gap-1.5 rounded-ui-sm bg-success/10 px-2 py-1.5 text-xs text-success">
-                  <Check size={12} />
-                  <span>
-                    {t.aiSettings.testSuccessDetail}
-                    {row.test.latency
-                      ? ` · ${(row.test.latency / 1000).toFixed(1)}s`
-                      : ""}
-                  </span>
-                </div>
-              ) : null}
-              {isConfigured ? (
-                <button
-                  type="button"
-                  onClick={() => void onClearKey()}
-                  className="text-[11px] text-destructive/80 hover:text-destructive transition-colors duration-fast ease-out-subtle"
-                >
-                  {tImg?.clearKey ?? "Remove API key"}
-                </button>
-              ) : null}
-            </div>
-          )}
-        </Field>
-
-        <Field label={tImg?.baseUrlLabel ?? "Base URL"}>
-          {(id) => (
-            <TextInput
-              id={id}
-              type="text"
-              value={row.baseUrlDraft}
-              onChange={(e) => onBaseUrlChange(e.target.value.trim())}
-              onBlur={() => void onBaseUrlCommit()}
-              onFocus={(e) => e.currentTarget.select()}
-              placeholder={provider.defaultBaseUrl}
-            />
-          )}
-        </Field>
+          {tImg?.resetButton ?? t.common.cancel}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleSave()}
+          disabled={!isDirty || saving}
+          className={[
+            "rounded-ui-md border border-primary bg-primary px-3 py-1.5 text-xs",
+            "text-primary-foreground transition-colors duration-fast ease-out-subtle",
+            "hover:bg-primary/90",
+            "disabled:opacity-50 disabled:cursor-not-allowed",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+          ].join(" ")}
+        >
+          {saving ? <Loader2 size={12} className="animate-spin" /> : null}
+          {tImg?.saveButton ?? t.common.save}
+        </button>
       </div>
     </div>
   );

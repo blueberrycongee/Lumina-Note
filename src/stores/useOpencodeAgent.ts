@@ -30,6 +30,8 @@ import {
   setDefaultDirectory,
 } from "@/services/opencode/client";
 import { useFileStore } from "@/stores/useFileStore";
+import { getAIConfig } from "@/services/ai/ai";
+import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 export type AgentStatus =
   | "idle"
@@ -792,6 +794,31 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       // message, the HTTP request retries, and any SSE/error envelopes
       // that fire downstream of this flow.
       const traceId = makeTraceId();
+
+      // Refuse to send when the active provider has no usable credentials.
+      // Without this guard, the opencode bridge skips silently (see
+      // provider-bridge.ts:154 → applyOpencodeBridge(null)) and the opencode
+      // server falls through to whatever it can find on the system (env
+      // vars, ~/.opencode/auth.json, models.dev defaults). The renderer's
+      // model badge still shows the user's Lumina pick (e.g. "DeepSeek V4
+      // Flash") while the actual response comes from the fallback model —
+      // including its own thinking / identity behaviour, making per-model
+      // settings like thinkingMode look broken.
+      const cfg = getAIConfig();
+      const keylessOk = cfg.provider === "ollama" || cfg.provider === "openai-compatible";
+      if (!cfg.apiKey?.trim() && !keylessOk) {
+        const t = getCurrentTranslations();
+        reportError({
+          kind: "task.start",
+          severity: "blocker",
+          message: t.ai.apiKeyRequired,
+          retryable: false,
+          traceId,
+        });
+        set({ status: "idle", error: t.ai.apiKeyRequired });
+        return;
+      }
+
       try {
         useErrorBanner.getState().clearBanner();
         set({ status: "running", error: null });
