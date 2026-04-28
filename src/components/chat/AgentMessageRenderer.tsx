@@ -136,6 +136,57 @@ function collapseConsecutiveThinking(parts: TimelinePart[]): TimelinePart[] {
   return out;
 }
 
+// Bundle every consecutive non-text/non-diff timeline entry into a single
+// outer WorkSession. The user only ever sees one quiet "Working · mm:ss"
+// line per phase; thinking and tool details live inside, behind a click.
+function bundleWorkSessions(parts: TimelinePart[]): TimelinePart[] {
+  const out: TimelinePart[] = [];
+  let run: WorkItem[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    out.push({ type: "work_session", items: run });
+    run = [];
+  };
+  for (const part of parts) {
+    if (
+      part.type === "thinking" ||
+      part.type === "thinking_group" ||
+      part.type === "tool" ||
+      part.type === "tool_group"
+    ) {
+      run.push(part);
+    } else {
+      flush();
+      out.push(part);
+    }
+  }
+  flush();
+  return out;
+}
+
+function countWorkSteps(items: WorkItem[]): number {
+  let n = 0;
+  for (const item of items) {
+    if (item.type === "thinking") n += 1;
+    else if (item.type === "thinking_group") n += item.items.length;
+    else if (item.type === "tool") n += 1;
+    else if (item.type === "tool_group") n += item.tools.length;
+  }
+  return n;
+}
+
+function isWorkSessionInProgress(items: WorkItem[]): boolean {
+  return items.some((item) => {
+    if (item.type === "thinking") return item.status === "streaming";
+    if (item.type === "thinking_group")
+      return item.items.some((t) => t.status === "streaming");
+    if (item.type === "tool") return item.tool.result === undefined;
+    if (item.type === "tool_group")
+      return item.tools.some((t) => t.result === undefined);
+    return false;
+  });
+}
+
 // ============ 解析函数 ============
 
 const IGNORED_TAGS = new Set([
@@ -669,40 +720,6 @@ function formatElapsed(seconds: number): string {
 }
 
 /**
- * 工作进度提示：展示一个呼吸点 + 流逝的时间，
- * 让长时间无文本输出（仅工具/思考）时也有 "正在工作" 的反馈。
- */
-const WorkingClock = memo(function WorkingClock({
-  startTime,
-  t,
-}: {
-  startTime: number;
-  t: any;
-}) {
-  const [elapsed, setElapsed] = useState(() =>
-    Math.max(0, Math.floor((Date.now() - startTime) / 1000)),
-  );
-  useEffect(() => {
-    const tick = () =>
-      setElapsed(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [startTime]);
-
-  return (
-    <div
-      className="flex items-center gap-2 text-xs text-muted-foreground py-1"
-      aria-live="off"
-    >
-      <span className="streaming-dot" aria-hidden />
-      <span>{t.agentMessage.working}</span>
-      <span className="tabular-nums opacity-70">{formatElapsed(elapsed)}</span>
-    </div>
-  );
-});
-
-/**
  * 连续思考块的外层折叠
  */
 const ThinkingGroupCollapsible = memo(function ThinkingGroupCollapsible({
@@ -878,6 +895,113 @@ const ToolGroupCollapsible = memo(function ToolGroupCollapsible({
               {tools.map((tool, i) => (
                 <ToolCallCollapsible key={i} tool={tool} t={t} />
               ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+});
+
+/**
+ * WorkSession：每轮里所有非文本/非 diff 的中间步骤的统一外壳。
+ *
+ * 设计要点：
+ * - 默认折叠。用户只看到一行：呼吸点 + "Working · 0:42"（进行中）
+ *   或 check + "5 步骤"（已完成）。
+ * - 点开后展示组内的 ThinkingCollapsible / ToolCallCollapsible /
+ *   分组折叠 —— 那些原本就独立可折叠的卡片留在原位，只是被一层
+ *   外壳收起来不再明晃晃地堆在主流中。
+ * - "进行中" 推断自里面的条目：任一思考还在 streaming 或工具还没
+ *   出 result，整段就视为进行中。
+ */
+const WorkSession = memo(function WorkSession({
+  items,
+  t,
+  llmRequestStartTime,
+  isRunning,
+}: {
+  items: WorkItem[];
+  t: any;
+  llmRequestStartTime?: number | null;
+  isRunning?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const stepCount = countWorkSteps(items);
+  const inProgress = isWorkSessionInProgress(items);
+  const showLive = inProgress && !!isRunning && llmRequestStartTime != null;
+
+  const [elapsed, setElapsed] = useState(() =>
+    showLive
+      ? Math.max(0, Math.floor((Date.now() - (llmRequestStartTime as number)) / 1000))
+      : 0,
+  );
+  useEffect(() => {
+    if (!showLive) return;
+    const start = llmRequestStartTime as number;
+    const tick = () =>
+      setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [showLive, llmRequestStartTime]);
+
+  const stepsLabel = (t.agentMessage.steps as string).replace(
+    "{count}",
+    String(stepCount),
+  );
+  const headerLabel = showLive
+    ? `${t.agentMessage.working} · ${formatElapsed(elapsed)}`
+    : stepsLabel;
+
+  return (
+    <div className="text-xs text-muted-foreground">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
+      >
+        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        {showLive ? (
+          <span className="streaming-dot" aria-hidden />
+        ) : inProgress ? (
+          <Loader2 size={12} className="animate-spin" />
+        ) : (
+          <Check size={12} className="text-success" />
+        )}
+        <span>{headerLabel}</span>
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-5 py-1 space-y-1 border-l border-border ml-1.5">
+              {items.map((item, i) => {
+                const key = `work-${i}`;
+                if (item.type === "thinking") {
+                  return (
+                    <ThinkingCollapsible
+                      key={key}
+                      thinking={item.content}
+                      t={t}
+                      status={item.status === "streaming" ? "thinking" : "done"}
+                    />
+                  );
+                }
+                if (item.type === "thinking_group") {
+                  return <ThinkingGroupCollapsible key={key} items={item.items} t={t} />;
+                }
+                if (item.type === "tool") {
+                  return <ToolCallCollapsible key={key} tool={item.tool} t={t} />;
+                }
+                if (item.type === "tool_group") {
+                  return <ToolGroupCollapsible key={key} tools={item.tools} t={t} />;
+                }
+                return null;
+              })}
             </div>
           </motion.div>
         )}
@@ -1066,11 +1190,15 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       // 使用用户消息索引作为稳定且唯一的 key
       const roundKey = `round-${userIdx}`;
 
-      // 折叠连续的工具调用 (≥3 才合并，pendingDiff 已经插入完毕，
-      // 它会自然地把前后的 tool run 切开，所以不会被吞进同一组)
-      // 思考块同样折叠 (≥2)，避免一连串 "Thinking..." 行堆叠。
+      // 三层折叠（外层 → 内层）：
+      // 1. 同类聚合：工具≥3 / 思考≥2 合并成对应分组
+      // 2. WorkSession：所有非文本/非 diff 的中间步骤打包成一个折叠条
+      //    这样用户默认只看到一条 "Working · mm:ss"，点开才看分组，
+      //    分组再点开看条目，条目再点开看正文（参数/思考内容）。
+      // pendingDiff 在前面已插入，会自然把 work_session 切成前后两段。
       let collapsedParts = collapseConsecutiveTools(parts);
       collapsedParts = collapseConsecutiveThinking(collapsedParts);
+      collapsedParts = bundleWorkSessions(collapsedParts);
 
       // 判断是否有 AI 回复内容
       const hasAIContent = collapsedParts.length > 0;
@@ -1129,24 +1257,16 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
 
                   return round.parts.map((part, partIndex) => {
                   const key = `${round.roundKey}-part-${partIndex}`;
-                  if (part.type === "thinking") {
+                  if (part.type === "work_session") {
                     return (
-                      <ThinkingCollapsible
+                      <WorkSession
                         key={key}
-                        thinking={part.content}
+                        items={part.items}
                         t={t}
-                        status={part.status === "streaming" ? "thinking" : "done"}
+                        llmRequestStartTime={llmRequestStartTime}
+                        isRunning={isRunning}
                       />
                     );
-                  }
-                  if (part.type === "thinking_group") {
-                    return <ThinkingGroupCollapsible key={key} items={part.items} t={t} />;
-                  }
-                  if (part.type === "tool") {
-                    return <ToolCallCollapsible key={key} tool={part.tool} t={t} />;
-                  }
-                  if (part.type === "tool_group") {
-                    return <ToolGroupCollapsible key={key} tools={part.tools} t={t} />;
                   }
                   if (part.type === "diff") {
                     return (
@@ -1192,11 +1312,6 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         </motion.div>
       ))}
       </AnimatePresence>
-
-      {/* 工作进度（流逝时间） */}
-      {isRunning && llmRequestStartTime != null && (
-        <WorkingClock startTime={llmRequestStartTime} t={t} />
-      )}
 
       {/* 超时提示 */}
       {isRunning && isLongRunning && onRetryTimeout && (
