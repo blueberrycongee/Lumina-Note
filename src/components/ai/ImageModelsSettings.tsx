@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useImageProvidersStore } from "@/stores/useImageProvidersStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
+  Button,
   Field,
   SectionHeader,
   Select,
@@ -31,8 +32,6 @@ interface DraftState {
   test: { status: TestStatus; latency?: number; message?: string };
 }
 
-const PLACEHOLDER_MASK = "•••••••••••••••••••••";
-
 interface ImageModelsStrings {
   title: string;
   description: string;
@@ -41,6 +40,10 @@ interface ImageModelsStrings {
   providerLabel: string;
   apiKeyLabel: string;
   apiKeyPlaceholder: string;
+  apiKeyConfiguredPlaceholder?: string;
+  apiKeySavedHint?: string;
+  apiKeyEmptyHint?: string;
+  apiKeyDirtyHint?: string;
   modelLabel: string;
   modelHint: string;
   baseUrlLabel: string;
@@ -52,7 +55,7 @@ interface ImageModelsStrings {
   clearKey: string;
 }
 
-function makeBlankDraft(provider: ImageProviderInfo): DraftState {
+function makeBlankDraft(): DraftState {
   return {
     apiKeyDraft: "",
     apiKeyDirty: false,
@@ -63,7 +66,6 @@ function makeBlankDraft(provider: ImageProviderInfo): DraftState {
   // Note: model + baseUrl drafts get hydrated from persisted settings via
   // the syncing useEffect below. Starting blank avoids stale data when
   // the persisted values change between renders (e.g., after Save).
-  void provider; // suppress unused
 }
 
 /**
@@ -130,7 +132,7 @@ export function ImageModelsSettings() {
         const existing = next[p.id];
         if (!existing) {
           next[p.id] = {
-            ...makeBlankDraft(p),
+            ...makeBlankDraft(),
             modelDraft: persisted?.modelId ?? "",
             baseUrlDraft: persisted?.baseUrl ?? "",
           };
@@ -305,7 +307,17 @@ export function ImageModelsSettings() {
   }
 
   const isConfigured = selectedProvider.configured;
-  const apiKeyPlaceholder = isConfigured ? PLACEHOLDER_MASK : "sk-...";
+  const hasPendingApiKey = draft.apiKeyDirty && draft.apiKeyDraft.trim().length > 0;
+  const apiKeyPlaceholder = isConfigured
+    ? tImg?.apiKeyConfiguredPlaceholder ?? "Saved API key is hidden"
+    : tImg?.apiKeyPlaceholder ?? "sk-...";
+  const apiKeyHint = hasPendingApiKey
+    ? tImg?.apiKeyDirtyHint ?? "This will replace the saved API key."
+    : isConfigured
+      ? tImg?.apiKeySavedHint ??
+        "Saved in the local keychain. The secret is hidden; type a new key to replace it."
+      : tImg?.apiKeyEmptyHint ??
+        "Saved keys go to the local keychain, not the plain settings file.";
 
   return (
     <div className="space-y-4 pt-4 border-t border-border/60">
@@ -357,38 +369,50 @@ export function ImageModelsSettings() {
       <Field label={tImg?.apiKeyLabel ?? "API Key"}>
         {(id) => (
           <div className="space-y-2">
-            <div className="flex gap-2">
-              <TextInput
-                id={id}
-                type="password"
-                value={draft.apiKeyDraft}
-                onChange={(e) =>
-                  updateDraft(selectedProvider.id, {
-                    apiKeyDraft: e.target.value.trim(),
-                    apiKeyDirty: true,
-                    test: { status: "idle" },
-                  })
-                }
-                onFocus={(e) => e.currentTarget.select()}
-                placeholder={apiKeyPlaceholder}
-                className="flex-1"
-              />
-              <button
+            <TextInput
+              id={id}
+              type="password"
+              value={draft.apiKeyDraft}
+              onChange={(e) =>
+                updateDraft(selectedProvider.id, {
+                  apiKeyDraft: e.target.value.trim(),
+                  apiKeyDirty: true,
+                  test: { status: "idle" },
+                })
+              }
+              onFocus={(e) => e.currentTarget.select()}
+              placeholder={apiKeyPlaceholder}
+            />
+            <p className="text-xs text-muted-foreground">
+              {apiKeyHint}
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              {isConfigured ? (
+                <button
+                  type="button"
+                  onClick={() => void handleClearKey()}
+                  className="text-[11px] text-destructive/80 hover:text-destructive transition-colors duration-fast ease-out-subtle"
+                >
+                  {tImg?.clearKey ?? "Remove API key"}
+                </button>
+              ) : (
+                <span />
+              )}
+              <Button
                 type="button"
                 onClick={() => void handleTest()}
                 disabled={draft.test.status === "testing"}
                 className={[
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-ui-md border px-3 py-2 text-xs",
-                  "transition-colors duration-fast ease-out-subtle",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                  "h-auto px-2.5 py-1 text-xs",
                   draft.test.status === "success"
-                    ? "border-success/40 bg-success/5 text-success"
+                    ? "border-success/40 bg-success/5 text-success hover:bg-success/10 hover:text-success"
                     : draft.test.status === "error"
-                      ? "border-destructive/40 bg-destructive/5 text-destructive"
-                      : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
+                      ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      : "",
                 ].join(" ")}
                 title={t.aiSettings.testButton}
+                variant="secondary"
+                size="sm"
               >
                 {draft.test.status === "testing" ? (
                   <>
@@ -411,7 +435,7 @@ export function ImageModelsSettings() {
                     {t.aiSettings.testButton}
                   </>
                 )}
-              </button>
+              </Button>
             </div>
             {draft.test.status === "error" && draft.test.message ? (
               <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
@@ -428,15 +452,6 @@ export function ImageModelsSettings() {
                     : ""}
                 </span>
               </div>
-            ) : null}
-            {isConfigured ? (
-              <button
-                type="button"
-                onClick={() => void handleClearKey()}
-                className="text-[11px] text-destructive/80 hover:text-destructive transition-colors duration-fast ease-out-subtle"
-              >
-                {tImg?.clearKey ?? "Remove API key"}
-              </button>
             ) : null}
           </div>
         )}
@@ -477,35 +492,27 @@ export function ImageModelsSettings() {
       </Field>
 
       <div className="flex items-center justify-end gap-2 pt-1">
-        <button
+        <Button
           type="button"
           onClick={handleReset}
           disabled={!isDirty || saving}
-          className={[
-            "rounded-ui-md border border-border bg-background px-3 py-1.5 text-xs",
-            "text-muted-foreground transition-colors duration-fast ease-out-subtle",
-            "hover:bg-accent hover:text-foreground",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-          ].join(" ")}
+          variant="secondary"
+          size="sm"
+          className="h-auto px-3 py-1.5 text-xs text-muted-foreground"
         >
           {tImg?.resetButton ?? t.common.cancel}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => void handleSave()}
           disabled={!isDirty || saving}
-          className={[
-            "rounded-ui-md border border-primary bg-primary px-3 py-1.5 text-xs",
-            "text-primary-foreground transition-colors duration-fast ease-out-subtle",
-            "hover:bg-primary/90",
-            "disabled:opacity-50 disabled:cursor-not-allowed",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-          ].join(" ")}
+          variant="primary"
+          size="sm"
+          className="h-auto px-3 py-1.5 text-xs"
         >
           {saving ? <Loader2 size={12} className="animate-spin" /> : null}
           {tImg?.saveButton ?? t.common.save}
-        </button>
+        </Button>
       </div>
     </div>
   );

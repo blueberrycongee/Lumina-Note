@@ -1482,6 +1482,20 @@ export default {
     toolGroup: "Tool calls",
     thinkingGroup: "Thinking",
     working: "Working",
+    imageGeneratingTitle: "Generating image",
+    imageGeneratingDescription:
+      "Sending the refined prompt, aspect ratio, and references to the image model. The result will be saved to the vault.",
+    imageGeneratingMessages: [
+      "Creating the image",
+      "Refining visual details",
+      "Balancing composition and aspect ratio",
+      "Waiting for the image model",
+    ],
+    imageGeneratedTitle: "Image generated",
+    imageGeneratedPath: "Path",
+    imageGeneratedModel: "Model",
+    imageGeneratedReuseHint: "Click the image to use it as a reference for the next generation.",
+    imageGeneratedMissingPath: "Generated image path is missing",
     errors: {
       generic: "Something went wrong. Please try again.",
       retry: "Try again",
@@ -1688,12 +1702,18 @@ export default {
     imageModels: {
       title: "Image Models",
       description:
-        "Drop in the keys. Lumina picks the right model when the agent goes to draw something — you don't have to switch.",
+        "Image keys are independent from the main model key. Image mode can generate directly even when the agent is not configured.",
       statusConfigured: "Connected",
       statusNotConfigured: "Not configured",
       providerLabel: "Provider",
       apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
+      apiKeyConfiguredPlaceholder: "API key saved (hidden)",
+      apiKeySavedHint:
+        "Saved in the local keychain. The secret is hidden; type a new key to replace it.",
+      apiKeyEmptyHint:
+        "Saved keys go to the local keychain, not the plain settings file.",
+      apiKeyDirtyHint: "Saving will replace this provider's API key.",
       modelLabel: "Model",
       modelHint: "Leave blank to use the provider default",
       baseUrlLabel: "Base URL",

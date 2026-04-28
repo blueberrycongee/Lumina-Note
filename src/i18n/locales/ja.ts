@@ -1476,6 +1476,20 @@ export default {
     toolGroup: "ツール呼び出し",
     thinkingGroup: "思考プロセス",
     working: "実行中",
+    imageGeneratingTitle: "画像を生成中",
+    imageGeneratingDescription:
+      "整えたプロンプト、比率、参照画像を画像モデルに送信しています。完了すると vault に保存されます。",
+    imageGeneratingMessages: [
+      "画像を作成中",
+      "画面のディテールを調整中",
+      "構図と比率を整えています",
+      "画像モデルの結果を待っています",
+    ],
+    imageGeneratedTitle: "画像を生成しました",
+    imageGeneratedPath: "パス",
+    imageGeneratedModel: "モデル",
+    imageGeneratedReuseHint: "画像をクリックすると、次回生成の参照画像として使えます。",
+    imageGeneratedMissingPath: "生成画像のパスがありません",
     errors: {
       generic: "エラーが発生しました。もう一度お試しください。",
       retry: "再試行",
@@ -1683,12 +1697,18 @@ export default {
     imageModels: {
       title: "画像モデル",
       description:
-        "Key を入れておけば、AI が画像を作るときにちょうどいいモデルを自分で選びます。",
+        "画像 key はメインモデルの key とは独立しています。agent が未設定でも画像モードは直接生成できます。",
       statusConfigured: "接続済み",
       statusNotConfigured: "未設定",
       providerLabel: "プロバイダ",
       apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
+      apiKeyConfiguredPlaceholder: "API Key は保存済み（非表示）",
+      apiKeySavedHint:
+        "ローカルキーチェーンに保存済みです。安全のため表示しません。新しい key を入力すると置き換えます。",
+      apiKeyEmptyHint:
+        "保存した key はローカルキーチェーンに入り、通常の設定ファイルには保存されません。",
+      apiKeyDirtyHint: "保存するとこのプロバイダの API Key を置き換えます。",
       modelLabel: "Model",
       modelHint: "空欄でデフォルトモデルを使用",
       baseUrlLabel: "Base URL",
