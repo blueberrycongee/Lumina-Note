@@ -27,7 +27,7 @@
   - No new runtime dependencies yet (those come in C2).
 
 ### C2 — Add Ed25519 verification with `@noble/ed25519`
-- [ ] **Goal:** `verify.ts` exports `verifyLicense(token: string): LicensePayload | null` per `CONTRACT.md` §1.3.
+- [x] **Goal:** `verify.ts` exports `verifyLicense(token: string): LicensePayload | null` per `CONTRACT.md` §1.3.
 - **Files:** `src/services/luminaCloud/verify.ts`, `src/services/luminaCloud/verify.test.ts`, `src/services/luminaCloud/canonical-json.ts` + test.
 - **Public key:** `PUBLIC_KEY.ts` exports a `PUBLIC_KEY_B64` placeholder constant. Real value will be filled in by Lead from `lumina-cloud` keypair generation. Mark with `// LEAD: replace with real public key from lumina-cloud T3 output`.
 - **Acceptance:**
@@ -47,7 +47,7 @@
   - **[BLOCKED: must NOT touch existing electron entry beyond a single named import]** — if the existing electron main is structured such that adding the new IPC handler requires non-additive edits, block and ask Lead.
 
 ### C4 — Zustand store `useLicenseStore`
-- [ ] **Goal:** `src/stores/useLicenseStore.ts` with: `license: string | null`, `payload: LicensePayload | null`, `status: 'idle' | 'loading' | 'valid' | 'invalid'`, actions `setLicense(token)`, `clearLicense()`, `refreshFromKeychain()`.
+- [x] **Goal:** `src/stores/useLicenseStore.ts` with: `license: string | null`, `payload: LicensePayload | null`, `status: 'idle' | 'loading' | 'valid' | 'invalid'`, actions `setLicense(token)`, `clearLicense()`, `refreshFromKeychain()`.
 - **Acceptance:**
   - `setLicense` calls `verifyLicense` and updates `payload`/`status` accordingly.
   - Hydrates from keychain on app start (calls `refreshFromKeychain` once).
@@ -128,4 +128,6 @@
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
 
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
+[x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
+[x] C4 — 2026-04-28 — 3144bd5 — useLicenseStore (zustand) with mocked luminaCloud; 9 tests cover all four status transitions
 [x] C5 — 2026-04-28 — 0d7eb75 — typed HTTP client + LuminaCloudError; 21 tests; no new runtime deps (manual fetch mock)
