@@ -1673,13 +1673,15 @@ export default {
     imageModels: {
       title: "Image Models",
       description:
-        "Connect image-generation APIs. The image-gen skill picks the right one for each request — you don't manage routing.",
+        "Drop in the keys. Lumina picks the right model when the agent goes to draw something — you don't have to switch.",
       statusConfigured: "Connected",
       statusNotConfigured: "Not configured",
+      apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
+      modelLabel: "Model",
+      modelHint: "Leave blank to use the provider default",
       baseUrlLabel: "Base URL",
       baseUrlHint: "For proxies or regional endpoints. Leave blank for default.",
-      advanced: "Advanced",
       clearKey: "Remove API key",
     },
     errors: {

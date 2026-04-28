@@ -22,6 +22,9 @@ export type PluginImageProviderId =
 export interface ResolvedImageSettings {
   apiKey?: string
   baseUrl?: string
+  /** User-persisted model id override — falls back to registry default
+   *  when undefined. Per-call model_id arg from the agent still wins. */
+  modelId?: string
 }
 
 export interface ImageProviderDefaults {

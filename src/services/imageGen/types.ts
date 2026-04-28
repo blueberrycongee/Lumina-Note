@@ -77,6 +77,8 @@ export const FALLBACK_IMAGE_PROVIDERS: ImageProviderInfo[] = [
 export interface ImageProviderPersistedSettings {
   /** Optional baseURL override (proxy / regional endpoint). */
   baseUrl?: string;
+  /** Optional model id override; falls back to provider's default. */
+  modelId?: string;
 }
 
 export interface AllImageProviderSettings {

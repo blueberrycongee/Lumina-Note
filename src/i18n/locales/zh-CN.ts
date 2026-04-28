@@ -391,7 +391,7 @@ export default {
       brainstorm: "陪我想点新东西",
       brainstormPrompt: "我想聊一下",
       imageModeChip: "图片模式",
-      imageModeChipHint: "下一条消息会作为图像生成请求发送",
+      imageModeChipHint: "下一条会被当成画图请求发出去",
       imageModeChipRemove: "退出图片模式",
     },
     history: "历史记录",
@@ -1636,13 +1636,15 @@ export default {
     imageModels: {
       title: "图像模型",
       description:
-        "为 AI 接通图像生成 API。配置后由 image-gen skill 自动选择合适的模型——你不用管路由。",
+        "填好 key 就行。AI 真要画图时会自己挑合适的模型，不用你来切。",
       statusConfigured: "已连接",
       statusNotConfigured: "未配置",
+      apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
+      modelLabel: "Model",
+      modelHint: "留空使用默认模型",
       baseUrlLabel: "Base URL",
       baseUrlHint: "用于代理或区域端点，留空使用默认值",
-      advanced: "高级",
       clearKey: "移除 API Key",
     },
     errors: {

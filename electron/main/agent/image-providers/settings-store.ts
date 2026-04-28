@@ -23,6 +23,12 @@ import type { ImageProviderId } from './registry.js'
 export interface ImageProviderPersistedSettings {
   /** Optional baseURL override (proxies, regional endpoints, etc.) */
   baseUrl?: string
+  /**
+   * Optional model id override. When set, generate_image uses this instead
+   * of the registry default — useful when a provider releases a new
+   * model (e.g. gpt-image-3) before Lumina ships a registry update.
+   */
+  modelId?: string
 }
 
 export interface AllImageProviderSettings {
@@ -138,12 +144,13 @@ export class ImageProviderSettingsStore {
    */
   async resolveSettings(
     id: ImageProviderId,
-  ): Promise<{ apiKey?: string; baseUrl?: string }> {
+  ): Promise<{ apiKey?: string; baseUrl?: string; modelId?: string }> {
     const persisted = this.getProviderSettings(id)
     const apiKey = (await this.getProviderApiKey(id)) ?? undefined
     return {
       apiKey,
       baseUrl: persisted.baseUrl,
+      modelId: persisted.modelId,
     }
   }
 }

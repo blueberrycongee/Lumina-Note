@@ -115,11 +115,17 @@ const pluginFn: Plugin = async () => {
             }
           }
 
+          // Model id precedence: per-call agent arg > user-persisted
+          // override > registry default. Persisted lets users adopt a new
+          // model variant (e.g. gpt-image-3) without us shipping a release.
+          const effectiveModelId =
+            args.model_id ?? settings.modelId ?? defaults.defaultModelId
+
           ctx.metadata({
             title: `Generating with ${defaults.marketingName}…`,
             metadata: {
               provider: providerId,
-              model: args.model_id ?? defaults.defaultModelId,
+              model: effectiveModelId,
               referenceCount: referenceImages.length,
             },
           })
@@ -132,7 +138,7 @@ const pluginFn: Plugin = async () => {
               prompt: args.prompt,
               referenceImages,
               aspectRatio: args.aspect_ratio,
-              modelId: args.model_id,
+              modelId: effectiveModelId,
             },
             signal: ctx.abort,
           })

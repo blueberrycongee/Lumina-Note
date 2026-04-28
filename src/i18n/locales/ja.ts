@@ -1668,13 +1668,15 @@ export default {
     imageModels: {
       title: "画像モデル",
       description:
-        "AI に画像生成 API を接続します。image-gen skill が用途に応じて最適なモデルを選びます。",
+        "Key を入れておけば、AI が画像を作るときにちょうどいいモデルを自分で選びます。",
       statusConfigured: "接続済み",
       statusNotConfigured: "未設定",
+      apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
+      modelLabel: "Model",
+      modelHint: "空欄でデフォルトモデルを使用",
       baseUrlLabel: "Base URL",
       baseUrlHint: "プロキシや地域エンドポイント用。空欄でデフォルトを使用。",
-      advanced: "詳細",
       clearKey: "API Key を削除",
     },
     errors: {
