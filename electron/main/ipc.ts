@@ -19,7 +19,6 @@ import { session } from "electron";
 import electronUpdater from "electron-updater";
 import type { ProviderSettingsStore } from "./agent/providers/settings-store.js";
 import type { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
-import type { SkillLoader } from "./agent/skills/loader.js";
 import type { WikiSettingsStore } from "./wiki/settings-store.js";
 import type { WikiManager } from "./wiki/manager.js";
 import { dispatchAgentCommand, isAgentCommand } from "./agent/ipc-dispatch.js";
@@ -66,7 +65,6 @@ export interface IpcHandlersOptions {
   getMainWindow: () => BrowserWindow | null;
   providerSettings?: ProviderSettingsStore;
   imageProviderSettings?: ImageProviderSettingsStore;
-  skillLoader?: SkillLoader;
   wikiSettings?: WikiSettingsStore;
   wikiManager?: WikiManager;
   /**
@@ -87,7 +85,6 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     getMainWindow,
     providerSettings,
     imageProviderSettings,
-    skillLoader,
     wikiSettings,
     wikiManager,
     onActiveVaultChanged,
@@ -180,7 +177,6 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
           {
             providerSettings,
             imageProviderSettings,
-            skillLoader,
             wikiSettings,
             wikiManager,
             onActiveVaultChanged,

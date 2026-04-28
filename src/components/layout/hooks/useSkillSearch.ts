@@ -1,25 +1,32 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useFileStore } from "@/stores/useFileStore";
-import { listAgentSkills, readAgentSkill } from "@/lib/host";
-import type { SelectedSkill, SkillInfo } from "@/types/skills";
 
+import { listOpencodeSkills } from "@/services/opencode/skills";
+import type { OpencodeSkillInfo } from "@/services/opencode/skills";
+import type { SelectedSkill } from "@/types/skills";
+
+/**
+ * Skill discovery + selection for the chat input.
+ *
+ * Lists opencode-discovered skills (built-in + vault + global) so the
+ * "@skill" popover can suggest them. Selected skills become chips above
+ * the input; the agent already sees them in `<available_skills>` so
+ * selection is informational from its perspective — the chip is just a
+ * UX cue for the user.
+ */
 export function useSkillSearch() {
-  const vaultPath = useFileStore((s) => s.vaultPath);
-
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [skills, setSkills] = useState<OpencodeSkillInfo[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<SelectedSkill[]>([]);
   const [skillQuery, setSkillQuery] = useState("");
   const [showSkillMenu, setShowSkillMenu] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(false);
 
-  // Load available skills
   useEffect(() => {
     let active = true;
     setSkillsLoading(true);
-    listAgentSkills(vaultPath || undefined)
+    listOpencodeSkills()
       .then((items) => {
         if (!active) return;
-        setSkills(Array.isArray(items) ? items : []);
+        setSkills(items);
       })
       .catch((err) => {
         if (!active) return;
@@ -33,7 +40,7 @@ export function useSkillSearch() {
     return () => {
       active = false;
     };
-  }, [vaultPath]);
+  }, []);
 
   const filteredSkills = useMemo(() => {
     if (!skills?.length) return [];
@@ -43,38 +50,29 @@ export function useSkillSearch() {
       .filter(
         (skill) =>
           skill.name.toLowerCase().includes(q) ||
-          skill.title.toLowerCase().includes(q) ||
           (skill.description?.toLowerCase().includes(q) ?? false),
       )
       .slice(0, 8);
   }, [skills, skillQuery]);
 
   const handleSelectSkill = useCallback(
-    async (skill: SkillInfo) => {
+    (skill: OpencodeSkillInfo) => {
       if (selectedSkills.some((s) => s.name === skill.name)) {
         setShowSkillMenu(false);
         setSkillQuery("");
-        return true; // already selected, just close menu
+        return true;
       }
-      try {
-        const detail = await readAgentSkill(skill.name, vaultPath || undefined);
-        const nextSkill: SelectedSkill = {
-          name: detail.info.name,
-          title: detail.info.title,
-          description: detail.info.description,
-          prompt: detail.prompt,
-          source: detail.info.source,
-        };
-        setSelectedSkills((prev) => [...prev, nextSkill]);
-      } catch (err) {
-        console.warn("[Skills] Failed to load skill detail:", err);
-      } finally {
-        setShowSkillMenu(false);
-        setSkillQuery("");
-      }
+      const next: SelectedSkill = {
+        name: skill.name,
+        description: skill.description,
+        prompt: skill.content,
+      };
+      setSelectedSkills((prev) => [...prev, next]);
+      setShowSkillMenu(false);
+      setSkillQuery("");
       return false;
     },
-    [selectedSkills, vaultPath],
+    [selectedSkills],
   );
 
   return {

@@ -1326,7 +1326,7 @@ export function MainAIChatShell() {
                       className="flex items-center gap-1 px-2 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs"
                     >
                       <Sparkles size={11} className="shrink-0" />
-                      <span className="font-medium">{skill.title}</span>
+                      <span className="font-medium">{skill.name}</span>
                       <button
                         onClick={() =>
                           setSelectedSkills((prev) =>
@@ -1426,11 +1426,11 @@ export function MainAIChatShell() {
                       ) : (
                         filteredSkills.map((skill) => (
                           <Row
-                            key={`${skill.source ?? "skill"}:${skill.name}`}
+                            key={`skill:${skill.name}`}
                             density="compact"
                             icon={<Sparkles size={14} />}
-                            title={skill.title}
-                            description={skill.description || skill.name}
+                            title={skill.name}
+                            description={skill.description}
                             onSelect={() => handleSelectSkill(skill)}
                           />
                         ))

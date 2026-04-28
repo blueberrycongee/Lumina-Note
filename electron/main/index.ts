@@ -35,7 +35,6 @@ import {
   type ImageProviderId,
 } from "./agent/image-providers/registry.js";
 import { setLuminaPluginContext } from "./agent-v2/plugin/context.js";
-import { SkillLoader } from "./agent/skills/loader.js";
 import { WikiSettingsStore } from "./wiki/settings-store.js";
 import { WikiManager } from "./wiki/manager.js";
 import { createMainWindowOptions } from "./window-config.js";
@@ -167,7 +166,6 @@ app.whenReady().then(() => {
     getActiveVaultPath: () => activeVaultPath,
   });
 
-  const skillLoader = new SkillLoader();
   const wikiSettings = new WikiSettingsStore({
     baseDir: app.getPath("userData"),
   });
@@ -219,7 +217,6 @@ app.whenReady().then(() => {
     getMainWindow,
     providerSettings,
     imageProviderSettings,
-    skillLoader,
     wikiSettings,
     wikiManager,
     onActiveVaultChanged: (vaultPath: string) => {

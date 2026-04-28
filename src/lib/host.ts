@@ -6,7 +6,6 @@
  */
 
 import { invoke } from "./hostBridge";
-import type { SkillDetail, SkillInfo } from "@/types/skills";
 import type { PluginEntry, PluginInfo } from "@/types/plugins";
 
 // Re-export bridge primitives so call sites that imported from
@@ -313,21 +312,6 @@ export async function showInExplorer(path: string): Promise<void> {
 
 export async function openNewWindow(): Promise<void> {
   return invoke("open_new_window");
-}
-
-// ── Agent skills ──────────────────────────────────────────────────────────
-
-export async function listAgentSkills(
-  workspacePath?: string,
-): Promise<SkillInfo[]> {
-  return invoke("agent_list_skills", { workspace_path: workspacePath });
-}
-
-export async function readAgentSkill(
-  name: string,
-  workspacePath?: string,
-): Promise<SkillDetail> {
-  return invoke("agent_read_skill", { name, workspace_path: workspacePath });
 }
 
 // ── Plugin ecosystem ──────────────────────────────────────────────────────

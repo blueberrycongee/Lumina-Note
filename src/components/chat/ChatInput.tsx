@@ -19,7 +19,7 @@ import {
 } from "@/components/ui";
 import { useCommandStore, SlashCommand } from "@/stores/useCommandStore";
 import { CommandManagerModal } from "./CommandManagerModal";
-import { invoke } from "@/lib/host";
+import { listOpencodeSkills } from "@/services/opencode/skills";
 import {
   filterMentionFiles,
   flattenFileTreeToReferences,
@@ -88,41 +88,38 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCommand, setEditingCommand] = useState<SlashCommand | null>(null);
 
-  // Fetch built-in skills from backend and merge as slash commands
-  const vaultPath = useFileStore((s) => s.vaultPath);
+  // Fetch opencode-discovered skills (Lumina built-ins + vault + global)
+  // and surface them as slash commands so the user can invoke a skill's
+  // playbook via /<skill-name>. The opencode `skill` tool is what drives
+  // actual skill loading at agent runtime — this is a UX shortcut for
+  // pasting the playbook into the user's prompt directly.
   const [skillCommands, setSkillCommands] = useState<SlashCommand[]>([]);
   useEffect(() => {
-    if (!vaultPath || !enableSlashCommands) return;
+    if (!enableSlashCommands) return;
     let cancelled = false;
     (async () => {
       try {
-        const skills = await invoke<Array<{
-          name: string; title: string; description?: string; source?: string;
-        }>>("agent_list_skills", { workspace_path: vaultPath });
-        if (cancelled || !skills?.length) return;
-        const details = await Promise.all(
-          skills.map((s) =>
-            invoke<{ info: typeof s; prompt: string } | null>(
-              "agent_read_skill", { workspace_path: vaultPath, name: s.name },
-            ).catch(() => null),
-          ),
-        );
+        const skills = await listOpencodeSkills();
         if (cancelled) return;
         setSkillCommands(
-          details
-            .filter((d): d is NonNullable<typeof d> => d != null && !!d.prompt)
-            .map((d) => ({
-              id: `skill:${d.info.name}`,
-              key: d.info.name,
-              description: d.info.description || d.info.title,
-              prompt: d.prompt,
+          skills
+            .filter((s) => !!s.content)
+            .map((s) => ({
+              id: `skill:${s.name}`,
+              key: s.name,
+              description: s.description,
+              prompt: s.content,
               isDefault: false,
             })),
         );
-      } catch { /* backend not ready yet */ }
+      } catch {
+        /* opencode server not ready yet — no skills available right now */
+      }
     })();
-    return () => { cancelled = true; };
-  }, [vaultPath, enableSlashCommands]);
+    return () => {
+      cancelled = true;
+    };
+  }, [enableSlashCommands]);
 
   const allCommands = useMemo(
     () => {

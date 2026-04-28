@@ -23,7 +23,6 @@ import type {
 } from './providers/settings-store.js'
 import { testProviderConnection } from './providers/test-connection.js'
 import { setAutoApproveToolCalls } from '../agent-v2/provider-bridge.js'
-import type { SkillLoader } from './skills/loader.js'
 import type { WikiManager } from '../wiki/manager.js'
 import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
 import { loadWikiIndex } from '../wiki/index-loader.js'
@@ -46,7 +45,6 @@ import {
 export interface AgentDispatchContext {
   providerSettings?: ProviderSettingsStore
   imageProviderSettings?: ImageProviderSettingsStore
-  skillLoader?: SkillLoader
   wikiSettings?: WikiSettingsStore
   wikiManager?: WikiManager
   /**
@@ -84,7 +82,6 @@ export async function dispatchAgentCommand(
   const {
     providerSettings,
     imageProviderSettings,
-    skillLoader,
     wikiSettings,
     wikiManager,
     onActiveVaultChanged,
@@ -291,25 +288,6 @@ export async function dispatchAgentCommand(
       }
       await deleteSkill({ vaultPath: vault_path, name })
       return null
-    }
-
-    // Skills — read-only skill discovery for the Skill Manager UI (LEGACY).
-    case 'agent_list_skills': {
-      if (!skillLoader) return []
-      const { workspace_path } = args as { workspace_path?: string }
-      if (!workspace_path) return []
-      return skillLoader.listSkills(workspace_path)
-    }
-    case 'agent_read_skill': {
-      if (!skillLoader) return null
-      const { name, workspace_path } = args as {
-        name?: string
-        workspace_path?: string
-      }
-      if (!name || !workspace_path) return null
-      const detail = await skillLoader.readSkill(workspace_path, name)
-      if (!detail) return null
-      return detail
     }
 
     // Vault — bind wiki manager to active vault, load wiki index, placeholder lint.
