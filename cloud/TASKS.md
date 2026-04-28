@@ -108,8 +108,7 @@
 - **Acceptance:** "Account" tab appears, both panels render.
 
 ### C11 — Minimal additive edit to `AISettingsModal.tsx`
-- [ ] **[BLOCKED: file currently has uncommitted work in progress (see git status). Lead, please commit or stash before unblocking.]**
-- **When unblocked:** Add Lumina Cloud to the providers list display **only**. Do not touch the rehydrate / dirty-tracking logic that's currently being fixed.
+- [x] **Goal:** Add Lumina Cloud to the providers list display **only**. Do not touch the rehydrate / dirty-tracking logic that's currently being fixed.
 
 ### C12 — End-to-end test: license → chat → usage
 - [x] **Goal:** Vitest e2e test that exercises: insert fixture license → setLicense → verify visible in provider list → mock chat round-trip → assert usage counter would update.

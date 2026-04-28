@@ -7,6 +7,12 @@ import {
   PROVIDER_MODELS,
   type LLMProviderType,
 } from "@/services/llm";
+import {
+  LUMINA_CLOUD_PROVIDER,
+  LUMINA_CLOUD_PROVIDER_ID,
+  isLuminaCloudVisible,
+} from "@/services/llm/providers/luminaCloud";
+import { useLicenseStore } from "@/stores/useLicenseStore";
 import { invoke } from "@/lib/host";
 import {
   getRecommendedTemperature,
@@ -167,6 +173,8 @@ export function AISettingsContent() {
   }, [savedConfig]);
 
   const errorMessages = t.aiSettings.errors as Record<string, string>;
+  const licenseFeatures = useLicenseStore((s) => s.payload?.features);
+  const licenseFeaturesForCloud = isLuminaCloudVisible(licenseFeatures);
   const providerMeta = PROVIDER_MODELS[config.provider as LLMProviderType];
   const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);
   const effectiveModelForTemp =
@@ -301,10 +309,18 @@ export function AISettingsContent() {
                   temperature: getRecommendedTemperature(provider, defaultModel),
                 });
               }}
-              options={Object.entries(PROVIDER_MODELS).map(([key, meta]) => ({
-                value: key,
-                label: meta.label,
-              }))}
+              options={[
+                ...Object.entries(PROVIDER_MODELS).map(([key, meta]) => ({
+                  value: key,
+                  label: meta.label,
+                })),
+                ...(licenseFeaturesForCloud
+                  ? [{
+                      value: LUMINA_CLOUD_PROVIDER_ID,
+                      label: LUMINA_CLOUD_PROVIDER.label,
+                    }]
+                  : []),
+              ]}
             />
           )}
         </Field>
