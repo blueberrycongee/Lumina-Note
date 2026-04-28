@@ -1,17 +1,13 @@
 import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowUpRight,
-  ChevronRight,
   Image as ImageIcon,
-  Network,
   PenLine,
   Search,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { useFileStore } from "@/stores/useFileStore";
 import type { FileEntry } from "@/lib/host";
 
 // ── Helpers ──
@@ -121,21 +117,19 @@ export function WelcomeGreeting({
   );
 }
 
-// ── Starters: a single quiet list that replaces the old 4-card grid +
-// 3-pill explore row. Mixes AI prompts (fill input) and navigation. Each
-// row is a clickable line with a left icon + label + optional dim
-// context fragment + trailing arrow that surfaces on hover.
-
-type StarterVariant = "ai" | "nav";
+// ── Starters: three ChatGPT-style pills under the input. Always exactly
+// three; the set adapts to context (current file, vault populated). Each
+// pill carries an icon tinted with a distinct accent so the row reads as
+// "three different kinds of starting points," not a uniform menu.
 
 interface Starter {
   id: string;
   icon: LucideIcon;
   label: string;
-  /** Optional dim context that lives on the right of the label — e.g. the
-   *  filename for "Help with this note · finals-prep.md". */
-  context?: string;
-  variant: StarterVariant;
+  /** Tailwind class fragment for the icon's accent color. Each pill gets
+   *  a different hue so the row feels like a palette of options rather
+   *  than a stack of the same thing. */
+  accent: string;
   onClick: () => void;
 }
 
@@ -144,7 +138,6 @@ interface BuildStartersInput {
   hasFiles: boolean;
   currentFile: string | null | undefined;
   onSetInput: (value: string) => void;
-  openGraphTab: () => void;
 }
 
 function buildStarters({
@@ -152,102 +145,96 @@ function buildStarters({
   hasFiles,
   currentFile,
   onSetInput,
-  openGraphTab,
 }: BuildStartersInput): Starter[] {
   const w = t.ai.welcomeStarters;
-  const out: Starter[] = [];
+  const helpWithNote: Starter | null = currentFile
+    ? {
+        id: "help-with-note",
+        icon: PenLine,
+        label: w.helpWithNote,
+        accent: "text-emerald-500 dark:text-emerald-400",
+        onClick: () => {
+          const name = extractName(currentFile);
+          onSetInput(w.helpWithNotePrompt.replace("{name}", name));
+        },
+      }
+    : null;
 
-  if (currentFile) {
-    const name = extractName(currentFile);
-    out.push({
-      id: "help-with-note",
-      icon: PenLine,
-      label: w.helpWithNote,
-      context: name,
-      variant: "ai",
-      onClick: () => onSetInput(w.helpWithNotePrompt.replace("{name}", name)),
-    });
-  }
-
-  out.push({
+  const generateImage: Starter = {
     id: "generate-image",
     icon: ImageIcon,
     label: w.generateImage,
-    variant: "ai",
+    accent: "text-violet-500 dark:text-violet-400",
     onClick: () => onSetInput(w.generateImagePrompt),
-  });
+  };
 
-  if (hasFiles) {
-    out.push({
-      id: "find-notes",
-      icon: Search,
-      label: w.findNotes,
-      variant: "ai",
-      onClick: () => onSetInput(w.findNotesPrompt),
-    });
-  } else {
-    out.push({
-      id: "brainstorm",
-      icon: Sparkles,
-      label: w.brainstorm,
-      variant: "ai",
-      onClick: () => onSetInput(w.brainstormPrompt),
-    });
-  }
+  const findOrBrainstorm: Starter = hasFiles
+    ? {
+        id: "find-notes",
+        icon: Search,
+        label: w.findNotes,
+        accent: "text-sky-500 dark:text-sky-400",
+        onClick: () => onSetInput(w.findNotesPrompt),
+      }
+    : {
+        id: "brainstorm",
+        icon: Sparkles,
+        label: w.brainstorm,
+        accent: "text-amber-500 dark:text-amber-400",
+        onClick: () => onSetInput(w.brainstormPrompt),
+      };
 
-  out.push({
-    id: "open-graph",
-    icon: Network,
-    label: w.openGraph,
-    variant: "nav",
-    onClick: openGraphTab,
-  });
+  const candidates: (Starter | null)[] = [
+    helpWithNote,
+    generateImage,
+    findOrBrainstorm,
+    // Fallback when there's no current file: use brainstorm as the third
+    // pill alongside generate + find/brainstorm so we always have three.
+    !helpWithNote && hasFiles
+      ? {
+          id: "brainstorm-extra",
+          icon: Sparkles,
+          label: w.brainstorm,
+          accent: "text-amber-500 dark:text-amber-400",
+          onClick: () => onSetInput(w.brainstormPrompt),
+        }
+      : null,
+  ];
 
-  return out.slice(0, 4);
+  return candidates.filter((s): s is Starter => s !== null).slice(0, 3);
 }
 
-function StarterRow({ starter }: { starter: Starter }) {
-  const { icon: Icon, label, context, variant, onClick } = starter;
+function StarterPill({ starter }: { starter: Starter }) {
+  const { icon: Icon, label, accent, onClick } = starter;
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        "group relative w-full flex items-center gap-3 px-3 py-2.5",
-        "rounded-ui-md text-left",
-        "transition-[background-color,color] duration-fast ease-out-subtle",
-        "hover:bg-muted/50",
-        "focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-primary/30",
-        "active:scale-[0.99]",
+        "group inline-flex items-center gap-1.5",
+        "rounded-full border border-border/60 bg-background/40 px-3 py-1.5",
+        "text-xs text-foreground",
+        "transition-[background-color,border-color,transform] duration-fast ease-out-subtle",
+        "hover:border-primary/40 hover:bg-accent/50",
+        "active:scale-[0.97]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       ].join(" ")}
     >
       <Icon
-        size={14}
-        className="shrink-0 text-muted-foreground transition-colors duration-fast ease-out-subtle group-hover:text-primary"
+        size={13}
+        className={[
+          "shrink-0 transition-transform duration-fast ease-out-subtle",
+          "group-hover:scale-110",
+          accent,
+        ].join(" ")}
       />
-      <span className="flex-1 truncate text-sm text-foreground">{label}</span>
-      {context && (
-        <span className="shrink-0 truncate max-w-[40%] text-xs text-muted-foreground/80 font-mono">
-          {context}
-        </span>
-      )}
-      {variant === "nav" ? (
-        <ArrowUpRight
-          size={12}
-          className="shrink-0 text-muted-foreground/50 transition-[color,transform] duration-fast ease-out-subtle group-hover:text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-        />
-      ) : (
-        <ChevronRight
-          size={12}
-          className="shrink-0 text-muted-foreground/40 opacity-0 -translate-x-1 transition-[opacity,transform] duration-fast ease-out-subtle group-hover:opacity-100 group-hover:translate-x-0"
-        />
-      )}
+      <span>{label}</span>
     </button>
   );
 }
 
-/** Quick-starters list — the welcome-screen replacement for the old
- *  4-card prescriptive grid + 3-pill explore row. */
+/** Three small pills under the input — ChatGPT-style starting points
+ *  that fill the chat with a contextual prompt when clicked. */
 export function WelcomeStarters({
   hasStarted,
   onSetInput,
@@ -255,7 +242,6 @@ export function WelcomeStarters({
   fileTree = [],
 }: WelcomeSectionProps) {
   const { t } = useLocaleStore();
-  const openGraphTab = useFileStore((s) => s.openGraphTab);
 
   const starters = useMemo(
     () =>
@@ -264,39 +250,34 @@ export function WelcomeStarters({
         hasFiles: fileTree.length > 0,
         currentFile,
         onSetInput,
-        openGraphTab,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, fileTree.length, currentFile, onSetInput, openGraphTab],
+    [t, fileTree.length, currentFile, onSetInput],
   );
 
   return (
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="mx-auto w-full max-w-md px-4 mt-6 sm:mt-8"
-          initial={{ opacity: 0, y: 12 }}
+          className="relative z-10 mx-auto w-full max-w-3xl px-4 mt-5 sm:mt-6 flex items-center justify-center flex-wrap gap-2"
+          initial={{ opacity: 0, y: 8 }}
           animate={{
             opacity: 1,
             y: 0,
             transition: {
-              delay: 0.12,
+              delay: 0.18,
               duration: 0.28,
               ease: [0.2, 0.9, 0.1, 1],
             },
           }}
           exit={{
             opacity: 0,
-            y: 8,
-            pointerEvents: "none",
-            transition: { duration: 0.16, ease: [0.4, 0, 0.2, 1] },
+            transition: { duration: 0.14, ease: [0.4, 0, 0.2, 1] },
           }}
         >
-          <div className="space-y-0.5">
-            {starters.map((s) => (
-              <StarterRow key={s.id} starter={s} />
-            ))}
-          </div>
+          {starters.map((s) => (
+            <StarterPill key={s.id} starter={s} />
+          ))}
         </motion.div>
       )}
     </AnimatePresence>

@@ -390,7 +390,6 @@ export default {
       findNotesPrompt: "幫我從筆記裡找一下關於",
       brainstorm: "陪我想點新東西",
       brainstormPrompt: "我想聊一下",
-      openGraph: "打開知識圖譜",
     },
     history: "歷史記錄",
     historyChats: "歷史對話",

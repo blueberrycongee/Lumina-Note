@@ -390,7 +390,6 @@ export default {
       findNotesPrompt: "ノートから次について探してください：",
       brainstorm: "一緒に考える",
       brainstormPrompt: "次について考えたい：",
-      openGraph: "ナレッジグラフを開く",
     },
     history: "履歴",
     historyChats: "履歴チャット",

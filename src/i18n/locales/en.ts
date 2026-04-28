@@ -393,7 +393,6 @@ export default {
       findNotesPrompt: "Find notes about ",
       brainstorm: "Help me think through something",
       brainstormPrompt: "I want to think through ",
-      openGraph: "Open the knowledge graph",
     },
     history: "History",
     historyChats: "History",
