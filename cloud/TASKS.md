@@ -117,7 +117,7 @@
 - **Acceptance:** `npm test -- src/__tests__/luminaCloud.e2e.test.ts` passes.
 
 ### C13 — README mention (subtle, not pushy)
-- [ ] **Goal:** Add a small "Optional: Lumina Cloud (paid)" subsection under the Features section in `README.en.md` and `README.zh-CN.md` only.
+- [x] **Goal:** Add a small "Optional: Lumina Cloud (paid)" subsection under the Features section in `README.en.md` and `README.zh-CN.md` only.
 - **Tone:** Match the existing brand voice (quiet, precise — see `PRODUCT.md` §3). One paragraph max. Link to the marketing site (placeholder URL `https://lumina-note.com` for now).
 - **Acceptance:** Diff is ≤ 15 lines per file.
 

@@ -102,6 +102,10 @@
 - Slash Command 扩展 API
 - 开发文档：`docs/plugin-ecosystem.md`
 
+<h3 align="center">可选：Lumina Cloud（付费）</h3>
+
+如果你不想自己配置 API key，Lumina Cloud 是基于许可证的可选服务。一次性买断或月度订阅可解锁 AI 设置中的 "Lumina Cloud" provider，模型一致，推理由 Lumina 承担。Lumina Note 默认仍然是 local-first，只有持有许可证时云端功能才会启用。详情见 [lumina-note.com](https://lumina-note.com)。
+
 ---
 
 <h2 align="center">快速开始</h2>
