@@ -88,6 +88,50 @@ describe('processMessageWithFiles', () => {
     expect(result.fullMessage).toContain('# Note Content');
   });
 
+  it('should not inline binary image references into the model prompt', async () => {
+    const files: ReferencedFile[] = [
+      { path: '/vault/assets/generated/icon.png', name: 'icon.png', isFolder: false },
+    ];
+
+    const result = await processMessageWithFiles('Use this image style', files);
+
+    expect(readFile).not.toHaveBeenCalled();
+    expect(result.fullMessage).toContain('Path: /vault/assets/generated/icon.png');
+    expect(result.fullMessage).toContain('Content not inlined');
+    expect(result.fullMessage).not.toContain('PNG');
+    expect(result.attachments).toEqual([
+      { type: 'file', name: 'icon.png', path: '/vault/assets/generated/icon.png' },
+    ]);
+  });
+
+  it('should replace binary-looking text with a path-only reference', async () => {
+    vi.mocked(readFile).mockResolvedValue('\u0000PNG binary payload');
+
+    const files: ReferencedFile[] = [
+      { path: '/vault/mystery', name: 'mystery', isFolder: false },
+    ];
+
+    const result = await processMessageWithFiles('Check this', files);
+
+    expect(readFile).toHaveBeenCalledWith('/vault/mystery');
+    expect(result.fullMessage).toContain('Path: /vault/mystery');
+    expect(result.fullMessage).toContain('Content not inlined');
+    expect(result.fullMessage).not.toContain('PNG binary payload');
+  });
+
+  it('should cap very large text references before sending to the model', async () => {
+    vi.mocked(readFile).mockResolvedValue('a'.repeat(200_000));
+
+    const files: ReferencedFile[] = [
+      { path: '/vault/huge.md', name: 'huge.md', isFolder: false },
+    ];
+
+    const result = await processMessageWithFiles('Summarize', files);
+
+    expect(result.fullMessage.length).toBeLessThan(130_000);
+    expect(result.fullMessage).toContain('[Truncated: file content exceeded');
+  });
+
   it('should handle file read errors gracefully', async () => {
     vi.mocked(readFile).mockRejectedValue(new Error('File not found'));
     

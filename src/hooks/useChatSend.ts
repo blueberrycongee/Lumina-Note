@@ -29,6 +29,68 @@ export interface ProcessedMessage {
   attachments: MessageAttachment[];
 }
 
+const MEDIA_OR_BINARY_EXTENSIONS = new Set([
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".avif",
+  ".ico",
+  ".pdf",
+  ".zip",
+  ".gz",
+  ".tar",
+  ".7z",
+  ".mp3",
+  ".mp4",
+  ".mov",
+  ".wav",
+  ".woff",
+  ".woff2",
+  ".ttf",
+  ".otf",
+]);
+
+const MAX_INLINE_FILE_CHARS = 120_000;
+const MAX_TOTAL_INLINE_FILE_CHARS = 240_000;
+
+function fileExtension(file: ReferencedFile): string {
+  const name = (file.path || file.name).toLowerCase();
+  const idx = name.lastIndexOf(".");
+  return idx >= 0 ? name.slice(idx) : "";
+}
+
+function shouldInlineReferencedFile(file: ReferencedFile): boolean {
+  return !MEDIA_OR_BINARY_EXTENSIONS.has(fileExtension(file));
+}
+
+function looksLikeBinaryText(content: string): boolean {
+  if (!content) return false;
+  if (content.includes("\u0000")) return true;
+  const sample = content.slice(0, 4096);
+  const replacementChars = (sample.match(/\uFFFD/g) ?? []).length;
+  return replacementChars > Math.max(8, sample.length * 0.02);
+}
+
+function buildPathOnlyFileContext(fileHeader: string, file: ReferencedFile): string {
+  return [
+    `--- ${fileHeader} ---`,
+    `Path: ${file.path}`,
+    "Content not inlined because this is a binary or media file. Use the path directly when a tool needs this file.",
+  ].join("\n");
+}
+
+function truncateInlineContent(content: string, remainingBudget: number): {
+  content: string;
+  truncated: boolean;
+} {
+  const limit = Math.max(0, Math.min(MAX_INLINE_FILE_CHARS, remainingBudget));
+  if (content.length <= limit) return { content, truncated: false };
+  return { content: content.slice(0, limit), truncated: true };
+}
+
 function summarizeQuoteText(text: string): string {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) return "Quoted content";
@@ -108,12 +170,43 @@ export async function processMessageWithFiles(
 
   // 读取引用文件的内容（用于发送给 AI）
   const fileContextEntries: string[] = [];
+  let inlineBudgetUsed = 0;
   for (const file of referencedFiles) {
     if (!file.isFolder) {
+      const fileHeader = t.ai.fileContextLabel.replace("{name}", file.name);
+      if (!shouldInlineReferencedFile(file)) {
+        fileContextEntries.push(buildPathOnlyFileContext(fileHeader, file));
+        continue;
+      }
+
       try {
         const content = await readFile(file.path);
-        const fileHeader = t.ai.fileContextLabel.replace("{name}", file.name);
-        fileContextEntries.push(`--- ${fileHeader} ---\n${content}`);
+        if (looksLikeBinaryText(content)) {
+          fileContextEntries.push(buildPathOnlyFileContext(fileHeader, file));
+          continue;
+        }
+        const remainingBudget = MAX_TOTAL_INLINE_FILE_CHARS - inlineBudgetUsed;
+        if (remainingBudget <= 0) {
+          fileContextEntries.push(
+            [
+              `--- ${fileHeader} ---`,
+              `Path: ${file.path}`,
+              "Content omitted because referenced file context is already at the inline size limit.",
+            ].join("\n"),
+          );
+          continue;
+        }
+        const truncated = truncateInlineContent(content, remainingBudget);
+        inlineBudgetUsed += truncated.content.length;
+        fileContextEntries.push(
+          [
+            `--- ${fileHeader} ---`,
+            truncated.content,
+            truncated.truncated
+              ? `\n[Truncated: file content exceeded ${MAX_INLINE_FILE_CHARS} characters or the total inline reference budget.]`
+              : "",
+          ].join("\n"),
+        );
       } catch (e) {
         reportOperationError({
           source: "useChatSend.processMessageWithFiles",
