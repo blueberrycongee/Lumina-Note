@@ -1016,6 +1016,33 @@ const silenceInit = (err: unknown) => {
   // and should not surface as an unhandled rejection.
   console.warn("[opencode] init listener error", err);
 };
+
+type OpencodeServerInfo = {
+  url: string;
+  username: string;
+  password: string;
+} | null;
+
+export function handleOpencodeServerChanged(info: OpencodeServerInfo): void {
+  const current = useOpencodeAgent.getState();
+  const sessionId = current.currentSessionId;
+  current.unsubscribe();
+  resetOpencodeClient();
+  useOpencodeAgent.setState({
+    pendingTool: null,
+    llmRetryState: null,
+    status: "idle",
+    error: null,
+  });
+  if (!info) return;
+
+  useOpencodeAgent.getState().subscribe().catch(silenceInit);
+  useOpencodeAgent.getState().loadSessions().catch(silenceInit);
+  if (sessionId) {
+    useOpencodeAgent.getState().switchSession(sessionId).catch(silenceInit);
+  }
+}
+
 export function initOpencodeAgentListeners(): void {
   // Pin every opencode HTTP request to the active vault path so the
   // InstanceMiddleware on the server always routes session/prompt traffic
@@ -1048,24 +1075,5 @@ export function initOpencodeAgentListeners(): void {
   if (serverChangedUnlisten) return;
   const bridge = typeof window !== "undefined" ? window.lumina?.opencode : undefined;
   if (!bridge?.onServerChanged) return;
-  serverChangedUnlisten = bridge.onServerChanged((info) => {
-    const current = useOpencodeAgent.getState();
-    current.unsubscribe();
-    resetOpencodeClient();
-    // Clear stale session state — the new opencode instance has its own
-    // session IDs; ours are no longer valid.
-    useOpencodeAgent.setState({
-      currentSessionId: null,
-      messages: [],
-      sessions: [],
-      pendingTool: null,
-      status: "idle",
-      error: null,
-    });
-    if (info) {
-      // Server is back up; resume event stream + session list.
-      useOpencodeAgent.getState().subscribe().catch(silenceInit);
-      useOpencodeAgent.getState().loadSessions().catch(silenceInit);
-    }
-  });
+  serverChangedUnlisten = bridge.onServerChanged(handleOpencodeServerChanged);
 }
