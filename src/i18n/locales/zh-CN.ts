@@ -1437,6 +1437,31 @@ export default {
     interruptRetry: "中断并重试",
     copy: "复制",
     toolGroup: "工具调用",
+    errors: {
+      generic: "出错了，请重试",
+      retry: "重试",
+      details: "详情",
+      hideDetails: "收起",
+      dismiss: "关闭",
+      copyDetails: "复制详情",
+      copied: "已复制",
+      panelCrashed: "该面板出错了",
+      reloadPanel: "重新加载",
+      // 发送消息相关
+      sendNetwork: "网络连接失败，请检查网络后重试",
+      sendAuth: "API 密钥无效或已过期，请到设置中检查",
+      sendGeneric: "发送消息失败，请重试",
+      // AI 服务返回的错误
+      providerThinkingNotSupported: "当前模型不支持深度思考，请在设置里切换模型或关闭深度思考",
+      providerStreamLost: "连接已断开，请刷新或重新发送消息",
+      providerGeneric: "AI 暂时无法响应，请稍后重试",
+      // 其他
+      permissionFailed: "工具批准失败，AI 已停止",
+      abortFailed: "无法停止当前对话",
+      sessionCreate: "无法创建新对话",
+      sessionSwitch: "无法加载该对话",
+      sessionDelete: "无法删除该对话",
+    },
   },
 
   // 选中工具栏

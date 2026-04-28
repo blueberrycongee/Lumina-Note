@@ -9,6 +9,7 @@
 
 import { toast } from "sonner";
 
+import { formatEnvelope } from "./format";
 import { subscribeErrors } from "./reporter";
 
 let wired = false;
@@ -17,9 +18,9 @@ export function wireErrorToasts(): void {
   wired = true;
   subscribeErrors((env) => {
     if (env.severity !== "transient") return;
-    toast.error(env.message, {
-      description: env.kind,
-      duration: 5000,
-    });
+    // Plain-language message only — same pattern consumer AI products
+    // use. The envelope kind / traceId / cause go to the diagnostics
+    // panel + ndjson, not in front of the user.
+    toast.error(formatEnvelope(env).text, { duration: 5000 });
   });
 }

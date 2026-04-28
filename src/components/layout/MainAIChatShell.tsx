@@ -14,6 +14,7 @@ import {
   initOpencodeAgentListeners,
 } from "@/stores/useOpencodeAgent";
 import { useErrorBanner } from "@/stores/useErrorBanner";
+import { ErrorBanner } from "../chat/ErrorBanner";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
@@ -1192,31 +1193,29 @@ export function MainAIChatShell() {
 
               {/* Agent 错误提示 — 由 useErrorBanner 驱动，覆盖所有 blocker
                   级别的错误信封（task.start / session.provider_error /
-                  permission.reply / session.abort）。 */}
+                  permission.reply / session.abort）。呈现层在
+                  components/chat/ErrorBanner — 只显示人话，技术细节
+                  藏在"详情"展开里。 */}
               {bannerError && (
-                <motion.div
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-2.5 text-sm text-destructive/90 px-4 py-3 bg-destructive/[0.06] border border-destructive/15 rounded-xl mb-5"
-                >
-                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0 leading-relaxed">
-                    <div className="font-medium">
-                      {bannerError.message || t.ai.errorRetry}
-                    </div>
-                    <div className="mt-0.5 text-xs text-destructive/70 font-mono">
-                      {bannerError.kind}
-                      {bannerError.traceId ? ` · ${bannerError.traceId}` : ""}
-                    </div>
-                  </div>
-                  <button
-                    onClick={dismissBanner}
-                    className="shrink-0 p-1 rounded hover:bg-destructive/10 transition-colors"
-                    aria-label="dismiss"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </motion.div>
+                <ErrorBanner
+                  envelope={bannerError}
+                  onDismiss={dismissBanner}
+                  onRetry={() => {
+                    dismissBanner();
+                    const lastUser = [...agentMessages]
+                      .reverse()
+                      .find((m) => m.role === "user");
+                    const text =
+                      typeof lastUser?.content === "string"
+                        ? lastUser.content
+                        : "";
+                    if (text) void handleSend(text);
+                  }}
+                  onReload={() => {
+                    dismissBanner();
+                    window.location.reload();
+                  }}
+                />
               )}
 
               <div ref={messagesEndRef} />

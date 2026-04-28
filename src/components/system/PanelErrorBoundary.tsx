@@ -16,6 +16,7 @@
 import { Component, type ReactNode } from "react";
 
 import { reportError } from "@/services/errors";
+import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 type Props = {
   /** Short label for the panel — surfaced in the fallback + envelope. */
@@ -56,20 +57,19 @@ export class PanelErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback({ error, reset: this.reset, label: this.props.label });
       }
+      // Lookup at render-time so locale switches re-render correctly.
+      const e = getCurrentTranslations().agentMessage.errors;
       return (
         <div className="flex h-full w-full items-center justify-center p-6">
-          <div className="max-w-md w-full rounded-xl border border-destructive/30 bg-destructive/[0.04] p-4 text-sm">
-            <div className="font-medium text-destructive mb-1">
-              {this.props.label} crashed
-            </div>
-            <div className="text-xs text-muted-foreground font-mono break-all mb-3">
-              {error.message}
+          <div className="max-w-md w-full rounded-xl border border-destructive/20 bg-destructive/[0.04] p-4 text-sm text-center">
+            <div className="text-foreground/90 mb-3">
+              {e.panelCrashed}
             </div>
             <button
               onClick={this.reset}
               className="px-3 py-1.5 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-xs font-medium transition-colors"
             >
-              Reload panel
+              {e.reloadPanel}
             </button>
           </div>
         </div>

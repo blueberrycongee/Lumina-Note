@@ -18,3 +18,4 @@ export {
   type RetryClassification,
   type RetryOptions,
 } from "./retry";
+export { formatEnvelope, type ErrorAction, type FormattedError } from "./format";
