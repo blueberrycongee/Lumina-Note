@@ -14,6 +14,7 @@ import { registerIpcHandlers } from "./ipc.js";
 import { installMainLogForwarding } from "./log-forward.js";
 import { registerOpencodeIpc } from "./agent-v2/ipc.js";
 import {
+  getOpencodeServer,
   restartOpencodeServer,
   startOpencodeServer,
   stopOpencodeServer,
@@ -24,11 +25,6 @@ import {
 } from "./agent-v2/provider-bridge.js";
 import { storeHandlers } from "./handlers/store.js";
 import { stopAllWatchers } from "./handlers/watcher.js";
-import { AiSdkProvider } from "./agent/providers/ai-sdk-provider.js";
-import {
-  createLanguageModel,
-  getProvider,
-} from "./agent/providers/registry.js";
 import {
   ProviderSettingsStore,
   type SecretStore,
@@ -40,7 +36,6 @@ import {
 } from "./agent/image-providers/registry.js";
 import { setLuminaPluginContext } from "./agent-v2/plugin/context.js";
 import { SkillLoader } from "./agent/skills/loader.js";
-import type { ProviderInterface } from "./agent/types.js";
 import { WikiSettingsStore } from "./wiki/settings-store.js";
 import { WikiManager } from "./wiki/manager.js";
 import { createMainWindowOptions } from "./window-config.js";
@@ -172,33 +167,23 @@ app.whenReady().then(() => {
     getActiveVaultPath: () => activeVaultPath,
   });
 
-  // Provider selector is still used by WikiManager for background wiki-note
-  // synthesis — the embedded opencode server runs the chat agent, but Lumina's
-  // own wiki synthesizer calls an AI SDK provider directly.
-  const providerSelector = async (): Promise<ProviderInterface | null> => {
-    const activeId = providerSettings.getActiveProvider();
-    if (!activeId) return null;
-    const entry = getProvider(activeId);
-    if (!entry) return null;
-    const settings = await providerSettings.resolveSettings(activeId);
-    const modelId = providerSettings.getProviderSettings(activeId).modelId;
-    if (!modelId) return null;
-    try {
-      const model = createLanguageModel(activeId, settings, modelId);
-      return new AiSdkProvider({ model });
-    } catch (err) {
-      console.error("[main] provider selection failed", err);
-      return null;
-    }
-  };
-
   const skillLoader = new SkillLoader();
   const wikiSettings = new WikiSettingsStore({
     baseDir: app.getPath("userData"),
   });
   const wikiManager = new WikiManager({
     settings: wikiSettings,
-    providerSelector,
+    // Wiki synthesis now routes through the same opencode server the chat
+    // uses; per-call resolver picks up server-restart credential changes.
+    serverInfoResolver: () => {
+      const handle = getOpencodeServer();
+      if (!handle) return null;
+      return {
+        url: handle.url,
+        username: handle.username,
+        password: handle.password,
+      };
+    },
   });
   // Refresh env from provider settings and (re)start the opencode server.
   // Called once at cold start and again whenever the user updates AI Settings,

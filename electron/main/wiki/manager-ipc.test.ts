@@ -32,7 +32,7 @@ function buildCtx() {
   const wikiSettings = new WikiSettingsStore({ baseDir })
   const wikiManager = new WikiManager({
     settings: wikiSettings,
-    providerSelector: () => null,
+    serverInfoResolver: () => null,
   })
   return { wikiSettings, wikiManager }
 }
@@ -65,7 +65,7 @@ describe('wiki_bind / wiki_rebuild / wiki_synthesize_note / wiki_stop dispatch',
     expect(out.marked).toBe(2)
   })
 
-  it('wiki_synthesize_note returns ok:false when no provider configured', async () => {
+  it('wiki_synthesize_note returns ok:false when opencode server is not ready', async () => {
     fs.writeFileSync(path.join(vault, 'a.md'), 'a')
     const ctx = buildCtx()
     await dispatchAgentCommand(ctx, 'wiki_bind', { vault_path: vault })
@@ -73,7 +73,7 @@ describe('wiki_bind / wiki_rebuild / wiki_synthesize_note / wiki_stop dispatch',
       rel_path: 'a.md',
     })) as { ok: boolean; error?: string }
     expect(out.ok).toBe(false)
-    expect(out.error).toContain('provider')
+    expect(out.error).toContain('not ready')
   })
 
   it('wiki_synthesize_note rejects missing rel_path', async () => {

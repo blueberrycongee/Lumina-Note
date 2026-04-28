@@ -16,21 +16,29 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { ProviderInterface } from '../agent/types.js'
 import type { WikiSettingsStore } from './settings-store.js'
 import { WikiState } from './state.js'
-import { WikiSynthesizer, type SynthesizeResult } from './synthesizer.js'
+import {
+  WikiSynthesizer,
+  type OpencodeServerInfo,
+  type SynthesizeResult,
+} from './synthesizer.js'
 import { WikiTrigger } from './trigger.js'
 
 export interface WikiManagerOptions {
   /**
-   * 解析当前可用的 provider — 每次 synthesize 前调一次,允许用户在 Settings 里
-   * 切换 provider 后立即生效。返回 null 时 synthesizer 会失败但不会崩。
+   * Returns the current opencode server credentials. Called per
+   * synthesizeNote() so a server restart (e.g. after the user changes
+   * provider settings) is picked up on the next run. Returns null when
+   * the server isn't ready yet.
    */
-  providerSelector: () => Promise<ProviderInterface | null> | ProviderInterface | null
-  /** 用户配置 store */
+  serverInfoResolver: () =>
+    | OpencodeServerInfo
+    | null
+    | Promise<OpencodeServerInfo | null>
+  /** User configuration store. */
   settings: WikiSettingsStore
-  /** 注入时钟便于测试 */
+  /** Injected clock for tests. */
   now?: () => number
 }
 
@@ -42,13 +50,13 @@ export interface BoundWiki {
 }
 
 export class WikiManager {
-  private readonly opts: Required<Pick<WikiManagerOptions, 'settings' | 'now' | 'providerSelector'>>
+  private readonly opts: Required<Pick<WikiManagerOptions, 'settings' | 'now' | 'serverInfoResolver'>>
   private bound: BoundWiki | null = null
   private currentBatch: { aborted: boolean } | null = null
 
   constructor(options: WikiManagerOptions) {
     this.opts = {
-      providerSelector: options.providerSelector,
+      serverInfoResolver: options.serverInfoResolver,
       settings: options.settings,
       now: options.now ?? (() => Date.now()),
     }
@@ -120,14 +128,10 @@ export class WikiManager {
    */
   async synthesizeNote(relPath: string): Promise<SynthesizeResult> {
     const bound = this.requireBound()
-    const provider = await this.opts.providerSelector()
-    if (!provider) {
-      return { ok: false, error: 'no provider configured for wiki synthesizer' }
-    }
     const synthesizer = new WikiSynthesizer({
       vaultPath: bound.vaultPath,
       state: bound.state,
-      provider,
+      serverInfoResolver: this.opts.serverInfoResolver,
       now: this.opts.now,
     })
     const batch = { aborted: false }
@@ -164,13 +168,13 @@ export class WikiManager {
 /**
  * Placeholder synthesizer used as the BoundWiki.synthesizer field — real
  * synthesis builds a fresh WikiSynthesizer per call so it picks up the
- * latest provider via providerSelector. This stub never runs in normal flow.
+ * latest server credentials. This stub never runs in normal flow.
  */
 function noopSynthesizer(vaultPath: string, state: WikiState): WikiSynthesizer {
   return new WikiSynthesizer({
     vaultPath,
     state,
-    provider: noProviderStub(),
+    serverInfoResolver: () => null,
   })
 }
 
@@ -208,12 +212,3 @@ async function listAllMarkdown(vaultPath: string): Promise<string[]> {
   return out
 }
 
-/** Stub provider — only reached if someone forgot to wire a real one in */
-function noProviderStub(): ProviderInterface {
-  return {
-    // eslint-disable-next-line require-yield
-    async *stream() {
-      throw new Error('WikiManager has no provider configured')
-    },
-  }
-}

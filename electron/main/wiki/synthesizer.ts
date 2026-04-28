@@ -1,84 +1,71 @@
 /**
- * WikiSynthesizer — 把单份 note 合并进 vault/wiki/。
+ * WikiSynthesizer — synthesize a single source note into vault/wiki/.
  *
- * 工作方式:
- *   - 起一个独立的 AgentRuntime + 独立 ToolRegistry,只注册 fs_read/fs_write/
- *     list_dir/fs_grep/fs_stat,把 allowedRoots 限死在 vaultPath。
- *     **不注册 shell**:wiki 合成不能跑命令。
- *   - 用 AutoApprovalGate,FS 工具自动放行(跑在后台,无 UI 介入)。
- *   - 喂一个 system prompt 让 agent:阅读源 note → 浏览 wiki/ → 决定哪个 wiki
- *     文件应该被更新或新建 → 用 fs_write 写。
- *   - 跑完后读源文件内容算 sha256,markSynced 到 WikiState。
+ * Post-migration this runs through the in-process opencode HTTP server,
+ * not the legacy Lumina AgentRuntime. The agent picks up the bundled
+ * `wiki-sync` SKILL.md (shipped at out/main/skills/wiki-sync/SKILL.md
+ * — see electron/main/agent-v2/builtin-skills/wiki-sync/) which carries
+ * all the synthesis instructions; we just create a one-shot session,
+ * send a "synthesize <relPath>" message, and wait for completion.
  *
- * 失败(provider 错/agent error/abort)抛错不写 WikiState,下次扫描会重试。
+ * Failure (server error, agent error, abort) does NOT mark the note synced
+ * in WikiState — the next scan will retry.
  */
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import { AgentEventBus } from '../agent/event-bus.js'
-import { AutoApprovalGate } from '../agent/approval-gate.js'
-import { AgentRuntime } from '../agent/runtime.js'
-import { ToolRegistry } from '../agent/tool-registry.js'
-import { registerFsTools } from '../agent/tools/fs.js'
-import { registerApplyPatchTool } from '../agent/tools/apply-patch.js'
-import type { ProviderInterface, TaskContext } from '../agent/types.js'
-
 import { hashContent, WikiState } from './state.js'
+
+export type OpencodeServerInfo = {
+  url: string
+  username: string
+  password: string
+}
 
 export interface WikiSynthesizerOptions {
   vaultPath: string
   state: WikiState
-  /** 注入 provider — 生产从 main bootstrap 选,测试用 mock */
-  provider: ProviderInterface
-  /** 单次合成最多让 agent 跑几轮,默认 8 */
-  maxTurns?: number
-  /** 注入时钟便于测试 */
+  /**
+   * Returns the current opencode server credentials. Returns null when
+   * the embedded server isn't ready yet — synthesizeNote() will report
+   * that as a soft failure (no markSynced) so the trigger retries later.
+   */
+  serverInfoResolver: () =>
+    | OpencodeServerInfo
+    | null
+    | Promise<OpencodeServerInfo | null>
+  /** Hard ceiling on how long to wait for the agent run to finish. Default 5min. */
+  timeoutMs?: number
+  /** Injected clock for tests. */
   now?: () => number
 }
 
 export interface SynthesizeResult {
   ok: boolean
-  /** 跑完后该 note 的内容 hash(成功路径)*/
+  /** Hash of the note's content after the synthesizer ran (success path). */
   hash?: string
-  /** session id 便于调试 / 关联日志 */
+  /** opencode session id, useful for log correlation. */
   sessionId?: string
   error?: string
 }
 
-const SYSTEM_PROMPT = `You are the Lumina Wiki Synthesizer. Your job: keep vault/wiki/ in sync with the user's source notes.
-
-You will be told the path of one source note that just changed. Steps you should follow:
-  1. Use fs_read to read the source note. Distill the key claims, definitions, and links worth surfacing in the wiki.
-  2. Use list_dir and fs_grep on vault/wiki/ to discover existing wiki entries. Prefer extending an existing entry over creating a new one.
-  3. Use apply_patch to update existing wiki entries (Update File + hunks) or create new ones (Add File). Fall back to fs_write only if apply_patch is not a good fit. Each wiki file should:
-     - Have a short YAML frontmatter with title, source_paths (the relative paths of the source notes contributing), updated_at (ISO timestamp).
-     - Cite source notes inline with [[wiki link]] style references back to the original notes.
-     - Stay concise — the wiki is a synthesis layer, not a copy of the note.
-  4. When you are done, respond with a one-paragraph summary of what you changed. Do not call more tools after that.
-
-Constraints:
-  - Only read/write inside the vault. Never try to run shell commands; that tool is not registered for you.
-  - Do not delete user notes. You may delete obsolete wiki entries you previously created if the source has been removed.
-  - If the source note is empty or trivially short, write a brief stub instead of fabricating content.`
+const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000
 
 export class WikiSynthesizer {
-  private readonly opts: Required<Omit<WikiSynthesizerOptions, 'maxTurns' | 'now'>> & {
-    maxTurns: number
+  private readonly opts: WikiSynthesizerOptions & {
+    timeoutMs: number
     now: () => number
   }
 
   constructor(options: WikiSynthesizerOptions) {
     this.opts = {
-      vaultPath: options.vaultPath,
-      state: options.state,
-      provider: options.provider,
-      maxTurns: options.maxTurns ?? 8,
+      ...options,
+      timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       now: options.now ?? (() => Date.now()),
     }
   }
 
-  /** 合成一份 note。返回成功/失败 + 内容 hash */
   async synthesizeNote(relPath: string): Promise<SynthesizeResult> {
     const absPath = path.join(this.opts.vaultPath, relPath)
     let sourceContent: string
@@ -91,45 +78,27 @@ export class WikiSynthesizer {
       }
     }
 
-    const eventBus = new SilentEventBus()
-    const toolRegistry = new ToolRegistry()
-    registerFsTools(toolRegistry, { allowedRoots: [this.opts.vaultPath] })
-    registerApplyPatchTool(toolRegistry, { rootDir: this.opts.vaultPath })
-    const runtime = new AgentRuntime({
-      eventBus,
-      provider: this.opts.provider,
-      toolRegistry,
-      approvalGate: new AutoApprovalGate(),
-      maxTurns: this.opts.maxTurns,
-      systemPrompt: SYSTEM_PROMPT,
-    })
-
-    const taskMessage = buildTaskMessage(this.opts.vaultPath, relPath, sourceContent)
-    const context: TaskContext = {
-      workspace_path: this.opts.vaultPath,
-      active_note_path: absPath,
+    const info = await this.opts.serverInfoResolver()
+    if (!info) {
+      return { ok: false, error: 'opencode server not ready' }
     }
 
-    let sessionId: string
+    let sessionId: string | undefined
     try {
-      sessionId = await runtime.start(taskMessage, context)
+      sessionId = await createSession(info, this.opts.vaultPath)
+      const taskMessage = buildTaskMessage(this.opts.vaultPath, relPath, sourceContent)
+      await runPrompt(info, sessionId, taskMessage, this.opts.timeoutMs)
     } catch (err) {
       return {
         ok: false,
+        sessionId,
         error: err instanceof Error ? err.message : String(err),
       }
     }
 
-    const finishReason = eventBus.lastFinishReason
-    if (finishReason !== 'done') {
-      return {
-        ok: false,
-        sessionId,
-        error: eventBus.lastErrorMessage ?? `agent finished with reason=${finishReason}`,
-      }
-    }
-
-    // 重新读源文件做最终 hash(agent 跑期间用户可能又改了,以最终内容为准)
+    // Re-read source file in case the user modified it during the run;
+    // hash whatever is on disk now so the next scan compares against the
+    // "as committed" content.
     let finalContent: string
     try {
       finalContent = await fs.readFile(absPath, 'utf-8')
@@ -138,8 +107,74 @@ export class WikiSynthesizer {
     }
     const hash = hashContent(finalContent)
     this.opts.state.markSynced(relPath, this.opts.now(), hash)
-
     return { ok: true, hash, sessionId }
+  }
+}
+
+function authHeader(info: OpencodeServerInfo): string {
+  return (
+    'Basic ' +
+    Buffer.from(`${info.username}:${info.password}`).toString('base64')
+  )
+}
+
+async function createSession(
+  info: OpencodeServerInfo,
+  vaultPath: string,
+): Promise<string> {
+  const url = `${info.url.replace(/\/$/, '')}/session?directory=${encodeURIComponent(vaultPath)}`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      authorization: authHeader(info),
+      'Content-Type': 'application/json',
+      'x-opencode-directory': vaultPath,
+    },
+    body: '{}',
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`opencode session.create ${res.status}: ${text.slice(0, 200)}`)
+  }
+  const json = (await res.json()) as { id?: string }
+  if (!json.id) throw new Error('opencode session.create returned no id')
+  return json.id
+}
+
+async function runPrompt(
+  info: OpencodeServerInfo,
+  sessionId: string,
+  text: string,
+  timeoutMs: number,
+): Promise<void> {
+  // Use the synchronous /session/{id}/message endpoint (SDK calls this
+  // session.prompt) — it blocks until the agent run completes. Faster
+  // and simpler than promptAsync + SSE polling for a one-shot job.
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(
+      `${info.url.replace(/\/$/, '')}/session/${encodeURIComponent(sessionId)}/message`,
+      {
+        method: 'POST',
+        headers: {
+          authorization: authHeader(info),
+          'Content-Type': 'application/json',
+          'x-opencode-directory': '',
+        },
+        body: JSON.stringify({
+          agent: 'wiki-sync',
+          parts: [{ type: 'text', text }],
+        }),
+        signal: ctrl.signal,
+      },
+    )
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      throw new Error(`session.prompt ${res.status}: ${body.slice(0, 300)}`)
+    }
+  } finally {
+    clearTimeout(timer)
   }
 }
 
@@ -147,35 +182,13 @@ function buildTaskMessage(vault: string, relPath: string, content: string): stri
   const truncated =
     content.length > 8_000 ? content.slice(0, 8_000) + '\n…(truncated)' : content
   return [
-    `The user just updated the note at \`${relPath}\` (vault root: ${vault}).`,
+    `Vault root: ${vault}`,
+    `Source note path (relative to vault): ${relPath}`,
     '',
-    'Source content:',
-    '```markdown',
+    'Use the **wiki-sync** skill to synthesize this note into the vault\'s `wiki/` folder.',
+    '',
+    '<source_content>',
     truncated,
-    '```',
-    '',
-    'Please synthesize it into vault/wiki/ following your system instructions.',
+    '</source_content>',
   ].join('\n')
-}
-
-/**
- * Wiki synthesizer 在后台跑,不需要把事件推给前端 — 用 silent bus 收尾原因即可。
- * 对外保留 emit 但只记录 finish/error,不真发事件。
- */
-class SilentEventBus extends AgentEventBus {
-  public lastFinishReason: string | null = null
-  public lastErrorMessage: string | null = null
-
-  constructor() {
-    super(() => null)
-  }
-
-  emit(event: { type: string; reason?: string; error?: string; message?: string }): void {
-    if (event.type === 'finish' && typeof event.reason === 'string') {
-      this.lastFinishReason = event.reason
-      if (event.message) this.lastErrorMessage = event.message
-    } else if (event.type === 'error' && typeof event.error === 'string') {
-      this.lastErrorMessage = event.error
-    }
-  }
 }

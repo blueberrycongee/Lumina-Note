@@ -1,19 +1,20 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { WikiManager } from './manager.js'
 import { WikiSettingsStore } from './settings-store.js'
-import type {
-  Message,
-  ProviderChunk,
-  ProviderInterface,
-  ToolDefinition,
-} from '../agent/types.js'
+import type { OpencodeServerInfo } from './synthesizer.js'
 
 let vault = ''
 let baseDir = ''
+
+const FAKE_INFO: OpencodeServerInfo = {
+  url: 'http://127.0.0.1:65535',
+  username: 'opencode',
+  password: 'test-pw',
+}
 
 beforeEach(() => {
   vault = fs.mkdtempSync(path.join(os.tmpdir(), 'lumina-wiki-mgr-vault-'))
@@ -21,6 +22,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   for (const dir of [vault, baseDir]) {
     try {
       fs.rmSync(dir, { recursive: true, force: true })
@@ -30,35 +32,32 @@ afterEach(() => {
   }
 })
 
-class ScriptedProvider implements ProviderInterface {
-  public turns = 0
-  constructor(private readonly chunks: ProviderChunk[][]) {}
-  async *stream(
-    _messages: Message[],
-    _tools: ToolDefinition[],
-    signal: AbortSignal,
-  ): AsyncIterable<ProviderChunk> {
-    const script = this.chunks[this.turns] ?? []
-    this.turns += 1
-    for (const chunk of script) {
-      if (signal.aborted) return
-      yield chunk
-    }
-  }
-}
-
 function writeNote(rel: string, content = 'hello'): void {
   const abs = path.join(vault, rel)
   fs.mkdirSync(path.dirname(abs), { recursive: true })
   fs.writeFileSync(abs, content)
 }
 
-function buildManager(provider: ProviderInterface | null = null): WikiManager {
+function buildManager(
+  serverInfo: OpencodeServerInfo | null = null,
+): WikiManager {
   const settings = new WikiSettingsStore({ baseDir })
   return new WikiManager({
     settings,
-    providerSelector: () => provider,
+    serverInfoResolver: () => serverInfo,
   })
+}
+
+function stubFetchOk(): void {
+  const stub = vi.fn(async (url: string | URL | Request) => {
+    const u =
+      typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+    if (u.includes('/session/') && u.includes('/message')) {
+      return new Response('{}', { status: 200 })
+    }
+    return new Response(JSON.stringify({ id: 'sess_test' }), { status: 200 })
+  })
+  vi.stubGlobal('fetch', stub)
 }
 
 describe('WikiManager.bind / start / stop', () => {
@@ -105,21 +104,19 @@ describe('WikiManager.rebuild', () => {
 })
 
 describe('WikiManager.synthesizeNote', () => {
-  it('returns ok:false when no provider available', async () => {
+  it('returns ok:false when opencode server is not ready', async () => {
     writeNote('a.md', 'content')
     const mgr = buildManager(null)
     await mgr.bind(vault)
     const out = await mgr.synthesizeNote('a.md')
     expect(out.ok).toBe(false)
-    expect(out.error).toContain('no provider')
+    expect(out.error).toContain('not ready')
   })
 
   it('runs synthesizer and returns ok with hash on success', async () => {
     writeNote('a.md', 'wisdom')
-    const provider = new ScriptedProvider([
-      [{ type: 'text', text: 'done' }, { type: 'finish', finish_reason: 'stop' }],
-    ])
-    const mgr = buildManager(provider)
+    stubFetchOk()
+    const mgr = buildManager(FAKE_INFO)
     const bound = await mgr.bind(vault)
     bound.state.updateNoteState('a.md', { lastModifiedAt: 1 })
     const out = await mgr.synthesizeNote('a.md')
@@ -128,20 +125,14 @@ describe('WikiManager.synthesizeNote', () => {
     expect(bound.state.getNoteState('a.md')?.lastSyncedHash).toBe(out.hash)
   })
 
-  it('stop() flips the current batch to aborted', async () => {
+  it('stop() does not throw mid-flight', async () => {
     writeNote('a.md', 'content')
-    const provider = new ScriptedProvider([
-      [{ type: 'text', text: 'ok' }, { type: 'finish', finish_reason: 'stop' }],
-    ])
-    const mgr = buildManager(provider)
+    stubFetchOk()
+    const mgr = buildManager(FAKE_INFO)
     await mgr.bind(vault)
-    // Race a stop against an in-flight synthesize: kick off, immediately stop
     const p = mgr.synthesizeNote('a.md')
     await mgr.stop()
     const out = await p
-    // The synthesizer had already finished one turn before stop() reached it,
-    // so result may be ok=true OR ok=false (aborted). Both are acceptable —
-    // what matters is that stop() did not throw and currentBatch was cleared.
     expect(typeof out.ok).toBe('boolean')
   })
 })

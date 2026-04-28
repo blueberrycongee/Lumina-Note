@@ -1,24 +1,24 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { hashContent, WikiState } from './state.js'
-import { WikiSynthesizer } from './synthesizer.js'
-import type {
-  Message,
-  ProviderChunk,
-  ProviderInterface,
-  ToolDefinition,
-} from '../agent/types.js'
+import { WikiSynthesizer, type OpencodeServerInfo } from './synthesizer.js'
 
 let vault = ''
+const FAKE_INFO: OpencodeServerInfo = {
+  url: 'http://127.0.0.1:65535',
+  username: 'opencode',
+  password: 'test-pw',
+}
 
 beforeEach(() => {
   vault = fs.mkdtempSync(path.join(os.tmpdir(), 'lumina-wiki-syn-'))
 })
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   try {
     fs.rmSync(vault, { recursive: true, force: true })
   } catch {
@@ -26,158 +26,139 @@ afterEach(() => {
   }
 })
 
-class ScriptedProvider implements ProviderInterface {
-  public turns = 0
-  constructor(private readonly chunks: ProviderChunk[][]) {}
-  async *stream(
-    _messages: Message[],
-    _tools: ToolDefinition[],
-    signal: AbortSignal,
-  ): AsyncIterable<ProviderChunk> {
-    const script = this.chunks[this.turns] ?? []
-    this.turns += 1
-    for (const chunk of script) {
-      if (signal.aborted) return
-      yield chunk
-    }
-  }
-}
-
 function writeNote(rel: string, content: string): void {
   const abs = path.join(vault, rel)
   fs.mkdirSync(path.dirname(abs), { recursive: true })
   fs.writeFileSync(abs, content)
 }
 
-describe('WikiSynthesizer', () => {
-  it('runs the agent loop, lets it write wiki/, and marks note synced', async () => {
-    writeNote('thoughts.md', 'I think recursive zettelkasten is underrated.')
-    const wikiPath = path.join(vault, 'wiki', 'zettelkasten.md')
+interface FetchCall {
+  url: string
+  init?: RequestInit
+}
 
-    // Two turns: turn 1 calls fs_write to create wiki entry, turn 2 produces final text.
-    const provider = new ScriptedProvider([
-      [
-        {
-          type: 'tool_call',
-          tool_call: {
-            id: 'tc1',
-            name: 'fs_write',
-            input: {
-              path: wikiPath,
-              content: '---\ntitle: Zettelkasten\n---\nFolded from thoughts.md.\n',
-            },
-          },
-        },
-        { type: 'finish', finish_reason: 'tool_use' },
-      ],
-      [
-        { type: 'text', text: 'Created wiki/zettelkasten.md.' },
-        { type: 'finish', finish_reason: 'stop' },
-      ],
-    ])
+function stubFetch(handlers: {
+  createSessionResponse?: () => Response
+  promptResponse?: () => Response
+}): { calls: FetchCall[] } {
+  const calls: FetchCall[] = []
+  const stub = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const u = typeof url === 'string' ? url : url instanceof URL ? url.toString() : url.url
+    calls.push({ url: u, init })
+    if (u.includes('/session/') && u.includes('/message')) {
+      return (
+        handlers.promptResponse?.() ??
+        new Response('{}', { status: 200 })
+      )
+    }
+    if (u.includes('/session')) {
+      return (
+        handlers.createSessionResponse?.() ??
+        new Response(JSON.stringify({ id: 'sess_test' }), { status: 200 })
+      )
+    }
+    return new Response('not found', { status: 404 })
+  })
+  vi.stubGlobal('fetch', stub)
+  return { calls }
+}
 
+describe('WikiSynthesizer (opencode-backed)', () => {
+  it('creates session, sends prompt, marks note synced on success', async () => {
+    writeNote('thoughts.md', 'Recursive zettelkasten is underrated.')
     const state = new WikiState(vault)
     state.updateNoteState('thoughts.md', { lastModifiedAt: 1 })
+    const { calls } = stubFetch({})
+
     const syn = new WikiSynthesizer({
       vaultPath: vault,
       state,
-      provider,
+      serverInfoResolver: () => FAKE_INFO,
       now: () => 999,
     })
 
     const result = await syn.synthesizeNote('thoughts.md')
     expect(result.ok).toBe(true)
-    expect(result.hash).toBe(
-      hashContent('I think recursive zettelkasten is underrated.'),
-    )
+    expect(result.hash).toBe(hashContent('Recursive zettelkasten is underrated.'))
+    expect(result.sessionId).toBe('sess_test')
     expect(state.getNoteState('thoughts.md')?.lastSyncedAt).toBe(999)
     expect(state.getNoteState('thoughts.md')?.lastSyncedHash).toBe(result.hash)
-    expect(fs.existsSync(wikiPath)).toBe(true)
-    expect(fs.readFileSync(wikiPath, 'utf-8').toLowerCase()).toContain('zettelkasten')
+
+    // Two HTTP calls expected: session.create + session.prompt.
+    expect(calls).toHaveLength(2)
+    expect(calls[0].url).toContain('/session?directory=')
+    expect(calls[1].url).toContain('/session/sess_test/message')
+    const body = JSON.parse(String(calls[1].init?.body))
+    expect(body.agent).toBe('wiki-sync')
+    expect(body.parts).toHaveLength(1)
+    expect(body.parts[0].text).toContain('thoughts.md')
+    expect(body.parts[0].text).toContain('wiki-sync')
   })
 
-  it('does not register shell tool — agent cannot exec commands', async () => {
-    writeNote('a.md', 'irrelevant')
-    let toolDefsSeenByAgent: ToolDefinition[] = []
-    const provider: ProviderInterface = {
-      async *stream(_messages, tools, _signal) {
-        toolDefsSeenByAgent = tools
-        yield { type: 'text', text: 'done' }
-        yield { type: 'finish', finish_reason: 'stop' }
-      },
-    }
+  it('returns soft failure when opencode server is not ready', async () => {
+    writeNote('a.md', 'x')
     const state = new WikiState(vault)
-    state.updateNoteState('a.md', { lastModifiedAt: 1 })
-    const syn = new WikiSynthesizer({ vaultPath: vault, state, provider })
-    await syn.synthesizeNote('a.md')
-    const names = toolDefsSeenByAgent.map((t) => t.name)
-    expect(names).not.toContain('shell')
-    expect(names).toEqual(
-      expect.arrayContaining([
-        'fs_read',
-        'fs_write',
-        'list_dir',
-        'fs_grep',
-        'fs_stat',
-        'apply_patch',
-      ]),
-    )
+    const syn = new WikiSynthesizer({
+      vaultPath: vault,
+      state,
+      serverInfoResolver: () => null,
+    })
+    const result = await syn.synthesizeNote('a.md')
+    expect(result.ok).toBe(false)
+    expect(result.error).toContain('not ready')
+    // Did not mark synced.
+    expect(state.getNoteState('a.md')?.lastSyncedAt).toBeUndefined()
   })
 
-  it('returns error if source note missing', async () => {
+  it('returns error when source note is missing', async () => {
     const state = new WikiState(vault)
-    const provider: ProviderInterface = {
-      async *stream() {},
-    }
-    const syn = new WikiSynthesizer({ vaultPath: vault, state, provider })
+    const syn = new WikiSynthesizer({
+      vaultPath: vault,
+      state,
+      serverInfoResolver: () => FAKE_INFO,
+    })
     const result = await syn.synthesizeNote('does-not-exist.md')
     expect(result.ok).toBe(false)
     expect(result.error).toContain('failed to read source note')
   })
 
-  it('returns error and skips markSynced when agent finishes with error', async () => {
-    writeNote('a.md', 'hi')
-    const provider = new ScriptedProvider([
-      [{ type: 'error', error: 'boom from provider' }],
-    ])
+  it('returns error when session.create fails (does not mark synced)', async () => {
+    writeNote('a.md', 'x')
     const state = new WikiState(vault)
     state.updateNoteState('a.md', { lastModifiedAt: 1 })
-    const syn = new WikiSynthesizer({ vaultPath: vault, state, provider })
+    stubFetch({
+      createSessionResponse: () =>
+        new Response('{"error": "auth"}', { status: 401 }),
+    })
+
+    const syn = new WikiSynthesizer({
+      vaultPath: vault,
+      state,
+      serverInfoResolver: () => FAKE_INFO,
+    })
     const result = await syn.synthesizeNote('a.md')
     expect(result.ok).toBe(false)
-    expect(result.error).toContain('boom from provider')
+    expect(result.error).toContain('401')
     expect(state.getNoteState('a.md')?.lastSyncedAt).toBeUndefined()
   })
 
-  it('FS tool allowedRoots locks writes inside vault', async () => {
-    writeNote('src.md', 'content')
-    const outsideTarget = path.join(os.tmpdir(), 'definitely-outside-vault.md')
-    let toolError: string | undefined
-    const provider = new ScriptedProvider([
-      [
-        {
-          type: 'tool_call',
-          tool_call: {
-            id: 'tc1',
-            name: 'fs_write',
-            input: { path: outsideTarget, content: 'pwn' },
-          },
-        },
-        { type: 'finish', finish_reason: 'tool_use' },
-      ],
-      [
-        { type: 'text', text: 'tried to escape' },
-        { type: 'finish', finish_reason: 'stop' },
-      ],
-    ])
+  it('returns error when session.prompt fails (does not mark synced)', async () => {
+    writeNote('a.md', 'x')
     const state = new WikiState(vault)
-    state.updateNoteState('src.md', { lastModifiedAt: 1 })
-    const syn = new WikiSynthesizer({ vaultPath: vault, state, provider })
-    const result = await syn.synthesizeNote('src.md')
-    // The tool error becomes a tool_result with is_error=true; the agent
-    // happens to finish ok in turn 2, but the outside file must not exist.
-    expect(fs.existsSync(outsideTarget)).toBe(false)
-    expect(result.ok).toBe(true) // overall agent finished, just the tool call failed
-    void toolError
+    state.updateNoteState('a.md', { lastModifiedAt: 1 })
+    stubFetch({
+      promptResponse: () => new Response('{"error":"upstream 5xx"}', { status: 502 }),
+    })
+
+    const syn = new WikiSynthesizer({
+      vaultPath: vault,
+      state,
+      serverInfoResolver: () => FAKE_INFO,
+    })
+    const result = await syn.synthesizeNote('a.md')
+    expect(result.ok).toBe(false)
+    expect(result.sessionId).toBe('sess_test')
+    expect(result.error).toContain('502')
+    expect(state.getNoteState('a.md')?.lastSyncedAt).toBeUndefined()
   })
 })

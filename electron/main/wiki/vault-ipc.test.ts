@@ -33,7 +33,7 @@ function buildCtx() {
   const wikiSettings = new WikiSettingsStore({ baseDir })
   const wikiManager = new WikiManager({
     settings: wikiSettings,
-    providerSelector: () => null,
+    serverInfoResolver: () => null,
   })
   return { wikiSettings, wikiManager }
 }

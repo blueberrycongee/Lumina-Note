@@ -82,6 +82,19 @@ Rules:
 - Follow-up prompt links: for exploratory, open-ended, strategic, comparative, research, learning, planning, or ambiguous topics, proactively end with 1-3 useful follow-up prompts. Use exactly this Markdown form for each prompt: [Prompt text](lumina-prompt:). The visible text must be the complete prompt the user can send by clicking. Good follow-ups should help the user narrow scope, go deeper, compare options, verify assumptions, or turn the answer into an actionable next step. Do not output follow-up prompts as plain text or inside a code block. Do not force them into simple factual answers, completed tasks, error messages, or cases where a follow-up would add no value.
 - Never call yourself "opencode" or a "CLI tool for software engineering." You are Lumina's assistant.`;
 
+// Background-only wiki synthesis agent. Identity-only — the actual
+// synthesis instructions live in the wiki-sync SKILL.md, which the agent
+// loads via the `skill` tool when invoked. Keeping this prompt minimal
+// avoids drift between two sources of truth.
+const WIKI_SYNC_AGENT_PROMPT = `You are running as Lumina's background wiki synthesizer. There is no human in the loop — your output is consumed automatically by the wiki state tracker.
+
+For every task, immediately invoke the \`skill wiki-sync\` tool to load the synthesis playbook, then follow it. Do not emit any final text until you have updated wiki/ as instructed by the skill.
+
+Constraints:
+- Run no shell commands. Bash, web fetch, and web search are not available to this agent.
+- Stay inside the vault. Read/write paths are confined by your permission policy.
+- Respond in the user's language when summarizing what you changed.`;
+
 // Lumina provider id → opencode provider id. Mainline providers use the
 // same id as models.dev so opencode's registry picks up model metadata,
 // pricing, context limits, etc.
@@ -227,6 +240,23 @@ export async function buildOpencodeBridge(
     agent: {
       build: {
         prompt: LUMINA_SYSTEM_PROMPT,
+      },
+      // Background wiki synthesizer agent. Lumina's wiki manager spawns
+      // a one-shot session with `agent: "wiki-sync"` whenever a note
+      // changes. The actual synthesis playbook lives in the wiki-sync
+      // SKILL.md (shipped at out/main/skills/wiki-sync/) — this agent
+      // entry just sets the identity and auto-allows the FS tools the
+      // skill needs (background sync can't pop a permission dialog).
+      "wiki-sync": {
+        prompt: WIKI_SYNC_AGENT_PROMPT,
+        permission: {
+          read: "allow",
+          edit: "allow",
+          write: "allow",
+          bash: "deny",
+          webfetch: "deny",
+          websearch: "deny",
+        },
       },
     },
     provider: {
