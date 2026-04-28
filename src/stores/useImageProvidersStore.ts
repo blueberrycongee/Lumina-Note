@@ -17,12 +17,13 @@ import { create } from "zustand";
 import { invoke } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 
-import type {
-  AllImageProviderSettings,
-  ImageProviderId,
-  ImageProviderInfo,
-  ImageProviderPersistedSettings,
-  ImageTestResult,
+import {
+  FALLBACK_IMAGE_PROVIDERS,
+  type AllImageProviderSettings,
+  type ImageProviderId,
+  type ImageProviderInfo,
+  type ImageProviderPersistedSettings,
+  type ImageTestResult,
 } from "@/services/imageGen/types";
 
 interface ImageProvidersState {
@@ -43,7 +44,11 @@ interface ImageProvidersState {
 }
 
 export const useImageProvidersStore = create<ImageProvidersState>((set, get) => ({
-  providers: [],
+  // Seed with the static fallback so the AI Settings → Image Models section
+  // always renders three provider rows, even before the first IPC round-trip
+  // completes (or if the main process isn't running the new handlers yet).
+  // The IPC refresh() below upgrades them with the live `configured` flag.
+  providers: FALLBACK_IMAGE_PROVIDERS,
   settings: { perProvider: {} },
   loaded: false,
   refresh: async () => {
@@ -53,7 +58,10 @@ export const useImageProvidersStore = create<ImageProvidersState>((set, get) => 
         invoke<AllImageProviderSettings | null>("image_get_provider_settings"),
       ]);
       set({
-        providers: providers ?? [],
+        providers:
+          Array.isArray(providers) && providers.length > 0
+            ? providers
+            : FALLBACK_IMAGE_PROVIDERS,
         settings: settings ?? { perProvider: {} },
         loaded: true,
       });
@@ -64,7 +72,9 @@ export const useImageProvidersStore = create<ImageProvidersState>((set, get) => 
         error: err,
         level: "warning",
       });
-      set({ loaded: true });
+      // Keep the fallback so the UI still has rows to render even when the
+      // backend isn't available — the user can still see the form.
+      set({ providers: FALLBACK_IMAGE_PROVIDERS, loaded: true });
     }
   },
   setProviderSettings: async (id, settings) => {
