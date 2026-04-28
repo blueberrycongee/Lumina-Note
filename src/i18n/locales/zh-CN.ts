@@ -431,9 +431,8 @@ export default {
     aiChatSettings: "AI 对话设置",
     getRealtimeContent: "从库中获取实时内容",
     aiGeneratedWarning: "AI 生成的内容可能存在错误，请注意核实",
-    agentInputPlaceholder:
-      "我是Lumina，这个模式下我拥有许多强力装备，可以帮你处理各种事务！",
-    chatInputPlaceholder: "我是Lumina，你有什么想和我聊聊的？我知无不言",
+    agentInputPlaceholder: "有什么可以帮你的？",
+    chatInputPlaceholder: "想聊点什么？",
     debugPanel: "调试面板",
     agentDebugPanel: "Agent 调试面板",
     mode: "模式",
@@ -1453,7 +1452,8 @@ export default {
     thinkingGroup: "思考过程",
     working: "正在工作中",
     imageGeneratingTitle: "正在生成图片",
-    imageGeneratingDescription: "正在把提示词、比例和参考图交给图像模型，完成后会自动保存到 vault。",
+    imageGeneratingDescription:
+      "正在把提示词、比例和参考图交给图像模型，完成后会自动保存到 vault。",
     imageGeneratingMessages: [
       "正在创建图片",
       "正在润色画面细节",
@@ -1480,7 +1480,8 @@ export default {
       sendAuth: "API 密钥无效或已过期，请到设置中检查",
       sendGeneric: "发送消息失败，请重试",
       // AI 服务返回的错误
-      providerThinkingNotSupported: "当前模型不支持深度思考，请在设置里切换模型或关闭深度思考",
+      providerThinkingNotSupported:
+        "当前模型不支持深度思考，请在设置里切换模型或关闭深度思考",
       providerStreamLost: "连接已断开，请刷新或重新发送消息",
       providerGeneric: "AI 暂时无法响应，请稍后重试",
       // 其他
@@ -1512,10 +1513,13 @@ export default {
       flashcardsDesc: "整理为问答式记忆卡片",
     },
     askPrompts: {
-      discuss: "我想就这段内容和你深入聊聊，先帮我点出关键观点，再提出值得继续追问的问题：\n\n{text}",
-      explain: "请用通俗、直白的语言解释下面这段内容，必要时举一个例子：\n\n{text}",
+      discuss:
+        "我想就这段内容和你深入聊聊，先帮我点出关键观点，再提出值得继续追问的问题：\n\n{text}",
+      explain:
+        "请用通俗、直白的语言解释下面这段内容，必要时举一个例子：\n\n{text}",
       quiz: "请围绕下面这段内容出 3 道理解性题目（含简答），帮我检验掌握情况：\n\n{text}",
-      flashcards: "请把下面这段内容整理成 4-6 张问答式记忆卡片（Q/A 格式，每张聚焦一个核心点）：\n\n{text}",
+      flashcards:
+        "请把下面这段内容整理成 4-6 张问答式记忆卡片（Q/A 格式，每张聚焦一个核心点）：\n\n{text}",
     },
     videoNote: "视频笔记",
     summaryTitle: "总结",
@@ -1671,7 +1675,8 @@ export default {
       apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
       apiKeyConfiguredPlaceholder: "API Key 已保存（不会显示明文）",
-      apiKeySavedHint: "已保存到本机钥匙串；出于安全不会回显，输入新 key 可替换。",
+      apiKeySavedHint:
+        "已保存到本机钥匙串；出于安全不会回显，输入新 key 可替换。",
       apiKeyEmptyHint: "保存后写入本机钥匙串，不会进入普通配置文件。",
       apiKeyDirtyHint: "保存后会替换当前服务商的 API Key。",
       modelLabel: "Model",

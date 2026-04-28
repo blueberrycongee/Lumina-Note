@@ -313,7 +313,8 @@ export default {
       descriptionLabel: "説明",
       descriptionHint: "AI がこのスキルを呼び出すか判断する一文。具体的に。",
       bodyLabel: "本文 (Markdown)",
-      bodyHint: "AI がスキルを呼び出した時に読む手順書：トリガー、ステップ、注意点。",
+      bodyHint:
+        "AI がスキルを呼び出した時に読む手順書：トリガー、ステップ、注意点。",
       saveButton: "保存",
       cancelButton: "キャンセル",
       nameInvalid: "名前は小文字、数字、ハイフンのみ（1〜64 文字）。",
@@ -383,7 +384,8 @@ export default {
     ],
     welcomeStarters: {
       helpWithNote: "このノートを手伝って",
-      helpWithNotePrompt: "「{name}」を見て、価値があると思う方向から始めてください。",
+      helpWithNotePrompt:
+        "「{name}」を見て、価値があると思う方向から始めてください。",
       generateImage: "画像を生成",
       generateImagePrompt: "次のような画像を生成してください：",
       findNotes: "ノートから探す",
@@ -433,10 +435,8 @@ export default {
     getRealtimeContent: "ライブラリからリアルタイムコンテンツを取得",
     aiGeneratedWarning:
       "AI が生成したコンテンツには誤りがある可能性があります。確認してください",
-    agentInputPlaceholder:
-      "私は Lumina です。このモードでは多くの強力なツールがあり、様々なタスクをお手伝いします！",
-    chatInputPlaceholder:
-      "私は Lumina です。何でもお話しください。知っていることは何でもお答えします",
+    agentInputPlaceholder: "何かお手伝いできることは？",
+    chatInputPlaceholder: "何か話したいことは？",
     debugPanel: "デバッグパネル",
     agentDebugPanel: "Agent デバッグパネル",
     mode: "モード",
@@ -624,7 +624,8 @@ export default {
 
   // リボン
   ribbon: {
-    commandPaletteTrigger: "コマンドパレット (Ctrl+P) — すべての機能をワンタップで",
+    commandPaletteTrigger:
+      "コマンドパレット (Ctrl+P) — すべての機能をワンタップで",
     commandPaletteNewBadge: "件の未体験機能",
     globalSearch: "全体検索 (Ctrl+Shift+F)",
     aiChatMain: "AI チャット（メインビュー）",
@@ -1488,7 +1489,8 @@ export default {
     imageGeneratedTitle: "画像を生成しました",
     imageGeneratedPath: "パス",
     imageGeneratedModel: "モデル",
-    imageGeneratedReuseHint: "画像をクリックすると、次回生成の参照画像として使えます。",
+    imageGeneratedReuseHint:
+      "画像をクリックすると、次回生成の参照画像として使えます。",
     imageGeneratedMissingPath: "生成画像のパスがありません",
     errors: {
       generic: "エラーが発生しました。もう一度お試しください。",
@@ -1500,13 +1502,17 @@ export default {
       copied: "コピーしました",
       panelCrashed: "このパネルで問題が発生しました",
       reloadPanel: "再読み込み",
-      sendNetwork: "ネットワーク接続に失敗しました。接続を確認してから再試行してください。",
+      sendNetwork:
+        "ネットワーク接続に失敗しました。接続を確認してから再試行してください。",
       sendAuth: "API キーが無効か期限切れです。設定を確認してください。",
       sendGeneric: "メッセージを送信できませんでした。もう一度お試しください。",
-      providerThinkingNotSupported: "このモデルは拡張思考に対応していません。設定でモデルを切り替えるか、思考を無効にしてください。",
-      providerStreamLost: "接続が切断されました。リロードまたは再送信してください。",
+      providerThinkingNotSupported:
+        "このモデルは拡張思考に対応していません。設定でモデルを切り替えるか、思考を無効にしてください。",
+      providerStreamLost:
+        "接続が切断されました。リロードまたは再送信してください。",
       providerGeneric: "AI が応答しませんでした。もう一度お試しください。",
-      permissionFailed: "ツールの承認に失敗しました。エージェントが停止しました。",
+      permissionFailed:
+        "ツールの承認に失敗しました。エージェントが停止しました。",
       abortFailed: "現在の会話を停止できませんでした。",
       sessionCreate: "新しいチャットを作成できませんでした。",
       sessionSwitch: "そのチャットを開けませんでした。",
@@ -1534,10 +1540,13 @@ export default {
       flashcardsDesc: "Q/A 形式の記憶カードにまとめる",
     },
     askPrompts: {
-      discuss: "次の文章について一緒にじっくり考えたいです。まず要点を挙げ、続いて掘り下げる価値のある問いを提案してください：\n\n{text}",
-      explain: "以下の文章を、平易で直截な言葉で説明してください。必要なら具体例も添えてください：\n\n{text}",
+      discuss:
+        "次の文章について一緒にじっくり考えたいです。まず要点を挙げ、続いて掘り下げる価値のある問いを提案してください：\n\n{text}",
+      explain:
+        "以下の文章を、平易で直截な言葉で説明してください。必要なら具体例も添えてください：\n\n{text}",
       quiz: "以下の文章をもとに、理解度を測るための簡答付き設問を3問作ってください：\n\n{text}",
-      flashcards: "以下の内容を、Q/A 形式の暗記カード4〜6枚にまとめてください。各カードは1つの要点に絞ってください：\n\n{text}",
+      flashcards:
+        "以下の内容を、Q/A 形式の暗記カード4〜6枚にまとめてください。各カードは1つの要点に絞ってください：\n\n{text}",
     },
     videoNote: "ビデオノート",
     summaryTitle: "要約",

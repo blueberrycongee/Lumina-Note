@@ -431,9 +431,8 @@ export default {
     aiChatSettings: "AI 對話設定",
     getRealtimeContent: "從庫中獲取即時內容",
     aiGeneratedWarning: "AI 生成的內容可能存在錯誤，請注意核實",
-    agentInputPlaceholder:
-      "我是Lumina，這個模式下我擁有許多強力裝備，可以幫你處理各種事務！",
-    chatInputPlaceholder: "我是Lumina，你有什麼想和我聊聊的？我知無不言",
+    agentInputPlaceholder: "有什麼可以幫你的？",
+    chatInputPlaceholder: "想聊點什麼？",
     debugPanel: "除錯面板",
     agentDebugPanel: "Agent 除錯面板",
     mode: "模式",
@@ -1454,7 +1453,8 @@ export default {
     thinkingGroup: "思考過程",
     working: "正在工作中",
     imageGeneratingTitle: "正在生成圖片",
-    imageGeneratingDescription: "正在把提示詞、比例和參考圖交給圖像模型，完成後會自動儲存到 vault。",
+    imageGeneratingDescription:
+      "正在把提示詞、比例和參考圖交給圖像模型，完成後會自動儲存到 vault。",
     imageGeneratingMessages: [
       "正在建立圖片",
       "正在潤色畫面細節",
@@ -1479,7 +1479,8 @@ export default {
       sendNetwork: "網路連線失敗，請檢查網路後重試",
       sendAuth: "API 金鑰無效或已過期，請至設定檢查",
       sendGeneric: "傳送訊息失敗，請重試",
-      providerThinkingNotSupported: "目前模型不支援深度思考，請於設定中切換模型或關閉深度思考",
+      providerThinkingNotSupported:
+        "目前模型不支援深度思考，請於設定中切換模型或關閉深度思考",
       providerStreamLost: "連線已中斷，請重新整理或重新傳送訊息",
       providerGeneric: "AI 暫時無法回應，請稍後重試",
       permissionFailed: "工具核准失敗，AI 已停止",
@@ -1510,10 +1511,13 @@ export default {
       flashcardsDesc: "整理為問答式記憶卡片",
     },
     askPrompts: {
-      discuss: "我想就這段內容和你深入聊聊，先幫我點出關鍵觀點，再提出值得繼續追問的問題：\n\n{text}",
-      explain: "請用通俗、直白的語言解釋下面這段內容，必要時舉一個例子：\n\n{text}",
+      discuss:
+        "我想就這段內容和你深入聊聊，先幫我點出關鍵觀點，再提出值得繼續追問的問題：\n\n{text}",
+      explain:
+        "請用通俗、直白的語言解釋下面這段內容，必要時舉一個例子：\n\n{text}",
       quiz: "請圍繞下面這段內容出 3 道理解性題目（含簡答），幫我檢驗掌握情況：\n\n{text}",
-      flashcards: "請把下面這段內容整理成 4-6 張問答式記憶卡片（Q/A 格式，每張聚焦一個核心點）：\n\n{text}",
+      flashcards:
+        "請把下面這段內容整理成 4-6 張問答式記憶卡片（Q/A 格式，每張聚焦一個核心點）：\n\n{text}",
     },
     videoNote: "視頻筆記",
     summaryTitle: "總結",
@@ -1668,7 +1672,8 @@ export default {
       apiKeyLabel: "API Key",
       apiKeyPlaceholder: "API Key",
       apiKeyConfiguredPlaceholder: "API Key 已儲存（不會顯示明文）",
-      apiKeySavedHint: "已儲存到本機鑰匙圈；出於安全不會回顯，輸入新 key 可替換。",
+      apiKeySavedHint:
+        "已儲存到本機鑰匙圈；出於安全不會回顯，輸入新 key 可替換。",
       apiKeyEmptyHint: "儲存後寫入本機鑰匙圈，不會進入普通設定檔。",
       apiKeyDirtyHint: "儲存後會替換目前服務商的 API Key。",
       modelLabel: "Model",
