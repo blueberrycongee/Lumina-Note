@@ -1461,6 +1461,8 @@ export default {
     interruptRetry: "中断してリトライ",
     copy: "コピー",
     toolGroup: "ツール呼び出し",
+    thinkingGroup: "思考プロセス",
+    working: "実行中",
     errors: {
       generic: "エラーが発生しました。もう一度お試しください。",
       retry: "再試行",

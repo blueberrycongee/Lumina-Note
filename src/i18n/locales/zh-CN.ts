@@ -1437,6 +1437,8 @@ export default {
     interruptRetry: "中断并重试",
     copy: "复制",
     toolGroup: "工具调用",
+    thinkingGroup: "思考过程",
+    working: "正在工作",
     errors: {
       generic: "出错了，请重试",
       retry: "重试",
