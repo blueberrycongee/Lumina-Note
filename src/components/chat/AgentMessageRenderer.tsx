@@ -98,6 +98,7 @@ type TimelinePart =
   | { type: "thinking_group"; items: ThinkingItem[] }
   | { type: "tool"; tool: ToolCallInfo }
   | { type: "tool_group"; tools: ToolCallInfo[] }
+  | { type: "image_generation_progress"; tool: ToolCallInfo }
   | { type: "generated_image"; image: GeneratedImageInfo }
   | { type: "work_session"; items: WorkItem[] }
   | { type: "diff"; diff: PendingDiff };
@@ -283,19 +284,6 @@ export function isPendingImageGenerationTool(tool: ToolCallInfo): boolean {
   return tool.name === "generate_image" && tool.result === undefined;
 }
 
-function findPendingImageGenerationTool(items: WorkItem[]): ToolCallInfo | null {
-  for (const item of items) {
-    if (item.type === "tool" && isPendingImageGenerationTool(item.tool)) {
-      return item.tool;
-    }
-    if (item.type === "tool_group") {
-      const tool = item.tools.find(isPendingImageGenerationTool);
-      if (tool) return tool;
-    }
-  }
-  return null;
-}
-
 export function getImageGenerationProviderLabel(tool: ToolCallInfo): string | null {
   if (tool.title) {
     const label = tool.title
@@ -309,6 +297,28 @@ export function getImageGenerationProviderLabel(tool: ToolCallInfo): string | nu
   const modelMatch = tool.params.match(/"model_id"\s*:\s*"([^"]+)"/);
   if (modelMatch?.[1]) return modelMatch[1];
   return null;
+}
+
+function getPendingImageGenerationTool(part: TimelinePart): ToolCallInfo | null {
+  if (part.type === "tool" && isPendingImageGenerationTool(part.tool)) {
+    return part.tool;
+  }
+  if (part.type === "tool_group") {
+    return part.tools.find(isPendingImageGenerationTool) ?? null;
+  }
+  return null;
+}
+
+function insertImageGenerationProgressParts(parts: TimelinePart[]): TimelinePart[] {
+  const out: TimelinePart[] = [];
+  for (const part of parts) {
+    out.push(part);
+    const pendingImageTool = getPendingImageGenerationTool(part);
+    if (pendingImageTool) {
+      out.push({ type: "image_generation_progress", tool: pendingImageTool });
+    }
+  }
+  return out;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1239,6 +1249,42 @@ const ImageGenerationProgress = memo(function ImageGenerationProgress({
   );
 });
 
+const ImageGenerationToolProgress = memo(function ImageGenerationToolProgress({
+  tool,
+  t,
+  llmRequestStartTime,
+  isRunning,
+}: {
+  tool: ToolCallInfo;
+  t: any;
+  llmRequestStartTime?: number | null;
+  isRunning?: boolean;
+}) {
+  const start = tool.time?.start ?? (llmRequestStartTime != null ? llmRequestStartTime : null);
+  const showLive = !!isRunning && start != null;
+  const [elapsed, setElapsed] = useState(() =>
+    showLive ? Math.max(0, Math.floor((Date.now() - (start as number)) / 1000)) : 0,
+  );
+
+  useEffect(() => {
+    if (!showLive) return;
+    const startedAt = start as number;
+    const tick = () =>
+      setElapsed(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [showLive, start]);
+
+  return (
+    <ImageGenerationProgress
+      providerLabel={getImageGenerationProviderLabel(tool)}
+      elapsedLabel={showLive ? formatElapsed(elapsed) : isRunning ? t.agentMessage.working : null}
+      t={t}
+    />
+  );
+});
+
 const GeneratedImageCard = memo(function GeneratedImageCard({
   image,
   vaultPath,
@@ -1398,10 +1444,6 @@ const WorkSession = memo(function WorkSession({
     "{count}",
     String(stepCount),
   );
-  const pendingImageTool = findPendingImageGenerationTool(items);
-  const imageProviderLabel = pendingImageTool
-    ? getImageGenerationProviderLabel(pendingImageTool)
-    : null;
 
   let headerLabel: string;
   if (showLive) {
@@ -1414,13 +1456,6 @@ const WorkSession = memo(function WorkSession({
 
   return (
     <div className="text-xs text-muted-foreground">
-      {pendingImageTool && (
-        <ImageGenerationProgress
-          providerLabel={imageProviderLabel}
-          elapsedLabel={showLive ? formatElapsed(elapsed) : null}
-          t={t}
-        />
-      )}
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
@@ -1665,6 +1700,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       // pendingDiff 在前面已插入，会自然把 work_session 切成前后两段。
       let collapsedParts = collapseConsecutiveTools(parts);
       collapsedParts = collapseConsecutiveThinking(collapsedParts);
+      collapsedParts = insertImageGenerationProgressParts(collapsedParts);
       collapsedParts = bundleWorkSessions(collapsedParts);
 
       // 判断是否有 AI 回复内容
@@ -1768,6 +1804,17 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                         image={part.image}
                         vaultPath={vaultPath}
                         t={t}
+                      />
+                    );
+                  }
+                  if (part.type === "image_generation_progress") {
+                    return (
+                      <ImageGenerationToolProgress
+                        key={key}
+                        tool={part.tool}
+                        t={t}
+                        llmRequestStartTime={llmRequestStartTime}
+                        isRunning={isRunning}
                       />
                     );
                   }

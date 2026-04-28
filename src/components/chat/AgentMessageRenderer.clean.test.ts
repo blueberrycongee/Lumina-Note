@@ -91,6 +91,51 @@ describe("AgentMessageRenderer", () => {
     expect(getImageGenerationProviderLabel(tool)).toBe("gpt-image-2");
   });
 
+  it("keeps pending image generation after the work session summary", () => {
+    const { container } = render(
+      createElement(AgentMessageRenderer, {
+        isRunning: true,
+        messages: [
+          {
+            id: "msg-user",
+            role: "user",
+            content: "Create a square cover",
+            rawParts: [],
+          },
+          {
+            id: "msg-assistant",
+            role: "assistant",
+            content: "",
+            rawParts: [
+              {
+                id: "part-tool",
+                sessionID: "test-session",
+                messageID: "msg-assistant",
+                type: "tool",
+                tool: "generate_image",
+                state: {
+                  status: "running",
+                  title: "Generating with gpt-image-2…",
+                  input: { prompt: "Create a square cover" },
+                  time: { start: Date.now() - 1000 },
+                },
+              } as never,
+            ],
+          },
+        ],
+      }),
+    );
+
+    const progress = container.querySelector(".image-generation-progress");
+    expect(progress).not.toBeNull();
+
+    const workSummary = screen.getByRole("button", { name: /正在工作中/ });
+    expect(
+      workSummary.compareDocumentPosition(progress as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("copies visible user prompt and assistant reply text", async () => {
     render(
       createElement(AgentMessageRenderer, {
