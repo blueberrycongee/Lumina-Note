@@ -38,7 +38,7 @@
 - **Dep:** add `@noble/ed25519` to `package.json` `dependencies`.
 
 ### C3 — License storage in OS keychain
-- [ ] **Goal:** `store.ts` exports `saveLicense`, `loadLicense`, `removeLicense` backed by Electron `safeStorage`.
+- [ ] **Goal:** `store.ts` exports `saveLicense`, `loadLicense`, `removeLicense` backed by Electron `safeStorage`. **[BLOCKED: `electron/main/ipc.ts` uses a unified dispatcher; wiring a new handler set needs 3 additive lines (import + factory call + dispatch branch), exceeding the "single named import" rule. Lead, please confirm whether 3 additive lines in `ipc.ts` are acceptable, or specify a different wiring point.]**
 - **Files:** `src/services/luminaCloud/store.ts`, IPC handlers in `electron/` (additive only — new file `electron/ipc/luminaCloudLicense.ts` and a single import line in the existing main entry).
 - **Acceptance:**
   - On macOS / Windows: encrypts via `safeStorage`.
@@ -126,3 +126,5 @@
 ## Done log
 
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
+
+[BLOCKED] C3 — 2026-04-28 — `electron/main/ipc.ts` requires 3 additive lines (import + factory + dispatch); exceeds single-import rule. Lead clarification requested.
