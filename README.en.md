@@ -109,6 +109,10 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 - Slash command extension API
 - Developer guide: `docs/plugin-ecosystem.md`
 
+<h3 align="center">Optional: Lumina Cloud (paid)</h3>
+
+If you'd rather not configure your own API keys, Lumina Cloud is a license-based add-on. A one-time founders purchase or a monthly subscription unlocks the "Lumina Cloud" provider in AI settings — same models, paid-by-Lumina inference. Local-first stays the default; cloud features only activate when a license is present. Learn more at [lumina-note.com](https://lumina-note.com).
+
 ---
 
 <h2 align="center">Quick Start</h2>

@@ -117,7 +117,7 @@
 - **Acceptance:** `npm test -- src/__tests__/luminaCloud.e2e.test.ts` passes.
 
 ### C13 — README mention (subtle, not pushy)
-- [ ] **Goal:** Add a small "Optional: Lumina Cloud (paid)" subsection under the Features section in `README.en.md` and `README.zh-CN.md` only.
+- [x] **Goal:** Add a small "Optional: Lumina Cloud (paid)" subsection under the Features section in `README.en.md` and `README.zh-CN.md` only.
 - **Tone:** Match the existing brand voice (quiet, precise — see `PRODUCT.md` §3). One paragraph max. Link to the marketing site (placeholder URL `https://lumina-note.com` for now).
 - **Acceptance:** Diff is ≤ 15 lines per file.
 
@@ -138,3 +138,4 @@
 [x] C12 — 2026-04-28 — 381004c — e2e test (license → setLicense → visible → mock chat → usage delta) + invalid-signature + lifetime-only-no-cloud_ai paths; 3 tests
 [x] C3 — 2026-04-28 — d684a85 — license storage via safeStorage + Linux 0600 fallback; 3 additive lines in ipc.ts; 16 tests (11 main, 5 renderer)
 [x] C10 — 2026-04-28 — 9873ab7 — Account tab mounted in SettingsModal between Network and System; locale strings in en/zh-CN/zh-TW/ja; 7 tests pass (existing modal tests + new account-tab assertion)
+[x] C13 — 2026-04-28 — 0a47e8f — Optional: Lumina Cloud subsection added to README.en.md and README.zh-CN.md (4 lines each, brand-voice paragraph)
