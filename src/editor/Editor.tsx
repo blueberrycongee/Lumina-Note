@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import { useUIStore, EditorMode } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { MainAIChatShell } from "@/components/layout/MainAIChatShell";
+import { PanelErrorBoundary } from "@/components/system/PanelErrorBoundary";
 import { LocalGraph } from "@/components/effects/LocalGraph";
 import { debounce } from "@/lib/utils";
 import {
@@ -642,7 +643,9 @@ export function Editor() {
       {/* Main content area */}
       {activeTab?.type === "ai-chat" ? (
         // 主视图区 AI 聊天视图
-        <MainAIChatShell />
+        <PanelErrorBoundary label="AI Chat">
+          <MainAIChatShell />
+        </PanelErrorBoundary>
       ) : (
         // 普通笔记编辑视图
         <div className="flex-1 overflow-hidden relative">

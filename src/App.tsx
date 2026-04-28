@@ -32,6 +32,8 @@ import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { CommandMenu, CommandMenuProvider } from "@/components/ui";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
+import { ImageViewer } from "@/components/images/ImageViewer";
+import { PanelErrorBoundary } from "@/components/system/PanelErrorBoundary";
 import { useAIStore } from "@/stores/useAIStore";
 import { initOpencodeAgentListeners } from "@/stores/useOpencodeAgent";
 import { wireErrorBanner } from "@/stores/useErrorBanner";
@@ -982,9 +984,11 @@ function App() {
                 style={{ width: leftSidebarWidth }}
               >
                 <DevProfiler id="Sidebar">
-                  <Sidebar
-                    onSwitchVault={() => useFileStore.getState().clearVault()}
-                  />
+                  <PanelErrorBoundary label="Sidebar">
+                    <Sidebar
+                      onSwitchVault={() => useFileStore.getState().clearVault()}
+                    />
+                  </PanelErrorBoundary>
                 </DevProfiler>
               </div>
             </div>
@@ -1008,6 +1012,7 @@ function App() {
               : "flex-1 w-auto opacity-100"
           }`}
         >
+          <PanelErrorBoundary label="Editor">
           {pendingDiff && activeTab?.type !== "ai-chat" ? (
             // Show diff view when there's a pending AI edit (non chat context)
             <DiffViewWrapper />
@@ -1016,6 +1021,11 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
+            </div>
+          ) : activeTab?.type === "image" && activeTab.path ? (
+            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+              <TabBar />
+              <ImageViewer filePath={activeTab.path} className="flex-1" />
             </div>
           ) : activeTab?.type === "diagram" && activeTab.path ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
@@ -1079,6 +1089,7 @@ function App() {
             // 空状态或其他标签页类型 - 统一使用 EditorWithGraph 保持 TabBar 一致
             <EditorWithGraph />
           )}
+          </PanelErrorBoundary>
         </main>
 
         {/* Right Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
