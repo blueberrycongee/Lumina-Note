@@ -1,7 +1,7 @@
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import { existsSync } from 'node:fs'
-import { copyFile, mkdir, readdir } from 'node:fs/promises'
+import { copyFile, mkdir, readdir, stat } from 'node:fs/promises'
 import path from 'path'
 import pkg from './package.json'
 
@@ -9,6 +9,25 @@ const OPENCODE_SERVER_DIST = path.resolve(
   __dirname,
   'thirdparty/opencode/packages/opencode/dist/node',
 )
+
+const LUMINA_BUILTIN_SKILLS_SRC = path.resolve(
+  __dirname,
+  'electron/main/agent-v2/builtin-skills',
+)
+
+async function copyDirRecursive(src: string, dst: string): Promise<void> {
+  await mkdir(dst, { recursive: true })
+  const entries = await readdir(src, { withFileTypes: true })
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name)
+    const dstPath = path.join(dst, entry.name)
+    if (entry.isDirectory()) {
+      await copyDirRecursive(srcPath, dstPath)
+    } else if (entry.isFile()) {
+      await copyFile(srcPath, dstPath)
+    }
+  }
+}
 
 export default defineConfig({
   main: {
@@ -83,6 +102,23 @@ export default defineConfig({
             // imports virtual:opencode-server. Rollup will error loudly at
             // that point with a more useful message.
             if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+          }
+        },
+      },
+      {
+        name: 'lumina:copy-builtin-skills',
+        async writeBundle() {
+          // Ship Lumina's built-in opencode skills (image-gen, etc.) next to
+          // the main bundle. provider-bridge.ts adds out/main/skills to
+          // cfg.skills.paths so opencode auto-discovers SKILL.md files at
+          // session start.
+          try {
+            const stats = await stat(LUMINA_BUILTIN_SKILLS_SRC).catch(() => null)
+            if (!stats?.isDirectory()) return
+            const dst = path.resolve(__dirname, 'out/main/skills')
+            await copyDirRecursive(LUMINA_BUILTIN_SKILLS_SRC, dst)
+          } catch (err) {
+            console.warn('[lumina:copy-builtin-skills] failed', err)
           }
         },
       },

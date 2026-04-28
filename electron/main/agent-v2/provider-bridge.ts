@@ -21,22 +21,32 @@ const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 let _autoApproveToolCalls = false;
 
 /**
- * Absolute path to the bundled Lumina opencode plugin (lumina-plugin.js).
- * It sits next to the main bundle (electron.vite.config.ts emits both as
- * sibling rollup entries). At runtime we resolve relative to import.meta.url
- * so the path works in both dev (out/main/) and packaged builds.
+ * Resolve `<file>` to an absolute path relative to the main bundle's
+ * directory at runtime. Works in both ESM (preferred — uses import.meta.url)
+ * and the legacy CJS fallback.
  */
-function resolveLuminaPluginPath(): string {
-  // import.meta.url isn't available in CJS; fall back to __dirname when so.
-  // electron-vite's main bundle is ESM by default — the import.meta path is
-  // the safe one — but the fallback handles legacy CJS bundles too.
+function resolveBesideMainBundle(file: string): string {
   let dir: string;
   try {
     dir = path.dirname(fileURLToPath(import.meta.url));
   } catch {
     dir = typeof __dirname === "string" ? __dirname : process.cwd();
   }
-  return path.join(dir, "lumina-plugin.js");
+  return path.join(dir, file);
+}
+
+/** Absolute path to the bundled Lumina opencode plugin (lumina-plugin.js). */
+function resolveLuminaPluginPath(): string {
+  return resolveBesideMainBundle("lumina-plugin.js");
+}
+
+/**
+ * Absolute path to the directory holding Lumina's bundled built-in skills
+ * (image-gen, etc.). Populated by the lumina:copy-builtin-skills vite
+ * plugin during build.
+ */
+function resolveBuiltinSkillsPath(): string {
+  return resolveBesideMainBundle("skills");
 }
 
 export function setAutoApproveToolCalls(value: boolean): void {
@@ -228,6 +238,20 @@ export async function buildOpencodeBridge(
     // plugin entry — keeping us aligned with opencode's plugin model
     // instead of inventing a parallel framework.
     plugin: [resolveLuminaPluginPath()],
+    // Skills opencode will auto-discover at session start.
+    //  - Absolute: bundled built-ins (image-gen, etc.) shipped with the app.
+    //  - Relative `.skills`: vault-local skills written by the user.
+    //    opencode resolves relative paths against the session's directory
+    //    (which Lumina sets to the vault root in useOpencodeAgent), so
+    //    `.skills` becomes `<vault>/.skills/**/SKILL.md`.
+    //
+    // Vault skills under `.claude/skills/` and `.agents/skills/` are also
+    // auto-discovered by opencode without needing a path entry — see
+    // skill/index.ts:EXTERNAL_DIRS — so users who follow the Claude Code
+    // convention need zero config.
+    skills: {
+      paths: [resolveBuiltinSkillsPath(), ".skills"],
+    },
   };
 
   if (_autoApproveToolCalls) {
