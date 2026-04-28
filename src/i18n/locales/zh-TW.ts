@@ -1158,6 +1158,7 @@ export default {
       ai: "AI",
       sync: "同步",
       network: "網路",
+      account: "帳戶",
       system: "系統",
     },
     diagnosticsTitle: "診斷",

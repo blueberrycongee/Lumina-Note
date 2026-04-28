@@ -1263,6 +1263,7 @@ export default {
       ai: "AI",
       sync: "同步",
       network: "网络",
+      account: "账户",
       system: "系统",
     },
     diagnosticsTitle: "诊断",

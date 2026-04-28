@@ -103,7 +103,7 @@
 - **Acceptance:** Tests cover three states (loading, success, error-with-cache).
 
 ### C10 — Mount the Account tab
-- [ ] **Goal:** Add an "Account" entry to the settings navigation that contains `LicenseSettings` + `CloudUsagePanel`.
+- [x] **Goal:** Add an "Account" entry to the settings navigation that contains `LicenseSettings` + `CloudUsagePanel`.
 - **Approach:** Locate the existing settings nav. **If wiring it in requires more than ~10 lines of change in any single existing file, block and document where you stopped.**
 - **Acceptance:** "Account" tab appears, both panels render.
 

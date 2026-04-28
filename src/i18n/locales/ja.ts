@@ -1180,6 +1180,7 @@ export default {
       ai: "AI",
       sync: "同期",
       network: "ネットワーク",
+      account: "アカウント",
       system: "システム",
     },
     diagnosticsTitle: "診断",
