@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { Settings, Bot, RefreshCw, Globe, Info, X } from "lucide-react";
+import { Settings, Bot, RefreshCw, Globe, Info, User, X } from "lucide-react";
 import { GeneralSection } from "../settings/GeneralSection";
 import { SystemSection } from "../settings/SystemSection";
 import { AISettingsContent } from "../ai/AISettingsModal";
@@ -14,18 +14,21 @@ import { WebDAVSettings } from "../settings/WebDAVSettings";
 import { MobileGatewaySection } from "../settings/MobileGatewaySection";
 import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { ProxySection } from "../settings/ProxySection";
+import { LicenseSettings } from "../settings/LicenseSettings";
+import { CloudUsagePanel } from "../settings/CloudUsagePanel";
 
-type TabId = "general" | "ai" | "sync" | "network" | "system";
+type TabId = "general" | "ai" | "sync" | "network" | "account" | "system";
 
 const TAB_ICONS: Record<TabId, typeof Settings> = {
   general: Settings,
   ai: Bot,
   sync: RefreshCw,
   network: Globe,
+  account: User,
   system: Info,
 };
 
-const TAB_ORDER: TabId[] = ["general", "ai", "sync", "network", "system"];
+const TAB_ORDER: TabId[] = ["general", "ai", "sync", "network", "account", "system"];
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -59,6 +62,13 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
         return (
           <>
             <ProxySection />
+          </>
+        );
+      case "account":
+        return (
+          <>
+            <LicenseSettings />
+            <CloudUsagePanel />
           </>
         );
       case "system":

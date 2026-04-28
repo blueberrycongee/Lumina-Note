@@ -109,6 +109,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
           ai: "AI",
           sync: "Sync",
           network: "Network",
+          account: "Account",
           system: "System",
         },
       },
@@ -191,6 +192,14 @@ vi.mock("../settings/ProxySection", () => ({
   ProxySection: () => <div>Proxy</div>,
 }));
 
+vi.mock("../settings/LicenseSettings", () => ({
+  LicenseSettings: () => <div>LicenseSettings</div>,
+}));
+
+vi.mock("../settings/CloudUsagePanel", () => ({
+  CloudUsagePanel: () => <div>CloudUsagePanel</div>,
+}));
+
 describe("SettingsModal", () => {
   const onOpenUpdateModal = vi.fn();
 
@@ -203,7 +212,7 @@ describe("SettingsModal", () => {
     onOpenUpdateModal.mockClear();
   });
 
-  it("renders tabbed navigation with 5 tabs", () => {
+  it("renders tabbed navigation with 6 tabs", () => {
     render(
       <SettingsModal
         isOpen
@@ -216,7 +225,23 @@ describe("SettingsModal", () => {
     expect(screen.getByText("AI")).toBeInTheDocument();
     expect(screen.getByText("Sync")).toBeInTheDocument();
     expect(screen.getByText("Network")).toBeInTheDocument();
+    expect(screen.getByText("Account")).toBeInTheDocument();
     expect(screen.getByText("System")).toBeInTheDocument();
+  });
+
+  it("switches to account tab and shows license + usage panels", () => {
+    render(
+      <SettingsModal
+        isOpen
+        onClose={() => undefined}
+        onOpenUpdateModal={onOpenUpdateModal}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Account"));
+
+    expect(screen.getByText("LicenseSettings")).toBeInTheDocument();
+    expect(screen.getByText("CloudUsagePanel")).toBeInTheDocument();
   });
 
   it("defaults to general tab showing theme and editor", () => {

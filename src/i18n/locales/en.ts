@@ -1290,6 +1290,7 @@ export default {
       ai: "AI",
       sync: "Sync",
       network: "Network",
+      account: "Account",
       system: "System",
     },
     diagnosticsTitle: "Diagnostics",

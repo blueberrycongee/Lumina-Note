@@ -103,7 +103,7 @@
 - **Acceptance:** Tests cover three states (loading, success, error-with-cache).
 
 ### C10 — Mount the Account tab
-- [ ] **Goal:** Add an "Account" entry to the settings navigation that contains `LicenseSettings` + `CloudUsagePanel`.
+- [x] **Goal:** Add an "Account" entry to the settings navigation that contains `LicenseSettings` + `CloudUsagePanel`.
 - **Approach:** Locate the existing settings nav. **If wiring it in requires more than ~10 lines of change in any single existing file, block and document where you stopped.**
 - **Acceptance:** "Account" tab appears, both panels render.
 
@@ -137,3 +137,4 @@
 [x] C9 — 2026-04-28 — ae19918 — CloudUsagePanel with 60s polling and stale-cache-on-error; 7 tests cover loading/success/error-with-cache + cold error + cadence + cleanup
 [x] C12 — 2026-04-28 — 381004c — e2e test (license → setLicense → visible → mock chat → usage delta) + invalid-signature + lifetime-only-no-cloud_ai paths; 3 tests
 [x] C3 — 2026-04-28 — d684a85 — license storage via safeStorage + Linux 0600 fallback; 3 additive lines in ipc.ts; 16 tests (11 main, 5 renderer)
+[x] C10 — 2026-04-28 — 9873ab7 — Account tab mounted in SettingsModal between Network and System; locale strings in en/zh-CN/zh-TW/ja; 7 tests pass (existing modal tests + new account-tab assertion)
