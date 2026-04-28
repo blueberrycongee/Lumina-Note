@@ -27,7 +27,7 @@
   - No new runtime dependencies yet (those come in C2).
 
 ### C2 — Add Ed25519 verification with `@noble/ed25519`
-- [ ] **Goal:** `verify.ts` exports `verifyLicense(token: string): LicensePayload | null` per `CONTRACT.md` §1.3.
+- [x] **Goal:** `verify.ts` exports `verifyLicense(token: string): LicensePayload | null` per `CONTRACT.md` §1.3.
 - **Files:** `src/services/luminaCloud/verify.ts`, `src/services/luminaCloud/verify.test.ts`, `src/services/luminaCloud/canonical-json.ts` + test.
 - **Public key:** `PUBLIC_KEY.ts` exports a `PUBLIC_KEY_B64` placeholder constant. Real value will be filled in by Lead from `lumina-cloud` keypair generation. Mark with `// LEAD: replace with real public key from lumina-cloud T3 output`.
 - **Acceptance:**
@@ -128,3 +128,4 @@
 (Loop agent appends `[x] C<n> — <date> — <commit hash> — <one-line note>` here as tasks complete, mirroring the `[x]` above.)
 
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
+[x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
