@@ -394,6 +394,17 @@ export default {
       imageModeChipHint: "次のメッセージは画像生成リクエストとして送信されます",
       imageModeChipRemove: "画像モードを解除",
     },
+    imageDirect: {
+      noImageProvider:
+        "画像プロバイダが未設定です。AI 設定 → 画像モデルから Key を入れてください。",
+      noVault: "ボルトを開いてください——画像の保存先が必要です。",
+      generating: "{provider} で直接生成中（チャットエージェントをバイパス）…",
+      successTitle: "{provider} で生成しました",
+      failureTitle: "{provider} の生成に失敗しました",
+      failureGeneric: "画像生成に失敗しました",
+      copyMarkdown: "Markdown をコピー",
+      copied: "コピーしました",
+    },
     history: "履歴",
     historyChats: "履歴チャット",
     newChat: "新規チャット",

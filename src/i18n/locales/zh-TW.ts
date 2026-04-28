@@ -394,6 +394,17 @@ export default {
       imageModeChipHint: "下一條會被當成畫圖請求發出去",
       imageModeChipRemove: "退出圖片模式",
     },
+    imageDirect: {
+      noImageProvider:
+        "圖像 provider 還沒設定——去 AI 設定裡 Image Models 那欄填個 key。",
+      noVault: "先打開一個 vault 才能儲存圖片。",
+      generating: "正在用 {provider} 直接生成（繞開了對話模型）…",
+      successTitle: "{provider} 出圖完成",
+      failureTitle: "{provider} 生成失敗",
+      failureGeneric: "圖片生成失敗",
+      copyMarkdown: "複製 markdown",
+      copied: "已複製",
+    },
     history: "歷史記錄",
     historyChats: "歷史對話",
     newChat: "新建對話",

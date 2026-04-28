@@ -397,6 +397,17 @@ export default {
       imageModeChipHint: "Your next message will be sent as an image generation request",
       imageModeChipRemove: "Exit image mode",
     },
+    imageDirect: {
+      noImageProvider:
+        "No image provider configured. Open AI Settings → Image Models to add a key.",
+      noVault: "Open a vault first — images need somewhere to land.",
+      generating: "Generating directly with {provider} (skipping the chat agent)…",
+      successTitle: "Generated with {provider}",
+      failureTitle: "{provider} generation failed",
+      failureGeneric: "Image generation failed",
+      copyMarkdown: "Copy markdown",
+      copied: "Copied",
+    },
     history: "History",
     historyChats: "History",
     newChat: "New Chat",

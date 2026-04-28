@@ -41,6 +41,9 @@ import {
   writeSkill,
   type SkillFrontmatter,
 } from '../agent-v2/skills/handlers.js'
+import { dispatchImageGeneration } from '../agent-v2/plugin/providers.js'
+import { writeImageToVault } from '../agent-v2/plugin/output.js'
+import { getImageProvider } from './image-providers/registry.js'
 
 export interface AgentDispatchContext {
   providerSettings?: ProviderSettingsStore
@@ -255,6 +258,102 @@ export async function dispatchAgentCommand(
         apiKey,
         baseUrl: settings?.baseUrl,
       })
+    }
+    // Direct image-generation path: bypass the chat agent entirely. Reuses
+    // the same dispatchImageGeneration + writeImageToVault that the
+    // generate_image opencode tool uses, but invoked straight from the
+    // renderer when the user has an image provider configured but the
+    // chat agent isn't (e.g. they pasted only an image API key, or their
+    // chat provider is broken). Result lands in vault/assets/generated/
+    // identically; renderer surfaces it as a synthetic chat card.
+    case 'image_generate_direct': {
+      if (!imageProviderSettings) {
+        return { ok: false, error: 'image-provider settings unavailable' }
+      }
+      const {
+        prompt,
+        provider_id,
+        aspect_ratio,
+        reference_images,
+        vault_path,
+      } = args as {
+        prompt?: string
+        provider_id?: string
+        aspect_ratio?: '1:1' | '4:3' | '3:4' | '16:9' | '9:16'
+        reference_images?: Array<{ data: string; mediaType: string }>
+        vault_path?: string
+      }
+      if (!prompt || prompt.trim().length === 0) {
+        return { ok: false, error: 'prompt is required' }
+      }
+      if (!vault_path) {
+        return { ok: false, error: 'no vault open' }
+      }
+      if (!provider_id || !isImageProviderId(provider_id)) {
+        return { ok: false, error: `Unknown image provider: ${provider_id}` }
+      }
+      const entry = getImageProvider(provider_id as ImageProviderId)
+      if (!entry) {
+        return { ok: false, error: `Unknown image provider: ${provider_id}` }
+      }
+      const settings = await imageProviderSettings.resolveSettings(
+        provider_id as ImageProviderId,
+      )
+      if (!settings.apiKey) {
+        return {
+          ok: false,
+          error: `No API key configured for ${entry.label}`,
+          providerId: provider_id,
+        }
+      }
+      const refs = (reference_images ?? []).slice(0, 3).map((r) => ({
+        mimeType: r.mediaType,
+        bytes: Buffer.from(r.data, 'base64'),
+      }))
+      try {
+        const result = await dispatchImageGeneration({
+          providerId: provider_id as ImageProviderId,
+          defaults: {
+            defaultModelId: entry.defaultModelId,
+            defaultBaseUrl: entry.defaultBaseUrl,
+          },
+          settings: { apiKey: settings.apiKey, baseUrl: settings.baseUrl },
+          request: {
+            prompt: prompt.trim(),
+            referenceImages: refs,
+            aspectRatio: aspect_ratio,
+            modelId: settings.modelId,
+          },
+        })
+        const generatedAt = new Date().toISOString()
+        const saved = await writeImageToVault({
+          vaultPath: vault_path,
+          bytes: result.images[0],
+          metadata: {
+            providerId: provider_id,
+            modelId: result.modelUsed,
+            prompt: prompt.trim(),
+            aspectRatio: aspect_ratio,
+            referenceCount: refs.length,
+            generatedAt,
+          },
+        })
+        return {
+          ok: true,
+          providerId: provider_id,
+          providerLabel: entry.label,
+          marketingName: entry.marketingName,
+          modelUsed: result.modelUsed,
+          relativePath: saved.relativePath,
+          absolutePath: saved.absolutePath,
+        }
+      } catch (err) {
+        return {
+          ok: false,
+          providerId: provider_id,
+          error: err instanceof Error ? err.message : String(err),
+        }
+      }
     }
 
     // Vault skill CRUD — listing/reading goes through opencode's /skill

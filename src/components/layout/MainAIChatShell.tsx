@@ -9,6 +9,12 @@ import {
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
+import { useImageProvidersStore } from "@/stores/useImageProvidersStore";
+import {
+  generateImageDirect,
+  pickConfiguredImageProvider,
+} from "@/services/imageGen/direct";
+import { toast } from "sonner";
 import {
   useOpencodeAgent,
   initOpencodeAgentListeners,
@@ -249,6 +255,27 @@ export function MainAIChatShell() {
       consumeInputAppends: state.consumeInputAppends,
     })),
   );
+
+  // Image-mode bypass: when the user is in image-mode but the chat agent
+  // isn't usable (no provider key, etc.), we still want them to be able
+  // to generate. The direct path skips opencode entirely and calls the
+  // image API straight from main process.
+  const aiProvider = useAIStore((s) => s.config.provider);
+  const aiApiKey = useAIStore((s) => s.config.apiKey);
+  const isAgentConfigured = useMemo(() => {
+    if (!aiProvider) return false;
+    if (aiProvider === "ollama" || aiProvider === "openai-compatible") {
+      return true;
+    }
+    return !!aiApiKey?.trim();
+  }, [aiProvider, aiApiKey]);
+
+  const imageProviders = useImageProvidersStore((s) => s.providers);
+  const imageProvidersLoaded = useImageProvidersStore((s) => s.loaded);
+  const refreshImageProviders = useImageProvidersStore((s) => s.refresh);
+  useEffect(() => {
+    if (!imageProvidersLoaded) void refreshImageProviders();
+  }, [imageProvidersLoaded, refreshImageProviders]);
 
   // Wrap session hooks with local state side effects
   const handleSwitchSession = useCallback(
@@ -720,6 +747,79 @@ export function MainAIChatShell() {
         performance.mark("lumina:send:processed");
       }
 
+      // Image-mode bypass: if the user is in image-mode AND the chat
+      // agent isn't usable (no API key, no provider), skip opencode
+      // entirely and call the image API directly. Same dispatch code,
+      // no LLM in the middle. The user gets a toast pointing at the
+      // saved file so they can drop it into a note manually.
+      if (imageMode && !isAgentConfigured) {
+        const provider = pickConfiguredImageProvider(imageProviders);
+        if (!provider) {
+          toast.error(t.ai.imageDirect.noImageProvider);
+          finalizePerf();
+          return;
+        }
+        if (!vaultPath) {
+          toast.error(t.ai.imageDirect.noVault);
+          finalizePerf();
+          return;
+        }
+        const toastId = toast.loading(
+          t.ai.imageDirect.generating.replace(
+            "{provider}",
+            provider.marketingName,
+          ),
+        );
+        try {
+          const result = await generateImageDirect({
+            prompt: message,
+            providerId: provider.id,
+            vaultPath,
+            // attachedImages from input chips aren't plumbed here yet
+            // (they live in the inline input state); future work.
+          });
+          if (result.ok) {
+            const markdown = `![](${result.relativePath})`;
+            toast.success(
+              t.ai.imageDirect.successTitle.replace(
+                "{provider}",
+                result.marketingName,
+              ),
+              {
+                id: toastId,
+                description: result.relativePath,
+                duration: 8000,
+                action: {
+                  label: t.ai.imageDirect.copyMarkdown,
+                  onClick: () => {
+                    void navigator.clipboard.writeText(markdown);
+                    toast.success(t.ai.imageDirect.copied, { duration: 2000 });
+                  },
+                },
+              },
+            );
+            // Refresh the file tree so the new file shows up in the
+            // sidebar without the user having to manually refresh.
+            void refreshFileTree();
+          } else {
+            toast.error(
+              t.ai.imageDirect.failureTitle.replace(
+                "{provider}",
+                provider.marketingName,
+              ),
+              { id: toastId, description: result.error },
+            );
+          }
+        } catch (err) {
+          toast.error(t.ai.imageDirect.failureGeneric, {
+            id: toastId,
+            description: err instanceof Error ? err.message : String(err),
+          });
+        }
+        finalizePerf();
+        return;
+      }
+
       // Image-mode wrap: the chip in the chip row promised the user "your
       // next message will become an image generation request." We respect
       // that by prepending an explicit instruction so the agent reaches
@@ -753,6 +853,10 @@ export function MainAIChatShell() {
       selectedSkills,
       isExportSelectionMode,
       imageMode,
+      isAgentConfigured,
+      imageProviders,
+      refreshFileTree,
+      t,
     ],
   );
 
