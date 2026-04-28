@@ -22,6 +22,13 @@ type Translations = ReturnType<typeof useLocaleStore.getState>["t"];
 interface WelcomeSectionProps {
   hasStarted: boolean;
   onSetInput: (value: string) => void;
+  /**
+   * Optional escape hatch for the "Generate an image" pill: instead of
+   * filling the textarea with a prompt template, callers can flip the
+   * chat into image-mode and let the user describe the picture directly.
+   * MainAIChatShell wires this so a chip appears in the input row.
+   */
+  onActivateImageMode?: () => void;
   currentFile?: string | null;
   recentFiles?: string[];
   fileTree?: FileEntry[];
@@ -138,6 +145,7 @@ interface BuildStartersInput {
   hasFiles: boolean;
   currentFile: string | null | undefined;
   onSetInput: (value: string) => void;
+  onActivateImageMode?: () => void;
 }
 
 function buildStarters({
@@ -145,6 +153,7 @@ function buildStarters({
   hasFiles,
   currentFile,
   onSetInput,
+  onActivateImageMode,
 }: BuildStartersInput): Starter[] {
   const w = t.ai.welcomeStarters;
   const helpWithNote: Starter | null = currentFile
@@ -160,12 +169,18 @@ function buildStarters({
       }
     : null;
 
+  // Image pill flips the chat into image-mode (chip appears in the input
+  // row) when the parent wires the activator. Falls back to filling the
+  // textarea with a prompt template — same behaviour as before — for
+  // any caller that hasn't opted into mode chips yet.
   const generateImage: Starter = {
     id: "generate-image",
     icon: ImageIcon,
     label: w.generateImage,
     accent: "text-violet-500 dark:text-violet-400",
-    onClick: () => onSetInput(w.generateImagePrompt),
+    onClick: onActivateImageMode
+      ? onActivateImageMode
+      : () => onSetInput(w.generateImagePrompt),
   };
 
   const findOrBrainstorm: Starter = hasFiles
@@ -238,6 +253,7 @@ function StarterPill({ starter }: { starter: Starter }) {
 export function WelcomeStarters({
   hasStarted,
   onSetInput,
+  onActivateImageMode,
   currentFile,
   fileTree = [],
 }: WelcomeSectionProps) {
@@ -250,9 +266,10 @@ export function WelcomeStarters({
         hasFiles: fileTree.length > 0,
         currentFile,
         onSetInput,
+        onActivateImageMode,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [t, fileTree.length, currentFile, onSetInput],
+    [t, fileTree.length, currentFile, onSetInput, onActivateImageMode],
   );
 
   return (
@@ -288,6 +305,7 @@ export function WelcomeStarters({
 export function WelcomeSection({
   hasStarted,
   onSetInput,
+  onActivateImageMode,
   currentFile,
   recentFiles,
   fileTree,
@@ -302,6 +320,7 @@ export function WelcomeSection({
       <WelcomeStarters
         hasStarted={hasStarted}
         onSetInput={onSetInput}
+        onActivateImageMode={onActivateImageMode}
         currentFile={currentFile}
         recentFiles={recentFiles}
         fileTree={fileTree}

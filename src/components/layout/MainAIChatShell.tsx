@@ -26,6 +26,7 @@ import {
   ArrowUp,
   FileText,
   History,
+  Image as ImageIcon,
   Plus,
   Paperclip,
   Quote,
@@ -84,6 +85,11 @@ export function MainAIChatShell() {
   const { setSkillManagerOpen, toggleLeftSidebar, toggleRightSidebar } =
     useUIStore();
   const [input, setInput] = useState("");
+  // Composition modes that wrap the user's prompt before send. Right now
+  // there's just one — image mode, activated from the welcome "Generate
+  // an image" pill — but the chip-row pattern (render below as a small
+  // pill with X) is what we'll grow as more modes get added.
+  const [imageMode, setImageMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -714,7 +720,16 @@ export function MainAIChatShell() {
         performance.mark("lumina:send:processed");
       }
 
-      await rustStartTask(fullMessage, {
+      // Image-mode wrap: the chip in the chip row promised the user "your
+      // next message will become an image generation request." We respect
+      // that by prepending an explicit instruction so the agent reaches
+      // for the image-gen skill (which it sees in <available_skills>)
+      // even when the user's prompt is short or ambiguous.
+      const wrappedFullMessage = imageMode
+        ? `Use the image-gen skill to generate an image. User prompt:\n${fullMessage}`
+        : fullMessage;
+
+      await rustStartTask(wrappedFullMessage, {
         workspace_path: vaultPath || "",
         active_note_path: currentFile || undefined,
         active_note_content: currentFile ? currentContent : undefined,
@@ -737,6 +752,7 @@ export function MainAIChatShell() {
       rustStartTask,
       selectedSkills,
       isExportSelectionMode,
+      imageMode,
     ],
   );
 
@@ -1316,10 +1332,30 @@ export function MainAIChatShell() {
               }
             >
               {/* Tags area — above the pill, only when non-empty */}
-              {(selectedSkills.length > 0 ||
+              {(imageMode ||
+                selectedSkills.length > 0 ||
                 referencedFiles.length > 0 ||
                 textSelections.length > 0) && (
                 <div className="max-w-3xl mx-auto w-full mb-2 flex flex-wrap gap-1 px-2">
+                  {imageMode && (
+                    <div
+                      key="image-mode-chip"
+                      className="flex items-center gap-1 px-2 py-1 bg-violet-500/10 text-violet-700 dark:text-violet-400 rounded-full text-xs"
+                      title={t.ai.welcomeStarters.imageModeChipHint}
+                    >
+                      <ImageIcon size={11} className="shrink-0" />
+                      <span className="font-medium">
+                        {t.ai.welcomeStarters.imageModeChip}
+                      </span>
+                      <button
+                        onClick={() => setImageMode(false)}
+                        className="hover:bg-violet-500/20 rounded-full p-0.5"
+                        aria-label={t.ai.welcomeStarters.imageModeChipRemove}
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  )}
                   {selectedSkills.map((skill) => (
                     <div
                       key={`selected-${skill.name}`}
@@ -1674,6 +1710,12 @@ export function MainAIChatShell() {
           <WelcomeStarters
             hasStarted={hasStarted}
             onSetInput={setInput}
+            onActivateImageMode={() => {
+              setImageMode(true);
+              window.requestAnimationFrame(() =>
+                textareaRef.current?.focus(),
+              );
+            }}
             currentFile={currentFile}
             recentFiles={recentFiles}
             fileTree={fileTree}
