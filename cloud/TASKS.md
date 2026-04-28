@@ -84,7 +84,7 @@
   - A unit test verifies the provider object's shape and visibility logic.
 
 ### C8 — License entry UI: `LicenseSettings.tsx`
-- [ ] **Goal:** A settings panel where the user can paste a license, see status, see SKU/email/expiry, and remove it.
+- [x] **Goal:** A settings panel where the user can paste a license, see status, see SKU/email/expiry, and remove it.
 - **Files:** `src/components/settings/LicenseSettings.tsx` + test, `src/components/settings/LicenseSettings.module.css` if needed (prefer Tailwind).
 - **Behavior:**
   - Paste license → calls `useLicenseStore.setLicense` → shows status (Verifying / Valid / Invalid + reason).
@@ -130,3 +130,4 @@
 [x] C1 — 2026-04-28 — ba66b60 — scaffolded `src/services/luminaCloud/` (types + stubs); typecheck passes; no new runtime deps
 [x] C2 — 2026-04-28 — 3127814 — Ed25519 verifyLicense + JCS canonical-json + 24 tests; deps @noble/ed25519 ^3.1.0, @noble/hashes ^2.2.0
 [x] C4 — 2026-04-28 — 3144bd5 — useLicenseStore (zustand) with mocked luminaCloud; 9 tests cover all four status transitions
+[x] C8 — 2026-04-28 — 6fc20d1 — LicenseSettings panel (Tailwind, standalone, no AISettingsModal dep); 7 tests cover idle/loading/invalid/valid + remove confirmation
