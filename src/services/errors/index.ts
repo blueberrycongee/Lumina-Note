@@ -10,3 +10,10 @@ export {
   subscribeErrors,
 } from "./reporter";
 export { wireErrorToasts } from "./toastBridge";
+export {
+  classifyHttpError,
+  makeTraceId,
+  retryWithBackoff,
+  type RetryClassification,
+  type RetryOptions,
+} from "./retry";

@@ -15,7 +15,12 @@
 import { create } from "zustand";
 import type { Event, Message, Part } from "@opencode-ai/sdk/client";
 import type { MessageAttachment } from "@/services/llm";
-import { reportError } from "@/services/errors";
+import {
+  classifyHttpError,
+  makeTraceId,
+  reportError,
+  retryWithBackoff,
+} from "@/services/errors";
 import { useErrorBanner } from "@/stores/useErrorBanner";
 import {
   getCachedServerInfo,
@@ -783,6 +788,10 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     },
 
     async startTask(task: string, ctx?: StartTaskContext) {
+      // One trace id per user-initiated send; correlates the optimistic
+      // message, the HTTP request retries, and any SSE/error envelopes
+      // that fire downstream of this flow.
+      const traceId = makeTraceId();
       try {
         useErrorBanner.getState().clearBanner();
         set({ status: "running", error: null });
@@ -822,27 +831,42 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // Explicit `agent: "build"` sidesteps any user-side opencode config
         // whose `default_agent` points at a plugin-backed agent that fails
         // to load under Electron (e.g. plugins importing `bun:*`).
-        await client.session.promptAsync({
-          path: { id: sessionId },
-          body: {
-            agent: "build",
-            parts: [{ type: "text", text: task } as never],
-          } as never,
-          query: ctx?.workspace_path
-            ? { directory: ctx.workspace_path }
-            : undefined,
-          throwOnError: true,
-        });
+        // retryWithBackoff retries on 5xx / network drops; 4xx (auth,
+        // bad payload, bad model id) is surfaced immediately.
+        await retryWithBackoff(
+          () =>
+            client.session.promptAsync({
+              path: { id: sessionId! },
+              body: {
+                agent: "build",
+                parts: [{ type: "text", text: task } as never],
+              } as never,
+              query: ctx?.workspace_path
+                ? { directory: ctx.workspace_path }
+                : undefined,
+              throwOnError: true,
+            }),
+          {
+            onRetry: (attempt, _err, cls) => {
+              // eslint-disable-next-line no-console
+              console.warn(
+                `[lumina:retry] task.start attempt=${attempt + 1} reason=${cls.reason} trace=${traceId}`,
+              );
+            },
+          },
+        );
       } catch (err) {
         // Drop any optimistic entry on failure so the UI doesn't show a
         // phantom user message.
+        const cls = classifyHttpError(err);
         reportError({
           kind: "task.start",
           severity: "blocker",
           message: `Couldn't send message: ${String(err)}`,
           cause: err,
-          retryable: true,
+          retryable: cls.retryable,
           sessionId: get().currentSessionId ?? undefined,
+          traceId,
         });
         set((state) => ({
           status: "idle",
