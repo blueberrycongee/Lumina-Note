@@ -10,6 +10,7 @@ export {
   subscribeErrors,
 } from "./reporter";
 export { wireErrorToasts } from "./toastBridge";
+export { wireErrorPersistence } from "./persistence";
 export {
   classifyHttpError,
   makeTraceId,

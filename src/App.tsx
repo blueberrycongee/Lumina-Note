@@ -32,12 +32,11 @@ import { SkillManagerModal } from "@/components/ai/SkillManagerModal";
 import { CommandMenu, CommandMenuProvider } from "@/components/ui";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
-import { ImageViewer } from "@/components/images/ImageViewer";
 import { PanelErrorBoundary } from "@/components/system/PanelErrorBoundary";
 import { useAIStore } from "@/stores/useAIStore";
 import { initOpencodeAgentListeners } from "@/stores/useOpencodeAgent";
 import { wireErrorBanner } from "@/stores/useErrorBanner";
-import { wireErrorToasts } from "@/services/errors";
+import { wireErrorToasts, wireErrorPersistence } from "@/services/errors";
 import { Toaster } from "sonner";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { getDragData, clearDragData } from "@/lib/dragState";
@@ -240,6 +239,7 @@ function App() {
     initOpencodeAgentListeners();
     wireErrorBanner();
     wireErrorToasts();
+    wireErrorPersistence();
   }, []);
 
   // 启动时自动检查更新（延迟 5 秒，避免影响启动性能）
@@ -1021,11 +1021,6 @@ function App() {
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
-            </div>
-          ) : activeTab?.type === "image" && activeTab.path ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
-              <TabBar />
-              <ImageViewer filePath={activeTab.path} className="flex-1" />
             </div>
           ) : activeTab?.type === "diagram" && activeTab.path ? (
             <div className="flex-1 flex flex-col overflow-hidden bg-background">
