@@ -23,7 +23,19 @@ export { verifyLicense } from './verify';
 
 export { loadLicense, removeLicense, saveLicense } from './store';
 
-export { isRevoked } from './revocations';
+export {
+  createRevocationCache,
+  DEFAULT_TTL_MS as REVOCATIONS_DEFAULT_TTL_MS,
+  isRevoked,
+  refreshRevocations,
+} from './revocations';
+
+export type {
+  RevocationCache,
+  RevocationCacheData,
+  RevocationCacheOptions,
+  RevocationStorage,
+} from './revocations';
 
 export {
   DEFAULT_BASE_URL,
