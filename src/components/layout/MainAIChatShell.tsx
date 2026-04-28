@@ -129,6 +129,7 @@ export function buildImageModeAgentPrompt(
     "Preserve explicit visual constraints from the user, including medium, region, era, genre, culture, composition, subject, mood, palette, and style descriptors. Do not replace a specific descriptor with a nearby default style unless the user asked for that.",
     "Handle visible text as its own requirement: if the user asks for readable text, preserve the requested text and language; if they do not ask for readable text, ask the image model to avoid readable text, letters, captions, labels, and speech bubbles.",
     "Refine the user's prompt for visual clarity, infer the aspect ratio, use relevant vault reference images when useful, then call generate_image.",
+    "After generate_image returns, do not repeat the generated image as markdown in the chat reply. Lumina renders the generated image card automatically; mention the saved path in plain text only if helpful.",
     "User prompt:",
     fullMessage,
   ]

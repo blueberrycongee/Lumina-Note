@@ -77,6 +77,7 @@ describe("buildImageModeAgentPrompt", () => {
     expect(prompt).toContain("Keep provider routing separate");
     expect(prompt).toContain("Preserve explicit visual constraints");
     expect(prompt).toContain("Handle visible text as its own requirement");
+    expect(prompt).toContain("do not repeat the generated image as markdown");
     expect(prompt).toContain("`openai-image`");
     expect(prompt).toContain("画一个黑白头像");
   });

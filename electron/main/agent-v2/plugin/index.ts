@@ -35,7 +35,7 @@ const ASPECT_RATIOS = ['1:1', '4:3', '3:4', '16:9', '9:16'] as const
 
 const GENERATE_IMAGE_DESCRIPTION = `Generate a new image and save it to the vault.
 
-Use this tool when the user wants new visual content — note illustrations, design exploration, mood images, posters, anything pictorial. The image is saved to assets/generated/ inside the vault and returned as a vault-relative path the user (or you, in a follow-up edit) can reference via standard markdown image syntax: ![](assets/generated/...)
+Use this tool when the user wants new visual content — note illustrations, design exploration, mood images, posters, anything pictorial. The image is saved to assets/generated/ inside the vault and returned as a vault-relative path. Lumina renders the generated image in chat automatically, so do not repeat it as markdown in the chat reply unless the user explicitly asks for the markdown reference.
 
 Provider routing (pick the best configured provider for the request):
 - openai-image (gpt-image-2) — best for precise photorealistic outputs and when you need many reference images stitched together. Supports flexible sizes.
@@ -177,7 +177,7 @@ const pluginFn: Plugin = async () => {
             output: [
               `Generated and saved: ${saved.relativePath}`,
               ``,
-              `Markdown reference: \`![](${saved.relativePath})\``,
+              `Lumina renders this generated image in chat automatically. Do not paste a markdown image for it in the chat reply unless the user explicitly asks for markdown.`,
               ``,
               `Provider: ${defaults.marketingName} (${result.modelUsed})`,
               `Aspect: ${args.aspect_ratio ?? '1:1'}`,

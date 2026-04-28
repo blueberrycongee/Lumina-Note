@@ -81,11 +81,10 @@ If the user doesn't say, **infer from context** — a "header image" is 16:9, an
 
 ## After generating
 
-The tool returns the vault-relative path. **Always include the markdown image syntax in your reply** so the user can drop the image into a note immediately:
-
-```markdown
-![alt text](assets/generated/2026-04/260427-...-XXXX.png)
-```
+The tool returns the vault-relative path, and Lumina renders the generated
+image in chat automatically. **Do not repeat the image as markdown in the
+chat reply** unless the user explicitly asks for the markdown reference.
+If useful, mention the saved vault-relative path in plain text.
 
 If the user asked for the image to land in a specific note, **edit the note** to insert it (use the `edit` tool). Don't leave the image dangling — the whole point is integration with their vault.
 
