@@ -58,11 +58,11 @@ export interface AgentDispatchContext {
    */
   onActiveVaultChanged?: (vaultPath: string) => void
   /**
-   * Fired (fire-and-forget) after the user mutates provider state via any of:
+   * Fired after the user mutates provider state via any of:
    *   agent_set_active_provider / agent_set_provider_settings / agent_set_provider_api_key
    * Wired from main/index.ts to rebuild OPENCODE_CONFIG_CONTENT +
    * OPENCODE_AUTH_CONTENT and restart the embedded opencode server so the
-   * new key / model takes effect without restarting the whole app.
+   * next send uses the new key / model / thinking mode.
    */
   onProviderSettingsChanged?: () => void | Promise<void>
 }
@@ -90,11 +90,13 @@ export async function dispatchAgentCommand(
     onActiveVaultChanged,
     onProviderSettingsChanged,
   } = ctx
-  const triggerProviderRefresh = (): void => {
+  const triggerProviderRefresh = async (): Promise<void> => {
     if (!onProviderSettingsChanged) return
-    void Promise.resolve(onProviderSettingsChanged()).catch((err) => {
+    try {
+      await onProviderSettingsChanged()
+    } catch (err) {
       console.error('[ipc-dispatch] provider-settings-changed hook threw', err)
-    })
+    }
   }
   switch (cmd) {
     // Provider settings — feeds the opencode bridge.
@@ -107,14 +109,14 @@ export async function dispatchAgentCommand(
       const { provider_id } = args as { provider_id?: string }
       if (provider_id === null || provider_id === undefined) {
         providerSettings.setActiveProvider(null)
-        triggerProviderRefresh()
+        await triggerProviderRefresh()
         return null
       }
       if (!hasProvider(provider_id)) {
         throw new Error(`Unknown provider: ${provider_id}`)
       }
       providerSettings.setActiveProvider(provider_id)
-      triggerProviderRefresh()
+      await triggerProviderRefresh()
       return null
     }
     case 'agent_set_provider_settings': {
@@ -130,7 +132,7 @@ export async function dispatchAgentCommand(
         provider_id as ProviderId,
         settings ?? {},
       )
-      triggerProviderRefresh()
+      await triggerProviderRefresh()
       return null
     }
     case 'agent_set_provider_api_key': {
@@ -147,13 +149,13 @@ export async function dispatchAgentCommand(
       } else {
         await providerSettings.setProviderApiKey(provider_id as ProviderId, api_key)
       }
-      triggerProviderRefresh()
+      await triggerProviderRefresh()
       return null
     }
     case 'agent_set_auto_approve': {
       const { value } = args as { value?: boolean }
       setAutoApproveToolCalls(!!value)
-      triggerProviderRefresh()
+      await triggerProviderRefresh()
       return null
     }
     case 'agent_has_provider_api_key': {

@@ -220,12 +220,29 @@ app.whenReady().then(() => {
   // (set_active_provider / set_provider_settings / set_provider_api_key).
   // Debounce so we only do one restart per save.
   let restartDebounce: NodeJS.Timeout | null = null;
-  const scheduleOpencodeRestart = (): void => {
+  let restartWaiters: Array<{
+    resolve: () => void;
+    reject: (err: unknown) => void;
+  }> = [];
+  const scheduleOpencodeRestart = (): Promise<void> => {
     if (restartDebounce) clearTimeout(restartDebounce);
+    const promise = new Promise<void>((resolve, reject) => {
+      restartWaiters.push({ resolve, reject });
+    });
     restartDebounce = setTimeout(() => {
+      const waiters = restartWaiters;
+      restartWaiters = [];
       restartDebounce = null;
-      void startOpencodeWithCurrentBridge(true);
+      startOpencodeWithCurrentBridge(true).then(
+        () => {
+          waiters.forEach((w) => w.resolve());
+        },
+        (err) => {
+          waiters.forEach((w) => w.reject(err));
+        },
+      );
     }, 150);
+    return promise;
   };
 
   registerIpcHandlers({
