@@ -8,6 +8,7 @@ import type { LLMConfig } from "./types";
 const DEFAULT_CONFIG: LLMConfig = {
   provider: "openai",
   apiKey: "",
+  apiKeyConfigured: false,
   model: "gpt-5.4",
   thinkingMode: "thinking",
 };

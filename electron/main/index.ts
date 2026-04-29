@@ -15,10 +15,12 @@ import { installMainLogForwarding } from "./log-forward.js";
 import { registerOpencodeIpc } from "./agent-v2/ipc.js";
 import {
   getOpencodeServer,
+  notifyOpencodeServerRefreshing,
   restartOpencodeServer,
   startOpencodeServer,
   stopOpencodeServer,
   trackOpencodeServerReadiness,
+  type OpencodeServerHandle,
 } from "./agent-v2/server.js";
 import {
   applyOpencodeBridge,
@@ -189,7 +191,7 @@ app.whenReady().then(() => {
   // so opencode's next request uses the new provider / key / baseURL.
   const startOpencodeWithCurrentBridge = async (
     restart: boolean,
-  ): Promise<void> => {
+  ): Promise<OpencodeServerHandle> => {
     const startup = (async () => {
       const bridge = await buildOpencodeBridge(providerSettings);
       applyOpencodeBridge(bridge);
@@ -205,7 +207,7 @@ app.whenReady().then(() => {
     })();
     trackOpencodeServerReadiness(startup);
     try {
-      await startup;
+      return await startup;
     } catch (err) {
       console.error(
         restart
@@ -213,36 +215,45 @@ app.whenReady().then(() => {
           : "[main] opencode server failed to start",
         err,
       );
+      throw err;
     }
   };
 
   // AISettingsModal.setConfig() fires three IPC calls in rapid succession
   // (set_active_provider / set_provider_settings / set_provider_api_key).
-  // Debounce so we only do one restart per save.
+  // Debounce so we only do one restart per save. Scheduling immediately
+  // invalidates renderer clients; the settings IPC itself returns quickly,
+  // while the next send waits on the readiness promise via opencode:get-server-info.
   let restartDebounce: NodeJS.Timeout | null = null;
-  let restartWaiters: Array<{
-    resolve: () => void;
-    reject: (err: unknown) => void;
-  }> = [];
-  const scheduleOpencodeRestart = (): Promise<void> => {
+  let scheduledRestart:
+    | {
+        promise: Promise<OpencodeServerHandle>;
+        resolve: (h: OpencodeServerHandle) => void;
+        reject: (err: unknown) => void;
+      }
+    | null = null;
+  const scheduleOpencodeRestart = (): void => {
     if (restartDebounce) clearTimeout(restartDebounce);
-    const promise = new Promise<void>((resolve, reject) => {
-      restartWaiters.push({ resolve, reject });
-    });
+    if (!scheduledRestart) {
+      let resolve!: (h: OpencodeServerHandle) => void;
+      let reject!: (err: unknown) => void;
+      const promise = new Promise<OpencodeServerHandle>((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      scheduledRestart = { promise, resolve, reject };
+      trackOpencodeServerReadiness(promise);
+      notifyOpencodeServerRefreshing();
+    }
     restartDebounce = setTimeout(() => {
-      const waiters = restartWaiters;
-      restartWaiters = [];
+      const pending = scheduledRestart;
+      scheduledRestart = null;
       restartDebounce = null;
       startOpencodeWithCurrentBridge(true).then(
-        () => {
-          waiters.forEach((w) => w.resolve());
-        },
-        (err) => {
-          waiters.forEach((w) => w.reject(err));
-        },
+        (handle) => pending?.resolve(handle),
+        (err) => pending?.reject(err),
       );
     }, 150);
-    return promise;
   };
 
   registerIpcHandlers({
@@ -258,7 +269,7 @@ app.whenReady().then(() => {
   });
   registerOpencodeIpc();
 
-  void startOpencodeWithCurrentBridge(false);
+  void startOpencodeWithCurrentBridge(false).catch(() => null);
   buildMenu();
   createWindow();
 

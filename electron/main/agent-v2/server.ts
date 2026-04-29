@@ -53,6 +53,10 @@ export function onOpencodeHandleChange(
   };
 }
 
+export function notifyOpencodeServerRefreshing(): void {
+  notifyListeners(null);
+}
+
 function healthUrl(base: string): string {
   return new URL("/global/health", base).toString();
 }
@@ -169,7 +173,6 @@ export function trackOpencodeServerReadiness(
 }
 
 export async function getOpencodeServerWhenReady(): Promise<OpencodeServerHandle | null> {
-  if (handle) return handle;
   if (readiness) {
     try {
       return await readiness;
@@ -177,6 +180,7 @@ export async function getOpencodeServerWhenReady(): Promise<OpencodeServerHandle
       return null;
     }
   }
+  if (handle) return handle;
   if (!starting) return null;
   try {
     return await starting;

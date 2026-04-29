@@ -908,7 +908,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       // settings like thinkingMode look broken.
       const cfg = getAIConfig();
       const keylessOk = cfg.provider === "ollama" || cfg.provider === "openai-compatible";
-      if (!cfg.apiKey?.trim() && !keylessOk) {
+      if (!cfg.apiKey?.trim() && !cfg.apiKeyConfigured && !keylessOk) {
         const t = getCurrentTranslations();
         reportError({
           kind: "task.start",

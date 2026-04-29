@@ -94,7 +94,7 @@ import type { AIConfig } from "@/services/ai/ai";
 
 type AgentImageModeConfig = Pick<
   AIConfig,
-  "provider" | "model" | "customModelId" | "baseUrl" | "apiKey"
+  "provider" | "model" | "customModelId" | "baseUrl" | "apiKey" | "apiKeyConfigured"
 >;
 
 export type AgentVisionMode = "vision" | "metadata-only" | "unknown";
@@ -111,7 +111,7 @@ export function isAgentConfigUsableForImageMode(
         : config.model?.trim();
     return !!modelId && !!config.baseUrl?.trim();
   }
-  return !!config.apiKey?.trim();
+  return !!config.apiKey?.trim() || !!config.apiKeyConfigured;
 }
 
 function getConfiguredAgentModelId(
@@ -355,6 +355,7 @@ export function MainAIChatShell() {
   // works independently.
   const aiProvider = useAIStore((s) => s.config.provider);
   const aiApiKey = useAIStore((s) => s.config.apiKey);
+  const aiApiKeyConfigured = useAIStore((s) => s.config.apiKeyConfigured);
   const aiModel = useAIStore((s) => s.config.model);
   const aiCustomModelId = useAIStore((s) => s.config.customModelId);
   const aiBaseUrl = useAIStore((s) => s.config.baseUrl);
@@ -362,20 +363,22 @@ export function MainAIChatShell() {
     return isAgentConfigUsableForImageMode({
       provider: aiProvider,
       apiKey: aiApiKey,
+      apiKeyConfigured: aiApiKeyConfigured,
       model: aiModel,
       customModelId: aiCustomModelId,
       baseUrl: aiBaseUrl,
     });
-  }, [aiProvider, aiApiKey, aiBaseUrl, aiCustomModelId, aiModel]);
+  }, [aiProvider, aiApiKey, aiApiKeyConfigured, aiBaseUrl, aiCustomModelId, aiModel]);
   const agentVisionMode = useMemo(() => {
     return getAgentVisionModeForImageMode({
       provider: aiProvider,
       apiKey: aiApiKey,
+      apiKeyConfigured: aiApiKeyConfigured,
       model: aiModel,
       customModelId: aiCustomModelId,
       baseUrl: aiBaseUrl,
     });
-  }, [aiProvider, aiApiKey, aiBaseUrl, aiCustomModelId, aiModel]);
+  }, [aiProvider, aiApiKey, aiApiKeyConfigured, aiBaseUrl, aiCustomModelId, aiModel]);
 
   const imageProviders = useImageProvidersStore((s) => s.providers);
   const imageProvidersLoaded = useImageProvidersStore((s) => s.loaded);

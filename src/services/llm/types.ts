@@ -73,6 +73,7 @@ export type LLMProviderType =
 export interface LLMConfig {
   provider: LLMProviderType;
   apiKey: string;
+  apiKeyConfigured?: boolean;
   model: string;
   customModelId?: string;
   baseUrl?: string;

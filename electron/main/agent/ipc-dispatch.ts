@@ -90,13 +90,11 @@ export async function dispatchAgentCommand(
     onActiveVaultChanged,
     onProviderSettingsChanged,
   } = ctx
-  const triggerProviderRefresh = async (): Promise<void> => {
+  const triggerProviderRefresh = (): void => {
     if (!onProviderSettingsChanged) return
-    try {
-      await onProviderSettingsChanged()
-    } catch (err) {
+    void Promise.resolve(onProviderSettingsChanged()).catch((err) => {
       console.error('[ipc-dispatch] provider-settings-changed hook threw', err)
-    }
+    })
   }
   switch (cmd) {
     // Provider settings — feeds the opencode bridge.
@@ -109,14 +107,14 @@ export async function dispatchAgentCommand(
       const { provider_id } = args as { provider_id?: string }
       if (provider_id === null || provider_id === undefined) {
         providerSettings.setActiveProvider(null)
-        await triggerProviderRefresh()
+        triggerProviderRefresh()
         return null
       }
       if (!hasProvider(provider_id)) {
         throw new Error(`Unknown provider: ${provider_id}`)
       }
       providerSettings.setActiveProvider(provider_id)
-      await triggerProviderRefresh()
+      triggerProviderRefresh()
       return null
     }
     case 'agent_set_provider_settings': {
@@ -132,7 +130,7 @@ export async function dispatchAgentCommand(
         provider_id as ProviderId,
         settings ?? {},
       )
-      await triggerProviderRefresh()
+      triggerProviderRefresh()
       return null
     }
     case 'agent_set_provider_api_key': {
@@ -149,13 +147,13 @@ export async function dispatchAgentCommand(
       } else {
         await providerSettings.setProviderApiKey(provider_id as ProviderId, api_key)
       }
-      await triggerProviderRefresh()
+      triggerProviderRefresh()
       return null
     }
     case 'agent_set_auto_approve': {
       const { value } = args as { value?: boolean }
       setAutoApproveToolCalls(!!value)
-      await triggerProviderRefresh()
+      triggerProviderRefresh()
       return null
     }
     case 'agent_has_provider_api_key': {
@@ -177,7 +175,15 @@ export async function dispatchAgentCommand(
       if (!model_id) {
         return { success: false, error: 'missing model_id' }
       }
-      return testProviderConnection(provider_id as ProviderId, model_id, settings ?? {})
+      const draftApiKey = settings?.apiKey?.trim() ?? ''
+      const storedApiKey =
+        !draftApiKey && providerSettings
+          ? ((await providerSettings.getProviderApiKey(provider_id as ProviderId)) ?? '')
+          : ''
+      return testProviderConnection(provider_id as ProviderId, model_id, {
+        ...(settings ?? {}),
+        apiKey: draftApiKey || storedApiKey,
+      })
     }
 
     // Image-generation providers (gpt-image-2 / Nano Banana / Seedream).

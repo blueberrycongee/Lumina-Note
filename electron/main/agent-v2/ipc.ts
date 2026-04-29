@@ -45,8 +45,14 @@ export function registerOpencodeIpc(): void {
   // Push new credentials to every renderer whenever the server restarts
   // (e.g. after the user updates provider settings). The renderer resets its
   // cached OpencodeClient so subsequent requests hit the fresh URL.
-  onOpencodeHandleChange(() => {
-    const info = handleInfo();
+  onOpencodeHandleChange((handle) => {
+    const info = handle
+      ? {
+          url: handle.url,
+          username: handle.username,
+          password: handle.password,
+        }
+      : null;
     for (const win of BrowserWindow.getAllWindows()) {
       if (!win.isDestroyed()) {
         win.webContents.send(OPENCODE_SERVER_CHANGED, info);

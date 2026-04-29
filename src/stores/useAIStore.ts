@@ -288,6 +288,10 @@ export const useAIStore = create<AIState>()(
               provider_id: nextProvider,
               api_key: (newConfig.apiKey ?? "").trim(),
             });
+            setAIConfig({
+              apiKeyConfigured: (newConfig.apiKey ?? "").trim().length > 0,
+            });
+            set({ config: getAIConfig() });
           }
         } catch (err) {
           console.error("[AIStore] failed to sync provider config to backend", err);
@@ -1023,7 +1027,11 @@ export const useAIStore = create<AIState>()(
             const decryptedKey = storedEncryptedKey
               ? await decryptApiKey(storedEncryptedKey)
               : "";
-            const decryptedConfig = { ...state.config, apiKey: decryptedKey };
+            const decryptedConfig = {
+              ...state.config,
+              apiKey: decryptedKey,
+              apiKeyConfigured: !!decryptedKey.trim(),
+            };
 
             // W4 migration: the legacy `thinkingMode: "auto"` literal was
             // dropped in favor of a binary thinking|instant union with
@@ -1036,7 +1044,7 @@ export const useAIStore = create<AIState>()(
 
             // Fetch backend provider settings and override provider-related fields
             try {
-              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string }> }>("agent_get_provider_settings");
+              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string; thinkingMode?: "thinking" | "instant"; reasoningEffort?: ReasoningEffort }> }>("agent_get_provider_settings");
               if (backend?.activeProviderId) {
                 const providerId = backend.activeProviderId;
                 const pp = backend.perProvider[providerId] ?? {};
@@ -1052,6 +1060,13 @@ export const useAIStore = create<AIState>()(
                 }
                 if (pp.baseUrl) decryptedConfig.baseUrl = pp.baseUrl;
                 else decryptedConfig.baseUrl = undefined;
+                if (pp.thinkingMode) decryptedConfig.thinkingMode = pp.thinkingMode;
+                decryptedConfig.reasoningEffort = pp.reasoningEffort;
+                decryptedConfig.apiKeyConfigured =
+                  !!decryptedConfig.apiKey?.trim() ||
+                  (await invoke<boolean>("agent_has_provider_api_key", {
+                    provider_id: providerId,
+                  }));
               }
             } catch {
               // Backend not available (e.g. web build), use local config

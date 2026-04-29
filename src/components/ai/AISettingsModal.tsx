@@ -195,6 +195,7 @@ export function AISettingsContent() {
   const apiConstraints = mainModelMeta?.apiConstraints;
   const apiKeyOptional =
     config.provider === "ollama" || config.provider === "openai-compatible";
+  const apiKeyConfigured = !!config.apiKey?.trim() || !!config.apiKeyConfigured;
   const baseUrlOptional = config.provider !== "openai-compatible";
 
   // 测试连接状态
@@ -234,7 +235,11 @@ export function AISettingsContent() {
 
   // 测试 API 连接
   const testConnection = useCallback(async () => {
-    if (config.provider !== "ollama" && config.provider !== "openai-compatible" && !config.apiKey) {
+    if (
+      config.provider !== "ollama" &&
+      config.provider !== "openai-compatible" &&
+      !apiKeyConfigured
+    ) {
       setTestResult({ status: "error", message: errorMessages.no_key });
       return;
     }
@@ -274,7 +279,7 @@ export function AISettingsContent() {
         message: parseError(error),
       });
     }
-  }, [config, parseError, t.aiSettings.testSuccess, t.aiSettings.testResponseEmpty, errorMessages.no_key]);
+  }, [config, apiKeyConfigured, parseError, t.aiSettings.testSuccess, t.aiSettings.testResponseEmpty, errorMessages.no_key]);
 
   // 配置变化时重置测试状态
   useEffect(() => {
@@ -356,6 +361,8 @@ export function AISettingsContent() {
                 placeholder={
                   config.provider === "ollama"
                     ? t.aiSettings.localModelNoKey
+                    : apiKeyConfigured
+                      ? t.aiSettings.imageModels?.apiKeyConfiguredPlaceholder ?? "API key saved (hidden)"
                     : config.provider === "anthropic"
                       ? "sk-ant-..."
                       : config.provider === "openai-compatible"
