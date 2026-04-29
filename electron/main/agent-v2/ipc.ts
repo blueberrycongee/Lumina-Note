@@ -2,7 +2,11 @@
 // The renderer uses these to build `createOpencodeClient({ baseUrl, auth })`.
 
 import { BrowserWindow, ipcMain } from "electron";
-import { getOpencodeServer, onOpencodeHandleChange } from "./server.js";
+import {
+  getOpencodeServer,
+  getOpencodeServerWhenReady,
+  onOpencodeHandleChange,
+} from "./server.js";
 
 export const OPENCODE_GET_SERVER_INFO = "opencode:get-server-info";
 export const OPENCODE_SERVER_CHANGED = "opencode:server-changed";
@@ -23,8 +27,20 @@ function handleInfo(): OpencodeServerInfo {
   };
 }
 
+async function handleInfoWhenReady(): Promise<OpencodeServerInfo> {
+  const handle = await getOpencodeServerWhenReady();
+  if (!handle) return null;
+  return {
+    url: handle.url,
+    username: handle.username,
+    password: handle.password,
+  };
+}
+
 export function registerOpencodeIpc(): void {
-  ipcMain.handle(OPENCODE_GET_SERVER_INFO, (): OpencodeServerInfo => handleInfo());
+  ipcMain.handle(OPENCODE_GET_SERVER_INFO, (): Promise<OpencodeServerInfo> =>
+    handleInfoWhenReady(),
+  );
 
   // Push new credentials to every renderer whenever the server restarts
   // (e.g. after the user updates provider settings). The renderer resets its

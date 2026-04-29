@@ -156,6 +156,16 @@ export function getOpencodeServer(): OpencodeServerHandle | null {
   return handle;
 }
 
+export async function getOpencodeServerWhenReady(): Promise<OpencodeServerHandle | null> {
+  if (handle) return handle;
+  if (!starting) return null;
+  try {
+    return await starting;
+  } catch {
+    return null;
+  }
+}
+
 export async function stopOpencodeServer(): Promise<void> {
   const current = handle;
   handle = null;

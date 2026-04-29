@@ -1069,11 +1069,13 @@ export function initOpencodeAgentListeners(): void {
   }
 
   const store = useOpencodeAgent.getState();
+  if (!serverChangedUnlisten) {
+    const bridge = typeof window !== "undefined" ? window.lumina?.opencode : undefined;
+    if (bridge?.onServerChanged) {
+      serverChangedUnlisten = bridge.onServerChanged(handleOpencodeServerChanged);
+    }
+  }
+
   store.subscribe().catch(silenceInit);
   store.loadSessions().catch(silenceInit);
-
-  if (serverChangedUnlisten) return;
-  const bridge = typeof window !== "undefined" ? window.lumina?.opencode : undefined;
-  if (!bridge?.onServerChanged) return;
-  serverChangedUnlisten = bridge.onServerChanged(handleOpencodeServerChanged);
 }
