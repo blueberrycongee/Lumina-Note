@@ -34,7 +34,6 @@ describe('dispatchAgentCommand provider settings IPC', () => {
         provider_id: 'deepseek',
         settings: {
           modelId: 'deepseek-v4-flash',
-          thinkingMode: 'instant',
         },
       },
     )).resolves.toBeNull()

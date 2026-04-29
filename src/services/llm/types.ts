@@ -94,11 +94,9 @@ export interface LLMOptions {
 
 export type ThinkingMode = "thinking" | "instant";
 
-// Optional second axis: when a model supports tunable reasoning depth on top of
-// the binary thinking toggle (e.g. DeepSeek V4 Pro's `reasoning_effort: "high"`,
-// OpenAI GPT-5.x `reasoning.effort`, Anthropic `output_config.effort`).
-// Each provider maps these levels to its native parameter shape.
-// `none` opts out of reasoning entirely (OpenAI / Anthropic / DeepSeek).
+// Optional catalog metadata for models that support provider-level reasoning
+// depth. Lumina's opencode path does not translate this into request params.
+// `none` represents a provider-level opt-out where that model supports it.
 // `xhigh` is GPT-5.5's "extreme" tier — most other providers cap at `high` or `max`.
 // `max` is Anthropic's and DeepSeek V4 Pro's "maximum thinking" tier.
 export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";

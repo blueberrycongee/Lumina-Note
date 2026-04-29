@@ -29,16 +29,6 @@ vi.mock("@/services/llm", () => ({
     yield { type: "text", text: "pong" };
     yield { type: "usage", inputTokens: 1, outputTokens: 1, totalTokens: 2 };
   }),
-  normalizeThinkingMode: (mode?: string) => {
-    if (mode === "thinking" || mode === "instant") return mode;
-    return "thinking";
-  },
-  supportsThinkingModeSwitch: () => true,
-  // W2: useAIStore.setConfig consults these when the user switches model so it
-  // can drop a stale reasoningEffort that the new model wouldn't accept. The
-  // tests don't exercise the reset behavior, so simple stubs suffice.
-  supportedReasoningEfforts: () => null,
-  getDefaultReasoningEffort: () => null,
 }));
 
 vi.mock("@/services/ai/ai", () => ({

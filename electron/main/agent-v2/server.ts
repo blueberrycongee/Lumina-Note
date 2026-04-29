@@ -27,6 +27,8 @@ let starting: Promise<OpencodeServerHandle> | null = null;
 let readiness: Promise<OpencodeServerHandle> | null = null;
 let listeners: Array<(h: OpencodeServerHandle | null) => void> = [];
 
+const STOP_TIMEOUT_MS = 2_000;
+
 function notifyListeners(next: OpencodeServerHandle | null): void {
   for (const fn of listeners) {
     try {
@@ -193,7 +195,23 @@ export async function stopOpencodeServer(): Promise<void> {
   const current = handle;
   handle = null;
   notifyListeners(null);
-  if (current) await Promise.resolve(current.stop());
+  if (!current) return;
+
+  // opencode's listener.stop() can wait indefinitely for long-lived SSE
+  // connections to drain. During a provider/model change that leaves the app
+  // with no listening server and a renderer stuck in loading. Treat stop as
+  // best-effort: clear the public handle immediately, then allow restart to
+  // continue after a bounded grace period.
+  try {
+    await Promise.race([
+      Promise.resolve(current.stop()),
+      new Promise<void>((resolve) => {
+        setTimeout(resolve, STOP_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (err) {
+    console.warn("[opencode] server stop failed during restart", err);
+  }
 }
 
 /**

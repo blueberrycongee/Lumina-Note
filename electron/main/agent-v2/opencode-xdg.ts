@@ -2,10 +2,11 @@
 //
 // Opencode resolves its config / data / cache / state directories from
 // xdg-basedir at module load (thirdparty/opencode/packages/opencode/src/
-// global/index.ts:10-13). Without this file it happily picks up
-// ~/.config/opencode, ~/.local/share/opencode, ~/.opencode, etc. — i.e.
-// every config file the user left behind from the `opencode` CLI. Those
-// configs have bit us repeatedly:
+// global/index.ts:10-13), and still uses Global.Path.home for ~/.opencode
+// discovery. Without this file it happily picks up ~/.config/opencode,
+// ~/.local/share/opencode, ~/.opencode, project .opencode, ~/.claude, etc.
+// — i.e. every config file the user left behind from the `opencode` CLI.
+// Those configs have bit us repeatedly:
 //
 //   - `default_agent: "Sisyphus - Ultraworker"` pointed at a missing
 //     plugin-backed agent → prompt_async failed.
@@ -13,16 +14,17 @@
 //     bootstrap.
 //   - ~50+ skills under ~/.claude/skills produced a multi-MB log flood.
 //
-// Lumina shouldn't inherit any of that. We redirect opencode's XDG base
-// under <userData>/opencode-runtime/ so the embedded server has its own
-// clean home. Session history, auth tokens, caches, and state all live
-// here — completely isolated from the user's opencode CLI.
+// Lumina shouldn't inherit any of that. We redirect opencode's XDG base and
+// test-home override under <userData>/opencode-runtime/ so the embedded
+// server has its own clean home. Session history, auth tokens, caches, and
+// state all live here — completely isolated from the user's opencode CLI.
 //
 // IMPORTANT: this module must be imported *before* anything that pulls
 // in `virtual:opencode-server`. Opencode's global/index.ts reads XDG env
 // vars at module load, so setting them later has no effect. Put this as
 // the very first import in electron/main/index.ts.
 
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -44,16 +46,22 @@ function resolveLuminaBase(): string {
 }
 
 const base = path.join(resolveLuminaBase(), "opencode-runtime");
+const runtimeHome = path.join(base, "home");
 
 process.env.XDG_CONFIG_HOME = path.join(base, "config");
 process.env.XDG_DATA_HOME = path.join(base, "data");
 process.env.XDG_CACHE_HOME = path.join(base, "cache");
 process.env.XDG_STATE_HOME = path.join(base, "state");
+process.env.OPENCODE_TEST_HOME = runtimeHome;
+process.env.OPENCODE_DISABLE_PROJECT_CONFIG = "1";
+process.env.OPENCODE_DISABLE_CLAUDE_CODE = "1";
 process.env.OPENCODE_DISABLE_EXTERNAL_SKILLS = "1";
 process.env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS = "1";
 
 // Opencode's global/index.ts does `fs.mkdir(..., {recursive: true})` on
-// all four roots at module load, so we don't pre-create them here.
+// the XDG roots at module load. It does not create Global.Path.home, so make
+// the private home deterministic before opencode scans it for ~/.opencode.
+fs.mkdirSync(runtimeHome, { recursive: true });
 
 // eslint-disable-next-line no-console
-console.log(`[opencode-xdg] isolated XDG base: ${base}`);
+console.log(`[opencode-xdg] isolated XDG base: ${base} home: ${runtimeHome}`);

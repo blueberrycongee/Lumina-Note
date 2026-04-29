@@ -50,4 +50,31 @@ describe("buildOpencodeBridge", () => {
     const config = JSON.parse(bridge?.config ?? "{}");
     expect(config.provider.deepseek.models["deepseek-chat"].interleaved).toBeUndefined();
   });
+
+  it("does not write Lumina thinking or effort settings into opencode model options", async () => {
+    const bridge = await buildOpencodeBridge(
+      {
+        getActiveProvider() {
+          return "deepseek";
+        },
+        getProviderSettings() {
+          return {
+            modelId: "deepseek-v4-pro",
+            thinkingMode: "instant",
+            reasoningEffort: "max",
+          };
+        },
+        async getProviderApiKey() {
+          return "sk-test";
+        },
+      } as unknown as ProviderSettingsStore,
+    );
+
+    const config = JSON.parse(bridge?.config ?? "{}");
+    expect(config.provider.deepseek.models["deepseek-v4-pro"]).toMatchObject({
+      reasoning: true,
+      interleaved: { field: "reasoning_content" },
+    });
+    expect(config.provider.deepseek.models["deepseek-v4-pro"].options).toBeUndefined();
+  });
 });

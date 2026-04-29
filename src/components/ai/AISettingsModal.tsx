@@ -186,8 +186,6 @@ export function AISettingsContent() {
   const temperatureLock = resolveTemperatureLock({
     provider: config.provider as LLMProviderType,
     model: effectiveModelForTemp,
-    thinkingMode: config.thinkingMode,
-    reasoningEffort: config.reasoningEffort,
   });
   const displayTemperature = temperatureLock
     ? temperatureLock.value

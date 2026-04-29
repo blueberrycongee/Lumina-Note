@@ -11,13 +11,13 @@ function setConfig(partial: Record<string, unknown>) {
   }));
 }
 
-function chip(kind: "model" | "mode" | "effort"): HTMLElement | null {
+function chip(kind: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-chip="${kind}"]`);
 }
 
-function getChip(kind: "model" | "mode" | "effort"): HTMLElement {
-  const el = chip(kind);
-  if (!el) throw new Error(`${kind} chip not in DOM`);
+function getModelChip(): HTMLElement {
+  const el = chip("model");
+  if (!el) throw new Error("model chip not in DOM");
   return el;
 }
 
@@ -29,112 +29,29 @@ describe("ModelEffortPicker", () => {
         provider: "openai",
         model: "gpt-5.5",
         customModelId: undefined,
-        thinkingMode: "thinking",
-        reasoningEffort: "medium",
+        thinkingMode: "instant",
+        reasoningEffort: "max",
       },
     }));
   });
 
-  it("renders only the model chip when the model has no thinking axis", () => {
-    setConfig({ provider: "openai", model: "gpt-4o", reasoningEffort: undefined });
+  it("renders only the model chip even when legacy thinking settings exist", () => {
     render(<ModelEffortPicker />);
     expect(chip("model")).toBeTruthy();
     expect(chip("mode")).toBeNull();
     expect(chip("effort")).toBeNull();
   });
 
-  it("renders model + effort chips for GPT-5.5 (effort-only)", () => {
-    render(<ModelEffortPicker />);
-    expect(chip("model")).toBeTruthy();
-    expect(chip("mode")).toBeNull();
-    expect(chip("effort")).toBeTruthy();
-    const { t } = useLocaleStore.getState();
-    expect(getChip("effort").textContent ?? "").toContain(
-      t.aiSettings.reasoningEffortMedium,
-    );
-  });
-
-  it("renders model + mode + effort chips for DeepSeek V4 Pro in thinking mode", () => {
-    setConfig({
-      provider: "deepseek",
-      model: "deepseek-v4-pro",
-      thinkingMode: "thinking",
-      reasoningEffort: "high",
-    });
-    render(<ModelEffortPicker />);
-    expect(chip("model")).toBeTruthy();
-    expect(chip("mode")).toBeTruthy();
-    expect(chip("effort")).toBeTruthy();
-  });
-
-  it("hides the effort chip for DeepSeek V4 Pro in instant mode", () => {
-    setConfig({
-      provider: "deepseek",
-      model: "deepseek-v4-pro",
-      thinkingMode: "instant",
-      reasoningEffort: undefined,
-    });
-    render(<ModelEffortPicker />);
-    expect(chip("model")).toBeTruthy();
-    expect(chip("mode")).toBeTruthy();
-    expect(chip("effort")).toBeNull();
-  });
-
-  it("renders model + mode chips only for Kimi K2.5 (binary toggle, no effort)", () => {
-    setConfig({
-      provider: "openai-compatible",
-      model: "custom",
-      customModelId: "kimi-k2.5",
-      thinkingMode: "thinking",
-      reasoningEffort: undefined,
-    });
-    render(<ModelEffortPicker />);
-    expect(chip("model")).toBeTruthy();
-    expect(chip("mode")).toBeTruthy();
-    expect(chip("effort")).toBeNull();
-  });
-
-  it("mode popover lists exactly Thinking and Instant (no Auto)", () => {
-    setConfig({
-      provider: "deepseek",
-      model: "deepseek-v4-pro",
-      thinkingMode: "thinking",
-    });
-    render(<ModelEffortPicker />);
-    fireEvent.click(getChip("mode"));
-    const { t } = useLocaleStore.getState();
-    const popover = document.querySelector<HTMLElement>(
-      '[data-chip-popover="mode"]',
-    );
-    expect(popover).toBeTruthy();
-    expect(popover?.textContent ?? "").toContain(t.aiSettings.thinkingModeThinking);
-    expect(popover?.textContent ?? "").toContain(t.aiSettings.thinkingModeInstant);
-    // No third option — the legacy "Auto" label was dropped in W4.
-    const rows = popover?.querySelectorAll('[role="button"]') ?? [];
-    expect(rows.length).toBe(2);
-  });
-
-  it("selecting a different model calls setConfig with model only", () => {
+  it("selecting a different model updates the selected model", () => {
     setConfig({
       provider: "anthropic",
       model: "claude-opus-4-7",
       reasoningEffort: "medium",
     });
     render(<ModelEffortPicker />);
-    fireEvent.click(getChip("model"));
+    fireEvent.click(getModelChip());
     fireEvent.click(screen.getByText("Claude Haiku 4.5"));
-    // The store's reset path clears the carried effort (haiku has no
-    // reasoning axis) — picker doesn't pass effort itself.
     expect(useAIStore.getState().config.model).toBe("claude-haiku-4-5");
-    expect(useAIStore.getState().config.reasoningEffort).toBeUndefined();
-  });
-
-  it("selecting an effort calls setConfig with reasoningEffort", () => {
-    render(<ModelEffortPicker />);
-    fireEvent.click(getChip("effort"));
-    const { t } = useLocaleStore.getState();
-    fireEvent.click(screen.getByText(t.aiSettings.reasoningEffortHigh));
-    expect(useAIStore.getState().config.reasoningEffort).toBe("high");
   });
 
   it("shows the disabled Configure-in-Settings row for openai-compatible", () => {
@@ -145,7 +62,7 @@ describe("ModelEffortPicker", () => {
       reasoningEffort: undefined,
     });
     render(<ModelEffortPicker />);
-    fireEvent.click(getChip("model"));
+    fireEvent.click(getModelChip());
     const { t } = useLocaleStore.getState();
     expect(
       screen.getByText(t.aiSettings.modelPicker.configureInSettings),

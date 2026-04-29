@@ -17,12 +17,9 @@ import type { ProviderId } from './registry.js'
 // Mirror of the renderer types in src/services/llm/types.ts. Kept inline to
 // avoid cross-tree imports — the literal sets are tiny and stable.
 //
-// Persisted JSON written by older clients may still carry the legacy `'auto'`
-// literal in `thinkingMode`. The bridge consumer (thinking-options.ts)
-// branches on `thinkingMode === 'thinking'` / `'instant'`, so any unrecognised
-// stale value falls through to the post-W4 default thinking-on behaviour.
-// The renderer's `normalizeThinkingMode` migrates `'auto'` to `'thinking'` on
-// hydrate, so new writes only ever produce one of the two current literals.
+// Persisted JSON written by older clients may still carry thinking/effort
+// fields. They are retained in the type so old files can be read, but the
+// opencode bridge no longer consumes them or translates them to providerOptions.
 export type ThinkingMode = 'thinking' | 'instant'
 export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
@@ -33,9 +30,9 @@ export interface ProviderPersistedSettings {
   name?: string
   /** 附加 HTTP header(罕见,用户自填) */
   headers?: Record<string, string>
-  /** 用户在 UI 选择的思考模式(auto/thinking/instant) */
+  /** Legacy field; not consumed by the opencode bridge. */
   thinkingMode?: ThinkingMode
-  /** 推理强度(low/medium/high/xhigh)— 仅当模型支持 effort 轴时生效 */
+  /** Legacy field; not consumed by the opencode bridge. */
   reasoningEffort?: ReasoningEffort
 }
 

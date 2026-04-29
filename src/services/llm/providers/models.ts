@@ -21,24 +21,22 @@ export interface ModelTemperatureSpec {
   fixedWhenReasoning?: number;
 }
 
-// Reasoning capability — discriminated union mirroring the existing strategies.
-// Each variant carries the data needed to produce the per-provider native option blob.
+// Reasoning capability metadata. Lumina's opencode path does not translate
+// this into providerOptions; opencode/provider defaults own request shaping.
+// `nativeShape` is retained as descriptive catalog data for docs/tests and
+// compatibility with older metadata consumers.
 export type ModelReasoningSpec =
   | { strategy: 'none' }
   | {
-      // DeepSeek V4 / Kimi K2.5/K2.6 / Zhipu GLM: thinking is a binary toggle
-      // via a `thinking` field. `nativeShape` describes the on-API shape so
-      // the bridge knows which blob to emit. `binary-thinking` is the
-      // provider-neutral OpenAI-compatible shape (`{ thinking: { type } }`)
-      // shared by Moonshot Kimi and Zhipu GLM thinking models; DeepSeek V4
-      // wraps the same field under `extra_body`.
+      // DeepSeek V4 / Kimi K2.5/K2.6 / Zhipu GLM: thinking is a binary model
+      // capability. Lumina keeps this as metadata only.
       strategy: 'param-toggle';
       nativeShape: 'deepseek-v4' | 'binary-thinking';
       // When the model also accepts a tunable depth (DeepSeek V4 Pro:
-      // ['high','max']), declare it here so the UI renders an effort selector.
+      // ['high','max']), declare it here as catalog metadata.
       efforts?: ReasoningEffort[];
-      // Per-provider API default. UI uses this to pick a sensible value when
-      // the user has no explicit selection.
+      // Per-provider API default, retained for temperature constraints and
+      // compatibility with older local state.
       defaultEffort?: ReasoningEffort;
     }
   | {
@@ -50,10 +48,7 @@ export type ModelReasoningSpec =
   | {
       // OpenAI GPT-5.x / Anthropic Claude 4.x / Xiaomi MiMo — model always
       // reasons (or has a `none` opt-out within the same effort axis); only
-      // depth is tunable. `nativeShape` decides the on-API blob:
-      //   openai-reasoning           → { reasoning: { effort } }
-      //   anthropic-output-config    → { output_config: { effort }, thinking: { type: "adaptive" } }
-      //   mimo-reasoning             → { reasoning_effort: <effort> } (flat, OpenAI-compat)
+      // depth is tunable at the provider API level.
       strategy: 'effort-only';
       nativeShape: 'openai-reasoning' | 'anthropic-output-config' | 'mimo-reasoning';
       efforts: ReasoningEffort[];
@@ -627,9 +622,7 @@ export function findModel(providerId: string, modelId: string): ModelMeta | unde
 // targeting providers we have since promoted to first-class entries (Moonshot
 // in W5, Zhipu GLM in W6). For those we iterate the promoted catalogs in
 // order and return the first hit so temperature locks / thinking capabilities
-// continue to apply. The bridge mirror covers the same fallback via
-// openai-compatible::kimi-* / openai-compatible::glm-* entries in
-// electron-side model-capabilities.
+// continue to apply in renderer-only metadata surfaces.
 const OPENAI_COMPATIBLE_FALLBACK_PROVIDERS = ['moonshot', 'glm', 'mimo'] as const;
 
 export function findModelInCatalog(providerId: string, modelId: string): ModelMeta | undefined {

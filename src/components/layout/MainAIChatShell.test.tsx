@@ -61,16 +61,14 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 
-  // Thinking-mode + effort selectors moved out of the "+" menu in W3 — they
-  // now live in the ModelEffortPicker chip beside the send button. The "+"
-  // menu is back to: Reference file / Skills / AI settings.
+  // Thinking-mode + effort selectors are not exposed in chat controls. The "+"
+  // menu is: Reference file / Skills / AI settings.
   it("only renders Reference / Skills / Settings rows in the + popover", () => {
     useAIStore.setState((state) => ({
       config: {
         ...state.config,
         provider: "deepseek",
         model: "deepseek-chat",
-        thinkingMode: "thinking",
       },
     }));
 

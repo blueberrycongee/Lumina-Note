@@ -73,7 +73,6 @@ export {
   supportsBinaryThinkingToggle,
   supportedReasoningEfforts,
   resolveThinkingModel,
-  getThinkingRequestBodyPatch,
   getDefaultReasoningEffort,
 } from "./thinking";
 export type { ThinkingCapability } from "./thinking";

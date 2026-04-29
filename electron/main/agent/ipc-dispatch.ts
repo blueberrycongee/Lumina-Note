@@ -62,7 +62,7 @@ export interface AgentDispatchContext {
    *   agent_set_active_provider / agent_set_provider_settings / agent_set_provider_api_key
    * Wired from main/index.ts to rebuild OPENCODE_CONFIG_CONTENT +
    * OPENCODE_AUTH_CONTENT and restart the embedded opencode server so the
-   * next send uses the new key / model / thinking mode.
+   * next send uses the new key / model / base URL.
    */
   onProviderSettingsChanged?: () => void | Promise<void>
 }

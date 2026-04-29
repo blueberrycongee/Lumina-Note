@@ -13,18 +13,14 @@ import {
   getAIConfig,
 } from "@/services/ai/ai";
 import { invoke, readFile } from "@/lib/host";
+import { enqueueAIConfigSync } from "@/services/ai/config-sync";
 import {
   callLLMStream,
-  getDefaultReasoningEffort,
-  normalizeThinkingMode,
-  supportedReasoningEfforts,
-  supportsThinkingModeSwitch,
   type LLMProviderType,
   type MessageAttachment,
   type ImageContent,
   type TextContent,
   type MessageContent,
-  type ReasoningEffort,
 } from "@/services/llm";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { formatUserFriendlyError } from "./aiErrorFormatting";
@@ -112,16 +108,6 @@ function resolveProviderModelId(config: AIConfig): string {
   return config.customModelId?.trim() || "";
 }
 
-function shouldStreamThinking(config: AIConfig): boolean {
-  const model = config.model === "custom" && config.customModelId
-    ? config.customModelId
-    : config.model;
-  return (
-    normalizeThinkingMode(config.thinkingMode) === "thinking" &&
-    supportsThinkingModeSwitch(config.provider as LLMProviderType, model)
-  );
-}
-
 interface AIState {
   // Config
   config: AIConfig;
@@ -207,30 +193,6 @@ export const useAIStore = create<AIState>()(
       setConfig: async (newConfig) => {
         const currentConfig = getAIConfig();
 
-        // When the user switches models (or providers), the previously
-        // selected reasoningEffort may no longer be valid for the new model
-        // (e.g. switching from GPT-5.5 with effort='medium' to a model that
-        // only accepts ['high','max']). Reset to the new model's per-API
-        // default in that case so we never send an unsupported value.
-        const providerOrModelChanged =
-          (newConfig.provider !== undefined && newConfig.provider !== currentConfig.provider) ||
-          (newConfig.model !== undefined && newConfig.model !== currentConfig.model) ||
-          (newConfig.customModelId !== undefined &&
-            newConfig.customModelId !== currentConfig.customModelId);
-        if (providerOrModelChanged && newConfig.reasoningEffort === undefined) {
-          const nextProvider = (newConfig.provider ?? currentConfig.provider) as LLMProviderType;
-          const nextModelRaw = newConfig.model ?? currentConfig.model;
-          const nextCustomModelId = newConfig.customModelId ?? currentConfig.customModelId;
-          const nextModel =
-            nextModelRaw === "custom" ? (nextCustomModelId?.trim() || "") : nextModelRaw;
-          const supported = supportedReasoningEfforts(nextProvider, nextModel);
-          const carriedEffort = currentConfig.reasoningEffort as ReasoningEffort | undefined;
-          if (!supported || !carriedEffort || !supported.includes(carriedEffort)) {
-            const fallback = getDefaultReasoningEffort(nextProvider, nextModel);
-            newConfig = { ...newConfig, reasoningEffort: fallback ?? undefined };
-          }
-        }
-
         // 如果有新的 apiKey，先加密
         if (newConfig.apiKey !== undefined) {
           const encryptedKey = await encryptApiKey(newConfig.apiKey);
@@ -246,56 +208,56 @@ export const useAIStore = create<AIState>()(
           set({ config: getAIConfig() });
         }
 
-        // Sync provider-related changes to backend
-        try {
-          const nextConfig = getAIConfig();
-          const nextProvider = nextConfig.provider;
-          const providerChanged = nextProvider !== currentConfig.provider;
-          const previousModelId = resolveProviderModelId(currentConfig);
-          const nextModelId = resolveProviderModelId(nextConfig);
-          const providerSettingsChanged =
-            providerChanged ||
-            nextModelId !== previousModelId ||
-            nextConfig.baseUrl !== currentConfig.baseUrl ||
-            nextConfig.thinkingMode !== currentConfig.thinkingMode ||
-            nextConfig.reasoningEffort !== currentConfig.reasoningEffort;
+        // Sync provider-related changes to backend. Model picker updates are
+        // fire-and-forget from the UI, so startTask waits on this queue before
+        // it builds the opencode request.
+        await enqueueAIConfigSync(async () => {
+          try {
+            const nextConfig = getAIConfig();
+            const nextProvider = nextConfig.provider;
+            const providerChanged = nextProvider !== currentConfig.provider;
+            const previousModelId = resolveProviderModelId(currentConfig);
+            const nextModelId = resolveProviderModelId(nextConfig);
+            const providerSettingsChanged =
+              providerChanged ||
+              nextModelId !== previousModelId ||
+              nextConfig.baseUrl !== currentConfig.baseUrl;
 
-          if (providerChanged) {
-            await invoke("agent_set_active_provider", { provider_id: nextProvider });
-          }
+            if (providerChanged) {
+              await invoke("agent_set_active_provider", { provider_id: nextProvider });
+            }
 
-          if (providerSettingsChanged) {
-            await invoke("agent_set_provider_settings", {
-              provider_id: nextProvider,
-              settings: {
-                modelId: nextModelId || undefined,
-                baseUrl: nextConfig.baseUrl || undefined,
-                thinkingMode: nextConfig.thinkingMode,
-                reasoningEffort: nextConfig.reasoningEffort,
-              },
-            });
-          }
+            if (providerSettingsChanged) {
+              await invoke("agent_set_provider_settings", {
+                provider_id: nextProvider,
+                settings: {
+                  modelId: nextModelId || undefined,
+                  baseUrl: nextConfig.baseUrl || undefined,
+                },
+              });
+            }
 
-          if (
-            newConfig.apiKey !== undefined &&
-            newConfig.apiKey !== currentConfig.apiKey
-          ) {
-            // Defense-in-depth: trim on the IPC boundary as well as in the
-            // settings UI's onChange. Pasted keys often carry trailing
-            // whitespace or newlines that produce a 401 from the upstream
-            // with no useful diagnostic.
-            await invoke("agent_set_provider_api_key", {
-              provider_id: nextProvider,
-              api_key: (newConfig.apiKey ?? "").trim(),
-            });
-            setAIConfig({
-              apiKeyConfigured: (newConfig.apiKey ?? "").trim().length > 0,
-            });
-            set({ config: getAIConfig() });
+            if (
+              newConfig.apiKey !== undefined &&
+              newConfig.apiKey !== currentConfig.apiKey
+            ) {
+              // Defense-in-depth: trim on the IPC boundary as well as in the
+              // settings UI's onChange. Pasted keys often carry trailing
+              // whitespace or newlines that produce a 401 from the upstream
+              // with no useful diagnostic.
+              await invoke("agent_set_provider_api_key", {
+                provider_id: nextProvider,
+                api_key: (newConfig.apiKey ?? "").trim(),
+              });
+              setAIConfig({
+                apiKeyConfigured: (newConfig.apiKey ?? "").trim().length > 0,
+              });
+              set({ config: getAIConfig() });
+            }
+          } catch (err) {
+            console.error("[AIStore] failed to sync provider config to backend", err);
           }
-        } catch (err) {
-          console.error("[AIStore] failed to sync provider config to backend", err);
-        }
+        });
       },
 
       // Chat state
@@ -674,8 +636,6 @@ export const useAIStore = create<AIState>()(
           get().createSession();
         }
 
-        const streamingThinkingEnabled = shouldStreamThinking(runtimeConfig);
-
         // 先显示用户消息
         set((state) => {
           // 使用 state.messages 而不是闭包中的 messages，确保获取最新状态
@@ -685,7 +645,7 @@ export const useAIStore = create<AIState>()(
             messages: newMessages,
             streamingContent: "",
             streamingReasoning: "",
-            streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
+            streamingReasoningStatus: "idle",
             error: null,
             sessions: state.sessions.map((s) =>
               s.id === state.currentSessionId
@@ -706,7 +666,7 @@ export const useAIStore = create<AIState>()(
           isStreaming: true,
           streamingContent: "",
           streamingReasoning: "",
-          streamingReasoningStatus: streamingThinkingEnabled ? "streaming" : "idle",
+          streamingReasoningStatus: "idle",
           _abortController: abortController,
         });
 
@@ -1032,19 +992,12 @@ export const useAIStore = create<AIState>()(
               apiKey: decryptedKey,
               apiKeyConfigured: !!decryptedKey.trim(),
             };
-
-            // W4 migration: the legacy `thinkingMode: "auto"` literal was
-            // dropped in favor of a binary thinking|instant union with
-            // `thinking` as the default. Existing persisted state may still
-            // carry "auto"; convert it once here so the rest of the renderer
-            // never has to handle the third state.
-            if ((decryptedConfig.thinkingMode as unknown) === "auto") {
-              decryptedConfig.thinkingMode = "thinking";
-            }
+            delete decryptedConfig.thinkingMode;
+            delete decryptedConfig.reasoningEffort;
 
             // Fetch backend provider settings and override provider-related fields
             try {
-              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string; thinkingMode?: "thinking" | "instant"; reasoningEffort?: ReasoningEffort }> }>("agent_get_provider_settings");
+              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string }> }>("agent_get_provider_settings");
               if (backend?.activeProviderId) {
                 const providerId = backend.activeProviderId;
                 const pp = backend.perProvider[providerId] ?? {};
@@ -1060,8 +1013,6 @@ export const useAIStore = create<AIState>()(
                 }
                 if (pp.baseUrl) decryptedConfig.baseUrl = pp.baseUrl;
                 else decryptedConfig.baseUrl = undefined;
-                if (pp.thinkingMode) decryptedConfig.thinkingMode = pp.thinkingMode;
-                decryptedConfig.reasoningEffort = pp.reasoningEffort;
                 decryptedConfig.apiKeyConfigured =
                   !!decryptedConfig.apiKey?.trim() ||
                   (await invoke<boolean>("agent_has_provider_api_key", {

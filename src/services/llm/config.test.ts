@@ -15,7 +15,7 @@ describe('LLM Config', () => {
       const config = getLLMConfig();
       expect(config.provider).toBe('openai');
       expect(config.model).toBe('gpt-5.4');
-      expect(config.thinkingMode).toBe('thinking');
+      expect(config.thinkingMode).toBeUndefined();
       expect(config.temperature).toBeUndefined();
       expect(config.apiKey).toBe('');
     });
@@ -75,7 +75,7 @@ describe('LLM Config', () => {
       expect(config.provider).toBe('openai');
       expect(config.apiKey).toBe('');
       expect(config.model).toBe('gpt-5.4');
-      expect(config.thinkingMode).toBe('thinking');
+      expect(config.thinkingMode).toBeUndefined();
     });
   });
 });

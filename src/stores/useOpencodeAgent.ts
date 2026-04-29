@@ -31,6 +31,7 @@ import {
 } from "@/services/opencode/client";
 import { useFileStore } from "@/stores/useFileStore";
 import { getAIConfig } from "@/services/ai/ai";
+import { waitForAIConfigSync } from "@/services/ai/config-sync";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { LLMConfig, LLMProviderType } from "@/services/llm";
 
@@ -904,11 +905,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       // vars, ~/.opencode/auth.json, models.dev defaults). The renderer's
       // model badge still shows the user's Lumina pick (e.g. "DeepSeek V4
       // Flash") while the actual response comes from the fallback model —
-      // including its own thinking / identity behaviour, making per-model
-      // settings like thinkingMode look broken.
-      const cfg = getAIConfig();
-      const keylessOk = cfg.provider === "ollama" || cfg.provider === "openai-compatible";
-      if (!cfg.apiKey?.trim() && !cfg.apiKeyConfigured && !keylessOk) {
+      // including its own identity and provider-default behaviour.
+      const initialCfg = getAIConfig();
+      const keylessOk =
+        initialCfg.provider === "ollama" ||
+        initialCfg.provider === "openai-compatible";
+      if (
+        !initialCfg.apiKey?.trim() &&
+        !initialCfg.apiKeyConfigured &&
+        !keylessOk
+      ) {
         const t = getCurrentTranslations();
         reportError({
           kind: "task.start",
@@ -942,6 +948,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             },
           ],
         }));
+        await waitForAIConfigSync();
+        const cfg = getAIConfig();
+        resetOpencodeClient();
         if (!get()._subscribed) await get().subscribe();
         let sessionId = get().currentSessionId;
         if (!sessionId) {

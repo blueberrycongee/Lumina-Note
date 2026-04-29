@@ -14,7 +14,6 @@ import { fileURLToPath } from "node:url";
 
 import type { ProviderSettingsStore } from "../agent/providers/settings-store.js";
 import type { ProviderId } from "../agent/providers/registry.js";
-import { buildModelOptionsBlob } from "../agent/providers/thinking-options.js";
 
 const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 
@@ -134,6 +133,10 @@ function modelConfigForOpencode(
   }
 
   return {
+    // DeepSeek requires assistant reasoning_content to be replayed when a
+    // thinking response involved tool calls. Opencode owns that history
+    // transform via `interleaved`; Lumina does not add per-request thinking
+    // or reasoning_effort providerOptions here.
     reasoning: true,
     interleaved: { field: "reasoning_content" },
   };
@@ -219,26 +222,6 @@ export async function buildOpencodeBridge(
     // with its registry (correct limits come from there).
     providerEntry.models = {
       [resolvedModelId]: modelConfigForOpencode(luminaId, resolvedModelId),
-    };
-  }
-
-  // Per-model `options` blob is what opencode forwards as Vercel AI SDK
-  // `providerOptions`. We compute the provider-native shape from the user's
-  // thinkingMode + reasoningEffort selection (see thinking-options.ts). When
-  // there's nothing to send (e.g. model doesn't expose a thinking axis, or
-  // the user hasn't enabled it), we leave `options` unset so opencode falls
-  // back to provider defaults.
-  const optionsBlob = buildModelOptionsBlob({
-    provider: luminaId,
-    modelId: resolvedModelId,
-    thinkingMode: persisted.thinkingMode,
-    reasoningEffort: persisted.reasoningEffort,
-  });
-  if (optionsBlob) {
-    const models = providerEntry.models as Record<string, Record<string, unknown>>;
-    models[resolvedModelId] = {
-      ...models[resolvedModelId],
-      options: optionsBlob,
     };
   }
 
