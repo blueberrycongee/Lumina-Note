@@ -480,6 +480,22 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       );
       return;
     }
+    if ((event.type as string) === "server.instance.disposed") {
+      const sessionId = get().currentSessionId;
+      if (get().status === "running") {
+        const message =
+          "The AI service restarted before it finished responding. Please send the message again.";
+        reportError({
+          kind: "session.provider_error",
+          severity: "blocker",
+          message,
+          retryable: true,
+          sessionId: sessionId ?? undefined,
+        });
+        set({ status: "idle", error: message, llmRetryState: null });
+      }
+      return;
+    }
     switch (event.type) {
       case "session.created":
       case "session.updated": {
@@ -681,24 +697,58 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       if (get()._subscribed) return;
       set({ _subscribed: true });
 
-      const client = await getOpencodeClient();
       const controller = new AbortController();
       set({ _abortController: controller });
 
-      // Run the stream loop in the background. If it throws we mark
-      // unsubscribed so a retry can be attempted later.
-      void (async () => {
-        try {
-          console.log("[opencode-sse] connecting…");
-          const result = await client.event.subscribe({
-            signal: controller.signal,
-          });
-          console.log("[opencode-sse] connected");
-          for await (const event of result.stream) {
-            handleEvent(event as Event);
+      const waitForReconnect = (ms: number) =>
+        new Promise<void>((resolve) => {
+          if (controller.signal.aborted) {
+            resolve();
+            return;
           }
-          console.log("[opencode-sse] stream ended cleanly");
-          set({ _subscribed: false, _abortController: null });
+          const timer = setTimeout(resolve, ms);
+          controller.signal.addEventListener(
+            "abort",
+            () => {
+              clearTimeout(timer);
+              resolve();
+            },
+            { once: true },
+          );
+        });
+
+      // Run the stream loop in the background. Opencode closes /event
+      // cleanly when an Instance is disposed; treat that as reconnectable,
+      // not as a permanent unsubscribe.
+      void (async () => {
+        let reconnectAttempt = 0;
+        try {
+          while (!controller.signal.aborted) {
+            try {
+              const client = await getOpencodeClient();
+              console.log("[opencode-sse] connecting…");
+              const result = await client.event.subscribe({
+                signal: controller.signal,
+              });
+              console.log("[opencode-sse] connected");
+              reconnectAttempt = 0;
+              for await (const event of result.stream) {
+                handleEvent(event as Event);
+              }
+              if (controller.signal.aborted) break;
+              console.warn("[opencode-sse] stream ended; reconnecting…");
+            } catch (err) {
+              if (controller.signal.aborted) {
+                console.log("[opencode-sse] aborted");
+                break;
+              }
+              console.warn("[opencode-sse] reconnectable failure", err);
+            }
+
+            reconnectAttempt += 1;
+            const delay = Math.min(500 * 2 ** (reconnectAttempt - 1), 5_000);
+            await waitForReconnect(delay);
+          }
         } catch (err) {
           if (controller.signal.aborted) {
             console.log("[opencode-sse] aborted");
@@ -715,7 +765,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             _subscribed: false,
             _abortController: null,
           });
+          return;
         }
+        set({ _subscribed: false, _abortController: null });
       })();
     },
 

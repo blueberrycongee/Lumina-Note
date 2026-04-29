@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { waitFor } from "@testing-library/react";
 
 const mocks = vi.hoisted(() => ({
   getOpencodeClient: vi.fn(),
@@ -21,6 +22,14 @@ import { useOpencodeAgent } from "./useOpencodeAgent";
 
 async function* emptyStream(): AsyncGenerator<never, void, unknown> {
   return;
+}
+
+async function* disposedStream(): AsyncGenerator<unknown, void, unknown> {
+  await Promise.resolve();
+  yield {
+    type: "server.instance.disposed",
+    properties: { directory: "/tmp/vault" },
+  };
 }
 
 describe("useOpencodeAgent.startTask", () => {
@@ -54,6 +63,7 @@ describe("useOpencodeAgent.startTask", () => {
   });
 
   afterEach(() => {
+    useOpencodeAgent.getState().unsubscribe();
     vi.clearAllMocks();
   });
 
@@ -72,5 +82,26 @@ describe("useOpencodeAgent.startTask", () => {
     ]);
 
     await promise;
+  });
+
+  it("releases the running state when opencode disposes the active instance", async () => {
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({ stream: disposedStream() })),
+      },
+      session: {
+        create: vi.fn(async () => ({ data: { id: "session-1" } })),
+        list: vi.fn(async () => ({ data: [] })),
+        promptAsync: vi.fn(async () => ({ data: {} })),
+      },
+    });
+
+    await useOpencodeAgent
+      .getState()
+      .startTask("hello", { workspace_path: "/tmp/vault" });
+
+    await waitFor(() => {
+      expect(useOpencodeAgent.getState().status).toBe("idle");
+    });
   });
 });
