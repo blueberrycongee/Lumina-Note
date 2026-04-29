@@ -24,6 +24,7 @@ export type OpencodeServerHandle = {
 
 let handle: OpencodeServerHandle | null = null;
 let starting: Promise<OpencodeServerHandle> | null = null;
+let readiness: Promise<OpencodeServerHandle> | null = null;
 let listeners: Array<(h: OpencodeServerHandle | null) => void> = [];
 
 function notifyListeners(next: OpencodeServerHandle | null): void {
@@ -156,8 +157,26 @@ export function getOpencodeServer(): OpencodeServerHandle | null {
   return handle;
 }
 
+export function trackOpencodeServerReadiness(
+  promise: Promise<OpencodeServerHandle>,
+): void {
+  readiness = promise;
+  void promise
+    .catch(() => null)
+    .finally(() => {
+      if (readiness === promise) readiness = null;
+    });
+}
+
 export async function getOpencodeServerWhenReady(): Promise<OpencodeServerHandle | null> {
   if (handle) return handle;
+  if (readiness) {
+    try {
+      return await readiness;
+    } catch {
+      return null;
+    }
+  }
   if (!starting) return null;
   try {
     return await starting;

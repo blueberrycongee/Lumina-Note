@@ -871,25 +871,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
       try {
         useErrorBanner.getState().clearBanner();
-        set({ status: "running", error: null, llmRetryState: null });
-        if (!get()._subscribed) await get().subscribe();
-        let sessionId = get().currentSessionId;
-        if (!sessionId) {
-          // Create under the same directory we'll prompt against (see the
-          // long comment in newSession). ctx.workspace_path is the vault
-          // root; without it opencode uses process.cwd() which in Electron
-          // resolves to the binary path and mismatches the prompt route.
-          sessionId = await get().newSession(ctx?.workspace_path || undefined);
-          if (!sessionId) throw new Error("failed to create session");
-        }
-
-        // Optimistic user message — appears *instantly* so the user sees
-        // their prompt on screen before the HTTP round-trip + SSE event
-        // loop completes (normally 100-500ms). The synthetic id is
-        // dedup'd in handleEvent() when the real user message.updated
-        // event arrives for this session.
+        // Update visible UI before any opencode startup/session work. Server
+        // bootstrap can legitimately take seconds on cold start; the user
+        // still needs immediate confirmation that their send was accepted.
         const optimisticId = `optimistic-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
         set((state) => ({
+          status: "running",
+          error: null,
+          llmRetryState: null,
           messages: [
             ...state.messages,
             {
@@ -901,6 +890,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             },
           ],
         }));
+        if (!get()._subscribed) await get().subscribe();
+        let sessionId = get().currentSessionId;
+        if (!sessionId) {
+          // Create under the same directory we'll prompt against (see the
+          // long comment in newSession). ctx.workspace_path is the vault
+          // root; without it opencode uses process.cwd() which in Electron
+          // resolves to the binary path and mismatches the prompt route.
+          sessionId = await get().newSession(ctx?.workspace_path || undefined);
+          if (!sessionId) throw new Error("failed to create session");
+        }
 
         const client = await getOpencodeClient();
         const promptModel = resolveOpencodePromptModel(cfg);

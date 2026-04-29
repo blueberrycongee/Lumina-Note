@@ -48,12 +48,17 @@ async function resolveServerInfo(): Promise<ServerInfo> {
       "opencode bridge missing: window.lumina.opencode not exposed by preload",
     );
   }
-  for (let attempt = 0; attempt < 50; attempt++) {
+
+  // The main-process IPC handler waits for the complete bootstrap path:
+  // provider/keychain bridge construction plus Server.listen() readiness.
+  // Keep only a small retry loop here for transient restart windows.
+  for (let attempt = 0; attempt < 3; attempt++) {
     const info = await bridge.getServerInfo();
     if (info) return info;
     await new Promise((r) => setTimeout(r, 200));
   }
-  throw new Error("opencode server never reported ready from main process");
+
+  throw new Error("opencode server not ready from main process");
 }
 
 function buildAuthHeader(info: ServerInfo): string {

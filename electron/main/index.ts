@@ -18,6 +18,7 @@ import {
   restartOpencodeServer,
   startOpencodeServer,
   stopOpencodeServer,
+  trackOpencodeServerReadiness,
 } from "./agent-v2/server.js";
 import {
   applyOpencodeBridge,
@@ -186,18 +187,32 @@ app.whenReady().then(() => {
   // Refresh env from provider settings and (re)start the opencode server.
   // Called once at cold start and again whenever the user updates AI Settings,
   // so opencode's next request uses the new provider / key / baseURL.
-  const reloadAndRestartOpencode = async (): Promise<void> => {
-    try {
+  const startOpencodeWithCurrentBridge = async (
+    restart: boolean,
+  ): Promise<void> => {
+    const startup = (async () => {
       const bridge = await buildOpencodeBridge(providerSettings);
       applyOpencodeBridge(bridge);
-      const handle = await restartOpencodeServer();
+      const handle = restart
+        ? await restartOpencodeServer()
+        : await startOpencodeServer();
       console.log(
         `[main] opencode server at ${handle.url}${
           bridge ? ` (provider: ${bridge.summary})` : " (no provider configured)"
         }`,
       );
+      return handle;
+    })();
+    trackOpencodeServerReadiness(startup);
+    try {
+      await startup;
     } catch (err) {
-      console.error("[main] opencode server failed to (re)start", err);
+      console.error(
+        restart
+          ? "[main] opencode server failed to (re)start"
+          : "[main] opencode server failed to start",
+        err,
+      );
     }
   };
 
@@ -209,7 +224,7 @@ app.whenReady().then(() => {
     if (restartDebounce) clearTimeout(restartDebounce);
     restartDebounce = setTimeout(() => {
       restartDebounce = null;
-      void reloadAndRestartOpencode();
+      void startOpencodeWithCurrentBridge(true);
     }, 150);
   };
 
@@ -226,20 +241,7 @@ app.whenReady().then(() => {
   });
   registerOpencodeIpc();
 
-  void (async () => {
-    try {
-      const bridge = await buildOpencodeBridge(providerSettings);
-      applyOpencodeBridge(bridge);
-      const h = await startOpencodeServer();
-      console.log(
-        `[main] opencode server at ${h.url}${
-          bridge ? ` (provider: ${bridge.summary})` : " (no provider configured)"
-        }`,
-      );
-    } catch (err) {
-      console.error("[main] opencode server failed to start", err);
-    }
-  })();
+  void startOpencodeWithCurrentBridge(false);
   buildMenu();
   createWindow();
 
