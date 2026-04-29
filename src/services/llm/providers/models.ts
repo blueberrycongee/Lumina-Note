@@ -115,6 +115,64 @@ export interface ProviderMeta {
   models: ModelMeta[];
 }
 
+function mimoReasoning(): ModelReasoningSpec {
+  return {
+    strategy: 'effort-only',
+    nativeShape: 'mimo-reasoning',
+    efforts: ['low', 'medium', 'high'],
+    defaultEffort: 'medium',
+  };
+}
+
+const MIMO_TOKEN_PLAN_MODELS: ModelMeta[] = [
+  {
+    id: 'mimo-v2.5-pro',
+    name: 'MiMo V2.5 Pro',
+    contextWindow: 1000000,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+  {
+    id: 'mimo-v2.5',
+    name: 'MiMo V2.5',
+    contextWindow: 1000000,
+    supportsVision: true,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+  {
+    id: 'mimo-v2-pro',
+    name: 'MiMo V2 Pro',
+    contextWindow: 1000000,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+  {
+    id: 'mimo-v2-omni',
+    name: 'MiMo V2 Omni',
+    contextWindow: 262144,
+    supportsVision: true,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+];
+
+function mimoTokenPlanProvider(
+  id: string,
+  label: string,
+  defaultBaseUrl: string,
+): ProviderMeta {
+  return {
+    id,
+    label,
+    description: `${label} endpoint for Xiaomi MiMo Token Plan keys`,
+    defaultBaseUrl,
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    models: MIMO_TOKEN_PLAN_MODELS,
+  };
+}
+
 export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
   anthropic: {
     id: 'anthropic',
@@ -523,6 +581,21 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
       },
     ],
   },
+  'mimo-token-plan-cn': mimoTokenPlanProvider(
+    'mimo-token-plan-cn',
+    'Xiaomi MiMo Token Plan (China)',
+    'https://token-plan-cn.xiaomimimo.com/v1',
+  ),
+  'mimo-token-plan-sgp': mimoTokenPlanProvider(
+    'mimo-token-plan-sgp',
+    'Xiaomi MiMo Token Plan (Singapore)',
+    'https://token-plan-sgp.xiaomimimo.com/v1',
+  ),
+  'mimo-token-plan-ams': mimoTokenPlanProvider(
+    'mimo-token-plan-ams',
+    'Xiaomi MiMo Token Plan (Europe)',
+    'https://token-plan-ams.xiaomimimo.com/v1',
+  ),
   groq: {
     id: 'groq',
     label: 'Groq',

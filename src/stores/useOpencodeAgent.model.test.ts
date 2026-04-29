@@ -33,6 +33,18 @@ describe("resolveOpencodePromptModel", () => {
     });
   });
 
+  it("routes MiMo Token Plan through opencode's regional Xiaomi provider", () => {
+    expect(
+      resolveOpencodePromptModel({
+        provider: "mimo-token-plan-sgp",
+        model: "mimo-v2.5-pro",
+      }),
+    ).toEqual({
+      providerID: "xiaomi-token-plan-sgp",
+      modelID: "mimo-v2.5-pro",
+    });
+  });
+
   it("omits an invalid custom model instead of sending an empty model id", () => {
     expect(
       resolveOpencodePromptModel({

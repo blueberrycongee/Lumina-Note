@@ -29,6 +29,9 @@ export type ProviderId =
   | 'moonshot'
   | 'glm'
   | 'mimo'
+  | 'mimo-token-plan-cn'
+  | 'mimo-token-plan-sgp'
+  | 'mimo-token-plan-ams'
   | 'groq'
   | 'openrouter'
   | 'ollama'
@@ -52,6 +55,31 @@ export interface ProviderEntry {
   supportsBaseUrl: boolean
   defaultBaseUrl?: string
   createModel(settings: ProviderSettings, modelId: string): LanguageModel
+}
+
+function createMimoTokenPlanEntry(
+  id: Extract<ProviderId, 'mimo-token-plan-cn' | 'mimo-token-plan-sgp' | 'mimo-token-plan-ams'>,
+  label: string,
+  description: string,
+  defaultBaseUrl: string,
+): ProviderEntry {
+  return {
+    id,
+    label,
+    description,
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    defaultBaseUrl,
+    createModel(settings, modelId) {
+      const factory = createOpenAICompatible({
+        name: id,
+        apiKey: settings.apiKey ?? '',
+        baseURL: settings.baseUrl ?? defaultBaseUrl,
+        headers: settings.headers,
+      })
+      return factory(modelId)
+    },
+  }
 }
 
 const entries: ProviderEntry[] = [
@@ -170,6 +198,24 @@ const entries: ProviderEntry[] = [
       return factory(modelId)
     },
   },
+  createMimoTokenPlanEntry(
+    'mimo-token-plan-cn',
+    'Xiaomi MiMo Token Plan (China)',
+    '小米 MiMo Token Plan 中国区端点',
+    'https://token-plan-cn.xiaomimimo.com/v1',
+  ),
+  createMimoTokenPlanEntry(
+    'mimo-token-plan-sgp',
+    'Xiaomi MiMo Token Plan (Singapore)',
+    '小米 MiMo Token Plan 新加坡区端点',
+    'https://token-plan-sgp.xiaomimimo.com/v1',
+  ),
+  createMimoTokenPlanEntry(
+    'mimo-token-plan-ams',
+    'Xiaomi MiMo Token Plan (Europe)',
+    '小米 MiMo Token Plan 欧洲区端点',
+    'https://token-plan-ams.xiaomimimo.com/v1',
+  ),
   {
     id: 'groq',
     label: 'Groq',

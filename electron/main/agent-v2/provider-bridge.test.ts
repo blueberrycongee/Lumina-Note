@@ -51,6 +51,26 @@ describe("buildOpencodeBridge", () => {
     expect(config.provider.deepseek.models["deepseek-chat"].interleaved).toBeUndefined();
   });
 
+  it("maps MiMo Token Plan providers to opencode's regional Xiaomi ids", async () => {
+    const bridge = await buildOpencodeBridge(
+      makeProviderSettings({
+        provider: "mimo-token-plan-sgp",
+        modelId: "mimo-v2.5-pro",
+      }),
+    );
+
+    const config = JSON.parse(bridge?.config ?? "{}");
+    const auth = JSON.parse(bridge?.auth ?? "{}");
+    expect(config.model).toBe("xiaomi-token-plan-sgp/mimo-v2.5-pro");
+    expect(config.provider["xiaomi-token-plan-sgp"].models).toEqual({
+      "mimo-v2.5-pro": {},
+    });
+    expect(auth["xiaomi-token-plan-sgp"]).toEqual({
+      type: "api",
+      key: "sk-test",
+    });
+  });
+
   it("does not write Lumina thinking or effort settings into opencode model options", async () => {
     const bridge = await buildOpencodeBridge(
       {

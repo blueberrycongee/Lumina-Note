@@ -12,6 +12,9 @@ const allProviders: LLMProviderType[] = [
   'moonshot',
   'glm',
   'mimo',
+  'mimo-token-plan-cn',
+  'mimo-token-plan-sgp',
+  'mimo-token-plan-ams',
   'groq',
   'openrouter',
   'ollama',
@@ -19,9 +22,9 @@ const allProviders: LLMProviderType[] = [
 ];
 
 describe('LLMProviderType', () => {
-  it('should be a valid union type with 11 providers', () => {
-    // W5: moonshot promoted; W6: glm + mimo promoted.
-    expect(allProviders.length).toBe(11);
+  it('should be a valid union type with 14 providers', () => {
+    // W5: moonshot promoted; W6: glm + mimo promoted; MiMo Token Plan adds regional endpoints.
+    expect(allProviders.length).toBe(14);
     expect(allProviders).toContain('anthropic');
     expect(allProviders).toContain('openai');
     expect(allProviders).toContain('google');
@@ -29,6 +32,9 @@ describe('LLMProviderType', () => {
     expect(allProviders).toContain('moonshot');
     expect(allProviders).toContain('glm');
     expect(allProviders).toContain('mimo');
+    expect(allProviders).toContain('mimo-token-plan-cn');
+    expect(allProviders).toContain('mimo-token-plan-sgp');
+    expect(allProviders).toContain('mimo-token-plan-ams');
     expect(allProviders).toContain('groq');
     expect(allProviders).toContain('openrouter');
     expect(allProviders).toContain('ollama');

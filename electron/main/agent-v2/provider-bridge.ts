@@ -109,6 +109,9 @@ const PROVIDER_ID_MAP: Partial<Record<ProviderId, string>> = {
   glm: "zhipuai",
   // models.dev id is `xiaomi`; opencode picks up MiMo model metadata from there.
   mimo: "xiaomi",
+  "mimo-token-plan-cn": "xiaomi-token-plan-cn",
+  "mimo-token-plan-sgp": "xiaomi-token-plan-sgp",
+  "mimo-token-plan-ams": "xiaomi-token-plan-ams",
   groq: "groq",
   openrouter: "openrouter",
   ollama: "ollama",

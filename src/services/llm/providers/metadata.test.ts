@@ -8,7 +8,7 @@ import {
 } from './metadata'
 
 describe('providers/metadata', () => {
-  it('covers all 11 provider ids (W5: moonshot top-level; W6: glm + mimo top-level)', () => {
+  it('covers all 14 provider ids (including MiMo Token Plan regional endpoints)', () => {
     const ids = Object.keys(PROVIDER_METADATA).sort()
     expect(ids).toEqual(
       [
@@ -18,6 +18,9 @@ describe('providers/metadata', () => {
         'google',
         'groq',
         'mimo',
+        'mimo-token-plan-ams',
+        'mimo-token-plan-cn',
+        'mimo-token-plan-sgp',
         'moonshot',
         'ollama',
         'openai',
@@ -264,6 +267,34 @@ describe('providers/metadata', () => {
       'mimo-v2-omni',
       'mimo-v2-flash',
     ])
+  })
+
+  it('mimo token plan providers expose regional endpoints and chat models', () => {
+    const expected = [
+      ['mimo-token-plan-cn', 'https://token-plan-cn.xiaomimimo.com/v1'],
+      ['mimo-token-plan-sgp', 'https://token-plan-sgp.xiaomimimo.com/v1'],
+      ['mimo-token-plan-ams', 'https://token-plan-ams.xiaomimimo.com/v1'],
+    ] as const
+
+    for (const [id, defaultBaseUrl] of expected) {
+      const provider = getProviderModels(id)
+      expect(provider?.label).toContain('Xiaomi MiMo Token Plan')
+      expect(provider?.defaultBaseUrl).toBe(defaultBaseUrl)
+      expect(provider?.requiresApiKey).toBe(true)
+      expect(provider?.models.map((m) => m.id)).toEqual([
+        'mimo-v2.5-pro',
+        'mimo-v2.5',
+        'mimo-v2-pro',
+        'mimo-v2-omni',
+      ])
+    }
+  })
+
+  it('mimo token plan exposes vision only on mimo-v2.5 and mimo-v2-omni', () => {
+    expect(findModel('mimo-token-plan-cn', 'mimo-v2.5-pro')?.supportsVision).toBeFalsy()
+    expect(findModel('mimo-token-plan-cn', 'mimo-v2-pro')?.supportsVision).toBeFalsy()
+    expect(findModel('mimo-token-plan-cn', 'mimo-v2.5')?.supportsVision).toBe(true)
+    expect(findModel('mimo-token-plan-cn', 'mimo-v2-omni')?.supportsVision).toBe(true)
   })
 
   it('mimo-v2.5-pro carries effort-only reasoning with mimo-reasoning shape', () => {
