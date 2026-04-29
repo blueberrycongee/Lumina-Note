@@ -41,9 +41,12 @@ const result = spawnSync(
     env: {
       ...process.env,
       PATH: process.env.PATH ?? "",
-      // build-node.ts → @opencode-ai/script shells out to `git branch --show-current`
-      // and fails if OPENCODE_CHANNEL is unset. Default to dev.
-      OPENCODE_CHANNEL: process.env.OPENCODE_CHANNEL || "dev",
+      // build-node.ts only defines OPENCODE_CHANNEL in the node bundle, not
+      // OPENCODE_VERSION. A non-local channel would therefore compile as
+      // channel=dev + version=local, making opencode try to install the
+      // nonexistent @opencode-ai/plugin@local. Keep local semantics for our
+      // embedded dev bundle unless a release build overrides it explicitly.
+      OPENCODE_CHANNEL: process.env.OPENCODE_CHANNEL || "local",
     },
   },
 );

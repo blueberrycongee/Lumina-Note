@@ -125,6 +125,20 @@ type OpencodeBridge = {
   summary: string;
 };
 
+function modelConfigForOpencode(
+  luminaId: ProviderId,
+  modelId: string,
+): Record<string, unknown> {
+  if (luminaId !== "deepseek" || !modelId.startsWith("deepseek-v4-")) {
+    return {};
+  }
+
+  return {
+    reasoning: true,
+    interleaved: { field: "reasoning_content" },
+  };
+}
+
 export async function buildOpencodeBridge(
   providerSettings: ProviderSettingsStore,
 ): Promise<OpencodeBridge | null> {
@@ -203,7 +217,9 @@ export async function buildOpencodeBridge(
     // Mainline providers — declare the model so it shows up even if
     // models.dev hasn't been fetched yet. Empty object lets opencode merge
     // with its registry (correct limits come from there).
-    providerEntry.models = { [resolvedModelId]: {} };
+    providerEntry.models = {
+      [resolvedModelId]: modelConfigForOpencode(luminaId, resolvedModelId),
+    };
   }
 
   // Per-model `options` blob is what opencode forwards as Vercel AI SDK
