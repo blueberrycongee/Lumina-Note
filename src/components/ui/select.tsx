@@ -57,6 +57,7 @@ export interface SelectProps<T extends string> {
   placeholder?: ReactNode;
   disabled?: boolean;
   className?: string;
+  optionLabelClassName?: string;
   id?: string;
   "aria-label"?: string;
 }
@@ -68,6 +69,7 @@ export function Select<T extends string>({
   placeholder,
   disabled,
   className,
+  optionLabelClassName,
   id,
   "aria-label": ariaLabel,
 }: SelectProps<T>) {
@@ -266,7 +268,13 @@ export function Select<T extends string>({
                 key={option.value}
                 density="compact"
                 role="option"
-                title={option.label}
+                title={
+                  optionLabelClassName ? (
+                    <span className={optionLabelClassName}>{option.label}</span>
+                  ) : (
+                    option.label
+                  )
+                }
                 description={option.description}
                 selected={isSelected}
                 disabled={option.disabled}

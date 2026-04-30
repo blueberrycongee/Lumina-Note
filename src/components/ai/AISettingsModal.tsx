@@ -529,6 +529,7 @@ export function AISettingsContent() {
                     value: model.id,
                     label: formatModelOptionLabel(model),
                   }))}
+                  optionLabelClassName="text-ui-caption"
                 />
               );
             }}
