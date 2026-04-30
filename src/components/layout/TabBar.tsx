@@ -12,7 +12,7 @@ import {
   Shapes,
   Images,
 } from "lucide-react";
-import { AnimatePresence, motion, Reorder, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
@@ -46,6 +46,8 @@ const TAB_SHAPE_DEFAULT_WIDTH = 200;
 // collapse the strip. 22px gives a ~7px tighter gap than the geometric
 // interlock without making the active tab "bite" into neighbors too far.
 const TAB_OVERLAP_PX = 22;
+const TAB_MIN_WIDTH_PX = 72;
+const TAB_MAX_WIDTH_PX = 240;
 const TABBAR_EDGE_SLOT_CLASS =
   "flex w-10 shrink-0 items-center justify-center pt-1.5";
 const TABBAR_ICON_BUTTON_CLASS =
@@ -326,6 +328,20 @@ interface ContextMenuState {
   tabIndex: number;
 }
 
+interface ClosingGhost {
+  tab: Tab;
+  index: number;
+}
+
+interface TabBounds {
+  x: number;
+  width: number;
+}
+
+function clampTabWidth(width: number): number {
+  return Math.max(TAB_MIN_WIDTH_PX, Math.min(TAB_MAX_WIDTH_PX, width));
+}
+
 const DEFERRED_SWITCH_TAB_TYPES = new Set<Tab["type"]>([
   "diagram",
   "image",
@@ -364,7 +380,9 @@ export function TabBar() {
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tabListRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
+  const [tabListWidth, setTabListWidth] = useState(0);
   const pendingSwitchSeqRef = useRef(0);
   // 1×1 invisible div positioned at the right-click coordinates so the
   // Popover has a real DOM element to anchor against. Without it the menu
@@ -391,6 +409,23 @@ export function TabBar() {
   useEffect(() => {
     tabsRef.current = tabs;
   }, [tabs]);
+
+  useLayoutEffect(() => {
+    const node = tabListRef.current;
+    if (!node || typeof ResizeObserver === "undefined") return;
+
+    const updateWidth = () => {
+      setTabListWidth(node.getBoundingClientRect().width);
+    };
+    updateWidth();
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setTabListWidth(width);
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const handleSelectTab = useCallback(
     (tab: Tab, index: number) => {
@@ -424,36 +459,10 @@ export function TabBar() {
     [switchTab],
   );
 
-  // Pinned tabs are confined to the prefix of the array; the store rejects
-  // moves that cross the boundary. We diff the new order against the current
-  // tabs to recover (fromIndex, toIndex) for the existing reorder API. If
-  // the move is illegal, the dispatch is a no-op and the next render snaps
-  // the tab back into place.
-  const handleReorder = useCallback(
-    (next: Tab[]) => {
-      if (next.length !== tabs.length) return;
-      let from = -1;
-      let to = -1;
-      for (let i = 0; i < next.length; i++) {
-        if (tabs[i]?.id !== next[i]?.id) {
-          if (from === -1) from = i;
-          to = i;
-        }
-      }
-      if (from === -1 || to === -1 || from === to) return;
-      const movedId = next[to].id;
-      const fromIndex = tabs.findIndex((t) => t.id === movedId);
-      const toIndex = next.findIndex((t) => t.id === movedId);
-      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
-      reorderTabs(fromIndex, toIndex);
-    },
-    [tabs, reorderTabs],
-  );
-
   // IDs of tabs currently animating their close. The store is updated first;
   // AnimatePresence keeps the removed DOM node alive briefly as a visual ghost
   // while the remaining tabs retarget to their new ideal bounds.
-  const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
+  const [closingGhosts, setClosingGhosts] = useState<Map<string, ClosingGhost>>(() => new Map());
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
   const [frozenWidths, setFrozenWidths] = useState<Map<string, number> | null>(null);
   const tabNodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -526,16 +535,114 @@ export function TabBar() {
     timeouts.current.add(timeout);
   }, [tabs]);
 
+  const closingIds = useMemo(
+    () => new Set(closingGhosts.keys()),
+    [closingGhosts],
+  );
+
+  const openTabsForLayout = useMemo(
+    () => tabs.filter((tab) => !closingIds.has(tab.id)),
+    [closingIds, tabs],
+  );
+
+  const tabLayouts = useMemo(() => {
+    const layouts = new Map<string, TabBounds>();
+    const openCount = openTabsForLayout.length;
+    const defaultWidth =
+      openCount > 0
+        ? clampTabWidth((tabListWidth + TAB_OVERLAP_PX * (openCount - 1)) / openCount)
+        : TAB_MAX_WIDTH_PX;
+
+    let x = 0;
+    for (const tab of openTabsForLayout) {
+      const width = frozenWidths?.get(tab.id) ?? defaultWidth;
+      layouts.set(tab.id, { x, width });
+      x += width - TAB_OVERLAP_PX;
+    }
+
+    for (const ghost of closingGhosts.values()) {
+      const prevOpen = [...tabs.slice(0, ghost.index)]
+        .reverse()
+        .find((tab) => !closingIds.has(tab.id));
+      const nextOpen = tabs
+        .slice(ghost.index)
+        .find((tab) => !closingIds.has(tab.id));
+      let closeX = 0;
+
+      if (prevOpen && layouts.has(prevOpen.id)) {
+        const prev = layouts.get(prevOpen.id)!;
+        closeX = prev.x + prev.width - TAB_OVERLAP_PX;
+      } else if (nextOpen && layouts.has(nextOpen.id)) {
+        closeX = layouts.get(nextOpen.id)!.x;
+      }
+
+      layouts.set(ghost.tab.id, { x: closeX, width: TAB_OVERLAP_PX });
+    }
+
+    return layouts;
+  }, [closingGhosts, closingIds, frozenWidths, openTabsForLayout, tabListWidth, tabs]);
+
+  const visualTabs = useMemo(() => {
+    const ghosts = [...closingGhosts.values()].map((ghost) => ({
+      tab: ghost.tab,
+      storeIndex: ghost.index,
+      isClosing: true,
+    }));
+    const open = tabs
+      .map((tab, index) => ({
+        tab,
+        storeIndex: index,
+        isClosing: false,
+      }))
+      .filter((item) => !closingIds.has(item.tab.id));
+
+    return [...ghosts, ...open];
+  }, [closingGhosts, closingIds, tabs]);
+
+  const handleTabDragEnd = useCallback(
+    (tabId: string, offsetX: number) => {
+      if (closingIds.has(tabId)) return;
+
+      const fromIndex = tabs.findIndex((tab) => tab.id === tabId);
+      const draggedBounds = tabLayouts.get(tabId);
+      if (fromIndex === -1 || !draggedBounds) return;
+
+      const draggedCenter = draggedBounds.x + offsetX + draggedBounds.width / 2;
+      const orderedOpenTabs = tabs.filter((tab) => !closingIds.has(tab.id));
+      const withoutDragged = orderedOpenTabs.filter((tab) => tab.id !== tabId);
+      const nextOrder = withoutDragged.map((tab) => tab.id);
+      const insertAt = withoutDragged.findIndex((tab) => {
+        const bounds = tabLayouts.get(tab.id);
+        return bounds ? draggedCenter < bounds.x + bounds.width / 2 : false;
+      });
+
+      nextOrder.splice(insertAt === -1 ? nextOrder.length : insertAt, 0, tabId);
+      const finalOpenIndex = nextOrder.findIndex((id) => id === tabId);
+      const openStoreIndexes = orderedOpenTabs.map((tab) =>
+        tabs.findIndex((item) => item.id === tab.id),
+      );
+      const targetStoreIndex = openStoreIndexes[finalOpenIndex] ?? fromIndex;
+
+      if (targetStoreIndex !== fromIndex) {
+        reorderTabs(fromIndex, targetStoreIndex);
+      }
+    },
+    [closingIds, reorderTabs, tabLayouts, tabs],
+  );
+
   const animateClose = useCallback((tabId: string) => {
     freezeTabWidthsForCloseBatch();
-    setClosingIds((prev) => {
+    const closeIndex = tabsRef.current.findIndex((tab) => tab.id === tabId);
+    const tab = closeIndex >= 0 ? tabsRef.current[closeIndex] : null;
+    if (!tab) return;
+
+    setClosingGhosts((prev) => {
       if (prev.has(tabId)) return prev;
-      const next = new Set(prev);
-      next.add(tabId);
+      const next = new Map(prev);
+      next.set(tabId, { tab, index: closeIndex });
       return next;
     });
 
-    const closeIndex = tabsRef.current.findIndex((tab) => tab.id === tabId);
     if (closeIndex >= 0) {
       void closeTab(closeIndex).catch((error) => {
         reportOperationError({
@@ -544,9 +651,9 @@ export function TabBar() {
           error,
           context: { tabId },
         });
-        setClosingIds((prev) => {
+        setClosingGhosts((prev) => {
           if (!prev.has(tabId)) return prev;
-          const next = new Set(prev);
+          const next = new Map(prev);
           next.delete(tabId);
           return next;
         });
@@ -555,9 +662,9 @@ export function TabBar() {
 
     const timeout = setTimeout(() => {
       timeouts.current.delete(timeout);
-      setClosingIds((prev) => {
+      setClosingGhosts((prev) => {
         if (!prev.has(tabId)) return prev;
-        const next = new Set(prev);
+        const next = new Map(prev);
         next.delete(tabId);
         return next;
       });
@@ -638,41 +745,27 @@ export function TabBar() {
               data-testid="mac-tabbar-traffic-light-spacer"
             />
           ) : null}
-          <Reorder.Group
-            as="div"
-            axis="x"
-            values={tabs}
-            onReorder={handleReorder}
-            className="flex min-w-0 flex-1 items-stretch overflow-hidden"
+          <div
+            ref={tabListRef}
+            className="relative h-full min-w-0 flex-1 overflow-hidden"
             data-testid="mac-tabbar-tabs"
           >
             <AnimatePresence initial={false}>
-              {tabs.map((tab, index) => {
-                const isClosing = closingIds.has(tab.id);
+              {visualTabs.map(({ tab, storeIndex, isClosing }) => {
+                const bounds = tabLayouts.get(tab.id) ?? { x: 0, width: TAB_MIN_WIDTH_PX };
                 const isEntering = enteringIds.has(tab.id);
-                const isActive = index === activeTabIndex;
-                const frozenWidth = isClosing ? undefined : frozenWidths?.get(tab.id);
-                const fixedWidth = isClosing || isEntering
-                  ? TAB_OVERLAP_PX
-                  : frozenWidth;
-                const widthStyle = fixedWidth
-                  ? {
-                      flexBasis: fixedWidth,
-                      minWidth: fixedWidth,
-                      maxWidth: fixedWidth,
-                    }
-                  : {};
-                const tabStyle =
-                  index > 0 || fixedWidth
-                    ? {
-                        ...(index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : {}),
-                        ...widthStyle,
-                        ...(isClosing ? { pointerEvents: "none" as const } : {}),
-                      }
-                    : undefined;
+                const activeTabId = activeTabIndex >= 0 ? tabs[activeTabIndex]?.id : null;
+                const isActive = !isClosing && tab.id === activeTabId;
+                const initialWidth = isEntering ? TAB_OVERLAP_PX : bounds.width;
+                const tabStyle = {
+                  width: bounds.width,
+                  flexBasis: bounds.width,
+                  minWidth: bounds.width,
+                  maxWidth: bounds.width,
+                  pointerEvents: isClosing ? "none" as const : undefined,
+                };
                 return (
-                  <Reorder.Item
-                    as="div"
+                  <motion.div
                     key={tab.id}
                     ref={(node: HTMLDivElement | null) => {
                       if (node) {
@@ -681,13 +774,15 @@ export function TabBar() {
                         tabNodeRefs.current.delete(tab.id);
                       }
                     }}
-                    value={tab}
                     data-testid={`mac-tabbar-tab-${tab.id}`}
                     drag={isClosing ? false : "x"}
                     dragElastic={0.05}
                     dragMomentum={false}
                     onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
-                    onDragEnd={() => document.body.classList.remove("lumina-tab-dragging")}
+                    onDragEnd={(_, info) => {
+                      document.body.classList.remove("lumina-tab-dragging");
+                      handleTabDragEnd(tab.id, info.offset.x);
+                    }}
                     whileDrag={
                       reduceMotion
                         ? undefined
@@ -701,16 +796,19 @@ export function TabBar() {
                             boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
                           }
                     }
-                    layout="position"
                     initial={
                       reduceMotion
                         ? false
                         : {
+                            x: bounds.x,
+                            width: initialWidth,
                             opacity: 0.45,
                             y: 7,
                           }
                     }
                     animate={{
+                      x: bounds.x,
+                      width: bounds.width,
                       opacity: isClosing ? 0 : 1,
                       y: 0,
                     }}
@@ -718,9 +816,7 @@ export function TabBar() {
                       reduceMotion
                         ? { opacity: 0 }
                         : {
-                            flexBasis: TAB_OVERLAP_PX,
-                            minWidth: TAB_OVERLAP_PX,
-                            maxWidth: TAB_OVERLAP_PX,
+                            width: TAB_OVERLAP_PX,
                             opacity: 0,
                             y: 0,
                           }
@@ -729,16 +825,9 @@ export function TabBar() {
                       duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
                       ease: [0.2, 0, 0, 1],
                     }}
-                    // Negative left-margin from the second tab onward so each
-                    // tab's left ear overlaps the previous tab's right ear —
-                    // same trick Chrome uses to merge adjacent silhouettes
-                    // instead of leaving a flat floor between them. The exact
-                    // amount (TAB_OVERLAP_PX) is tuned slightly larger than
-                    // EAR_RADIUS so the bodies pack tighter than the pure
-                    // geometric interlock would give.
                     style={tabStyle}
                     className={cn(
-                      "relative grow-0 shrink basis-[240px] min-w-[72px] max-w-[240px] overflow-hidden transition-[flex-basis,min-width,max-width,opacity] duration-[180ms] ease-[cubic-bezier(.2,0,0,1)]",
+                      "absolute bottom-0 top-0 overflow-hidden",
                       isClosing && "pointer-events-none",
                       // Active tab sits above its neighbors so its silhouette
                       // outline (and white fill) cleanly overlays the overlapping
@@ -754,7 +843,7 @@ export function TabBar() {
                     >
                       <TabItem
                         tab={tab}
-                        isActive={index === activeTabIndex}
+                        isActive={isActive}
                         displayName={
                           tab.type === "ai-chat"
                             ? t.common.aiChatTab
@@ -762,23 +851,26 @@ export function TabBar() {
                               ? t.graph.title
                               : tab.name
                         }
-                        onSelect={() => handleSelectTab(tab, index)}
+                        onSelect={() => {
+                          if (!isClosing) handleSelectTab(tab, storeIndex);
+                        }}
                         onDoubleClick={() => {
+                          if (isClosing) return;
                           if (tab.isPreview) {
                             promotePreviewTab(tab.id);
                           } else if (!tab.isPinned) {
                             animateClose(tab.id);
                           }
                         }}
-                        onClose={(e) => handleClose(e, index)}
-                        onContextMenu={(e) => handleContextMenu(e, index)}
+                        onClose={(e) => handleClose(e, storeIndex)}
+                        onContextMenu={(e) => handleContextMenu(e, storeIndex)}
                       />
                     </motion.div>
-                  </Reorder.Item>
+                  </motion.div>
                 );
               })}
             </AnimatePresence>
-          </Reorder.Group>
+          </div>
         </div>
         <div
           className={cn(TABBAR_EDGE_SLOT_CLASS, "relative z-10")}
