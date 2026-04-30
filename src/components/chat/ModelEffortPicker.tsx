@@ -109,17 +109,17 @@ function ModelRow({ model, provider, selected, onSelect }: ModelRowProps) {
       title={model.name}
       onClick={onSelect}
       className={cn(
-        "group flex h-7 w-full items-center gap-2 rounded-ui-md px-2 text-left",
-        "text-ui-caption text-foreground transition-colors duration-fast ease-out-subtle",
+        "group flex h-6 w-full items-center gap-2 rounded-ui-md px-2 text-left",
+        "text-ui-micro text-foreground transition-colors duration-fast ease-out-subtle",
         "hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
         selected && "bg-accent hover:bg-accent",
       )}
     >
-      <span className={cn("min-w-0 flex-1 truncate", selected ? "font-medium" : "font-normal")}>
+      <span className="min-w-0 flex-1 truncate font-normal">
         {label}
       </span>
       {selected ? (
-        <Check size={12} className="shrink-0 text-muted-foreground" />
+        <Check size={11} className="shrink-0 text-muted-foreground" />
       ) : null}
     </button>
   );
