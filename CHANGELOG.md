@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-04-30
+
+本次发版重点是把 v1.3.4 之后的 AI / opencode / 图片生成链路收口：主聊天的 provider 切换更稳定，图片生成不再完全依赖聊天模型可用，Lumina Cloud 的账号与 provider 入口也补齐了。
+
+### 新功能
+- **Lumina Cloud 入口补齐**：新增 Lumina Cloud provider、license 安全存储、revocation cache、账号用量面板、License Settings，以及 AI Settings 里的 Lumina Cloud provider row。
+- **图片生成独立可用**：新增 Image Models 设置，支持 gpt-image-2 / Nano Banana / Seedream 三个图片 provider；当主聊天 agent 没配置或不可用时，图片模式可以直接走已配置的图片 provider 生成图片。
+- **聊天图片工作流增强**：欢迎页新增 "Generate an image" 入口；聊天里的生成图片可点击回填为下一次输入参考；生成结果在聊天中以专门的图片卡展示，避免重复插入 markdown。
+- **opencode skill / plugin 接入**：内置 image-gen skill，接入 Lumina opencode plugin 的 `generate_image` tool；Skill Manager 改为读取 opencode 原生 skill API。
+
+### 修复
+- **opencode 启动和重启更稳**：等待 server startup 后再返回 IPC；provider 重启期间保持 session；处理 `server.instance.disposed` 事件，避免 provider restart 后聊天流断掉无反馈。
+- **provider / model 切换修复**：发送请求时显式带上用户选中的模型；修复 DeepSeek V4 thinking 参数位置和 instant mode；改善 MiMo Token Plan、DeepSeek、provider-aware model selection 的同步。
+- **AI Settings 同步修复**：桌面 profile 切换会同步 provider 配置；保存 provider 设置时不再被 opencode restart readiness 阻塞；provider refresh 有明确等待路径。
+- **图片 provider 路由更可靠**：图片 provider 网络失败处理更稳；路由不再误切 provider；设置页始终渲染三个 provider row，避免用户无处填写 key。
+- **聊天发送体验修复**：opencode 冷启动期间立即显示 pending user message；错误 banner 保持 sticky，避免错误刚出现就被 idle 状态覆盖。
+
+### 改进
+- **Agent V2 代码结构收敛**：仍被 V2 使用的 provider settings、image provider settings、agent IPC dispatch 移到 `electron/main/agent-v2/`，删除代码层面的 `electron/main/agent/` 旧路径，清理 `Rust Agent` / V1 runtime 残留命名。
+- **错误处理统一**：新增结构化 error envelope、统一 reporter、toast bridge、retry policy、traceId 和诊断面板，让聊天、侧栏、编辑器错误走同一条用户可理解的路径。
+- **聊天时间线降噪**：连续工具调用折叠为一个工作会话，运行态文案更克制，并显示完成耗时。
+- **图片显示更克制**：生成图片在聊天中缩小展示，减少对对话流的打断。
+
 ## [1.3.4] - 2026-04-27
 
 紧跟 v1.3.3 的第三次发版——这次修的是 AI Settings 输入框处理 paste 的方式。
