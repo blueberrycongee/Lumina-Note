@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { getAIConfig, setAIConfig, type AIConfig } from "@/services/ai/ai";
+import { getAIConfig, type AIConfig } from "@/services/ai/ai";
+import { useAIStore } from "@/stores/useAIStore";
 
 export interface AgentProfile {
   id: string;
@@ -71,7 +72,9 @@ export const useAgentProfileStore = create<AgentProfileState>()(
         if (applyToDesktop && id) {
           const profile = get().profiles.find(p => p.id === id);
           if (profile) {
-            setAIConfig(profile.config);
+            // Route desktop profile switches through AIStore so opencode's
+            // provider bridge and server refresh stay in sync with the UI.
+            void useAIStore.getState().setConfig(profile.config);
           }
         }
       },
