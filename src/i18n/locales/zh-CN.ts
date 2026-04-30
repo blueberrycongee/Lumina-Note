@@ -1930,7 +1930,6 @@ export default {
     refreshLibrary: "刷新图片库",
     gridView: "网格视图",
     listView: "列表视图",
-    groupedView: "分组视图",
     searchPlaceholder: "按文件名、路径或笔记引用搜索",
     // 状态筛选
     statusAll: "全部图片",
@@ -1954,15 +1953,6 @@ export default {
     // 文件夹筛选
     allFolders: "所有文件夹",
     vaultRoot: "仓库根目录",
-    // 分组模式
-    groupByStatus: "按状态分组",
-    groupByFolder: "按文件夹分组",
-    // 分组标签
-    groupNeedsCleanup: "待清理",
-    groupLinkedFromMultipleNotes: "被多个笔记引用",
-    groupLargeFiles: "大文件 (>{threshold})",
-    groupRecentlyAdded: "最近添加",
-    groupReferenced: "已引用",
     // 状态标签文字
     badgeOrphan: "孤立",
     badgeReferenced: "已引用",

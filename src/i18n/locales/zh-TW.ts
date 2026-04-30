@@ -1926,7 +1926,6 @@ export default {
     refreshLibrary: "重新整理圖片庫",
     gridView: "網格檢視",
     listView: "清單檢視",
-    groupedView: "分組檢視",
     searchPlaceholder: "按檔名、路徑或筆記引用搜尋",
     // 狀態篩選
     statusAll: "全部圖片",
@@ -1950,15 +1949,6 @@ export default {
     // 資料夾篩選
     allFolders: "所有資料夾",
     vaultRoot: "倉庫根目錄",
-    // 分組模式
-    groupByStatus: "按狀態分組",
-    groupByFolder: "按資料夾分組",
-    // 分組標籤
-    groupNeedsCleanup: "待清理",
-    groupLinkedFromMultipleNotes: "被多個筆記引用",
-    groupLargeFiles: "大檔案 (>{threshold})",
-    groupRecentlyAdded: "最近新增",
-    groupReferenced: "已引用",
     // 狀態標籤文字
     badgeOrphan: "孤立",
     badgeReferenced: "已引用",

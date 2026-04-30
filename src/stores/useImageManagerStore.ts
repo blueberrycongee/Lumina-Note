@@ -1,15 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type ImageManagerViewMode = "grid" | "list" | "group";
-export type ImageManagerGroupMode = "status" | "folder";
+export type ImageManagerViewMode = "grid" | "list";
 export type ImageManagerStatusFilter = "all" | "referenced" | "orphan" | "multi" | "recent" | "large";
 export type ImageManagerSortBy = "name" | "modified" | "size" | "references";
 export type ImageManagerSortOrder = "asc" | "desc";
 
 interface ImageManagerState {
   viewMode: ImageManagerViewMode;
-  groupMode: ImageManagerGroupMode;
   statusFilter: ImageManagerStatusFilter;
   folderFilter: string;
   searchQuery: string;
@@ -20,7 +18,6 @@ interface ImageManagerState {
   focusedPath: string | null;
   setDetailPanelOpen: (open: boolean) => void;
   setViewMode: (mode: ImageManagerViewMode) => void;
-  setGroupMode: (mode: ImageManagerGroupMode) => void;
   setStatusFilter: (filter: ImageManagerStatusFilter) => void;
   setFolderFilter: (folder: string) => void;
   setSearchQuery: (query: string) => void;
@@ -39,7 +36,6 @@ export const useImageManagerStore = create<ImageManagerState>()(
   persist(
     (set) => ({
       viewMode: "grid",
-      groupMode: "status",
       statusFilter: "all",
       folderFilter: "all",
       searchQuery: "",
@@ -50,7 +46,6 @@ export const useImageManagerStore = create<ImageManagerState>()(
       focusedPath: null,
       setDetailPanelOpen: (detailPanelOpen) => set({ detailPanelOpen }),
       setViewMode: (viewMode) => set({ viewMode }),
-      setGroupMode: (groupMode) => set({ groupMode }),
       setStatusFilter: (statusFilter) => set({ statusFilter }),
       setFolderFilter: (folderFilter) => set({ folderFilter }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -93,9 +88,18 @@ export const useImageManagerStore = create<ImageManagerState>()(
     }),
     {
       name: "lumina-image-manager",
+      merge: (persisted, current) => {
+        const next = {
+          ...current,
+          ...(persisted as Partial<ImageManagerState>),
+        };
+        if (next.viewMode !== "grid" && next.viewMode !== "list") {
+          next.viewMode = "grid";
+        }
+        return next;
+      },
       partialize: (state) => ({
         viewMode: state.viewMode,
-        groupMode: state.groupMode,
         statusFilter: state.statusFilter,
         folderFilter: state.folderFilter,
         searchQuery: state.searchQuery,

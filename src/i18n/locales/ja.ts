@@ -1972,7 +1972,6 @@ export default {
     refreshLibrary: "画像ライブラリを更新",
     gridView: "グリッド表示",
     listView: "リスト表示",
-    groupedView: "グループ表示",
     searchPlaceholder: "ファイル名、パス、またはノート参照で検索",
     // ステータスフィルター
     statusAll: "すべての画像",
@@ -1996,15 +1995,6 @@ export default {
     // フォルダフィルター
     allFolders: "すべてのフォルダ",
     vaultRoot: "ボールトルート",
-    // グループモード
-    groupByStatus: "ステータスで分類",
-    groupByFolder: "フォルダで分類",
-    // グループラベル
-    groupNeedsCleanup: "クリーンアップが必要",
-    groupLinkedFromMultipleNotes: "複数のノートからリンク",
-    groupLargeFiles: "大きいファイル (>{threshold})",
-    groupRecentlyAdded: "最近追加",
-    groupReferenced: "参照済み",
     // ステータスバッジテキスト
     badgeOrphan: "孤立",
     badgeReferenced: "参照済み",

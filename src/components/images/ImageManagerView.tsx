@@ -4,7 +4,6 @@ import {
   FolderOpen,
   Grid2X2,
   Image as ImageIcon,
-  Layers3,
   List,
   Loader2,
   RefreshCw,
@@ -127,16 +126,6 @@ const compareValues = (
   }
 };
 
-const groupStatusLabel = (key: string): string => {
-  const t = getCurrentTranslations();
-  switch (key) {
-    case "orphan":
-      return t.imageManager.groupNeedsCleanup;
-    default:
-      return t.imageManager.groupReferenced;
-  }
-};
-
 const resolveVaultFolderInput = (vaultPath: string, value: string): string => {
   const trimmed = value.trim();
   if (!trimmed || trimmed === ".") return vaultPath;
@@ -158,7 +147,6 @@ export function ImageManagerView() {
   );
   const {
     viewMode,
-    groupMode,
     statusFilter,
     folderFilter,
     searchQuery,
@@ -168,7 +156,6 @@ export function ImageManagerView() {
     focusedPath,
     detailPanelOpen,
     setViewMode,
-    setGroupMode,
     setStatusFilter,
     setFolderFilter,
     setSearchQuery,
@@ -182,7 +169,6 @@ export function ImageManagerView() {
   } = useImageManagerStore(
     useShallow((state) => ({
       viewMode: state.viewMode,
-      groupMode: state.groupMode,
       statusFilter: state.statusFilter,
       folderFilter: state.folderFilter,
       searchQuery: state.searchQuery,
@@ -192,7 +178,6 @@ export function ImageManagerView() {
       focusedPath: state.focusedPath,
       detailPanelOpen: state.detailPanelOpen,
       setViewMode: state.setViewMode,
-      setGroupMode: state.setGroupMode,
       setStatusFilter: state.setStatusFilter,
       setFolderFilter: state.setFolderFilter,
       setSearchQuery: state.setSearchQuery,
@@ -329,36 +314,6 @@ export function ImageManagerView() {
   const primaryAsset =
     (focusedPath && filteredImages.find((image) => image.path === focusedPath)) ??
     (selectedImages.length === 1 ? selectedImages[0] : null);
-
-  const groupedImages = useMemo(() => {
-    if (viewMode !== "group") return [];
-
-    if (groupMode === "folder") {
-      const groups = new Map<string, ImageAssetRecord[]>();
-      for (const image of filteredImages) {
-        const key = image.folderRelativePath;
-        groups.set(key, [...(groups.get(key) ?? []), image]);
-      }
-      return Array.from(groups.entries()).map(([key, items]) => ({
-        key,
-        label: key === "." ? getCurrentTranslations().imageManager.vaultRoot : key,
-        items,
-      }));
-    }
-
-    const groups = new Map<string, ImageAssetRecord[]>();
-    for (const image of filteredImages) {
-      const key = image.orphan ? "orphan" : "referenced";
-      groups.set(key, [...(groups.get(key) ?? []), image]);
-    }
-    return ["orphan", "referenced"]
-      .filter((key) => groups.has(key))
-      .map((key) => ({
-        key,
-        label: groupStatusLabel(key),
-        items: groups.get(key) ?? [],
-      }));
-  }, [filteredImages, groupMode, viewMode]);
 
   const handleDimension = useCallback((path: string, width: number, height: number) => {
     if (!width || !height) return;
@@ -536,13 +491,6 @@ export function ImageManagerView() {
             >
               <List className="h-3.5 w-3.5" />
             </button>
-            <button
-              onClick={() => setViewMode("group")}
-              className={cn("ui-icon-btn h-8 w-8", viewMode === "group" && "border-primary/30 bg-primary/10 text-primary")}
-              title={t.imageManager.groupedView}
-            >
-              <Layers3 className="h-3.5 w-3.5" />
-            </button>
             <div className="mx-1 h-4 w-px bg-border/60" />
             <button
               onClick={() => setDetailPanelOpen(!detailPanelOpen)}
@@ -601,33 +549,6 @@ export function ImageManagerView() {
           </button>
         </div>
 
-        {/* Row 3 (conditional): group mode toggle */}
-        {viewMode === "group" ? (
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setGroupMode("status")}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                groupMode === "status"
-                  ? "border-primary/35 bg-primary/10 text-primary"
-                  : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t.imageManager.groupByStatus}
-            </button>
-            <button
-              onClick={() => setGroupMode("folder")}
-              className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                groupMode === "folder"
-                  ? "border-primary/35 bg-primary/10 text-primary"
-                  : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {t.imageManager.groupByFolder}
-            </button>
-          </div>
-        ) : null}
       </div>
 
       {/* Main content area */}
@@ -710,33 +631,6 @@ export function ImageManagerView() {
                       onRename={openRenameDialog}
                       onMove={(path) => openMoveDialog([path])}
                     />
-                  ))}
-                </div>
-              ) : viewMode === "group" ? (
-                <div className="space-y-5">
-                  {groupedImages.map((group) => (
-                    <section key={group.key} className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h2 className="text-sm font-semibold">{group.label}</h2>
-                          <p className="text-xs text-muted-foreground">{t.imageManager.imageCount.replace("{count}", String(group.items.length))}</p>
-                        </div>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                        {group.items.map((image) => (
-                          <ImageGridCard
-                            key={image.path}
-                            image={image}
-                            selected={selectedImageSet.has(image.path)}
-                            onDimension={(width, height) => handleDimension(image.path, width, height)}
-                            onSelect={handleCardClick}
-                            onLocate={handleLocateInTree}
-                            onRename={openRenameDialog}
-                            onMove={(path) => openMoveDialog([path])}
-                          />
-                        ))}
-                      </div>
-                    </section>
                   ))}
                 </div>
               ) : (

@@ -100,7 +100,6 @@ describe("ImageManagerView", () => {
     localStorage.removeItem("lumina-image-manager");
     useImageManagerStore.setState({
       viewMode: "grid",
-      groupMode: "status",
       statusFilter: "all",
       folderFilter: "all",
       searchQuery: "",

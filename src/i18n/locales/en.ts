@@ -1968,7 +1968,6 @@ Requirements:
     refreshLibrary: "Refresh image library",
     gridView: "Grid view",
     listView: "List view",
-    groupedView: "Grouped view",
     searchPlaceholder: "Search by file name, path, or note reference",
     // Status filters
     statusAll: "All images",
@@ -1992,15 +1991,6 @@ Requirements:
     // Folder filter
     allFolders: "All folders",
     vaultRoot: "Vault root",
-    // Group mode
-    groupByStatus: "Group by status",
-    groupByFolder: "Group by folder",
-    // Group labels
-    groupNeedsCleanup: "Needs cleanup",
-    groupLinkedFromMultipleNotes: "Linked from multiple notes",
-    groupLargeFiles: "Large files (>{threshold})",
-    groupRecentlyAdded: "Recently added",
-    groupReferenced: "Referenced",
     // Status badge text
     badgeOrphan: "Orphan",
     badgeReferenced: "Referenced",
