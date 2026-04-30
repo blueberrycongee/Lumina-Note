@@ -218,11 +218,13 @@ const createEditorTheme = (fontSize: number) =>
     // ::selection only while we're managing rows makes both directions
     // visually identical and still leaves intra-cell text selection
     // working when no row drag is in progress.
-    "&.cm-table-rows-dragging .cm-table-editor *::selection, &.cm-table-rows-dragging .cm-table-widget *::selection":
-      {
-        backgroundColor: "transparent !important",
-        color: "inherit !important",
-      },
+    "&.cm-table-rows-dragging *::selection": {
+      backgroundColor: "transparent !important",
+      color: "inherit !important",
+    },
+    "&.cm-table-rows-dragging .cm-selectionBackground": {
+      display: "none !important",
+    },
 
     // ── Block Editor: block-level hover highlight & boundary ────────
     ".cm-block-line": {
