@@ -667,7 +667,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                 value={filePickerQuery}
                 onChange={(e) => setFilePickerQuery(e.target.value)}
                 placeholder={t.ai.searchFiles}
-                className="w-full rounded-ui-sm bg-muted/50 px-2 py-1.5 text-[13px] outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full rounded-ui-sm bg-muted/50 px-2 py-1.5 text-ui-control outline-none focus:ring-1 focus:ring-primary/50"
                 autoFocus
               />
             </div>
@@ -801,14 +801,14 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
-                            "block truncate text-[13px] text-foreground",
+                            "block truncate text-ui-control text-foreground",
                             selected ? "font-medium" : "font-normal",
                           )}
                         >
                           /{cmd.key}
                         </span>
                         {isSkill && (
-                          <span className="inline-flex items-center gap-0.5 rounded-ui-sm bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary/70">
+                          <span className="inline-flex items-center gap-0.5 rounded-ui-sm bg-primary/10 px-1.5 py-0.5 text-ui-micro text-primary/70">
                             <Sparkles size={10} />
                             skill
                           </span>
@@ -867,7 +867,7 @@ export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
               setIsModalOpen(true);
               setShowCommand(false);
             }}
-            className="flex w-full items-center gap-2 border-t border-border/40 px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
+            className="flex w-full items-center gap-2 border-t border-border/40 px-3 py-2 text-ui-control text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground"
             aria-label={t.ai.slashCommands.createShortcut}
           >
             <Plus size={14} />

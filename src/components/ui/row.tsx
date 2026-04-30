@@ -118,7 +118,7 @@ export const Row = forwardRef<HTMLButtonElement, RowProps>(function Row(
       <span className="min-w-0 flex-1">
         <span
           className={cn(
-            "block truncate text-[13px] text-foreground",
+            "block truncate text-ui-control text-foreground",
             selected ? "font-medium" : "font-normal",
           )}
         >

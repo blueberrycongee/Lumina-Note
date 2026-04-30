@@ -196,7 +196,7 @@ export function SearchSidebar({ inputRef }: SearchSidebarProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t.globalSearch.searchPlaceholder}
-            className="ui-input h-8 w-full pl-7 pr-7 text-[13px]"
+            className="ui-input h-8 w-full pl-7 pr-7 text-ui-control"
           />
           {query && (
             <button
@@ -233,7 +233,7 @@ export function SearchSidebar({ inputRef }: SearchSidebarProps) {
           >
             <Regex size={14} />
           </button>
-          <span className="ml-auto text-[11px] text-muted-foreground">
+          <span className="ml-auto text-ui-caption text-muted-foreground">
             {isSearching
               ? null
               : query.trim() && results.length === 0
@@ -250,16 +250,16 @@ export function SearchSidebar({ inputRef }: SearchSidebarProps) {
       {/* Results */}
       <div className="sidebar-file-tree-scroll min-h-0 flex-1 overflow-auto pb-2">
         {isSearching && results.length === 0 ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-[12px] text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 py-6 text-ui-meta text-muted-foreground">
             <Loader2 size={14} className="animate-spin" />
             {t.globalSearch.searching ?? "Searching..."}
           </div>
         ) : results.length === 0 && query.trim() ? (
-          <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">
+          <div className="px-3 py-6 text-center text-ui-meta text-muted-foreground">
             {t.globalSearch.noMatches}
           </div>
         ) : results.length === 0 ? (
-          <div className="px-3 py-6 text-center text-[12px] text-muted-foreground">
+          <div className="px-3 py-6 text-center text-ui-meta text-muted-foreground">
             {t.globalSearch.searchPlaceholder}
           </div>
         ) : (
@@ -269,7 +269,7 @@ export function SearchSidebar({ inputRef }: SearchSidebarProps) {
               <div key={result.path} className="px-1">
                 <button
                   onClick={() => toggleFile(result.path)}
-                  className="flex w-full items-center gap-1 rounded-ui-sm px-1.5 py-1 text-left text-[13px] hover:bg-accent"
+                  className="flex w-full items-center gap-1 rounded-ui-sm px-1.5 py-1 text-left text-ui-control hover:bg-accent"
                 >
                   {collapsed ? (
                     <ChevronRight size={12} className="shrink-0 text-muted-foreground" />
@@ -278,7 +278,7 @@ export function SearchSidebar({ inputRef }: SearchSidebarProps) {
                   )}
                   <FileText size={12} className="shrink-0 text-muted-foreground" />
                   <span className="truncate font-medium">{result.name}</span>
-                  <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+                  <span className="ml-auto shrink-0 text-ui-caption text-muted-foreground">
                     {result.matches.length}
                   </span>
                 </button>
@@ -294,10 +294,10 @@ export function SearchSidebar({ inputRef }: SearchSidebarProps) {
                         <button
                           key={idx}
                           onClick={() => jumpTo(result, m)}
-                          className="flex w-full items-baseline gap-1.5 rounded-ui-sm px-2 py-0.5 pl-7 text-left text-[12px] hover:bg-accent"
+                          className="flex w-full items-baseline gap-1.5 rounded-ui-sm px-2 py-0.5 pl-7 text-left text-ui-meta hover:bg-accent"
                           title={m.content.trim()}
                         >
-                          <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/70">
+                          <span className="shrink-0 text-ui-micro tabular-nums text-muted-foreground/70">
                             {m.line}
                           </span>
                           <span className="truncate text-muted-foreground">

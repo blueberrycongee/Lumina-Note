@@ -23,7 +23,7 @@ export function SidebarQuickActions({ vaultPath, onQuickNote }: SidebarQuickActi
       <button
         onClick={onQuickNote}
         disabled={!vaultPath}
-        className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground rounded-ui-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
+        className="w-full flex items-center gap-2 px-3 py-1 text-ui-sidebar text-muted-foreground hover:bg-accent hover:text-foreground rounded-ui-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
         title={t.file.quickNote}
       >
         <Calendar size={14} />
@@ -77,7 +77,7 @@ export function SidebarQuickActions({ vaultPath, onQuickNote }: SidebarQuickActi
         <button
           onClick={startRecording}
           disabled={!vaultPath}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[13px] text-muted-foreground hover:bg-accent hover:text-foreground rounded-ui-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
+          className="w-full flex items-center gap-2 px-3 py-1 text-ui-sidebar text-muted-foreground hover:bg-accent hover:text-foreground rounded-ui-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap min-w-0"
           title={t.file.voiceRecordHint}
         >
           <Mic size={14} />

@@ -341,7 +341,7 @@ function SkillsList({
                         </div>
                       )}
                     </div>
-                    <p className="mt-2 truncate font-mono text-[11px] text-muted-foreground/70">
+                    <p className="mt-2 truncate font-mono text-ui-caption text-muted-foreground/70">
                       {skill.location}
                     </p>
                   </div>
@@ -537,7 +537,7 @@ function SkillEditor({
             onChange={(e) => setBody(e.target.value)}
             rows={14}
             spellCheck={false}
-            className="w-full rounded-ui-md border border-border bg-background px-3 py-2 font-mono text-[13px] text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/60 transition-colors duration-fast ease-out-subtle resize-y min-h-[280px]"
+            className="w-full rounded-ui-md border border-border bg-background px-3 py-2 font-mono text-ui-control text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/60 transition-colors duration-fast ease-out-subtle resize-y min-h-[280px]"
           />
         )}
       </Field>

@@ -91,7 +91,7 @@ export function NoteHoverPreview({ anchor, path, label, onClose }: NoteHoverPrev
           )}
           {load.kind === "ready" && (
             <>
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground/80 mb-1">
+              <div className="text-ui-caption uppercase tracking-wider text-muted-foreground/80 mb-1">
                 {label}
               </div>
               <div

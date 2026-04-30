@@ -98,7 +98,7 @@ export function ErrorBanner({ envelope, onDismiss, onRetry, onReload }: Props) {
         </div>
       </div>
 
-      <div className="mt-2 pl-7 space-y-1 font-mono text-[11px] text-destructive/70">
+      <div className="mt-2 pl-7 space-y-1 font-mono text-ui-caption text-destructive/70">
         {envelope.traceId && <div>trace: {envelope.traceId}</div>}
         {envelope.sessionId && <div>session: {envelope.sessionId}</div>}
         <div className="break-words whitespace-pre-wrap">
@@ -106,7 +106,7 @@ export function ErrorBanner({ envelope, onDismiss, onRetry, onReload }: Props) {
         </div>
         <button
           onClick={copyDetails}
-          className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-destructive/10 hover:bg-destructive/20 transition-colors"
+          className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-ui-caption bg-destructive/10 hover:bg-destructive/20 transition-colors"
         >
           {copied ? (
             <>

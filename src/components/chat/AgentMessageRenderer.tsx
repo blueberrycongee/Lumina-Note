@@ -1333,14 +1333,14 @@ const ImageGenerationProgress = memo(function ImageGenerationProgress({
             </motion.div>
           </AnimatePresence>
           {providerLabel && (
-            <span className="rounded-full border border-foreground/10 bg-background/65 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur">
+            <span className="rounded-full border border-foreground/10 bg-background/65 px-2.5 py-1 text-ui-caption font-medium text-muted-foreground shadow-sm backdrop-blur">
               {providerLabel}
             </span>
           )}
         </div>
         <div className="mt-auto">
           {elapsedLabel && (
-            <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted-foreground/75">
+            <div className="mt-3 flex items-center gap-1.5 text-ui-caption text-muted-foreground/75">
               <span className="streaming-dot" aria-hidden />
               <span>{elapsedLabel}</span>
             </div>
@@ -1905,7 +1905,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
             {/* 用户消息 */}
             <div className="flex justify-end mb-5">
               <div className="flex max-w-[80%] flex-col items-end gap-1">
-                <div className="rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-[15px] leading-relaxed text-foreground">
+                <div className="rounded-ui-xl rounded-tr-ui-sm border border-border/60 bg-muted px-4 py-3 text-ui-body leading-relaxed text-foreground">
                   <UserMessageBubbleContent
                     text={round.userContent}
                     attachments={round.userAttachments}

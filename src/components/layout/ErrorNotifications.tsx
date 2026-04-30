@@ -70,7 +70,7 @@ export function ErrorNotifications() {
               <div className="mt-2 flex items-center gap-1">
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[11px] text-foreground/80 hover:bg-muted"
+                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-ui-caption text-foreground/80 hover:bg-muted"
                   onClick={() => handleCopy(notice)}
                 >
                   <Copy className="h-3 w-3" />
@@ -78,7 +78,7 @@ export function ErrorNotifications() {
                 </button>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[11px] text-foreground/80 hover:bg-muted"
+                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-ui-caption text-foreground/80 hover:bg-muted"
                   onClick={() => dismissNotice(notice.id)}
                 >
                   <X className="h-3 w-3" />
@@ -93,7 +93,7 @@ export function ErrorNotifications() {
         <div className="self-end">
           <button
             type="button"
-            className="rounded border border-border bg-background/90 px-2 py-1 text-[11px] text-foreground/80 hover:bg-muted"
+            className="rounded border border-border bg-background/90 px-2 py-1 text-ui-caption text-foreground/80 hover:bg-muted"
             onClick={clearNotices}
           >
             Clear all

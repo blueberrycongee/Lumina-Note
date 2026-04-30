@@ -23,10 +23,10 @@ export function OverviewDashboard() {
               </CardHeader>
               <CardContent className="pt-3">
                 <div className="space-y-2">
-                  <p className="text-[15px] font-medium text-foreground">
+                  <p className="text-ui-body font-medium text-foreground">
                     {t.overview.getStarted}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-ui-control text-muted-foreground">
                     {t.overview.createHintPrefix} <Kbd>Ctrl</Kbd>
                     <span className="px-1 opacity-70">+</span>
                     <Kbd>N</Kbd> {t.overview.createHintSuffix}
@@ -41,7 +41,7 @@ export function OverviewDashboard() {
                 <CardTitle>{t.overview.shortcutsTitle}</CardTitle>
               </CardHeader>
               <CardContent className="pt-3">
-                <div className="grid grid-cols-1 gap-2 text-sm">
+                <div className="grid grid-cols-1 gap-2 text-ui-control">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">{t.overview.commandPalette}</span>
                     <Kbd>Ctrl+P</Kbd>

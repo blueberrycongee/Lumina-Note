@@ -87,8 +87,57 @@ const DiagramView = lazy(async () => {
 const MAIN_WORKSPACE_WINDOW_WIDTH = 1280;
 const MAIN_WORKSPACE_WINDOW_HEIGHT = 840;
 
+const getShortcutModifierLabel = () =>
+  typeof navigator !== "undefined" && /mac/i.test(navigator.platform)
+    ? "⌘"
+    : "Ctrl";
+
+interface EmptyNewTabPageProps {
+  onCreateNewFile: () => void;
+  onQuickOpen: () => void;
+}
+
+function EmptyNewTabPage({
+  onCreateNewFile,
+  onQuickOpen,
+}: EmptyNewTabPageProps) {
+  const t = useLocaleStore((state) => state.t);
+  const shortcutModifier = getShortcutModifierLabel();
+
+  return (
+    <div className="flex flex-1 flex-col bg-popover">
+      <div className="relative flex h-14 shrink-0 items-center px-8">
+        <div className="pointer-events-none absolute inset-x-0 text-center text-ui-control font-medium text-foreground">
+          {t.views.newTab}
+        </div>
+      </div>
+      <div className="flex flex-1 items-center justify-center pb-28">
+        <div className="flex flex-col items-center gap-3.5 text-ui-body font-medium">
+          <button
+            type="button"
+            onClick={onCreateNewFile}
+            className="text-primary transition-colors hover:text-primary/80"
+          >
+            {t.overview.createNewFile} ({shortcutModifier} N)
+          </button>
+          <button
+            type="button"
+            onClick={onQuickOpen}
+            className="text-primary transition-colors hover:text-primary/80"
+          >
+            {t.overview.openFile} ({shortcutModifier} O)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Component that shows tabs + graph/editor content
-function EditorWithGraph() {
+function EditorWithGraph({
+  onCreateNewFile,
+  onQuickOpen,
+}: EmptyNewTabPageProps) {
   const { tabs, activeTabIndex } = useFileStore(
     useShallow((state) => ({
       tabs: state.tabs,
@@ -96,11 +145,17 @@ function EditorWithGraph() {
     })),
   );
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
+  const isEmptyWorkspace = tabs.length === 0 && !activeTab;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-background transition-colors duration-300">
+    <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
       <TabBar />
-      {activeTab?.type === "graph" ? (
+      {isEmptyWorkspace ? (
+        <EmptyNewTabPage
+          onCreateNewFile={onCreateNewFile}
+          onQuickOpen={onQuickOpen}
+        />
+      ) : activeTab?.type === "graph" ? (
         <KnowledgeGraph className="flex-1" />
       ) : activeTab?.type === "isolated-graph" && activeTab.isolatedNode ? (
         <KnowledgeGraph
@@ -226,6 +281,17 @@ function App() {
     count: number;
     timer: ReturnType<typeof setTimeout> | null;
   }>({ count: 0, timer: null });
+
+  const handleCreateFileFromNewTab = useCallback(() => {
+    if (vaultPath) {
+      void createNewFile();
+    }
+  }, [vaultPath, createNewFile]);
+
+  const handleQuickOpenFromNewTab = useCallback(() => {
+    setPaletteMode("file");
+    setPaletteOpen(true);
+  }, []);
 
   // 首次启动时默认打开 AI Chat
   useEffect(() => {
@@ -597,7 +663,7 @@ function App() {
         // 创建拖拽指示器 - VS Code/Cursor 风格
         dragIndicator = document.createElement("div");
         dragIndicator.className =
-          "fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover text-popover-foreground text-sm rounded-lg border border-border shadow-elev-2";
+          "fixed pointer-events-none z-[9999] flex items-center gap-2 px-3 py-2 bg-popover text-popover-foreground text-ui-control rounded-lg border border-border shadow-elev-2";
 
         // 根据是文件还是文件夹显示不同图标
         const icon = dragData.isFolder
@@ -1033,7 +1099,7 @@ function App() {
               <TabBar />
               <Suspense
                 fallback={
-                  <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                  <div className="flex flex-1 items-center justify-center text-ui-control text-muted-foreground">
                     {t.diagramView.loadingEditor}
                   </div>
                 }
@@ -1082,13 +1148,19 @@ function App() {
           ) : activeTab?.type === "graph" ||
             activeTab?.type === "isolated-graph" ? (
             // 图谱标签页
-            <EditorWithGraph />
+            <EditorWithGraph
+              onCreateNewFile={handleCreateFileFromNewTab}
+              onQuickOpen={handleQuickOpenFromNewTab}
+            />
           ) : currentFile ? (
             // 文件编辑
             <Editor />
           ) : (
             // 空状态或其他标签页类型 - 统一使用 EditorWithGraph 保持 TabBar 一致
-            <EditorWithGraph />
+            <EditorWithGraph
+              onCreateNewFile={handleCreateFileFromNewTab}
+              onQuickOpen={handleQuickOpenFromNewTab}
+            />
           )}
           </PanelErrorBoundary>
         </main>

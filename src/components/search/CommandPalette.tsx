@@ -372,7 +372,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
-              className="flex-1 bg-transparent outline-none text-sm"
+              className="flex-1 bg-transparent outline-none text-ui-control"
             />
             {/* Mode tabs */}
             <div className="flex gap-1 text-xs">
@@ -404,7 +404,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
           {/* Results */}
           <div ref={listRef} className="max-h-80 overflow-y-auto">
             {filteredItems.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-sm">
+              <div className="p-8 text-center text-muted-foreground text-ui-control">
                 {t.commandPalette.noResults}
               </div>
             ) : (
@@ -427,7 +427,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                   return (
                     <div key={cmd.id}>
                       {headerLabel && (
-                        <div className="flex items-center gap-1.5 px-4 pt-3 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground/80">
+                        <div className="flex items-center gap-1.5 px-4 pt-3 pb-1 text-ui-micro uppercase tracking-wider text-muted-foreground/80">
                           {HeaderIcon ? <HeaderIcon size={11} className="opacity-70" /> : null}
                           <span>{headerLabel}</span>
                         </div>
@@ -446,10 +446,10 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                           {cmd.icon}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium flex items-center gap-2">
+                          <div className="text-ui-control font-medium flex items-center gap-2">
                             <span className="truncate">{cmd.label}</span>
                             {showNewBadge && (
-                              <span className="shrink-0 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
+                              <span className="shrink-0 text-ui-micro uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary/15 text-primary">
                                 {t.commandPalette.newBadge}
                               </span>
                             )}
@@ -487,7 +487,7 @@ export function CommandPalette({ isOpen, mode, onClose, onModeChange }: CommandP
                     >
                       <FileText size={16} className="text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{file.name}</div>
+                        <div className="text-ui-control font-medium truncate">{file.name}</div>
                         <div className="text-xs text-muted-foreground truncate">
                           {file.path}
                         </div>

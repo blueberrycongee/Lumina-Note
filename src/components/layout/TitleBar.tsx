@@ -156,7 +156,7 @@ export function TitleBar() {
         <div className="w-20" />
         {/* 中间：应用标题 */}
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[11px] text-muted-foreground font-medium pointer-events-none">
+          <span className="text-ui-caption text-muted-foreground font-medium pointer-events-none">
             Lumina Note
           </span>
         </div>
@@ -185,7 +185,7 @@ export function TitleBar() {
           alt="Logo"
           className="w-4 h-4 pointer-events-none"
         />
-        <span className="text-[11px] text-muted-foreground font-medium pointer-events-none">
+        <span className="text-ui-caption text-muted-foreground font-medium pointer-events-none">
           Lumina Note
         </span>
       </div>

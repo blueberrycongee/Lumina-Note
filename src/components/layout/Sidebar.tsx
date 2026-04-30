@@ -53,6 +53,16 @@ interface SidebarProps {
   onSwitchVault?: () => void;
 }
 
+const FILE_TREE_ROW_CLASS =
+  "ui-tree-row w-full flex items-center gap-1.5 py-1 pr-2 transition-colors cursor-pointer select-none rounded-ui-sm";
+const FILE_TREE_FILE_ROW_CLASS =
+  "ui-tree-row w-full flex items-center gap-1.5 py-1 pr-2 transition-colors cursor-grab select-none rounded-ui-sm";
+const FILE_TREE_ICON_CLASS = "ui-tree-icon text-muted-foreground shrink-0";
+const FILE_TREE_ICON_PASSIVE_CLASS =
+  "ui-tree-icon text-muted-foreground shrink-0 pointer-events-none";
+const FILE_TREE_LABEL_CLASS =
+  "ui-tree-label truncate pointer-events-none";
+
 export function Sidebar({ onSwitchVault }: SidebarProps) {
   const { t } = useLocaleStore();
   const showMacTopChrome = useMacTopChromeEnabled();
@@ -394,7 +404,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
         {/* Favorites */}
         <div className="px-2">
           <div className="mb-1 flex items-center justify-between gap-2 rounded-ui-sm px-2 py-1">
-            <span className="flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
+            <span className="flex min-w-0 items-center gap-1.5 text-ui-caption font-semibold text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis">
               <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
               {t.favorites.title}
             </span>
@@ -402,7 +412,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
               <button
                 onClick={() => setFavoriteSortMode("manual")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[11px] rounded transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-ui-caption rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "manual"
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -414,7 +424,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
               <button
                 onClick={() => setFavoriteSortMode("recentAdded")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[11px] rounded transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-ui-caption rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentAdded"
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -426,7 +436,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
               <button
                 onClick={() => setFavoriteSortMode("recentOpened")}
                 className={cn(
-                  "px-1.5 py-0.5 text-[11px] rounded transition-colors whitespace-nowrap",
+                  "px-1.5 py-0.5 text-ui-caption rounded transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentOpened"
                     ? "bg-accent text-foreground"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -447,7 +457,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
                 <div
                   key={entry.path}
                   className={cn(
-                    "group flex items-center gap-2 px-2 py-1 rounded-ui-md text-[13px]",
+                    "ui-tree-row group flex items-center gap-2 px-2 py-1 rounded-ui-md",
                     currentFile === entry.path
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -459,7 +469,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
                     title={entry.path}
                   >
                     <Star className="w-3.5 h-3.5 text-yellow-500" />
-                    <span className="truncate">
+                    <span className="ui-tree-label truncate">
                       {getFileName(entry.path).replace(/\.md$/i, "")}
                     </span>
                   </button>
@@ -550,7 +560,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
           />
         )}
         {fileTree.length === 0 && !creating ? (
-          <div className="px-4 py-8 text-center text-muted-foreground text-[13px]">
+          <div className="px-4 py-8 text-center text-muted-foreground ui-tree-label">
             {t.file.emptyFolder}
           </div>
         ) : (
@@ -637,15 +647,15 @@ function CreateInputRow({
   return (
     <div
       data-file-tree-item="true"
-      className="w-full flex items-center gap-1.5 py-1.5 pr-2 text-[13px] rounded-ui-sm"
+      className="ui-tree-row w-full flex items-center gap-1.5 py-1 pr-2 rounded-ui-sm"
       style={{ paddingLeft }}
     >
       {type === "folder" ? (
-        <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
+        <Folder className={FILE_TREE_ICON_CLASS} />
       ) : type === "diagram" ? (
-        <Shapes className="w-4 h-4 text-muted-foreground shrink-0" />
+        <Shapes className={FILE_TREE_ICON_CLASS} />
       ) : (
-        <File className="w-4 h-4 text-muted-foreground shrink-0" />
+        <File className={FILE_TREE_ICON_CLASS} />
       )}
       <input
         type="text"
@@ -670,10 +680,10 @@ function CreateInputRow({
         className="flex-1 ui-input h-6 px-1.5"
       />
       {type === "file" && (
-        <span className="text-muted-foreground text-sm">.md</span>
+        <span className="ui-tree-label text-muted-foreground">.md</span>
       )}
       {type === "diagram" && (
-        <span className="text-muted-foreground text-sm">.diagram.json</span>
+        <span className="ui-tree-label text-muted-foreground">.diagram.json</span>
       )}
     </div>
   );
@@ -826,8 +836,8 @@ function FileTreeItem({
           data-file-tree-item="true"
           style={{ paddingLeft }}
         >
-          <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Folder className="w-4 h-4 text-muted-foreground shrink-0" />
+          <ChevronRight className={FILE_TREE_ICON_CLASS} />
+          <Folder className={FILE_TREE_ICON_CLASS} />
           <input
             type="text"
             value={renameValue}
@@ -835,7 +845,7 @@ function FileTreeItem({
             onBlur={onRenameSubmit}
             onKeyDown={handleKeyDown}
             autoFocus
-            className="flex-1 ui-input h-8 px-2 border-primary/60"
+            className="flex-1 ui-input h-7 px-2 border-primary/60"
           />
         </div>
       );
@@ -862,7 +872,7 @@ function FileTreeItem({
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           className={cn(
-            "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-[13px] cursor-pointer select-none rounded-ui-sm",
+            FILE_TREE_ROW_CLASS,
             isSelected ? "bg-primary/10 text-primary" : "hover:bg-accent",
             isDragOver && "bg-primary/10",
           )}
@@ -870,17 +880,17 @@ function FileTreeItem({
         >
           <ChevronRight
             className={cn(
-              "w-4 h-4 text-muted-foreground shrink-0 pointer-events-none",
+              FILE_TREE_ICON_PASSIVE_CLASS,
               "transition-transform duration-150 ease-out motion-reduce:transition-none",
               isExpanded && "rotate-90",
             )}
           />
           {isExpanded ? (
-            <FolderOpen className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+            <FolderOpen className={FILE_TREE_ICON_PASSIVE_CLASS} />
           ) : (
-            <Folder className="w-4 h-4 text-muted-foreground shrink-0 pointer-events-none" />
+            <Folder className={FILE_TREE_ICON_PASSIVE_CLASS} />
           )}
-          <span className="truncate pointer-events-none">{entry.name}</span>
+          <span className={FILE_TREE_LABEL_CLASS}>{entry.name}</span>
         </div>
 
         <AnimatePresence initial={false}>
@@ -950,7 +960,7 @@ function FileTreeItem({
         className="flex items-center gap-1.5 py-1 px-1"
         style={{ paddingLeft: paddingLeft + 20 }}
       >
-        <File className="w-4 h-4 text-muted-foreground shrink-0" />
+        <File className={FILE_TREE_ICON_CLASS} />
         <input
           type="text"
           value={renameValue}
@@ -958,9 +968,9 @@ function FileTreeItem({
           onBlur={onRenameSubmit}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="flex-1 ui-input h-8 px-2 border-primary/60"
+          className="flex-1 ui-input h-7 px-2 border-primary/60"
         />
-        <span className="text-muted-foreground text-sm">.md</span>
+        <span className="ui-tree-label text-muted-foreground">.md</span>
       </div>
     );
   }
@@ -968,17 +978,17 @@ function FileTreeItem({
   const getFileIcon = () => {
     const name = entry.name.toLowerCase();
     if (name.endsWith(".db.json")) {
-      return <File className="w-4 h-4 text-muted-foreground shrink-0" />;
+      return <File className={FILE_TREE_ICON_CLASS} />;
     }
     if (
       name.endsWith(".excalidraw.json") ||
       name.endsWith(".diagram.json") ||
       name.endsWith(".drawio.json")
     ) {
-      return <Shapes className="w-4 h-4 text-muted-foreground shrink-0" />;
+      return <Shapes className={FILE_TREE_ICON_CLASS} />;
     }
     if (name.endsWith(".pdf")) {
-      return <FileText className="w-4 h-4 text-muted-foreground shrink-0" />;
+      return <FileText className={FILE_TREE_ICON_CLASS} />;
     }
     if (
       name.endsWith(".png") ||
@@ -987,9 +997,9 @@ function FileTreeItem({
       name.endsWith(".gif") ||
       name.endsWith(".webp")
     ) {
-      return <Image className="w-4 h-4 text-muted-foreground shrink-0" />;
+      return <Image className={FILE_TREE_ICON_CLASS} />;
     }
-    return <File className="w-4 h-4 text-muted-foreground shrink-0" />;
+    return <File className={FILE_TREE_ICON_CLASS} />;
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -1015,7 +1025,7 @@ function FileTreeItem({
       onDoubleClick={() => onPermanentOpen(entry)}
       onContextMenu={(e) => onContextMenu(e, entry)}
       className={cn(
-        "w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors text-[13px] cursor-grab select-none rounded-ui-sm",
+        FILE_TREE_FILE_ROW_CLASS,
         showActive
           ? "bg-primary/10 text-primary"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -1023,7 +1033,7 @@ function FileTreeItem({
       style={{ paddingLeft: paddingLeft + 20 }}
     >
       <span className="pointer-events-none">{getFileIcon()}</span>
-      <span className="truncate pointer-events-none">
+      <span className={FILE_TREE_LABEL_CLASS}>
         {getFileName(entry.name)}
       </span>
     </div>
@@ -1097,7 +1107,7 @@ function VaultNameSection({
             }
           }}
           autoFocus
-          className="ui-input h-8 w-full border-primary/60 px-2"
+          className="ui-input h-7 w-full border-primary/60 px-2"
         />
       </div>
     );
@@ -1130,7 +1140,7 @@ function VaultNameSection({
           }}
           onMouseLeave={() => setIsRootDragOver(false)}
           className={cn(
-            "group flex items-center gap-1 cursor-pointer select-none px-2 py-2 text-[13px] font-medium truncate transition-colors rounded-ui-sm",
+            "ui-tree-row group flex items-center gap-1 cursor-pointer select-none px-2 py-1.5 truncate transition-colors rounded-ui-sm",
             isRootDragOver && "bg-primary/10",
             selectedPath === vaultPath && "bg-primary/10 text-primary",
           )}

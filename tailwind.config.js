@@ -53,6 +53,15 @@ export default {
         mono: ["var(--font-mono)"],
         display: ["var(--font-display)"],
       },
+      fontSize: {
+        "ui-micro": ["10px", { lineHeight: "13px" }],
+        "ui-caption": ["10.5px", { lineHeight: "13px" }],
+        "ui-meta": ["11.5px", { lineHeight: "15px" }],
+        "ui-tree": ["11px", { lineHeight: "14px" }],
+        "ui-sidebar": ["11.5px", { lineHeight: "15px" }],
+        "ui-control": ["12px", { lineHeight: "15px" }],
+        "ui-body": ["13px", { lineHeight: "20px" }],
+      },
       borderRadius: {
         "ui-sm": "var(--ui-radius-sm)",
         "ui-md": "var(--ui-radius-md)",

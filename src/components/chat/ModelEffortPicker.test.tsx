@@ -50,26 +50,21 @@ describe("ModelEffortPicker", () => {
     expect(chip("effort")).toBeNull();
   });
 
-  it("selecting a different model updates only the runtime model selection", () => {
+  it("selecting a different model updates the configured model", () => {
     setConfig({
       provider: "anthropic",
       model: "claude-opus-4-7",
       apiKeyConfigured: true,
       reasoningEffort: "medium",
     });
-    const setConfigSpy = vi.spyOn(useAIStore.getState(), "setConfig");
     render(<ModelEffortPicker />);
     fireEvent.click(getModelChip());
     fireEvent.click(screen.getByText("Claude Haiku 4.5"));
-    expect(setConfigSpy).not.toHaveBeenCalled();
-    expect(useAIStore.getState().config.model).toBe("claude-opus-4-7");
-    expect(useAIStore.getState().runtimeModelSelection).toEqual({
-      provider: "anthropic",
-      model: "claude-haiku-4-5",
-    });
+    expect(useAIStore.getState().config.model).toBe("claude-haiku-4-5");
+    expect(useAIStore.getState().runtimeModelSelection).toBeNull();
   });
 
-  it("can switch to a configured provider for the next message", () => {
+  it("does not show models from other configured providers", () => {
     setConfig({
       provider: "openai",
       model: "gpt-5.4",
@@ -90,20 +85,11 @@ describe("ModelEffortPicker", () => {
     }));
     render(<ModelEffortPicker />);
     fireEvent.click(getModelChip());
-    fireEvent.click(screen.getByText("DeepSeek V4 Flash"));
-    expect(
-      useAIStore.getState().runtimeModelSelection,
-    ).toEqual({
-      provider: "deepseek",
-      model: "deepseek-v4-flash",
-    });
-    expect(useAIStore.getState().config).toMatchObject({
-      provider: "openai",
-      model: "gpt-5.4",
-    });
+    expect(screen.queryByText("DeepSeek V4 Flash")).toBeNull();
+    expect(screen.getAllByText("GPT-5.4").length).toBeGreaterThan(0);
   });
 
-  it("hides unconfigured providers from the primary model list", () => {
+  it("shows only the current provider model list", () => {
     setConfig({
       provider: "deepseek",
       model: "deepseek-v4-flash",
@@ -121,23 +107,17 @@ describe("ModelEffortPicker", () => {
     expect(screen.queryByText("Anthropic")).toBeNull();
     expect(screen.queryByText("OpenAI")).toBeNull();
     expect(screen.getAllByText("DeepSeek V4 Flash").length).toBeGreaterThan(0);
-    expect(screen.getByText(t.aiSettings.modelPicker.manageModelsHint)).toBeTruthy();
+    expect(
+      screen.queryByText(t.aiSettings.modelPicker.manageModelsHint),
+    ).toBeNull();
   });
 
-  it("can open AI settings from the model picker footer", () => {
-    const onOpenSettings = vi.fn();
-    render(<ModelEffortPicker onOpenSettings={onOpenSettings} />);
-    fireEvent.click(getModelChip());
-    const { t } = useLocaleStore.getState();
-    fireEvent.click(screen.getByText(t.aiSettings.modelPicker.manageModels));
-    expect(onOpenSettings).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows an empty state when no provider is ready to send", () => {
+  it("shows the settings hint row when the provider has no preset model list", () => {
     setConfig({
-      provider: "openai",
-      model: "gpt-5.4",
-      apiKeyConfigured: false,
+      provider: "openai-compatible",
+      model: "custom",
+      customModelId: "custom-model",
+      apiKeyConfigured: true,
       apiKey: "",
       reasoningEffort: undefined,
     });
@@ -145,10 +125,10 @@ describe("ModelEffortPicker", () => {
     fireEvent.click(getModelChip());
     const { t } = useLocaleStore.getState();
     expect(screen.getByText(
-      t.aiSettings.modelPicker.noConfiguredModels,
+      t.aiSettings.modelPicker.configureInSettings,
     )).toBeTruthy();
     expect(screen.queryByText(
-      t.aiSettings.modelPicker.configureInSettings,
+      t.aiSettings.modelPicker.noConfiguredModels,
     )).toBeNull();
   });
 });

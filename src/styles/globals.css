@@ -273,14 +273,14 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .ui-kbd {
-    @apply inline-flex items-center rounded-ui-sm border border-border/60 bg-muted/70 px-1.5 py-0.5 text-xs font-medium text-muted-foreground;
+    @apply inline-flex items-center rounded-ui-sm border border-border/60 bg-muted/70 px-1.5 py-0.5 text-ui-caption font-medium text-muted-foreground;
     min-width: 1.25rem;
     height: 1.125rem;
     justify-content: center;
   }
 
   .ui-input {
-    @apply h-9 w-full rounded-ui-md border border-border bg-background px-3 text-sm text-foreground;
+    @apply h-8 w-full rounded-ui-md border border-border bg-background px-2.5 text-ui-control text-foreground;
     @apply placeholder:text-muted-foreground/70;
     @apply focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-primary/20;
     transition:
@@ -326,7 +326,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-action-btn {
-    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-ui-md bg-primary px-3 text-sm font-medium text-primary-foreground;
+    @apply inline-flex h-8 items-center justify-center gap-1.5 rounded-ui-md bg-primary px-2.5 text-ui-control font-medium text-primary-foreground;
     @apply hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     transition-property: background-color, border-color, box-shadow, color, transform;
@@ -339,7 +339,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-toggle-btn {
-    @apply inline-flex h-8 items-center gap-1.5 rounded-ui-md px-2.5 text-sm text-muted-foreground;
+    @apply inline-flex h-7 items-center gap-1.5 rounded-ui-md px-2 text-ui-control text-muted-foreground;
     @apply hover:bg-accent hover:text-foreground;
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     transition-property: background-color, border-color, color, box-shadow, transform;
@@ -356,12 +356,12 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-count-badge {
-    @apply inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-medium;
+    @apply inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-ui-caption font-medium;
     @apply bg-accent text-foreground;
   }
 
   .db-menu-item {
-    @apply flex w-full items-center gap-2 rounded-ui-sm px-3 py-1.5 text-sm text-foreground;
+    @apply flex w-full items-center gap-2 rounded-ui-sm px-2.5 py-1 text-ui-control text-foreground;
     @apply hover:bg-accent;
     @apply focus-visible:outline-none focus-visible:bg-accent;
     transition-property: background-color, color;
@@ -378,7 +378,7 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   .db-empty-state {
-    @apply rounded-ui-md border border-dashed border-border bg-muted px-4 py-6 text-center text-sm text-muted-foreground;
+    @apply rounded-ui-md border border-dashed border-border bg-muted px-4 py-5 text-center text-ui-control text-muted-foreground;
   }
 
   .app-sidebar-shell {
@@ -462,6 +462,23 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 @layer utilities {
+  .ui-tree-row {
+    font-size: 11px;
+    line-height: 15px;
+    font-weight: 400;
+  }
+
+  .ui-tree-label {
+    font-size: 11px;
+    line-height: 15px;
+    font-weight: 400;
+  }
+
+  .ui-tree-icon {
+    width: 14px;
+    height: 14px;
+  }
+
   .ui-compact-row {
     container-type: inline-size;
     min-width: 0;
@@ -758,6 +775,13 @@ body,
 #root {
   height: 100%;
   overflow: hidden;
+}
+
+html {
+  /* Desktop app density: Tailwind's default 16px root makes the chrome feel
+     web-sized. 13px brings rem-based spacing and controls close to an 80% UI
+     zoom without changing the editor's explicit pixel typography tokens. */
+  font-size: 13px;
 }
 
 body {

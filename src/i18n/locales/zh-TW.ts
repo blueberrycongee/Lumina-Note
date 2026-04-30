@@ -100,6 +100,8 @@ export default {
   overview: {
     title: "概覽",
     getStarted: "從側邊欄選擇一個筆記開始編輯",
+    createNewFile: "建立新檔案",
+    openFile: "開啟檔案",
     createHintPrefix: "或按",
     createHintSuffix: "建立新筆記",
     shortcutsTitle: "快捷鍵",

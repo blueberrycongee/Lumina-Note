@@ -335,7 +335,7 @@ export function ImageModelsSettings() {
             <span>{tImg?.providerLabel ?? "Provider"}</span>
             <span
               className={[
-                "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-normal",
+                "inline-flex shrink-0 items-center gap-1.5 text-ui-caption font-normal",
                 isConfigured ? "text-success" : "text-muted-foreground/70",
               ].join(" ")}
             >
@@ -391,7 +391,7 @@ export function ImageModelsSettings() {
                 <button
                   type="button"
                   onClick={() => void handleClearKey()}
-                  className="text-[11px] text-destructive/80 hover:text-destructive transition-colors duration-fast ease-out-subtle"
+                  className="text-ui-caption text-destructive/80 hover:text-destructive transition-colors duration-fast ease-out-subtle"
                 >
                   {tImg?.clearKey ?? "Remove API key"}
                 </button>

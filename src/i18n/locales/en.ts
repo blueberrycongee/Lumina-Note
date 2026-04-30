@@ -100,6 +100,8 @@ export default {
   overview: {
     title: "Overview",
     getStarted: "Select a note from the sidebar to start editing",
+    createNewFile: "Create new file",
+    openFile: "Open file",
     createHintPrefix: "Or press",
     createHintSuffix: "to create a new note",
     shortcutsTitle: "Shortcuts",

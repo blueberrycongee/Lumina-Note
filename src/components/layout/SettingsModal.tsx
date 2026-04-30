@@ -109,7 +109,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
                 <button
                   key={tabId}
                   onClick={() => setActiveTab(tabId)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] transition-colors ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-ui-control transition-colors ${
                     isActive
                       ? "bg-primary/10 text-primary font-medium"
                       : "text-foreground/70 hover:bg-muted hover:text-foreground"

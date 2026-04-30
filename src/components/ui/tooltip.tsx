@@ -252,7 +252,7 @@ export function AutoTooltipHost() {
         pointerEvents: "none",
       }}
       className={cn(
-        "px-2 py-1 text-[12px] leading-tight rounded-md border border-border",
+        "px-2 py-1 text-ui-meta leading-tight rounded-md border border-border",
         "bg-foreground text-background shadow-elev-2",
         "max-w-[260px] whitespace-normal",
         "animate-in fade-in-0 zoom-in-95 duration-100"

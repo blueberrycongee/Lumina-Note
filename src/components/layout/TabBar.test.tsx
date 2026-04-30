@@ -40,6 +40,9 @@ vi.mock("@/stores/useLocaleStore", () => ({
       graph: {
         title: "Graph",
       },
+      views: {
+        newTab: "New Tab",
+      },
       tabBar: {
         pin: "Pin",
         unpin: "Unpin",
@@ -150,5 +153,14 @@ describe("TabBar", () => {
     fireEvent.click(screen.getByTestId("mac-tabbar-new-tab"));
 
     expect(createNewFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a labeled new-tab action when there are no tabs", () => {
+    fileStoreState.tabs = [];
+
+    render(<TabBar />);
+
+    expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(screen.getByTestId("mac-tabbar-new-tab"));
+    expect(screen.getByText("New Tab")).toBeInTheDocument();
   });
 });

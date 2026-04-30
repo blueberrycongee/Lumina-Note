@@ -100,6 +100,8 @@ export default {
   overview: {
     title: "概要",
     getStarted: "サイドバーからノートを選択して編集を開始してください",
+    createNewFile: "新規ファイルを作成",
+    openFile: "ファイルを開く",
     createHintPrefix: "または",
     createHintSuffix: "で新しいノートを作成",
     shortcutsTitle: "ショートカット",

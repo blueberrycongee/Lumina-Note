@@ -100,6 +100,8 @@ export default {
   overview: {
     title: "概览",
     getStarted: "从侧边栏选择一个笔记开始编辑",
+    createNewFile: "创建新文件",
+    openFile: "打开文件",
     createHintPrefix: "或按",
     createHintSuffix: "创建新笔记",
     shortcutsTitle: "快捷键",
