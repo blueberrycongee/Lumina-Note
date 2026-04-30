@@ -12,8 +12,19 @@
 // runtime: status, messages, pending tool approval, sessions, and debug state.
 
 import { create } from "zustand";
-import type { Event, Message, Part } from "@opencode-ai/sdk/client";
-import type { MessageAttachment } from "@/services/llm";
+import type {
+  Event,
+  FilePartInput,
+  Message,
+  Part,
+  TextPartInput,
+} from "@opencode-ai/sdk/client";
+import type {
+  ImageContent,
+  MessageAttachment,
+  MessageContent,
+  TextContent,
+} from "@/services/llm";
 import {
   classifyHttpError,
   makeTraceId,
@@ -47,7 +58,7 @@ export type AgentStatus =
 export type AgentMessage = {
   id: string;
   role: "user" | "assistant" | "system" | "tool";
-  content: string;
+  content: MessageContent;
   rawParts: Part[];
   // Kept optional for shape parity with the legacy store — not yet
   // populated from opencode FileParts (deferred).
@@ -72,9 +83,9 @@ type StartTaskContext = {
   active_note_content?: string;
   display_message?: string;
   // Forwarded as parts on the prompt once we wire attachments — opencode
-  // accepts FilePartInput alongside TextPartInput. For now accepted-but-ignored
-  // to keep the MainAIChatShell call-site compiling.
+  // accepts FilePartInput alongside TextPartInput.
   attachments?: unknown[];
+  fileParts?: FilePartInput[];
 };
 
 type OpencodePromptModel = {
@@ -265,6 +276,88 @@ function partsToText(parts: Part[]): string {
   return out.join("");
 }
 
+const IMAGE_PART_MEDIA_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+function isImagePartMediaType(
+  mime: string,
+): mime is ImageContent["source"]["mediaType"] {
+  return IMAGE_PART_MEDIA_TYPES.has(mime);
+}
+
+function parseDataUrlImage(
+  url: string,
+  fallbackMime: string,
+): ImageContent | null {
+  const match = url.match(/^data:([^;,]+);base64,(.*)$/s);
+  if (!match) return null;
+  const mediaType = match[1] || fallbackMime;
+  if (!isImagePartMediaType(mediaType)) return null;
+  return {
+    type: "image",
+    source: {
+      type: "base64",
+      mediaType,
+      data: match[2],
+    },
+  };
+}
+
+function imageContentsFromFileParts(
+  parts: Array<Part | FilePartInput>,
+): ImageContent[] {
+  const images: ImageContent[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    if (part.type !== "file") continue;
+    if (!part.mime.startsWith("image/")) continue;
+    const image = parseDataUrlImage(part.url, part.mime);
+    if (!image) continue;
+    const key = `${image.source.mediaType}:${image.source.data.slice(0, 128)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    images.push(image);
+  }
+  return images;
+}
+
+function messageContentFromParts(
+  parts: Part[],
+  role: AgentMessage["role"],
+): MessageContent {
+  const text = partsToText(parts);
+  if (role !== "user") return text;
+
+  const images = imageContentsFromFileParts(parts);
+  if (images.length === 0) return text;
+
+  const content: Array<TextContent | ImageContent> = [];
+  if (text.trim().length > 0) {
+    content.push({ type: "text", text });
+  }
+  content.push(...images);
+  return content;
+}
+
+function userContentFromTextAndFileParts(
+  text: string,
+  fileParts: FilePartInput[] = [],
+): MessageContent {
+  const images = imageContentsFromFileParts(fileParts);
+  if (images.length === 0) return text;
+
+  const content: Array<TextContent | ImageContent> = [];
+  if (text.trim().length > 0) {
+    content.push({ type: "text", text });
+  }
+  content.push(...images);
+  return content;
+}
+
 function roleOf(info: Message): AgentMessage["role"] {
   return info.role === "assistant" || info.role === "user"
     ? info.role
@@ -272,10 +365,11 @@ function roleOf(info: Message): AgentMessage["role"] {
 }
 
 function makeAgentMessage(info: Message, parts: Part[]): AgentMessage {
+  const role = roleOf(info);
   return {
     id: info.id,
-    role: roleOf(info),
-    content: partsToText(parts),
+    role,
+    content: messageContentFromParts(parts, role),
     rawParts: parts,
   };
 }
@@ -392,7 +486,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const stub: AgentMessage = {
           id: part.messageID,
           role: "assistant",
-          content: partsToText([part]),
+          content: messageContentFromParts([part], "assistant"),
           rawParts: [part],
         };
         return { messages: [...state.messages, stub] };
@@ -402,7 +496,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       const next = state.messages.slice();
       next[idx] = {
         ...existing,
-        content: partsToText(nextParts),
+        content: messageContentFromParts(nextParts, existing.role),
         rawParts: nextParts,
       };
       return { messages: next };
@@ -440,7 +534,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       const nextMessages = state.messages.slice();
       nextMessages[msgIdx] = {
         ...msg,
-        content: partsToText(nextParts),
+        content: messageContentFromParts(nextParts, msg.role),
         rawParts: nextParts,
       };
       return { messages: nextMessages };
@@ -461,7 +555,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       const next = state.messages.slice();
       next[idx] = {
         ...existing,
-        content: partsToText(nextParts),
+        content: messageContentFromParts(nextParts, existing.role),
         rawParts: nextParts,
       };
       return { messages: next };
@@ -1005,6 +1099,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // bootstrap can legitimately take seconds on cold start; the user
         // still needs immediate confirmation that their send was accepted.
         const optimisticId = `optimistic-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const fileParts = ctx?.fileParts ?? [];
+        const displayText = ctx?.display_message || task;
         set((state) => ({
           status: "running",
           error: null,
@@ -1014,7 +1110,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             {
               id: optimisticId,
               role: "user" as const,
-              content: ctx?.display_message || task,
+              content: userContentFromTextAndFileParts(displayText, fileParts),
               rawParts: [],
               attachments: (ctx?.attachments as MessageAttachment[] | undefined) || [],
             },
@@ -1060,10 +1156,15 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
         const client = await getOpencodeClient();
         const promptModel = resolveOpencodePromptModel(selection);
+        const parts: Array<TextPartInput | FilePartInput> = [];
+        if (task.trim().length > 0) {
+          parts.push({ type: "text", text: task });
+        }
+        parts.push(...(ctx?.fileParts ?? []));
         const body = {
           agent: "build",
           ...(promptModel ? { model: promptModel } : {}),
-          parts: [{ type: "text", text: task } as never],
+          parts,
         };
         // promptAsync returns as soon as the HTTP request is accepted;
         // the actual response tokens arrive over the SSE stream.

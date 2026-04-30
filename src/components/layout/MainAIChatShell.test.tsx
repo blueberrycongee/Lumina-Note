@@ -61,6 +61,51 @@ describe("MainAIChatShell", () => {
     expect(useAIStore.getState().pendingInputAppends).toHaveLength(0);
   });
 
+  it("sends pasted screenshots as opencode file parts", async () => {
+    const startTask = vi.fn(async () => undefined);
+    useOpencodeAgent.setState({
+      currentSessionId: "test-session",
+      status: "idle",
+      startTask: startTask as typeof originalStartTask,
+    });
+
+    render(<MainAIChatShell />);
+
+    const input = screen.getByRole("textbox") as HTMLTextAreaElement;
+    const file = new File(["image-bytes"], "clip.png", { type: "image/png" });
+    fireEvent.paste(input, {
+      clipboardData: {
+        items: [
+          {
+            type: "image/png",
+            getAsFile: () => file,
+          },
+        ],
+      },
+    });
+
+    await waitFor(() => expect(screen.getByAltText("clip.png")).toBeTruthy());
+    fireEvent.change(input, { target: { value: "what is this?" } });
+
+    const { t } = useLocaleStore.getState();
+    fireEvent.click(screen.getByTitle(t.ai.send));
+
+    await waitFor(() => expect(startTask).toHaveBeenCalledTimes(1));
+    const [task, context] = startTask.mock.calls[0] as unknown as Parameters<
+      typeof originalStartTask
+    >;
+    expect(task).toBe("what is this?");
+    expect(context?.fileParts).toHaveLength(1);
+    expect(context?.fileParts?.[0]).toMatchObject({
+      type: "file",
+      mime: "image/png",
+      filename: "clip.png",
+    });
+    expect(context?.fileParts?.[0]?.url).toMatch(
+      /^data:image\/png;base64,/,
+    );
+  });
+
   // Thinking-mode + effort selectors are not exposed in chat controls. The "+"
   // menu is: Reference file / Skills / AI settings.
   it("only renders Reference / Skills / Settings rows in the + popover", () => {

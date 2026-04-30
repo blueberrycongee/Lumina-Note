@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
 } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import type { FilePartInput } from "@opencode-ai/sdk/client";
 import { useUIStore } from "@/stores/useUIStore";
 import { useAIStore } from "@/stores/useAIStore";
 import { useImageProvidersStore } from "@/stores/useImageProvidersStore";
@@ -96,6 +97,54 @@ type AgentImageModeConfig = Pick<
   AIConfig,
   "provider" | "model" | "customModelId" | "baseUrl" | "apiKey" | "apiKeyConfigured"
 >;
+
+type ChatImageAttachment = {
+  id: string;
+  filename: string;
+  mime: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+  url: string;
+};
+
+const SUPPORTED_CHAT_IMAGE_MIME_TYPES = new Set<ChatImageAttachment["mime"]>([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+function isSupportedChatImageMime(
+  mime: string,
+): mime is ChatImageAttachment["mime"] {
+  return SUPPORTED_CHAT_IMAGE_MIME_TYPES.has(
+    mime as ChatImageAttachment["mime"],
+  );
+}
+
+function imageFileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+        return;
+      }
+      reject(new Error("Image paste produced an empty result"));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Image paste failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function imageAttachmentToFilePart(
+  image: ChatImageAttachment,
+): FilePartInput {
+  return {
+    type: "file",
+    mime: image.mime,
+    filename: image.filename,
+    url: image.url,
+  };
+}
 
 export type AgentVisionMode = "vision" | "metadata-only" | "unknown";
 
@@ -191,6 +240,7 @@ export function MainAIChatShell() {
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
+  const [attachedImages, setAttachedImages] = useState<ChatImageAttachment[]>([]);
   const [showMention, setShowMention] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -831,7 +881,8 @@ export function MainAIChatShell() {
       if (
         (!effectiveInput &&
           referencedFiles.length === 0 &&
-          textSelections.length === 0) ||
+          textSelections.length === 0 &&
+          attachedImages.length === 0) ||
         isAgentWaitingApproval
       ) {
         return;
@@ -863,7 +914,9 @@ export function MainAIChatShell() {
       autoSendMessageRef.current = null;
       const files = [...referencedFiles];
       const quotedSelections = [...textSelections];
+      const imageFileParts = attachedImages.map(imageAttachmentToFilePart);
       setReferencedFiles([]);
+      setAttachedImages([]);
       clearTextSelections();
       setShowMention(false);
       setMentionQuery("");
@@ -1014,6 +1067,7 @@ export function MainAIChatShell() {
         active_note_content: currentFile ? currentContent : undefined,
         display_message: displayMessage,
         attachments,
+        fileParts: imageFileParts,
       });
       setSelectedSkills([]);
       finalizePerf();
@@ -1026,6 +1080,7 @@ export function MainAIChatShell() {
       currentFile,
       currentContent,
       referencedFiles,
+      attachedImages,
       textSelections,
       clearTextSelections,
       startAgentTask,
@@ -1073,7 +1128,8 @@ export function MainAIChatShell() {
         input.trim().length > 0 ||
         selectedSkills.length > 0 ||
         referencedFiles.length > 0 ||
-        textSelections.length > 0;
+        textSelections.length > 0 ||
+        attachedImages.length > 0;
       if (
         hasPendingInput ||
         agentStatus === "running" ||
@@ -1093,9 +1149,47 @@ export function MainAIChatShell() {
       isAgentWaitingApproval,
       isExportSelectionMode,
       referencedFiles.length,
+      attachedImages.length,
       selectedSkills.length,
       textSelections.length,
     ],
+  );
+
+  const processImageFile = useCallback(async (file: File) => {
+    if (!isSupportedChatImageMime(file.type)) return;
+    const mime = file.type;
+    const url = await imageFileToDataUrl(file);
+    setAttachedImages((prev) => [
+      ...prev,
+      {
+        id: `img_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        filename: file.name || `pasted-image.${mime.split("/")[1] ?? "png"}`,
+        mime,
+        url,
+      },
+    ]);
+    window.requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const items = Array.from(event.clipboardData?.items ?? []);
+      const imageItems = items.filter((item) =>
+        isSupportedChatImageMime(item.type),
+      );
+      if (imageItems.length === 0) return;
+
+      event.preventDefault();
+      for (const item of imageItems) {
+        const file = item.getAsFile();
+        if (file) {
+          void processImageFile(file).catch((err) => {
+            console.warn("[chat] failed to attach pasted image", err);
+          });
+        }
+      }
+    },
+    [processImageFile],
   );
 
   const autoSendRef = useRef(false);
@@ -1619,7 +1713,8 @@ export function MainAIChatShell() {
               {(imageMode ||
                 selectedSkills.length > 0 ||
                 referencedFiles.length > 0 ||
-                textSelections.length > 0) && (
+                textSelections.length > 0 ||
+                attachedImages.length > 0) && (
                 <div className="max-w-3xl mx-auto w-full mb-2 flex flex-wrap gap-1 px-2">
                   {imageMode && (
                     <div
@@ -1693,6 +1788,27 @@ export function MainAIChatShell() {
                       <button
                         onClick={() => removeTextSelection(selection.id)}
                         className="hover:bg-accent/80 rounded-full p-0.5 shrink-0"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
+                  {attachedImages.map((image) => (
+                    <div key={image.id} className="group relative">
+                      <img
+                        src={image.url}
+                        alt={image.filename}
+                        className="h-16 w-16 rounded-md border border-border/60 object-cover"
+                      />
+                      <button
+                        onClick={() =>
+                          setAttachedImages((images) =>
+                            images.filter((item) => item.id !== image.id),
+                          )
+                        }
+                        className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                        aria-label={t.common.delete}
+                        title={t.common.delete}
                       >
                         <X size={10} />
                       </button>
@@ -1912,6 +2028,7 @@ export function MainAIChatShell() {
                           )
                         }
                         onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
                         placeholder={t.ai.agentInputPlaceholder}
                         style={{ gridArea: "textarea" }}
                         className="w-full min-w-0 resize-none outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] bg-transparent text-sm leading-relaxed py-1 overflow-y-auto scrollbar-hide"
