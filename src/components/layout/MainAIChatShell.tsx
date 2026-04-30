@@ -1804,7 +1804,11 @@ export function MainAIChatShell() {
                       <Row
                         density="compact"
                         icon={<Paperclip size={14} />}
-                        title="Reference file"
+                        title={
+                          <span className="text-ui-caption">
+                            Reference file
+                          </span>
+                        }
                         trailing={<Kbd>@</Kbd>}
                         onSelect={() => {
                           textareaRef.current?.focus();
@@ -1815,7 +1819,7 @@ export function MainAIChatShell() {
                       <Row
                         density="compact"
                         icon={<Sparkles size={14} />}
-                        title="Skills"
+                        title={<span className="text-ui-caption">Skills</span>}
                         trailing={<Kbd>/</Kbd>}
                         onSelect={() => {
                           setSkillManagerOpen(true);
@@ -1825,7 +1829,11 @@ export function MainAIChatShell() {
                       <Row
                         density="compact"
                         icon={<Settings size={14} />}
-                        title={t.ai.aiChatSettings}
+                        title={
+                          <span className="text-ui-caption">
+                            {t.ai.aiChatSettings}
+                          </span>
+                        }
                         onSelect={() => {
                           setShowSettings(true);
                           setShowPlusMenu(false);
