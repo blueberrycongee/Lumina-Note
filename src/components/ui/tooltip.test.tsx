@@ -99,6 +99,24 @@ describe("AutoTooltipHost", () => {
     expect(screen.queryByTestId("auto-tooltip")).not.toBeInTheDocument();
   });
 
+  it("does not treat screen-reader-only text as a visible label", async () => {
+    renderWithButton(
+      <button title="Command Palette">
+        <span aria-hidden="true">⌘</span>
+        <span className="sr-only">3 New</span>
+      </button>,
+    );
+
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(screen.getByTestId("auto-tooltip")).toHaveTextContent(
+      "Command Palette",
+    );
+  });
+
   it("suppresses the tooltip on labeled buttons under keyboard focus too", async () => {
     renderWithButton(<button aria-label="Save file">Save</button>);
     fireEvent.focusIn(screen.getByRole("button"));

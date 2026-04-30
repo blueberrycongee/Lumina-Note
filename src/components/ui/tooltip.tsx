@@ -33,6 +33,15 @@ function getTooltipText(el: HTMLElement): string | null {
   return null;
 }
 
+function hasVisibleTextLabel(el: HTMLElement): boolean {
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone
+    .querySelectorAll(".sr-only, [aria-hidden='true'], [hidden]")
+    .forEach((node) => node.remove());
+  const text = clone.textContent?.trim() ?? "";
+  return /\p{L}/u.test(text);
+}
+
 /**
  * Decide whether to actually surface a tooltip on this trigger. We suppress
  * for buttons that already render a word-character label inline — repeating
@@ -52,12 +61,10 @@ function getTooltipText(el: HTMLElement): string | null {
 function shouldShowTooltip(el: HTMLElement): boolean {
   if (el.dataset.tooltipForce === "true") return true;
   if (el.dataset.tooltipSuppress === "true") return false;
-  const text = el.textContent?.trim() ?? "";
-  if (!text) return true;
   // \p{L} matches any unicode letter — Latin, CJK, Cyrillic, Greek, etc.
   // Symbols like ▶ × + don't match, so iconic glyph buttons keep their
   // tooltips while real text labels suppress theirs.
-  return !/\p{L}/u.test(text);
+  return !hasVisibleTextLabel(el);
 }
 
 function computePosition(el: HTMLElement, text: string): TooltipState {
