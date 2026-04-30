@@ -22,7 +22,6 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Select } from "@/components/ui";
-import { showInExplorer } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { useLocaleStore, getCurrentTranslations } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
@@ -411,19 +410,6 @@ export function ImageManagerView() {
     setSuccessMessage(t.imageManager.focusedInTree);
   }, []);
 
-  const handleReveal = useCallback(async (path: string) => {
-    try {
-      await showInExplorer(path);
-    } catch (error) {
-      reportOperationError({
-        source: "ImageManagerView.handleReveal",
-        action: "Reveal image in file manager",
-        error,
-        level: "warning",
-      });
-    }
-  }, []);
-
   const openRenameDialog = useCallback((path: string) => {
     const asset = images.find((image) => image.path === path);
     if (!asset) return;
@@ -794,9 +780,7 @@ export function ImageManagerView() {
                   dimensions={dimensions[primaryAsset.path]}
                   onDimension={(width, height) => handleDimension(primaryAsset.path, width, height)}
                   onOpenNote={handleOpenNote}
-                  onCopyPath={handleCopyPath}
                   onLocate={handleLocateInTree}
-                  onReveal={handleReveal}
                   onRename={openRenameDialog}
                   onMove={(path) => openMoveDialog([path])}
                 />
@@ -1076,9 +1060,7 @@ function ImageDetailPanel({
   dimensions,
   onDimension,
   onOpenNote,
-  onCopyPath,
   onLocate,
-  onReveal,
   onRename,
   onMove,
 }: {
@@ -1086,9 +1068,7 @@ function ImageDetailPanel({
   dimensions?: { width: number; height: number };
   onDimension: (width: number, height: number) => void;
   onOpenNote: (path: string) => void;
-  onCopyPath: (path: string) => void | Promise<void>;
   onLocate: (path: string) => void;
-  onReveal: (path: string) => void;
   onRename: (path: string) => void;
   onMove: (path: string) => void;
 }) {
@@ -1123,21 +1103,18 @@ function ImageDetailPanel({
           </div>
 
           <div className="border-t border-border/50 pt-3">
-            <h3 className="text-sm font-semibold">{t.imageManager.actions}</h3>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              <button onClick={() => onCopyPath(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
-                {t.imageManager.copyPath}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">{t.imageManager.actions}</h3>
+              <button onClick={() => onLocate(image.path)} className="ui-icon-btn h-7 w-7" title={t.imageManager.locateInTree}>
+                <FolderTree className="h-3.5 w-3.5" />
+                <span className="sr-only">{t.imageManager.locateInTree}</span>
               </button>
-              <button onClick={() => onLocate(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
-                {t.imageManager.locateInTree}
-              </button>
-              <button onClick={() => onReveal(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
-                {t.imageManager.revealInFinder}
-              </button>
-              <button onClick={() => onRename(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button onClick={() => onRename(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-sm hover:bg-accent">
                 {t.imageManager.renameSafely}
               </button>
-              <button onClick={() => onMove(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-xs hover:bg-accent">
+              <button onClick={() => onMove(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-sm hover:bg-accent">
                 {t.imageManager.moveSafely}
               </button>
             </div>
