@@ -757,13 +757,13 @@ export function AISettingsContent() {
         {/* Explicit save controls for the main-model fields. Drafts above
             commit only when the user clicks Save (matches the image
             settings pattern). Reset reverts drafts to the persisted state. */}
-        <div className="flex items-center justify-end gap-3 border-t border-border/60 pt-5">
+        <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-4">
           <button
             type="button"
             onClick={handleReset}
             disabled={!isDirty || saving}
             className={[
-              "rounded-ui-md border border-border bg-background px-5 py-2 text-sm",
+              "rounded-ui-md border border-border bg-background px-3 py-1.5 text-xs",
               "text-muted-foreground transition-colors duration-fast ease-out-subtle",
               "hover:bg-accent hover:text-foreground",
               "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -777,7 +777,7 @@ export function AISettingsContent() {
             onClick={() => void handleSave()}
             disabled={!isDirty || saving}
             className={[
-              "inline-flex items-center gap-1.5 rounded-ui-md border border-primary bg-primary px-6 py-2 text-sm",
+              "inline-flex items-center gap-1.5 rounded-ui-md border border-primary bg-primary px-3 py-1.5 text-xs",
               "text-primary-foreground transition-colors duration-fast ease-out-subtle",
               "hover:bg-primary/90",
               "disabled:opacity-50 disabled:cursor-not-allowed",
