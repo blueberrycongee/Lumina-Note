@@ -106,11 +106,6 @@ function EmptyNewTabPage({
 
   return (
     <div className="flex flex-1 flex-col bg-popover">
-      <div className="relative flex h-14 shrink-0 items-center px-8">
-        <div className="pointer-events-none absolute inset-x-0 text-center text-ui-control font-medium text-foreground">
-          {t.views.newTab}
-        </div>
-      </div>
       <div className="flex flex-1 items-center justify-center pb-28">
         <div className="flex flex-col items-center gap-3.5 text-ui-body font-medium">
           <button
