@@ -19,7 +19,10 @@ code,
 textarea,
 input,
 [contenteditable="true"],
-.select-text {
+.select-text,
+.react-pdf__Page,
+.react-pdf__Page__textContent,
+.react-pdf__Page__textContent :is(span, br) {
   user-select: text;
   -webkit-user-select: text;
 }

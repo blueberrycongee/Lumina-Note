@@ -42,3 +42,11 @@ describe("Electron drag regions", () => {
     expect(noDragRegionBlock).toContain("-webkit-app-region: no-drag;");
   });
 });
+
+describe("Selectable content regions", () => {
+  it("allows PDF text layer content to override the app-wide no-selection rule", () => {
+    expect(globalsCss).toContain(".react-pdf__Page");
+    expect(globalsCss).toContain(".react-pdf__Page__textContent");
+    expect(globalsCss).toContain(".react-pdf__Page__textContent :is(span, br)");
+  });
+});
