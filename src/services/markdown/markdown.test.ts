@@ -133,6 +133,24 @@ describe('parseMarkdown', () => {
       expect(result).toContain('callout-fold');
       expect(result).not.toContain('callout-folded');
     });
+
+    it('should use default title for nested callouts without duplicating body text', () => {
+      const result = parseMarkdown(
+        '> [!FAILURE]\n> 嵌套 callout：\n>\n> > [!QUESTION]\n> > 内层 question callout。'
+      );
+      const host = document.createElement('div');
+      host.innerHTML = result;
+      const titles = Array.from(
+        host.querySelectorAll('.callout-title-text')
+      ).map((el) => el.textContent);
+      const text = host.textContent || '';
+
+      expect(titles).toContain('Failure');
+      expect(titles).toContain('Question');
+      expect(titles).not.toContain('嵌套 callout：');
+      expect(titles).not.toContain('内层 question callout。');
+      expect(text.match(/内层 question callout。/g)).toHaveLength(1);
+    });
   });
 
   describe('math (KaTeX)', () => {

@@ -100,6 +100,25 @@ describe("CodeMirror live markdown rendering polish", () => {
     expect(editorText(container)).toContain("> Raw callout body");
   });
 
+  it.each(["live", "reading"] as const)(
+    "uses default nested callout titles in %s mode without duplicating body text",
+    (mode) => {
+      const content =
+        "Intro\n> [!FAILURE]\n> 嵌套 callout：\n>\n> > [!QUESTION]\n> > 内层 question callout。";
+      const { container } = setupEditor(content, mode);
+      const titles = Array.from(
+        container.querySelectorAll(".callout-title-text"),
+      ).map((el) => el.textContent);
+      const text = container.textContent || "";
+
+      expect(titles).toContain("Failure");
+      expect(titles).toContain("Question");
+      expect(titles).not.toContain("嵌套 callout：");
+      expect(titles).not.toContain("内层 question callout。");
+      expect(text.match(/内层 question callout。/g)).toHaveLength(1);
+    },
+  );
+
   it("renders blockquote lines while revealing quote markers on the active line", () => {
     const content = "Intro\n> Quoted text";
     const { container, view } = setupEditor(content, "live");

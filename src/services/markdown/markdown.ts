@@ -7,21 +7,43 @@ import { resolveCalloutType } from "@/editor/calloutConfig";
 // Custom renderer for Obsidian-style callouts
 const renderer = new Renderer();
 
+function parseCalloutQuote(text: string): {
+  rawType: string;
+  modifier: "+" | "-" | undefined;
+  titleText: string;
+  body: string;
+} | null {
+  const normalized = text.replace(/\r\n?/g, "\n");
+  const lineBreakIndex = normalized.indexOf("\n");
+  const firstLine =
+    lineBreakIndex === -1 ? normalized : normalized.slice(0, lineBreakIndex);
+  const body =
+    lineBreakIndex === -1 ? "" : normalized.slice(lineBreakIndex + 1);
+  const match = firstLine.match(
+    /^[^\S\r\n]*\[!([^\]]+)\][^\S\r\n]*([+-])?[^\S\r\n]*(.*)$/,
+  );
+  if (!match) return null;
+  return {
+    rawType: match[1].trim(),
+    modifier: match[2] as "+" | "-" | undefined,
+    titleText: (match[3] || "").trim(),
+    body,
+  };
+}
+
 renderer.blockquote = function (quote: string | { text: string }) {
   try {
     const text = typeof quote === "string" ? quote : (quote?.text || "");
-    const calloutMatch = text.match(/^\s*\[!([^\]]+)\]\s*([+-])?\s*(.*)$/m);
+    const calloutMatch = parseCalloutQuote(text);
 
     if (calloutMatch) {
-      const rawType = calloutMatch[1].trim();
-      const modifier = calloutMatch[2] as '+' | '-' | undefined;
-      const titleText = (calloutMatch[3] || '').trim();
+      const { rawType, modifier, titleText, body } = calloutMatch;
       const resolved = resolveCalloutType(rawType);
       const title = titleText || resolved.label;
       const foldable = modifier !== undefined;
       const folded = modifier === '-';
-
-      const content = text.replace(/^\s*\[![^\]]+\].*$/m, "").trim();
+      const renderedBody = body.trim() ? markedInstance.parse(body.trim()) : "";
+      const content = typeof renderedBody === "string" ? renderedBody : "";
 
       const foldArrow = foldable ? `<span class="callout-fold">\u25BC</span>` : '';
       const foldedClass = folded ? ' callout-folded' : '';
