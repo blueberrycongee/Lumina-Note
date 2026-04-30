@@ -35,6 +35,20 @@ describe("App sidebar motion", () => {
     );
   });
 
+  it("keeps sidebar toggles reachable when the main pane is collapsed", () => {
+    expect(appSource).toContain("function CollapsedMainSidebarControls");
+    expect(appSource).toContain(
+      'data-testid="collapsed-main-sidebar-controls"',
+    );
+    expect(appSource).toContain(
+      'data-testid="collapsed-main-toggle-left-sidebar"',
+    );
+    expect(appSource).toContain(
+      'data-testid="collapsed-main-toggle-right-sidebar"',
+    );
+    expect(appSource).toContain("{isMainCollapsed ? (");
+  });
+
   it("defines directional sidebar motion tokens and nudge states", () => {
     expect(globalsSource).toContain("--ui-motion-sidebar: 220ms;");
     expect(globalsSource).toContain(".app-sidebar-shell[data-open=\"false\"]");

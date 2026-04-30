@@ -76,6 +76,12 @@ import {
 } from "@/stores/useUpdateStore";
 import { isTauriAvailable } from "@/lib/host";
 import { hydrateProxyConfigOnStartup } from "@/lib/proxyStartup";
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -88,6 +94,57 @@ const MAIN_WORKSPACE_WINDOW_WIDTH = 1280;
 const MAIN_WORKSPACE_WINDOW_HEIGHT = 840;
 const MAIN_CONTENT_PANE_CLASS =
   "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover";
+
+interface CollapsedMainSidebarControlsProps {
+  leftSidebarOpen: boolean;
+  rightSidebarOpen: boolean;
+  leftSidebarLabel: string;
+  rightSidebarLabel: string;
+  onToggleLeftSidebar: () => void;
+  onToggleRightSidebar: () => void;
+}
+
+function CollapsedMainSidebarControls({
+  leftSidebarOpen,
+  rightSidebarOpen,
+  leftSidebarLabel,
+  rightSidebarLabel,
+  onToggleLeftSidebar,
+  onToggleRightSidebar,
+}: CollapsedMainSidebarControlsProps) {
+  const LeftIcon = leftSidebarOpen ? PanelLeftClose : PanelLeftOpen;
+  const RightIcon = rightSidebarOpen ? PanelRightClose : PanelRightOpen;
+
+  return (
+    <div
+      className="flex h-full w-10 flex-shrink-0 flex-col items-center gap-1 border-x border-border/60 bg-popover pt-2"
+      data-testid="collapsed-main-sidebar-controls"
+    >
+      <button
+        type="button"
+        className="flex h-7 w-7 items-center justify-center rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        onClick={onToggleLeftSidebar}
+        aria-label={leftSidebarLabel}
+        aria-pressed={leftSidebarOpen}
+        title={leftSidebarLabel}
+        data-testid="collapsed-main-toggle-left-sidebar"
+      >
+        <LeftIcon aria-hidden="true" size={16} />
+      </button>
+      <button
+        type="button"
+        className="flex h-7 w-7 items-center justify-center rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        onClick={onToggleRightSidebar}
+        aria-label={rightSidebarLabel}
+        aria-pressed={rightSidebarOpen}
+        title={rightSidebarLabel}
+        data-testid="collapsed-main-toggle-right-sidebar"
+      >
+        <RightIcon aria-hidden="true" size={16} />
+      </button>
+    </div>
+  );
+}
 
 const getShortcutModifierLabel = () =>
   typeof navigator !== "undefined" && /mac/i.test(navigator.platform)
@@ -527,6 +584,12 @@ function App() {
     })),
   );
   const showMacTopChrome = useMacTopChromeEnabled();
+  const leftSidebarToggleLabel = leftSidebarOpen
+    ? t.sidebar.collapseLeftSidebar
+    : t.sidebar.expandLeftSidebar;
+  const rightSidebarToggleLabel = rightSidebarOpen
+    ? t.sidebar.collapseRightPanel
+    : t.sidebar.expandRightPanel;
   const showMacLeftPaneTopBar = showMacTopChrome && leftSidebarOpen;
   const showMacRibbonTrafficLightSafeArea =
     showMacTopChrome && !showMacLeftPaneTopBar;
@@ -1169,6 +1232,17 @@ function App() {
             onDoubleClick={toggleRightSidebar}
           />
         </div>
+
+        {isMainCollapsed ? (
+          <CollapsedMainSidebarControls
+            leftSidebarOpen={leftSidebarOpen}
+            rightSidebarOpen={rightSidebarOpen}
+            leftSidebarLabel={leftSidebarToggleLabel}
+            rightSidebarLabel={rightSidebarToggleLabel}
+            onToggleLeftSidebar={toggleLeftSidebar}
+            onToggleRightSidebar={toggleRightSidebar}
+          />
+        ) : null}
 
         {/* Right Sidebar */}
         <div
