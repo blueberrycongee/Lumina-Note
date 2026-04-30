@@ -110,7 +110,7 @@ function ModelRow({ model, provider, selected, onSelect }: ModelRowProps) {
       onClick={onSelect}
       className={cn(
         "group flex h-7 w-full items-center gap-2 rounded-ui-md px-2 text-left",
-        "text-ui-control text-foreground transition-colors duration-fast ease-out-subtle",
+        "text-ui-caption text-foreground transition-colors duration-fast ease-out-subtle",
         "hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
         selected && "bg-accent hover:bg-accent",
       )}
@@ -193,7 +193,11 @@ export function ModelEffortPicker() {
             {providerModels.length === 0 ? (
               <Row
                 density="compact"
-                title={t.aiSettings.modelPicker.configureInSettings}
+                title={
+                  <span className="text-ui-caption">
+                    {t.aiSettings.modelPicker.configureInSettings}
+                  </span>
+                }
                 disabled
               />
             ) : (
