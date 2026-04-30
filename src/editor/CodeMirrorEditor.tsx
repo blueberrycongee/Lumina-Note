@@ -1013,6 +1013,49 @@ function queuePrerender(formula: string, displayMode: boolean) {
   }
 }
 
+type AsyncWidgetSnapshot = {
+  height: number;
+  top: number;
+  scrollerTop: number;
+};
+
+function captureAsyncWidgetSnapshot(
+  view: EditorView,
+  element: HTMLElement,
+): AsyncWidgetSnapshot | null {
+  const scroller = view.scrollDOM;
+  if (!scroller || !element.isConnected) return null;
+  const rect = element.getBoundingClientRect();
+  const scrollerRect = scroller.getBoundingClientRect();
+  return {
+    height: rect.height,
+    top: rect.top,
+    scrollerTop: scrollerRect.top,
+  };
+}
+
+function restoreScrollAfterAsyncWidgetResize(
+  view: EditorView,
+  element: HTMLElement,
+  snapshot: AsyncWidgetSnapshot | null,
+) {
+  if (!snapshot) return;
+  requestAnimationFrame(() => {
+    if (!element.isConnected) return;
+    const nextHeight = element.getBoundingClientRect().height;
+    const delta = nextHeight - snapshot.height;
+    if (Math.abs(delta) < 1) return;
+    if (snapshot.top < snapshot.scrollerTop) {
+      view.scrollDOM.scrollTop += delta;
+    }
+  });
+}
+
+function estimateMermaidHeight(code: string) {
+  const lineCount = Math.max(1, code.split("\n").length);
+  return Math.min(420, Math.max(180, lineCount * 26 + 96));
+}
+
 class MathWidget extends WidgetType {
   // isPreviewPanel: true = 编辑模式下方的预览面板; false = 预览模式下的替换块
   constructor(
@@ -1029,6 +1072,10 @@ class MathWidget extends WidgetType {
       other.displayMode === this.displayMode &&
       other.isPreviewPanel === this.isPreviewPanel
     );
+  }
+
+  get estimatedHeight() {
+    return this.displayMode || this.isPreviewPanel ? 92 : -1;
   }
 
   toDOM() {
@@ -1190,10 +1237,14 @@ class MermaidWidget extends WidgetType {
   eq(other: MermaidWidget) {
     return other.code === this.code && other.blockFrom === this.blockFrom;
   }
+  get estimatedHeight() {
+    return estimateMermaidHeight(this.code);
+  }
   toDOM(view: EditorView) {
     const container = document.createElement("div");
     container.className = "mermaid-container my-2";
     container.dataset.widgetType = "codeblock";
+    container.style.minHeight = `${this.estimatedHeight}px`;
 
     const editBtn = document.createElement("button");
     editBtn.type = "button";
@@ -1228,6 +1279,7 @@ class MermaidWidget extends WidgetType {
 
     // 异步渲染 mermaid
     setTimeout(async () => {
+      const snapshot = captureAsyncWidgetSnapshot(view, container);
       try {
         const isDark = document.documentElement.classList.contains("dark");
         mermaid.initialize({
@@ -1236,10 +1288,12 @@ class MermaidWidget extends WidgetType {
           securityLevel: "loose",
         });
         await mermaid.run({ nodes: [pre] });
+        restoreScrollAfterAsyncWidgetResize(view, container, snapshot);
       } catch (err) {
         console.error("[Mermaid] Render failed:", err);
         pre.textContent = `Mermaid Error: ${this.code}`;
         pre.style.color = "red";
+        restoreScrollAfterAsyncWidgetResize(view, container, snapshot);
       }
     }, 0);
 
@@ -1483,10 +1537,13 @@ class ImageWidget extends WidgetType {
       other.notePath === this.notePath
     );
   }
-  toDOM() {
+  get estimatedHeight() {
+    return 220;
+  }
+  toDOM(view: EditorView) {
     const container = document.createElement("div");
     container.className = "cm-image-widget";
-    container.style.cssText = "display:block;margin:8px 0;";
+    container.style.cssText = `display:block;margin:8px 0;min-height:${this.estimatedHeight}px;`;
     container.dataset.widgetType = "image";
     container.dataset.imageSrc = this.src;
 
@@ -1505,11 +1562,27 @@ class ImageWidget extends WidgetType {
     img.className = "markdown-image";
     img.loading = "lazy";
     img.style.cssText = "max-width:100%;border-radius:6px;cursor:pointer;";
+    let pendingImageResizeSnapshot: AsyncWidgetSnapshot | null = null;
+    img.addEventListener("load", () => {
+      restoreScrollAfterAsyncWidgetResize(
+        view,
+        container,
+        pendingImageResizeSnapshot,
+      );
+      pendingImageResizeSnapshot = null;
+    });
 
     // 处理图片路径
     if (this.src.startsWith("http") || this.src.startsWith("data:")) {
       // 网络图片或 data URL
-      img.src = this.src;
+      requestAnimationFrame(() => {
+        if (!container.isConnected) return;
+        pendingImageResizeSnapshot = captureAsyncWidgetSnapshot(
+          view,
+          container,
+        );
+        img.src = this.src;
+      });
     } else if (this.vaultPath) {
       const fullPath = resolveEditorImagePath({
         src: this.src,
@@ -1527,6 +1600,10 @@ class ImageWidget extends WidgetType {
 
       readBinaryFileBase64(fullPath)
         .then((base64) => {
+          pendingImageResizeSnapshot = captureAsyncWidgetSnapshot(
+            view,
+            container,
+          );
           img.src = `data:${getImageMimeType(fullPath)};base64,${base64}`;
           img.style.opacity = "1";
           img.alt = this.alt;
