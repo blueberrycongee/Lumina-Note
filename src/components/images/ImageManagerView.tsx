@@ -908,11 +908,11 @@ function EmptyState({
   );
 }
 
-function StatusBadges({ image }: { image: ImageAssetRecord }) {
+function StatusBadges({ image, className }: { image: ImageAssetRecord; className?: string }) {
   const { t } = useLocaleStore();
   const statuses = summarizeStatuses(image);
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className={cn("flex flex-wrap gap-1.5", className)}>
       {statuses.map((status) => (
         <span
           key={status}
@@ -1096,7 +1096,7 @@ function ImageListRow({
       onClick={(event) => onSelect(image.path, event)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "image-manager-list-grid px-4 py-2 text-left text-sm transition-colors hover:bg-accent/30",
+        "image-manager-list-grid image-manager-list-row px-4 text-left text-sm transition-colors hover:bg-accent/30",
         selected && "bg-primary/5",
       )}
     >
@@ -1109,9 +1109,9 @@ function ImageListRow({
       <div className="min-w-0">
         <div className="truncate text-sm font-medium">{image.name}</div>
         <div className="mt-1">
-          <StatusBadges image={image} />
+          <StatusBadges image={image} className="h-5 flex-nowrap overflow-hidden" />
         </div>
-        <div className="image-manager-list-compact-meta mt-1.5 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <div className="image-manager-list-compact-meta mt-1.5 items-center gap-x-2 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
           <span>{getCurrentTranslations().imageManager.refs.replace("{count}", String(image.referenceCount))}</span>
           <span>{formatBytes(image.sizeBytes)}</span>
           <span>{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</span>
