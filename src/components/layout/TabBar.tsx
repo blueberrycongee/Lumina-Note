@@ -222,7 +222,7 @@ function TabItem({
             onMouseDown={(e) => e.stopPropagation()}
             aria-label={t.tabBar.close}
             className={cn(
-              "shrink-0 p-0.5 rounded-ui-sm",
+              "mr-1 shrink-0 p-0.5 rounded-ui-sm",
               "transition-[background-color,color,opacity,transform] duration-fast ease-out-subtle",
               "hover:bg-destructive/15 hover:text-destructive active:scale-90",
               "opacity-0 group-hover:opacity-100",
