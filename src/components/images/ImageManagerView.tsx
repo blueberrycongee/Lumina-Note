@@ -508,6 +508,7 @@ export function ImageManagerView() {
   const statsSummary = t.imageManager.statsSummary
     .replace("{total}", String(summary.totalImages))
     .replace("{orphans}", String(summary.orphanImages));
+  const showScanningState = loading && images.length === 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
@@ -676,7 +677,7 @@ export function ImageManagerView() {
                   title={t.imageManager.emptyVaultTitle}
                   description={t.imageManager.emptyVaultDescription}
                 />
-              ) : loading ? (
+              ) : showScanningState ? (
                 <EmptyState
                   icon={Loader2}
                   title={t.imageManager.scanningTitle}

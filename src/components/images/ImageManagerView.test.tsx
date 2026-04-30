@@ -13,6 +13,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
 const openFile = vi.hoisted(() => (() => undefined));
 const refreshFileTree = vi.hoisted(() => (async () => undefined));
 const reloadFileIfOpen = vi.hoisted(() => (async () => undefined));
+const readFile = vi.hoisted(() => vi.fn(async () => "![Hero](../assets/hero.png)"));
 const fileStoreState = vi.hoisted(() => ({
   vaultPath: "/vault",
   fileTree: [
@@ -67,7 +68,7 @@ vi.mock("@/stores/useFileStore", () => ({
 }));
 
 vi.mock("@/lib/host", () => ({
-  readFile: vi.fn(async () => "![Hero](../assets/hero.png)"),
+  readFile,
   readBinaryFileBase64: vi.fn(async () => "AAAA"),
   showInExplorer: async () => undefined,
 }));
@@ -94,6 +95,8 @@ describe("ImageManagerView", () => {
     fileStoreState.currentFile = null;
     fileStoreState.currentContent = "";
     fileStoreState.tabs = [];
+    readFile.mockReset();
+    readFile.mockResolvedValue("![Hero](../assets/hero.png)");
     localStorage.removeItem("lumina-image-manager");
     useImageManagerStore.setState({
       viewMode: "grid",
@@ -123,6 +126,35 @@ describe("ImageManagerView", () => {
 
     await waitFor(() => {
       expect(screen.getByText(en.imageManager.noMatchTitle)).toBeInTheDocument();
+    });
+  });
+
+  it("keeps the existing image list visible while refreshing", async () => {
+    render(<ImageManagerView />);
+
+    expect((await screen.findAllByText("hero.png")).length).toBeGreaterThan(0);
+
+    let resolveRefreshRead: (value: string) => void = () => undefined;
+    readFile.mockImplementationOnce(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveRefreshRead = resolve;
+        }),
+    );
+
+    fireEvent.click(screen.getByTitle(en.imageManager.refreshLibrary));
+
+    await waitFor(() => {
+      expect(readFile).toHaveBeenCalledTimes(2);
+    });
+
+    expect(screen.queryByText(en.imageManager.scanningTitle)).not.toBeInTheDocument();
+    expect(screen.getAllByText("hero.png").length).toBeGreaterThan(0);
+
+    resolveRefreshRead("![Hero](../assets/hero.png)");
+
+    await waitFor(() => {
+      expect(readFile).toHaveBeenCalledTimes(2);
     });
   });
 });
