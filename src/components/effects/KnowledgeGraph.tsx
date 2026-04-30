@@ -16,6 +16,9 @@ import {
 import { cn } from "@/lib/utils";
 import { getWikiPreview } from "@/lib/wikiLinks";
 
+const KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS =
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+
 // Types
 interface GraphNode {
   id: string;
@@ -1067,7 +1070,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
             <h3 className="text-sm font-semibold">{t.knowledgeGraph.settings}</h3>
             <button
               onClick={() => setShowSettings(false)}
-              className="p-1 hover:bg-muted rounded"
+              className={KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS}
             >
               <ChevronUp size={14} />
             </button>
@@ -1172,13 +1175,13 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       {/* Main Graph Area */}
       <div className="flex-1 flex flex-col">
         {/* Controls */}
-        <div className="p-2 border-b border-border/60 flex items-center justify-between bg-popover">
+        <div className="py-2 px-1.5 border-b border-border/60 flex items-center justify-between bg-popover">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}
               className={cn(
-                "p-1.5 rounded transition-colors",
-                showSettings ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground"
+                KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS,
+                showSettings && "bg-primary/10 text-primary hover:text-primary"
               )}
               title={t.knowledgeGraph.settings}
             >
@@ -1191,22 +1194,22 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           <div className="flex items-center gap-1">
             <button
               onClick={() => setZoom((z) => Math.min(z * 1.2, 3))}
-              className="p-1 hover:bg-muted rounded text-muted-foreground"
+              className={KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS}
             >
               <ZoomIn size={14} />
             </button>
-            <span className="text-xs w-10 text-center text-muted-foreground">
+            <span className="flex h-7 w-10 items-center justify-center text-xs text-muted-foreground">
               {Math.round(zoom * 100)}%
             </span>
             <button
               onClick={() => setZoom((z) => Math.max(z * 0.8, 0.3))}
-              className="p-1 hover:bg-muted rounded text-muted-foreground"
+              className={KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS}
             >
               <ZoomOut size={14} />
             </button>
             <button
               onClick={buildGraph}
-              className="p-1 hover:bg-muted rounded text-muted-foreground ml-1"
+              className={cn(KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS, "ml-2")}
               title={t.sidebar.refresh}
             >
               <RefreshCw size={14} />
