@@ -3,6 +3,13 @@ import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 
+vi.mock("mermaid", () => ({
+  default: {
+    initialize: vi.fn(),
+    run: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 function setupEditor(
   content: string,
   viewMode: "live" | "reading" | "source" = "live",
@@ -211,6 +218,55 @@ describe("CodeMirror live markdown rendering polish", () => {
         ?.value,
     ).toBe(nextContent);
     expect(view.state.doc.toString()).toBe(nextContent);
+  });
+
+  it("keeps rendered mermaid DOM stable when editing above the block", () => {
+    const content = "Intro\n\n```mermaid\ngraph TD\nA-->B\n```\n\nOutro";
+    const { container, view } = setupEditor(content, "live");
+    const mermaid = container.querySelector<HTMLElement>(".mermaid-container");
+    const insert = "Lead\n";
+
+    expect(mermaid).not.toBeNull();
+
+    act(() => {
+      view.dispatch({ changes: { from: 0, insert } });
+    });
+
+    const updatedMermaid =
+      container.querySelector<HTMLElement>(".mermaid-container");
+    expect(updatedMermaid).toBe(mermaid);
+
+    fireEvent.click(updatedMermaid!.querySelector(".mermaid-edit-source-btn")!);
+
+    expect(container.querySelector(".mermaid-container")).toBeNull();
+    expect(editorText(container)).toContain("```mermaid");
+    expect(view.state.selection.main.from).toBe(
+      content.indexOf("```mermaid") + insert.length + "```mermaid\n".length,
+    );
+  });
+
+  it("replaces rendered mermaid DOM when the diagram source changes", () => {
+    const content = "Intro\n\n```mermaid\ngraph TD\nA-->B\n```\n\nOutro";
+    const { container, view } = setupEditor(content, "live");
+    const mermaid = container.querySelector<HTMLElement>(".mermaid-container");
+    const arrowFrom = content.indexOf("A-->B");
+
+    expect(mermaid).not.toBeNull();
+
+    act(() => {
+      view.dispatch({
+        changes: {
+          from: arrowFrom,
+          to: arrowFrom + "A-->B".length,
+          insert: "A-->C",
+        },
+      });
+    });
+
+    const updatedMermaid =
+      container.querySelector<HTMLElement>(".mermaid-container");
+    expect(updatedMermaid).not.toBe(mermaid);
+    expect(updatedMermaid?.textContent).toContain("A-->C");
   });
 
   it("renders blockquote lines while revealing quote markers on the active line", () => {

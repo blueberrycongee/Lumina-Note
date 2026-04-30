@@ -1237,6 +1237,29 @@ class LiveCodeBlockCopyButtonWidget extends WidgetType {
 }
 
 // Mermaid 图表 Widget
+const MERMAID_WIDGET_CODE_KEY: unique symbol = Symbol("luminaMermaidCode");
+type MermaidContainerElement = HTMLElement & {
+  [MERMAID_WIDGET_CODE_KEY]?: string;
+};
+
+function findMermaidBlockRangeForWidget(
+  view: EditorView,
+  container: HTMLElement,
+  fallbackFrom: number,
+): { from: number; to: number } | null {
+  const widgets = Array.from(
+    view.contentDOM.querySelectorAll<HTMLElement>(".mermaid-container"),
+  );
+  const widgetIndex = widgets.indexOf(container);
+  if (widgetIndex >= 0) {
+    const range = mermaidRenderedBlockPositionsCache[widgetIndex];
+    if (range) return range;
+  }
+  return (
+    mermaidBlockPositionsCache.find((c) => c.from === fallbackFrom) ?? null
+  );
+}
+
 class MermaidWidget extends WidgetType {
   constructor(
     readonly code: string,
@@ -1245,16 +1268,14 @@ class MermaidWidget extends WidgetType {
     super();
   }
   eq(other: MermaidWidget) {
-    return other.code === this.code && other.blockFrom === this.blockFrom;
+    return other.code === this.code;
   }
   get estimatedHeight() {
     return estimateMermaidHeight(this.code);
   }
   toDOM(view: EditorView) {
     const container = document.createElement("div");
-    container.className = "mermaid-container my-2";
-    container.dataset.widgetType = "codeblock";
-    container.style.minHeight = `${this.estimatedHeight}px`;
+    this.syncContainerDOM(container);
 
     const editBtn = document.createElement("button");
     editBtn.type = "button";
@@ -1266,16 +1287,17 @@ class MermaidWidget extends WidgetType {
     editBtn.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      const blockFrom = this.blockFrom;
-      const blockRange = mermaidBlockPositionsCache.find(
-        (c) => c.from === blockFrom,
+      const blockRange = findMermaidBlockRangeForWidget(
+        view,
+        container,
+        this.blockFrom,
       );
       if (!blockRange) return;
       const fenceLine = view.state.doc.lineAt(blockRange.from);
       const contentLineStart = fenceLine.to + 1;
       const targetPos = Math.min(contentLineStart, blockRange.to);
       view.dispatch({
-        effects: toggleMermaidEdit.of({ from: blockFrom }),
+        effects: toggleMermaidEdit.of({ from: blockRange.from }),
         selection: { anchor: targetPos },
       });
       view.focus();
@@ -1308,6 +1330,18 @@ class MermaidWidget extends WidgetType {
     }, 0);
 
     return container;
+  }
+  updateDOM(container: HTMLElement) {
+    const mermaidContainer = container as MermaidContainerElement;
+    if (mermaidContainer[MERMAID_WIDGET_CODE_KEY] !== this.code) return false;
+    this.syncContainerDOM(mermaidContainer);
+    return true;
+  }
+  private syncContainerDOM(container: MermaidContainerElement) {
+    container.className = "mermaid-container my-2";
+    container.dataset.widgetType = "codeblock";
+    container[MERMAID_WIDGET_CODE_KEY] = this.code;
+    container.style.minHeight = `${this.estimatedHeight}px`;
   }
   ignoreEvent() {
     return true;
@@ -2444,7 +2478,10 @@ function buildMermaidDecorations(state: EditorState): DecorationSet {
 
         const code = lines.slice(1, lines.length - 1).join("\n");
         const widget = new MermaidWidget(code, node.from);
-        mermaidRenderedBlockPositionsCache.push({ from: node.from, to: node.to });
+        mermaidRenderedBlockPositionsCache.push({
+          from: node.from,
+          to: node.to,
+        });
         decorations.push(
           Decoration.replace({ widget, block: true }).range(node.from, node.to),
         );
