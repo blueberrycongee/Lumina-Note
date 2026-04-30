@@ -51,6 +51,8 @@ vi.mock("@/stores/useLocaleStore", () => ({
         title: "Graph",
       },
       ribbon: {
+        commandPaletteTrigger: "Command Palette",
+        commandPaletteNewBadge: "New",
         globalSearch: "Global Search",
         aiChatMain: "AI Chat",
         fileEditor: "Files",
@@ -146,6 +148,7 @@ describe("Ribbon", () => {
     fileStoreState.tabs = [];
     fileStoreState.activeTabIndex = -1;
     fileStoreState.currentFile = null;
+    window.localStorage.clear();
   });
 
   it("does not render a macOS traffic-light safe area by default", () => {
@@ -203,6 +206,19 @@ describe("Ribbon", () => {
     expect(
       screen.getByRole("button", { name: /Software Update/ }),
     ).toBeInTheDocument();
+  });
+
+  it("renders the unseen featured cue as a static dot", () => {
+    render(<Ribbon />);
+
+    const commandButton = screen.getByTitle("Command Palette");
+    expect(commandButton).toHaveTextContent("3 New");
+    expect(commandButton.querySelector(".animate-ping")).not.toBeInTheDocument();
+    expect(
+      commandButton.querySelectorAll(
+        ".absolute.top-1.right-1.w-2.h-2.rounded-full.bg-primary",
+      ),
+    ).toHaveLength(1);
   });
 
   it("opens the dedicated update modal directly from the ribbon button", () => {

@@ -103,7 +103,7 @@ export function Ribbon({
     (t.ribbon as typeof t.ribbon & { imageManager?: string }).imageManager ??
     "Image Manager";
 
-  // Pulse cue on the palette trigger when there are featured commands the
+  // Static cue on the palette trigger when there are featured commands the
   // user hasn't tried yet. Source of truth is localStorage, kept in sync via
   // the COMMAND_USAGE_EVENT broadcast by the palette itself when a command
   // is executed (so the dot decays in real time as the user discovers).
@@ -327,7 +327,7 @@ export function Ribbon({
         {/* Top icons */}
         <div className="flex flex-col items-center gap-1">
           {/* Command Palette (⌘P) — discovery affordance for users who don't
-              know the keyboard shortcut. The pulse dot decays as the user
+              know the keyboard shortcut. The dot decays as the user
               tries each featured capability. */}
           <button
             onClick={() => {
@@ -339,10 +339,6 @@ export function Ribbon({
             <Command size={20} />
             {unseenFeatured > 0 && (
               <>
-                <span
-                  aria-hidden
-                  className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary animate-ping opacity-60"
-                />
                 <span
                   aria-hidden
                   className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary"

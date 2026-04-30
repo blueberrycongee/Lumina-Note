@@ -1,6 +1,6 @@
 // Shared local-storage-backed usage state for the command palette.
 // Used by CommandPalette to render Discover/Recent sections, and by the
-// Ribbon's palette trigger to render an "unseen featured" pulse dot.
+// Ribbon's palette trigger to render an "unseen featured" dot.
 
 export const COMMAND_USAGE_KEY = "lumina:commandPaletteUsage";
 export const COMMAND_USAGE_EVENT = "lumina-command-palette-usage-updated";
