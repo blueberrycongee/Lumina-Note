@@ -86,6 +86,8 @@ const DiagramView = lazy(async () => {
 
 const MAIN_WORKSPACE_WINDOW_WIDTH = 1280;
 const MAIN_WORKSPACE_WINDOW_HEIGHT = 840;
+const MAIN_CONTENT_PANE_CLASS =
+  "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover";
 
 const getShortcutModifierLabel = () =>
   typeof navigator !== "undefined" && /mac/i.test(navigator.platform)
@@ -1082,15 +1084,15 @@ function App() {
                   <DiffViewWrapper />
                 ) : activeTab?.type === "pdf" && activeTab.path ? (
                   // PDF 标签页
-                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                  <div className={MAIN_CONTENT_PANE_CLASS}>
                     <PDFViewer filePath={activeTab.path} className="flex-1" />
                   </div>
                 ) : activeTab?.type === "image" && activeTab.path ? (
-                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                  <div className={MAIN_CONTENT_PANE_CLASS}>
                     <ImageViewer filePath={activeTab.path} className="flex-1" />
                   </div>
                 ) : activeTab?.type === "diagram" && activeTab.path ? (
-                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                  <div className={MAIN_CONTENT_PANE_CLASS}>
                     <Suspense
                       fallback={
                         <div className="flex flex-1 items-center justify-center text-ui-control text-muted-foreground">
@@ -1107,11 +1109,11 @@ function App() {
                     </Suspense>
                   </div>
                 ) : activeTab?.type === "image-manager" ? (
-                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                  <div className={MAIN_CONTENT_PANE_CLASS}>
                     <ImageManagerView />
                   </div>
                 ) : activeTab?.type === "plugin-view" ? (
-                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                  <div className={MAIN_CONTENT_PANE_CLASS}>
                     <PluginViewPane
                       title={activeTab.name}
                       html={activeTab.pluginViewHtml || "<p>Empty plugin view</p>"}

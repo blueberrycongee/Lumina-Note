@@ -9,6 +9,15 @@ const globalsSource = readFileSync(
 );
 
 describe("App sidebar motion", () => {
+  it("keeps specialized tab panes stretched across the main content area", () => {
+    expect(appSource).toContain(
+      'const MAIN_CONTENT_PANE_CLASS =\n  "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover";',
+    );
+    expect(
+      appSource.match(/<div className=\{MAIN_CONTENT_PANE_CLASS\}>/g) ?? [],
+    ).toHaveLength(5);
+  });
+
   it("wraps both sidebars in animated shells with fixed-width inner content", () => {
     expect(appSource).toContain('data-side="left"');
     expect(appSource).toContain('data-side="right"');
