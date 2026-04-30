@@ -101,6 +101,23 @@ describe("CodeMirror live markdown rendering polish", () => {
   });
 
   it.each(["live", "reading"] as const)(
+    "uses one block surface for table, math, and divider widgets in %s mode",
+    (mode) => {
+      const content =
+        "| A | B |\n| --- | --- |\n| 1 | 2 |\n\n$$\na^2+b^2=c^2\n$$\n\n---";
+      const { container } = setupEditor(content, mode);
+
+      expect(container.querySelector(".cm-table-widget, .cm-table-editor"))
+        .not.toBeNull();
+      expect(container.querySelector(".cm-math-block")).not.toBeNull();
+      expect(container.querySelector(".cm-hr-container")).not.toBeNull();
+      expect(
+        container.querySelectorAll(".markdown-block-shell").length,
+      ).toBeGreaterThanOrEqual(2);
+    },
+  );
+
+  it.each(["live", "reading"] as const)(
     "uses default nested callout titles in %s mode without duplicating body text",
     (mode) => {
       const content =

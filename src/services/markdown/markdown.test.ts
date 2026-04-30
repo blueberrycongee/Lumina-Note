@@ -57,22 +57,24 @@ describe('parseMarkdown', () => {
 
     it('should parse horizontal rules with ---', () => {
       const result = parseMarkdown('---');
-      expect(result).toContain('<hr>');
+      expect(result).toContain('<hr');
+      expect(result).toContain('markdown-block-shell');
+      expect(result).toContain('markdown-hr-block');
     });
 
     it('should parse horizontal rules with ***', () => {
       const result = parseMarkdown('***');
-      expect(result).toContain('<hr>');
+      expect(result).toContain('<hr');
     });
 
     it('should parse horizontal rules with ___', () => {
       const result = parseMarkdown('___');
-      expect(result).toContain('<hr>');
+      expect(result).toContain('<hr');
     });
 
     it('should parse horizontal rules in context', () => {
       const result = parseMarkdown('Text before\n\n---\n\nText after');
-      expect(result).toContain('<hr>');
+      expect(result).toContain('<hr');
       expect(result).toContain('Text before');
       expect(result).toContain('Text after');
     });
@@ -162,6 +164,8 @@ describe('parseMarkdown', () => {
     it('should parse block math', () => {
       const result = parseMarkdown('$$\n\\int_0^1 x dx\n$$');
       expect(result).toContain('katex');
+      expect(result).toContain('markdown-block-shell');
+      expect(result).toContain('markdown-math-block');
     });
   });
 
@@ -190,7 +194,9 @@ describe('parseMarkdown', () => {
     it('should wrap tables in container', () => {
       const table = '| a | b |\n|---|---|\n| 1 | 2 |';
       const result = parseMarkdown(table);
-      expect(result).toContain('class="table-wrapper"');
+      expect(result).toContain('table-wrapper');
+      expect(result).toContain('markdown-block-shell');
+      expect(result).toContain('markdown-table-block');
       expect(result).toContain('<table>');
     });
   });

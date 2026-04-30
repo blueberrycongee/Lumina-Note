@@ -455,6 +455,27 @@ const createEditorTheme = (fontSize: number) =>
       fontFamily: "var(--font-mono)",
     },
 
+    // === Shared rendered block surface ===
+    ".markdown-block-shell": {
+      display: "block",
+      boxSizing: "border-box",
+      width: "100%",
+      margin: "10px 0",
+      border: "1px solid transparent",
+      borderRadius: "8px",
+      backgroundColor: "transparent",
+      overflow: "hidden",
+      transition:
+        "background-color 120ms ease, border-color 120ms ease",
+    },
+    ".markdown-block-shell:hover, .markdown-block-shell:focus-within": {
+      borderColor: "hsl(var(--border) / 0.55)",
+      backgroundColor: "hsl(var(--muted) / 0.1)",
+    },
+    ".markdown-block-body": {
+      padding: "14px 16px",
+    },
+
     // === Math 编辑体验 ===
     // 行内公式渲染结果 - 带淡入动画
     ".cm-math-inline": {
@@ -466,9 +487,17 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-math-block": {
       display: "block",
       textAlign: "center",
-      padding: "0.5em 0",
       overflow: "hidden",
       cursor: "pointer",
+    },
+    ".cm-math-block .markdown-math-body": {
+      minHeight: "76px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ".cm-math-block .katex-display": {
+      margin: "0",
     },
 
     // 编辑模式：源码背景 (淡绿色) - 带淡入动画
@@ -493,36 +522,59 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-math-preview-panel": {
       display: "block",
       textAlign: "center",
-      padding: "8px",
       marginTop: "4px",
       marginBottom: "8px",
-      border: "1px solid hsl(var(--border) / 0.5)",
-      borderRadius: "6px",
-      backgroundColor: "hsl(var(--muted) / 0.3)",
       pointerEvents: "none", // 关键：让鼠标点击穿透面板，避免无法聚焦其他位置
       userSelect: "none",
       opacity: 0.95,
     },
 
     // === Table 样式 ===
-    ".cm-table-widget": { display: "block", overflowX: "auto", cursor: "text" },
-    ".cm-table-widget table": { borderCollapse: "collapse", width: "100%" },
+    ".cm-table-widget, .cm-table-editor": {
+      display: "block",
+      boxSizing: "border-box",
+      width: "100%",
+      margin: "10px 0",
+      border: "1px solid hsl(var(--border) / 0.72)",
+      borderRadius: "8px",
+      backgroundColor: "transparent",
+      overflowX: "auto",
+      cursor: "text",
+      transition:
+        "background-color 120ms ease, border-color 120ms ease",
+    },
+    ".cm-table-widget:hover, .cm-table-editor:hover, .cm-table-widget:focus-within, .cm-table-editor:focus-within":
+      {
+        borderColor: "hsl(var(--border) / 0.9)",
+        backgroundColor: "hsl(var(--muted) / 0.1)",
+      },
+    ".cm-table-widget table, .cm-table-editor table": {
+      borderCollapse: "separate",
+      borderSpacing: "0",
+      width: "100%",
+      backgroundColor: "transparent",
+    },
     ".cm-table-widget th, .cm-table-widget td": {
-      border: "1px solid hsl(var(--border))",
-      padding: "8px 12px",
+      border: "0",
+      borderRight: "1px solid hsl(var(--border) / 0.68)",
+      borderBottom: "1px solid hsl(var(--border) / 0.68)",
+      padding: "10px 12px",
     },
-    ".cm-table-widget th": {
-      backgroundColor: "hsl(var(--muted))",
-      fontWeight: "600",
-    },
-    ".cm-table-editor": { display: "block", overflowX: "auto", cursor: "text" },
-    ".cm-table-editor table": { borderCollapse: "collapse", width: "100%" },
     ".cm-table-editor th, .cm-table-editor td": {
-      border: "1px solid hsl(var(--border))",
-      padding: "8px 12px",
+      border: "0",
+      borderRight: "1px solid hsl(var(--border) / 0.68)",
+      borderBottom: "1px solid hsl(var(--border) / 0.68)",
+      padding: "10px 12px",
     },
-    ".cm-table-editor th": {
-      backgroundColor: "hsl(var(--muted))",
+    ".cm-table-widget th:last-child, .cm-table-widget td:last-child, .cm-table-editor th:last-child, .cm-table-editor td:last-child":
+      {
+        borderRight: "0",
+      },
+    ".cm-table-widget tr:last-child td, .cm-table-editor tr:last-child td": {
+      borderBottom: "0",
+    },
+    ".cm-table-widget th, .cm-table-editor th": {
+      backgroundColor: "hsl(var(--muted) / 0.1)",
       fontWeight: "600",
     },
     ".cm-table-cell": { outline: "none", minWidth: "40px" },
@@ -532,13 +584,11 @@ const createEditorTheme = (fontSize: number) =>
       marginBottom: "6px",
     },
     ".cm-table-source-toggle": {
-      display: "flex",
-      justifyContent: "flex-end",
-      marginBottom: "6px",
+      display: "none",
     },
     ".cm-table-toggle": {
       border: "1px solid hsl(var(--border))",
-      backgroundColor: "hsl(var(--background))",
+      backgroundColor: "hsl(var(--background) / 0.76)",
       color: "hsl(var(--foreground))",
       borderRadius: "6px",
       padding: "4px 8px",
@@ -552,7 +602,8 @@ const createEditorTheme = (fontSize: number) =>
       color: "hsl(var(--foreground))",
       display: "block",
       overflowX: "auto",
-      backgroundColor: "rgba(59, 130, 246, 0.1)",
+      backgroundColor: "transparent",
+      padding: "12px 14px",
     },
 
     // === Code Block 样式（codemirror-live-markdown）===
@@ -853,21 +904,17 @@ const createEditorTheme = (fontSize: number) =>
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      height: "28px",
+      minHeight: "34px",
       cursor: "text",
       position: "relative",
-      borderRadius: "6px",
-      // Solid background so .cm-block-widget-selected ring has something
-      // to sit on and the selection rectangle behind doesn't leak through.
-      backgroundColor: "hsl(var(--background))",
     },
-    ".cm-hr-container::before": {
-      content: '""',
-      display: "block",
+    ".cm-hr-container .markdown-hr-rule": {
       width: "40%",
       maxWidth: "160px",
-      height: "1px",
-      backgroundColor: "hsl(var(--border))",
+      minWidth: "72px",
+      border: "0",
+      borderTop: "1px solid hsl(var(--border) / 0.9)",
+      margin: "0",
     },
     ".cm-hr-source": { color: "hsl(var(--muted-foreground))", opacity: 0.6 },
   });
@@ -971,10 +1018,11 @@ class MathWidget extends WidgetType {
     const container = document.createElement(
       this.displayMode || this.isPreviewPanel ? "div" : "span",
     );
+    const isBlock = this.displayMode || this.isPreviewPanel;
     container.className = this.isPreviewPanel
-      ? "cm-math-preview-panel"
+      ? "cm-math-preview-panel markdown-block-shell markdown-math-block"
       : this.displayMode
-        ? "cm-math-block"
+        ? "cm-math-block markdown-block-shell markdown-math-block"
         : "cm-math-inline";
 
     // 只有非预览面板（即渲染态公式）才添加标记，用于点击检测
@@ -982,22 +1030,30 @@ class MathWidget extends WidgetType {
       container.dataset.widgetType = "math";
     }
 
+    const renderTarget = isBlock
+      ? document.createElement("div")
+      : container;
+    if (isBlock) {
+      renderTarget.className = "markdown-block-body markdown-math-body";
+      container.appendChild(renderTarget);
+    }
+
     // 尝试使用缓存
     const cacheKey = `${this.formula}|${this.displayMode}`;
     const cached = katexCache.get(cacheKey);
     if (cached) {
-      container.innerHTML = cached;
+      renderTarget.innerHTML = cached;
     } else {
       try {
-        katex.render(this.formula, container, {
+        katex.render(this.formula, renderTarget, {
           displayMode: this.displayMode,
           throwOnError: false,
           strict: false,
         });
         // 缓存渲染结果
-        katexCache.set(cacheKey, container.innerHTML);
+        katexCache.set(cacheKey, renderTarget.innerHTML);
       } catch (e) {
-        container.textContent = this.formula;
+        renderTarget.textContent = this.formula;
       }
     }
     return container;
@@ -1377,7 +1433,10 @@ class HorizontalRuleWidget extends WidgetType {
     //    target (combined with `ignoreEvent: false` so CM actually
     //    processes the click) fixes that without touching cursor logic.
     const container = document.createElement("div");
-    container.className = "cm-hr-container";
+    container.className = "cm-hr-container markdown-block-shell markdown-hr-block";
+    const rule = document.createElement("hr");
+    rule.className = "markdown-hr-rule";
+    container.appendChild(rule);
     return container;
   }
   ignoreEvent() {

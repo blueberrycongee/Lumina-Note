@@ -7,6 +7,14 @@ import { resolveCalloutType } from "@/editor/calloutConfig";
 // Custom renderer for Obsidian-style callouts
 const renderer = new Renderer();
 
+renderer.hr = function () {
+  return (
+    `<div class="markdown-block-shell markdown-hr-block">` +
+    `<hr class="markdown-hr-rule" />` +
+    `</div>`
+  );
+};
+
 function parseCalloutQuote(text: string): {
   rawType: string;
   modifier: "+" | "-" | undefined;
@@ -224,7 +232,7 @@ export function parseMarkdown(markdown: string): string {
     if (!markdown) return "";
     
     // We need to handle math placeholders here
-    const mathPlaceholders: string[] = [];
+    const mathPlaceholders: Array<{ html: string; displayMode: boolean }> = [];
     const mathPlaceholderPrefix = "⟦MATH_BLOCK_";
     const mathPlaceholderSuffix = "⟧";
     
@@ -240,7 +248,7 @@ export function parseMarkdown(markdown: string): string {
           strict: false,
           output: "html",
         });
-        mathPlaceholders.push(html);
+        mathPlaceholders.push({ html, displayMode });
         return `${mathPlaceholderPrefix}${mathPlaceholders.length - 1}${mathPlaceholderSuffix}`;
       } catch (e) {
         return formula;
@@ -331,10 +339,18 @@ export function parseMarkdown(markdown: string): string {
     // 5. Restore Math Placeholders
     // Marked might wrap our placeholders in <p> tags if they are inline.
     // We need to replace the placeholders in the HTML with the rendered math.
-    mathPlaceholders.forEach((mathHtml, index) => {
+    mathPlaceholders.forEach((math, index) => {
       const placeholder = `${mathPlaceholderPrefix}${index}${mathPlaceholderSuffix}`;
-      // Replace global occurrences
-      html = (html as string).split(placeholder).join(mathHtml);
+      if (math.displayMode) {
+        const blockHtml =
+          `<div class="markdown-block-shell markdown-math-block">` +
+          `<div class="markdown-block-body markdown-math-body">${math.html}</div>` +
+          `</div>`;
+        html = (html as string).split(`<p>${placeholder}</p>`).join(blockHtml);
+        html = (html as string).split(placeholder).join(blockHtml);
+      } else {
+        html = (html as string).split(placeholder).join(math.html);
+      }
     });
 
     // 5.5 Restore Mermaid Placeholders - 转换为 mermaid 容器
@@ -353,8 +369,11 @@ export function parseMarkdown(markdown: string): string {
 
     // 6. Wrap tables in a scrollable container to fix alignment issues
     // Replace <table> with <div class="table-wrapper"><table>
-    html = (html as string).replace(/<table>/g, '<div class="table-wrapper"><table>');
-    html = (html as string).replace(/<\/table>/g, '</table></div>');
+    html = (html as string).replace(
+      /<table>/g,
+      '<div class="table-wrapper markdown-block-shell markdown-table-block"><div class="markdown-block-body markdown-table-body"><table>',
+    );
+    html = (html as string).replace(/<\/table>/g, '</table></div></div>');
 
     return pluginRenderRuntime.apply(html as string);
   } catch (error) {

@@ -1421,6 +1421,39 @@ html {
   color: hsl(var(--md-list-marker, var(--primary)));
 }
 
+/* Shared Markdown block surface used by reading HTML and CodeMirror widgets. */
+.markdown-block-shell {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0.75rem 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  overflow: hidden;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.markdown-block-shell:hover,
+.markdown-block-shell:focus-within {
+  border-color: hsl(var(--border) / 0.55);
+  background: hsl(var(--muted) / 0.1);
+}
+
+.markdown-table-block {
+  border-color: hsl(var(--md-table-border, var(--border)) / 0.72);
+}
+
+.markdown-table-block:hover,
+.markdown-table-block:focus-within {
+  border-color: hsl(var(--md-table-border, var(--border)) / 0.9);
+}
+
+.markdown-block-body {
+  padding: 0.875rem 1rem;
+}
+
 /* 引用块 */
 .prose blockquote {
   border-left: 3px solid hsl(var(--md-blockquote-border, var(--primary)));
@@ -1433,8 +1466,22 @@ html {
 /* 分割线 */
 .prose hr {
   border: none;
-  border-top: 1px solid hsl(var(--md-hr, var(--border)));
-  margin: 2rem 0;
+  margin: 0;
+}
+
+.prose .markdown-hr-block {
+  min-height: 2.125rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prose .markdown-hr-rule {
+  width: 40%;
+  min-width: 4.5rem;
+  max-width: 10rem;
+  border: 0;
+  border-top: 1px solid hsl(var(--md-hr, var(--border)) / 0.9);
 }
 
 /* Inline code — match CodeMirrorEditor's .cm-code chip exactly so toggling
@@ -1584,14 +1631,15 @@ mark {
 /* Table styles - 使用主题变量 */
 .table-wrapper {
   overflow-x: auto;
-  margin: 1.5rem 0;
-  border-radius: 0.375rem;
+  margin: 0.75rem 0;
 }
 
 .prose table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.95rem;
+  background: transparent;
 }
 
 .prose thead {
@@ -1607,24 +1655,37 @@ mark {
 }
 
 .prose th {
-  background: hsl(var(--md-table-header-bg, var(--muted)));
+  background: hsl(var(--md-table-header-bg, var(--muted)) / 0.1);
   font-weight: 600;
   text-align: left;
-  padding: 0.75rem;
-  border: 1px solid hsl(var(--md-table-border, var(--border)));
+  padding: 0.625rem 0.75rem;
+  border: 0;
+  border-right: 1px solid hsl(var(--md-table-border, var(--border)) / 0.68);
+  border-bottom: 1px solid hsl(var(--md-table-border, var(--border)) / 0.68);
 }
 
 .prose td {
-  padding: 0.75rem;
-  border: 1px solid hsl(var(--md-table-border, var(--border)));
+  padding: 0.625rem 0.75rem;
+  border: 0;
+  border-right: 1px solid hsl(var(--md-table-border, var(--border)) / 0.68);
+  border-bottom: 1px solid hsl(var(--md-table-border, var(--border)) / 0.68);
+}
+
+.prose th:last-child,
+.prose td:last-child {
+  border-right: 0;
+}
+
+.prose tr:last-child td {
+  border-bottom: 0;
 }
 
 .prose tr:nth-child(even) {
-  background: hsl(var(--md-table-header-bg, var(--muted)) / 0.3);
+  background: transparent;
 }
 
 .prose tr:hover {
-  background: hsl(var(--md-table-header-bg, var(--muted)) / 0.5);
+  background: hsl(var(--md-table-header-bg, var(--muted)) / 0.18);
 }
 
 /* Live preview block styles */
@@ -1698,7 +1759,18 @@ mark {
 /* Math block in live preview */
 .live-preview-content .katex-display {
   margin: 0 !important;
-  padding: 0.5rem 0;
+  padding: 0;
+}
+
+.markdown-math-body {
+  min-height: 4.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.markdown-math-body .katex-display {
+  margin: 0;
 }
 
 /* Smooth fade and scale animation */
