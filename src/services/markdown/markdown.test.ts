@@ -45,6 +45,8 @@ describe('parseMarkdown', () => {
 
     it('should parse code blocks', () => {
       const result = parseMarkdown('```js\nconst x = 1;\n```');
+      expect(result).toContain('markdown-code-block');
+      expect(result).toContain('markdown-block-shell');
       expect(result).toContain('<pre>');
       expect(result).toContain('<code');
       expect(result).toContain('const x = 1;');

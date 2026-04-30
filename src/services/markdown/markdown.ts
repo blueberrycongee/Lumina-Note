@@ -86,7 +86,7 @@ renderer.code = function (token: { text: string; lang?: string; escaped?: boolea
     ? `<span class="code-block-lang">${escapeHtml(lang)}</span>`
     : "";
   return (
-    `<div class="code-block-wrapper">` +
+    `<div class="code-block-wrapper markdown-block-shell markdown-code-block">` +
     `<div class="code-block-header">${langLabel}` +
     `<button class="code-copy-btn" type="button" aria-label="Copy">` +
     `<span class="copy-icon">${COPY_SVG}</span>` +

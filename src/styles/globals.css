@@ -1096,7 +1096,7 @@ html {
   display: flex;
   gap: 0.75rem;
   margin: 0.75rem 0;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1rem 1rem 1.5rem;
   border-radius: 6px;
   font-size: inherit;
   line-height: 1.6;
@@ -1451,7 +1451,11 @@ html {
 }
 
 .markdown-block-body {
-  padding: 0.875rem 1rem;
+  padding: 0.875rem 1rem 0.875rem 1.5rem;
+}
+
+.markdown-table-body {
+  padding: 0;
 }
 
 /* 引用块 */
@@ -1510,11 +1514,12 @@ html {
   border: none;
   border-radius: 0;
   background: transparent;
+  padding: 0.875rem 1rem 0.875rem 1.5rem;
 }
 .code-block-header {
   display: flex;
   align-items: center;
-  padding: 4px 6px 4px 12px;
+  padding: 4px 6px 4px 24px;
   border-bottom: 1px solid hsl(var(--border) / 0.5);
 }
 .code-block-lang {
@@ -1669,6 +1674,16 @@ mark {
   border: 0;
   border-right: 1px solid hsl(var(--md-table-border, var(--border)) / 0.68);
   border-bottom: 1px solid hsl(var(--md-table-border, var(--border)) / 0.68);
+}
+
+.prose th:first-child,
+.prose td:first-child {
+  padding-left: 1.5rem;
+}
+
+.prose th:last-child,
+.prose td:last-child {
+  padding-right: 1rem;
 }
 
 .prose th:last-child,
@@ -1845,7 +1860,7 @@ mark {
 .mermaid-container {
   position: relative;
   margin: 1rem 0;
-  padding: 1rem;
+  padding: 1rem 1rem 1rem 1.5rem;
   background: hsl(var(--muted) / 0.3);
   border-radius: 0.5rem;
   overflow-x: auto;

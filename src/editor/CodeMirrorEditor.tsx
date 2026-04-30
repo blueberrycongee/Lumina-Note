@@ -132,6 +132,8 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "transparent",
       fontSize: `${fontSize}px`,
       height: "100%",
+      "--lumina-block-text-left": "24px",
+      "--lumina-block-text-right": "16px",
       "--lumina-codeblock-bg": "hsl(var(--muted) / 0.5)",
       "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.6)",
       "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.54)",
@@ -439,7 +441,8 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "hsl(var(--muted) / 0.1)",
     },
     ".markdown-block-body": {
-      padding: "14px 16px",
+      padding:
+        "14px var(--lumina-block-text-right) 14px var(--lumina-block-text-left)",
     },
 
     // === Math 编辑体验 ===
@@ -532,8 +535,13 @@ const createEditorTheme = (fontSize: number) =>
       borderBottom: "1px solid hsl(var(--border) / 0.68)",
       padding: "10px 12px",
     },
+    ".cm-table-widget th:first-child, .cm-table-widget td:first-child, .cm-table-editor th:first-child, .cm-table-editor td:first-child":
+      {
+        paddingLeft: "var(--lumina-block-text-left)",
+      },
     ".cm-table-widget th:last-child, .cm-table-widget td:last-child, .cm-table-editor th:last-child, .cm-table-editor td:last-child":
       {
+        paddingRight: "var(--lumina-block-text-right)",
         borderRight: "0",
       },
     ".cm-table-widget tr:last-child td, .cm-table-editor tr:last-child td": {
@@ -567,7 +575,8 @@ const createEditorTheme = (fontSize: number) =>
       display: "block",
       overflowX: "auto",
       backgroundColor: "transparent",
-      padding: "12px 14px",
+      padding:
+        "12px var(--lumina-block-text-right) 12px var(--lumina-block-text-left)",
     },
 
     // === Code Block 样式（codemirror-live-markdown）===
@@ -579,9 +588,9 @@ const createEditorTheme = (fontSize: number) =>
       borderRadius: "8px",
     },
     ".cm-lumina-codeblock-open": {
-      marginLeft: "36px",
-      marginRight: "36px",
-      paddingLeft: "14px !important",
+      marginLeft: "0",
+      marginRight: "0",
+      paddingLeft: "var(--lumina-block-text-left) !important",
       paddingRight: "78px !important",
       paddingTop: "8px !important",
       paddingBottom: "2px !important",
@@ -591,20 +600,20 @@ const createEditorTheme = (fontSize: number) =>
       borderRadius: "8px 8px 0 0",
     },
     ".cm-lumina-codeblock-content-line": {
-      marginLeft: "36px",
-      marginRight: "36px",
+      marginLeft: "0",
+      marginRight: "0",
       backgroundColor: "var(--lumina-codeblock-bg)",
       color: "hsl(var(--foreground) / 0.96)",
       fontFamily: "'JetBrains Mono', monospace",
-      paddingLeft: "14px !important",
-      paddingRight: "14px !important",
+      paddingLeft: "var(--lumina-block-text-left) !important",
+      paddingRight: "var(--lumina-block-text-right) !important",
       lineHeight: "1.7 !important",
     },
     ".cm-lumina-codeblock-close": {
-      marginLeft: "36px",
-      marginRight: "36px",
-      paddingLeft: "14px !important",
-      paddingRight: "14px !important",
+      marginLeft: "0",
+      marginRight: "0",
+      paddingLeft: "var(--lumina-block-text-left) !important",
+      paddingRight: "var(--lumina-block-text-right) !important",
       paddingTop: "2px !important",
       paddingBottom: "8px !important",
       backgroundColor: "var(--lumina-codeblock-bg)",
@@ -634,7 +643,8 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".cm-codeblock-line": {
       display: "block",
-      padding: "0 14px",
+      padding:
+        "0 var(--lumina-block-text-right) 0 var(--lumina-block-text-left)",
       lineHeight: "1.75",
       minHeight: "28px",
     },
@@ -680,8 +690,8 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "var(--lumina-codeblock-bg-source)",
       color: "hsl(var(--foreground) / 0.96)",
       fontFamily: "'JetBrains Mono', monospace",
-      paddingLeft: "14px !important",
-      paddingRight: "14px !important",
+      paddingLeft: "var(--lumina-block-text-left) !important",
+      paddingRight: "var(--lumina-block-text-right) !important",
     },
 
     // === Inline code block styles ===
@@ -699,7 +709,8 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "var(--lumina-codeblock-bg) !important",
       fontFamily: "'JetBrains Mono', monospace !important",
       color: "hsl(var(--foreground) / 0.96)",
-      padding: "0 14px !important",
+      padding:
+        "0 var(--lumina-block-text-right) 0 var(--lumina-block-text-left) !important",
       lineHeight: "1.7 !important",
     },
     ".cm-codeblock-footer": {
