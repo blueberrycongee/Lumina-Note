@@ -347,6 +347,7 @@ export function AISettingsContent() {
                     }]
                   : []),
               ]}
+              optionLabelClassName="text-ui-caption"
             />
           )}
         </Field>
