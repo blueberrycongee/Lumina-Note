@@ -2034,7 +2034,7 @@ export default {
       "当前没有笔记引用此图片。可以安全地审查、重命名、移动或清理。",
     // 多选面板
     batchActions: "批量操作",
-    batchSummary: "{orphanCount} 个孤立，{multiCount} 个多引用。",
+    batchSummary: "{orphanCount} 个孤立。",
     moveSelectedSafely: "安全移动所选",
     // 操作对话框
     renameImageSafely: "安全重命名图片",

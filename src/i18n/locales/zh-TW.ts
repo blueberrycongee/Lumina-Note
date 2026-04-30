@@ -2030,7 +2030,7 @@ export default {
       "目前沒有筆記引用此圖片。可以安全地審查、重新命名、移動或清理。",
     // 多選面板
     batchActions: "批次操作",
-    batchSummary: "{orphanCount} 個孤立，{multiCount} 個多引用。",
+    batchSummary: "{orphanCount} 個孤立。",
     moveSelectedSafely: "安全移動所選",
     // 操作對話框
     renameImageSafely: "安全重新命名圖片",

@@ -68,8 +68,6 @@ const getStatusOptions = (
 ): Array<{ value: ImageManagerStatusFilter; label: string }> => [
   { value: "all", label: t.imageManager.statusAll },
   { value: "orphan", label: t.imageManager.statusOrphans },
-  { value: "multi", label: t.imageManager.statusMultiUsed },
-  { value: "large", label: t.imageManager.statusLarge },
 ];
 
 const getSortOptions = (t: ReturnType<typeof getCurrentTranslations>): Array<{ value: ImageManagerSortBy; label: string }> => [
@@ -80,8 +78,6 @@ const getSortOptions = (t: ReturnType<typeof getCurrentTranslations>): Array<{ v
 
 const statusBadgeStyles = {
   orphan: "bg-warning/10 text-warning",
-  multi: "bg-primary/10 text-primary",
-  large: "bg-muted text-muted-foreground",
 } as const;
 
 const formatBytes = (bytes: number | null): string => {
@@ -100,8 +96,6 @@ const formatBytes = (bytes: number | null): string => {
 const summarizeStatuses = (asset: ImageAssetRecord): string[] => {
   const statuses: string[] = [];
   if (asset.orphan) statuses.push("orphan");
-  if (asset.multiReferenced) statuses.push("multi");
-  if (asset.large) statuses.push("large");
   return statuses;
 };
 
@@ -111,10 +105,6 @@ const matchesStatusFilter = (asset: ImageAssetRecord, filter: ImageManagerStatus
       return !asset.orphan;
     case "orphan":
       return asset.orphan;
-    case "multi":
-      return asset.multiReferenced;
-    case "large":
-      return asset.large;
     default:
       return true;
   }
@@ -143,8 +133,6 @@ const groupStatusLabel = (key: string): string => {
   switch (key) {
     case "orphan":
       return t.imageManager.groupNeedsCleanup;
-    case "multi":
-      return t.imageManager.groupLinkedFromMultipleNotes;
     default:
       return t.imageManager.groupReferenced;
   }
@@ -242,7 +230,7 @@ export function ImageManagerView() {
   }, [successMessage]);
 
   useEffect(() => {
-    if (statusFilter === "recent" || statusFilter === "referenced") {
+    if (statusFilter !== "all" && statusFilter !== "orphan") {
       setStatusFilter("all");
     }
     if (sortBy === "size") {
@@ -361,14 +349,10 @@ export function ImageManagerView() {
 
     const groups = new Map<string, ImageAssetRecord[]>();
     for (const image of filteredImages) {
-      const key = image.orphan
-        ? "orphan"
-        : image.multiReferenced
-          ? "multi"
-          : "referenced";
+      const key = image.orphan ? "orphan" : "referenced";
       groups.set(key, [...(groups.get(key) ?? []), image]);
     }
-    return ["orphan", "multi", "referenced"]
+    return ["orphan", "referenced"]
       .filter((key) => groups.has(key))
       .map((key) => ({
         key,
@@ -893,11 +877,7 @@ function StatusBadges({ image, className }: { image: ImageAssetRecord; className
             statusBadgeStyles[status as keyof typeof statusBadgeStyles],
           )}
         >
-          {status === "orphan"
-            ? t.imageManager.badgeOrphan
-            : status === "multi"
-                ? t.imageManager.badgeMulti
-                : t.imageManager.badgeLarge}
+          {t.imageManager.badgeOrphan}
         </span>
       ))}
     </div>
@@ -1209,9 +1189,7 @@ function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; o
       <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t.imageManager.batchActions}</p>
       <h2 className="mt-2 text-base font-semibold">{t.imageManager.imagesSelected.replace("{count}", String(images.length))}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        {t.imageManager.batchSummary
-          .replace("{orphanCount}", String(orphanCount))
-          .replace("{multiCount}", String(images.filter((image) => image.multiReferenced).length))}
+        {t.imageManager.batchSummary.replace("{orphanCount}", String(orphanCount))}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button onClick={onMove} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">

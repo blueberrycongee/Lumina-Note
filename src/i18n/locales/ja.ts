@@ -2079,7 +2079,7 @@ export default {
       "現在、このイメージを参照しているノートはありません。安全に確認、名前変更、移動、またはクリーンアップできます。",
     // 複数選択パネル
     batchActions: "バッチアクション",
-    batchSummary: "{orphanCount} 件孤立、{multiCount} 件複数参照。",
+    batchSummary: "{orphanCount} 件孤立。",
     moveSelectedSafely: "選択を安全に移動",
     // アクションダイアログ
     renameImageSafely: "画像を安全に名前変更",
