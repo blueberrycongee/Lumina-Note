@@ -8,7 +8,9 @@
  *  - createModel(settings, modelId) → LanguageModel: 把 BYOK 配置 + 模型 id 实例化
  *
  * 不做动态加载。ProviderId 是静态联合类型,新增 provider 只是在本文件加一行条目。
- * Phase 2.4 会在 runtime 侧用 createLanguageModel(id, settings, modelId) + streamText 把 provider 串起来。
+ * Agent V2 uses this registry for settings validation and provider test calls;
+ * the opencode bridge translates the same persisted settings into opencode
+ * config/auth.
  */
 
 import { createAnthropic } from '@ai-sdk/anthropic'

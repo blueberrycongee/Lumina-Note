@@ -4,7 +4,7 @@
  * 主 IPC 命令: agent_test_provider({ provider_id, model_id, settings }) → TestConnectionResult
  * 返回 { success, latencyMs?, error? }。
  *
- * UI 侧(Phase 5)AI Settings 的 "Test" 按钮会调这个 IPC,显示成功/失败 + 延迟。
+ * AI Settings 的 "Test" 按钮会调这个 IPC,显示成功/失败 + 延迟。
  * 测试时可注入 modelBuilder 返 MockLanguageModelV3 覆盖。
  */
 

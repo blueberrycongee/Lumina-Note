@@ -6,7 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { dispatchAgentCommand } from '../agent/ipc-dispatch.js'
+import { dispatchAgentCommand } from '../agent-v2/ipc-dispatch.js'
 import { WikiManager } from './manager.js'
 import { WikiSettingsStore } from './settings-store.js'
 

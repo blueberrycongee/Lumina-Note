@@ -18,11 +18,11 @@ import { createPluginsHandlers } from "./handlers/plugins.js";
 import { createLuminaCloudLicenseHandlers } from "./handlers/luminaCloudLicense.js";
 import { session, safeStorage } from "electron";
 import electronUpdater from "electron-updater";
-import type { ProviderSettingsStore } from "./agent/providers/settings-store.js";
-import type { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
+import type { ProviderSettingsStore } from "./agent-v2/providers/settings-store.js";
+import type { ImageProviderSettingsStore } from "./agent-v2/image-providers/settings-store.js";
 import type { WikiSettingsStore } from "./wiki/settings-store.js";
 import type { WikiManager } from "./wiki/manager.js";
-import { dispatchAgentCommand, isAgentCommand } from "./agent/ipc-dispatch.js";
+import { dispatchAgentCommand, isAgentCommand } from "./agent-v2/ipc-dispatch.js";
 import { setDirtyFileCount } from "../main/index.js";
 
 const { autoUpdater } = electronUpdater;

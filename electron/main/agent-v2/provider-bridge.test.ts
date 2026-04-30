@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProviderSettingsStore } from "../agent/providers/settings-store.js";
+import type { ProviderSettingsStore } from "./providers/settings-store.js";
 import { buildOpencodeBridge } from "./provider-bridge.js";
 
 function makeProviderSettings(

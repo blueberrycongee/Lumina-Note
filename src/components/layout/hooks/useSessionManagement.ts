@@ -16,46 +16,46 @@ export function formatSessionTime(timestamp: number): string {
 
 export function useSessionManagement() {
   const {
-    sessions: rustSessions,
-    currentSessionId: rustSessionId,
-    switchSession: rustSwitchSession,
-    deleteSession: rustDeleteSession,
-    clearChat: rustClearChat,
+    sessions: agentSessions,
+    currentSessionId: agentSessionId,
+    switchSession: switchAgentSession,
+    deleteSession: deleteAgentSession,
+    clearChat: clearAgentChat,
   } = useOpencodeAgent();
 
   const allSessions = useMemo(() => {
-    return rustSessions
+    return agentSessions
       .map((s) => ({
         ...s,
         type: "agent" as const,
       }))
       .sort((a, b) => b.updatedAt - a.updatedAt);
-  }, [rustSessions]);
+  }, [agentSessions]);
 
   const handleSwitchSession = useCallback(
     (id: string, _type: "agent" | "chat") => {
-      rustSwitchSession(id);
+      switchAgentSession(id);
     },
-    [rustSwitchSession],
+    [switchAgentSession],
   );
 
   const handleDeleteSession = useCallback(
     (id: string, _type: "agent" | "chat") => {
-      rustDeleteSession(id);
+      deleteAgentSession(id);
     },
-    [rustDeleteSession],
+    [deleteAgentSession],
   );
 
   const isCurrentSession = useCallback(
     (id: string, _type: "agent" | "chat") => {
-      return rustSessionId === id;
+      return agentSessionId === id;
     },
-    [rustSessionId],
+    [agentSessionId],
   );
 
   const handleNewChat = useCallback(() => {
-    rustClearChat();
-  }, [rustClearChat]);
+    clearAgentChat();
+  }, [clearAgentChat]);
 
   return {
     allSessions,
@@ -63,7 +63,7 @@ export function useSessionManagement() {
     handleDeleteSession,
     isCurrentSession,
     handleNewChat,
-    rustSessionId,
+    agentSessionId,
     chatSessionId: "",
   };
 }

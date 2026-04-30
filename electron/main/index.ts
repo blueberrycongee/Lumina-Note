@@ -31,12 +31,12 @@ import { stopAllWatchers } from "./handlers/watcher.js";
 import {
   ProviderSettingsStore,
   type SecretStore,
-} from "./agent/providers/settings-store.js";
-import { ImageProviderSettingsStore } from "./agent/image-providers/settings-store.js";
+} from "./agent-v2/providers/settings-store.js";
+import { ImageProviderSettingsStore } from "./agent-v2/image-providers/settings-store.js";
 import {
   getImageProvider,
   type ImageProviderId,
-} from "./agent/image-providers/registry.js";
+} from "./agent-v2/image-providers/registry.js";
 import { setLuminaPluginContext } from "./agent-v2/plugin/context.js";
 import { WikiSettingsStore } from "./wiki/settings-store.js";
 import { WikiManager } from "./wiki/manager.js";

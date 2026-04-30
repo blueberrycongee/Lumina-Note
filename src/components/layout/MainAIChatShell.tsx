@@ -271,7 +271,7 @@ export function MainAIChatShell() {
     handleDeleteSession,
     isCurrentSession,
     handleNewChat: _sessionNewChat,
-    rustSessionId,
+    agentSessionId,
   } = useSessionManagement();
 
   const {
@@ -285,25 +285,25 @@ export function MainAIChatShell() {
     handleSelectSkill: _handleSelectSkill,
   } = useSkillSearch();
 
-  // ========== Rust Agent ==========
+  // ========== Opencode Agent ==========
   const {
     status: agentStatus,
-    messages: rustAgentMessages,
-    error: _rustError,
-    startTask: rustStartTask,
+    messages: rawAgentMessages,
+    error: _agentError,
+    startTask: startAgentTask,
     abort: agentAbort,
-    pendingTool: rustPendingTool,
+    pendingTool: pendingAgentPermission,
     approveTool: approve,
     rejectTool: reject,
-    queuedTasks: rustQueuedTasks,
-    activeTaskPreview: rustActiveTaskPreview,
+    queuedTasks: queuedAgentTasks,
+    activeTaskPreview: activeAgentTaskPreview,
     debugPromptStack,
     llmRequestStartTime,
     llmRetryState,
     retryTimeout,
   } = useOpencodeAgent();
 
-  // 初始化 Rust Agent 事件监听器
+  // 初始化 Opencode Agent 事件监听器
   useEffect(() => {
     initOpencodeAgentListeners();
   }, []);
@@ -313,7 +313,7 @@ export function MainAIChatShell() {
   const dismissBanner = useErrorBanner((s) => s.dismiss);
 
   // 工具审批 - 提取 tool 对象
-  const pendingTool = rustPendingTool?.tool;
+  const pendingTool = pendingAgentPermission?.tool;
   const [retryNow, setRetryNow] = useState(Date.now());
   useEffect(() => {
     if (!llmRetryState || agentStatus !== "running") return;
@@ -328,8 +328,8 @@ export function MainAIChatShell() {
       : null;
 
   const agentMessages = useMemo(
-    () => rustAgentMessages.map((msg) => ({ ...msg, content: msg.content })),
-    [rustAgentMessages],
+    () => rawAgentMessages.map((msg) => ({ ...msg, content: msg.content })),
+    [rawAgentMessages],
   );
 
   // AI store — text selections + input appends. Model/effort are owned by the
@@ -461,7 +461,7 @@ export function MainAIChatShell() {
   // 判断是否正在加载
   const isLoading = agentStatus === "running";
   const isAgentWaitingApproval = agentStatus === "waiting_approval";
-  const agentQueueCount = rustQueuedTasks.length;
+  const agentQueueCount = queuedAgentTasks.length;
 
   const exportCandidates = useMemo<ExportMessage[]>(() => {
     const normalizedMessages: RawConversationMessage[] = agentMessages.map(
@@ -484,10 +484,10 @@ export function MainAIChatShell() {
 
   const currentConversationTitle = useMemo(() => {
     const currentSession = allSessions.find(
-      (s) => s.type === "agent" && s.id === rustSessionId,
+      (s) => s.type === "agent" && s.id === agentSessionId,
     );
     return currentSession?.title || t.ai.conversation;
-  }, [allSessions, rustSessionId, t.ai.conversation]);
+  }, [allSessions, agentSessionId, t.ai.conversation]);
 
   useEffect(() => {
     const validIds = new Set(exportCandidates.map((message) => message.id));
@@ -1033,7 +1033,7 @@ export function MainAIChatShell() {
           )
         : fullMessage;
 
-      await rustStartTask(wrappedFullMessage, {
+      await startAgentTask(wrappedFullMessage, {
         workspace_path: vaultPath || "",
         active_note_path: currentFile || undefined,
         active_note_content: currentFile ? currentContent : undefined,
@@ -1053,7 +1053,7 @@ export function MainAIChatShell() {
       referencedFiles,
       textSelections,
       clearTextSelections,
-      rustStartTask,
+      startAgentTask,
       selectedSkills,
       isExportSelectionMode,
       imageMode,
@@ -1553,7 +1553,7 @@ export function MainAIChatShell() {
           <div className={`w-full shrink-0 ${hasStarted ? "pb-4" : ""}`}>
             {!isExportSelectionMode &&
               (agentQueueCount > 0 ||
-                rustActiveTaskPreview ||
+                activeAgentTaskPreview ||
                 (llmRetryState && agentStatus === "running")) && (
                 <motion.div
                   initial={{ opacity: 0, y: 6 }}
@@ -1577,17 +1577,17 @@ export function MainAIChatShell() {
                         )}
                       </span>
                     </div>
-                    {rustActiveTaskPreview && (
+                    {activeAgentTaskPreview && (
                       <p className="text-xs text-muted-foreground mb-2">
                         {t.ai.agentQueueCurrent}:{" "}
                         <span className="text-foreground">
-                          {rustActiveTaskPreview}
+                          {activeAgentTaskPreview}
                         </span>
                       </p>
                     )}
                     {agentQueueCount > 0 && (
                       <div className="space-y-1">
-                        {rustQueuedTasks.slice(0, 3).map((item) => (
+                        {queuedAgentTasks.slice(0, 3).map((item) => (
                           <div
                             key={item.id}
                             className="text-xs text-muted-foreground truncate"
@@ -2097,13 +2097,13 @@ export function MainAIChatShell() {
           showDebug &&
           (() => {
             // 获取完整消息（包含 system prompt）
-            const fullMessages = rustAgentMessages; // Rust Agent 消息
+            const fullMessages = rawAgentMessages; // Opencode Agent 消息
 
             return (
               <div className="fixed inset-4 z-50 bg-popover border border-border rounded-xl shadow-elev-3 flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/50">
                   <h2 className="font-bold text-lg">
-                    🐛 {t.ai.agentDebugPanel} (🦀 Rust)
+                    🐛 {t.ai.agentDebugPanel} (opencode)
                   </h2>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">

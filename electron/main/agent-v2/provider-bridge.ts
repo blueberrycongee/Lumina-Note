@@ -1,7 +1,7 @@
 // Translate Lumina's ProviderSettingsStore into the env vars opencode reads
 // at startup (OPENCODE_CONFIG_CONTENT + OPENCODE_AUTH_CONTENT). Without this
-// bridge the UI-configured key never reaches opencode — it only lives in the
-// legacy Rust-agent path.
+// bridge the UI-configured key never reaches opencode; it only lives in
+// Lumina's encrypted settings store.
 //
 // Shape ref:
 //   auth.json  — thirdparty/opencode/packages/opencode/src/auth/index.ts:59
@@ -15,8 +15,8 @@ import { fileURLToPath } from "node:url";
 import type {
   ProviderPersistedSettings,
   ProviderSettingsStore,
-} from "../agent/providers/settings-store.js";
-import type { ProviderId } from "../agent/providers/registry.js";
+} from "./providers/settings-store.js";
+import type { ProviderId } from "./providers/registry.js";
 
 const OPENCODE_CUSTOM_PROVIDER_ID = "lumina-compat";
 

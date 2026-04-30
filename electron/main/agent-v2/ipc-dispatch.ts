@@ -1,11 +1,9 @@
 /**
- * Agent-prefixed IPC routing.
+ * Agent V2 IPC routing.
  *
- * Post-opencode-migration this dispatcher is intentionally narrow: all
- * chat-agent commands (start_task / abort / approve_tool / debug log
- * helpers) have been deleted along with the legacy AgentRuntime. What's
- * left is the user-facing settings surface + resources that the new
- * opencode runtime sits on top of:
+ * This dispatcher is intentionally narrow. The chat runtime itself is the
+ * embedded opencode server; this file only owns the user-facing settings
+ * and Lumina resources that opencode sits on top of:
  *
  *   - provider settings (drive the opencode-bridge's env content)
  *   - skills (read-only skill discovery for the Skill manager UI)
@@ -22,7 +20,7 @@ import type {
   ProviderSettingsStore,
 } from './providers/settings-store.js'
 import { testProviderConnection } from './providers/test-connection.js'
-import { setAutoApproveToolCalls } from '../agent-v2/provider-bridge.js'
+import { setAutoApproveToolCalls } from './provider-bridge.js'
 import type { WikiManager } from '../wiki/manager.js'
 import type { WikiSettings, WikiSettingsStore } from '../wiki/settings-store.js'
 import { loadWikiIndex } from '../wiki/index-loader.js'
@@ -40,9 +38,9 @@ import {
   deleteSkill,
   writeSkill,
   type SkillFrontmatter,
-} from '../agent-v2/skills/handlers.js'
-import { dispatchImageGeneration } from '../agent-v2/plugin/providers.js'
-import { writeImageToVault } from '../agent-v2/plugin/output.js'
+} from './skills/handlers.js'
+import { dispatchImageGeneration } from './plugin/providers.js'
+import { writeImageToVault } from './plugin/output.js'
 import { getImageProvider } from './image-providers/registry.js'
 
 export interface AgentDispatchContext {

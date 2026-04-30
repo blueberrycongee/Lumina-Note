@@ -490,23 +490,23 @@ function appendPartsFromContent(
 ) {
   const trimmed = content.trim();
 
-  // Rust Agent 格式：🔧 tool_name: {...}
-  const rustToolMatch = trimmed.match(/^🔧\s*(\w+)\s*:\s*([\s\S]+)$/);
-  if (rustToolMatch) {
+  // Legacy text-event format: 🔧 tool_name: {...}
+  const legacyToolMatch = trimmed.match(/^🔧\s*(\w+)\s*:\s*([\s\S]+)$/);
+  if (legacyToolMatch) {
     const tool = {
-      name: rustToolMatch[1],
-      params: formatToolParams(rustToolMatch[2]),
+      name: legacyToolMatch[1],
+      params: formatToolParams(legacyToolMatch[2]),
     };
     parts.push({ type: "tool", tool });
     lastToolCall.current = tool;
     return;
   }
 
-  // Rust Agent 格式：✅ 结果... 或 ❌ 错误...
-  const rustSuccessMatch = trimmed.match(/^✅\s*(\w+)\s*:\s*([\s\S]+)$/);
-  if (rustSuccessMatch) {
-    const toolName = rustSuccessMatch[1];
-    const result = rustSuccessMatch[2].trim();
+  // Legacy text-event format: ✅ result... or ❌ error...
+  const legacySuccessMatch = trimmed.match(/^✅\s*(\w+)\s*:\s*([\s\S]+)$/);
+  if (legacySuccessMatch) {
+    const toolName = legacySuccessMatch[1];
+    const result = legacySuccessMatch[2].trim();
     if (lastToolCall.current && lastToolCall.current.name === toolName) {
       lastToolCall.current.result = result;
       lastToolCall.current.success = true;
@@ -534,10 +534,10 @@ function appendPartsFromContent(
     return;
   }
 
-  const rustErrorMatch = trimmed.match(/^❌\s*(\w+)\s*:\s*([\s\S]+)$/);
-  if (rustErrorMatch) {
-    const toolName = rustErrorMatch[1];
-    const result = rustErrorMatch[2].trim();
+  const legacyErrorMatch = trimmed.match(/^❌\s*(\w+)\s*:\s*([\s\S]+)$/);
+  if (legacyErrorMatch) {
+    const toolName = legacyErrorMatch[1];
+    const result = legacyErrorMatch[2].trim();
     if (lastToolCall.current && lastToolCall.current.name === toolName) {
       lastToolCall.current.result = result;
       lastToolCall.current.success = false;

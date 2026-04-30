@@ -1,8 +1,8 @@
 /**
  * AI Service for chat and file modifications
  * 
- * 注意：LLM 调用已统一到 @/services/llm
- * 此文件保留业务逻辑（文件引用解析、编辑建议等）
+ * Shared AI-adjacent helpers for file references and edit suggestions.
+ * User-visible runtime calls should go through the opencode agent store.
  */
 
 import {
@@ -118,7 +118,8 @@ export interface ChatResponse {
 }
 
 /**
- * Chat API (使用统一的 LLM 服务)
+ * Deprecated direct chat API. Kept only for old call sites until they are
+ * migrated to the opencode agent path.
  */
 export async function chat(
   messages: Message[],

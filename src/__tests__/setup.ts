@@ -109,11 +109,6 @@ vi.mock('@/lib/hostBridge', async () => {
       'rename_file': undefined,
       'move_file': undefined,
       
-      // Agent 相关
-      'agent_start_task': { taskId: 'mock-task-id' },
-      'agent_abort': undefined,
-      'agent_get_status': { status: 'idle' },
-      'agent_get_queue_status': { running: false, queued: [] },
       'agent_get_provider_settings': {
         activeProviderId: 'openai',
         perProvider: {},

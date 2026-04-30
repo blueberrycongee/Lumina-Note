@@ -6,7 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { dispatchAgentCommand, isAgentCommand } from '../agent/ipc-dispatch.js'
+import { dispatchAgentCommand, isAgentCommand } from '../agent-v2/ipc-dispatch.js'
 import { DEFAULT_WIKI_SETTINGS, WikiSettingsStore } from './settings-store.js'
 
 let baseDir = ''

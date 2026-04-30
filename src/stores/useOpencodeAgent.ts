@@ -8,9 +8,8 @@
 //   - `startTask()` fires promptAsync() so the HTTP request returns
 //     immediately — message/part deltas are delivered via the SSE loop.
 //
-// The public surface mirrors what MainAIChatShell's destructure expects
-// from useRustAgentStore (status / messages / pendingTool / …) so the UI
-// can migrate with minimal churn.
+// The public surface is what MainAIChatShell expects from the active agent
+// runtime: status, messages, pending tool approval, sessions, and debug state.
 
 import { create } from "zustand";
 import type { Event, Message, Part } from "@opencode-ai/sdk/client";
@@ -1145,9 +1144,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     },
 
     enableDebug() {
-      // No-op: legacy Rust runtime wrote a prompt dump to rootDir. opencode
-      // uses its own Log.init() pipeline; the button stays inert until a
-      // replacement UI hook lands.
+      // No-op for now. Opencode uses its own Log.init() pipeline; the button
+      // stays inert until a replacement UI hook lands.
     },
 
     disableDebug() {

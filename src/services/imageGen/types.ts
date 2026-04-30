@@ -1,6 +1,6 @@
 /**
  * Renderer-side types for image-generation providers. The shapes mirror the
- * IPC contract exposed by `electron/main/agent/image-providers/`.
+ * IPC contract exposed by `electron/main/agent-v2/image-providers/`.
  *
  * Three providers, simultaneously available — the agent (via the image-gen
  * skill) picks which one to call. There is no "active" image provider.
@@ -31,7 +31,7 @@ export interface ImageProviderInfo {
  * failure leaves the Image Models settings showing only a section header
  * with no provider rows — and the user has nowhere to type their API key.
  *
- * Keep these entries in sync with electron/main/agent/image-providers/
+ * Keep these entries in sync with electron/main/agent-v2/image-providers/
  * registry.ts. The static metadata is non-secret and identical on both
  * sides; the only thing the IPC adds is the live `configured` flag.
  */

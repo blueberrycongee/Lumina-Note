@@ -1,12 +1,13 @@
 /**
  * LLM Service 公共出口。
  *
- * Phase 2.5 后,所有 LLM 调用都通过 Electron main 的 agent runtime(AI SDK) 完成。
+ * Runtime LLM calls go through the embedded opencode agent in Electron main.
  * 这里只保留:
  * - 共享的数据类型(Message / ThinkingMode / ...)
  * - PROVIDER_MODELS metadata(用于 UI 展示模型下拉,不绑实现)
  * - thinking / temperature / routing 辅助工具
- * - callLLM / callLLMStream — 遗留 API,Phase 5 前端重接 agent runtime 时会替换成真实路径
+ * - callLLM / callLLMStream — deprecated direct-call shims; callers should
+ *   route user-visible work through the opencode agent instead.
  */
 
 export type {
@@ -90,11 +91,10 @@ import type {
 } from "./types";
 
 const REMOVED_MESSAGE =
-  "LLM provider layer removed in Phase 2.5. Use the agent runtime (Electron main) via IPC instead.";
+  "Direct LLM provider calls were removed. Use the opencode agent runtime instead.";
 
 /**
- * Stub — 老 callLLM API 已被 TS agent + AI SDK 替代。保留签名让现有 callers 编译通过;
- * 运行时若被调用会直接抛,Phase 5 会重新布线前端。
+ * Deprecated stub. Runtime calls should go through useOpencodeAgent.
  */
 export async function callLLM(
   _messages: Message[],
@@ -115,8 +115,8 @@ export async function* callLLMStream(
   throw new Error(REMOVED_MESSAGE);
 }
 
-// createProvider 老 API: 直接抛错。唯一一个前端 caller (AISettingsModal) 的 test connection
-// 功能会在 Phase 2.8 提供替代 IPC 路径。保留 LLMProvider 返回类型让调用点编译通过。
+// Deprecated stub kept for old imports; provider testing now goes through
+// agent_test_provider IPC.
 import type { LLMProvider } from "./types";
 
 export function createProvider(_configOverride?: Partial<LLMConfig>): LLMProvider {
