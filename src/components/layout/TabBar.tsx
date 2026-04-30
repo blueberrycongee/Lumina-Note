@@ -435,27 +435,34 @@ export function TabBar() {
                     isActive ? "z-10" : "z-0 hover:z-[5]"
                   )}
                 >
-                  <TabItem
-                    tab={tab}
-                    isActive={index === activeTabIndex}
-                    displayName={
-                      tab.type === "ai-chat"
-                        ? t.common.aiChatTab
-                        : tab.type === "graph"
-                          ? t.graph.title
-                          : tab.name
-                    }
-                    onSelect={() => switchTab(index)}
-                    onDoubleClick={() => {
-                      if (tab.isPreview) {
-                        promotePreviewTab(tab.id);
-                      } else if (!tab.isPinned) {
-                        animateClose(tab.id);
+                  <motion.div
+                    className="h-full w-full"
+                    initial={reduceMotion ? false : { opacity: 0, y: 3, scale: 0.985 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+                  >
+                    <TabItem
+                      tab={tab}
+                      isActive={index === activeTabIndex}
+                      displayName={
+                        tab.type === "ai-chat"
+                          ? t.common.aiChatTab
+                          : tab.type === "graph"
+                            ? t.graph.title
+                            : tab.name
                       }
-                    }}
-                    onClose={(e) => handleClose(e, index)}
-                    onContextMenu={(e) => handleContextMenu(e, index)}
-                  />
+                      onSelect={() => switchTab(index)}
+                      onDoubleClick={() => {
+                        if (tab.isPreview) {
+                          promotePreviewTab(tab.id);
+                        } else if (!tab.isPinned) {
+                          animateClose(tab.id);
+                        }
+                      }}
+                      onClose={(e) => handleClose(e, index)}
+                      onContextMenu={(e) => handleContextMenu(e, index)}
+                    />
+                  </motion.div>
                 </Reorder.Item>
               );
             })}
