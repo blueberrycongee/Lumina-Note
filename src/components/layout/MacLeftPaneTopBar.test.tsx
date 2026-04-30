@@ -21,16 +21,8 @@ vi.mock("@/stores/useLocaleStore", () => ({
         newFolder: "New Folder",
         refresh: "Refresh",
       },
-      file: {
-        openFolder: "Open Folder",
-        newWindow: "New Window",
-      },
     },
   }),
-}));
-
-vi.mock("@/lib/host", () => ({
-  openNewWindow: vi.fn(),
 }));
 
 describe("MacLeftPaneTopBar", () => {
@@ -54,15 +46,19 @@ describe("MacLeftPaneTopBar", () => {
     expect(container.firstElementChild).toHaveClass("items-stretch");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("h-full");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("items-center");
+    expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("justify-center");
+    expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("gap-4");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("px-2");
   });
 
   it("renders file operation buttons in the top bar", () => {
     render(<MacLeftPaneTopBar />);
 
-    expect(screen.getByTitle("Open Folder")).toBeInTheDocument();
     expect(screen.getByTitle("New Note")).toBeInTheDocument();
+    expect(screen.getByTitle("New Diagram")).toBeInTheDocument();
     expect(screen.getByTitle("New Folder")).toBeInTheDocument();
     expect(screen.getByTitle("Refresh")).toBeInTheDocument();
+    expect(screen.queryByTitle("Open Folder")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("New Window")).not.toBeInTheDocument();
   });
 });

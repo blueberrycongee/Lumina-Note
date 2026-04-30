@@ -1,9 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
-  AppWindow,
   FilePlus,
-  FolderOpen,
   FolderPlus,
   RefreshCw,
   Shapes,
@@ -15,8 +13,6 @@ interface SidebarHeaderProps {
   onNewFolder: () => void;
   onRefresh: () => void;
   isLoadingTree: boolean;
-  onOpenFolder: () => void;
-  onNewWindow: () => void;
 }
 
 export function SidebarHeader({
@@ -25,49 +21,33 @@ export function SidebarHeader({
   onNewFolder,
   onRefresh,
   isLoadingTree,
-  onOpenFolder,
-  onNewWindow,
 }: SidebarHeaderProps) {
   const { t } = useLocaleStore();
 
   return (
     <div className="p-3 flex items-center justify-between text-ui-caption font-semibold text-muted-foreground tracking-[0.2em] uppercase">
       <span className="ui-compact-text ui-compact-hide-md">{t.sidebar.files}</span>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onOpenFolder}
-          className="w-7 h-7 ui-icon-btn"
-          title={t.file.openFolder}
-        >
-          <FolderOpen className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={onNewWindow}
-          className="w-7 h-7 ui-icon-btn"
-          title={t.file.newWindow}
-        >
-          <AppWindow className="w-3.5 h-3.5" />
-        </button>
+      <div className="flex items-center gap-4">
         <button
           onClick={onNewFile}
           className="w-7 h-7 ui-icon-btn"
           title={t.sidebar.newNote}
         >
-          <FilePlus className="w-3.5 h-3.5" />
+          <FilePlus size={15} />
         </button>
         <button
           onClick={onNewDiagram}
           className="w-7 h-7 ui-icon-btn"
           title={t.sidebar.newDiagram}
         >
-          <Shapes className="w-3.5 h-3.5" />
+          <Shapes size={15} />
         </button>
         <button
           onClick={onNewFolder}
           className="w-7 h-7 ui-icon-btn"
           title={t.sidebar.newFolder}
         >
-          <FolderPlus className="w-3.5 h-3.5" />
+          <FolderPlus size={15} />
         </button>
         <button
           onClick={onRefresh}
@@ -76,7 +56,8 @@ export function SidebarHeader({
           title={t.sidebar.refresh}
         >
           <RefreshCw
-            className={cn("w-3.5 h-3.5", isLoadingTree && "animate-spin")}
+            size={15}
+            className={cn(isLoadingTree && "animate-spin")}
           />
         </button>
       </div>

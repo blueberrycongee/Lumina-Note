@@ -1,7 +1,5 @@
 import {
-  AppWindow,
   FilePlus,
-  FolderOpen,
   FolderPlus,
   RefreshCw,
   Shapes,
@@ -9,7 +7,6 @@ import {
 import { cn } from "@/lib/utils";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useFileStore } from "@/stores/useFileStore";
-import { openNewWindow } from "@/lib/host";
 import { WindowControls } from "./WindowControls";
 
 export function MacLeftPaneTopBar() {
@@ -28,28 +25,10 @@ export function MacLeftPaneTopBar() {
       </div>
 
       <div
-        className="flex h-full min-w-0 flex-1 items-center gap-0.5 px-2 border-b border-border/40"
+        className="flex h-full min-w-0 flex-1 items-center justify-center gap-4 px-2 border-b border-border/40"
         data-tauri-drag-region
         data-testid="mac-left-pane-controls"
       >
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new CustomEvent("open-vault"))}
-          className="w-7 h-7 ui-icon-btn"
-          title={t.file.openFolder}
-          data-tauri-drag-region="false"
-        >
-          <FolderOpen className="w-3.5 h-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => void openNewWindow()}
-          className="w-7 h-7 ui-icon-btn"
-          title={t.file.newWindow}
-          data-tauri-drag-region="false"
-        >
-          <AppWindow className="w-3.5 h-3.5" />
-        </button>
         <button
           type="button"
           onClick={() =>
@@ -59,7 +38,7 @@ export function MacLeftPaneTopBar() {
           title={t.sidebar.newNote}
           data-tauri-drag-region="false"
         >
-          <FilePlus className="w-3.5 h-3.5" />
+          <FilePlus size={15} />
         </button>
         <button
           type="button"
@@ -70,7 +49,7 @@ export function MacLeftPaneTopBar() {
           title={t.sidebar.newDiagram}
           data-tauri-drag-region="false"
         >
-          <Shapes className="w-3.5 h-3.5" />
+          <Shapes size={15} />
         </button>
         <button
           type="button"
@@ -81,7 +60,7 @@ export function MacLeftPaneTopBar() {
           title={t.sidebar.newFolder}
           data-tauri-drag-region="false"
         >
-          <FolderPlus className="w-3.5 h-3.5" />
+          <FolderPlus size={15} />
         </button>
         <button
           type="button"
@@ -92,11 +71,11 @@ export function MacLeftPaneTopBar() {
           data-tauri-drag-region="false"
         >
           <RefreshCw
-            className={cn("w-3.5 h-3.5", isLoadingTree && "animate-spin")}
+            size={15}
+            className={cn(isLoadingTree && "animate-spin")}
           />
         </button>
 
-        <div className="flex-1" />
       </div>
     </div>
   );

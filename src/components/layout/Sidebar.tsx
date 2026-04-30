@@ -129,8 +129,6 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
     handleSelectRoot,
     getContextMenuItems,
     getRootContextMenuItems,
-    handleOpenFolder,
-    handleNewWindow,
     toggleExpanded,
     handleNewFile,
     handleNewDiagram,
@@ -394,8 +392,6 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
           onNewFolder={() => handleNewFolder()}
           onRefresh={refreshFileTree}
           isLoadingTree={isLoadingTree}
-          onOpenFolder={handleOpenFolder}
-          onNewWindow={handleNewWindow}
         />
       )}
 
