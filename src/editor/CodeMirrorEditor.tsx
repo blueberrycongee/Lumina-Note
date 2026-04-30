@@ -4613,7 +4613,6 @@ export const CodeMirrorEditor = forwardRef<
         case "source":
         default:
           return [
-            calloutStateField,
             ...(blockEditorEnabled ? blockEditorExtensions : []),
           ];
       }

@@ -91,6 +91,15 @@ describe("CodeMirror live markdown rendering polish", () => {
     expect(editorText(container)).toContain("- [x] Done");
   });
 
+  it("keeps source mode as raw markdown for callouts", () => {
+    const content = "> [!NOTE]\n> Raw callout body";
+    const { container } = setupEditor(content, "source");
+
+    expect(container.querySelector(".callout")).toBeNull();
+    expect(editorText(container)).toContain("> [!NOTE]");
+    expect(editorText(container)).toContain("> Raw callout body");
+  });
+
   it("renders blockquote lines while revealing quote markers on the active line", () => {
     const content = "Intro\n> Quoted text";
     const { container, view } = setupEditor(content, "live");
