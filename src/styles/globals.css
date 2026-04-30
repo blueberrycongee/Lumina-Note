@@ -1060,9 +1060,9 @@ html {
 /* KaTeX Math styles */
 .katex-display {
   margin: 1.5rem 0;
-  padding: 1rem;
-  background: hsl(var(--muted) / 0.5);
-  border-radius: 0.5rem;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
   overflow-x: auto;
 }
 
@@ -1081,7 +1081,7 @@ html {
 
 /* Math block in dark mode */
 .dark .katex-display {
-  background: hsl(var(--muted));
+  background: transparent;
 }
 
 .dark .katex {
