@@ -464,13 +464,13 @@ body.resizing iframe[data-codex-iframe="true"] {
 @layer utilities {
   .ui-tree-row {
     font-size: 11px;
-    line-height: 15px;
+    line-height: 20px;
     font-weight: 400;
   }
 
   .ui-tree-label {
     font-size: 11px;
-    line-height: 15px;
+    line-height: 20px;
     font-weight: 400;
   }
 

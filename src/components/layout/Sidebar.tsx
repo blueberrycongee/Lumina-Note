@@ -54,9 +54,9 @@ interface SidebarProps {
 }
 
 const FILE_TREE_ROW_CLASS =
-  "ui-tree-row w-full flex items-center gap-1.5 py-1 pr-2 transition-colors cursor-pointer select-none rounded-ui-sm";
+  "ui-tree-row w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors cursor-pointer select-none rounded-ui-sm";
 const FILE_TREE_FILE_ROW_CLASS =
-  "ui-tree-row w-full flex items-center gap-1.5 py-1 pr-2 transition-colors cursor-grab select-none rounded-ui-sm";
+  "ui-tree-row w-full flex items-center gap-1.5 py-1.5 pr-2 transition-colors cursor-grab select-none rounded-ui-sm";
 const FILE_TREE_ICON_CLASS = "ui-tree-icon text-muted-foreground shrink-0";
 const FILE_TREE_ICON_PASSIVE_CLASS =
   "ui-tree-icon text-muted-foreground shrink-0 pointer-events-none";
@@ -408,14 +408,14 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
               <Star className="h-3.5 w-3.5 shrink-0 text-yellow-500" />
               {t.favorites.title}
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setFavoriteSortMode("manual")}
                 className={cn(
-                  "px-1.5 py-0.5 text-ui-caption rounded transition-colors whitespace-nowrap",
+                  "rounded-ui-sm px-1 py-0.5 text-ui-micro font-normal leading-none transition-colors whitespace-nowrap",
                   favoriteSortMode === "manual"
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    ? "bg-accent/60 text-foreground/80"
+                    : "text-muted-foreground/55 hover:bg-accent/50 hover:text-muted-foreground",
                 )}
                 title={t.favorites.sortManual}
               >
@@ -424,10 +424,10 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
               <button
                 onClick={() => setFavoriteSortMode("recentAdded")}
                 className={cn(
-                  "px-1.5 py-0.5 text-ui-caption rounded transition-colors whitespace-nowrap",
+                  "rounded-ui-sm px-1 py-0.5 text-ui-micro font-normal leading-none transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentAdded"
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    ? "bg-accent/60 text-foreground/80"
+                    : "text-muted-foreground/55 hover:bg-accent/50 hover:text-muted-foreground",
                 )}
                 title={t.favorites.sortRecentAdded}
               >
@@ -436,10 +436,10 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
               <button
                 onClick={() => setFavoriteSortMode("recentOpened")}
                 className={cn(
-                  "px-1.5 py-0.5 text-ui-caption rounded transition-colors whitespace-nowrap",
+                  "rounded-ui-sm px-1 py-0.5 text-ui-micro font-normal leading-none transition-colors whitespace-nowrap",
                   favoriteSortMode === "recentOpened"
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    ? "bg-accent/60 text-foreground/80"
+                    : "text-muted-foreground/55 hover:bg-accent/50 hover:text-muted-foreground",
                 )}
                 title={t.favorites.sortRecentOpened}
               >
@@ -647,7 +647,7 @@ function CreateInputRow({
   return (
     <div
       data-file-tree-item="true"
-      className="ui-tree-row w-full flex items-center gap-1.5 py-1 pr-2 rounded-ui-sm"
+      className="ui-tree-row w-full flex items-center gap-1.5 py-1.5 pr-2 rounded-ui-sm"
       style={{ paddingLeft }}
     >
       {type === "folder" ? (
@@ -1140,7 +1140,7 @@ function VaultNameSection({
           }}
           onMouseLeave={() => setIsRootDragOver(false)}
           className={cn(
-            "ui-tree-row group flex items-center gap-1 cursor-pointer select-none px-2 py-1.5 truncate transition-colors rounded-ui-sm",
+            "ui-tree-row group flex items-center gap-1 cursor-pointer select-none px-2 py-2 truncate transition-colors rounded-ui-sm",
             isRootDragOver && "bg-primary/10",
             selectedPath === vaultPath && "bg-primary/10 text-primary",
           )}
