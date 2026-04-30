@@ -44,7 +44,7 @@ function ChipButton({
       data-chip={testId}
       className={[
         "flex h-7 shrink-0 items-center gap-1 self-end rounded-full px-2",
-        "text-xs",
+        "text-ui-caption",
         "transition-[background-color,color,transform,box-shadow] duration-content ease-out-subtle",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
         open
@@ -52,7 +52,7 @@ function ChipButton({
           : "text-muted-foreground hover:bg-accent hover:text-foreground hover:-translate-y-px hover:shadow-elev-1",
       ].join(" ")}
     >
-      <span className="block max-w-[88px] truncate font-medium">{label}</span>
+      <span className="block max-w-[88px] truncate font-normal">{label}</span>
       <ChevronUp
         size={12}
         className={[
