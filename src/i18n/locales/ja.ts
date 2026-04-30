@@ -431,6 +431,7 @@ export default {
     agentModeHint:
       "スマートアシスタントモード、ファイル読み書きとタスク実行可能",
     notConfigured: "未設定",
+    switchProvider: "プロバイダーを切り替え",
     aiChatSettings: "AI チャット設定",
     getRealtimeContent: "ライブラリからリアルタイムコンテンツを取得",
     aiGeneratedWarning:
@@ -1518,6 +1519,19 @@ export default {
       sessionCreate: "新しいチャットを作成できませんでした。",
       sessionSwitch: "そのチャットを開けませんでした。",
       sessionDelete: "そのチャットを削除できませんでした。",
+      // エラータイプラベル
+      kindLabels: {
+        "task.start": "メッセージ送信",
+        "session.provider_error": "AI サービス",
+        "permission.reply": "ツール権限",
+        "session.abort": "セッション停止",
+        "session.create": "セッション作成",
+        "session.switch": "セッション切替",
+        "session.delete": "セッション削除",
+        "render.boundary": "パネル描画",
+        "session.list": "セッション一覧",
+        "unknown": "不明なエラー",
+      },
     },
   },
 
@@ -1630,12 +1644,21 @@ export default {
     apiKey: "API Key",
     apiKeyOptional: "オプション",
     localModelNoKey: "ローカルモデルは API Key 不要",
+    mimoEndpoint: "MiMo エンドポイント",
+    mimoEndpointHint: "公式 API または Token Plan の地域エンドポイントを選択します。",
     model: "モデル",
     customModelId: "カスタムモデル ID",
     customModelHint:
       "例：deepseek-ai/DeepSeek-V3 または Pro/ERNIE-4.0-Turbo-8K",
     baseUrl: "Base URL",
     baseUrlOptional: "オプション、サードパーティプロキシ用",
+    openAICompatibleAdvanced: "OpenAI 互換の詳細設定",
+    contextWindow: "コンテキストウィンドウ",
+    contextWindowHint:
+      "空欄の場合は既定の 32,000 を使用します。OpenAI 互換カスタムモデルの実行時制限にのみ影響します。",
+    maxOutputTokens: "最大出力トークン",
+    maxOutputTokensHint:
+      "空欄の場合は既定の 4,096 を使用します。推論モデルでは最終テキスト用に十分な出力枠が必要です。",
     thinkingMode: "思考モード",
     thinkingModeThinking: "思考",
     thinkingModeInstant: "高速応答",
@@ -1653,6 +1676,14 @@ export default {
       title: "モデル切替",
       moreModels: "他のモデル",
       configureInSettings: "AI 設定で構成",
+      configuredModels: "構成済み",
+      manageModels: "モデルを管理",
+      manageModelsHint: "AI 設定でプロバイダーを追加または編集",
+      noConfiguredModels:
+        "利用可能なモデルがありません。まず AI 設定でプロバイダーを構成してください。",
+      appliesToNextMessage: "次のメッセージに適用",
+      contextContinues:
+        "現在の会話コンテキストは継続します。モデル互換性のため、一部の履歴詳細は圧縮される場合があります。",
     },
     temperature: "Temperature",
     temperatureLock: {

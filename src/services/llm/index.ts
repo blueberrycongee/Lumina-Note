@@ -36,10 +36,14 @@ export {
   getProviderModels,
   findModel,
   findModelInCatalog,
+  MIMO_ENDPOINTS,
+  getMimoEndpointForBaseUrl,
+  getMimoModelsForBaseUrl,
 } from "./providers/models";
 export type {
   ProviderMeta as AgentProviderMeta,
   ModelMeta as AgentModelMeta,
+  MimoEndpoint,
   ModelReasoningSpec,
   ModelTemperatureSpec,
   ModelApiConstraints,

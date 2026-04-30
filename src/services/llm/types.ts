@@ -59,9 +59,6 @@ export type LLMProviderType =
   | "moonshot"
   | "glm"
   | "mimo"
-  | "mimo-token-plan-cn"
-  | "mimo-token-plan-sgp"
-  | "mimo-token-plan-ams"
   | "groq"
   | "openrouter"
   | "ollama"
@@ -80,6 +77,8 @@ export interface LLMConfig {
   model: string;
   customModelId?: string;
   baseUrl?: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
   temperature?: number;
   thinkingMode?: ThinkingMode;
   reasoningEffort?: ReasoningEffort;

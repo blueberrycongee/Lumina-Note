@@ -135,6 +135,8 @@ describe("useAIStore sendMessageStream", () => {
       model: "custom",
       customModelId: "kimi-k2.5",
       baseUrl: "https://api.moonshot.cn/v1",
+      contextWindow: 256000,
+      maxOutputTokens: 8192,
     });
 
     expect(invokeMock).toHaveBeenCalledWith("agent_set_active_provider", {
@@ -145,7 +147,33 @@ describe("useAIStore sendMessageStream", () => {
       settings: {
         modelId: "kimi-k2.5",
         baseUrl: "https://api.moonshot.cn/v1",
+        contextWindow: 256000,
+        maxOutputTokens: 8192,
       },
     });
+  });
+
+  it("updates runtime model selection without syncing persistent provider settings", () => {
+    useAIStore.getState().setRuntimeModelSelection({
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+    });
+
+    expect(useAIStore.getState().runtimeModelSelection).toEqual({
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+    });
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("clears runtime model selection when persistent model settings are saved", async () => {
+    useAIStore.getState().setRuntimeModelSelection({
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+    });
+
+    await useAIStore.getState().setConfig({ model: "gpt-5.5" });
+
+    expect(useAIStore.getState().runtimeModelSelection).toBeNull();
   });
 });

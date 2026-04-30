@@ -119,4 +119,30 @@ describe('ProviderSettingsStore', () => {
     const resolved = await store.resolveSettings('openai')
     expect(resolved.apiKey).toBeUndefined()
   })
+
+  it('migrates legacy MiMo Token Plan provider ids into the MiMo provider', async () => {
+    const secret = createInMemorySecretStore()
+    secret.inner.set('lumina:provider:apikey:mimo-token-plan-sgp', 'tp-old')
+    fs.writeFileSync(
+      path.join(tmpDir, 'lumina-provider-settings.json'),
+      JSON.stringify({
+        activeProviderId: 'mimo-token-plan-sgp',
+        perProvider: {
+          'mimo-token-plan-sgp': {
+            modelId: 'mimo-v2.5-pro',
+          },
+        },
+      }),
+      'utf-8',
+    )
+
+    const store = new ProviderSettingsStore({ baseDir: tmpDir, secretStore: secret })
+
+    expect(store.getActiveProvider()).toBe('mimo')
+    expect(store.getProviderSettings('mimo')).toEqual({
+      modelId: 'mimo-v2.5-pro',
+      baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
+    })
+    await expect(store.getProviderApiKey('mimo')).resolves.toBe('tp-old')
+  })
 })

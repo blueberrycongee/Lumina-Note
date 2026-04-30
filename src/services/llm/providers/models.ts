@@ -124,6 +124,70 @@ function mimoReasoning(): ModelReasoningSpec {
   };
 }
 
+export interface MimoEndpoint {
+  id: 'official' | 'token-plan-cn' | 'token-plan-sgp' | 'token-plan-ams';
+  label: string;
+  defaultBaseUrl: string;
+  modelSet: 'official' | 'token-plan';
+}
+
+export const MIMO_ENDPOINTS: MimoEndpoint[] = [
+  {
+    id: 'official',
+    label: 'Official API',
+    defaultBaseUrl: 'https://api.xiaomimimo.com/v1',
+    modelSet: 'official',
+  },
+  {
+    id: 'token-plan-cn',
+    label: 'Token Plan China',
+    defaultBaseUrl: 'https://token-plan-cn.xiaomimimo.com/v1',
+    modelSet: 'token-plan',
+  },
+  {
+    id: 'token-plan-sgp',
+    label: 'Token Plan Singapore',
+    defaultBaseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
+    modelSet: 'token-plan',
+  },
+  {
+    id: 'token-plan-ams',
+    label: 'Token Plan Europe',
+    defaultBaseUrl: 'https://token-plan-ams.xiaomimimo.com/v1',
+    modelSet: 'token-plan',
+  },
+];
+
+const MIMO_OFFICIAL_MODELS: ModelMeta[] = [
+  {
+    id: 'mimo-v2.5-pro',
+    name: 'MiMo V2.5 Pro',
+    contextWindow: 1000000,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+  {
+    id: 'mimo-v2-pro',
+    name: 'MiMo V2 Pro',
+    contextWindow: 1000000,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+  {
+    id: 'mimo-v2-omni',
+    name: 'MiMo V2 Omni',
+    contextWindow: 262144,
+    supportsVision: true,
+    supportsThinking: true,
+    reasoning: mimoReasoning(),
+  },
+  {
+    id: 'mimo-v2-flash',
+    name: 'MiMo V2 Flash',
+    contextWindow: 262144,
+  },
+];
+
 const MIMO_TOKEN_PLAN_MODELS: ModelMeta[] = [
   {
     id: 'mimo-v2.5-pro',
@@ -157,20 +221,30 @@ const MIMO_TOKEN_PLAN_MODELS: ModelMeta[] = [
   },
 ];
 
-function mimoTokenPlanProvider(
-  id: string,
-  label: string,
-  defaultBaseUrl: string,
-): ProviderMeta {
-  return {
-    id,
-    label,
-    description: `${label} endpoint for Xiaomi MiMo Token Plan keys`,
-    defaultBaseUrl,
-    requiresApiKey: true,
-    supportsBaseUrl: true,
-    models: MIMO_TOKEN_PLAN_MODELS,
-  };
+function normalizeBaseUrl(baseUrl?: string): string {
+  return (baseUrl ?? '').trim().replace(/\/+$/, '').toLowerCase();
+}
+
+export function getMimoEndpointForBaseUrl(baseUrl?: string): MimoEndpoint {
+  const normalized = normalizeBaseUrl(baseUrl);
+  return (
+    MIMO_ENDPOINTS.find((endpoint) => normalizeBaseUrl(endpoint.defaultBaseUrl) === normalized) ??
+    MIMO_ENDPOINTS[0]
+  );
+}
+
+export function getMimoModelsForBaseUrl(baseUrl?: string): ModelMeta[] {
+  return getMimoEndpointForBaseUrl(baseUrl).modelSet === 'token-plan'
+    ? MIMO_TOKEN_PLAN_MODELS
+    : MIMO_OFFICIAL_MODELS;
+}
+
+function getAllMimoModels(): ModelMeta[] {
+  const byId = new Map<string, ModelMeta>();
+  for (const model of [...MIMO_OFFICIAL_MODELS, ...MIMO_TOKEN_PLAN_MODELS]) {
+    byId.set(model.id, model);
+  }
+  return Array.from(byId.values());
 }
 
 export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
@@ -532,70 +606,12 @@ export const PROVIDER_MODELS: Record<string, ProviderMeta> = {
   mimo: {
     id: 'mimo',
     label: 'Xiaomi MiMo',
-    description: '小米 MiMo 系列 (V2.5 Pro / V2 Pro / V2 Omni / V2 Flash)',
-    defaultBaseUrl: 'https://api.xiaomimimo.com/v1',
+    description: '小米 MiMo 系列 (Official API / Token Plan regional endpoints)',
+    defaultBaseUrl: MIMO_ENDPOINTS[0].defaultBaseUrl,
     requiresApiKey: true,
     supportsBaseUrl: true,
-    models: [
-      {
-        id: 'mimo-v2.5-pro',
-        name: 'MiMo V2.5 Pro',
-        contextWindow: 1000000,
-        supportsThinking: true,
-        reasoning: {
-          strategy: 'effort-only',
-          nativeShape: 'mimo-reasoning',
-          efforts: ['low', 'medium', 'high'],
-          defaultEffort: 'medium',
-        },
-      },
-      {
-        id: 'mimo-v2-pro',
-        name: 'MiMo V2 Pro',
-        contextWindow: 1000000,
-        supportsThinking: true,
-        reasoning: {
-          strategy: 'effort-only',
-          nativeShape: 'mimo-reasoning',
-          efforts: ['low', 'medium', 'high'],
-          defaultEffort: 'medium',
-        },
-      },
-      {
-        id: 'mimo-v2-omni',
-        name: 'MiMo V2 Omni',
-        contextWindow: 262144,
-        supportsVision: true,
-        supportsThinking: true,
-        reasoning: {
-          strategy: 'effort-only',
-          nativeShape: 'mimo-reasoning',
-          efforts: ['low', 'medium', 'high'],
-          defaultEffort: 'medium',
-        },
-      },
-      {
-        id: 'mimo-v2-flash',
-        name: 'MiMo V2 Flash',
-        contextWindow: 262144,
-      },
-    ],
+    models: MIMO_OFFICIAL_MODELS,
   },
-  'mimo-token-plan-cn': mimoTokenPlanProvider(
-    'mimo-token-plan-cn',
-    'Xiaomi MiMo Token Plan (China)',
-    'https://token-plan-cn.xiaomimimo.com/v1',
-  ),
-  'mimo-token-plan-sgp': mimoTokenPlanProvider(
-    'mimo-token-plan-sgp',
-    'Xiaomi MiMo Token Plan (Singapore)',
-    'https://token-plan-sgp.xiaomimimo.com/v1',
-  ),
-  'mimo-token-plan-ams': mimoTokenPlanProvider(
-    'mimo-token-plan-ams',
-    'Xiaomi MiMo Token Plan (Europe)',
-    'https://token-plan-ams.xiaomimimo.com/v1',
-  ),
   groq: {
     id: 'groq',
     label: 'Groq',
@@ -682,6 +698,9 @@ export function getProviderModels(id: string): ProviderMeta | undefined {
 }
 
 export function findModel(providerId: string, modelId: string): ModelMeta | undefined {
+  if (providerId === 'mimo') {
+    return getAllMimoModels().find((m) => m.id === modelId);
+  }
   return PROVIDER_MODELS[providerId]?.models.find((m) => m.id === modelId);
 }
 

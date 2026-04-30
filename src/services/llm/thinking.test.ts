@@ -92,7 +92,7 @@ describe("LLM thinking metadata", () => {
     expect(getDefaultReasoningEffort("openai", "gpt-5.4")).toBe("none");
     expect(getDefaultReasoningEffort("anthropic", "claude-opus-4-7")).toBe("high");
     expect(getDefaultReasoningEffort("mimo", "mimo-v2.5-pro")).toBe("medium");
-    expect(getDefaultReasoningEffort("mimo-token-plan-sgp", "mimo-v2.5-pro")).toBe("medium");
+    expect(getDefaultReasoningEffort("mimo", "mimo-v2.5")).toBe("medium");
     expect(getDefaultReasoningEffort("openai", "gpt-4o")).toBeNull();
   });
 });

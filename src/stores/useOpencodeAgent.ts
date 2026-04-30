@@ -34,6 +34,8 @@ import { getAIConfig } from "@/services/ai/ai";
 import { waitForAIConfigSync } from "@/services/ai/config-sync";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import type { LLMConfig, LLMProviderType } from "@/services/llm";
+import { useAIStore, type RuntimeModelSelection } from "@/stores/useAIStore";
+import { invoke } from "@/lib/host";
 
 export type AgentStatus =
   | "idle"
@@ -89,25 +91,85 @@ const OPENCODE_PROVIDER_ID_MAP: Partial<Record<LLMProviderType, string>> = {
   moonshot: "moonshotai",
   glm: "zhipuai",
   mimo: "xiaomi",
-  "mimo-token-plan-cn": "xiaomi-token-plan-cn",
-  "mimo-token-plan-sgp": "xiaomi-token-plan-sgp",
-  "mimo-token-plan-ams": "xiaomi-token-plan-ams",
   groq: "groq",
   openrouter: "openrouter",
   ollama: "ollama",
   "openai-compatible": "lumina-compat",
 };
 
+const MIMO_TOKEN_PLAN_OPENCODE_IDS: Record<string, string> = {
+  "https://token-plan-cn.xiaomimimo.com/v1": "xiaomi-token-plan-cn",
+  "https://token-plan-sgp.xiaomimimo.com/v1": "xiaomi-token-plan-sgp",
+  "https://token-plan-ams.xiaomimimo.com/v1": "xiaomi-token-plan-ams",
+};
+
+function normalizeBaseUrl(baseUrl?: string): string {
+  return (baseUrl ?? "").trim().replace(/\/+$/, "").toLowerCase();
+}
+
+function resolveOpencodeProviderId(config: Pick<LLMConfig, "provider" | "baseUrl">): string | undefined {
+  if (config.provider === "mimo") {
+    return (
+      MIMO_TOKEN_PLAN_OPENCODE_IDS[normalizeBaseUrl(config.baseUrl)] ??
+      OPENCODE_PROVIDER_ID_MAP.mimo
+    );
+  }
+  return OPENCODE_PROVIDER_ID_MAP[config.provider];
+}
+
 export function resolveOpencodePromptModel(
-  config: Pick<LLMConfig, "provider" | "model" | "customModelId">,
+  config:
+    | Pick<LLMConfig, "provider" | "model" | "customModelId" | "baseUrl">
+    | RuntimeModelSelection,
 ): OpencodePromptModel | undefined {
-  const providerID = OPENCODE_PROVIDER_ID_MAP[config.provider];
+  const providerID = resolveOpencodeProviderId(config);
   const modelID =
     config.model === "custom"
       ? config.customModelId?.trim()
       : config.model?.trim();
   if (!providerID || !modelID) return undefined;
   return { providerID, modelID };
+}
+
+function resolveRuntimeSelection(
+  config: Pick<LLMConfig, "provider" | "model" | "customModelId" | "baseUrl">,
+  runtimeSelection: RuntimeModelSelection | null,
+): RuntimeModelSelection {
+  if (runtimeSelection) return runtimeSelection;
+  return {
+    provider: config.provider,
+    model: config.model,
+    customModelId: config.customModelId,
+    baseUrl: config.baseUrl,
+  };
+}
+
+function requiresStoredApiKey(provider: LLMProviderType): boolean {
+  return provider !== "ollama";
+}
+
+function localProviderApiKeyState(
+  provider: LLMProviderType,
+  activeConfig: LLMConfig,
+): boolean | undefined {
+  if (!requiresStoredApiKey(provider)) return true;
+  if (provider !== activeConfig.provider) return undefined;
+  return !!activeConfig.apiKey?.trim() || !!activeConfig.apiKeyConfigured;
+}
+
+async function hasProviderApiKey(
+  provider: LLMProviderType,
+  activeConfig: LLMConfig,
+): Promise<boolean> {
+  const local = localProviderApiKeyState(provider, activeConfig);
+  if (local !== undefined) return local;
+  try {
+    return await invoke<boolean>("agent_has_provider_api_key", {
+      provider_id: provider,
+    });
+  } catch {
+    return false;
+  }
 }
 
 // Shape-parity with the legacy store so existing UI code that reaches into
@@ -910,14 +972,17 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       // Flash") while the actual response comes from the fallback model —
       // including its own identity and provider-default behaviour.
       const initialCfg = getAIConfig();
-      const keylessOk =
-        initialCfg.provider === "ollama" ||
-        initialCfg.provider === "openai-compatible";
-      if (
-        !initialCfg.apiKey?.trim() &&
-        !initialCfg.apiKeyConfigured &&
-        !keylessOk
-      ) {
+      const initialSelection = resolveRuntimeSelection(
+        initialCfg,
+        useAIStore.getState().runtimeModelSelection,
+      );
+      const localKeyState = localProviderApiKeyState(
+        initialSelection.provider,
+        initialCfg,
+      );
+      const selectedProviderHasKey =
+        localKeyState ?? (await hasProviderApiKey(initialSelection.provider, initialCfg));
+      if (!selectedProviderHasKey) {
         const t = getCurrentTranslations();
         reportError({
           kind: "task.start",
@@ -953,6 +1018,30 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         }));
         await waitForAIConfigSync();
         const cfg = getAIConfig();
+        const selection = resolveRuntimeSelection(
+          cfg,
+          useAIStore.getState().runtimeModelSelection,
+        );
+        const selectedProviderHasKeyAfterSync = await hasProviderApiKey(
+          selection.provider,
+          cfg,
+        );
+        if (!selectedProviderHasKeyAfterSync) {
+          const t = getCurrentTranslations();
+          reportError({
+            kind: "task.start",
+            severity: "blocker",
+            message: t.ai.apiKeyRequired,
+            retryable: false,
+            traceId,
+          });
+          set((state) => ({
+            status: "idle",
+            error: t.ai.apiKeyRequired,
+            messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
+          }));
+          return;
+        }
         resetOpencodeClient();
         if (!get()._subscribed) await get().subscribe();
         let sessionId = get().currentSessionId;
@@ -966,7 +1055,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         }
 
         const client = await getOpencodeClient();
-        const promptModel = resolveOpencodePromptModel(cfg);
+        const promptModel = resolveOpencodePromptModel(selection);
         const body = {
           agent: "build",
           ...(promptModel ? { model: promptModel } : {}),

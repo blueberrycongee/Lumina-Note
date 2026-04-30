@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { waitFor } from "@testing-library/react";
+import { invoke } from "@/lib/host";
 
 const mocks = vi.hoisted(() => ({
   getOpencodeClient: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("@/services/ai/config-sync", () => ({
 }));
 
 import { useOpencodeAgent } from "./useOpencodeAgent";
+import { useAIStore } from "./useAIStore";
 
 async function* emptyStream(): AsyncGenerator<never, void, unknown> {
   return;
@@ -40,6 +42,7 @@ async function* disposedStream(): AsyncGenerator<unknown, void, unknown> {
 
 describe("useOpencodeAgent.startTask", () => {
   beforeEach(() => {
+    vi.mocked(invoke).mockResolvedValue(true);
     mocks.getAIConfig.mockReturnValue({
       provider: "ollama",
       apiKey: "",
@@ -66,6 +69,15 @@ describe("useOpencodeAgent.startTask", () => {
       llmRetryState: null,
       _subscribed: false,
       _abortController: null,
+    });
+    useAIStore.setState({
+      config: {
+        provider: "ollama",
+        apiKey: "",
+        apiKeyConfigured: false,
+        model: "llama3.2",
+      },
+      runtimeModelSelection: null,
     });
   });
 
@@ -142,6 +154,49 @@ describe("useOpencodeAgent.startTask", () => {
 
     await waitFor(() => {
       expect(useOpencodeAgent.getState().status).toBe("idle");
+    });
+  });
+
+  it("sends the runtime-selected provider/model without mutating persistent config", async () => {
+    const promptAsync = vi.fn(async () => ({ data: {} }));
+    mocks.getAIConfig.mockReturnValue({
+      provider: "openai",
+      apiKey: "",
+      apiKeyConfigured: true,
+      model: "gpt-5.4",
+    });
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({ stream: emptyStream() })),
+      },
+      session: {
+        create: vi.fn(async () => ({ data: { id: "session-1" } })),
+        list: vi.fn(async () => ({ data: [] })),
+        promptAsync,
+      },
+    });
+    useAIStore.getState().setRuntimeModelSelection({
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+    });
+
+    await useOpencodeAgent
+      .getState()
+      .startTask("hello", { workspace_path: "/tmp/vault" });
+
+    expect(promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({
+          model: {
+            providerID: "deepseek",
+            modelID: "deepseek-v4-flash",
+          },
+        }),
+      }),
+    );
+    expect(mocks.getAIConfig()).toMatchObject({
+      provider: "openai",
+      model: "gpt-5.4",
     });
   });
 });

@@ -432,6 +432,7 @@ export default {
     agentModeHint:
       "Agent mode can read and edit files, then run tasks for you.",
     notConfigured: "Not configured",
+    switchProvider: "Switch Provider",
     aiChatSettings: "AI Chat Settings",
     getRealtimeContent: "Uses your workspace as live context",
     aiGeneratedWarning:
@@ -1518,6 +1519,19 @@ export default {
       sessionCreate: "Couldn't create a new chat.",
       sessionSwitch: "Couldn't open that chat.",
       sessionDelete: "Couldn't delete that chat.",
+      // Error type labels
+      kindLabels: {
+        "task.start": "Send Message",
+        "session.provider_error": "AI Service",
+        "permission.reply": "Tool Permission",
+        "session.abort": "Stop Session",
+        "session.create": "Create Session",
+        "session.switch": "Switch Session",
+        "session.delete": "Delete Session",
+        "render.boundary": "Panel Render",
+        "session.list": "Session List",
+        "unknown": "Unknown Error",
+      },
     },
   },
 
@@ -1627,11 +1641,20 @@ export default {
     apiKey: "API Key",
     apiKeyOptional: "optional",
     localModelNoKey: "Local models don't need API Key",
+    mimoEndpoint: "MiMo Endpoint",
+    mimoEndpointHint: "Choose the official API or a Token Plan regional endpoint.",
     model: "Model",
     customModelId: "Custom Model ID",
     customModelHint: "e.g. deepseek-ai/DeepSeek-V3 or Pro/ERNIE-4.0-Turbo-8K",
     baseUrl: "Base URL",
     baseUrlOptional: "Optional, for third-party proxies",
+    openAICompatibleAdvanced: "OpenAI Compatible Advanced",
+    contextWindow: "Context Window",
+    contextWindowHint:
+      "Leave blank for the 32,000 default. Only affects runtime limits for OpenAI-compatible custom models.",
+    maxOutputTokens: "Max Output Tokens",
+    maxOutputTokensHint:
+      "Leave blank for the 4,096 default. Reasoning models need enough output room for final text.",
     thinkingMode: "Thinking Mode",
     thinkingModeThinking: "Thinking",
     thinkingModeInstant: "Instant",
@@ -1649,6 +1672,13 @@ export default {
       title: "Switch model",
       moreModels: "More models",
       configureInSettings: "Configure in AI Settings",
+      configuredModels: "Configured",
+      manageModels: "Manage models",
+      manageModelsHint: "Add or edit providers in AI Settings",
+      noConfiguredModels: "No usable model yet. Configure a provider in AI Settings first.",
+      appliesToNextMessage: "Applies to the next message",
+      contextContinues:
+        "This keeps the conversation context. Some history details may be compacted for model compatibility.",
     },
     temperature: "Temperature",
     temperatureLock: {

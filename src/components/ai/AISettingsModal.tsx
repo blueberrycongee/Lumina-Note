@@ -4,7 +4,10 @@ import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import type { AIConfig } from "@/services/ai/ai";
 import {
+  MIMO_ENDPOINTS,
   PROVIDER_MODELS,
+  getMimoEndpointForBaseUrl,
+  getMimoModelsForBaseUrl,
   type LLMProviderType,
 } from "@/services/llm";
 import {
@@ -61,13 +64,19 @@ function formatModelOptionLabel(model: { name: string; supportsThinking?: boolea
   return model.name;
 }
 
-function getDefaultModelForProvider(provider: LLMProviderType): string {
-  return PROVIDER_MODELS[provider]?.models[0]?.id || "custom";
+function getModelsForProvider(provider: LLMProviderType, baseUrl?: string) {
+  return provider === "mimo"
+    ? getMimoModelsForBaseUrl(baseUrl)
+    : (PROVIDER_MODELS[provider]?.models ?? []);
 }
 
-function getModelMeta(provider: LLMProviderType, modelId?: string) {
+function getDefaultModelForProvider(provider: LLMProviderType, baseUrl?: string): string {
+  return getModelsForProvider(provider, baseUrl)[0]?.id || "custom";
+}
+
+function getModelMeta(provider: LLMProviderType, modelId?: string, baseUrl?: string) {
   if (!modelId || modelId === "custom") return undefined;
-  return PROVIDER_MODELS[provider]?.models.find((m) => m.id === modelId);
+  return getModelsForProvider(provider, baseUrl).find((m) => m.id === modelId);
 }
 
 function formatTemperatureLockMessage(
@@ -93,6 +102,13 @@ function formatApiConstraintsValues(
       c.frequencyPenalty ? c.frequencyPenalty.fixed.toString() : "—",
     )
     .replace("{n}", c.n ? c.n.fixed.toString() : "—");
+}
+
+function parsePositiveIntegerDraft(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number.parseInt(trimmed, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 // LabelRow — label on the left, optional right-aligned slot (e.g. "Optional"
@@ -176,7 +192,13 @@ export function AISettingsContent() {
   const licenseFeatures = useLicenseStore((s) => s.payload?.features);
   const licenseFeaturesForCloud = isLuminaCloudVisible(licenseFeatures);
   const providerMeta = PROVIDER_MODELS[config.provider as LLMProviderType];
-  const mainModelMeta = getModelMeta(config.provider as LLMProviderType, config.model);
+  const mainModelMeta = getModelMeta(
+    config.provider as LLMProviderType,
+    config.model,
+    config.baseUrl,
+  );
+  const isMimoProvider = config.provider === "mimo";
+  const mimoEndpoint = getMimoEndpointForBaseUrl(config.baseUrl);
   const effectiveModelForTemp =
     config.model === "custom" ? (config.customModelId || "custom") : config.model;
   const recommendedTemperature = getRecommendedTemperature(
@@ -303,12 +325,13 @@ export function AISettingsContent() {
               value={config.provider}
               onValueChange={(next) => {
                 const provider = next as LLMProviderType;
-                const defaultModel = getDefaultModelForProvider(provider);
+                const baseUrl = PROVIDER_MODELS[provider]?.defaultBaseUrl;
+                const defaultModel = getDefaultModelForProvider(provider, baseUrl);
                 setConfig({
                   provider,
                   model: defaultModel,
                   customModelId: defaultModel === "custom" ? "" : undefined,
-                  baseUrl: PROVIDER_MODELS[provider]?.defaultBaseUrl,
+                  baseUrl,
                   temperature: getRecommendedTemperature(provider, defaultModel),
                 });
               }}
@@ -428,6 +451,39 @@ export function AISettingsContent() {
           )}
         </Field>
 
+        {isMimoProvider && (
+          <Field
+            label={t.aiSettings.mimoEndpoint}
+            hint={t.aiSettings.mimoEndpointHint}
+          >
+            {(id) => (
+              <Select
+                id={id}
+                value={mimoEndpoint.defaultBaseUrl}
+                onValueChange={(baseUrl) => {
+                  const nextModels = getMimoModelsForBaseUrl(baseUrl);
+                  const currentModelAvailable = nextModels.some(
+                    (model) => model.id === config.model,
+                  );
+                  const nextModel = currentModelAvailable
+                    ? config.model
+                    : (nextModels[0]?.id ?? "custom");
+                  setConfig({
+                    baseUrl,
+                    model: nextModel,
+                    customModelId: undefined,
+                    temperature: getRecommendedTemperature("mimo", nextModel),
+                  });
+                }}
+                options={MIMO_ENDPOINTS.map((endpoint) => ({
+                  value: endpoint.defaultBaseUrl,
+                  label: endpoint.label,
+                }))}
+              />
+            )}
+          </Field>
+        )}
+
         {config.provider !== "openai-compatible" && (
           <Field
             label={
@@ -438,8 +494,10 @@ export function AISettingsContent() {
             }
           >
             {(id) => {
-              const providerModels =
-                PROVIDER_MODELS[config.provider as LLMProviderType]?.models ?? [];
+              const providerModels = getModelsForProvider(
+                config.provider as LLMProviderType,
+                config.baseUrl,
+              );
               const currentInList = providerModels.some(
                 (m) => m.id === config.model,
               );
@@ -524,6 +582,55 @@ export function AISettingsContent() {
               />
             )}
           </Field>
+        )}
+
+        {config.provider === "openai-compatible" && (
+          <div className="space-y-3 border-t border-border/60 pt-3">
+            <SectionHeader
+              icon={<Info size={14} />}
+              title={t.aiSettings.openAICompatibleAdvanced}
+            />
+            <Field
+              label={t.aiSettings.contextWindow}
+              hint={t.aiSettings.contextWindowHint}
+            >
+              {(id) => (
+                <TextInput
+                  id={id}
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  value={config.contextWindow?.toString() ?? ""}
+                  onChange={(e) =>
+                    setConfig({
+                      contextWindow: parsePositiveIntegerDraft(e.target.value),
+                    })
+                  }
+                  placeholder="32000"
+                />
+              )}
+            </Field>
+            <Field
+              label={t.aiSettings.maxOutputTokens}
+              hint={t.aiSettings.maxOutputTokensHint}
+            >
+              {(id) => (
+                <TextInput
+                  id={id}
+                  type="number"
+                  min="1"
+                  inputMode="numeric"
+                  value={config.maxOutputTokens?.toString() ?? ""}
+                  onChange={(e) =>
+                    setConfig({
+                      maxOutputTokens: parsePositiveIntegerDraft(e.target.value),
+                    })
+                  }
+                  placeholder="4096"
+                />
+              )}
+            </Field>
+          </div>
         )}
 
         <div className="space-y-1.5">

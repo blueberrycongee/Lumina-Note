@@ -33,11 +33,12 @@ describe("resolveOpencodePromptModel", () => {
     });
   });
 
-  it("routes MiMo Token Plan through opencode's regional Xiaomi provider", () => {
+  it("routes MiMo Token Plan endpoint through opencode's regional Xiaomi provider", () => {
     expect(
       resolveOpencodePromptModel({
-        provider: "mimo-token-plan-sgp",
+        provider: "mimo",
         model: "mimo-v2.5-pro",
+        baseUrl: "https://token-plan-sgp.xiaomimimo.com/v1",
       }),
     ).toEqual({
       providerID: "xiaomi-token-plan-sgp",

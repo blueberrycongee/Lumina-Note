@@ -159,6 +159,7 @@ export function Select<T extends string>({
         onKeyDown={onTriggerKeyDown}
         className={cn(
           "inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-sm",
+          "[clip-path:inset(0_round_0.5rem)]",
           "bg-background/60 border border-border/60",
           "transition-colors hover:bg-muted",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",

@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 
 import {
   findModel,
+  getMimoEndpointForBaseUrl,
+  getMimoModelsForBaseUrl,
   getProviderModels,
   listProviderModels,
+  MIMO_ENDPOINTS,
   PROVIDER_METADATA,
 } from './metadata'
 
 describe('providers/metadata', () => {
-  it('covers all 14 provider ids (including MiMo Token Plan regional endpoints)', () => {
+  it('covers all 11 top-level provider ids', () => {
     const ids = Object.keys(PROVIDER_METADATA).sort()
     expect(ids).toEqual(
       [
@@ -18,9 +21,6 @@ describe('providers/metadata', () => {
         'google',
         'groq',
         'mimo',
-        'mimo-token-plan-ams',
-        'mimo-token-plan-cn',
-        'mimo-token-plan-sgp',
         'moonshot',
         'ollama',
         'openai',
@@ -269,32 +269,32 @@ describe('providers/metadata', () => {
     ])
   })
 
-  it('mimo token plan providers expose regional endpoints and chat models', () => {
-    const expected = [
-      ['mimo-token-plan-cn', 'https://token-plan-cn.xiaomimimo.com/v1'],
-      ['mimo-token-plan-sgp', 'https://token-plan-sgp.xiaomimimo.com/v1'],
-      ['mimo-token-plan-ams', 'https://token-plan-ams.xiaomimimo.com/v1'],
-    ] as const
+  it('mimo exposes token plan as endpoint choices instead of top-level providers', () => {
+    expect(MIMO_ENDPOINTS.map((endpoint) => endpoint.defaultBaseUrl)).toEqual([
+      'https://api.xiaomimimo.com/v1',
+      'https://token-plan-cn.xiaomimimo.com/v1',
+      'https://token-plan-sgp.xiaomimimo.com/v1',
+      'https://token-plan-ams.xiaomimimo.com/v1',
+    ])
 
-    for (const [id, defaultBaseUrl] of expected) {
-      const provider = getProviderModels(id)
-      expect(provider?.label).toContain('Xiaomi MiMo Token Plan')
-      expect(provider?.defaultBaseUrl).toBe(defaultBaseUrl)
-      expect(provider?.requiresApiKey).toBe(true)
-      expect(provider?.models.map((m) => m.id)).toEqual([
-        'mimo-v2.5-pro',
-        'mimo-v2.5',
-        'mimo-v2-pro',
-        'mimo-v2-omni',
-      ])
-    }
+    expect(
+      getMimoModelsForBaseUrl('https://token-plan-cn.xiaomimimo.com/v1').map((m) => m.id),
+    ).toEqual([
+      'mimo-v2.5-pro',
+      'mimo-v2.5',
+      'mimo-v2-pro',
+      'mimo-v2-omni',
+    ])
+    expect(getMimoEndpointForBaseUrl('https://token-plan-sgp.xiaomimimo.com/v1').id).toBe(
+      'token-plan-sgp',
+    )
   })
 
-  it('mimo token plan exposes vision only on mimo-v2.5 and mimo-v2-omni', () => {
-    expect(findModel('mimo-token-plan-cn', 'mimo-v2.5-pro')?.supportsVision).toBeFalsy()
-    expect(findModel('mimo-token-plan-cn', 'mimo-v2-pro')?.supportsVision).toBeFalsy()
-    expect(findModel('mimo-token-plan-cn', 'mimo-v2.5')?.supportsVision).toBe(true)
-    expect(findModel('mimo-token-plan-cn', 'mimo-v2-omni')?.supportsVision).toBe(true)
+  it('mimo token plan models remain discoverable through the single MiMo provider', () => {
+    expect(findModel('mimo', 'mimo-v2.5-pro')?.supportsVision).toBeFalsy()
+    expect(findModel('mimo', 'mimo-v2-pro')?.supportsVision).toBeFalsy()
+    expect(findModel('mimo', 'mimo-v2.5')?.supportsVision).toBe(true)
+    expect(findModel('mimo', 'mimo-v2-omni')?.supportsVision).toBe(true)
   })
 
   it('mimo-v2.5-pro carries effort-only reasoning with mimo-reasoning shape', () => {

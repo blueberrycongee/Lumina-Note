@@ -94,6 +94,7 @@ export const Row = forwardRef<HTMLButtonElement, RowProps>(function Row(
       className={cn(
         "group relative w-full text-left",
         "flex items-center rounded-ui-md",
+        "[clip-path:inset(0_round_var(--ui-radius-md))]",
         "text-foreground",
         "transition-colors duration-fast ease-out-subtle",
         compact ? "gap-2 px-2.5 py-1.5" : "gap-2.5 px-3 py-2",

@@ -2,16 +2,16 @@
  * Chat error banner — what the user actually sees when something goes
  * wrong. Mirrors the consumer-AI pattern: one plain-language sentence,
  * an optional retry button, dismiss. Technical metadata (kind, traceId,
- * raw message, cause) only appears when the user opens "Details" — and
- * even then it's framed as "for bug reports" rather than thrown at them.
+ * raw message, cause) appears directly for transparency, with copy
+ * functionality for bug reports.
  *
  * The format function decides what message to show; this component
  * only handles presentation + the disclosure interaction.
  */
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { AlertCircle, X, RefreshCw, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+import { motion } from "framer-motion";
+import { AlertCircle, X, RefreshCw, Copy, Check } from "lucide-react";
 
 import { formatEnvelope, type ErrorEnvelope } from "@/services/errors";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -25,10 +25,13 @@ type Props = {
   onReload?: () => void;
 };
 
+function getKindLabel(kind: string, kindLabels: Record<string, string>): string {
+  return kindLabels[kind] || kind;
+}
+
 export function ErrorBanner({ envelope, onDismiss, onRetry, onReload }: Props) {
   const { t } = useLocaleStore();
   const e = t.agentMessage.errors;
-  const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const formatted = formatEnvelope(envelope);
@@ -71,6 +74,9 @@ export function ErrorBanner({ envelope, onDismiss, onRetry, onReload }: Props) {
         <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
         <div className="flex-1 min-w-0 leading-relaxed">
           {formatted.text}
+          <div className="mt-1 text-xs text-destructive/60 font-mono">
+            {getKindLabel(envelope.kind, e.kindLabels)}
+          </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {actionLabel && (
@@ -92,51 +98,26 @@ export function ErrorBanner({ envelope, onDismiss, onRetry, onReload }: Props) {
         </div>
       </div>
 
-      <div className="mt-1 -mb-1 pl-7">
+      <div className="mt-2 pl-7 space-y-1 font-mono text-[11px] text-destructive/70">
+        {envelope.traceId && <div>trace: {envelope.traceId}</div>}
+        {envelope.sessionId && <div>session: {envelope.sessionId}</div>}
+        <div className="break-words whitespace-pre-wrap">
+          {envelope.message}
+        </div>
         <button
-          onClick={() => setShowDetails((v) => !v)}
-          className="flex items-center gap-1 text-xs text-destructive/60 hover:text-destructive/80 transition-colors"
+          onClick={copyDetails}
+          className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-destructive/10 hover:bg-destructive/20 transition-colors"
         >
-          {showDetails ? (
-            <ChevronUp className="w-3 h-3" />
+          {copied ? (
+            <>
+              <Check className="w-3 h-3" /> {e.copied}
+            </>
           ) : (
-            <ChevronDown className="w-3 h-3" />
+            <>
+              <Copy className="w-3 h-3" /> {e.copyDetails}
+            </>
           )}
-          {showDetails ? e.hideDetails : e.details}
         </button>
-        <AnimatePresence>
-          {showDetails && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-2 px-2 py-2 rounded-md bg-destructive/[0.04] border border-destructive/10 space-y-1 font-mono text-[11px] text-destructive/70">
-                <div>kind: {envelope.kind}</div>
-                {envelope.traceId && <div>trace: {envelope.traceId}</div>}
-                {envelope.sessionId && <div>session: {envelope.sessionId}</div>}
-                <div className="break-words whitespace-pre-wrap">
-                  {envelope.message}
-                </div>
-                <button
-                  onClick={copyDetails}
-                  className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-destructive/10 hover:bg-destructive/20 transition-colors"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-3 h-3" /> {e.copied}
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" /> {e.copyDetails}
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </motion.div>
   );

@@ -9,7 +9,7 @@ import {
 } from './registry.js'
 
 describe('providers/registry', () => {
-  it('lists all 14 built-in providers (including MiMo Token Plan regional endpoints)', () => {
+  it('lists all 11 built-in top-level providers', () => {
     const providers = listProviders()
     const ids = providers.map((p) => p.id).sort()
     expect(ids).toEqual(
@@ -20,9 +20,6 @@ describe('providers/registry', () => {
         'google',
         'groq',
         'mimo',
-        'mimo-token-plan-ams',
-        'mimo-token-plan-cn',
-        'mimo-token-plan-sgp',
         'moonshot',
         'ollama',
         'openai',
@@ -57,18 +54,6 @@ describe('providers/registry', () => {
     expect(mimo?.requiresApiKey).toBe(true)
     expect(mimo?.supportsBaseUrl).toBe(true)
     expect(mimo?.defaultBaseUrl).toBe('https://api.xiaomimimo.com/v1')
-  })
-
-  it('mimo token plan providers use their regional endpoints', () => {
-    expect(getProvider('mimo-token-plan-cn')?.defaultBaseUrl).toBe(
-      'https://token-plan-cn.xiaomimimo.com/v1',
-    )
-    expect(getProvider('mimo-token-plan-sgp')?.defaultBaseUrl).toBe(
-      'https://token-plan-sgp.xiaomimimo.com/v1',
-    )
-    expect(getProvider('mimo-token-plan-ams')?.defaultBaseUrl).toBe(
-      'https://token-plan-ams.xiaomimimo.com/v1',
-    )
   })
 
   it('every provider has label / description / requiresApiKey / supportsBaseUrl', () => {

@@ -14,6 +14,29 @@ import path from 'node:path'
 
 import type { ProviderId } from './registry.js'
 
+type LegacyProviderId =
+  | 'mimo-token-plan-cn'
+  | 'mimo-token-plan-sgp'
+  | 'mimo-token-plan-ams'
+
+const LEGACY_MIMO_TOKEN_PLAN_BASE_URLS: Record<LegacyProviderId, string> = {
+  'mimo-token-plan-cn': 'https://token-plan-cn.xiaomimimo.com/v1',
+  'mimo-token-plan-sgp': 'https://token-plan-sgp.xiaomimimo.com/v1',
+  'mimo-token-plan-ams': 'https://token-plan-ams.xiaomimimo.com/v1',
+}
+
+function isLegacyMimoTokenPlanId(id: string): id is LegacyProviderId {
+  return id in LEGACY_MIMO_TOKEN_PLAN_BASE_URLS
+}
+
+function legacyMimoTokenPlanIdForBaseUrl(baseUrl?: string): LegacyProviderId | null {
+  const normalized = (baseUrl ?? '').trim().replace(/\/+$/, '').toLowerCase()
+  for (const [id, url] of Object.entries(LEGACY_MIMO_TOKEN_PLAN_BASE_URLS)) {
+    if (url.toLowerCase() === normalized) return id as LegacyProviderId
+  }
+  return null
+}
+
 // Mirror of the renderer types in src/services/llm/types.ts. Kept inline to
 // avoid cross-tree imports — the literal sets are tiny and stable.
 //
@@ -26,6 +49,8 @@ export type ReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'ma
 export interface ProviderPersistedSettings {
   baseUrl?: string
   modelId?: string
+  contextWindow?: number
+  maxOutputTokens?: number
   /** openai-compatible 用: 用户自定义显示名 */
   name?: string
   /** 附加 HTTP header(罕见,用户自填) */
@@ -68,6 +93,36 @@ function secretKey(providerId: ProviderId): string {
   return `lumina:provider:apikey:${providerId}`
 }
 
+function legacySecretKey(providerId: LegacyProviderId): string {
+  return `lumina:provider:apikey:${providerId}`
+}
+
+function normalizePersistedProviderState(
+  parsed: Partial<AllProviderSettings>,
+): AllProviderSettings {
+  const activeProviderId = parsed.activeProviderId
+  const normalized: AllProviderSettings = {
+    activeProviderId:
+      typeof activeProviderId === 'string' && isLegacyMimoTokenPlanId(activeProviderId)
+        ? 'mimo'
+        : ((activeProviderId as ProviderId | null | undefined) ?? null),
+    perProvider: {},
+  }
+
+  for (const [rawId, settings] of Object.entries(parsed.perProvider ?? {})) {
+    if (isLegacyMimoTokenPlanId(rawId)) {
+      normalized.perProvider.mimo = {
+        ...settings,
+        baseUrl: settings.baseUrl ?? LEGACY_MIMO_TOKEN_PLAN_BASE_URLS[rawId],
+      }
+      continue
+    }
+    normalized.perProvider[rawId as ProviderId] = { ...settings }
+  }
+
+  return normalized
+}
+
 export class ProviderSettingsStore {
   private readonly options: SettingsStoreOptions
   private readonly filePath: string
@@ -88,10 +143,7 @@ export class ProviderSettingsStore {
     try {
       const raw = fs.readFileSync(this.filePath, 'utf-8')
       const parsed = JSON.parse(raw) as Partial<AllProviderSettings>
-      this.state = {
-        activeProviderId: parsed.activeProviderId ?? null,
-        perProvider: parsed.perProvider ?? {},
-      }
+      this.state = normalizePersistedProviderState(parsed)
     } catch {
       this.state = { ...DEFAULT_STATE, perProvider: {} }
     }
@@ -141,7 +193,15 @@ export class ProviderSettingsStore {
   }
 
   async getProviderApiKey(id: ProviderId): Promise<string | null> {
-    return this.options.secretStore.get(secretKey(id))
+    const direct = await this.options.secretStore.get(secretKey(id))
+    if (direct || id !== 'mimo') return direct
+
+    const legacyId = legacyMimoTokenPlanIdForBaseUrl(
+      this.getProviderSettings('mimo').baseUrl,
+    )
+    return legacyId
+      ? this.options.secretStore.get(legacySecretKey(legacyId))
+      : null
   }
 
   async setProviderApiKey(id: ProviderId, apiKey: string): Promise<void> {

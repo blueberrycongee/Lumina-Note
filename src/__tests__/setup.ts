@@ -114,6 +114,11 @@ vi.mock('@/lib/hostBridge', async () => {
       'agent_abort': undefined,
       'agent_get_status': { status: 'idle' },
       'agent_get_queue_status': { running: false, queued: [] },
+      'agent_get_provider_settings': {
+        activeProviderId: 'openai',
+        perProvider: {},
+      },
+      'agent_has_provider_api_key': false,
 
       // 数据库相关
       'query_database': { rows: [] },

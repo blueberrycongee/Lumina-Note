@@ -14,7 +14,8 @@ import {
   generateImageDirect,
   pickConfiguredImageProvider,
 } from "@/services/imageGen/direct";
-import { findModelInCatalog } from "@/services/llm/providers/models";
+import { findModelInCatalog, listProviderModels, PROVIDER_MODELS } from "@/services/llm/providers/models";
+import type { LLMProviderType } from "@/services/llm";
 import { toast } from "sonner";
 import {
   useOpencodeAgent,
@@ -190,6 +191,7 @@ export function MainAIChatShell() {
   const [imageMode, setImageMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [showProviderMenu, setShowProviderMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [referencedFiles, setReferencedFiles] = useState<ReferencedFile[]>([]);
   const [showMention, setShowMention] = useState(false);
@@ -338,6 +340,7 @@ export function MainAIChatShell() {
     clearTextSelections,
     pendingInputAppends,
     consumeInputAppends,
+    setRuntimeModelSelection,
   } = useAIStore(
     useShallow((state) => ({
       textSelections: state.textSelections,
@@ -345,6 +348,7 @@ export function MainAIChatShell() {
       clearTextSelections: state.clearTextSelections,
       pendingInputAppends: state.pendingInputAppends,
       consumeInputAppends: state.consumeInputAppends,
+      setRuntimeModelSelection: state.setRuntimeModelSelection,
     })),
   );
 
@@ -794,6 +798,26 @@ export function MainAIChatShell() {
       );
     },
     [_handleSelectSkill],
+  );
+
+  // Provider switching
+  const handleSwitchProvider = useCallback(
+    (providerId: string) => {
+      const providerMeta = PROVIDER_MODELS[providerId];
+      if (!providerMeta) return;
+
+      // Get the first model of the new provider as default
+      const defaultModel = providerMeta.models[0];
+      if (!defaultModel) return;
+
+      setRuntimeModelSelection({
+        provider: providerId as LLMProviderType,
+        model: defaultModel.id,
+      });
+      setShowProviderMenu(false);
+      setShowPlusMenu(false);
+    },
+    [setRuntimeModelSelection],
   );
 
   // 发送消息
@@ -1828,12 +1852,54 @@ export function MainAIChatShell() {
                       <Row
                         density="compact"
                         icon={<Settings size={14} />}
+                        title={t.ai.switchProvider}
+                        trailing={<Kbd>⌘P</Kbd>}
+                        onSelect={() => {
+                          setShowPlusMenu(false);
+                          setShowProviderMenu(true);
+                        }}
+                      />
+                      <Row
+                        density="compact"
+                        icon={<Settings size={14} />}
                         title={t.ai.aiChatSettings}
                         onSelect={() => {
                           setShowSettings(true);
                           setShowPlusMenu(false);
                         }}
                       />
+                    </PopoverList>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Provider switcher popover */}
+                <Popover
+                  open={showProviderMenu}
+                  onOpenChange={setShowProviderMenu}
+                  anchor={plusButtonRef}
+                >
+                  <PopoverContent
+                    placement="top-start"
+                    width={240}
+                    data-provider-menu
+                  >
+                    <PopoverHeader>
+                      {t.ai.switchProvider}
+                    </PopoverHeader>
+                    <PopoverList>
+                      {listProviderModels().map((meta) => {
+                        const isSelected = meta.id === aiProvider;
+                        return (
+                          <Row
+                            key={meta.id}
+                            density="compact"
+                            title={meta.label}
+                            selected={isSelected}
+                            trailing={isSelected ? <Check size={14} /> : null}
+                            onSelect={() => handleSwitchProvider(meta.id)}
+                          />
+                        );
+                      })}
                     </PopoverList>
                   </PopoverContent>
                 </Popover>
@@ -1882,7 +1948,10 @@ export function MainAIChatShell() {
                     >
                       <button
                         ref={plusButtonRef}
-                        onClick={() => setShowPlusMenu((v) => !v)}
+                        onClick={() => {
+                          setShowProviderMenu(false);
+                          setShowPlusMenu((v) => !v);
+                        }}
                         style={{ gridArea: "plus" }}
                         className={[
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
@@ -1915,7 +1984,9 @@ export function MainAIChatShell() {
                       />
 
                       <div style={{ gridArea: "chips" }} className="flex">
-                        <ModelEffortPicker />
+                        <ModelEffortPicker
+                          onOpenSettings={() => setShowSettings(true)}
+                        />
                       </div>
 
                       <button

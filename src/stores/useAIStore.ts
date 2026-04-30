@@ -51,6 +51,27 @@ export interface TokenUsage {
 
 export type StreamingReasoningStatus = "idle" | "streaming" | "done";
 
+export type RuntimeModelSelection = {
+  provider: LLMProviderType;
+  model: string;
+  customModelId?: string;
+  baseUrl?: string;
+};
+
+export type ProviderRuntimeSettings = {
+  modelId?: string;
+  baseUrl?: string;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  name?: string;
+  apiKeyConfigured?: boolean;
+};
+
+type ProviderSettingsSnapshot = {
+  activeProviderId: LLMProviderType | null;
+  perProvider: Partial<Record<LLMProviderType, ProviderRuntimeSettings>>;
+};
+
 interface ChatSession {
   id: string;
   title: string;
@@ -108,11 +129,27 @@ function resolveProviderModelId(config: AIConfig): string {
   return config.customModelId?.trim() || "";
 }
 
+function buildProviderSettingsPayload(config: AIConfig): ProviderRuntimeSettings {
+  const settings: ProviderRuntimeSettings = {
+    modelId: resolveProviderModelId(config) || undefined,
+    baseUrl: config.baseUrl || undefined,
+  };
+  if (config.provider === "openai-compatible") {
+    settings.contextWindow = config.contextWindow || undefined;
+    settings.maxOutputTokens = config.maxOutputTokens || undefined;
+  }
+  return settings;
+}
+
 interface AIState {
   // Config
   config: AIConfig;
   encryptedApiKey?: string;
   setConfig: (config: Partial<AIConfig>) => void | Promise<void>;
+  providerSettings: ProviderSettingsSnapshot;
+  runtimeModelSelection: RuntimeModelSelection | null;
+  loadProviderSettings: () => Promise<void>;
+  setRuntimeModelSelection: (selection: RuntimeModelSelection | null) => void;
 
   // Chat
   messages: Message[];
@@ -190,6 +227,64 @@ export const useAIStore = create<AIState>()(
       // Config
       config: getAIConfig(),
       encryptedApiKey: undefined,
+      providerSettings: {
+        activeProviderId: null,
+        perProvider: {},
+      },
+      runtimeModelSelection: null,
+      loadProviderSettings: async () => {
+        try {
+          const backend = await invoke<{
+            activeProviderId: string | null;
+            perProvider: Record<string, ProviderRuntimeSettings>;
+          }>("agent_get_provider_settings");
+          const perProvider: Partial<Record<LLMProviderType, ProviderRuntimeSettings>> = {};
+          const entries = Object.entries(backend?.perProvider ?? {});
+          await Promise.all(
+            entries.map(async ([provider, settings]) => {
+              const providerId = provider as LLMProviderType;
+              let apiKeyConfigured = providerId === "ollama";
+              try {
+                apiKeyConfigured =
+                  providerId === "ollama" ||
+                  (await invoke<boolean>("agent_has_provider_api_key", {
+                    provider_id: providerId,
+                  }));
+              } catch {
+                apiKeyConfigured = false;
+              }
+              perProvider[providerId] = {
+                ...settings,
+                apiKeyConfigured,
+              };
+            }),
+          );
+          set({
+            providerSettings: {
+              activeProviderId: (backend?.activeProviderId as LLMProviderType | null) ?? null,
+              perProvider,
+            },
+          });
+        } catch {
+          set({
+            providerSettings: {
+              activeProviderId: get().config.provider,
+              perProvider: {
+                [get().config.provider]: {
+                  ...buildProviderSettingsPayload(get().config),
+                  apiKeyConfigured:
+                    get().config.provider === "ollama" ||
+                    !!get().config.apiKey?.trim() ||
+                    !!get().config.apiKeyConfigured,
+                },
+              },
+            },
+          });
+        }
+      },
+      setRuntimeModelSelection: (selection) => {
+        set({ runtimeModelSelection: selection });
+      },
       setConfig: async (newConfig) => {
         const currentConfig = getAIConfig();
 
@@ -208,6 +303,14 @@ export const useAIStore = create<AIState>()(
           set({ config: getAIConfig() });
         }
 
+        if (
+          newConfig.provider !== undefined ||
+          newConfig.model !== undefined ||
+          newConfig.customModelId !== undefined
+        ) {
+          set({ runtimeModelSelection: null });
+        }
+
         // Sync provider-related changes to backend. Model picker updates are
         // fire-and-forget from the UI, so startTask waits on this queue before
         // it builds the opencode request.
@@ -221,20 +324,32 @@ export const useAIStore = create<AIState>()(
             const providerSettingsChanged =
               providerChanged ||
               nextModelId !== previousModelId ||
-              nextConfig.baseUrl !== currentConfig.baseUrl;
+              nextConfig.baseUrl !== currentConfig.baseUrl ||
+              nextConfig.contextWindow !== currentConfig.contextWindow ||
+              nextConfig.maxOutputTokens !== currentConfig.maxOutputTokens;
 
             if (providerChanged) {
               await invoke("agent_set_active_provider", { provider_id: nextProvider });
             }
 
             if (providerSettingsChanged) {
-              await invoke("agent_set_provider_settings", {
-                provider_id: nextProvider,
-                settings: {
-                  modelId: nextModelId || undefined,
-                  baseUrl: nextConfig.baseUrl || undefined,
-                },
-              });
+                const nextProviderSettings = buildProviderSettingsPayload(nextConfig);
+                await invoke("agent_set_provider_settings", {
+                  provider_id: nextProvider,
+                  settings: nextProviderSettings,
+                });
+                set((state) => ({
+                  providerSettings: {
+                    activeProviderId: nextProvider,
+                    perProvider: {
+                      ...state.providerSettings.perProvider,
+                      [nextProvider]: {
+                        ...(state.providerSettings.perProvider[nextProvider] ?? {}),
+                        ...nextProviderSettings,
+                      },
+                    },
+                  },
+                }));
             }
 
             if (
@@ -254,6 +369,7 @@ export const useAIStore = create<AIState>()(
               });
               set({ config: getAIConfig() });
             }
+            await get().loadProviderSettings();
           } catch (err) {
             console.error("[AIStore] failed to sync provider config to backend", err);
           }
@@ -997,7 +1113,24 @@ export const useAIStore = create<AIState>()(
 
             // Fetch backend provider settings and override provider-related fields
             try {
-              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, { modelId?: string; baseUrl?: string }> }>("agent_get_provider_settings");
+              const backend = await invoke<{ activeProviderId: string | null; perProvider: Record<string, ProviderRuntimeSettings> }>("agent_get_provider_settings");
+              const perProvider: Partial<Record<LLMProviderType, ProviderRuntimeSettings>> = {};
+              await Promise.all(
+                Object.entries(backend?.perProvider ?? {}).map(async ([provider, settings]) => {
+                  const providerId = provider as LLMProviderType;
+                  let apiKeyConfigured = providerId === "ollama";
+                  try {
+                    apiKeyConfigured =
+                      providerId === "ollama" ||
+                      (await invoke<boolean>("agent_has_provider_api_key", {
+                        provider_id: providerId,
+                      }));
+                  } catch {
+                    apiKeyConfigured = false;
+                  }
+                  perProvider[providerId] = { ...settings, apiKeyConfigured };
+                }),
+              );
               if (backend?.activeProviderId) {
                 const providerId = backend.activeProviderId;
                 const pp = backend.perProvider[providerId] ?? {};
@@ -1013,12 +1146,25 @@ export const useAIStore = create<AIState>()(
                 }
                 if (pp.baseUrl) decryptedConfig.baseUrl = pp.baseUrl;
                 else decryptedConfig.baseUrl = undefined;
+                if (providerId === "openai-compatible") {
+                  decryptedConfig.contextWindow = pp.contextWindow;
+                  decryptedConfig.maxOutputTokens = pp.maxOutputTokens;
+                } else {
+                  decryptedConfig.contextWindow = undefined;
+                  decryptedConfig.maxOutputTokens = undefined;
+                }
                 decryptedConfig.apiKeyConfigured =
                   !!decryptedConfig.apiKey?.trim() ||
                   (await invoke<boolean>("agent_has_provider_api_key", {
                     provider_id: providerId,
                   }));
               }
+              useAIStore.setState({
+                providerSettings: {
+                  activeProviderId: (backend?.activeProviderId as LLMProviderType | null) ?? null,
+                  perProvider,
+                },
+              });
             } catch {
               // Backend not available (e.g. web build), use local config
             }
@@ -1028,6 +1174,7 @@ export const useAIStore = create<AIState>()(
               useAIStore.setState({
                 config: decryptedConfig,
                 encryptedApiKey: storedEncryptedKey,
+                runtimeModelSelection: null,
               });
             });
           } catch (error) {
