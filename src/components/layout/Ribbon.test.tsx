@@ -221,6 +221,15 @@ describe("Ribbon", () => {
     ).toHaveLength(1);
   });
 
+  it("uses visible hover emphasis for the command palette button", () => {
+    render(<Ribbon />);
+
+    expect(screen.getByTitle("Command Palette")).toHaveClass(
+      "hover:!bg-primary/10",
+      "hover:!text-primary",
+    );
+  });
+
   it("opens the dedicated update modal directly from the ribbon button", () => {
     render(<Ribbon />);
 

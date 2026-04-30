@@ -333,7 +333,7 @@ export function Ribbon({
             onClick={() => {
               window.dispatchEvent(new CustomEvent("open-command-palette"));
             }}
-            className="w-9 h-9 ui-icon-btn relative"
+            className="w-9 h-9 ui-icon-btn relative hover:!bg-primary/10 hover:!text-primary"
             title={t.ribbon.commandPaletteTrigger}
           >
             <Command size={20} />
