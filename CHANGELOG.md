@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.5] - 2026-04-30
+## [1.3.5] - 2026-05-01
 
 本次发版重点是把 v1.3.4 之后的 AI / opencode / 图片生成链路收口：主聊天的 provider 切换更稳定，图片生成不再完全依赖聊天模型可用，Lumina Cloud 的账号与 provider 入口也补齐了。
 
@@ -23,12 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI Settings 同步修复**：桌面 profile 切换会同步 provider 配置；保存 provider 设置时不再被 opencode restart readiness 阻塞；provider refresh 有明确等待路径。
 - **图片 provider 路由更可靠**：图片 provider 网络失败处理更稳；路由不再误切 provider；设置页始终渲染三个 provider row，避免用户无处填写 key。
 - **聊天发送体验修复**：opencode 冷启动期间立即显示 pending user message；错误 banner 保持 sticky，避免错误刚出现就被 idle 状态覆盖。
+- **侧栏折叠态控制修复**：当主内容区被右侧栏挤到折叠时，左右侧栏开关会穿出到布局层，避免中间区消失后无法操作侧栏；右侧 resize handle 也保持贴住右侧栏左边缘，不再因 fallback 控制条错位。
+- **编辑器 live markdown 交互修复**：稳定 live image、表格、callout、Mermaid、blockquote、代码块和异步 widget 的布局与选择行为，减少切换模式和滚动时的跳动。
+- **PDF 选择修复**：恢复 PDF 文本选择能力，同时保留应用 chrome 的默认不可选中行为。
 
 ### 改进
 - **Agent V2 代码结构收敛**：仍被 V2 使用的 provider settings、image provider settings、agent IPC dispatch 移到 `electron/main/agent-v2/`，删除代码层面的 `electron/main/agent/` 旧路径，清理 `Rust Agent` / V1 runtime 残留命名。
 - **错误处理统一**：新增结构化 error envelope、统一 reporter、toast bridge、retry policy、traceId 和诊断面板，让聊天、侧栏、编辑器错误走同一条用户可理解的路径。
 - **聊天时间线降噪**：连续工具调用折叠为一个工作会话，运行态文案更克制，并显示完成耗时。
 - **图片显示更克制**：生成图片在聊天中缩小展示，减少对对话流的打断。
+- **主界面 chrome 打磨**：TabBar、侧栏 toggle、新建标签、图片管理器、知识图谱和模型选择器的密度与动效继续收敛，减少不必要的视觉噪声。
 
 ## [1.3.4] - 2026-04-27
 
