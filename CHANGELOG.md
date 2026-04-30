@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-05-01
+
+### 修复
+- **opencode provider 切换缓存修复**：provider / model 设置变化并重启 opencode 前，先 dispose 所有 opencode directory instance，强制 provider/model state 用最新配置重建，避免切到 MiMo Token Plan 等 provider 后仍命中旧缓存并报 `ProviderModelNotFoundError`。
+
 ## [1.3.5] - 2026-05-01
 
 本次发版重点是把 v1.3.4 之后的 AI / opencode / 图片生成链路收口：主聊天的 provider 切换更稳定，图片生成不再完全依赖聊天模型可用，Lumina Cloud 的账号与 provider 入口也补齐了。

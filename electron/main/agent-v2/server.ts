@@ -28,6 +28,7 @@ let readiness: Promise<OpencodeServerHandle> | null = null;
 let listeners: Array<(h: OpencodeServerHandle | null) => void> = [];
 
 const STOP_TIMEOUT_MS = 2_000;
+const DISPOSE_TIMEOUT_MS = 2_000;
 
 function notifyListeners(next: OpencodeServerHandle | null): void {
   for (const fn of listeners) {
@@ -87,6 +88,30 @@ async function waitForReady(
     await new Promise((r) => setTimeout(r, 100));
   }
   throw new Error(`opencode server not ready within ${timeoutMs}ms at ${url}`);
+}
+
+async function disposeOpencodeInstances(
+  current: OpencodeServerHandle,
+): Promise<void> {
+  const headers = new Headers({
+    authorization:
+      "Basic " +
+      Buffer.from(`${current.username}:${current.password}`).toString("base64"),
+  });
+  try {
+    const res = await fetch(new URL("/global/dispose", current.url), {
+      method: "POST",
+      headers,
+      signal: AbortSignal.timeout(DISPOSE_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      console.warn(
+        `[opencode] instance dispose returned HTTP ${res.status} during restart`,
+      );
+    }
+  } catch (err) {
+    console.warn("[opencode] instance dispose failed during restart", err);
+  }
 }
 
 export async function startOpencodeServer(opts?: {
@@ -196,6 +221,15 @@ export async function stopOpencodeServer(): Promise<void> {
   handle = null;
   notifyListeners(null);
   if (!current) return;
+
+  // Server.listen()/listener.stop() only tears down the HTTP listener. Opencode
+  // keeps per-directory InstanceState caches (including provider/model state)
+  // in the shared Effect runtime. If provider settings change and we only
+  // restart the listener, a vault directory can keep using the old provider
+  // table and reject the newly selected model with ProviderModelNotFoundError.
+  // Disposing instances before restart forces provider/config state to rebuild
+  // from the freshly applied OPENCODE_CONFIG_CONTENT/OPENCODE_AUTH_CONTENT.
+  await disposeOpencodeInstances(current);
 
   // opencode's listener.stop() can wait indefinitely for long-lived SSE
   // connections to drain. During a provider/model change that leaves the app
