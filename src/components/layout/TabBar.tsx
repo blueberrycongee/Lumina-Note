@@ -11,10 +11,6 @@ import {
   Puzzle,
   Shapes,
   Images,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
 } from "lucide-react";
 import { AnimatePresence, motion, Reorder, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -56,8 +52,73 @@ const TABBAR_ICON_BUTTON_CLASS =
   "relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const TABBAR_ICON_BUTTON_OPEN_CLASS =
   "text-primary hover:text-primary";
-const TABBAR_STATE_RAIL_CLASS =
-  "absolute inset-y-1.5 w-0.5 rounded-full bg-primary transition-[opacity,transform] duration-200 ease-out";
+
+interface SidebarStateIconProps {
+  side: "left" | "right";
+  open: boolean;
+  reduceMotion: boolean | null;
+}
+
+function SidebarStateIcon({ side, open, reduceMotion }: SidebarStateIconProps) {
+  const panelX = side === "left" ? 4 : 12;
+  const dividerX = side === "left" ? 11 : 12;
+  const transformOrigin = side === "left" ? "4px 12px" : "20px 12px";
+  const closedStroke = "hsl(var(--muted-foreground))";
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-[18px] w-[18px]"
+      viewBox="0 0 24 24"
+      fill="none"
+    >
+      <motion.rect
+        x={panelX}
+        y="5"
+        width="8"
+        height="14"
+        rx="2"
+        fill="currentColor"
+        initial={false}
+        animate={{
+          opacity: open ? 1 : 0,
+          scaleX: open ? 1 : 0.35,
+        }}
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : { duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }
+        }
+        style={{ transformOrigin }}
+      />
+      <rect
+        x="4"
+        y="4"
+        width="16"
+        height="16"
+        rx="5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+      />
+      <motion.line
+        x1={dividerX}
+        y1="5.5"
+        x2={dividerX}
+        y2="18.5"
+        stroke={open ? "hsl(var(--popover))" : closedStroke}
+        strokeWidth="2"
+        strokeLinecap="round"
+        initial={false}
+        animate={{ opacity: open ? 0.95 : 1 }}
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : { duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }
+        }
+      />
+    </svg>
+  );
+}
 
 function tabShapeSegments(width: number, height: number): string[] {
   const w = Math.max(width, TAB_SHAPE_TOP_RADIUS * 2 + TAB_SHAPE_EAR_RADIUS * 2);
@@ -464,39 +525,11 @@ export function TabBar() {
               leftSidebarOpen && TABBAR_ICON_BUTTON_OPEN_CLASS,
             )}
           >
-            <span
-              aria-hidden
-              className={cn(
-                TABBAR_STATE_RAIL_CLASS,
-                "left-1 origin-center",
-                leftSidebarOpen
-                  ? "scale-y-100 opacity-100"
-                  : "scale-y-0 opacity-0",
-              )}
+            <SidebarStateIcon
+              side="left"
+              open={leftSidebarOpen}
+              reduceMotion={reduceMotion}
             />
-            {leftSidebarOpen ? (
-              <motion.span
-                key="left-open"
-                className="relative flex"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
-                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
-              >
-                <PanelLeftClose size={15} />
-              </motion.span>
-            ) : (
-              <motion.span
-                key="left-closed"
-                className="relative flex"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
-                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
-              >
-                <PanelLeftOpen size={15} />
-              </motion.span>
-            )}
           </button>
         </div>
         <div
@@ -656,39 +689,11 @@ export function TabBar() {
               rightSidebarOpen && TABBAR_ICON_BUTTON_OPEN_CLASS,
             )}
           >
-            <span
-              aria-hidden
-              className={cn(
-                TABBAR_STATE_RAIL_CLASS,
-                "right-1 origin-center",
-                rightSidebarOpen
-                  ? "scale-y-100 opacity-100"
-                  : "scale-y-0 opacity-0",
-              )}
+            <SidebarStateIcon
+              side="right"
+              open={rightSidebarOpen}
+              reduceMotion={reduceMotion}
             />
-            {rightSidebarOpen ? (
-              <motion.span
-                key="right-open"
-                className="relative flex"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
-                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
-              >
-                <PanelRightClose size={15} />
-              </motion.span>
-            ) : (
-              <motion.span
-                key="right-closed"
-                className="relative flex"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
-                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
-              >
-                <PanelRightOpen size={15} />
-              </motion.span>
-            )}
           </button>
         </div>
       </div>

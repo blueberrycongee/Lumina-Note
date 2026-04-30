@@ -244,6 +244,26 @@ describe("TabBar", () => {
     );
   });
 
+  it("renders window-style sidebar state icons", () => {
+    render(<TabBar />);
+
+    const leftIcon = screen
+      .getByTestId("mac-tabbar-toggle-left-sidebar")
+      .querySelector("svg");
+    const rightIcon = screen
+      .getByTestId("mac-tabbar-toggle-right-sidebar")
+      .querySelector("svg");
+
+    expect(leftIcon).toHaveAttribute("viewBox", "0 0 24 24");
+    expect(rightIcon).toHaveAttribute("viewBox", "0 0 24 24");
+    expect(leftIcon?.querySelector('rect[x="4"][y="4"][rx="5"]')).toBeTruthy();
+    expect(rightIcon?.querySelector('rect[x="4"][y="4"][rx="5"]')).toBeTruthy();
+    expect(leftIcon?.querySelector('rect[x="4"][width="8"]')).toBeTruthy();
+    expect(rightIcon?.querySelector('rect[x="12"][width="8"]')).toBeTruthy();
+    expect(leftIcon?.querySelector("line")).toBeTruthy();
+    expect(rightIcon?.querySelector("line")).toBeTruthy();
+  });
+
   it("uses muted styling for collapsed sidebar states", () => {
     leftSidebarOpenState.value = false;
     rightSidebarOpenState.value = false;
