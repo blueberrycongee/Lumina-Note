@@ -77,6 +77,10 @@ export default {
     refresh: "Refresh",
     toggleSidebar: "Toggle Sidebar",
     toggleRightPanel: "Toggle right panel",
+    collapseLeftSidebar: "Collapse left sidebar",
+    expandLeftSidebar: "Expand left sidebar",
+    collapseRightPanel: "Collapse right sidebar",
+    expandRightPanel: "Expand right sidebar",
   },
 
   favorites: {

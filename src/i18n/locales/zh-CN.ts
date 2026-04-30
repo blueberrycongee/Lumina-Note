@@ -77,6 +77,10 @@ export default {
     refresh: "刷新",
     toggleSidebar: "切换侧边栏",
     toggleRightPanel: "切换右侧面板",
+    collapseLeftSidebar: "折叠左侧栏",
+    expandLeftSidebar: "展开左侧栏",
+    collapseRightPanel: "折叠右侧栏",
+    expandRightPanel: "展开右侧栏",
   },
 
   favorites: {

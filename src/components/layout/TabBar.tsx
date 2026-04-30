@@ -53,7 +53,11 @@ const TAB_OVERLAP_PX = 22;
 const TABBAR_EDGE_SLOT_CLASS =
   "flex w-10 shrink-0 items-center justify-center pt-1.5";
 const TABBAR_ICON_BUTTON_CLASS =
-  "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const TABBAR_ICON_BUTTON_OPEN_CLASS =
+  "text-primary hover:text-primary";
+const TABBAR_STATE_RAIL_CLASS =
+  "absolute inset-y-1.5 w-0.5 rounded-full bg-primary transition-[opacity,transform] duration-200 ease-out";
 
 function tabShapeSegments(width: number, height: number): string[] {
   const w = Math.max(width, TAB_SHAPE_TOP_RADIUS * 2 + TAB_SHAPE_EAR_RADIUS * 2);
@@ -424,15 +428,26 @@ export function TabBar() {
   const handleOpenNewTab = useCallback(() => {
     openNewTab();
   }, [openNewTab]);
+  const leftSidebarToggleLabel = leftSidebarOpen
+    ? t.sidebar.collapseLeftSidebar
+    : t.sidebar.expandLeftSidebar;
+  const rightSidebarToggleLabel = rightSidebarOpen
+    ? t.sidebar.collapseRightPanel
+    : t.sidebar.expandRightPanel;
 
   return (
     <>
       <div
-        className="flex h-11 shrink-0 items-stretch border-b border-border/60 bg-popover shadow-elev-1"
+        className="relative flex h-11 shrink-0 items-stretch bg-popover"
         data-tauri-drag-region={showMacTopActions ? true : undefined}
       >
         <div
-          className={TABBAR_EDGE_SLOT_CLASS}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-px bg-border/60"
+          data-testid="mac-tabbar-bottom-rule"
+        />
+        <div
+          className={cn(TABBAR_EDGE_SLOT_CLASS, "relative z-10")}
           data-testid="mac-tabbar-left-sidebar-slot"
           data-tauri-drag-region="false"
         >
@@ -441,20 +456,52 @@ export function TabBar() {
             data-testid="mac-tabbar-toggle-left-sidebar"
             data-tauri-drag-region="false"
             onClick={toggleLeftSidebar}
-            aria-label={t.sidebar.toggleSidebar}
-            title={t.sidebar.toggleSidebar}
-            className={TABBAR_ICON_BUTTON_CLASS}
+            aria-label={leftSidebarToggleLabel}
+            aria-pressed={leftSidebarOpen}
+            title={leftSidebarToggleLabel}
+            className={cn(
+              TABBAR_ICON_BUTTON_CLASS,
+              leftSidebarOpen && TABBAR_ICON_BUTTON_OPEN_CLASS,
+            )}
           >
+            <span
+              aria-hidden
+              className={cn(
+                TABBAR_STATE_RAIL_CLASS,
+                "left-1 origin-center",
+                leftSidebarOpen
+                  ? "scale-y-100 opacity-100"
+                  : "scale-y-0 opacity-0",
+              )}
+            />
             {leftSidebarOpen ? (
-              <PanelLeftClose size={15} />
+              <motion.span
+                key="left-open"
+                className="relative flex"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
+                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+              >
+                <PanelLeftClose size={15} />
+              </motion.span>
             ) : (
-              <PanelLeftOpen size={15} />
+              <motion.span
+                key="left-closed"
+                className="relative flex"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
+                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+              >
+                <PanelLeftOpen size={15} />
+              </motion.span>
             )}
           </button>
         </div>
         <div
           ref={containerRef}
-          className="flex min-w-0 flex-1 items-stretch overflow-hidden px-1 pt-1.5"
+          className="relative z-10 flex min-w-0 flex-1 items-stretch overflow-hidden px-1 pt-1.5"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
           data-testid="mac-tabbar-tabstrip"
         >
@@ -576,7 +623,7 @@ export function TabBar() {
           </Reorder.Group>
         </div>
         <div
-          className={TABBAR_EDGE_SLOT_CLASS}
+          className={cn(TABBAR_EDGE_SLOT_CLASS, "relative z-10")}
           data-testid="mac-tabbar-new-tab-slot"
           data-tauri-drag-region="false"
         >
@@ -592,7 +639,7 @@ export function TabBar() {
           </button>
         </div>
         <div
-          className={TABBAR_EDGE_SLOT_CLASS}
+          className={cn(TABBAR_EDGE_SLOT_CLASS, "relative z-10")}
           data-testid="mac-tabbar-right-sidebar-slot"
           data-tauri-drag-region="false"
         >
@@ -601,14 +648,46 @@ export function TabBar() {
             data-testid="mac-tabbar-toggle-right-sidebar"
             data-tauri-drag-region="false"
             onClick={toggleRightSidebar}
-            aria-label={t.sidebar.toggleRightPanel}
-            title={t.sidebar.toggleRightPanel}
-            className={TABBAR_ICON_BUTTON_CLASS}
+            aria-label={rightSidebarToggleLabel}
+            aria-pressed={rightSidebarOpen}
+            title={rightSidebarToggleLabel}
+            className={cn(
+              TABBAR_ICON_BUTTON_CLASS,
+              rightSidebarOpen && TABBAR_ICON_BUTTON_OPEN_CLASS,
+            )}
           >
+            <span
+              aria-hidden
+              className={cn(
+                TABBAR_STATE_RAIL_CLASS,
+                "right-1 origin-center",
+                rightSidebarOpen
+                  ? "scale-y-100 opacity-100"
+                  : "scale-y-0 opacity-0",
+              )}
+            />
             {rightSidebarOpen ? (
-              <PanelRightClose size={15} />
+              <motion.span
+                key="right-open"
+                className="relative flex"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
+                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+              >
+                <PanelRightClose size={15} />
+              </motion.span>
             ) : (
-              <PanelRightOpen size={15} />
+              <motion.span
+                key="right-closed"
+                className="relative flex"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.86 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0, scale: 0.86 }}
+                transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+              >
+                <PanelRightOpen size={15} />
+              </motion.span>
             )}
           </button>
         </div>

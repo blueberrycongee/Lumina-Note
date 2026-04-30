@@ -57,6 +57,10 @@ vi.mock("@/stores/useLocaleStore", () => ({
       sidebar: {
         toggleSidebar: "Toggle left sidebar",
         toggleRightPanel: "Toggle right panel",
+        collapseLeftSidebar: "Collapse left sidebar",
+        expandLeftSidebar: "Expand left sidebar",
+        collapseRightPanel: "Collapse right sidebar",
+        expandRightPanel: "Expand right sidebar",
       },
     },
   }),
@@ -134,6 +138,23 @@ describe("TabBar", () => {
     expect(container.firstElementChild).not.toHaveClass("min-h-[32px]");
   });
 
+  it("draws the tab bar bottom rule behind the tab shapes", () => {
+    const { container } = render(<TabBar />);
+
+    expect(container.firstElementChild).not.toHaveClass("border-b");
+    expect(container.firstElementChild).not.toHaveClass("shadow-elev-1");
+    expect(screen.getByTestId("mac-tabbar-bottom-rule")).toHaveClass(
+      "absolute",
+      "bottom-0",
+      "z-0",
+      "bg-border/60",
+    );
+    expect(screen.getByTestId("mac-tabbar-tabstrip")).toHaveClass(
+      "relative",
+      "z-10",
+    );
+  });
+
   it("shows the dedicated image manager tab icon", () => {
     fileStoreState.tabs = [
       { id: "tab-2", name: "Image Manager", type: "image-manager", isPinned: false, isDirty: false },
@@ -163,17 +184,15 @@ describe("TabBar", () => {
   });
 
   it("reserves sidebar toggle slots at the far edges of the tab bar", () => {
-    const { container } = render(<TabBar />);
+    render(<TabBar />);
 
-    const root = container.firstElementChild;
-    expect(root?.children[0]).toContainElement(
+    expect(screen.getByTestId("mac-tabbar-left-sidebar-slot")).toContainElement(
       screen.getByTestId("mac-tabbar-toggle-left-sidebar"),
     );
-    expect(root?.children[1]).toBe(screen.getByTestId("mac-tabbar-tabstrip"));
-    expect(root?.children[2]).toContainElement(
+    expect(screen.getByTestId("mac-tabbar-new-tab-slot")).toContainElement(
       screen.getByTestId("mac-tabbar-new-tab"),
     );
-    expect(root?.children[3]).toContainElement(
+    expect(screen.getByTestId("mac-tabbar-right-sidebar-slot")).toContainElement(
       screen.getByTestId("mac-tabbar-toggle-right-sidebar"),
     );
   });
@@ -198,6 +217,53 @@ describe("TabBar", () => {
 
     expect(toggleLeftSidebar).toHaveBeenCalledTimes(1);
     expect(toggleRightSidebar).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses icon-only primary accent styling for open sidebar states", () => {
+    render(<TabBar />);
+
+    expect(screen.getByTestId("mac-tabbar-toggle-left-sidebar")).toHaveClass(
+      "text-primary",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-right-sidebar")).toHaveClass(
+      "text-primary",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-left-sidebar")).not.toHaveClass(
+      "bg-primary/10",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-right-sidebar")).not.toHaveClass(
+      "bg-primary/10",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-left-sidebar")).toHaveAttribute(
+      "aria-label",
+      "Collapse left sidebar",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-right-sidebar")).toHaveAttribute(
+      "aria-label",
+      "Collapse right sidebar",
+    );
+  });
+
+  it("uses muted styling for collapsed sidebar states", () => {
+    leftSidebarOpenState.value = false;
+    rightSidebarOpenState.value = false;
+
+    render(<TabBar />);
+
+    expect(screen.getByTestId("mac-tabbar-toggle-left-sidebar")).not.toHaveClass(
+      "bg-primary/10",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-right-sidebar")).not.toHaveClass(
+      "bg-primary/10",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-left-sidebar")).toHaveAttribute(
+      "aria-label",
+      "Expand left sidebar",
+    );
+    expect(screen.getByTestId("mac-tabbar-toggle-right-sidebar")).toHaveAttribute(
+      "aria-label",
+      "Expand right sidebar",
+    );
   });
 
   it("keeps the new-tab button outside the shrinking tab list", () => {

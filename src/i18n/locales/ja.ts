@@ -77,6 +77,10 @@ export default {
     refresh: "更新",
     toggleSidebar: "サイドバーを切替",
     toggleRightPanel: "右パネルを切替",
+    collapseLeftSidebar: "左サイドバーを折りたたむ",
+    expandLeftSidebar: "左サイドバーを展開",
+    collapseRightPanel: "右サイドバーを折りたたむ",
+    expandRightPanel: "右サイドバーを展開",
   },
 
   favorites: {
