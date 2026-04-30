@@ -316,11 +316,6 @@ body.resizing iframe[data-codex-iframe="true"] {
     overflow: hidden;
   }
 
-  .image-manager-list-header {
-    min-height: 2rem;
-    white-space: nowrap;
-  }
-
   .image-manager-list-row {
     height: 3.5rem;
   }

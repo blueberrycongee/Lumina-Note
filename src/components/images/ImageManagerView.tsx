@@ -697,13 +697,6 @@ export function ImageManagerView() {
                 />
               ) : viewMode === "list" ? (
                 <div className="image-manager-list divide-y divide-border/50 border-t border-border/50">
-                  <div className="image-manager-list-grid image-manager-list-header px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                    <span>{t.imageManager.columnPreview}</span>
-                    <span>{t.imageManager.columnFile}</span>
-                    <span className="image-manager-list-location">{t.imageManager.columnLocation}</span>
-                    <span className="image-manager-list-refs">{t.imageManager.columnRefs}</span>
-                    <span className="image-manager-list-actions">{t.imageManager.columnActions}</span>
-                  </div>
                   {filteredImages.map((image) => (
                     <ImageListRow
                       key={image.path}
