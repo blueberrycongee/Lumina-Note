@@ -569,6 +569,25 @@ const createEditorTheme = (fontSize: number) =>
       backgroundColor: "hsl(var(--muted) / 0.1)",
       fontWeight: "600",
     },
+    ".cm-table-row-selected > th, .cm-table-row-selected > td": {
+      backgroundColor: "hsl(var(--primary) / 0.16)",
+    },
+    ".cm-table-row-selected:first-child > th:first-child, .cm-table-row-selected:first-child > td:first-child":
+      {
+        borderTopLeftRadius: "7px",
+      },
+    ".cm-table-row-selected:first-child > th:last-child, .cm-table-row-selected:first-child > td:last-child":
+      {
+        borderTopRightRadius: "7px",
+      },
+    ".cm-table-row-selected:last-child > th:first-child, .cm-table-row-selected:last-child > td:first-child":
+      {
+        borderBottomLeftRadius: "7px",
+      },
+    ".cm-table-row-selected:last-child > th:last-child, .cm-table-row-selected:last-child > td:last-child":
+      {
+        borderBottomRightRadius: "7px",
+      },
     ".cm-table-cell": { outline: "none", minWidth: "40px" },
     ".cm-table-toolbar": {
       display: "none",
@@ -3531,6 +3550,289 @@ const tableKeymap = [
   },
 ];
 
+type TableRowSourceRange = {
+  from: number;
+  to: number;
+};
+
+type TableSourceRange = {
+  from: number;
+  to: number;
+  rows: TableRowSourceRange[];
+};
+
+type TableRowHit = {
+  table: TableSourceRange;
+  row: TableRowSourceRange;
+};
+
+function collectTableSourceRanges(state: EditorState): TableSourceRange[] {
+  const tables: TableSourceRange[] = [];
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (node.name !== "Table") return;
+
+      const sourceLines: TableRowSourceRange[] = [];
+      for (let pos = node.from; pos <= node.to; ) {
+        const line = state.doc.lineAt(pos);
+        sourceLines.push({ from: line.from, to: line.to });
+        if (line.to >= node.to) break;
+        pos = line.to + 1;
+      }
+
+      if (sourceLines.length < 2) return;
+
+      const rows: TableRowSourceRange[] = [
+        {
+          from: sourceLines[0].from,
+          to: sourceLines[1].to,
+        },
+      ];
+      for (let index = 2; index < sourceLines.length; index += 1) {
+        rows.push(sourceLines[index]);
+      }
+
+      tables.push({ from: node.from, to: node.to, rows });
+    },
+  });
+
+  return tables;
+}
+
+function rangesIntersect(
+  a: { from: number; to: number },
+  b: { from: number; to: number },
+): boolean {
+  return a.from < b.to && a.to > b.from;
+}
+
+function getTableRows(tableEl: Element): HTMLTableRowElement[] {
+  return Array.from(tableEl.querySelectorAll<HTMLTableRowElement>("tr"));
+}
+
+function clearRenderedTableRowSelection(view: EditorView): void {
+  view.contentDOM
+    .querySelectorAll(".cm-table-row-selected")
+    .forEach((row) => row.classList.remove("cm-table-row-selected"));
+}
+
+function syncRenderedTableRowSelection(view: EditorView): void {
+  clearRenderedTableRowSelection(view);
+
+  const selection = view.state.selection.main;
+  if (selection.empty) return;
+
+  const selected = { from: selection.from, to: selection.to };
+  const tables = collectTableSourceRanges(view.state);
+  const renderedTables = Array.from(
+    view.contentDOM.querySelectorAll<HTMLElement>(
+      ".cm-table-editor, .cm-table-widget",
+    ),
+  );
+
+  renderedTables.forEach((tableEl, tableIndex) => {
+    const table = tables[tableIndex];
+    if (!table || !rangesIntersect(selected, table)) return;
+
+    getTableRows(tableEl).forEach((rowEl, rowIndex) => {
+      const row = table.rows[rowIndex];
+      if (row && rangesIntersect(selected, row)) {
+        rowEl.classList.add("cm-table-row-selected");
+      }
+    });
+  });
+}
+
+function findRenderedTableRowAtPoint(
+  view: EditorView,
+  clientX: number,
+  clientY: number,
+): TableRowHit | null {
+  const tables = collectTableSourceRanges(view.state);
+  const renderedTables = Array.from(
+    view.contentDOM.querySelectorAll<HTMLElement>(
+      ".cm-table-editor, .cm-table-widget",
+    ),
+  );
+
+  for (let tableIndex = 0; tableIndex < renderedTables.length; tableIndex += 1) {
+    const tableEl = renderedTables[tableIndex];
+    const table = tables[tableIndex];
+    if (!table) continue;
+
+    const rect = tableEl.getBoundingClientRect();
+    if (
+      clientX < rect.left ||
+      clientX > rect.right ||
+      clientY < rect.top ||
+      clientY > rect.bottom
+    ) {
+      continue;
+    }
+
+    const rows = getTableRows(tableEl);
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+      const row = table.rows[rowIndex];
+      if (!row) continue;
+
+      const rowRect = rows[rowIndex].getBoundingClientRect();
+      if (clientY >= rowRect.top && clientY <= rowRect.bottom) {
+        return { table, row };
+      }
+    }
+  }
+
+  return null;
+}
+
+function tableRowSelectionForDrag(
+  anchorPos: number,
+  anchorRow: TableRowSourceRange | null,
+  targetRow: TableRowSourceRange,
+  targetTable: TableSourceRange,
+): { anchor: number; head: number } {
+  if (anchorRow) {
+    if (targetRow.from < anchorRow.from) {
+      return { anchor: anchorRow.to, head: targetRow.from };
+    }
+    return { anchor: anchorRow.from, head: targetRow.to };
+  }
+
+  if (anchorPos >= targetTable.to) {
+    return { anchor: anchorPos, head: targetRow.from };
+  }
+
+  return { anchor: anchorPos, head: targetRow.to };
+}
+
+function dispatchTableRowSelection(
+  view: EditorView,
+  selection: { anchor: number; head: number },
+): void {
+  const current = view.state.selection.main;
+  if (current.anchor === selection.anchor && current.head === selection.head)
+    return;
+
+  view.dispatch({
+    selection,
+    userEvent: "select.pointer",
+  });
+}
+
+const tableRowSelectionPlugin = ViewPlugin.fromClass(
+  class {
+    private mouseDown:
+      | {
+          x: number;
+          y: number;
+          anchorPos: number;
+          anchorRow: TableRowSourceRange | null;
+        }
+      | null = null;
+
+    private dragging = false;
+
+    constructor(private readonly view: EditorView) {
+      this.view.contentDOM.addEventListener("mousedown", this.onMouseDown, true);
+      this.view.dom.ownerDocument.addEventListener("mousemove", this.onMouseMove);
+      this.view.dom.ownerDocument.addEventListener("mouseup", this.onMouseUp);
+      syncRenderedTableRowSelection(this.view);
+    }
+
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.selectionSet || update.viewportChanged) {
+        syncRenderedTableRowSelection(update.view);
+      }
+    }
+
+    destroy() {
+      clearRenderedTableRowSelection(this.view);
+      this.view.contentDOM.removeEventListener(
+        "mousedown",
+        this.onMouseDown,
+        true,
+      );
+      this.view.dom.ownerDocument.removeEventListener(
+        "mousemove",
+        this.onMouseMove,
+      );
+      this.view.dom.ownerDocument.removeEventListener("mouseup", this.onMouseUp);
+    }
+
+    private onMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+
+      const hit = findRenderedTableRowAtPoint(
+        this.view,
+        event.clientX,
+        event.clientY,
+      );
+      const coordsPos = this.view.posAtCoords({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      this.mouseDown = {
+        x: event.clientX,
+        y: event.clientY,
+        anchorPos: coordsPos ?? this.view.state.selection.main.head,
+        anchorRow: hit?.row ?? null,
+      };
+      this.dragging = false;
+    };
+
+    private onMouseMove = (event: MouseEvent) => {
+      if (!this.mouseDown || (event.buttons & 1) === 0) return;
+
+      const dx = Math.abs(event.clientX - this.mouseDown.x);
+      const dy = Math.abs(event.clientY - this.mouseDown.y);
+      if (!this.dragging && dx < 4 && dy < 4) return;
+
+      const hit = findRenderedTableRowAtPoint(
+        this.view,
+        event.clientX,
+        event.clientY,
+      );
+      if (!hit && !this.mouseDown.anchorRow) return;
+
+      this.dragging = true;
+      event.preventDefault();
+
+      if (hit) {
+        dispatchTableRowSelection(
+          this.view,
+          tableRowSelectionForDrag(
+            this.mouseDown.anchorPos,
+            this.mouseDown.anchorRow,
+            hit.row,
+            hit.table,
+          ),
+        );
+        return;
+      }
+
+      const coordsPos = this.view.posAtCoords({
+        x: event.clientX,
+        y: event.clientY,
+      });
+      if (coordsPos === null || !this.mouseDown.anchorRow) return;
+
+      const anchor =
+        coordsPos < this.mouseDown.anchorRow.from
+          ? this.mouseDown.anchorRow.to
+          : this.mouseDown.anchorRow.from;
+      dispatchTableRowSelection(this.view, { anchor, head: coordsPos });
+    };
+
+    private onMouseUp = () => {
+      this.mouseDown = null;
+      this.dragging = false;
+      syncRenderedTableRowSelection(this.view);
+    };
+  },
+);
+
 const wikiLinkStateField = StateField.define<DecorationSet>({
   create: buildWikiLinkDecorations,
   update(deco, tr) {
@@ -4277,6 +4579,7 @@ export const CodeMirrorEditor = forwardRef<
             collapseOnSelectionFacet.of(false),
             readingModePlugin,
             tableField,
+            tableRowSelectionPlugin,
             editableCodeBlockField,
             ...widgets,
           ];
@@ -4285,6 +4588,7 @@ export const CodeMirrorEditor = forwardRef<
             collapseOnSelectionFacet.of(true),
             livePreviewPlugin,
             tableEditorPlugin(),
+            tableRowSelectionPlugin,
             editableCodeBlockField,
             ...widgets,
             ...(blockEditorEnabled ? blockEditorExtensions : []),

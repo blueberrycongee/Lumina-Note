@@ -127,6 +127,43 @@ describe("CodeMirror live markdown rendering polish", () => {
     expect(container.querySelector(".cm-table-toggle")).not.toBeNull();
   });
 
+  it("marks rendered table rows that intersect the editor selection", () => {
+    const content =
+      "Intro\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |\n\nOutro";
+    const { container, view } = setupEditor(content, "live");
+    const rows = () =>
+      Array.from(container.querySelectorAll<HTMLTableRowElement>("tr"));
+
+    expect(rows()).toHaveLength(3);
+    expect(container.querySelector(".cm-table-row-selected")).toBeNull();
+
+    act(() => {
+      view.dispatch({
+        selection: {
+          anchor: 0,
+          head: content.indexOf("| 1 | 2 |") + "| 1 | 2 |".length,
+        },
+      });
+    });
+
+    expect(rows()[0].classList.contains("cm-table-row-selected")).toBe(true);
+    expect(rows()[1].classList.contains("cm-table-row-selected")).toBe(true);
+    expect(rows()[2].classList.contains("cm-table-row-selected")).toBe(false);
+
+    act(() => {
+      view.dispatch({
+        selection: {
+          anchor: content.indexOf("Outro"),
+          head: content.indexOf("| 3 | 4 |"),
+        },
+      });
+    });
+
+    expect(rows()[0].classList.contains("cm-table-row-selected")).toBe(false);
+    expect(rows()[1].classList.contains("cm-table-row-selected")).toBe(false);
+    expect(rows()[2].classList.contains("cm-table-row-selected")).toBe(true);
+  });
+
   it.each(["live", "reading"] as const)(
     "uses default nested callout titles in %s mode without duplicating body text",
     (mode) => {
