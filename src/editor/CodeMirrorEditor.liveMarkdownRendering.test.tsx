@@ -156,6 +156,11 @@ describe("CodeMirror live markdown rendering polish", () => {
     expect(rows()[0].classList.contains("cm-table-row-selected")).toBe(true);
     expect(rows()[1].classList.contains("cm-table-row-selected")).toBe(true);
     expect(rows()[2].classList.contains("cm-table-row-selected")).toBe(false);
+    expect(
+      container.querySelector(".cm-editor")?.classList.contains(
+        "cm-table-row-selection-active",
+      ),
+    ).toBe(true);
 
     act(() => {
       view.dispatch({
@@ -169,6 +174,17 @@ describe("CodeMirror live markdown rendering polish", () => {
     expect(rows()[0].classList.contains("cm-table-row-selected")).toBe(false);
     expect(rows()[1].classList.contains("cm-table-row-selected")).toBe(false);
     expect(rows()[2].classList.contains("cm-table-row-selected")).toBe(true);
+
+    act(() => {
+      view.dispatch({ selection: { anchor: 0 } });
+    });
+
+    expect(container.querySelector(".cm-table-row-selected")).toBeNull();
+    expect(
+      container.querySelector(".cm-editor")?.classList.contains(
+        "cm-table-row-selection-active",
+      ),
+    ).toBe(false);
   });
 
   it.each(["live", "reading"] as const)(

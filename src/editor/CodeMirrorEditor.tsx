@@ -361,12 +361,12 @@ const createEditorTheme = (fontSize: number) =>
         userSelect: "none !important",
         WebkitUserSelect: "none !important",
       },
-    "&.cm-table-row-drag-selecting .cm-table-editor *::selection, &.cm-table-row-drag-selecting .cm-table-widget *::selection":
+    "&.cm-table-row-drag-selecting .cm-table-editor *::selection, &.cm-table-row-drag-selecting .cm-table-widget *::selection, &.cm-table-row-selection-active .cm-table-editor *::selection, &.cm-table-row-selection-active .cm-table-widget *::selection":
       {
         backgroundColor: "transparent !important",
         color: "inherit !important",
       },
-    "&.cm-table-row-drag-selecting .cm-table-editor, &.cm-table-row-drag-selecting .cm-table-editor *, &.cm-table-row-drag-selecting .cm-table-widget, &.cm-table-row-drag-selecting .cm-table-widget *":
+    "&.cm-table-row-drag-selecting .cm-table-editor, &.cm-table-row-drag-selecting .cm-table-editor *, &.cm-table-row-drag-selecting .cm-table-widget, &.cm-table-row-drag-selecting .cm-table-widget *, &.cm-table-row-selection-active .cm-table-editor, &.cm-table-row-selection-active .cm-table-editor *, &.cm-table-row-selection-active .cm-table-widget, &.cm-table-row-selection-active .cm-table-widget *":
       {
         userSelect: "none !important",
         WebkitUserSelect: "none !important",
@@ -3823,7 +3823,10 @@ type TableSourceRange = {
 type TableRowHit = {
   table: TableSourceRange;
   row: TableRowSourceRange;
+  tableRect: DOMRect;
 };
+
+type TableDragAnchorSide = "above" | "below" | "inside";
 
 function collectTableSourceRanges(state: EditorState): TableSourceRange[] {
   const tables: TableSourceRange[] = [];
@@ -3874,6 +3877,7 @@ function clearRenderedTableRowSelection(view: EditorView): void {
   view.contentDOM
     .querySelectorAll(".cm-table-row-selected")
     .forEach((row) => row.classList.remove("cm-table-row-selected"));
+  view.dom.classList.remove("cm-table-row-selection-active");
 }
 
 function syncRenderedTableRowSelection(view: EditorView): void {
@@ -3890,6 +3894,7 @@ function syncRenderedTableRowSelection(view: EditorView): void {
     ),
   );
 
+  let hasSelectedTableRow = false;
   renderedTables.forEach((tableEl, tableIndex) => {
     const table = tables[tableIndex];
     if (!table || !rangesIntersect(selected, table)) return;
@@ -3898,9 +3903,15 @@ function syncRenderedTableRowSelection(view: EditorView): void {
       const row = table.rows[rowIndex];
       if (row && rangesIntersect(selected, row)) {
         rowEl.classList.add("cm-table-row-selected");
+        hasSelectedTableRow = true;
       }
     });
   });
+
+  view.dom.classList.toggle(
+    "cm-table-row-selection-active",
+    hasSelectedTableRow,
+  );
 }
 
 function findRenderedTableRowAtPoint(
@@ -3925,7 +3936,7 @@ function findRenderedTableRowAtPoint(
       clientX < rect.left ||
       clientX > rect.right ||
       clientY < rect.top ||
-      clientY > rect.bottom
+      clientY >= rect.bottom
     ) {
       continue;
     }
@@ -3936,8 +3947,8 @@ function findRenderedTableRowAtPoint(
       if (!row) continue;
 
       const rowRect = rows[rowIndex].getBoundingClientRect();
-      if (clientY >= rowRect.top && clientY <= rowRect.bottom) {
-        return { table, row };
+      if (clientY >= rowRect.top && clientY < rowRect.bottom) {
+        return { table, row, tableRect: rect };
       }
     }
   }
@@ -3948,8 +3959,8 @@ function findRenderedTableRowAtPoint(
 function tableRowSelectionForDrag(
   anchorPos: number,
   anchorRow: TableRowSourceRange | null,
+  anchorSide: TableDragAnchorSide,
   targetRow: TableRowSourceRange,
-  targetTable: TableSourceRange,
 ): { anchor: number; head: number } {
   if (anchorRow) {
     if (targetRow.from < anchorRow.from) {
@@ -3958,11 +3969,20 @@ function tableRowSelectionForDrag(
     return { anchor: anchorRow.from, head: targetRow.to };
   }
 
-  if (anchorPos >= targetTable.to) {
+  if (anchorSide === "below") {
     return { anchor: anchorPos, head: targetRow.from };
   }
 
   return { anchor: anchorPos, head: targetRow.to };
+}
+
+function tableDragAnchorSide(
+  anchorY: number,
+  hit: TableRowHit,
+): TableDragAnchorSide {
+  if (anchorY < hit.tableRect.top) return "above";
+  if (anchorY >= hit.tableRect.bottom) return "below";
+  return "inside";
 }
 
 function dispatchTableRowSelection(
@@ -4080,8 +4100,8 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
           tableRowSelectionForDrag(
             this.mouseDown.anchorPos,
             this.mouseDown.anchorRow,
+            tableDragAnchorSide(this.mouseDown.y, hit),
             hit.row,
-            hit.table,
           ),
         );
         return;
