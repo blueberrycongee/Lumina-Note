@@ -361,6 +361,16 @@ const createEditorTheme = (fontSize: number) =>
         userSelect: "none !important",
         WebkitUserSelect: "none !important",
       },
+    "&.cm-table-row-drag-selecting .cm-table-editor *::selection, &.cm-table-row-drag-selecting .cm-table-widget *::selection":
+      {
+        backgroundColor: "transparent !important",
+        color: "inherit !important",
+      },
+    "&.cm-table-row-drag-selecting .cm-table-editor, &.cm-table-row-drag-selecting .cm-table-editor *, &.cm-table-row-drag-selecting .cm-table-widget, &.cm-table-row-drag-selecting .cm-table-widget *":
+      {
+        userSelect: "none !important",
+        WebkitUserSelect: "none !important",
+      },
 
     // 块级标记 (标题/列表/引用) - 默认隐藏
     //    Zero-layout-shift: font-size: 0, display: inline — no transition
@@ -3812,8 +3822,16 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
 
     constructor(private readonly view: EditorView) {
       this.view.contentDOM.addEventListener("mousedown", this.onMouseDown, true);
-      this.view.dom.ownerDocument.addEventListener("mousemove", this.onMouseMove);
-      this.view.dom.ownerDocument.addEventListener("mouseup", this.onMouseUp);
+      this.view.dom.ownerDocument.addEventListener(
+        "mousemove",
+        this.onMouseMove,
+        true,
+      );
+      this.view.dom.ownerDocument.addEventListener(
+        "mouseup",
+        this.onMouseUp,
+        true,
+      );
       syncRenderedTableRowSelection(this.view);
     }
 
@@ -3833,8 +3851,14 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       this.view.dom.ownerDocument.removeEventListener(
         "mousemove",
         this.onMouseMove,
+        true,
       );
-      this.view.dom.ownerDocument.removeEventListener("mouseup", this.onMouseUp);
+      this.view.dom.ownerDocument.removeEventListener(
+        "mouseup",
+        this.onMouseUp,
+        true,
+      );
+      this.view.dom.classList.remove("cm-table-row-drag-selecting");
     }
 
     private onMouseDown = (event: MouseEvent) => {
@@ -3871,10 +3895,12 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         event.clientX,
         event.clientY,
       );
-      if (!hit && !this.mouseDown.anchorRow) return;
+      if (!hit && !this.mouseDown.anchorRow && !this.dragging) return;
 
       this.dragging = true;
+      this.setRowDragActive(true);
       event.preventDefault();
+      event.stopPropagation();
 
       if (hit) {
         dispatchTableRowSelection(
@@ -3893,7 +3919,15 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
         x: event.clientX,
         y: event.clientY,
       });
-      if (coordsPos === null || !this.mouseDown.anchorRow) return;
+      if (coordsPos === null) return;
+
+      if (!this.mouseDown.anchorRow) {
+        dispatchTableRowSelection(this.view, {
+          anchor: this.mouseDown.anchorPos,
+          head: coordsPos,
+        });
+        return;
+      }
 
       const anchor =
         coordsPos < this.mouseDown.anchorRow.from
@@ -3902,11 +3936,26 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
       dispatchTableRowSelection(this.view, { anchor, head: coordsPos });
     };
 
-    private onMouseUp = () => {
+    private onMouseUp = (event: MouseEvent) => {
+      if (this.dragging) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       this.mouseDown = null;
       this.dragging = false;
+      this.setRowDragActive(false);
       syncRenderedTableRowSelection(this.view);
     };
+
+    private setRowDragActive(active: boolean) {
+      this.view.dom.classList.toggle("cm-table-row-drag-selecting", active);
+      const isMouseSelecting = this.view.state.field(mouseSelectingField, false);
+      if (active && !isMouseSelecting) {
+        this.view.dispatch({ effects: setMouseSelecting.of(true) });
+      } else if (!active && isMouseSelecting) {
+        this.view.dispatch({ effects: setMouseSelecting.of(false) });
+      }
+    }
   },
 );
 
