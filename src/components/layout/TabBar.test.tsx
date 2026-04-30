@@ -147,6 +147,13 @@ describe("TabBar", () => {
     expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(newTabButton);
   });
 
+  it("keeps the new-tab button outside the shrinking tab list", () => {
+    render(<TabBar />);
+
+    expect(screen.getByTestId("mac-tabbar-tabs")).toHaveClass("flex-1", "overflow-hidden");
+    expect(screen.getByTestId("mac-tabbar-new-tab")).toHaveClass("shrink-0");
+  });
+
   it("opens a real new tab when the new-tab button is clicked", () => {
     render(<TabBar />);
 

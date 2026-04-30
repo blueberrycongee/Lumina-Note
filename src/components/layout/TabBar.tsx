@@ -370,7 +370,7 @@ export function TabBar() {
       >
         <div
           ref={containerRef}
-          className="flex min-w-0 flex-1 items-stretch overflow-x-auto scrollbar-hide px-1 pt-1.5"
+          className="flex min-w-0 flex-1 items-stretch overflow-hidden px-1 pt-1.5"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
           data-testid="mac-tabbar-tabstrip"
         >
@@ -386,7 +386,8 @@ export function TabBar() {
             axis="x"
             values={tabs}
             onReorder={handleReorder}
-            className="flex min-w-0 items-stretch"
+            className="flex min-w-0 flex-1 items-stretch overflow-hidden"
+            data-testid="mac-tabbar-tabs"
           >
             {tabs.map((tab, index) => {
               const isClosing = closingIds.has(tab.id);
@@ -428,7 +429,7 @@ export function TabBar() {
                     "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
                     isClosing
                       ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
-                      : "grow-0 shrink basis-[240px] min-w-[110px] max-w-[240px]",
+                      : "grow-0 shrink basis-[240px] min-w-[72px] max-w-[240px]",
                     // Active tab sits above its neighbors so its silhouette
                     // outline (and white fill) cleanly overlays the overlapping
                     // ears of the inactive tabs on either side.
