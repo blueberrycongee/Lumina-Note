@@ -1148,7 +1148,7 @@ function VaultNameSection({
               e.stopPropagation();
               setMenuOpen((prev) => !prev);
             }}
-            className="shrink-0 p-0.5 rounded-ui-sm opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground hover:bg-accent"
+            className="shrink-0 p-0.5 rounded-ui-sm opacity-60 transition-opacity text-muted-foreground hover:opacity-100 hover:text-foreground hover:bg-accent focus-visible:opacity-100"
             aria-label={t.workspace?.switch || "Switch Workspace"}
           >
             <ChevronDown className="w-3.5 h-3.5" />
