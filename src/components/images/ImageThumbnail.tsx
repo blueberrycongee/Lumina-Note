@@ -85,10 +85,13 @@ export function ImageThumbnail({
   useEffect(() => {
     let cancelled = false;
     if (cached) {
+      setPreview(cached);
+      setStatus("idle");
       onDimensions?.({ width: cached.width, height: cached.height });
       return;
     }
 
+    setPreview(null);
     setStatus("loading");
     loadImagePreview(path)
       .then((nextPreview) => {
@@ -99,6 +102,7 @@ export function ImageThumbnail({
       })
       .catch(() => {
         if (cancelled) return;
+        setPreview(null);
         setStatus("error");
       });
 
