@@ -13,7 +13,6 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
   Button,
   Field,
-  SectionHeader,
   Select,
   TextInput,
 } from "@/components/ui";
@@ -66,6 +65,40 @@ function makeBlankDraft(): DraftState {
   // Note: model + baseUrl drafts get hydrated from persisted settings via
   // the syncing useEffect below. Starting blank avoids stale data when
   // the persisted values change between renders (e.g., after Save).
+}
+
+const IMAGE_SETTINGS_CARD_CLASS =
+  "rounded-ui-md border border-border/70 bg-background/35 p-4 shadow-sm";
+
+function ImageSettingsCardHeader({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2.5">
+          <span className="text-muted-foreground">{icon}</span>
+          <h3 className="text-base font-semibold tracking-tight text-foreground">
+            {title}
+          </h3>
+        </div>
+        {description ? (
+          <p className="mt-2 text-ui-control text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0 pt-0.5">{action}</div> : null}
+    </div>
+  );
 }
 
 /**
@@ -294,15 +327,13 @@ export function ImageModelsSettings() {
 
   if (!selectedProvider || !draft) {
     return (
-      <div className="space-y-3 pt-4 border-t border-border/60">
-        <SectionHeader
-          icon={<ImageIcon size={14} />}
+      <section className={IMAGE_SETTINGS_CARD_CLASS}>
+        <ImageSettingsCardHeader
+          icon={<ImageIcon size={18} />}
           title={tImg?.title ?? "Image Models"}
+          description={tImg?.description}
         />
-        {tImg?.description && (
-          <p className="text-xs text-muted-foreground -mt-1">{tImg.description}</p>
-        )}
-      </div>
+      </section>
     );
   }
 
@@ -318,40 +349,38 @@ export function ImageModelsSettings() {
         "Saved in the local keychain. The secret is hidden; type a new key to replace it."
       : tImg?.apiKeyEmptyHint ??
         "Saved keys go to the local keychain, not the plain settings file.";
+  const statusIndicator = (
+    <span
+      className={[
+        "inline-flex shrink-0 items-center gap-1.5 text-ui-caption font-normal",
+        isConfigured ? "text-success" : "text-muted-foreground/70",
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "inline-block h-1.5 w-1.5 rounded-full",
+          isConfigured ? "bg-success" : "bg-muted-foreground/40",
+        ].join(" ")}
+        aria-hidden
+      />
+      {isConfigured
+        ? tImg?.statusConfigured ?? "Configured"
+        : tImg?.statusNotConfigured ?? "Not configured"}
+    </span>
+  );
 
   return (
-    <div className="space-y-4 pt-4 border-t border-border/60">
-      <SectionHeader
-        icon={<ImageIcon size={14} />}
-        title={tImg?.title ?? "Image Models"}
-      />
-      {tImg?.description && (
-        <p className="text-xs text-muted-foreground -mt-1">{tImg.description}</p>
-      )}
+    <section className={IMAGE_SETTINGS_CARD_CLASS}>
+      <div className="space-y-4">
+        <ImageSettingsCardHeader
+          icon={<ImageIcon size={18} />}
+          title={tImg?.title ?? "Image Models"}
+          description={tImg?.description}
+          action={statusIndicator}
+        />
 
       <Field
-        label={
-          <span className="flex items-center justify-between gap-3">
-            <span>{tImg?.providerLabel ?? "Provider"}</span>
-            <span
-              className={[
-                "inline-flex shrink-0 items-center gap-1.5 text-ui-caption font-normal",
-                isConfigured ? "text-success" : "text-muted-foreground/70",
-              ].join(" ")}
-            >
-              <span
-                className={[
-                  "inline-block h-1.5 w-1.5 rounded-full",
-                  isConfigured ? "bg-success" : "bg-muted-foreground/40",
-                ].join(" ")}
-                aria-hidden
-              />
-              {isConfigured
-                ? tImg?.statusConfigured ?? "Configured"
-                : tImg?.statusNotConfigured ?? "Not configured"}
-            </span>
-          </span>
-        }
+        label={tImg?.providerLabel ?? "Provider"}
       >
         {(id) => (
           <Select
@@ -362,6 +391,7 @@ export function ImageModelsSettings() {
               value: p.id,
               label: `${p.label} · ${p.marketingName}`,
             }))}
+            optionLabelClassName="text-ui-caption"
           />
         )}
       </Field>
@@ -491,7 +521,7 @@ export function ImageModelsSettings() {
         )}
       </Field>
 
-      <div className="flex items-center justify-end gap-2 pt-1">
+      <div className="flex items-center justify-end gap-2 border-t border-border/60 pt-4">
         <Button
           type="button"
           onClick={handleReset}
@@ -513,7 +543,8 @@ export function ImageModelsSettings() {
           {saving ? <Loader2 size={12} className="animate-spin" /> : null}
           {tImg?.saveButton ?? t.common.save}
         </Button>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }

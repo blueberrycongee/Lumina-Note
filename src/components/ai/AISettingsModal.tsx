@@ -111,6 +111,40 @@ function parsePositiveIntegerDraft(value: string): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+const SETTINGS_CARD_CLASS =
+  "rounded-ui-md border border-border/70 bg-background/35 p-4 shadow-sm";
+
+function SettingsCardHeader({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: React.ReactNode;
+  title: React.ReactNode;
+  description?: React.ReactNode;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2.5">
+          <span className="text-muted-foreground">{icon}</span>
+          <h3 className="text-base font-semibold tracking-tight text-foreground">
+            {title}
+          </h3>
+        </div>
+        {description ? (
+          <p className="mt-2 text-ui-control text-muted-foreground">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {action ? <div className="shrink-0 pt-0.5">{action}</div> : null}
+    </div>
+  );
+}
+
 // LabelRow — label on the left, optional right-aligned slot (e.g. "Optional"
 // tag, brain icon). Keeps the inline parenthetical out of the label proper
 // so the field's primary identifier reads first.
@@ -308,12 +342,12 @@ export function AISettingsContent() {
 
   return (
     <div className="space-y-6">
-      {/* AI Provider Settings */}
-      <div className="space-y-4">
-        <SectionHeader
-          icon={<Bot size={14} />}
-          title={t.aiSettings.mainModel}
-        />
+      <section className={SETTINGS_CARD_CLASS}>
+        <div className="space-y-6">
+          <SettingsCardHeader
+            icon={<Bot size={18} />}
+            title={t.aiSettings.mainModel}
+          />
 
         <Field
           label={t.aiSettings.provider}
@@ -348,6 +382,7 @@ export function AISettingsContent() {
                   : []),
               ]}
               optionLabelClassName="text-ui-caption"
+              className="w-full"
             />
           )}
         </Field>
@@ -363,35 +398,76 @@ export function AISettingsContent() {
         >
           {(id) => (
             <div className="space-y-2">
-              <TextInput
-                id={id}
-                type="password"
-                value={config.apiKey}
-                // Trim on every keystroke — paste-from-clipboard frequently
-                // brings trailing whitespace / newlines that the upstream
-                // rejects with the same 401 we'd get for a wrong key.
-                onChange={(e) =>
-                  setConfig({ apiKey: e.target.value.trim() })
-                }
-                // Select-all on focus so a paste into a field that already
-                // has a saved key REPLACES it instead of inserting beside.
-                // Without this, `<input type=password>` shows the old key as
-                // dots, the cursor lands at click position, and a paste
-                // merges old+new — produces a bogus concatenated "key" that
-                // fails 401 with the OLD key's last-4 in the upstream error.
-                onFocus={(e) => e.currentTarget.select()}
-                placeholder={
-                  config.provider === "ollama"
-                    ? t.aiSettings.localModelNoKey
-                    : apiKeyConfigured
-                      ? t.aiSettings.imageModels?.apiKeyConfiguredPlaceholder ?? "API key saved (hidden)"
-                    : config.provider === "anthropic"
-                      ? "sk-ant-..."
-                      : config.provider === "openai-compatible"
-                        ? t.aiSettings.apiKeyOptional
-                        : "sk-..."
-                }
-              />
+              <div className="flex items-center gap-3">
+                <TextInput
+                  id={id}
+                  type="password"
+                  value={config.apiKey}
+                  // Trim on every keystroke — paste-from-clipboard frequently
+                  // brings trailing whitespace / newlines that the upstream
+                  // rejects with the same 401 we'd get for a wrong key.
+                  onChange={(e) =>
+                    setConfig({ apiKey: e.target.value.trim() })
+                  }
+                  // Select-all on focus so a paste into a field that already
+                  // has a saved key REPLACES it instead of inserting beside.
+                  // Without this, `<input type=password>` shows the old key as
+                  // dots, the cursor lands at click position, and a paste
+                  // merges old+new — produces a bogus concatenated "key" that
+                  // fails 401 with the OLD key's last-4 in the upstream error.
+                  onFocus={(e) => e.currentTarget.select()}
+                  placeholder={
+                    config.provider === "ollama"
+                      ? t.aiSettings.localModelNoKey
+                      : apiKeyConfigured
+                        ? t.aiSettings.imageModels?.apiKeyConfiguredPlaceholder ?? "API key saved (hidden)"
+                      : config.provider === "anthropic"
+                        ? "sk-ant-..."
+                        : config.provider === "openai-compatible"
+                          ? t.aiSettings.apiKeyOptional
+                          : "sk-..."
+                  }
+                />
+                <button
+                  onClick={testConnection}
+                  disabled={testResult.status === "testing"}
+                  className={[
+                    "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-ui-md border px-3 text-sm",
+                    "transition-colors duration-fast ease-out-subtle",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    testResult.status === "success"
+                      ? "border-success/40 bg-success/5 text-success"
+                      : testResult.status === "error"
+                        ? "border-destructive/40 bg-destructive/5 text-destructive"
+                        : "border-border bg-background text-foreground hover:bg-accent",
+                  ].join(" ")}
+                  title={t.aiSettings.testButton}
+                  type="button"
+                >
+                  {testResult.status === "testing" ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      {t.aiSettings.testing}
+                    </>
+                  ) : testResult.status === "success" ? (
+                    <>
+                      <Check size={16} />
+                      {t.aiSettings.testSuccessShort}
+                    </>
+                  ) : testResult.status === "error" ? (
+                    <>
+                      <X size={16} />
+                      {t.aiSettings.testFailed}
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={16} />
+                      {t.aiSettings.testButton}
+                    </>
+                  )}
+                </button>
+              </div>
               {testResult.status === "error" && testResult.message ? (
                 <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
                   <X size={12} className="mt-0.5 shrink-0" />
@@ -408,134 +484,104 @@ export function AISettingsContent() {
                   </span>
                 </div>
               ) : null}
-              <div className="flex justify-end">
-                <button
-                  onClick={testConnection}
-                  disabled={testResult.status === "testing"}
-                  className={[
-                    "inline-flex items-center gap-1.5 rounded-ui-md border px-2.5 py-1 text-xs",
-                    "transition-colors duration-fast ease-out-subtle",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    testResult.status === "success"
-                      ? "border-success/40 bg-success/5 text-success"
-                      : testResult.status === "error"
-                        ? "border-destructive/40 bg-destructive/5 text-destructive"
-                        : "border-border text-muted-foreground hover:bg-accent hover:text-foreground",
-                  ].join(" ")}
-                  title={t.aiSettings.testButton}
-                >
-                  {testResult.status === "testing" ? (
-                    <>
-                      <Loader2 size={12} className="animate-spin" />
-                      {t.aiSettings.testing}
-                    </>
-                  ) : testResult.status === "success" ? (
-                    <>
-                      <Check size={12} />
-                      {t.aiSettings.testSuccessShort}
-                    </>
-                  ) : testResult.status === "error" ? (
-                    <>
-                      <X size={12} />
-                      {t.aiSettings.testFailed}
-                    </>
-                  ) : (
-                    <>
-                      <Zap size={12} />
-                      {t.aiSettings.testButton}
-                    </>
-                  )}
-                </button>
-              </div>
             </div>
           )}
         </Field>
 
-        {isMimoProvider && (
-          <Field
-            label={t.aiSettings.mimoEndpoint}
-            hint={t.aiSettings.mimoEndpointHint}
-          >
-            {(id) => (
-              <Select
-                id={id}
-                value={mimoEndpoint.defaultBaseUrl}
-                onValueChange={(baseUrl) => {
-                  const nextModels = getMimoModelsForBaseUrl(baseUrl);
-                  const currentModelAvailable = nextModels.some(
-                    (model) => model.id === config.model,
-                  );
-                  const nextModel = currentModelAvailable
-                    ? config.model
-                    : (nextModels[0]?.id ?? "custom");
-                  setConfig({
-                    baseUrl,
-                    model: nextModel,
-                    customModelId: undefined,
-                    temperature: getRecommendedTemperature("mimo", nextModel),
-                  });
-                }}
-                options={MIMO_ENDPOINTS.map((endpoint) => ({
-                  value: endpoint.defaultBaseUrl,
-                  label: endpoint.label,
-                }))}
-              />
-            )}
-          </Field>
-        )}
-
-        {config.provider !== "openai-compatible" && (
-          <Field
-            label={
-              <LabelRow>
-                {t.aiSettings.model}
-                {mainModelMeta?.supportsThinking && <ThinkingModelIcon />}
-              </LabelRow>
-            }
-          >
-            {(id) => {
-              const providerModels = getModelsForProvider(
-                config.provider as LLMProviderType,
-                config.baseUrl,
-              );
-              const currentInList = providerModels.some(
-                (m) => m.id === config.model,
-              );
-              return (
+        <div
+          className={
+            isMimoProvider
+              ? "grid grid-cols-2 gap-4"
+              : "max-w-[29rem]"
+          }
+        >
+          {isMimoProvider && (
+            <Field
+              label={t.aiSettings.mimoEndpoint}
+              hint={t.aiSettings.mimoEndpointHint}
+            >
+              {(id) => (
                 <Select
                   id={id}
-                  value={currentInList ? config.model : "custom"}
-                  onValueChange={(newModel) => {
-                    if (newModel === "custom") {
-                      setConfig({
-                        model: newModel,
-                        customModelId: "",
-                        temperature: getRecommendedTemperature(
-                          config.provider as LLMProviderType,
-                          "custom",
-                        ),
-                      });
-                    } else {
-                      setConfig({
-                        model: newModel,
-                        temperature: getRecommendedTemperature(
-                          config.provider as LLMProviderType,
-                          newModel,
-                        ),
-                      });
-                    }
+                  value={mimoEndpoint.defaultBaseUrl}
+                  onValueChange={(baseUrl) => {
+                    const nextModels = getMimoModelsForBaseUrl(baseUrl);
+                    const currentModelAvailable = nextModels.some(
+                      (model) => model.id === config.model,
+                    );
+                    const nextModel = currentModelAvailable
+                      ? config.model
+                      : (nextModels[0]?.id ?? "custom");
+                    setConfig({
+                      baseUrl,
+                      model: nextModel,
+                      customModelId: undefined,
+                      temperature: getRecommendedTemperature("mimo", nextModel),
+                    });
                   }}
-                  options={providerModels.map((model) => ({
-                    value: model.id,
-                    label: formatModelOptionLabel(model),
+                  options={MIMO_ENDPOINTS.map((endpoint) => ({
+                    value: endpoint.defaultBaseUrl,
+                    label: endpoint.label,
                   }))}
-                  optionLabelClassName="text-ui-caption"
+                  className="w-full"
                 />
-              );
-            }}
-          </Field>
-        )}
+              )}
+            </Field>
+          )}
+
+          {config.provider !== "openai-compatible" && (
+            <Field
+              label={
+                <LabelRow>
+                  {t.aiSettings.model}
+                  {mainModelMeta?.supportsThinking && <ThinkingModelIcon />}
+                </LabelRow>
+              }
+            >
+              {(id) => {
+                const providerModels = getModelsForProvider(
+                  config.provider as LLMProviderType,
+                  config.baseUrl,
+                );
+                const currentInList = providerModels.some(
+                  (m) => m.id === config.model,
+                );
+                return (
+                  <Select
+                    id={id}
+                    value={currentInList ? config.model : "custom"}
+                    onValueChange={(newModel) => {
+                      if (newModel === "custom") {
+                        setConfig({
+                          model: newModel,
+                          customModelId: "",
+                          temperature: getRecommendedTemperature(
+                            config.provider as LLMProviderType,
+                            "custom",
+                          ),
+                        });
+                      } else {
+                        setConfig({
+                          model: newModel,
+                          temperature: getRecommendedTemperature(
+                            config.provider as LLMProviderType,
+                            newModel,
+                          ),
+                        });
+                      }
+                    }}
+                    options={providerModels.map((model) => ({
+                      value: model.id,
+                      label: formatModelOptionLabel(model),
+                    }))}
+                    optionLabelClassName="text-ui-caption"
+                    className="w-full"
+                  />
+                );
+              }}
+            </Field>
+          )}
+        </div>
 
         {(config.model === "custom" ||
           config.provider === "openai-compatible") && (
@@ -711,13 +757,13 @@ export function AISettingsContent() {
         {/* Explicit save controls for the main-model fields. Drafts above
             commit only when the user clicks Save (matches the image
             settings pattern). Reset reverts drafts to the persisted state. */}
-        <div className="flex items-center justify-end gap-2 pt-1">
+        <div className="flex items-center justify-end gap-3 border-t border-border/60 pt-5">
           <button
             type="button"
             onClick={handleReset}
             disabled={!isDirty || saving}
             className={[
-              "rounded-ui-md border border-border bg-background px-3 py-1.5 text-xs",
+              "rounded-ui-md border border-border bg-background px-5 py-2 text-sm",
               "text-muted-foreground transition-colors duration-fast ease-out-subtle",
               "hover:bg-accent hover:text-foreground",
               "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -731,7 +777,7 @@ export function AISettingsContent() {
             onClick={() => void handleSave()}
             disabled={!isDirty || saving}
             className={[
-              "inline-flex items-center gap-1.5 rounded-ui-md border border-primary bg-primary px-3 py-1.5 text-xs",
+              "inline-flex items-center gap-1.5 rounded-ui-md border border-primary bg-primary px-6 py-2 text-sm",
               "text-primary-foreground transition-colors duration-fast ease-out-subtle",
               "hover:bg-primary/90",
               "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -742,7 +788,8 @@ export function AISettingsContent() {
             {t.aiSettings.saveButton}
           </button>
         </div>
-      </div>
+        </div>
+      </section>
 
       {/* Image Models — gpt-image-2 / Nano Banana / Seedream */}
       <ImageModelsSettings />
@@ -801,9 +848,9 @@ function ToggleRow({
 export function AISettingsModal({ isOpen, onClose }: AISettingsModalProps) {
   const { t } = useLocaleStore();
   return (
-    <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()} width={560}>
-      <DialogHeader title={t.aiSettings.title} />
-      <DialogBody>
+    <Dialog open={isOpen} onOpenChange={(v) => !v && onClose()} width={520}>
+      <DialogHeader title={t.aiSettings.title} className="px-5 pt-4 pb-4" />
+      <DialogBody className="px-5 py-4">
         <AISettingsContent />
       </DialogBody>
     </Dialog>
