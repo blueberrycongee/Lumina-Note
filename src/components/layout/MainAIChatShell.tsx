@@ -180,8 +180,7 @@ export function buildImageModeAgentPrompt(
 
 export function MainAIChatShell() {
   const { t } = useLocaleStore();
-  const { setSkillManagerOpen, toggleLeftSidebar, toggleRightSidebar } =
-    useUIStore();
+  const setSkillManagerOpen = useUIStore((state) => state.setSkillManagerOpen);
   const [input, setInput] = useState("");
   // Composition modes that wrap the user's prompt before send. Right now
   // there's just one — image mode, activated from the welcome "Generate
@@ -1277,8 +1276,6 @@ export function MainAIChatShell() {
         onStartExportSelection={handleStartExportSelection}
         onCancelExportSelection={handleCancelExportSelection}
         onNewChat={handleNewChat}
-        onToggleLeftSidebar={toggleLeftSidebar}
-        onToggleRightSidebar={toggleRightSidebar}
         title={currentConversationTitle}
       />
 

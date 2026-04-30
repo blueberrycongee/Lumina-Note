@@ -2,7 +2,20 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useFileStore, Tab } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { useUIStore } from "@/stores/useUIStore";
-import { X, FileText, Network, Pin, Plus, Puzzle, Shapes, Images } from "lucide-react";
+import {
+  X,
+  FileText,
+  Network,
+  Pin,
+  Plus,
+  Puzzle,
+  Shapes,
+  Images,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 import { AnimatePresence, motion, Reorder, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
@@ -37,6 +50,10 @@ const TAB_SHAPE_DEFAULT_WIDTH = 200;
 // collapse the strip. 22px gives a ~7px tighter gap than the geometric
 // interlock without making the active tab "bite" into neighbors too far.
 const TAB_OVERLAP_PX = 22;
+const TABBAR_EDGE_SLOT_CLASS =
+  "flex w-10 shrink-0 items-center justify-center pt-1.5";
+const TABBAR_ICON_BUTTON_CLASS =
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 function tabShapeSegments(width: number, height: number): string[] {
   const w = Math.max(width, TAB_SHAPE_TOP_RADIUS * 2 + TAB_SHAPE_EAR_RADIUS * 2);
@@ -266,7 +283,19 @@ export function TabBar() {
   // would have no stable position to recompute against on resize / scroll.
   const contextAnchorRef = useRef<HTMLDivElement>(null);
   const showMacTopActions = useMacTopChromeEnabled();
-  const leftSidebarOpen = useUIStore((state) => state.leftSidebarOpen);
+  const {
+    leftSidebarOpen,
+    rightSidebarOpen,
+    toggleLeftSidebar,
+    toggleRightSidebar,
+  } = useUIStore(
+    useShallow((state) => ({
+      leftSidebarOpen: state.leftSidebarOpen,
+      rightSidebarOpen: state.rightSidebarOpen,
+      toggleLeftSidebar: state.toggleLeftSidebar,
+      toggleRightSidebar: state.toggleRightSidebar,
+    })),
+  );
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
   const reduceMotion = useReducedMotion();
   const reorderTabs = useFileStore((state) => state.reorderTabs);
@@ -403,6 +432,27 @@ export function TabBar() {
         data-tauri-drag-region={showMacTopActions ? true : undefined}
       >
         <div
+          className={TABBAR_EDGE_SLOT_CLASS}
+          data-testid="mac-tabbar-left-sidebar-slot"
+          data-tauri-drag-region="false"
+        >
+          <button
+            type="button"
+            data-testid="mac-tabbar-toggle-left-sidebar"
+            data-tauri-drag-region="false"
+            onClick={toggleLeftSidebar}
+            aria-label={t.sidebar.toggleSidebar}
+            title={t.sidebar.toggleSidebar}
+            className={TABBAR_ICON_BUTTON_CLASS}
+          >
+            {leftSidebarOpen ? (
+              <PanelLeftClose size={15} />
+            ) : (
+              <PanelLeftOpen size={15} />
+            )}
+          </button>
+        </div>
+        <div
           ref={containerRef}
           className="flex min-w-0 flex-1 items-stretch overflow-hidden px-1 pt-1.5"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
@@ -524,15 +574,42 @@ export function TabBar() {
               );
             })}
           </Reorder.Group>
+        </div>
+        <div
+          className={TABBAR_EDGE_SLOT_CLASS}
+          data-testid="mac-tabbar-new-tab-slot"
+          data-tauri-drag-region="false"
+        >
           <button
             type="button"
             data-testid="mac-tabbar-new-tab"
             data-tauri-drag-region="false"
             onClick={handleOpenNewTab}
             aria-label={t.tabBar.newTab}
-            className="shrink-0 flex items-center justify-center w-9 rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
+            className={TABBAR_ICON_BUTTON_CLASS}
           >
             <Plus size={16} />
+          </button>
+        </div>
+        <div
+          className={TABBAR_EDGE_SLOT_CLASS}
+          data-testid="mac-tabbar-right-sidebar-slot"
+          data-tauri-drag-region="false"
+        >
+          <button
+            type="button"
+            data-testid="mac-tabbar-toggle-right-sidebar"
+            data-tauri-drag-region="false"
+            onClick={toggleRightSidebar}
+            aria-label={t.sidebar.toggleRightPanel}
+            title={t.sidebar.toggleRightPanel}
+            className={TABBAR_ICON_BUTTON_CLASS}
+          >
+            {rightSidebarOpen ? (
+              <PanelRightClose size={15} />
+            ) : (
+              <PanelRightOpen size={15} />
+            )}
           </button>
         </div>
       </div>

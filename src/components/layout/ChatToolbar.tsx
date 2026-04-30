@@ -1,5 +1,5 @@
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { Download, History, MessageSquare, Plus, Sidebar } from "lucide-react";
+import { Download, History, Plus } from "lucide-react";
 import type { ExportMessage } from "@/features/conversation-export/exportUtils";
 import { cn } from "@/lib/utils";
 
@@ -12,8 +12,6 @@ interface ChatToolbarProps {
   onStartExportSelection: () => void;
   onCancelExportSelection: () => void;
   onNewChat: () => void;
-  onToggleLeftSidebar?: () => void;
-  onToggleRightSidebar?: () => void;
   title?: string;
 }
 
@@ -26,14 +24,9 @@ export function ChatToolbar({
   onStartExportSelection,
   onCancelExportSelection,
   onNewChat,
-  onToggleLeftSidebar,
-  onToggleRightSidebar,
   title,
 }: ChatToolbarProps) {
   const { t } = useLocaleStore();
-
-  const iconButton =
-    "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors duration-fast ease-out-subtle hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
   const pillButton =
     "flex items-center gap-1.5 rounded-ui-sm px-2 h-7 text-ui-caption transition-colors duration-fast ease-out-subtle whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
@@ -41,15 +34,6 @@ export function ChatToolbar({
   return (
     <div className="ui-compact-row h-11 flex items-center justify-between px-3 border-b border-border/60 shrink-0 min-w-0">
       <div className="flex items-center gap-1 min-w-0 overflow-hidden">
-        {onToggleLeftSidebar && (
-          <button
-            onClick={onToggleLeftSidebar}
-            className={iconButton}
-            title={t.sidebar.toggleSidebar}
-          >
-            <Sidebar size={15} />
-          </button>
-        )}
         {title && (
           <>
             <span
@@ -100,15 +84,6 @@ export function ChatToolbar({
             {t.ai.newChat}
           </span>
         </button>
-        {onToggleRightSidebar && (
-          <button
-            onClick={onToggleRightSidebar}
-            className={iconButton}
-            title={t.sidebar.toggleRightPanel}
-          >
-            <MessageSquare size={15} />
-          </button>
-        )}
       </div>
     </div>
   );

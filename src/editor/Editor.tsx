@@ -19,8 +19,6 @@ import { ReadingView } from "./ReadingView";
 import { SelectionToolbar } from "@/components/toolbar/SelectionToolbar";
 import { SelectionContextMenu } from "@/components/toolbar/SelectionContextMenu";
 import {
-  Sidebar,
-  MessageSquare,
   BookOpen,
   Eye,
   Code2,
@@ -154,8 +152,6 @@ export function Editor() {
   );
 
   const {
-    toggleLeftSidebar,
-    toggleRightSidebar,
     editorMode,
     setEditorMode,
     toggleSplitView,
@@ -529,14 +525,6 @@ export function Editor() {
       {activeTab?.type !== "ai-chat" && (
         <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
           <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
-            <button
-              onClick={toggleLeftSidebar}
-              className="p-1 hover:bg-accent rounded transition-colors hover:text-foreground shrink-0"
-              title={t.sidebar.toggleSidebar}
-            >
-              <Sidebar size={16} />
-            </button>
-
             {/* Navigation buttons */}
             <div className="flex items-center gap-0.5 shrink-0">
               <button
@@ -628,13 +616,6 @@ export function Editor() {
               title={t.editor.exportPdf}
             >
               <Download size={16} />
-            </button>
-            <button
-              onClick={toggleRightSidebar}
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
-              title={t.sidebar.toggleRightPanel}
-            >
-              <MessageSquare size={16} />
             </button>
           </div>
         </div>

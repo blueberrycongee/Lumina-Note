@@ -5,7 +5,10 @@ import { TabBar } from "./TabBar";
 
 const macTopChromeEnabled = vi.hoisted(() => ({ value: false }));
 const leftSidebarOpenState = vi.hoisted(() => ({ value: true }));
+const rightSidebarOpenState = vi.hoisted(() => ({ value: true }));
 const openNewTab = vi.hoisted(() => vi.fn());
+const toggleLeftSidebar = vi.hoisted(() => vi.fn());
+const toggleRightSidebar = vi.hoisted(() => vi.fn());
 const switchTab = () => undefined;
 const closeTab = async () => undefined;
 const closeOtherTabs = () => undefined;
@@ -51,6 +54,10 @@ vi.mock("@/stores/useLocaleStore", () => ({
         closeAll: "Close All",
         newTab: "New tab",
       },
+      sidebar: {
+        toggleSidebar: "Toggle left sidebar",
+        toggleRightPanel: "Toggle right panel",
+      },
     },
   }),
 }));
@@ -59,6 +66,9 @@ vi.mock("@/stores/useUIStore", () => ({
   useUIStore: (selector: (state: unknown) => unknown) =>
     selector({
       leftSidebarOpen: leftSidebarOpenState.value,
+      rightSidebarOpen: rightSidebarOpenState.value,
+      toggleLeftSidebar,
+      toggleRightSidebar,
     }),
 }));
 
@@ -74,8 +84,11 @@ describe("TabBar", () => {
   beforeEach(() => {
     macTopChromeEnabled.value = false;
     leftSidebarOpenState.value = true;
+    rightSidebarOpenState.value = true;
     fileStoreState.tabs = [{ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false }];
     openNewTab.mockClear();
+    toggleLeftSidebar.mockClear();
+    toggleRightSidebar.mockClear();
   });
 
   it("does not render macOS top actions outside macOS overlay mode", () => {
@@ -138,13 +151,53 @@ describe("TabBar", () => {
     expect(container.querySelector("svg.lucide-file-text")?.getAttribute("class")).toContain("text-primary");
   });
 
-  it("renders a new-tab button immediately after the last tab inside the tab strip", () => {
+  it("renders a centered new-tab button between the tab strip and right sidebar toggle", () => {
     render(<TabBar />);
 
     const newTabButton = screen.getByTestId("mac-tabbar-new-tab");
     expect(newTabButton).toBeInTheDocument();
     expect(newTabButton).toHaveAttribute("aria-label", "New tab");
-    expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(newTabButton);
+    expect(screen.getByTestId("mac-tabbar-new-tab-slot")).toContainElement(
+      newTabButton,
+    );
+  });
+
+  it("reserves sidebar toggle slots at the far edges of the tab bar", () => {
+    const { container } = render(<TabBar />);
+
+    const root = container.firstElementChild;
+    expect(root?.children[0]).toContainElement(
+      screen.getByTestId("mac-tabbar-toggle-left-sidebar"),
+    );
+    expect(root?.children[1]).toBe(screen.getByTestId("mac-tabbar-tabstrip"));
+    expect(root?.children[2]).toContainElement(
+      screen.getByTestId("mac-tabbar-new-tab"),
+    );
+    expect(root?.children[3]).toContainElement(
+      screen.getByTestId("mac-tabbar-toggle-right-sidebar"),
+    );
+  });
+
+  it("keeps the new-tab button to the left of the right sidebar toggle", () => {
+    render(<TabBar />);
+
+    expect(
+      screen
+        .getByTestId("mac-tabbar-new-tab")
+        .compareDocumentPosition(
+          screen.getByTestId("mac-tabbar-toggle-right-sidebar"),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("toggles both sidebars from the tab bar edge controls", () => {
+    render(<TabBar />);
+
+    fireEvent.click(screen.getByTestId("mac-tabbar-toggle-left-sidebar"));
+    fireEvent.click(screen.getByTestId("mac-tabbar-toggle-right-sidebar"));
+
+    expect(toggleLeftSidebar).toHaveBeenCalledTimes(1);
+    expect(toggleRightSidebar).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the new-tab button outside the shrinking tab list", () => {
@@ -152,6 +205,9 @@ describe("TabBar", () => {
 
     expect(screen.getByTestId("mac-tabbar-tabs")).toHaveClass("flex-1", "overflow-hidden");
     expect(screen.getByTestId("mac-tabbar-new-tab")).toHaveClass("shrink-0");
+    expect(screen.getByTestId("mac-tabbar-tabstrip")).not.toContainElement(
+      screen.getByTestId("mac-tabbar-new-tab"),
+    );
   });
 
   it("freezes remaining tab widths during a close batch", () => {
@@ -199,7 +255,7 @@ describe("TabBar", () => {
 
     render(<TabBar />);
 
-    expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(screen.getByTestId("mac-tabbar-new-tab"));
+    expect(screen.getByTestId("mac-tabbar-new-tab-slot")).toContainElement(screen.getByTestId("mac-tabbar-new-tab"));
     expect(screen.queryByText("New Tab")).not.toBeInTheDocument();
   });
 
