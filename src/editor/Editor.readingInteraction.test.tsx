@@ -38,24 +38,6 @@ vi.mock("./CodeMirrorEditor", async () => {
   };
 });
 
-vi.mock("@/services/markdown/markdown", () => ({
-  parseMarkdown: () => "<p>Alpha Beta Gamma</p>",
-}));
-
-vi.mock("mermaid", () => ({
-  default: {
-    initialize: vi.fn(),
-    run: vi.fn(() => Promise.resolve()),
-  },
-}));
-
-vi.mock("@/services/plugins/renderRuntime", () => ({
-  pluginRenderRuntime: {
-    apply: (html: string) => html,
-    mountReadingView: vi.fn(() => vi.fn()),
-  },
-}));
-
 vi.mock("@/components/toolbar/SelectionToolbar", () => ({
   SelectionToolbar: () => null,
 }));
@@ -129,10 +111,10 @@ describe("Editor reading interaction", () => {
 
   it("keeps reading mode when clicking reading content", () => {
     const { container } = render(<Editor />);
-    const readingParagraph = container.querySelector(".reading-view p");
-    expect(readingParagraph).toBeInstanceOf(HTMLElement);
+    const readingContent = container.querySelector(".cm-editor");
+    expect(readingContent).toBeInstanceOf(HTMLElement);
 
-    fireEvent.click(readingParagraph as HTMLElement);
+    fireEvent.click(readingContent as HTMLElement);
 
     expect(useUIStore.getState().editorMode).toBe("reading");
   });

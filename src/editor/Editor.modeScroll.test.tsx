@@ -44,12 +44,6 @@ vi.mock("./CodeMirrorEditor", async () => {
   };
 });
 
-vi.mock("./ReadingView", () => ({
-  ReadingView: ({ content }: { content: string }) => (
-    <article data-testid="reading-view">{content}</article>
-  ),
-}));
-
 vi.mock("@/components/toolbar/SelectionToolbar", () => ({
   SelectionToolbar: () => null,
 }));
@@ -149,7 +143,7 @@ describe("Editor mode scroll preservation", () => {
   });
 
   it("restores the current scroll position when entering reading mode", async () => {
-    const { container } = render(<Editor />);
+    render(<Editor />);
     const editorScroll = screen.getByTestId("cm-scroll");
     setScrollableMetrics(editorScroll, {
       scrollHeight: 2000,
@@ -158,23 +152,14 @@ describe("Editor mode scroll preservation", () => {
     });
 
     fireEvent.click(screen.getByTitle("实时"));
-
-    const readingScroll = container.querySelector(
-      '[data-editor-scroll-container="reading"]',
-    );
-    expect(readingScroll).toBeInstanceOf(HTMLElement);
-    setScrollableMetrics(readingScroll as HTMLElement, {
-      scrollHeight: 1800,
-      clientHeight: 500,
-    });
 
     await flushModeScrollRestore();
 
-    expect((readingScroll as HTMLElement).scrollTop).toBeCloseTo(520, 0);
+    expect(editorScroll.scrollTop).toBeCloseTo(600, 0);
   });
 
   it("uses the reading scroll position when switching back to source mode", async () => {
-    const { container } = render(<Editor />);
+    render(<Editor />);
     const editorScroll = screen.getByTestId("cm-scroll");
     setScrollableMetrics(editorScroll, {
       scrollHeight: 2000,
@@ -184,19 +169,11 @@ describe("Editor mode scroll preservation", () => {
 
     fireEvent.click(screen.getByTitle("实时"));
 
-    const readingScroll = container.querySelector(
-      '[data-editor-scroll-container="reading"]',
-    );
-    expect(readingScroll).toBeInstanceOf(HTMLElement);
-    setScrollableMetrics(readingScroll as HTMLElement, {
-      scrollHeight: 1500,
-      clientHeight: 500,
-      scrollTop: 300,
-    });
+    editorScroll.scrollTop = 300;
 
     fireEvent.click(screen.getByTitle("阅读"));
     await flushModeScrollRestore();
 
-    expect(editorScroll.scrollTop).toBeCloseTo(450, 0);
+    expect(editorScroll.scrollTop).toBeCloseTo(300, 0);
   });
 });
