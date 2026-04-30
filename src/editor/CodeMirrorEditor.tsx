@@ -421,10 +421,15 @@ const createEditorTheme = (fontSize: number) =>
       color: "hsl(var(--primary-foreground))",
     },
     ".cm-blockquote-line": {
+      boxSizing: "border-box",
+      marginLeft: "var(--lumina-line-pad-left)",
+      marginRight: "var(--lumina-line-pad-right)",
       borderLeft: "3px solid hsl(var(--md-blockquote-border, var(--primary)) / 0.45)",
+      paddingLeft: "var(--lumina-block-text-left) !important",
+      paddingRight: "var(--lumina-block-text-right) !important",
       color: "hsl(var(--md-blockquote, var(--muted-foreground)))",
       fontStyle: "italic",
-      backgroundColor: "hsl(var(--muted) / 0.18)",
+      backgroundColor: "transparent",
     },
     ".cm-readable-source, .cm-readable-source-line": {
       color: "hsl(var(--muted-foreground))",
