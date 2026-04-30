@@ -27,6 +27,7 @@ vi.mock("@/services/ai/config-sync", () => ({
 
 import { useOpencodeAgent } from "./useOpencodeAgent";
 import { useAIStore } from "./useAIStore";
+import { getCurrentTranslations } from "./useLocaleStore";
 
 async function* emptyStream(): AsyncGenerator<never, void, unknown> {
   return;
@@ -117,6 +118,24 @@ describe("useOpencodeAgent.startTask", () => {
       "reset-client",
       "get-client",
     ]);
+  });
+
+  it("creates opencode sessions with Lumina's localized default title", async () => {
+    const create = vi.fn(async () => ({ data: { id: "session-1" } }));
+    mocks.getOpencodeClient.mockResolvedValue({
+      session: {
+        create,
+        list: vi.fn(async () => ({ data: [] })),
+      },
+    });
+
+    await useOpencodeAgent.getState().newSession("/tmp/vault");
+
+    expect(create).toHaveBeenCalledWith({
+      body: { title: getCurrentTranslations().common.newConversation },
+      query: { directory: "/tmp/vault" },
+      throwOnError: true,
+    });
   });
 
   it("shows the optimistic user message before waiting for opencode startup", async () => {

@@ -48,7 +48,7 @@ vi.mock("@/lib/host", () => ({
 vi.mock("@/stores/useLocaleStore", () => ({
   getCurrentTranslations: () => ({
     common: {
-      newConversation: "新对话",
+      newConversation: "新会话",
     },
     ai: {
       apiKeyRequired: "请先配置 API Key",

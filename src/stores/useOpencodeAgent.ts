@@ -352,9 +352,10 @@ function sessionSummary(info: {
   title: string;
   time: { created: number; updated: number };
 }): AgentSessionSummary {
+  const fallbackTitle = getCurrentTranslations().common.newConversation;
   return {
     id: info.id,
-    title: info.title,
+    title: (info.title ?? "").trim() || fallbackTitle,
     createdAt: info.time.created,
     updatedAt: info.time.updated,
   };
@@ -875,7 +876,11 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // hits a not-found path silently and the SSE stream goes dead.
         // Tie both calls to the same directory.
         const query = directory ? { directory } : undefined;
-        const res = await client.session.create({ query, throwOnError: true });
+        const res = await client.session.create({
+          body: { title: getCurrentTranslations().common.newConversation },
+          query,
+          throwOnError: true,
+        });
         const data = res.data as { id?: string } | undefined;
         const id = data?.id ?? null;
         if (id) {
