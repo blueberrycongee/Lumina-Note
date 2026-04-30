@@ -5,7 +5,7 @@ import { TabBar } from "./TabBar";
 
 const macTopChromeEnabled = vi.hoisted(() => ({ value: false }));
 const leftSidebarOpenState = vi.hoisted(() => ({ value: true }));
-const createNewFile = vi.hoisted(() => vi.fn(async () => undefined));
+const openNewTab = vi.hoisted(() => vi.fn());
 const switchTab = () => undefined;
 const closeTab = async () => undefined;
 const closeOtherTabs = () => undefined;
@@ -21,13 +21,13 @@ vi.mock("@/stores/useFileStore", () => ({
     selector({
       tabs: fileStoreState.tabs,
       activeTabIndex: 0,
+      openNewTab,
       switchTab,
       closeTab,
       closeOtherTabs,
       closeAllTabs,
       reorderTabs,
       togglePinTab,
-      createNewFile,
     }),
 }));
 
@@ -75,7 +75,7 @@ describe("TabBar", () => {
     macTopChromeEnabled.value = false;
     leftSidebarOpenState.value = true;
     fileStoreState.tabs = [{ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false }];
-    createNewFile.mockClear();
+    openNewTab.mockClear();
   });
 
   it("does not render macOS top actions outside macOS overlay mode", () => {
@@ -147,20 +147,31 @@ describe("TabBar", () => {
     expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(newTabButton);
   });
 
-  it("invokes createNewFile when the new-tab button is clicked", () => {
+  it("opens a real new tab when the new-tab button is clicked", () => {
     render(<TabBar />);
 
     fireEvent.click(screen.getByTestId("mac-tabbar-new-tab"));
 
-    expect(createNewFile).toHaveBeenCalledTimes(1);
+    expect(openNewTab).toHaveBeenCalledTimes(1);
   });
 
-  it("shows a labeled new-tab action when there are no tabs", () => {
+  it("does not render a fake new-tab when there are no store tabs", () => {
     fileStoreState.tabs = [];
 
     render(<TabBar />);
 
     expect(screen.getByTestId("mac-tabbar-tabstrip")).toContainElement(screen.getByTestId("mac-tabbar-new-tab"));
+    expect(screen.queryByText("New Tab")).not.toBeInTheDocument();
+  });
+
+  it("renders store-backed new tabs as closeable tab items", () => {
+    fileStoreState.tabs = [
+      { id: "new-tab-1", name: "New Tab", type: "new-tab", isPinned: false, isDirty: false },
+    ];
+
+    render(<TabBar />);
+
     expect(screen.getByText("New Tab")).toBeInTheDocument();
+    expect(screen.getByLabelText("Close")).toBeInTheDocument();
   });
 });

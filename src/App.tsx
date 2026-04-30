@@ -145,12 +145,12 @@ function EditorWithGraph({
     })),
   );
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
-  const isEmptyWorkspace = tabs.length === 0 && !activeTab;
+  const showNewTabPage = !activeTab || activeTab.type === "new-tab";
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
       <TabBar />
-      {isEmptyWorkspace ? (
+      {showNewTabPage ? (
         <EmptyNewTabPage
           onCreateNewFile={onCreateNewFile}
           onQuickOpen={onQuickOpen}
@@ -245,7 +245,7 @@ function App() {
     activeTabIndex,
     fileTree,
     refreshFileTree,
-    openAIMainTab,
+    openNewTab,
   } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
@@ -257,7 +257,7 @@ function App() {
       activeTabIndex: state.activeTabIndex,
       fileTree: state.fileTree,
       refreshFileTree: state.refreshFileTree,
-      openAIMainTab: state.openAIMainTab,
+      openNewTab: state.openNewTab,
     })),
   );
   const pendingDiff = useAIStore((state) => state.pendingDiff);
@@ -293,10 +293,10 @@ function App() {
     setPaletteOpen(true);
   }, []);
 
-  // 首次启动时默认打开 AI Chat
+  // Keep the tab model concrete even when no persisted tab state exists.
   useEffect(() => {
     if (tabs.length === 0) {
-      openAIMainTab();
+      openNewTab();
     }
   }, []);
 

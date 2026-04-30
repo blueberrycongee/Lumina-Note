@@ -26,6 +26,7 @@ interface HistoryEntry {
 
 // 标签页类型
 export type TabType =
+  | "new-tab"
   | "file"
   | "diagram"
   | "graph"
@@ -127,6 +128,7 @@ interface FileState {
   closeFile: () => void;
 
   // Tab actions
+  openNewTab: () => void;
   switchTab: (index: number) => void;
   closeTab: (index: number) => Promise<void>;
   closeOtherTabs: (index: number) => Promise<void>;
@@ -272,6 +274,42 @@ function trimUndoStack(stack: HistoryEntry[]): HistoryEntry[] {
 
 function getTabLastSavedContent(tab: Tab): string {
   return tab.lastSavedContent ?? tab.content;
+}
+
+let newTabCounter = 0;
+
+function createNewTab(): Tab {
+  newTabCounter += 1;
+  const t = getCurrentTranslations();
+  return {
+    id: `__new_tab_${Date.now()}_${newTabCounter}__`,
+    type: "new-tab",
+    path: "",
+    name: t.views.newTab,
+    content: "",
+    isDirty: false,
+    lastSavedContent: "",
+    undoStack: [],
+    redoStack: [],
+  };
+}
+
+function getCurrentFileForTab(tab: Tab): string | null {
+  return tab.path || null;
+}
+
+function addOrReplaceActiveNewTab(
+  tabs: Tab[],
+  activeTabIndex: number,
+  tab: Tab,
+): { tabs: Tab[]; activeTabIndex: number } {
+  if (activeTabIndex >= 0 && tabs[activeTabIndex]?.type === "new-tab") {
+    const nextTabs = [...tabs];
+    nextTabs[activeTabIndex] = tab;
+    return { tabs: nextTabs, activeTabIndex };
+  }
+
+  return { tabs: [...tabs, tab], activeTabIndex: tabs.length };
 }
 
 function patchTabState(
@@ -587,8 +625,13 @@ export const useFileStore = create<FileState>()(
               newTabIndex = newTabs.length - 1;
             }
           } else {
-            newTabs = [...currentTabs, newTab];
-            newTabIndex = newTabs.length - 1;
+            const placement = addOrReplaceActiveNewTab(
+              currentTabs,
+              get().activeTabIndex,
+              newTab,
+            );
+            newTabs = placement.tabs;
+            newTabIndex = placement.activeTabIndex;
           }
 
           // 更新导航历史
@@ -640,6 +683,43 @@ export const useFileStore = create<FileState>()(
         }
       },
 
+      openNewTab: () => {
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+          lastSavedContent,
+        } = get();
+
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+            lastSavedContent,
+          };
+        }
+
+        updatedTabs.push(createNewTab());
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: null,
+          currentContent: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
+        });
+      },
+
       // 切换标签页
       switchTab: (index: number) => {
         const {
@@ -671,7 +751,7 @@ export const useFileStore = create<FileState>()(
           set({
             tabs: updatedTabs,
             activeTabIndex: index,
-            currentFile: targetTab.path,
+            currentFile: getCurrentFileForTab(targetTab),
             currentContent: targetTab.content,
             isDirty: targetTab.isDirty,
             undoStack: targetTab.undoStack,
@@ -683,7 +763,7 @@ export const useFileStore = create<FileState>()(
           const targetTab = tabs[index];
           set({
             activeTabIndex: index,
-            currentFile: targetTab.path,
+            currentFile: getCurrentFileForTab(targetTab),
             currentContent: targetTab.content,
             isDirty: targetTab.isDirty,
             undoStack: targetTab.undoStack,
@@ -721,10 +801,10 @@ export const useFileStore = create<FileState>()(
         const newTabs = tabs.filter((_, i) => i !== index);
 
         if (newTabs.length === 0) {
-          // 没有标签页了
+          const newTab = createNewTab();
           set({
-            tabs: [],
-            activeTabIndex: -1,
+            tabs: [newTab],
+            activeTabIndex: 0,
             currentFile: null,
             currentContent: "",
             isDirty: false,
@@ -768,7 +848,7 @@ export const useFileStore = create<FileState>()(
           set({
             tabs: newTabs,
             activeTabIndex: newActiveIndex,
-            currentFile: targetTab.path,
+            currentFile: getCurrentFileForTab(targetTab),
             currentContent: targetTab.content,
             isDirty: targetTab.isDirty,
             undoStack: targetTab.undoStack,
@@ -807,7 +887,7 @@ export const useFileStore = create<FileState>()(
         set({
           tabs: remainingTabs,
           activeTabIndex: newActiveIndex >= 0 ? newActiveIndex : 0,
-          currentFile: targetTab.path,
+          currentFile: getCurrentFileForTab(targetTab),
           currentContent: targetTab.content,
           isDirty: targetTab.isDirty,
           undoStack: targetTab.undoStack,
@@ -833,9 +913,10 @@ export const useFileStore = create<FileState>()(
         const pinnedTabs = tabs.filter((tab) => tab.isPinned);
 
         if (pinnedTabs.length === 0) {
+          const newTab = createNewTab();
           set({
-            tabs: [],
-            activeTabIndex: -1,
+            tabs: [newTab],
+            activeTabIndex: 0,
             currentFile: null,
             currentContent: "",
             isDirty: false,
@@ -848,7 +929,7 @@ export const useFileStore = create<FileState>()(
           set({
             tabs: pinnedTabs,
             activeTabIndex: 0,
-            currentFile: firstPinned.path,
+            currentFile: getCurrentFileForTab(firstPinned),
             currentContent: firstPinned.content,
             isDirty: firstPinned.isDirty,
             undoStack: firstPinned.undoStack,
@@ -1224,11 +1305,15 @@ export const useFileStore = create<FileState>()(
           redoStack: [],
         };
 
-        updatedTabs.push(pdfTab);
+        const placement = addOrReplaceActiveNewTab(
+          updatedTabs,
+          activeTabIndex,
+          pdfTab,
+        );
 
         set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
+          tabs: placement.tabs,
+          activeTabIndex: placement.activeTabIndex,
           currentFile: pdfPath,
           currentContent: "",
           isDirty: false,
@@ -1304,11 +1389,15 @@ export const useFileStore = create<FileState>()(
           redoStack: [],
         };
 
-        updatedTabs.push(diagramTab);
+        const placement = addOrReplaceActiveNewTab(
+          updatedTabs,
+          activeTabIndex,
+          diagramTab,
+        );
 
         set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
+          tabs: placement.tabs,
+          activeTabIndex: placement.activeTabIndex,
           currentFile: diagramPath,
           currentContent: "",
           isDirty: false,
@@ -1380,11 +1469,15 @@ export const useFileStore = create<FileState>()(
           redoStack: [],
         };
 
-        updatedTabs.push(imageTab);
+        const placement = addOrReplaceActiveNewTab(
+          updatedTabs,
+          activeTabIndex,
+          imageTab,
+        );
 
         set({
-          tabs: updatedTabs,
-          activeTabIndex: updatedTabs.length - 1,
+          tabs: placement.tabs,
+          activeTabIndex: placement.activeTabIndex,
           currentFile: imagePath,
           currentContent: "",
           isDirty: false,

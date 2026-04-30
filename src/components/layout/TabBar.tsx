@@ -184,7 +184,7 @@ function TabItem({
           isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
         )}
       >
-        {tab.type === "graph" || tab.type === "isolated-graph" ? (
+        {tab.type === "new-tab" ? null : tab.type === "graph" || tab.type === "isolated-graph" ? (
           <Network size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "pdf" ? (
           <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
@@ -245,17 +245,17 @@ interface ContextMenuState {
 
 export function TabBar() {
   const { t } = useLocaleStore();
-  const { tabs, activeTabIndex, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab, createNewFile } =
+  const { tabs, activeTabIndex, openNewTab, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
     useFileStore(
       useShallow((state) => ({
         tabs: state.tabs,
         activeTabIndex: state.activeTabIndex,
+        openNewTab: state.openNewTab,
         switchTab: state.switchTab,
         closeOtherTabs: state.closeOtherTabs,
         closeAllTabs: state.closeAllTabs,
         togglePinTab: state.togglePinTab,
         promotePreviewTab: state.promotePreviewTab,
-        createNewFile: state.createNewFile,
       })),
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -358,58 +358,9 @@ export function TabBar() {
     [tabs, animateClose]
   );
 
-  const handleCreateNewFile = useCallback(() => {
-    void createNewFile().catch((error) => {
-      reportOperationError({
-        source: "TabBar.newTab",
-        action: "Create new file from tab bar",
-        error,
-      });
-    });
-  }, [createNewFile]);
-
-  if (tabs.length === 0) {
-    return (
-      <div
-        className="flex h-11 shrink-0 items-stretch border-b border-border/60 bg-popover shadow-elev-1"
-        data-tauri-drag-region={showMacTopActions ? true : undefined}
-      >
-        <div
-          ref={containerRef}
-          className="flex min-w-0 flex-1 items-stretch overflow-hidden px-1 pt-1.5"
-          data-tauri-drag-region={showMacTopActions ? true : undefined}
-          data-testid="mac-tabbar-tabstrip"
-        >
-          {showMacTrafficLightInset ? (
-            <div
-              className="h-full shrink-0"
-              style={{ width: `${MAC_TABBAR_LEFT_SAFE_INSET}px` }}
-              data-testid="mac-tabbar-traffic-light-spacer"
-            />
-          ) : null}
-          <div
-            className="relative h-full min-w-[150px] basis-[220px] max-w-[240px] shrink-0"
-            data-tauri-drag-region="false"
-          >
-            <TabShape isActive isDropTarget={false} />
-            <div className="relative flex h-full items-center px-7 text-ui-control font-medium text-foreground">
-              <span className="truncate">{t.views.newTab}</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            data-testid="mac-tabbar-new-tab"
-            data-tauri-drag-region="false"
-            onClick={handleCreateNewFile}
-            aria-label={t.tabBar.newTab}
-            className="shrink-0 flex items-center justify-center w-9 rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleOpenNewTab = useCallback(() => {
+    openNewTab();
+  }, [openNewTab]);
 
   return (
     <>
@@ -513,7 +464,7 @@ export function TabBar() {
             type="button"
             data-testid="mac-tabbar-new-tab"
             data-tauri-drag-region="false"
-            onClick={handleCreateNewFile}
+            onClick={handleOpenNewTab}
             aria-label={t.tabBar.newTab}
             className="shrink-0 flex items-center justify-center w-9 rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
           >
