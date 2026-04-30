@@ -1,8 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
-  Copy,
-  ExternalLink,
   FolderOpen,
   Grid2X2,
   Image as ImageIcon,
@@ -30,7 +28,6 @@ import { useLocaleStore, getCurrentTranslations } from "@/stores/useLocaleStore"
 import { useFileStore } from "@/stores/useFileStore";
 import {
   type ImageAssetRecord,
-  LARGE_IMAGE_THRESHOLD_BYTES,
   buildImageLibraryIndex,
 } from "@/services/assets/imageManager";
 import {
@@ -66,27 +63,24 @@ type ActionDialogState =
       executing: boolean;
     };
 
-const getStatusLabels = (t: ReturnType<typeof getCurrentTranslations>): Record<ImageManagerStatusFilter, string> => ({
-  all: t.imageManager.statusAll,
-  referenced: t.imageManager.statusReferenced,
-  orphan: t.imageManager.statusOrphans,
-  multi: t.imageManager.statusMultiUsed,
-  recent: t.imageManager.statusRecent,
-  large: t.imageManager.statusLarge,
-});
+const getStatusOptions = (
+  t: ReturnType<typeof getCurrentTranslations>,
+): Array<{ value: ImageManagerStatusFilter; label: string }> => [
+  { value: "all", label: t.imageManager.statusAll },
+  { value: "orphan", label: t.imageManager.statusOrphans },
+  { value: "multi", label: t.imageManager.statusMultiUsed },
+  { value: "large", label: t.imageManager.statusLarge },
+];
 
 const getSortOptions = (t: ReturnType<typeof getCurrentTranslations>): Array<{ value: ImageManagerSortBy; label: string }> => [
   { value: "modified", label: t.imageManager.sortRecentlyChanged },
   { value: "name", label: t.imageManager.sortName },
-  { value: "size", label: t.imageManager.sortFileSize },
   { value: "references", label: t.imageManager.sortReferenceCount },
 ];
 
 const statusBadgeStyles = {
   orphan: "bg-warning/10 text-warning",
-  referenced: "bg-success/10 text-success",
   multi: "bg-primary/10 text-primary",
-  recent: "bg-muted text-muted-foreground",
   large: "bg-muted text-muted-foreground",
 } as const;
 
@@ -103,20 +97,10 @@ const formatBytes = (bytes: number | null): string => {
   return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[unitIndex]}`;
 };
 
-const formatDate = (timestamp: number | null): string => {
-  if (!timestamp) return getCurrentTranslations().imageManager.unknown;
-  return new Date(timestamp).toLocaleString();
-};
-
 const summarizeStatuses = (asset: ImageAssetRecord): string[] => {
   const statuses: string[] = [];
-  if (asset.orphan) {
-    statuses.push("orphan");
-  } else {
-    statuses.push("referenced");
-  }
+  if (asset.orphan) statuses.push("orphan");
   if (asset.multiReferenced) statuses.push("multi");
-  if (asset.recent) statuses.push("recent");
   if (asset.large) statuses.push("large");
   return statuses;
 };
@@ -129,8 +113,6 @@ const matchesStatusFilter = (asset: ImageAssetRecord, filter: ImageManagerStatus
       return asset.orphan;
     case "multi":
       return asset.multiReferenced;
-    case "recent":
-      return asset.recent;
     case "large":
       return asset.large;
     default:
@@ -163,10 +145,6 @@ const groupStatusLabel = (key: string): string => {
       return t.imageManager.groupNeedsCleanup;
     case "multi":
       return t.imageManager.groupLinkedFromMultipleNotes;
-    case "large":
-      return t.imageManager.groupLargeFiles.replace("{threshold}", formatBytes(LARGE_IMAGE_THRESHOLD_BYTES));
-    case "recent":
-      return t.imageManager.groupRecentlyAdded;
     default:
       return t.imageManager.groupReferenced;
   }
@@ -181,7 +159,7 @@ const resolveVaultFolderInput = (vaultPath: string, value: string): string => {
 
 export function ImageManagerView() {
   const { t } = useLocaleStore();
-  const STATUS_LABELS = useMemo(() => getStatusLabels(t), [t]);
+  const STATUS_OPTIONS = useMemo(() => getStatusOptions(t), [t]);
   const SORT_OPTIONS = useMemo(() => getSortOptions(t), [t]);
   const { vaultPath, fileTree, openFile, refreshFileTree } = useFileStore(
     useShallow((state) => ({
@@ -262,6 +240,15 @@ export function ImageManagerView() {
     const timer = window.setTimeout(() => setSuccessMessage(null), 2600);
     return () => window.clearTimeout(timer);
   }, [successMessage]);
+
+  useEffect(() => {
+    if (statusFilter === "recent" || statusFilter === "referenced") {
+      setStatusFilter("all");
+    }
+    if (sortBy === "size") {
+      setSortBy("modified");
+    }
+  }, [setSortBy, setStatusFilter, sortBy, statusFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -378,14 +365,10 @@ export function ImageManagerView() {
         ? "orphan"
         : image.multiReferenced
           ? "multi"
-          : image.large
-            ? "large"
-            : image.recent
-              ? "recent"
-              : "referenced";
+          : "referenced";
       groups.set(key, [...(groups.get(key) ?? []), image]);
     }
-    return ["orphan", "multi", "large", "recent", "referenced"]
+    return ["orphan", "multi", "referenced"]
       .filter((key) => groups.has(key))
       .map((key) => ({
         key,
@@ -554,8 +537,7 @@ export function ImageManagerView() {
 
   const statsSummary = t.imageManager.statsSummary
     .replace("{total}", String(summary.totalImages))
-    .replace("{orphans}", String(summary.orphanImages))
-    .replace("{totalSize}", formatBytes(summary.totalBytes));
+    .replace("{orphans}", String(summary.orphanImages));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
@@ -616,10 +598,7 @@ export function ImageManagerView() {
             value={statusFilter}
             onValueChange={(v) => setStatusFilter(v as ImageManagerStatusFilter)}
             className="h-8 min-w-[120px] text-xs"
-            options={Object.entries(STATUS_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            }))}
+            options={STATUS_OPTIONS}
           />
           <Select
             value={folderFilter}
@@ -753,22 +732,17 @@ export function ImageManagerView() {
                     <span>{t.imageManager.columnFile}</span>
                     <span className="image-manager-list-location">{t.imageManager.columnLocation}</span>
                     <span className="image-manager-list-refs">{t.imageManager.columnRefs}</span>
-                    <span className="image-manager-list-size">{t.imageManager.columnSize}</span>
-                    <span className="image-manager-list-changed">{t.imageManager.columnChanged}</span>
                     <span className="image-manager-list-actions">{t.imageManager.columnActions}</span>
                   </div>
                   {filteredImages.map((image) => (
                     <ImageListRow
                       key={image.path}
                       image={image}
-                      dimensions={dimensions[image.path]}
                       selected={selectedImageSet.has(image.path)}
                       onDimension={(width, height) => handleDimension(image.path, width, height)}
                       onSelect={handleCardClick}
                       onOpenNote={handleOpenNote}
-                      onCopyPath={handleCopyPath}
                       onLocate={handleLocateInTree}
-                      onReveal={handleReveal}
                       onRename={openRenameDialog}
                       onMove={(path) => openMoveDialog([path])}
                     />
@@ -792,9 +766,7 @@ export function ImageManagerView() {
                             selected={selectedImageSet.has(image.path)}
                             onDimension={(width, height) => handleDimension(image.path, width, height)}
                             onSelect={handleCardClick}
-                            onCopyPath={handleCopyPath}
                             onLocate={handleLocateInTree}
-                            onReveal={handleReveal}
                             onRename={openRenameDialog}
                             onMove={(path) => openMoveDialog([path])}
                           />
@@ -812,9 +784,7 @@ export function ImageManagerView() {
                       selected={selectedImageSet.has(image.path)}
                       onDimension={(width, height) => handleDimension(image.path, width, height)}
                       onSelect={handleCardClick}
-                      onCopyPath={handleCopyPath}
                       onLocate={handleLocateInTree}
-                      onReveal={handleReveal}
                       onRename={openRenameDialog}
                       onMove={(path) => openMoveDialog([path])}
                     />
@@ -911,6 +881,8 @@ function EmptyState({
 function StatusBadges({ image, className }: { image: ImageAssetRecord; className?: string }) {
   const { t } = useLocaleStore();
   const statuses = summarizeStatuses(image);
+  if (statuses.length === 0) return null;
+
   return (
     <div className={cn("flex flex-wrap gap-1.5", className)}>
       {statuses.map((status) => (
@@ -923,13 +895,9 @@ function StatusBadges({ image, className }: { image: ImageAssetRecord; className
         >
           {status === "orphan"
             ? t.imageManager.badgeOrphan
-            : status === "referenced"
-              ? t.imageManager.badgeReferenced
-              : status === "multi"
+            : status === "multi"
                 ? t.imageManager.badgeMulti
-                : status === "recent"
-                  ? t.imageManager.badgeRecent
-                  : t.imageManager.badgeLarge}
+                : t.imageManager.badgeLarge}
         </span>
       ))}
     </div>
@@ -938,24 +906,18 @@ function StatusBadges({ image, className }: { image: ImageAssetRecord; className
 
 function CardActions({
   path,
-  onCopyPath,
   onLocate,
-  onReveal,
   onRename,
   onMove,
 }: {
   path: string;
-  onCopyPath: (path: string) => void | Promise<void>;
   onLocate: (path: string) => void;
-  onReveal: (path: string) => void;
   onRename: (path: string) => void;
   onMove: (path: string) => void;
 }) {
   const { t } = useLocaleStore();
   const actions = [
-    { label: t.imageManager.copyPath, icon: Copy, onClick: onCopyPath },
     { label: t.imageManager.locateInTree, icon: FolderTree, onClick: onLocate },
-    { label: t.imageManager.revealInFinder, icon: ExternalLink, onClick: onReveal },
     { label: t.imageManager.rename, icon: PencilLine, onClick: onRename },
     { label: t.imageManager.move, icon: MoveRight, onClick: onMove },
   ];
@@ -984,9 +946,7 @@ function ImageGridCard({
   selected,
   onDimension,
   onSelect,
-  onCopyPath,
   onLocate,
-  onReveal,
   onRename,
   onMove,
 }: {
@@ -994,9 +954,7 @@ function ImageGridCard({
   selected: boolean;
   onDimension: (width: number, height: number) => void;
   onSelect: (path: string, event?: React.MouseEvent) => void;
-  onCopyPath: (path: string) => void | Promise<void>;
   onLocate: (path: string) => void;
-  onReveal: (path: string) => void;
   onRename: (path: string) => void;
   onMove: (path: string) => void;
 }) {
@@ -1039,13 +997,10 @@ function ImageGridCard({
             {getCurrentTranslations().imageManager.refs.replace("{count}", String(image.referenceCount))}
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">{formatBytes(image.sizeBytes)}</span>
         <div>
           <CardActions
             path={image.path}
-            onCopyPath={onCopyPath}
             onLocate={onLocate}
-            onReveal={onReveal}
             onRename={onRename}
             onMove={onMove}
           />
@@ -1057,26 +1012,20 @@ function ImageGridCard({
 
 function ImageListRow({
   image,
-  dimensions,
   selected,
   onDimension,
   onSelect,
   onOpenNote,
-  onCopyPath,
   onLocate,
-  onReveal,
   onRename,
   onMove,
 }: {
   image: ImageAssetRecord;
-  dimensions?: { width: number; height: number };
   selected: boolean;
   onDimension: (width: number, height: number) => void;
   onSelect: (path: string, event?: React.MouseEvent) => void;
   onOpenNote: (path: string) => void;
-  onCopyPath: (path: string) => void | Promise<void>;
   onLocate: (path: string) => void;
-  onReveal: (path: string) => void;
   onRename: (path: string) => void;
   onMove: (path: string) => void;
 }) {
@@ -1111,19 +1060,12 @@ function ImageListRow({
         <div className="mt-1">
           <StatusBadges image={image} className="h-5 flex-nowrap overflow-hidden" />
         </div>
-        <div className="image-manager-list-compact-meta mt-1.5 items-center gap-x-2 overflow-hidden whitespace-nowrap text-xs text-muted-foreground">
-          <span>{getCurrentTranslations().imageManager.refs.replace("{count}", String(image.referenceCount))}</span>
-          <span>{formatBytes(image.sizeBytes)}</span>
-          <span>{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</span>
-        </div>
       </div>
       <div className="image-manager-list-location min-w-0 text-xs text-muted-foreground">
         <div className="truncate">{image.relativePath}</div>
-        <div className="mt-1 truncate">{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</div>
+        <div className="mt-1 truncate">{image.folderRelativePath === "." ? getCurrentTranslations().imageManager.vaultRoot : image.folderRelativePath}</div>
       </div>
       <div className="image-manager-list-refs text-sm">{image.referenceCount}</div>
-      <div className="image-manager-list-size text-sm">{formatBytes(image.sizeBytes)}</div>
-      <div className="image-manager-list-changed text-xs text-muted-foreground">{formatDate(image.modifiedAt)}</div>
       <div className="image-manager-list-actions flex items-center gap-1">
         {image.referencedBy[0] ? (
           <button
@@ -1140,9 +1082,7 @@ function ImageListRow({
         ) : null}
         <CardActions
           path={image.path}
-          onCopyPath={onCopyPath}
           onLocate={onLocate}
-          onReveal={onReveal}
           onRename={onRename}
           onMove={onMove}
         />
@@ -1198,8 +1138,6 @@ function ImageDetailPanel({
               <DetailRow label={t.imageManager.folder} value={image.folderRelativePath === "." ? t.imageManager.vaultRoot : image.folderRelativePath} />
               <DetailRow label={t.imageManager.fileSize} value={formatBytes(image.sizeBytes)} />
               <DetailRow label={t.imageManager.pixelSize} value={dimensions ? `${dimensions.width} × ${dimensions.height}` : t.imageManager.detecting} />
-              <DetailRow label={t.imageManager.changed} value={formatDate(image.modifiedAt)} />
-              <DetailRow label={t.imageManager.created} value={formatDate(image.createdAt)} />
               <DetailRow label={t.imageManager.referenceCount} value={String(image.referenceCount)} />
             </dl>
           </div>
@@ -1265,7 +1203,6 @@ function ImageDetailPanel({
 
 function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; onMove: () => void }) {
   const { t } = useLocaleStore();
-  const totalSize = images.reduce((sum, image) => sum + (image.sizeBytes ?? 0), 0);
   const orphanCount = images.filter((image) => image.orphan).length;
   return (
     <div className="flex h-full flex-col px-4 py-3">
@@ -1274,8 +1211,7 @@ function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; o
       <p className="mt-1 text-sm text-muted-foreground">
         {t.imageManager.batchSummary
           .replace("{orphanCount}", String(orphanCount))
-          .replace("{multiCount}", String(images.filter((image) => image.multiReferenced).length))
-          .replace("{totalSize}", formatBytes(totalSize))}
+          .replace("{multiCount}", String(images.filter((image) => image.multiReferenced).length))}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <button onClick={onMove} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">

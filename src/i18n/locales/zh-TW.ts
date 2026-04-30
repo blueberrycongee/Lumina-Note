@@ -2030,8 +2030,7 @@ export default {
       "目前沒有筆記引用此圖片。可以安全地審查、重新命名、移動或清理。",
     // 多選面板
     batchActions: "批次操作",
-    batchSummary:
-      "{orphanCount} 個孤立，{multiCount} 個多引用，總大小 {totalSize}。",
+    batchSummary: "{orphanCount} 個孤立，{multiCount} 個多引用。",
     moveSelectedSafely: "安全移動所選",
     // 操作對話框
     renameImageSafely: "安全重新命名圖片",
@@ -2058,7 +2057,7 @@ export default {
     unknown: "未知",
     collapsePanel: "收起詳情面板",
     expandPanel: "展開詳情面板",
-    statsSummary: "{total} 張圖片 · {orphans} 張孤立 · {totalSize}",
+    statsSummary: "{total} 張圖片 · {orphans} 張孤立",
   },
 
   // 團隊協作

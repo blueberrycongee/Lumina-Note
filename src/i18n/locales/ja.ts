@@ -2079,8 +2079,7 @@ export default {
       "現在、このイメージを参照しているノートはありません。安全に確認、名前変更、移動、またはクリーンアップできます。",
     // 複数選択パネル
     batchActions: "バッチアクション",
-    batchSummary:
-      "{orphanCount} 件孤立、{multiCount} 件複数参照、合計サイズ {totalSize}。",
+    batchSummary: "{orphanCount} 件孤立、{multiCount} 件複数参照。",
     moveSelectedSafely: "選択を安全に移動",
     // アクションダイアログ
     renameImageSafely: "画像を安全に名前変更",
@@ -2108,7 +2107,7 @@ export default {
     unknown: "不明",
     collapsePanel: "詳細パネルを閉じる",
     expandPanel: "詳細パネルを開く",
-    statsSummary: "{total} 枚 · {orphans} 件孤立 · {totalSize}",
+    statsSummary: "{total} 枚 · {orphans} 件孤立",
   },
 
   // チームコラボレーション

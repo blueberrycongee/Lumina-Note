@@ -2074,8 +2074,7 @@ Requirements:
       "No note currently references this image. It is safe to review, rename, move, or clean up.",
     // Multi-selection panel
     batchActions: "Batch actions",
-    batchSummary:
-      "{orphanCount} orphaned, {multiCount} multi-referenced, total size {totalSize}.",
+    batchSummary: "{orphanCount} orphaned, {multiCount} multi-referenced.",
     moveSelectedSafely: "Move selected safely",
     // Action dialog
     renameImageSafely: "Rename image safely",
@@ -2103,7 +2102,7 @@ Requirements:
     unknown: "Unknown",
     collapsePanel: "Collapse detail panel",
     expandPanel: "Expand detail panel",
-    statsSummary: "{total} images · {orphans} orphans · {totalSize}",
+    statsSummary: "{total} images · {orphans} orphans",
   },
 
   // Team collaboration

@@ -310,7 +310,7 @@ body.resizing iframe[data-codex-iframe="true"] {
 
   .image-manager-list-grid {
     display: grid;
-    grid-template-columns: 48px minmax(0, 1fr) 56px 72px 192px;
+    grid-template-columns: 48px minmax(0, 1fr) 56px 116px;
     column-gap: 0.75rem;
     align-items: center;
     overflow: hidden;
@@ -325,9 +325,7 @@ body.resizing iframe[data-codex-iframe="true"] {
     height: 3.5rem;
   }
 
-  .image-manager-list-location,
-  .image-manager-list-changed,
-  .image-manager-list-compact-meta {
+  .image-manager-list-location {
     display: none;
   }
 
@@ -344,22 +342,17 @@ body.resizing iframe[data-codex-iframe="true"] {
 
   @container (max-width: 620px) {
     .image-manager-list-grid {
-      grid-template-columns: 48px minmax(0, 1fr) 192px;
+      grid-template-columns: 48px minmax(0, 1fr) 116px;
     }
 
-    .image-manager-list-refs,
-    .image-manager-list-size {
+    .image-manager-list-refs {
       display: none;
-    }
-
-    .image-manager-list-compact-meta {
-      display: flex;
     }
   }
 
   @container (min-width: 760px) {
     .image-manager-list-grid {
-      grid-template-columns: 48px minmax(0, 1.1fr) minmax(0, 1fr) 56px 72px 192px;
+      grid-template-columns: 48px minmax(0, 1.1fr) minmax(0, 1fr) 56px 116px;
     }
 
     .image-manager-list-location {
@@ -369,11 +362,7 @@ body.resizing iframe[data-codex-iframe="true"] {
 
   @container (min-width: 1040px) {
     .image-manager-list-grid {
-      grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr) 56px 72px 132px 192px;
-    }
-
-    .image-manager-list-changed {
-      display: block;
+      grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr) 56px 116px;
     }
   }
 
