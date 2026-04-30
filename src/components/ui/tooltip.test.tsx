@@ -37,6 +37,20 @@ describe("AutoTooltipHost", () => {
     expect(screen.getByTestId("auto-tooltip")).toHaveTextContent("Save file");
   });
 
+  it("renders tooltip without an entrance animation", async () => {
+    renderWithButton(<button aria-label="Save file" />);
+    fireEvent.mouseOver(screen.getByRole("button"));
+    await act(async () => {
+      vi.advanceTimersByTime(400);
+    });
+
+    expect(screen.getByTestId("auto-tooltip")).not.toHaveClass(
+      "animate-in",
+      "fade-in-0",
+      "zoom-in-95",
+    );
+  });
+
   it("falls back to data-tooltip when aria-label is absent", async () => {
     renderWithButton(<button data-tooltip="Open chat" />);
     fireEvent.mouseOver(screen.getByRole("button"));
