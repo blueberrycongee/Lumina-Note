@@ -597,7 +597,9 @@ function FavoritesSection({
                   key={option.mode}
                   role="option"
                   density="compact"
-                  title={option.label}
+                  title={
+                    <span className="text-ui-caption">{option.label}</span>
+                  }
                   selected={sortMode === option.mode}
                   trailing={
                     sortMode === option.mode ? <Check size={13} /> : null
@@ -1233,7 +1235,11 @@ function VaultNameSection({
             <Row
               density="compact"
               icon={<Pencil className="w-3.5 h-3.5" />}
-              title={t.workspace?.rename || "Rename"}
+              title={
+                <span className="text-ui-caption">
+                  {t.workspace?.rename || "Rename"}
+                </span>
+              }
               onSelect={handleRenameClick}
               role="menuitem"
             />
@@ -1241,7 +1247,11 @@ function VaultNameSection({
               <Row
                 density="compact"
                 icon={<ArrowLeftRight className="w-3.5 h-3.5" />}
-                title={t.workspace?.switch || "Switch"}
+                title={
+                  <span className="text-ui-caption">
+                    {t.workspace?.switch || "Switch"}
+                  </span>
+                }
                 onSelect={handleSwitchClick}
                 role="menuitem"
               />
