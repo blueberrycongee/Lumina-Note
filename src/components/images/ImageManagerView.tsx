@@ -1099,8 +1099,14 @@ function ActionDialog({
 }) {
   const { t } = useLocaleStore();
   return (
-    <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4">
-      <div className="w-full max-w-2xl rounded-xl border border-border/60 bg-popover shadow-ui-float">
+    <div
+      className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl rounded-xl border border-border/60 bg-popover shadow-ui-float"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
           <div>
             <h2 className="text-lg font-semibold">

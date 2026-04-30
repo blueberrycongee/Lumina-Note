@@ -16,8 +16,9 @@ import { useLocaleStore } from "@/stores/useLocaleStore";
  *   - backdrop: black at 40% (light) / 60% (dark); 120ms fade
  *   - panel: bg-popover, rounded-ui-xl (14px), shadow-elev-3, max-w-md
  *     default (pass width for wider modals)
- *   - ESC dismisses; outside click does NOT dismiss (intentional — dialogs
- *     demand an explicit decision, popovers don't)
+ *   - ESC dismisses; outside click dismisses by default. Pass
+ *     dismissOnBackdropClick={false} for dialogs that require an explicit
+ *     decision.
  *   - respects prefers-reduced-motion
  *
  * Anatomy:
@@ -39,7 +40,7 @@ export interface DialogProps {
   width?: number | string;
   /** Override panel className — avoid unless absolutely needed. */
   className?: string;
-  /** When true, clicking the backdrop closes the dialog. Default false. */
+  /** When true, clicking the backdrop closes the dialog. Default true. */
   dismissOnBackdropClick?: boolean;
   /** Hide the top-right close button. Default false. */
   hideCloseButton?: boolean;
@@ -52,7 +53,7 @@ export const Dialog = forwardRef<HTMLDivElement, DialogProps>(function Dialog(
     onOpenChange,
     width = 480,
     className,
-    dismissOnBackdropClick = false,
+    dismissOnBackdropClick = true,
     hideCloseButton = false,
     children,
   },

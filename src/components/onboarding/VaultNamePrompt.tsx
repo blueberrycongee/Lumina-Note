@@ -34,8 +34,14 @@ export function VaultNamePrompt({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm p-6 rounded-ui-xl bg-popover border border-border shadow-elev-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={handleCancel}
+    >
+      <div
+        className="w-full max-w-sm p-6 rounded-ui-xl bg-popover border border-border shadow-elev-3"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-ui-md bg-accent flex items-center justify-center">
             <FolderPlus className="w-5 h-5 text-primary" />
