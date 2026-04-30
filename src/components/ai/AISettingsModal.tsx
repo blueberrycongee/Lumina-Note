@@ -794,25 +794,26 @@ export function AISettingsContent() {
       {/* Image Models — gpt-image-2 / Nano Banana / Seedream */}
       <ImageModelsSettings />
 
-      {/* Agent 设置 */}
-      <div className="space-y-3 pt-4 border-t border-border/60">
-        <SectionHeader
-          icon={<Shield size={14} />}
-          title={t.aiSettings.agentSettings}
-        />
-        <ToggleRow
-          label={t.aiSettings.autoApproveTools}
-          hint={t.aiSettings.noManualConfirm}
-          checked={autoApprove}
-          onChange={setAutoApprove}
-        />
-        <ToggleRow
-          label={t.aiSettings.autoCompactContext}
-          hint={t.aiSettings.autoCompactHint}
-          checked={autoCompactEnabled}
-          onChange={setAutoCompactEnabled}
-        />
-      </div>
+      <section className={SETTINGS_CARD_CLASS}>
+        <div className="space-y-3">
+          <SettingsCardHeader
+            icon={<Shield size={18} />}
+            title={t.aiSettings.agentSettings}
+          />
+          <ToggleRow
+            label={t.aiSettings.autoApproveTools}
+            hint={t.aiSettings.noManualConfirm}
+            checked={autoApprove}
+            onChange={setAutoApprove}
+          />
+          <ToggleRow
+            label={t.aiSettings.autoCompactContext}
+            hint={t.aiSettings.autoCompactHint}
+            checked={autoCompactEnabled}
+            onChange={setAutoCompactEnabled}
+          />
+        </div>
+      </section>
     </div>
   );
 }
