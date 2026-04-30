@@ -304,6 +304,68 @@ body.resizing iframe[data-codex-iframe="true"] {
     transform: scale(0.92);
   }
 
+  .image-manager-list {
+    container-type: inline-size;
+  }
+
+  .image-manager-list-grid {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 56px 72px 174px;
+    column-gap: 0.75rem;
+    align-items: center;
+  }
+
+  .image-manager-list-location,
+  .image-manager-list-changed,
+  .image-manager-list-compact-meta {
+    display: none;
+  }
+
+  .image-manager-list-actions {
+    min-width: 0;
+    justify-self: end;
+    white-space: nowrap;
+  }
+
+  .image-manager-list-actions .ui-icon-btn {
+    flex: 0 0 auto;
+  }
+
+  @container (max-width: 620px) {
+    .image-manager-list-grid {
+      grid-template-columns: 48px minmax(0, 1fr) 174px;
+    }
+
+    .image-manager-list-refs,
+    .image-manager-list-size {
+      display: none;
+    }
+
+    .image-manager-list-compact-meta {
+      display: flex;
+    }
+  }
+
+  @container (min-width: 760px) {
+    .image-manager-list-grid {
+      grid-template-columns: 48px minmax(0, 1.1fr) minmax(0, 1fr) 56px 72px 174px;
+    }
+
+    .image-manager-list-location {
+      display: block;
+    }
+  }
+
+  @container (min-width: 1040px) {
+    .image-manager-list-grid {
+      grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr) 56px 72px 132px 174px;
+    }
+
+    .image-manager-list-changed {
+      display: block;
+    }
+  }
+
   .db-surface {
     @apply rounded-ui-lg border border-border bg-background;
   }

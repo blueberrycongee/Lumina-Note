@@ -747,15 +747,15 @@ export function ImageManagerView() {
                   description={t.imageManager.noMatchDescription}
                 />
               ) : viewMode === "list" ? (
-                <div className="divide-y divide-border/50 border-t border-border/50">
-                  <div className="grid grid-cols-[48px_1fr_80px_80px_100px] gap-3 px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground md:grid-cols-[48px_1fr_1fr_80px_80px_100px] lg:grid-cols-[48px_1fr_1fr_80px_80px_140px_100px]">
+                <div className="image-manager-list divide-y divide-border/50 border-t border-border/50">
+                  <div className="image-manager-list-grid image-manager-list-header px-4 py-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     <span>{t.imageManager.columnPreview}</span>
                     <span>{t.imageManager.columnFile}</span>
-                    <span className="hidden md:block">{t.imageManager.columnLocation}</span>
-                    <span>{t.imageManager.columnRefs}</span>
-                    <span>{t.imageManager.columnSize}</span>
-                    <span className="hidden lg:block">{t.imageManager.columnChanged}</span>
-                    <span>{t.imageManager.columnActions}</span>
+                    <span className="image-manager-list-location">{t.imageManager.columnLocation}</span>
+                    <span className="image-manager-list-refs">{t.imageManager.columnRefs}</span>
+                    <span className="image-manager-list-size">{t.imageManager.columnSize}</span>
+                    <span className="image-manager-list-changed">{t.imageManager.columnChanged}</span>
+                    <span className="image-manager-list-actions">{t.imageManager.columnActions}</span>
                   </div>
                   {filteredImages.map((image) => (
                     <ImageListRow
@@ -1096,7 +1096,7 @@ function ImageListRow({
       onClick={(event) => onSelect(image.path, event)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "grid grid-cols-[48px_1fr_80px_80px_100px] gap-3 px-4 py-2 text-left text-sm transition-colors hover:bg-accent/30 md:grid-cols-[48px_1fr_1fr_80px_80px_100px] lg:grid-cols-[48px_1fr_1fr_80px_80px_140px_100px]",
+        "image-manager-list-grid px-4 py-2 text-left text-sm transition-colors hover:bg-accent/30",
         selected && "bg-primary/5",
       )}
     >
@@ -1111,24 +1111,31 @@ function ImageListRow({
         <div className="mt-1">
           <StatusBadges image={image} />
         </div>
+        <div className="image-manager-list-compact-meta mt-1.5 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span>{getCurrentTranslations().imageManager.refs.replace("{count}", String(image.referenceCount))}</span>
+          <span>{formatBytes(image.sizeBytes)}</span>
+          <span>{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</span>
+        </div>
       </div>
-      <div className="hidden min-w-0 text-xs text-muted-foreground md:block">
+      <div className="image-manager-list-location min-w-0 text-xs text-muted-foreground">
         <div className="truncate">{image.relativePath}</div>
         <div className="mt-1 truncate">{dimensions ? `${dimensions.width}×${dimensions.height}` : getCurrentTranslations().imageManager.detectingSize}</div>
       </div>
-      <div className="text-sm">{image.referenceCount}</div>
-      <div className="text-sm">{formatBytes(image.sizeBytes)}</div>
-      <div className="hidden text-xs text-muted-foreground lg:block">{formatDate(image.modifiedAt)}</div>
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="image-manager-list-refs text-sm">{image.referenceCount}</div>
+      <div className="image-manager-list-size text-sm">{formatBytes(image.sizeBytes)}</div>
+      <div className="image-manager-list-changed text-xs text-muted-foreground">{formatDate(image.modifiedAt)}</div>
+      <div className="image-manager-list-actions flex items-center gap-1">
         {image.referencedBy[0] ? (
           <button
             onClick={(event) => {
               event.stopPropagation();
               onOpenNote(image.referencedBy[0].notePath);
             }}
-            className="rounded-md border border-border/60 px-2 py-1 text-xs hover:bg-accent"
+            className="ui-icon-btn h-7 w-7"
+            title={getCurrentTranslations().imageManager.openNote}
           >
-            {getCurrentTranslations().imageManager.openNote}
+            <FileText className="h-3.5 w-3.5" />
+            <span className="sr-only">{getCurrentTranslations().imageManager.openNote}</span>
           </button>
         ) : null}
         <CardActions
