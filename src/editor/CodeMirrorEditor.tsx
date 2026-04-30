@@ -395,6 +395,65 @@ const createEditorTheme = (fontSize: number) =>
       fontSize: "1em",
       color: "hsl(var(--muted-foreground) / 0.6)",
     },
+    ".cm-formatting-hidden": {
+      fontSize: "0",
+      color: "transparent",
+      letterSpacing: "-1ch",
+      pointerEvents: "none",
+    },
+
+    ".cm-rendered-list-marker": {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      minWidth: "1.15em",
+      marginRight: "0.15em",
+      color: "hsl(var(--muted-foreground))",
+      fontVariantNumeric: "tabular-nums",
+      userSelect: "none",
+      cursor: "text",
+    },
+    ".cm-rendered-list-marker-unordered": {
+      justifyContent: "center",
+      fontSize: "0.95em",
+      color: "hsl(var(--foreground) / 0.72)",
+    },
+    ".cm-rendered-task-marker": {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "1.15em",
+      height: "1.15em",
+      marginRight: "0.2em",
+      border: "1px solid hsl(var(--border))",
+      borderRadius: "3px",
+      backgroundColor: "hsl(var(--background))",
+      color: "hsl(var(--background))",
+      fontSize: "0.78em",
+      lineHeight: "1",
+      userSelect: "none",
+      cursor: "text",
+    },
+    ".cm-rendered-task-marker-checked": {
+      backgroundColor: "hsl(var(--primary))",
+      borderColor: "hsl(var(--primary))",
+      color: "hsl(var(--primary-foreground))",
+    },
+    ".cm-blockquote-line": {
+      borderLeft: "3px solid hsl(var(--md-blockquote-border, var(--primary)) / 0.45)",
+      color: "hsl(var(--md-blockquote, var(--muted-foreground)))",
+      fontStyle: "italic",
+      backgroundColor: "hsl(var(--muted) / 0.18)",
+    },
+    ".cm-readable-source, .cm-readable-source-line": {
+      color: "hsl(var(--muted-foreground))",
+      fontFamily: "var(--font-mono)",
+      fontSize: "0.94em",
+    },
+    ".cm-readable-source-token": {
+      color: "hsl(var(--muted-foreground) / 0.72)",
+      fontFamily: "var(--font-mono)",
+    },
 
     // === Math 编辑体验 ===
     // 行内公式渲染结果 - 带淡入动画
@@ -1250,6 +1309,53 @@ class VoicePreviewWidget extends WidgetType {
   }
 }
 
+class ListMarkerWidget extends WidgetType {
+  constructor(
+    readonly marker: string,
+    readonly kind: "unordered" | "ordered" | "task",
+    readonly checked: boolean = false,
+  ) {
+    super();
+  }
+  eq(other: ListMarkerWidget) {
+    return (
+      other.marker === this.marker &&
+      other.kind === this.kind &&
+      other.checked === this.checked
+    );
+  }
+  toDOM() {
+    const marker = document.createElement("span");
+    if (this.kind === "task") {
+      marker.className = `cm-rendered-task-marker${this.checked ? " cm-rendered-task-marker-checked" : ""}`;
+      marker.setAttribute("role", "checkbox");
+      marker.setAttribute("aria-checked", this.checked ? "true" : "false");
+      marker.textContent = this.checked ? "✓" : "";
+      return marker;
+    }
+    marker.className = `cm-rendered-list-marker cm-rendered-list-marker-${this.kind}`;
+    marker.textContent = this.kind === "unordered" ? "•" : this.marker;
+    return marker;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
+class EmptyMarkerWidget extends WidgetType {
+  eq(_other: EmptyMarkerWidget) {
+    return true;
+  }
+  toDOM() {
+    const marker = document.createElement("span");
+    marker.className = "cm-empty-source-marker";
+    return marker;
+  }
+  ignoreEvent() {
+    return false;
+  }
+}
+
 class HorizontalRuleWidget extends WidgetType {
   constructor() {
     super();
@@ -1368,13 +1474,13 @@ class ImageWidget extends WidgetType {
 // shouldShowSource 从 codemirror-live-markdown 导入
 
 // ============ 6. StateFields & Plugins ============
-const LIVE_BLOCK_MARK_TYPES = new Set(["HeaderMark", "ListMark", "QuoteMark"]);
-const LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES = new Set(["ListMark", "QuoteMark"]);
+const LIVE_BLOCK_MARK_TYPES = new Set(["HeaderMark"]);
 const LIVE_INLINE_MARK_TYPES = new Set([
   "EmphasisMark",
   "StrikethroughMark",
   "CodeMark",
 ]);
+const LIVE_LINK_SOURCE_TYPES = new Set(["LinkMark", "URL", "LinkTitle"]);
 const SKIP_LIVE_PREVIEW_PARENT_TYPES = new Set(["FencedCode", "CodeBlock"]);
 
 function isInsideSkippedLivePreviewParent(node: any): boolean {
@@ -1413,10 +1519,25 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
     enter: (node) => {
       if (
         !LIVE_BLOCK_MARK_TYPES.has(node.name) &&
-        !LIVE_INLINE_MARK_TYPES.has(node.name)
+        !LIVE_INLINE_MARK_TYPES.has(node.name) &&
+        !LIVE_LINK_SOURCE_TYPES.has(node.name)
       )
         return;
       if (isInsideSkippedLivePreviewParent(node)) return;
+
+      if (LIVE_LINK_SOURCE_TYPES.has(node.name)) {
+        const parent = node.node.parent;
+        if (!parent || parent.name !== "Link") return;
+        const isTouched = shouldShowSource(state, parent.from, parent.to);
+        const cls =
+          isTouched && !isDrag
+            ? "cm-formatting-inline cm-formatting-inline-visible"
+            : "cm-formatting-inline";
+        decorations.push(
+          Decoration.mark({ class: cls }).range(node.from, node.to),
+        );
+        return;
+      }
 
       if (node.name === "CodeMark") {
         const parent = node.node.parent;
@@ -1431,9 +1552,7 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
       if (LIVE_BLOCK_MARK_TYPES.has(node.name)) {
         const lineNum = state.doc.lineAt(node.from).number;
         const isActiveLine = activeLines.has(lineNum) && !isDrag;
-        const shouldShow =
-          LIVE_ALWAYS_VISIBLE_BLOCK_MARK_TYPES.has(node.name) || isActiveLine;
-        const cls = shouldShow
+        const cls = isActiveLine
           ? "cm-formatting-block cm-formatting-block-visible"
           : "cm-formatting-block";
         decorations.push(
@@ -1459,6 +1578,103 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
     true,
   );
 }
+
+function selectionActiveLines(state: EditorState): Set<number> {
+  const activeLines = new Set<number>();
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(range.from).number;
+    const endLine = state.doc.lineAt(range.to).number;
+    for (let line = startLine; line <= endLine; line++) {
+      activeLines.add(line);
+    }
+  }
+  return activeLines;
+}
+
+function buildListAndQuoteDecorations(state: EditorState): DecorationSet {
+  const decorations: Range<Decoration>[] = [];
+  const activeLines = selectionActiveLines(state);
+  const revealActiveLine =
+    state.facet(collapseOnSelectionFacet) &&
+    !state.field(mouseSelectingField, false);
+  const quoteLines = new Set<number>();
+
+  syntaxTree(state).iterate({
+    enter: (node) => {
+      if (isInsideSkippedLivePreviewParent(node)) return;
+
+      if (node.name === "ListMark") {
+        const line = state.doc.lineAt(node.from);
+        if (revealActiveLine && activeLines.has(line.number)) return;
+
+        const marker = state.doc.sliceString(node.from, node.to);
+        const offset = node.from - line.from;
+        const rest = line.text.slice(offset);
+        const taskMatch = /^([-+*]|\d+[.)])\s+\[([ xX])\]/.exec(rest);
+        if (taskMatch) {
+          decorations.push(
+            Decoration.replace({
+              widget: new ListMarkerWidget(
+                "",
+                "task",
+                taskMatch[2].toLowerCase() === "x",
+              ),
+            }).range(node.from, node.from + taskMatch[0].length),
+          );
+          return;
+        }
+
+        const kind = /^\d/.test(marker) ? "ordered" : "unordered";
+        decorations.push(
+          Decoration.replace({
+            widget: new ListMarkerWidget(marker, kind),
+          }).range(node.from, node.to),
+        );
+        return;
+      }
+
+      if (node.name === "QuoteMark") {
+        const line = state.doc.lineAt(node.from);
+        quoteLines.add(line.number);
+        if (revealActiveLine && activeLines.has(line.number)) return;
+        decorations.push(
+          Decoration.replace({ widget: new EmptyMarkerWidget() }).range(
+            node.from,
+            node.to,
+          ),
+        );
+      }
+    },
+  });
+
+  quoteLines.forEach((lineNumber) => {
+    const line = state.doc.line(lineNumber);
+    decorations.push(
+      Decoration.line({ class: "cm-blockquote-line" }).range(line.from),
+    );
+  });
+
+  return Decoration.set(
+    decorations.sort((a, b) => a.from - b.from),
+    true,
+  );
+}
+
+const listAndQuoteStateField = StateField.define<DecorationSet>({
+  create: buildListAndQuoteDecorations,
+  update(deco, tr) {
+    if (tr.docChanged || tr.reconfigured || tr.selection) {
+      return buildListAndQuoteDecorations(tr.state);
+    }
+    const isDragging = tr.state.field(mouseSelectingField, false);
+    const wasDragging = tr.startState.field(mouseSelectingField, false);
+    if (isDragging !== wasDragging) {
+      return buildListAndQuoteDecorations(tr.state);
+    }
+    return deco.map(tr.changes);
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
 
 const livePreviewPlugin = ViewPlugin.fromClass(
   class {
@@ -4199,11 +4415,12 @@ const readingModePlugin = ViewPlugin.fromClass(
               "EmphasisMark",
               "StrikethroughMark",
               "CodeMark",
-              "ListMark",
-              "QuoteMark",
             ].includes(node.name)
           ) {
             this.hide(state, node.from, node.to, d);
+          } else if (LIVE_LINK_SOURCE_TYPES.has(node.name)) {
+            const parent = node.node.parent;
+            if (parent?.name === "Link") this.hide(state, node.from, node.to, d);
           }
         },
       });
@@ -4245,6 +4462,8 @@ const markdownStylePlugin = ViewPlugin.fromClass(
             InlineCode: "cm-code",
             Link: "cm-link",
             URL: "cm-url",
+            HTMLTag: "cm-readable-source-token",
+            LinkLabel: "cm-readable-source-token",
           };
           if (type.startsWith("ATXHeading")) {
             const cls = map[type] || "cm-header-4";
@@ -4255,6 +4474,12 @@ const markdownStylePlugin = ViewPlugin.fromClass(
           } else if (map[type]) {
             d.push(
               Decoration.mark({ class: map[type] }).range(node.from, node.to),
+            );
+          } else if (type === "LinkReference") {
+            d.push(
+              Decoration.line({ class: "cm-readable-source-line" }).range(
+                node.from,
+              ),
             );
           }
         },
@@ -4357,6 +4582,7 @@ export const CodeMirrorEditor = forwardRef<
         ? createImageStateField(vaultPath, resolvedFilePath)
         : null;
       const widgets = [
+        listAndQuoteStateField,
         mathStateField,
         mermaidEditingField,
         mermaidStateField,
