@@ -14,6 +14,7 @@ const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 64;
 const MAC_COLLAPSED_RIBBON_WIDTH = 64;
 const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLAPSED_RIBBON_WIDTH;
 const CLOSE_ANIMATION_MS = 150;
+const CLOSE_BATCH_WIDTH_FREEZE_MS = 750;
 
 // Chrome-style tab silhouette: top corners curve in, bottom corners curve out
 // into "ears" that flush with the strip's bottom edge. Ear arcs use sweep-flag=0
@@ -302,7 +303,10 @@ export function TabBar() {
   // semantics: only user-initiated closes get an animation; preview replaces
   // and external removals just unmount instantly via React reconciliation.
   const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
+  const [frozenWidths, setFrozenWidths] = useState<Map<string, number> | null>(null);
+  const tabNodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const timeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const releaseFrozenWidthsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
@@ -313,7 +317,37 @@ export function TabBar() {
     };
   }, []);
 
+  const freezeTabWidthsForCloseBatch = useCallback(() => {
+    const next = new Map<string, number>();
+    for (const tab of tabs) {
+      const width = tabNodeRefs.current.get(tab.id)?.getBoundingClientRect().width;
+      if (width && width > 0) {
+        next.set(tab.id, width);
+      }
+    }
+    if (next.size > 0) {
+      setFrozenWidths(next);
+    }
+
+    if (releaseFrozenWidthsTimeout.current) {
+      clearTimeout(releaseFrozenWidthsTimeout.current);
+      timeouts.current.delete(releaseFrozenWidthsTimeout.current);
+    }
+
+    const timeout = setTimeout(() => {
+      timeouts.current.delete(timeout);
+      if (releaseFrozenWidthsTimeout.current === timeout) {
+        releaseFrozenWidthsTimeout.current = null;
+      }
+      setFrozenWidths(null);
+    }, CLOSE_BATCH_WIDTH_FREEZE_MS);
+
+    releaseFrozenWidthsTimeout.current = timeout;
+    timeouts.current.add(timeout);
+  }, [tabs]);
+
   const animateClose = useCallback((tabId: string) => {
+    freezeTabWidthsForCloseBatch();
     setClosingIds((prev) => {
       if (prev.has(tabId)) return prev;
       const next = new Set(prev);
@@ -342,7 +376,7 @@ export function TabBar() {
       });
     }, CLOSE_ANIMATION_MS);
     timeouts.current.add(timeout);
-  }, []);
+  }, [freezeTabWidthsForCloseBatch]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -392,11 +426,33 @@ export function TabBar() {
             {tabs.map((tab, index) => {
               const isClosing = closingIds.has(tab.id);
               const isActive = index === activeTabIndex;
+              const frozenWidth = isClosing ? undefined : frozenWidths?.get(tab.id);
+              const tabStyle =
+                index > 0 || frozenWidth
+                  ? {
+                      ...(index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : {}),
+                      ...(frozenWidth
+                        ? {
+                            flexBasis: frozenWidth,
+                            minWidth: frozenWidth,
+                            maxWidth: frozenWidth,
+                          }
+                        : {}),
+                    }
+                  : undefined;
               return (
                 <Reorder.Item
                   as="div"
                   key={tab.id}
+                  ref={(node: HTMLDivElement | null) => {
+                    if (node) {
+                      tabNodeRefs.current.set(tab.id, node);
+                    } else {
+                      tabNodeRefs.current.delete(tab.id);
+                    }
+                  }}
                   value={tab}
+                  data-testid={`mac-tabbar-tab-${tab.id}`}
                   drag={isClosing ? false : "x"}
                   dragElastic={0.05}
                   dragMomentum={false}
@@ -424,7 +480,7 @@ export function TabBar() {
                   // amount (TAB_OVERLAP_PX) is tuned slightly larger than
                   // EAR_RADIUS so the bodies pack tighter than the pure
                   // geometric interlock would give.
-                  style={index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : undefined}
+                  style={tabStyle}
                   className={cn(
                     "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
                     isClosing

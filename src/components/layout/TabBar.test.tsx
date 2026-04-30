@@ -154,6 +154,38 @@ describe("TabBar", () => {
     expect(screen.getByTestId("mac-tabbar-new-tab")).toHaveClass("shrink-0");
   });
 
+  it("freezes remaining tab widths during a close batch", () => {
+    const rectSpy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockReturnValue({
+        width: 160,
+        height: 38,
+        x: 0,
+        y: 0,
+        top: 0,
+        right: 160,
+        bottom: 38,
+        left: 0,
+        toJSON: () => ({}),
+      });
+    fileStoreState.tabs = [
+      { id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false },
+      { id: "tab-2", name: "Project.md", type: "file", isPinned: false, isDirty: false },
+    ];
+
+    render(<TabBar />);
+
+    fireEvent.click(screen.getAllByLabelText("Close")[0]);
+
+    expect(screen.getByTestId("mac-tabbar-tab-tab-2")).toHaveStyle({
+      flexBasis: "160px",
+      minWidth: "160px",
+      maxWidth: "160px",
+    });
+
+    rectSpy.mockRestore();
+  });
+
   it("opens a real new tab when the new-tab button is clicked", () => {
     render(<TabBar />);
 
