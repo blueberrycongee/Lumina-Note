@@ -1681,6 +1681,7 @@ class HorizontalRuleWidget extends WidgetType {
     //    processes the click) fixes that without touching cursor logic.
     const container = document.createElement("div");
     container.className = "cm-hr-container markdown-block-shell markdown-hr-block";
+    container.dataset.widgetType = "hr";
     const rule = document.createElement("hr");
     rule.className = "markdown-hr-rule";
     container.appendChild(rule);
@@ -5671,9 +5672,9 @@ export const CodeMirrorEditor = forwardRef<
         return;
       }
 
-      // 1. Math/Table/CodeBlock Widget 点击 -> 聚焦源码
+      // 1. Math/Table/HorizontalRule widgets focus their source on click.
       const widgetDom = target.closest(
-        '[data-widget-type="math"], [data-widget-type="table"]',
+        '[data-widget-type="math"], [data-widget-type="table"], [data-widget-type="hr"]',
       );
       if (widgetDom) {
         const pos = v.posAtDOM(widgetDom);

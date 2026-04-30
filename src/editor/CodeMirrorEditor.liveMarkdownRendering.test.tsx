@@ -124,6 +124,19 @@ describe("CodeMirror live markdown rendering polish", () => {
     },
   );
 
+  it("reveals horizontal rule source when clicking the rendered block", () => {
+    const content = "Intro\n\n---\n\nOutro";
+    const { container } = setupEditor(content, "live");
+    const rule = container.querySelector<HTMLElement>(".cm-hr-container");
+
+    expect(rule).not.toBeNull();
+    expect(editorText(container)).not.toContain("---");
+
+    fireEvent.mouseDown(rule!);
+
+    expect(editorText(container)).toContain("---");
+  });
+
   it("does not show the table markdown toggle in live render mode", () => {
     const content = "| A | B |\n| --- | --- |\n| 1 | 2 |";
     const { container } = setupEditor(content, "live");
