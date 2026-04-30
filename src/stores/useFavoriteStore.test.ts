@@ -18,6 +18,7 @@ describe("useFavoriteStore", () => {
       favorites: {},
       manualOrder: [],
       defaultSortMode: "manual",
+      collapsed: false,
     });
     vi.useRealTimers();
   });
@@ -97,5 +98,15 @@ describe("useFavoriteStore", () => {
 
     const remaining = store.getFavorites("manual").map((f) => f.path);
     expect(remaining).toEqual(["/notes/a.md", "/notes/c.md"]);
+  });
+
+  it("persists the collapsed state separately from favorites", () => {
+    const store = useFavoriteStore.getState();
+
+    store.addFavorite("/notes/a.md");
+    store.setCollapsed(true);
+
+    expect(useFavoriteStore.getState().collapsed).toBe(true);
+    expect(useFavoriteStore.getState().isFavorite("/notes/a.md")).toBe(true);
   });
 });

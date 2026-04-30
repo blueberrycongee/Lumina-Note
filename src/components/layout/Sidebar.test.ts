@@ -17,7 +17,8 @@ describe("Sidebar warm color hierarchy", () => {
 
   it("uses muted-foreground default file icons", () => {
     expect(sidebarSource).toContain(
-      '<File className="w-4 h-4 text-muted-foreground shrink-0" />',
+      'const FILE_TREE_ICON_CLASS = "ui-tree-icon text-muted-foreground shrink-0";',
     );
+    expect(sidebarSource).toContain("return <File className={FILE_TREE_ICON_CLASS} />;");
   });
 });

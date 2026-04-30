@@ -14,6 +14,7 @@ interface FavoriteState {
   favorites: Record<string, FavoriteEntry>;
   manualOrder: string[];
   defaultSortMode: FavoriteSortMode;
+  collapsed: boolean;
 
   addFavorite: (path: string, addedAt?: number) => void;
   removeFavorite: (path: string) => void;
@@ -25,6 +26,7 @@ interface FavoriteState {
   moveFavorite: (fromIndex: number, toIndex: number) => void;
   setManualOrder: (paths: string[]) => void;
   setDefaultSortMode: (mode: FavoriteSortMode) => void;
+  setCollapsed: (collapsed: boolean) => void;
   getFavorites: (mode?: FavoriteSortMode) => FavoriteEntry[];
   pruneMissing: (fileTree: FileEntry[]) => void;
 }
@@ -63,6 +65,7 @@ export const useFavoriteStore = create<FavoriteState>()(
       favorites: {},
       manualOrder: [],
       defaultSortMode: "manual",
+      collapsed: false,
 
       addFavorite: (path, addedAt = Date.now()) => {
         if (!isMarkdownPath(path)) return;
@@ -186,6 +189,8 @@ export const useFavoriteStore = create<FavoriteState>()(
 
       setDefaultSortMode: (mode) => set({ defaultSortMode: mode }),
 
+      setCollapsed: (collapsed) => set({ collapsed }),
+
       getFavorites: (mode) => {
         const { favorites, manualOrder, defaultSortMode } = get();
         const entries = Object.values(favorites);
@@ -233,6 +238,7 @@ export const useFavoriteStore = create<FavoriteState>()(
         favorites: state.favorites,
         manualOrder: state.manualOrder,
         defaultSortMode: state.defaultSortMode,
+        collapsed: state.collapsed,
       }),
     }
   )
