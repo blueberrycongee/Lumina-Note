@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverList, Row } from "@/components/ui";
 const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 64;
 const MAC_COLLAPSED_RIBBON_WIDTH = 64;
 const MAC_TABBAR_LEFT_SAFE_INSET = MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH - MAC_COLLAPSED_RIBBON_WIDTH;
-const CLOSE_ANIMATION_MS = 150;
+const TAB_BOUNDS_ANIMATION_MS = 180;
 const CLOSE_BATCH_WIDTH_FREEZE_MS = 750;
 
 // Chrome-style tab silhouette: top corners curve in, bottom corners curve out
@@ -348,13 +348,14 @@ async function preloadTabBeforeSwitch(tab: Tab): Promise<void> {
 
 export function TabBar() {
   const { t } = useLocaleStore();
-  const { tabs, activeTabIndex, openNewTab, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
+  const { tabs, activeTabIndex, openNewTab, switchTab, closeTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
     useFileStore(
       useShallow((state) => ({
         tabs: state.tabs,
         activeTabIndex: state.activeTabIndex,
         openNewTab: state.openNewTab,
         switchTab: state.switchTab,
+        closeTab: state.closeTab,
         closeOtherTabs: state.closeOtherTabs,
         closeAllTabs: state.closeAllTabs,
         togglePinTab: state.togglePinTab,
@@ -449,14 +450,14 @@ export function TabBar() {
     [tabs, reorderTabs],
   );
 
-  // IDs of tabs currently animating their close (shrinking out). The tab is
-  // still in the store during this window — store removal happens after the
-  // animation finishes. This is what lets the component own the animation
-  // semantics: only user-initiated closes get an animation; preview replaces
-  // and external removals just unmount instantly via React reconciliation.
+  // IDs of tabs currently animating their close. The store is updated first;
+  // AnimatePresence keeps the removed DOM node alive briefly as a visual ghost
+  // while the remaining tabs retarget to their new ideal bounds.
   const [closingIds, setClosingIds] = useState<Set<string>>(() => new Set());
+  const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
   const [frozenWidths, setFrozenWidths] = useState<Map<string, number> | null>(null);
   const tabNodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const previousTabIdsRef = useRef<Set<string>>(new Set(tabs.map((tab) => tab.id)));
   const timeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const releaseFrozenWidthsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -468,6 +469,33 @@ export function TabBar() {
       document.body.classList.remove("lumina-tab-dragging");
     };
   }, []);
+
+  useLayoutEffect(() => {
+    const previousIds = previousTabIdsRef.current;
+    const currentIds = new Set(tabs.map((tab) => tab.id));
+    const addedIds = tabs
+      .map((tab) => tab.id)
+      .filter((id) => !previousIds.has(id));
+
+    previousTabIdsRef.current = currentIds;
+    if (reduceMotion || addedIds.length === 0) return;
+
+    setEnteringIds((prev) => {
+      const next = new Set(prev);
+      for (const id of addedIds) next.add(id);
+      return next;
+    });
+
+    const timeout = setTimeout(() => {
+      timeouts.current.delete(timeout);
+      setEnteringIds((prev) => {
+        const next = new Set(prev);
+        for (const id of addedIds) next.delete(id);
+        return next;
+      });
+    }, 0);
+    timeouts.current.add(timeout);
+  }, [reduceMotion, tabs]);
 
   const freezeTabWidthsForCloseBatch = useCallback(() => {
     const next = new Map<string, number>();
@@ -506,29 +534,36 @@ export function TabBar() {
       next.add(tabId);
       return next;
     });
+
+    const closeIndex = tabsRef.current.findIndex((tab) => tab.id === tabId);
+    if (closeIndex >= 0) {
+      void closeTab(closeIndex).catch((error) => {
+        reportOperationError({
+          source: "TabBar.animateClose",
+          action: "Close tab",
+          error,
+          context: { tabId },
+        });
+        setClosingIds((prev) => {
+          if (!prev.has(tabId)) return prev;
+          const next = new Set(prev);
+          next.delete(tabId);
+          return next;
+        });
+      });
+    }
+
     const timeout = setTimeout(() => {
       timeouts.current.delete(timeout);
-      const state = useFileStore.getState();
-      const idx = state.tabs.findIndex((t) => t.id === tabId);
-      if (idx >= 0) {
-        void state.closeTab(idx).catch((error) => {
-          reportOperationError({
-            source: "TabBar.animateClose",
-            action: "Close tab",
-            error,
-            context: { tabId },
-          });
-        });
-      }
       setClosingIds((prev) => {
         if (!prev.has(tabId)) return prev;
         const next = new Set(prev);
         next.delete(tabId);
         return next;
       });
-    }, CLOSE_ANIMATION_MS);
+    }, TAB_BOUNDS_ANIMATION_MS + 80);
     timeouts.current.add(timeout);
-  }, [freezeTabWidthsForCloseBatch]);
+  }, [closeTab, freezeTabWidthsForCloseBatch]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -611,106 +646,138 @@ export function TabBar() {
             className="flex min-w-0 flex-1 items-stretch overflow-hidden"
             data-testid="mac-tabbar-tabs"
           >
-            {tabs.map((tab, index) => {
-              const isClosing = closingIds.has(tab.id);
-              const isActive = index === activeTabIndex;
-              const frozenWidth = isClosing ? undefined : frozenWidths?.get(tab.id);
-              const tabStyle =
-                index > 0 || frozenWidth
+            <AnimatePresence initial={false}>
+              {tabs.map((tab, index) => {
+                const isClosing = closingIds.has(tab.id);
+                const isEntering = enteringIds.has(tab.id);
+                const isActive = index === activeTabIndex;
+                const frozenWidth = isClosing ? undefined : frozenWidths?.get(tab.id);
+                const fixedWidth = isClosing || isEntering
+                  ? TAB_OVERLAP_PX
+                  : frozenWidth;
+                const widthStyle = fixedWidth
                   ? {
-                      ...(index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : {}),
-                      ...(frozenWidth
-                        ? {
-                            flexBasis: frozenWidth,
-                            minWidth: frozenWidth,
-                            maxWidth: frozenWidth,
-                          }
-                        : {}),
+                      flexBasis: fixedWidth,
+                      minWidth: fixedWidth,
+                      maxWidth: fixedWidth,
                     }
-                  : undefined;
-              return (
-                <Reorder.Item
-                  as="div"
-                  key={tab.id}
-                  ref={(node: HTMLDivElement | null) => {
-                    if (node) {
-                      tabNodeRefs.current.set(tab.id, node);
-                    } else {
-                      tabNodeRefs.current.delete(tab.id);
-                    }
-                  }}
-                  value={tab}
-                  data-testid={`mac-tabbar-tab-${tab.id}`}
-                  drag={isClosing ? false : "x"}
-                  dragElastic={0.05}
-                  dragMomentum={false}
-                  onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
-                  onDragEnd={() => document.body.classList.remove("lumina-tab-dragging")}
-                  whileDrag={
-                    reduceMotion
-                      ? undefined
-                      : {
-                          // Lift + brighten so the dragged tab clearly leads.
-                          // zIndex must clear the active tab's z-10 so a
-                          // dragged inactive tab doesn't slip under it.
-                          scale: 1.02,
-                          y: -2,
-                          zIndex: 30,
-                          boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                        }
-                  }
-                  layout="position"
-                  transition={{ duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }}
-                  // Negative left-margin from the second tab onward so each
-                  // tab's left ear overlaps the previous tab's right ear —
-                  // same trick Chrome uses to merge adjacent silhouettes
-                  // instead of leaving a flat floor between them. The exact
-                  // amount (TAB_OVERLAP_PX) is tuned slightly larger than
-                  // EAR_RADIUS so the bodies pack tighter than the pure
-                  // geometric interlock would give.
-                  style={tabStyle}
-                  className={cn(
-                    "relative transition-[flex-basis,min-width,max-width,opacity] duration-150 ease-out",
-                    isClosing
-                      ? "basis-0 min-w-0 max-w-0 grow-0 shrink-0 opacity-0 pointer-events-none overflow-hidden"
-                      : "grow-0 shrink basis-[240px] min-w-[72px] max-w-[240px]",
-                    // Active tab sits above its neighbors so its silhouette
-                    // outline (and white fill) cleanly overlays the overlapping
-                    // ears of the inactive tabs on either side.
-                    isActive ? "z-10" : "z-0 hover:z-[5]"
-                  )}
-                >
-                  <motion.div
-                    className="h-full w-full"
-                    initial={reduceMotion ? false : { opacity: 0, y: 3, scale: 0.985 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
-                  >
-                    <TabItem
-                      tab={tab}
-                      isActive={index === activeTabIndex}
-                      displayName={
-                        tab.type === "ai-chat"
-                          ? t.common.aiChatTab
-                          : tab.type === "graph"
-                            ? t.graph.title
-                            : tab.name
+                  : {};
+                const tabStyle =
+                  index > 0 || fixedWidth
+                    ? {
+                        ...(index > 0 ? { marginLeft: -TAB_OVERLAP_PX } : {}),
+                        ...widthStyle,
+                        ...(isClosing ? { pointerEvents: "none" as const } : {}),
                       }
-                      onSelect={() => handleSelectTab(tab, index)}
-                      onDoubleClick={() => {
-                        if (tab.isPreview) {
-                          promotePreviewTab(tab.id);
-                        } else if (!tab.isPinned) {
-                          animateClose(tab.id);
+                    : undefined;
+                return (
+                  <Reorder.Item
+                    as="div"
+                    key={tab.id}
+                    ref={(node: HTMLDivElement | null) => {
+                      if (node) {
+                        tabNodeRefs.current.set(tab.id, node);
+                      } else {
+                        tabNodeRefs.current.delete(tab.id);
+                      }
+                    }}
+                    value={tab}
+                    data-testid={`mac-tabbar-tab-${tab.id}`}
+                    drag={isClosing ? false : "x"}
+                    dragElastic={0.05}
+                    dragMomentum={false}
+                    onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
+                    onDragEnd={() => document.body.classList.remove("lumina-tab-dragging")}
+                    whileDrag={
+                      reduceMotion
+                        ? undefined
+                        : {
+                            // Lift + brighten so the dragged tab clearly leads.
+                            // zIndex must clear the active tab's z-10 so a
+                            // dragged inactive tab doesn't slip under it.
+                            scale: 1.02,
+                            y: -2,
+                            zIndex: 30,
+                            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                          }
+                    }
+                    layout="position"
+                    initial={
+                      reduceMotion
+                        ? false
+                        : {
+                            opacity: 0.45,
+                            y: 7,
+                          }
+                    }
+                    animate={{
+                      opacity: isClosing ? 0 : 1,
+                      y: 0,
+                    }}
+                    exit={
+                      reduceMotion
+                        ? { opacity: 0 }
+                        : {
+                            flexBasis: TAB_OVERLAP_PX,
+                            minWidth: TAB_OVERLAP_PX,
+                            maxWidth: TAB_OVERLAP_PX,
+                            opacity: 0,
+                            y: 0,
+                          }
+                    }
+                    transition={{
+                      duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
+                      ease: [0.2, 0, 0, 1],
+                    }}
+                    // Negative left-margin from the second tab onward so each
+                    // tab's left ear overlaps the previous tab's right ear —
+                    // same trick Chrome uses to merge adjacent silhouettes
+                    // instead of leaving a flat floor between them. The exact
+                    // amount (TAB_OVERLAP_PX) is tuned slightly larger than
+                    // EAR_RADIUS so the bodies pack tighter than the pure
+                    // geometric interlock would give.
+                    style={tabStyle}
+                    className={cn(
+                      "relative grow-0 shrink basis-[240px] min-w-[72px] max-w-[240px] overflow-hidden transition-[flex-basis,min-width,max-width,opacity] duration-[180ms] ease-[cubic-bezier(.2,0,0,1)]",
+                      isClosing && "pointer-events-none",
+                      // Active tab sits above its neighbors so its silhouette
+                      // outline (and white fill) cleanly overlays the overlapping
+                      // ears of the inactive tabs on either side.
+                      isActive ? "z-10" : "z-0 hover:z-[5]"
+                    )}
+                  >
+                    <motion.div
+                      className="h-full w-full"
+                      initial={reduceMotion ? false : { opacity: 0, y: 3, scale: 0.985 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
+                    >
+                      <TabItem
+                        tab={tab}
+                        isActive={index === activeTabIndex}
+                        displayName={
+                          tab.type === "ai-chat"
+                            ? t.common.aiChatTab
+                            : tab.type === "graph"
+                              ? t.graph.title
+                              : tab.name
                         }
-                      }}
-                      onClose={(e) => handleClose(e, index)}
-                      onContextMenu={(e) => handleContextMenu(e, index)}
-                    />
-                  </motion.div>
-                </Reorder.Item>
-              );
-            })}
+                        onSelect={() => handleSelectTab(tab, index)}
+                        onDoubleClick={() => {
+                          if (tab.isPreview) {
+                            promotePreviewTab(tab.id);
+                          } else if (!tab.isPinned) {
+                            animateClose(tab.id);
+                          }
+                        }}
+                        onClose={(e) => handleClose(e, index)}
+                        onContextMenu={(e) => handleContextMenu(e, index)}
+                      />
+                    </motion.div>
+                  </Reorder.Item>
+                );
+              })}
+            </AnimatePresence>
           </Reorder.Group>
         </div>
         <div
