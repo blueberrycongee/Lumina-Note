@@ -579,9 +579,7 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".cm-table-cell": { outline: "none", minWidth: "40px" },
     ".cm-table-toolbar": {
-      display: "flex",
-      justifyContent: "flex-end",
-      marginBottom: "6px",
+      display: "none",
     },
     ".cm-table-source-toggle": {
       display: "none",

@@ -117,6 +117,16 @@ describe("CodeMirror live markdown rendering polish", () => {
     },
   );
 
+  it("does not show the table markdown toggle in live render mode", () => {
+    const content = "| A | B |\n| --- | --- |\n| 1 | 2 |";
+    const { container } = setupEditor(content, "live");
+    const toolbar = container.querySelector<HTMLElement>(".cm-table-toolbar");
+
+    expect(toolbar).not.toBeNull();
+    expect(getComputedStyle(toolbar!).display).toBe("none");
+    expect(container.querySelector(".cm-table-toggle")).not.toBeNull();
+  });
+
   it.each(["live", "reading"] as const)(
     "uses default nested callout titles in %s mode without duplicating body text",
     (mode) => {
