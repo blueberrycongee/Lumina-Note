@@ -15,10 +15,22 @@ interface PDFViewerProps {
   className?: string;
 }
 
+const pdfDataCache = new Map<string, Uint8Array>();
+
+export async function preloadPDF(filePath: string): Promise<Uint8Array> {
+  const cached = pdfDataCache.get(filePath);
+  if (cached) return cached;
+  const data = await readFile(filePath);
+  pdfDataCache.set(filePath, data);
+  return data;
+}
+
 export function PDFViewer({ filePath, className }: PDFViewerProps) {
   const [numPages, setNumPages] = useState(0);
-  const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [pdfData, setPdfData] = useState<Uint8Array | null>(
+    () => pdfDataCache.get(filePath) ?? null,
+  );
+  const [loading, setLoading] = useState(() => !pdfDataCache.has(filePath));
   const [error, setError] = useState<string | null>(null);
   const [showOutline, setShowOutline] = useState(false);
   const { currentPage, scale, setCurrentPage, setScale } = usePDFStore();
@@ -30,9 +42,17 @@ export function PDFViewer({ filePath, className }: PDFViewerProps) {
 
     const loadPdf = async () => {
       try {
+        const cached = pdfDataCache.get(filePath);
+        if (cached) {
+          setPdfData(cached);
+          setLoading(false);
+          setError(null);
+          return;
+        }
+
         setLoading(true);
         setError(null);
-        const data = await readFile(filePath);
+        const data = await preloadPDF(filePath);
         if (!cancelled) {
           // 不要共享 ArrayBuffer，直接存储原始数据
           setPdfData(data);

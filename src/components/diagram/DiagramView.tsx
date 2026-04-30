@@ -158,6 +158,23 @@ function normalizeFsPath(path: string): string {
   return path.replace(/\\/g, "/").replace(/\/+$/g, "").toLowerCase();
 }
 
+interface DiagramSceneSnapshot {
+  normalizedState: ExcalidrawInitialDataState;
+  serialized: string;
+  selectedIds: string[];
+}
+
+const diagramSceneCache = new Map<string, DiagramSceneSnapshot>();
+
+export async function preloadDiagram(filePath: string): Promise<DiagramSceneSnapshot> {
+  const cached = diagramSceneCache.get(filePath);
+  if (cached) return cached;
+  const raw = await readFileWithTimeout(filePath, DIAGRAM_LOAD_TIMEOUT_MS);
+  const snapshot = normalizeSceneFromRaw(raw);
+  diagramSceneCache.set(filePath, snapshot);
+  return snapshot;
+}
+
 export function DiagramView({
   filePath,
   externalContent,
@@ -170,19 +187,26 @@ export function DiagramView({
   const { t } = useLocaleStore();
   const isDarkMode = useUIStore((state) => state.isDarkMode);
   const isManualSave = saveMode === "manual";
-  const [loading, setLoading] = useState(true);
+  const cachedScene = diagramSceneCache.get(filePath);
+  const [loading, setLoading] = useState(() => !cachedScene);
   const [error, setError] = useState<string | null>(null);
-  const [initialData, setInitialData] = useState<ExcalidrawInitialDataState>(() => createInitialScene());
+  const [initialData, setInitialData] = useState<ExcalidrawInitialDataState>(
+    () => cachedScene?.normalizedState ?? createInitialScene(),
+  );
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [selectedElementCount, setSelectedElementCount] = useState(0);
+  const [selectedElementCount, setSelectedElementCount] = useState(
+    () => cachedScene?.selectedIds.length ?? 0,
+  );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimerRef = useRef<number | null>(null);
-  const lastSavedSerializedRef = useRef("");
-  const latestSerializedRef = useRef("");
+  const lastSavedSerializedRef = useRef(cachedScene?.serialized ?? "");
+  const latestSerializedRef = useRef(cachedScene?.serialized ?? "");
   const pendingSerializedRef = useRef<string | null>(null);
-  const latestElementsRef = useRef<readonly OrderedExcalidrawElement[]>([]);
-  const selectedElementIdsRef = useRef<string[]>([]);
+  const latestElementsRef = useRef<readonly OrderedExcalidrawElement[]>(
+    (cachedScene?.normalizedState.elements as OrderedExcalidrawElement[]) ?? [],
+  );
+  const selectedElementIdsRef = useRef<string[]>(cachedScene?.selectedIds ?? []);
   const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const lastAppliedExternalContentRef = useRef<string | null>(null);
   const isMountedRef = useRef(true);
@@ -284,8 +308,8 @@ export function DiagramView({
           setLoading(true);
         }
         setError(null);
-        const raw = await readFileWithTimeout(filePath, DIAGRAM_LOAD_TIMEOUT_MS);
-        const { normalizedState, serialized, selectedIds } = normalizeSceneFromRaw(raw);
+        const { normalizedState, serialized, selectedIds } =
+          await preloadDiagram(filePath);
         if (!isMountedRef.current) {
           return false;
         }
@@ -316,7 +340,10 @@ export function DiagramView({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const loaded = await loadSceneFromDisk({ showLoading: true, resetOnError: true });
+      const loaded = await loadSceneFromDisk({
+        showLoading: !diagramSceneCache.has(filePath),
+        resetOnError: true,
+      });
       if (cancelled || !loaded) return;
     })();
 

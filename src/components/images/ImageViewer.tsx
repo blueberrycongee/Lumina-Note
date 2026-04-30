@@ -18,6 +18,8 @@ interface LoadedImage {
   bytes: number;
 }
 
+const imageCache = new Map<string, LoadedImage>();
+
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
 
@@ -33,9 +35,36 @@ function formatBytes(bytes: number): string {
   return `${value.toFixed(value >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
+export async function preloadImage(
+  filePath: string,
+  options?: { force?: boolean },
+): Promise<LoadedImage> {
+  const cached = imageCache.get(filePath);
+  if (cached && !options?.force) return cached;
+
+  const base64 = await readBinaryFileBase64(filePath);
+  const src = `data:${getImageMimeType(filePath)};base64,${base64}`;
+  const dimensions = await new Promise<{ width: number; height: number }>(
+    (resolve, reject) => {
+      const probe = new Image();
+      probe.onload = () =>
+        resolve({ width: probe.naturalWidth, height: probe.naturalHeight });
+      probe.onerror = () => reject(new Error("decode failed"));
+      probe.src = src;
+    },
+  );
+  const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+  const bytes = Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+  const loaded = { src, width: dimensions.width, height: dimensions.height, bytes };
+  imageCache.set(filePath, loaded);
+  return loaded;
+}
+
 export function ImageViewer({ filePath, className }: ImageViewerProps) {
-  const [image, setImage] = useState<LoadedImage | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [image, setImage] = useState<LoadedImage | null>(
+    () => imageCache.get(filePath) ?? null,
+  );
+  const [loading, setLoading] = useState(() => !imageCache.has(filePath));
   const [error, setError] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
@@ -44,6 +73,17 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const cached = imageCache.get(filePath);
+    if (cached && reloadKey === 0) {
+      setImage(cached);
+      setLoading(false);
+      setError(null);
+      setScale(1);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     setLoading(true);
     setError(null);
     setImage(null);
@@ -51,22 +91,9 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
 
     const load = async () => {
       try {
-        const base64 = await readBinaryFileBase64(filePath);
+        const loaded = await preloadImage(filePath, { force: reloadKey > 0 });
         if (cancelled) return;
-        const src = `data:${getImageMimeType(filePath)};base64,${base64}`;
-        const dimensions = await new Promise<{ width: number; height: number }>(
-          (resolve, reject) => {
-            const probe = new Image();
-            probe.onload = () => resolve({ width: probe.naturalWidth, height: probe.naturalHeight });
-            probe.onerror = () => reject(new Error("decode failed"));
-            probe.src = src;
-          },
-        );
-        if (cancelled) return;
-        // base64 length ≈ ceil(bytes / 3) * 4 — invert for an approximate size.
-        const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
-        const bytes = Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
-        setImage({ src, width: dimensions.width, height: dimensions.height, bytes });
+        setImage(loaded);
         setLoading(false);
       } catch (err) {
         if (cancelled) return;

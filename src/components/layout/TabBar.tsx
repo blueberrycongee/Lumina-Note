@@ -326,6 +326,26 @@ interface ContextMenuState {
   tabIndex: number;
 }
 
+const DEFERRED_SWITCH_TAB_TYPES = new Set<Tab["type"]>([
+  "diagram",
+  "image",
+  "pdf",
+]);
+
+async function preloadTabBeforeSwitch(tab: Tab): Promise<void> {
+  if (!tab.path) return;
+  if (tab.type === "image") {
+    const { preloadImage } = await import("@/components/images/ImageViewer");
+    await preloadImage(tab.path);
+  } else if (tab.type === "pdf") {
+    const { preloadPDF } = await import("@/components/pdf/PDFViewer");
+    await preloadPDF(tab.path);
+  } else if (tab.type === "diagram") {
+    const { preloadDiagram } = await import("@/components/diagram/DiagramView");
+    await preloadDiagram(tab.path);
+  }
+}
+
 export function TabBar() {
   const { t } = useLocaleStore();
   const { tabs, activeTabIndex, openNewTab, switchTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
@@ -343,6 +363,8 @@ export function TabBar() {
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tabsRef = useRef(tabs);
+  const pendingSwitchSeqRef = useRef(0);
   // 1×1 invisible div positioned at the right-click coordinates so the
   // Popover has a real DOM element to anchor against. Without it the menu
   // would have no stable position to recompute against on resize / scroll.
@@ -364,6 +386,42 @@ export function TabBar() {
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
   const reduceMotion = useReducedMotion();
   const reorderTabs = useFileStore((state) => state.reorderTabs);
+
+  useEffect(() => {
+    tabsRef.current = tabs;
+  }, [tabs]);
+
+  const handleSelectTab = useCallback(
+    (tab: Tab, index: number) => {
+      if (!DEFERRED_SWITCH_TAB_TYPES.has(tab.type)) {
+        switchTab(index);
+        return;
+      }
+
+      const seq = pendingSwitchSeqRef.current + 1;
+      pendingSwitchSeqRef.current = seq;
+      void (async () => {
+        try {
+          await preloadTabBeforeSwitch(tab);
+        } catch (error) {
+          reportOperationError({
+            source: "TabBar",
+            action: "Preload tab before switch",
+            error,
+            level: "warning",
+            context: { tabId: tab.id, type: tab.type, path: tab.path },
+          });
+        }
+
+        if (pendingSwitchSeqRef.current !== seq) return;
+        const currentIndex = tabsRef.current.findIndex((item) => item.id === tab.id);
+        if (currentIndex >= 0) {
+          switchTab(currentIndex);
+        }
+      })();
+    },
+    [switchTab],
+  );
 
   // Pinned tabs are confined to the prefix of the array; the store rejects
   // moves that cross the boundary. We diff the new order against the current
@@ -638,7 +696,7 @@ export function TabBar() {
                             ? t.graph.title
                             : tab.name
                       }
-                      onSelect={() => switchTab(index)}
+                      onSelect={() => handleSelectTab(tab, index)}
                       onDoubleClick={() => {
                         if (tab.isPreview) {
                           promotePreviewTab(tab.id);

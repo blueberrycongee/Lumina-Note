@@ -32,7 +32,6 @@ import {
   Loader2,
 } from "lucide-react";
 import { exportToPdf, getExportFileName } from "@/services/pdf/exportPdf";
-import { TabBar } from "@/components/layout/TabBar";
 import { useScrollFade } from "@/hooks/useScrollFade";
 import { cn } from "@/lib/utils";
 
@@ -518,9 +517,6 @@ export function Editor() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
-      {/* Tab Bar */}
-      <TabBar />
-
       {/* Top Navigation Bar — 非 AI 聊天模式下显示 */}
       {activeTab?.type !== "ai-chat" && (
         <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">

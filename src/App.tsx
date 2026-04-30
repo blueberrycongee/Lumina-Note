@@ -143,8 +143,7 @@ function EditorWithGraph({
   const showNewTabPage = !activeTab || activeTab.type === "new-tab";
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
-      <TabBar />
+    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover transition-colors duration-300">
       {showNewTabPage ? (
         <EmptyNewTabPage
           onCreateNewFile={onCreateNewFile}
@@ -1075,88 +1074,88 @@ function App() {
           }`}
         >
           <PanelErrorBoundary label="Editor">
-          {pendingDiff && activeTab?.type !== "ai-chat" ? (
-            // Show diff view when there's a pending AI edit (non chat context)
-            <DiffViewWrapper />
-          ) : activeTab?.type === "pdf" && activeTab.path ? (
-            // PDF 标签页
-            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
+            <div className="flex h-full min-h-0 flex-col bg-popover">
               <TabBar />
-              <PDFViewer filePath={activeTab.path} className="flex-1" />
-            </div>
-          ) : activeTab?.type === "image" && activeTab.path ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
-              <TabBar />
-              <ImageViewer filePath={activeTab.path} className="flex-1" />
-            </div>
-          ) : activeTab?.type === "diagram" && activeTab.path ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
-              <TabBar />
-              <Suspense
-                fallback={
-                  <div className="flex flex-1 items-center justify-center text-ui-control text-muted-foreground">
-                    {t.diagramView.loadingEditor}
+              <div className="flex min-h-0 flex-1 overflow-hidden">
+                {pendingDiff && activeTab?.type !== "ai-chat" ? (
+                  // Show diff view when there's a pending AI edit (non chat context)
+                  <DiffViewWrapper />
+                ) : activeTab?.type === "pdf" && activeTab.path ? (
+                  // PDF 标签页
+                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                    <PDFViewer filePath={activeTab.path} className="flex-1" />
                   </div>
-                }
-              >
-                <DiagramView
-                  key={activeTab.path}
-                  filePath={activeTab.path}
-                  externalContent={activeTab.content || undefined}
-                  className="flex-1"
-                />
-              </Suspense>
+                ) : activeTab?.type === "image" && activeTab.path ? (
+                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                    <ImageViewer filePath={activeTab.path} className="flex-1" />
+                  </div>
+                ) : activeTab?.type === "diagram" && activeTab.path ? (
+                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                    <Suspense
+                      fallback={
+                        <div className="flex flex-1 items-center justify-center text-ui-control text-muted-foreground">
+                          {t.diagramView.loadingEditor}
+                        </div>
+                      }
+                    >
+                      <DiagramView
+                        key={activeTab.path}
+                        filePath={activeTab.path}
+                        externalContent={activeTab.content || undefined}
+                        className="flex-1"
+                      />
+                    </Suspense>
+                  </div>
+                ) : activeTab?.type === "image-manager" ? (
+                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                    <ImageManagerView />
+                  </div>
+                ) : activeTab?.type === "plugin-view" ? (
+                  <div className="flex h-full flex-col overflow-hidden bg-popover">
+                    <PluginViewPane
+                      title={activeTab.name}
+                      html={activeTab.pluginViewHtml || "<p>Empty plugin view</p>"}
+                      scopeId={activeTab.pluginViewType}
+                      onAction={(action, data) => {
+                        const scopedType = activeTab.pluginViewType;
+                        if (!scopedType) return;
+                        const actions = pluginRuntime.getTabActions(scopedType);
+                        const handler = actions[action];
+                        if (handler) {
+                          void handler(data);
+                        } else {
+                          console.warn(
+                            `[PluginViewPane] No handler for action "${action}" on tab type "${scopedType}"`,
+                          );
+                        }
+                      }}
+                    />
+                  </div>
+                ) : activeTab?.type === "ai-chat" ? (
+                  // 主视图区 AI 聊天标签页，交给 Editor 内部根据 tab 类型渲染
+                  <Editor />
+                ) : splitView && currentFile ? (
+                  // Show split editor when enabled
+                  <SplitEditor />
+                ) : activeTab?.type === "graph" ||
+                  activeTab?.type === "isolated-graph" ? (
+                  // 图谱标签页
+                  <EditorWithGraph
+                    onCreateNewFile={handleCreateFileFromNewTab}
+                    onQuickOpen={handleQuickOpenFromNewTab}
+                  />
+                ) : currentFile ? (
+                  // 文件编辑
+                  <Editor />
+                ) : (
+                  // 空状态或其他标签页类型 - 统一使用 EditorWithGraph 保持 TabBar 一致
+                  <EditorWithGraph
+                    onCreateNewFile={handleCreateFileFromNewTab}
+                    onQuickOpen={handleQuickOpenFromNewTab}
+                  />
+                )}
+              </div>
             </div>
-          ) : activeTab?.type === "image-manager" ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
-              <TabBar />
-              <ImageManagerView />
-            </div>
-          ) : activeTab?.type === "plugin-view" ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
-              <TabBar />
-              <PluginViewPane
-                title={activeTab.name}
-                html={activeTab.pluginViewHtml || "<p>Empty plugin view</p>"}
-                scopeId={activeTab.pluginViewType}
-                onAction={(action, data) => {
-                  const scopedType = activeTab.pluginViewType;
-                  if (!scopedType) return;
-                  const actions = pluginRuntime.getTabActions(scopedType);
-                  const handler = actions[action];
-                  if (handler) {
-                    void handler(data);
-                  } else {
-                    console.warn(
-                      `[PluginViewPane] No handler for action "${action}" on tab type "${scopedType}"`,
-                    );
-                  }
-                }}
-              />
-            </div>
-          ) : activeTab?.type === "ai-chat" ? (
-            // 主视图区 AI 聊天标签页，交给 Editor 内部根据 tab 类型渲染
-            <Editor />
-          ) : splitView && currentFile ? (
-            // Show split editor when enabled
-            <SplitEditor />
-          ) : activeTab?.type === "graph" ||
-            activeTab?.type === "isolated-graph" ? (
-            // 图谱标签页
-            <EditorWithGraph
-              onCreateNewFile={handleCreateFileFromNewTab}
-              onQuickOpen={handleQuickOpenFromNewTab}
-            />
-          ) : currentFile ? (
-            // 文件编辑
-            <Editor />
-          ) : (
-            // 空状态或其他标签页类型 - 统一使用 EditorWithGraph 保持 TabBar 一致
-            <EditorWithGraph
-              onCreateNewFile={handleCreateFileFromNewTab}
-              onQuickOpen={handleQuickOpenFromNewTab}
-            />
-          )}
           </PanelErrorBoundary>
         </main>
 
