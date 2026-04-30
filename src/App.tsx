@@ -1224,15 +1224,6 @@ function App() {
           </PanelErrorBoundary>
         </main>
 
-        {/* Right Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
-        <div className="relative flex-shrink-0 h-full z-20 bg-popover">
-          <ResizeHandle
-            direction="right"
-            onResize={handleRightResize}
-            onDoubleClick={toggleRightSidebar}
-          />
-        </div>
-
         {isMainCollapsed ? (
           <CollapsedMainSidebarControls
             leftSidebarOpen={leftSidebarOpen}
@@ -1243,6 +1234,15 @@ function App() {
             onToggleRightSidebar={toggleRightSidebar}
           />
         ) : null}
+
+        {/* Right Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
+        <div className="relative flex-shrink-0 h-full z-20 bg-popover">
+          <ResizeHandle
+            direction="right"
+            onResize={handleRightResize}
+            onDoubleClick={toggleRightSidebar}
+          />
+        </div>
 
         {/* Right Sidebar */}
         <div

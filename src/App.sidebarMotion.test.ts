@@ -49,6 +49,24 @@ describe("App sidebar motion", () => {
     expect(appSource).toContain("{isMainCollapsed ? (");
   });
 
+  it("keeps the right resize handle directly against the right sidebar", () => {
+    const controlsIndex = appSource.indexOf(
+      "<CollapsedMainSidebarControls",
+    );
+    const rightResizeIndex = appSource.indexOf(
+      'direction="right"',
+      controlsIndex,
+    );
+    const rightSidebarIndex = appSource.indexOf(
+      "{/* Right Sidebar */}",
+      rightResizeIndex,
+    );
+
+    expect(controlsIndex).toBeGreaterThan(-1);
+    expect(rightResizeIndex).toBeGreaterThan(controlsIndex);
+    expect(rightSidebarIndex).toBeGreaterThan(rightResizeIndex);
+  });
+
   it("defines directional sidebar motion tokens and nudge states", () => {
     expect(globalsSource).toContain("--ui-motion-sidebar: 220ms;");
     expect(globalsSource).toContain(".app-sidebar-shell[data-open=\"false\"]");
