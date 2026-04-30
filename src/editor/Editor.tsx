@@ -517,7 +517,7 @@ export function Editor() {
   }, [isDirty, save, activeTab?.type]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-background transition-colors duration-300">
+    <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
       {/* Tab Bar */}
       <TabBar />
 

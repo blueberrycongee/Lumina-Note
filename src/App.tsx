@@ -1058,7 +1058,7 @@ function App() {
         </div>
 
         {/* Left Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
-        <div className="relative flex-shrink-0 h-full z-20 bg-background">
+        <div className="relative flex-shrink-0 h-full z-20 bg-popover">
           <ResizeHandle
             direction="left"
             onResize={handleLeftResize}
@@ -1068,7 +1068,7 @@ function App() {
 
         {/* Main content - switches between Editor, Graph, Split, Diff and AI Chat based on state */}
         <main
-          className={`relative flex flex-col overflow-hidden min-w-0 bg-background transition-[width,opacity] duration-200 ${
+          className={`relative flex flex-col overflow-hidden min-w-0 bg-popover transition-[width,opacity] duration-200 ${
             isMainCollapsed
               ? "flex-none w-0 opacity-0 pointer-events-none"
               : "flex-1 w-auto opacity-100"
@@ -1080,17 +1080,17 @@ function App() {
             <DiffViewWrapper />
           ) : activeTab?.type === "pdf" && activeTab.path ? (
             // PDF 标签页
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
               <TabBar />
               <PDFViewer filePath={activeTab.path} className="flex-1" />
             </div>
           ) : activeTab?.type === "image" && activeTab.path ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
               <TabBar />
               <ImageViewer filePath={activeTab.path} className="flex-1" />
             </div>
           ) : activeTab?.type === "diagram" && activeTab.path ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
               <TabBar />
               <Suspense
                 fallback={
@@ -1108,12 +1108,12 @@ function App() {
               </Suspense>
             </div>
           ) : activeTab?.type === "image-manager" ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
               <TabBar />
               <ImageManagerView />
             </div>
           ) : activeTab?.type === "plugin-view" ? (
-            <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            <div className="flex-1 flex flex-col overflow-hidden bg-popover">
               <TabBar />
               <PluginViewPane
                 title={activeTab.name}
@@ -1161,7 +1161,7 @@ function App() {
         </main>
 
         {/* Right Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
-        <div className="relative flex-shrink-0 h-full z-20 bg-background">
+        <div className="relative flex-shrink-0 h-full z-20 bg-popover">
           <ResizeHandle
             direction="right"
             onResize={handleRightResize}

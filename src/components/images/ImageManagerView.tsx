@@ -466,7 +466,7 @@ export function ImageManagerView() {
   const showScanningState = loading && images.length === 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
+    <div className="flex min-h-0 flex-1 flex-col bg-popover">
       {/* Compact header */}
       <div className="flex flex-col gap-2 border-b border-border/60 px-4 py-2.5">
         {/* Row 1: title + stats + view buttons */}
@@ -504,7 +504,7 @@ export function ImageManagerView() {
 
         {/* Row 2: search + filters */}
         <div className="flex items-center gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border/50 bg-muted/30 px-2.5 py-1.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border border-border/50 bg-popover px-2.5 py-1.5">
             <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             <input
               value={searchQuery}
@@ -556,27 +556,27 @@ export function ImageManagerView() {
         <div className="flex min-h-0 h-full">
           <div className="min-h-0 flex-1 overflow-hidden">
             {currentSelection.length > 1 ? (
-              <div className="border-b border-border/60 bg-muted/20 px-4 py-2">
+              <div className="border-b border-border/60 bg-popover px-4 py-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-md bg-background px-2.5 py-1 text-xs font-medium">
+                  <span className="inline-flex items-center gap-2 rounded-md bg-popover px-2.5 py-1 text-xs font-medium">
                     <CheckSquare className="h-4 w-4 text-primary" />
                     {t.imageManager.imagesSelected.replace("{count}", String(currentSelection.length))}
                   </span>
                   <button
                     onClick={() => openMoveDialog(currentSelection.map((image) => image.path))}
-                    className="rounded-md border border-border/50 bg-background px-2.5 py-1 text-xs hover:bg-accent"
+                    className="rounded-md border border-border/50 bg-popover px-2.5 py-1 text-xs hover:bg-accent"
                   >
                     {t.imageManager.moveSelected}
                   </button>
                   <button
                     onClick={() => handleCopyPath(currentSelection.map((image) => image.path))}
-                    className="rounded-md border border-border/50 bg-background px-2.5 py-1 text-xs hover:bg-accent"
+                    className="rounded-md border border-border/50 bg-popover px-2.5 py-1 text-xs hover:bg-accent"
                   >
                     {t.imageManager.copyPaths}
                   </button>
                   <button
                     onClick={clearSelection}
-                    className="rounded-md border border-border/50 bg-background px-2.5 py-1 text-xs hover:bg-accent"
+                    className="rounded-md border border-border/50 bg-popover px-2.5 py-1 text-xs hover:bg-accent"
                   >
                     {t.imageManager.clearSelection}
                   </button>
@@ -725,7 +725,7 @@ function EmptyState({
 }) {
   return (
     <div className={cn("flex h-full flex-col items-center justify-center px-6 text-center", compact ? "min-h-[240px]" : "min-h-[360px]")}>
-      <div className="mb-3 rounded-full border border-border/60 bg-background/80 p-3 shadow-elev-1">
+      <div className="mb-3 rounded-full border border-border/60 bg-popover/80 p-3 shadow-elev-1">
         <Icon className={cn("h-6 w-6 text-muted-foreground", spinning && "animate-spin")} />
       </div>
       <h2 className="text-base font-semibold">{title}</h2>
@@ -826,7 +826,7 @@ function ImageGridCard({
       onClick={(event) => onSelect(image.path, event)}
       onKeyDown={handleKeyDown}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-lg border bg-background text-left transition-[border-color,box-shadow] duration-fast ease-out-subtle hover:border-primary/30",
+        "group flex flex-col overflow-hidden rounded-lg border bg-popover text-left transition-[border-color,box-shadow] duration-fast ease-out-subtle hover:border-primary/30",
         selected ? "border-primary/40 ring-1 ring-primary/10" : "border-border/60",
       )}
     >
@@ -999,10 +999,10 @@ function ImageDetailPanel({
               </button>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button onClick={() => onRename(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-sm hover:bg-accent">
+              <button onClick={() => onRename(image.path)} className="rounded-md border border-border/50 bg-popover px-2.5 py-1.5 text-sm hover:bg-accent">
                 {t.imageManager.renameSafely}
               </button>
-              <button onClick={() => onMove(image.path)} className="rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-sm hover:bg-accent">
+              <button onClick={() => onMove(image.path)} className="rounded-md border border-border/50 bg-popover px-2.5 py-1.5 text-sm hover:bg-accent">
                 {t.imageManager.moveSafely}
               </button>
             </div>
@@ -1023,7 +1023,7 @@ function ImageDetailPanel({
                   <button
                     key={note.notePath}
                     onClick={() => onOpenNote(note.notePath)}
-                    className="flex w-full items-center justify-between rounded-md border border-border/60 bg-background px-3 py-2 text-left hover:bg-accent"
+                    className="flex w-full items-center justify-between rounded-md border border-border/60 bg-popover px-3 py-2 text-left hover:bg-accent"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 text-sm font-medium">
@@ -1057,13 +1057,13 @@ function MultiSelectionPanel({ images, onMove }: { images: ImageAssetRecord[]; o
         {t.imageManager.batchSummary.replace("{orphanCount}", String(orphanCount))}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <button onClick={onMove} className="rounded-lg border border-border/60 bg-background px-3 py-2 text-sm hover:bg-accent">
+        <button onClick={onMove} className="rounded-lg border border-border/60 bg-popover px-3 py-2 text-sm hover:bg-accent">
           {t.imageManager.moveSelectedSafely}
         </button>
       </div>
       <div className="mt-5 min-h-0 flex-1 space-y-2 overflow-auto">
         {images.map((image) => (
-          <div key={image.path} className="rounded-md border border-border/60 bg-background px-3 py-2">
+          <div key={image.path} className="rounded-md border border-border/60 bg-popover px-3 py-2">
             <div className="truncate text-sm font-medium">{image.name}</div>
             <div className="mt-1 truncate text-xs text-muted-foreground">{image.relativePath}</div>
           </div>
@@ -1100,7 +1100,7 @@ function ActionDialog({
   const { t } = useLocaleStore();
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/35 px-4">
-      <div className="w-full max-w-2xl rounded-xl border border-border/60 bg-background shadow-ui-float">
+      <div className="w-full max-w-2xl rounded-xl border border-border/60 bg-popover shadow-ui-float">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3.5">
           <div>
             <h2 className="text-lg font-semibold">
@@ -1144,7 +1144,7 @@ function ActionDialog({
                 <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-medium text-primary">
                   {t.imageManager.imageFiles.replace("{count}", String(dialog.preview.changes.length))}
                 </span>
-                <span className="rounded-full border border-border/60 bg-background px-3 py-1 font-medium">
+                <span className="rounded-full border border-border/60 bg-popover px-3 py-1 font-medium">
                   {t.imageManager.notesWillBeRewritten.replace("{count}", String(dialog.preview.noteUpdates.length))}
                 </span>
               </div>
@@ -1153,7 +1153,7 @@ function ActionDialog({
                   <h3 className="text-sm font-semibold">{t.imageManager.fileChanges}</h3>
                   <div className="mt-2 space-y-2">
                     {dialog.preview.changes.map((change) => (
-                      <div key={`${change.from}-${change.to}`} className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs">
+                      <div key={`${change.from}-${change.to}`} className="rounded-md border border-border/60 bg-popover px-3 py-2 text-xs">
                         <div className="truncate text-muted-foreground">{change.from}</div>
                         <div className="mt-1 truncate font-medium text-foreground">{change.to}</div>
                       </div>
@@ -1169,7 +1169,7 @@ function ActionDialog({
                   ) : (
                     <div className="mt-2 space-y-2">
                       {dialog.preview.noteUpdates.map((note) => (
-                        <div key={note.notePath} className="rounded-md border border-border/60 bg-background px-3 py-2 text-xs">
+                        <div key={note.notePath} className="rounded-md border border-border/60 bg-popover px-3 py-2 text-xs">
                           <div className="truncate font-medium text-foreground">{note.notePath}</div>
                           <div className="mt-1 text-muted-foreground">{t.imageManager.referencesUpdated.replace("{count}", String(note.changes.reduce((sum, change) => sum + change.occurrenceCount, 0)))}</div>
                         </div>
@@ -1183,7 +1183,7 @@ function ActionDialog({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border/60 px-5 py-3.5">
-          <button onClick={onClose} className="rounded-lg border border-border/60 bg-background px-4 py-2 text-sm hover:bg-accent">
+          <button onClick={onClose} className="rounded-lg border border-border/60 bg-popover px-4 py-2 text-sm hover:bg-accent">
             {t.common.cancel}
           </button>
           {!dialog.preview ? (

@@ -251,7 +251,7 @@ export function PDFCanvas({
     <div 
       ref={containerRef}
       className={cn(
-        "flex-1 overflow-auto bg-muted/30",
+        "flex-1 overflow-auto bg-popover",
         className
       )}
     >

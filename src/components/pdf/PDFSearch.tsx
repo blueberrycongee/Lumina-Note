@@ -170,7 +170,7 @@ export function PDFSearch({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={t.pdfViewer.search.placeholder}
-          className="w-40 pl-7 pr-7 py-1 text-sm bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
+          className="w-40 pl-7 pr-7 py-1 text-sm bg-popover border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
         />
         {query && (
           <button

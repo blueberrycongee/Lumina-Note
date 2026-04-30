@@ -67,7 +67,7 @@ export function PDFToolbar({
 
   return (
     <div className={cn(
-      "h-10 flex items-center justify-between px-3 border-b border-border/60 bg-muted/50",
+      "h-10 flex items-center justify-between px-3 border-b border-border/60 bg-popover",
       className
     )}>
       {/* 翻页控制 */}
@@ -86,7 +86,7 @@ export function PDFToolbar({
             type="text"
             value={currentPage}
             onChange={handlePageInput}
-            className="w-10 text-center bg-background border border-border/60 rounded px-1 py-0.5 text-sm"
+            className="w-10 text-center bg-popover border border-border/60 rounded px-1 py-0.5 text-sm"
           />
           <span className="text-muted-foreground">/</span>
           <span className="text-muted-foreground">{totalPages}</span>

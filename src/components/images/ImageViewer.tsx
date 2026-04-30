@@ -93,7 +93,7 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
   const fitToScreen = () => setScale(1);
 
   return (
-    <div className={cn("flex flex-1 flex-col overflow-hidden bg-background", className)}>
+    <div className={cn("flex flex-1 flex-col overflow-hidden bg-popover", className)}>
       <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2 text-xs text-muted-foreground">
         <span className="truncate font-medium text-foreground" title={filePath}>
           {fileName}
@@ -169,7 +169,7 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
         </div>
       </div>
 
-      <div className="relative flex flex-1 items-center justify-center overflow-auto bg-[radial-gradient(circle_at_center,_var(--muted)_1px,_transparent_1px)] bg-[length:16px_16px]">
+      <div className="relative flex flex-1 items-center justify-center overflow-auto bg-popover">
         {loading && (
           <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
             <Loader2 size={20} className="animate-spin" />
@@ -183,7 +183,7 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
             <button
               type="button"
               onClick={() => setReloadKey((k) => k + 1)}
-              className="inline-flex items-center gap-1.5 rounded-ui-sm border border-border/60 bg-background px-2.5 py-1 text-xs transition-colors hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-ui-sm border border-border/60 bg-popover px-2.5 py-1 text-xs transition-colors hover:bg-muted"
             >
               <RefreshCw size={12} />
               Retry

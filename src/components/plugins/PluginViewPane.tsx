@@ -65,7 +65,7 @@ export function PluginViewPane({ title, html, scopeId, onAction }: PluginViewPan
 
   return (
     <div
-      className="flex-1 overflow-auto bg-background"
+      className="flex-1 overflow-auto bg-popover"
       data-lumina-plugin-scope={scopeId}
       onClick={handleClick}
     >

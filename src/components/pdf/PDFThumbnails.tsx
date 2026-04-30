@@ -56,7 +56,7 @@ export function PDFThumbnails({
 
   if (collapsed) {
     return (
-      <div className={cn("w-8 flex flex-col items-center py-2 border-r border-border/60 bg-muted/30", className)}>
+      <div className={cn("w-8 flex flex-col items-center py-2 border-r border-border/60 bg-popover", className)}>
         <button
           onClick={onToggle}
           className="p-1 hover:bg-accent rounded transition-colors"
@@ -106,7 +106,7 @@ export function PDFThumbnails({
                 </div>
               }
             />
-            <div className="text-center text-xs py-1 bg-background/80">
+            <div className="text-center text-xs py-1 bg-popover/80">
               {pageNum}
             </div>
           </div>
