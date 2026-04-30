@@ -35,6 +35,9 @@ import { exportToPdf, getExportFileName } from "@/services/pdf/exportPdf";
 import { useScrollFade } from "@/hooks/useScrollFade";
 import { cn } from "@/lib/utils";
 
+const EDITOR_ICON_BUTTON_CLASS =
+  "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:text-muted-foreground/60 disabled:hover:bg-transparent disabled:hover:text-muted-foreground/60";
+
 const modeIcons: Record<EditorMode, React.ReactNode> = {
   reading: <BookOpen size={14} />,
   live: <Eye size={14} />,
@@ -519,19 +522,14 @@ export function Editor() {
     <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
       {/* Top Navigation Bar — 非 AI 聊天模式下显示 */}
       {activeTab?.type !== "ai-chat" && (
-        <div className="ui-compact-row h-10 flex items-center px-4 justify-between select-none border-b border-border shrink-0">
+        <div className="ui-compact-row h-10 flex items-center px-1.5 justify-between select-none border-b border-border shrink-0">
           <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0 overflow-hidden">
             {/* Navigation buttons */}
             <div className="flex items-center gap-0.5 shrink-0">
               <button
                 onClick={goBack}
                 disabled={!canGoBack()}
-                className={cn(
-                  "p-1 rounded transition-colors",
-                  canGoBack()
-                    ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                    : "text-muted-foreground/60 cursor-not-allowed",
-                )}
+                className={EDITOR_ICON_BUTTON_CLASS}
                 title={t.editor.goBackShortcut}
               >
                 <ChevronLeft size={16} />
@@ -539,12 +537,7 @@ export function Editor() {
               <button
                 onClick={goForward}
                 disabled={!canGoForward()}
-                className={cn(
-                  "p-1 rounded transition-colors",
-                  canGoForward()
-                    ? "hover:bg-accent text-muted-foreground hover:text-foreground"
-                    : "text-muted-foreground/60 cursor-not-allowed",
-                )}
+                className={EDITOR_ICON_BUTTON_CLASS}
                 title={t.editor.goForwardShortcut}
               >
                 <ChevronRight size={16} />
@@ -552,7 +545,7 @@ export function Editor() {
             </div>
 
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Mode Switcher — single button cycling live → reading → source */}
             <button
               onClick={() => {
@@ -561,7 +554,7 @@ export function Editor() {
                   order[(order.indexOf(editorMode) + 1) % order.length];
                 handleModeChange(next);
               }}
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              className={EDITOR_ICON_BUTTON_CLASS}
               title={modeLabels[editorMode]}
             >
               {modeIcons[editorMode]}
@@ -574,7 +567,7 @@ export function Editor() {
                 competes with the mode toggle next to it. */}
             <span
               className={cn(
-                "ui-compact-hide flex items-center gap-1.5 text-xs transition-colors",
+                "ui-compact-hide flex h-7 items-center gap-1.5 text-xs transition-colors",
                 isDirty || isSaving ? "text-foreground/70" : "text-muted-foreground",
               )}
               aria-live="polite"
@@ -599,7 +592,7 @@ export function Editor() {
             </span>
             <button
               onClick={toggleSplitView}
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              className={EDITOR_ICON_BUTTON_CLASS}
               title={t.editor.splitView}
             >
               <Columns size={16} />
@@ -608,7 +601,7 @@ export function Editor() {
               onClick={() =>
                 exportToPdf(currentContent, getExportFileName(currentFile))
               }
-              className="p-1 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-foreground"
+              className={EDITOR_ICON_BUTTON_CLASS}
               title={t.editor.exportPdf}
             >
               <Download size={16} />
