@@ -761,7 +761,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
         // 中心小圆
         ctx.beginPath();
         ctx.arc(node.x, node.y, innerRadius * 0.5, 0, 2 * Math.PI);
-        ctx.fillStyle = "hsl(var(--background))";
+        ctx.fillStyle = "hsl(var(--popover))";
         ctx.fill();
       } else {
         // 普通文件节点 - 圆形
@@ -807,7 +807,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
           const bgH = fontSize + padY * 2;
           const savedAlpha = ctx.globalAlpha;
           ctx.globalAlpha = 0.75;
-          ctx.fillStyle = "hsl(var(--background))";
+          ctx.fillStyle = "hsl(var(--popover))";
           const r = 3 / zoom;
           ctx.beginPath();
           ctx.moveTo(bgX + r, bgY);
@@ -1056,10 +1056,10 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
   }, [hoverPreviewNode]);
 
   return (
-    <div className={`flex h-full ${className}`}>
+    <div className={`flex h-full bg-popover ${className}`}>
       {/* Settings Panel */}
       <div className={cn(
-        "w-64 border-r border-border/60 bg-background flex-shrink-0 overflow-y-auto transition-[width,opacity] duration-200 ease-out",
+        "w-64 border-r border-border/60 bg-popover flex-shrink-0 overflow-y-auto transition-[width,opacity] duration-200 ease-out",
         showSettings ? "opacity-100" : "w-0 opacity-0 overflow-hidden"
       )}>
         <div className="p-4 space-y-6">
@@ -1172,7 +1172,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       {/* Main Graph Area */}
       <div className="flex-1 flex flex-col">
         {/* Controls */}
-        <div className="p-2 border-b border-border/60 flex items-center justify-between bg-background">
+        <div className="p-2 border-b border-border/60 flex items-center justify-between bg-popover">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -1215,7 +1215,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
         </div>
 
         {/* Canvas */}
-        <div ref={containerRef} className="flex-1 relative bg-muted/20 overflow-hidden">
+        <div ref={containerRef} className="flex-1 relative bg-popover overflow-hidden">
           <canvas
             ref={canvasRef}
             width={dimensions.width}
@@ -1336,7 +1336,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
         {/* Node details */}
         {selectedNode && (
-          <div className="p-3 border-t border-border/60 bg-background space-y-2 max-h-40 overflow-y-auto">
+          <div className="p-3 border-t border-border/60 bg-popover space-y-2 max-h-40 overflow-y-auto">
             <div className="flex items-center gap-2">
               <FileText size={14} className="text-primary" />
               <span
