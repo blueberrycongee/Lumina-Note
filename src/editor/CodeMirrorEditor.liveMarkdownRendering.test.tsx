@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
+import { useFileStore } from "@/stores/useFileStore";
 
 vi.mock("mermaid", () => ({
   default: {
@@ -46,6 +47,7 @@ function findFormattingSpan(container: HTMLElement, text: string) {
 describe("CodeMirror live markdown rendering polish", () => {
   afterEach(() => {
     cleanup();
+    useFileStore.setState({ vaultPath: null, currentFile: null });
   });
 
   it("hides link destination markers until the link source is active", () => {
@@ -123,6 +125,29 @@ describe("CodeMirror live markdown rendering polish", () => {
       ).toBeGreaterThanOrEqual(2);
     },
   );
+
+  it("uses the shared block surface and fallback UI for image widgets", () => {
+    useFileStore.setState({
+      vaultPath: "/vault",
+      currentFile: "/vault/note.md",
+    });
+    const { container } = setupEditor(
+      "Intro\n\n![Missing](missing.png)\n\nOutro",
+      "live",
+    );
+    const widget = container.querySelector<HTMLElement>(".cm-image-widget");
+    const image = widget?.querySelector<HTMLImageElement>("img.markdown-image");
+
+    expect(widget).not.toBeNull();
+    expect(widget).toHaveClass("markdown-block-shell");
+    expect(widget).toHaveClass("markdown-image-block");
+    expect(image).not.toBeNull();
+
+    fireEvent.error(image!);
+
+    expect(widget?.querySelector(".markdown-image-error")).not.toBeNull();
+    expect(widget?.textContent).toContain("missing.png");
+  });
 
   it("reveals horizontal rule source when clicking the rendered block", () => {
     const content = "Intro\n\n---\n\nOutro";

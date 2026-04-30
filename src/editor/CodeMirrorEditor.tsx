@@ -903,7 +903,7 @@ const createEditorTheme = (fontSize: number) =>
       fontStyle: "italic",
       opacity: 0.8,
     },
-    ".cm-image-widget": { display: "block", margin: "8px 0" },
+    ".cm-image-widget": { display: "block" },
     ".cm-image-info": {
       background: "hsl(var(--muted))",
       padding: "4px 8px",
@@ -917,6 +917,57 @@ const createEditorTheme = (fontSize: number) =>
       maxWidth: "100%",
       borderRadius: "6px",
       cursor: "pointer",
+    },
+    ".markdown-image-body": {
+      minHeight: "128px",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: "8px",
+      padding:
+        "12px var(--lumina-block-text-right) 12px var(--lumina-block-text-left)",
+    },
+    ".markdown-image-body .markdown-image": {
+      margin: "0 auto",
+    },
+    ".markdown-image-error": {
+      width: "100%",
+      minHeight: "104px",
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      padding: "14px",
+      borderRadius: "6px",
+      border: "1px dashed hsl(var(--border))",
+      color: "hsl(var(--muted-foreground))",
+      backgroundColor: "hsl(var(--muted) / 0.18)",
+    },
+    ".markdown-image-error-icon": {
+      width: "28px",
+      height: "28px",
+      flex: "0 0 auto",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: "999px",
+      color: "hsl(var(--destructive, 0 84.2% 60.2%))",
+      backgroundColor: "hsl(var(--destructive, 0 84.2% 60.2%) / 0.1)",
+      fontWeight: "700",
+    },
+    ".markdown-image-error-title": {
+      color: "hsl(var(--foreground))",
+      fontSize: "0.92em",
+      fontWeight: "600",
+      lineHeight: "1.35",
+    },
+    ".markdown-image-error-detail": {
+      marginTop: "2px",
+      color: "hsl(var(--muted-foreground))",
+      fontFamily: "var(--font-mono)",
+      fontSize: "0.78em",
+      lineHeight: "1.35",
+      overflowWrap: "anywhere",
     },
 
     // Horizontal Rule
@@ -1717,12 +1768,42 @@ class ImageWidget extends WidgetType {
   get estimatedHeight() {
     return 220;
   }
+  private renderError(body: HTMLElement, src: string) {
+    const t = useLocaleStore.getState().t;
+    const error = document.createElement("div");
+    error.className = "markdown-image-error";
+    error.setAttribute("role", "note");
+
+    const icon = document.createElement("span");
+    icon.className = "markdown-image-error-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "!";
+
+    const content = document.createElement("div");
+    const title = document.createElement("div");
+    title.className = "markdown-image-error-title";
+    title.textContent = t.editor.imageLoadFailed;
+
+    const detail = document.createElement("div");
+    detail.className = "markdown-image-error-detail";
+    detail.textContent = src.length > 160 ? `${src.slice(0, 157)}...` : src;
+    detail.title = src;
+
+    content.appendChild(title);
+    content.appendChild(detail);
+    error.appendChild(icon);
+    error.appendChild(content);
+    body.replaceChildren(error);
+  }
   toDOM(view: EditorView) {
     const container = document.createElement("div");
-    container.className = "cm-image-widget";
-    container.style.cssText = `display:block;margin:8px 0;min-height:${this.estimatedHeight}px;`;
+    container.className = "cm-image-widget markdown-block-shell markdown-image-block";
+    container.style.minHeight = `${this.estimatedHeight}px`;
     container.dataset.widgetType = "image";
     container.dataset.imageSrc = this.src;
+
+    const body = document.createElement("div");
+    body.className = "markdown-block-body markdown-image-body";
 
     // 如果显示信息，添加路径提示
     if (this.showInfo) {
@@ -1731,16 +1812,26 @@ class ImageWidget extends WidgetType {
       info.style.cssText =
         "background:hsl(var(--primary)/0.1);padding:4px 8px;border-radius:4px;font-size:12px;color:hsl(var(--primary));margin-bottom:4px;font-family:monospace;display:inline-block;";
       info.textContent = this.src;
-      container.appendChild(info);
+      body.appendChild(info);
     }
 
     const img = document.createElement("img");
     img.alt = this.alt;
     img.className = "markdown-image";
     img.loading = "lazy";
-    img.style.cssText = "max-width:100%;border-radius:6px;cursor:pointer;";
     let pendingImageResizeSnapshot: AsyncWidgetSnapshot | null = null;
     img.addEventListener("load", () => {
+      container.style.minHeight = "";
+      restoreScrollAfterAsyncWidgetResize(
+        view,
+        container,
+        pendingImageResizeSnapshot,
+      );
+      pendingImageResizeSnapshot = null;
+    });
+    img.addEventListener("error", () => {
+      container.style.minHeight = "";
+      this.renderError(body, this.src);
       restoreScrollAfterAsyncWidgetResize(
         view,
         container,
@@ -1767,7 +1858,9 @@ class ImageWidget extends WidgetType {
         vaultPath: this.vaultPath,
       });
       if (!fullPath) {
-        container.appendChild(img);
+        container.style.minHeight = "";
+        this.renderError(body, this.src);
+        container.appendChild(body);
         return container;
       }
 
@@ -1787,12 +1880,22 @@ class ImageWidget extends WidgetType {
         })
         .catch((err) => {
           console.error("[ImageWidget] Image load failed:", fullPath, err);
-          img.alt = `${useLocaleStore.getState().t.editor.imageLoadFailed}: ${this.src}`;
-          img.style.opacity = "1";
+          container.style.minHeight = "";
+          this.renderError(body, this.src);
         });
+    } else {
+      requestAnimationFrame(() => {
+        if (!container.isConnected) return;
+        pendingImageResizeSnapshot = captureAsyncWidgetSnapshot(
+          view,
+          container,
+        );
+        img.src = this.src;
+      });
     }
 
-    container.appendChild(img);
+    body.appendChild(img);
+    container.appendChild(body);
     return container;
   }
   ignoreEvent() {
