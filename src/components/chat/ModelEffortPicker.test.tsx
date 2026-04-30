@@ -59,7 +59,7 @@ describe("ModelEffortPicker", () => {
     });
     render(<ModelEffortPicker />);
     fireEvent.click(getModelChip());
-    fireEvent.click(screen.getByText("Claude Haiku 4.5"));
+    fireEvent.click(screen.getByText("Haiku 4.5"));
     expect(useAIStore.getState().config.model).toBe("claude-haiku-4-5");
     expect(useAIStore.getState().runtimeModelSelection).toBeNull();
   });
@@ -106,7 +106,8 @@ describe("ModelEffortPicker", () => {
     ).toBeNull();
     expect(screen.queryByText("Anthropic")).toBeNull();
     expect(screen.queryByText("OpenAI")).toBeNull();
-    expect(screen.getAllByText("DeepSeek V4 Flash").length).toBeGreaterThan(0);
+    expect(screen.queryByText("DeepSeek V4 Flash")).toBeNull();
+    expect(screen.getAllByText("V4 Flash").length).toBeGreaterThan(0);
     expect(
       screen.queryByText(t.aiSettings.modelPicker.manageModelsHint),
     ).toBeNull();

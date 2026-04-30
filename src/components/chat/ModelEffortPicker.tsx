@@ -13,10 +13,10 @@ import {
   PROVIDER_MODELS,
   findModelInCatalog,
   getMimoModelsForBaseUrl,
+  type AgentModelMeta as ModelMeta,
   type LLMProviderType,
 } from "@/services/llm";
-
-const MODEL_POPOVER_WIDTH = 240;
+import { cn } from "@/lib/utils";
 
 interface ChipButtonProps {
   triggerRef: MutableRefObject<HTMLButtonElement | null>;
@@ -52,7 +52,7 @@ function ChipButton({
           : "text-muted-foreground hover:bg-accent hover:text-foreground hover:-translate-y-px hover:shadow-elev-1",
       ].join(" ")}
     >
-      <span className="block max-w-[140px] truncate font-medium">{label}</span>
+      <span className="block max-w-[88px] truncate font-medium">{label}</span>
       <ChevronUp
         size={12}
         className={[
@@ -68,6 +68,61 @@ function getProviderModels(provider: LLMProviderType, baseUrl?: string) {
   return provider === "mimo"
     ? getMimoModelsForBaseUrl(baseUrl)
     : (PROVIDER_MODELS[provider]?.models ?? []);
+}
+
+function getCompactModelName(provider: LLMProviderType, name: string) {
+  const withoutParenthetical = name.replace(/\s*\([^)]*\)\s*$/g, "").trim();
+  const providerScoped = (() => {
+    switch (provider) {
+      case "anthropic":
+        return withoutParenthetical.replace(/^Claude\s+/i, "");
+      case "google":
+        return withoutParenthetical.replace(/^Gemini\s+/i, "");
+      case "deepseek":
+        return withoutParenthetical.replace(/^DeepSeek\s+/i, "");
+      case "moonshot":
+        return withoutParenthetical.replace(/^Kimi\s+/i, "");
+      case "mimo":
+        return withoutParenthetical.replace(/^MiMo\s+/i, "");
+      default:
+        return withoutParenthetical;
+    }
+  })();
+  return providerScoped || withoutParenthetical || name;
+}
+
+interface ModelRowProps {
+  model: ModelMeta;
+  provider: LLMProviderType;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function ModelRow({ model, provider, selected, onSelect }: ModelRowProps) {
+  const label = getCompactModelName(provider, model.name);
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      data-selected={selected}
+      title={model.name}
+      onClick={onSelect}
+      className={cn(
+        "group flex h-7 w-full items-center gap-2 rounded-ui-md px-2 text-left",
+        "text-ui-control text-foreground transition-colors duration-fast ease-out-subtle",
+        "hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-popover",
+        selected && "bg-accent hover:bg-accent",
+      )}
+    >
+      <span className={cn("min-w-0 flex-1 truncate", selected ? "font-medium" : "font-normal")}>
+        {label}
+      </span>
+      {selected ? (
+        <Check size={12} className="shrink-0 text-muted-foreground" />
+      ) : null}
+    </button>
+  );
 }
 
 export function ModelEffortPicker() {
@@ -92,6 +147,10 @@ export function ModelEffortPicker() {
   const providerModels = getProviderModels(provider, config.baseUrl);
   const modelDisplayName =
     modelMeta?.name || effectiveModelId || t.aiSettings.model;
+  const compactModelDisplayName =
+    modelMeta?.name
+      ? getCompactModelName(provider, modelMeta.name)
+      : modelDisplayName;
 
   const handleSelectModel = (modelId: string) => {
     if (modelId !== effectiveModelId) {
@@ -100,13 +159,22 @@ export function ModelEffortPicker() {
     setOpen(false);
   };
 
+  const openModelPicker = () => {
+    setOpen((prev) => !prev);
+  };
+
+  const modelPopoverWidth = Math.max(
+    modelTriggerRef.current?.getBoundingClientRect().width ?? 0,
+    104,
+  ) + 16;
+
   return (
     <div className="flex items-end gap-1 self-end">
       <ChipButton
         triggerRef={modelTriggerRef}
-        label={modelDisplayName}
+        label={compactModelDisplayName}
         open={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={openModelPicker}
         title={t.aiSettings.modelPicker.title}
         testId="model"
       />
@@ -117,10 +185,11 @@ export function ModelEffortPicker() {
       >
         <PopoverContent
           placement="top-end"
-          width={MODEL_POPOVER_WIDTH}
+          width={modelPopoverWidth}
+          className="rounded-ui-md"
           data-chip-popover="model"
         >
-          <PopoverList>
+          <PopoverList className="max-h-[11.5rem] p-1">
             {providerModels.length === 0 ? (
               <Row
                 density="compact"
@@ -129,14 +198,11 @@ export function ModelEffortPicker() {
               />
             ) : (
               providerModels.map((m) => (
-                <Row
+                <ModelRow
                   key={m.id}
-                  density="compact"
-                  title={m.name}
+                  model={m}
+                  provider={provider}
                   selected={m.id === effectiveModelId}
-                  trailing={
-                    m.id === effectiveModelId ? <Check size={14} /> : null
-                  }
                   onSelect={() => handleSelectModel(m.id)}
                 />
               ))

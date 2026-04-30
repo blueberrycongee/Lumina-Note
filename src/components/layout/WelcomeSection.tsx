@@ -101,7 +101,7 @@ export function WelcomeGreeting({
     <AnimatePresence>
       {!hasStarted && (
         <motion.div
-          className="relative text-center mt-8 sm:mt-12 md:mt-16 mb-6 sm:mb-8 space-y-3"
+          className="relative text-center mt-10 sm:mt-14 md:mt-[4.5rem] mb-6 sm:mb-8 space-y-3"
           initial={{ opacity: 0, y: 16 }}
           animate={{
             opacity: 1,
