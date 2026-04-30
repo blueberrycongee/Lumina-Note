@@ -11,6 +11,25 @@ import { Popover, PopoverContent, PopoverList } from "./popover";
 import { Row } from "./row";
 import { cn } from "@/lib/utils";
 
+type PointerPoint = {
+  clientX: number;
+  clientY: number;
+};
+
+function isPointInsideElement(
+  element: HTMLElement | null,
+  point: PointerPoint,
+): boolean {
+  if (!element) return false;
+  const rect = element.getBoundingClientRect();
+  return (
+    point.clientX >= rect.left &&
+    point.clientX <= rect.right &&
+    point.clientY >= rect.top &&
+    point.clientY <= rect.bottom
+  );
+}
+
 /**
  * Select — themed dropdown built on Popover + Row.
  *
@@ -53,7 +72,9 @@ export function Select<T extends string>({
   "aria-label": ariaLabel,
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
+  const [triggerHover, setTriggerHover] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const lastPointerRef = useRef<PointerPoint | null>(null);
   const selectedOption = useMemo(
     () => options.find((o) => o.value === value),
     [options, value],
@@ -144,6 +165,35 @@ export function Select<T extends string>({
     }
   };
 
+  const syncTriggerHover = useCallback((point: PointerPoint) => {
+    const inside = isPointInsideElement(triggerRef.current, point);
+    setTriggerHover(inside);
+    return inside;
+  }, []);
+
+  useEffect(() => {
+    if (!triggerHover) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const point = { clientX: event.clientX, clientY: event.clientY };
+      lastPointerRef.current = point;
+      syncTriggerHover(point);
+    };
+    const handleLayoutShift = () => {
+      const point = lastPointerRef.current;
+      if (point) syncTriggerHover(point);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("scroll", handleLayoutShift, true);
+    window.addEventListener("resize", handleLayoutShift);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("scroll", handleLayoutShift, true);
+      window.removeEventListener("resize", handleLayoutShift);
+    };
+  }, [syncTriggerHover, triggerHover]);
+
   return (
     <Popover open={open} onOpenChange={setOpen} anchor={triggerRef}>
       <button
@@ -155,13 +205,36 @@ export function Select<T extends string>({
         aria-haspopup="listbox"
         aria-label={ariaLabel}
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onPointerEnter={(event) => {
+          const point = { clientX: event.clientX, clientY: event.clientY };
+          lastPointerRef.current = point;
+          syncTriggerHover(point);
+        }}
+        onPointerMove={(event) => {
+          const point = { clientX: event.clientX, clientY: event.clientY };
+          lastPointerRef.current = point;
+          syncTriggerHover(point);
+        }}
+        onPointerLeave={() => setTriggerHover(false)}
+        onClick={(event) => {
+          if (
+            event.detail !== 0 &&
+            !isPointInsideElement(triggerRef.current, {
+              clientX: event.clientX,
+              clientY: event.clientY,
+            })
+          ) {
+            return;
+          }
+          setOpen((v) => !v);
+        }}
         onKeyDown={onTriggerKeyDown}
         className={cn(
           "inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg text-sm",
           "[clip-path:inset(0_round_0.5rem)]",
           "bg-background/60 border border-border/60",
-          "transition-colors hover:bg-muted",
+          "transition-colors",
+          !disabled && (triggerHover || open) && "bg-muted",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           className,
