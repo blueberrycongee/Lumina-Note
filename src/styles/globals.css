@@ -1098,9 +1098,43 @@ html {
   margin: 0.75rem 0;
   padding: 1rem 1rem 1rem 1.5rem;
   border-radius: 6px;
+  box-sizing: border-box;
   font-size: inherit;
   line-height: 1.6;
   transition: box-shadow 200ms ease;
+}
+
+.callout-source-mode {
+  cursor: text;
+}
+
+/*
+  Callout live source editing deliberately reuses the rendered `.callout`
+  shell and swaps only the internals to this textarea. Keep the shell geometry
+  stable here; do not reintroduce per-CodeMirror-line callout source styling.
+*/
+.callout-source-editor {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow: auto;
+  background: transparent;
+  color: hsl(var(--foreground));
+  font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+  line-height: 1.6;
+}
+
+.callout-source-editor::selection {
+  background: hsl(var(--primary) / 0.24);
 }
 
 .callout-edit-source-btn {
@@ -1285,80 +1319,6 @@ html {
 .dark .callout-red:hover { box-shadow: inset 3px 0 0 hsl(0 40% 55% / 0.4); }
 .dark .callout-purple:hover { box-shadow: inset 3px 0 0 hsl(270 35% 55% / 0.4); }
 .dark .callout-gray:hover { box-shadow: inset 3px 0 0 hsl(0 0% 50% / 0.4); }
-
-/* --- CodeMirror editor: editing mode (active callout) --- */
-.codemirror-wrapper .callout-editing {
-  margin: 0;
-  padding: 0.25rem 1.25rem;
-  border-radius: 0;
-  border-left: 3px solid;
-  display: block;
-  line-height: 1.6;
-}
-
-.codemirror-wrapper .callout-editing.callout-editing-first {
-  border-top-left-radius: 0.375rem;
-  border-top-right-radius: 0.375rem;
-  margin-top: 0.75rem;
-  padding-top: 1rem;
-}
-
-.codemirror-wrapper .callout-editing.callout-editing-last {
-  border-bottom-left-radius: 0.375rem;
-  border-bottom-right-radius: 0.375rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 1rem;
-}
-
-.callout-editing.callout-blue {
-  border-color: hsl(210 40% 55%);
-  background: hsl(210 30% 95%);
-}
-.callout-editing.callout-green {
-  border-color: hsl(140 35% 50%);
-  background: hsl(140 25% 95%);
-}
-.callout-editing.callout-yellow {
-  border-color: hsl(45 50% 55%);
-  background: hsl(45 35% 94%);
-}
-.callout-editing.callout-red {
-  border-color: hsl(0 40% 55%);
-  background: hsl(0 30% 96%);
-}
-.callout-editing.callout-purple {
-  border-color: hsl(270 35% 55%);
-  background: hsl(270 25% 96%);
-}
-.callout-editing.callout-gray {
-  border-color: hsl(0 0% 55%);
-  background: hsl(0 0% 95%);
-}
-
-.dark .callout-editing.callout-blue {
-  border-color: hsl(210 40% 55%);
-  background: hsl(210 25% 18%);
-}
-.dark .callout-editing.callout-green {
-  border-color: hsl(140 35% 50%);
-  background: hsl(140 20% 18%);
-}
-.dark .callout-editing.callout-yellow {
-  border-color: hsl(45 50% 55%);
-  background: hsl(45 25% 18%);
-}
-.dark .callout-editing.callout-red {
-  border-color: hsl(0 40% 55%);
-  background: hsl(0 25% 18%);
-}
-.dark .callout-editing.callout-purple {
-  border-color: hsl(270 35% 55%);
-  background: hsl(270 20% 18%);
-}
-.dark .callout-editing.callout-gray {
-  border-color: hsl(0 0% 50%);
-  background: hsl(0 0% 20%);
-}
 
 /* ===== Prose Styles (for reading/live view) ===== */
 .prose {

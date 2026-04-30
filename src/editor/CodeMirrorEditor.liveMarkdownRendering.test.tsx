@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { CodeMirrorEditor } from "./CodeMirrorEditor";
 
@@ -182,6 +182,36 @@ describe("CodeMirror live markdown rendering polish", () => {
       expect(text.match(/内层 question callout。/g)).toHaveLength(1);
     },
   );
+
+  it("keeps live callout source editing inside the rendered block shell", () => {
+    const content = "> [!NOTE]\n> Raw callout body";
+    const { container, view } = setupEditor(content, "live");
+    const callout = container.querySelector<HTMLElement>(".callout");
+
+    expect(callout).not.toBeNull();
+    expect(container.querySelector(".callout-source-editor")).toBeNull();
+
+    fireEvent.click(callout!);
+
+    const sourceShell = container.querySelector<HTMLElement>(".callout");
+    const textarea = container.querySelector<HTMLTextAreaElement>(
+      ".callout-source-editor",
+    );
+
+    expect(sourceShell).not.toBeNull();
+    expect(sourceShell?.classList.contains("callout-source-mode")).toBe(true);
+    expect(textarea).not.toBeNull();
+    expect(textarea?.value).toBe(content);
+
+    const nextContent = "> [!NOTE]\n> Edited body";
+    fireEvent.input(textarea!, { target: { value: nextContent } });
+
+    expect(
+      container.querySelector<HTMLTextAreaElement>(".callout-source-editor")
+        ?.value,
+    ).toBe(nextContent);
+    expect(view.state.doc.toString()).toBe(nextContent);
+  });
 
   it("renders blockquote lines while revealing quote markers on the active line", () => {
     const content = "Intro\n> Quoted text";

@@ -1324,11 +1324,15 @@ class CalloutBlockWidget extends WidgetType {
     readonly defaultFolded: boolean,
     readonly blockFrom: number,
     readonly lineCount: number,
+    readonly sourceMarkdown: string,
+    readonly sourceMode: boolean,
+    readonly lockedHeight?: number,
   ) {
     super();
   }
   get estimatedHeight() {
-    return this.lineCount * 22 + 32;
+    if (this.lockedHeight && this.lockedHeight > 0) return this.lockedHeight;
+    return this.lineCount * 22 + 32 + (this.content ? 6 : 0);
   }
   eq(other: CalloutBlockWidget) {
     return (
@@ -1338,13 +1342,140 @@ class CalloutBlockWidget extends WidgetType {
       other.color === this.color &&
       other.foldable === this.foldable &&
       other.defaultFolded === this.defaultFolded &&
-      other.blockFrom === this.blockFrom
+      other.blockFrom === this.blockFrom &&
+      other.sourceMarkdown === this.sourceMarkdown &&
+      other.sourceMode === this.sourceMode &&
+      other.lockedHeight === this.lockedHeight
     );
   }
   toDOM(view: EditorView) {
     const wrapper = document.createElement("div");
-    wrapper.className = `callout callout-${this.color}${this.defaultFolded ? " callout-folded" : ""}`;
+    this.syncWrapperDOM(wrapper, view);
+    return wrapper;
+  }
+
+  updateDOM(dom: HTMLElement, view: EditorView) {
+    this.syncWrapperDOM(dom, view);
+    return true;
+  }
+
+  private syncWrapperDOM(wrapper: HTMLElement, view: EditorView) {
+    /*
+     * Keep this as a single block widget in both rendered and source states.
+     *
+     * We previously tried to reveal the original CodeMirror lines and tune
+     * their per-line padding/line-height so the sum matched the rendered
+     * callout. That path is fragile: wrapping, blank quote lines, markdown
+     * rendering, font loading, and CodeMirror's own line boxes all change the
+     * final height independently. The confirmed stable approach is to keep the
+     * same `.callout` shell, measure its rendered height on entry, and swap only
+     * the inner content to a textarea. Do not replace this with line
+     * decorations unless the full live-mode geometry is revalidated first.
+     */
+    const mode = this.sourceMode ? "source" : "render";
+    const renderKey = JSON.stringify([
+      this.icon,
+      this.title,
+      this.content,
+      this.color,
+      this.foldable,
+      this.defaultFolded,
+    ]);
+    if (
+      !this.sourceMode &&
+      wrapper.dataset.calloutMode === mode &&
+      wrapper.dataset.calloutRenderKey === renderKey
+    ) {
+      wrapper.dataset.blockFrom = String(this.blockFrom);
+      wrapper.style.height = "";
+      wrapper.style.minHeight = "";
+      return;
+    }
+
+    wrapper.className = `callout callout-${this.color}${this.sourceMode ? " callout-source-mode" : this.defaultFolded ? " callout-folded" : ""}`;
     wrapper.tabIndex = -1;
+    wrapper.dataset.blockFrom = String(this.blockFrom);
+    wrapper.dataset.calloutMode = mode;
+    wrapper.dataset.calloutRenderKey = this.sourceMode ? "" : renderKey;
+    if (this.sourceMode && this.lockedHeight && this.lockedHeight > 0) {
+      wrapper.style.height = `${this.lockedHeight}px`;
+      wrapper.style.minHeight = `${this.lockedHeight}px`;
+    } else {
+      wrapper.style.height = "";
+      wrapper.style.minHeight = "";
+    }
+
+    if (this.sourceMode) {
+      let textarea = wrapper.querySelector<HTMLTextAreaElement>(
+        "textarea.callout-source-editor",
+      );
+      const isNewTextarea = !textarea;
+      if (!textarea) {
+        wrapper.replaceChildren();
+        textarea = document.createElement("textarea");
+        textarea.className = "callout-source-editor";
+      }
+      if (textarea.value !== this.sourceMarkdown) {
+        textarea.value = this.sourceMarkdown;
+      }
+      textarea.rows = Math.max(1, this.lineCount);
+      textarea.spellcheck = false;
+      textarea.setAttribute("aria-label", "编辑 Callout 源码");
+
+      const resizeTextarea = () => {
+        if (this.lockedHeight && this.lockedHeight > 0) return;
+        textarea.style.height = "auto";
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      };
+
+      if (isNewTextarea) {
+        textarea.addEventListener("input", () => {
+          const blockFrom = Number(wrapper.dataset.blockFrom);
+          const blockRange = calloutPositionsCache.find(
+            (c) => c.from === blockFrom,
+          );
+          if (!blockRange || !textarea) return;
+          view.dispatch({
+            changes: {
+              from: blockRange.from,
+              to: blockRange.to,
+              insert: textarea.value,
+            },
+          });
+          resizeTextarea();
+        });
+
+        textarea.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            const blockFrom = Number(wrapper.dataset.blockFrom);
+            view.dispatch({
+              effects: closeCalloutEdit.of({ from: blockFrom }),
+            });
+            view.focus();
+          }
+        });
+
+        textarea.addEventListener("blur", () => {
+          setTimeout(() => {
+            if (wrapper.contains(wrapper.ownerDocument.activeElement)) return;
+            const blockFrom = Number(wrapper.dataset.blockFrom);
+            view.dispatch({
+              effects: closeCalloutEdit.of({ from: blockFrom }),
+            });
+          }, 0);
+        });
+      }
+
+      if (isNewTextarea) wrapper.appendChild(textarea);
+      requestAnimationFrame(() => {
+        resizeTextarea();
+        if (isNewTextarea) textarea.focus();
+      });
+      return;
+    }
+
+    wrapper.replaceChildren();
 
     const editBtn = document.createElement("button");
     editBtn.type = "button";
@@ -1361,11 +1492,14 @@ class CalloutBlockWidget extends WidgetType {
       if (!blockRange) return;
       const headerLine = view.state.doc.lineAt(blockRange.from);
       const targetPos = headerLine.to;
+      const renderedHeight = Math.ceil(wrapper.getBoundingClientRect().height);
       view.dispatch({
-        effects: toggleCalloutEdit.of({ from: blockFrom }),
+        effects: toggleCalloutEdit.of({
+          from: blockFrom,
+          height: renderedHeight > 0 ? renderedHeight : undefined,
+        }),
         selection: { anchor: targetPos },
       });
-      view.focus();
     };
 
     editBtn.addEventListener("click", (event) => {
@@ -1420,8 +1554,6 @@ class CalloutBlockWidget extends WidgetType {
       e.preventDefault();
       enterEditMode();
     });
-
-    return wrapper;
   }
   ignoreEvent() {
     return true;
@@ -2196,6 +2328,7 @@ function buildMathDecorations(state: EditorState): DecorationSet {
 
 // Mermaid 代码块位置缓存（常规代码块改用 codemirror-live-markdown）
 let mermaidBlockPositionsCache: { from: number; to: number }[] = [];
+let mermaidRenderedBlockPositionsCache: { from: number; to: number }[] = [];
 
 const toggleMermaidEdit = StateEffect.define<{ from: number }>();
 
@@ -2293,6 +2426,7 @@ function shouldShowMermaidSource(
 function buildMermaidDecorations(state: EditorState): DecorationSet {
   const decorations: any[] = [];
   mermaidBlockPositionsCache = [];
+  mermaidRenderedBlockPositionsCache = [];
   syntaxTree(state).iterate({
     enter: (node) => {
       if (node.name === "FencedCode") {
@@ -2310,6 +2444,7 @@ function buildMermaidDecorations(state: EditorState): DecorationSet {
 
         const code = lines.slice(1, lines.length - 1).join("\n");
         const widget = new MermaidWidget(code, node.from);
+        mermaidRenderedBlockPositionsCache.push({ from: node.from, to: node.to });
         decorations.push(
           Decoration.replace({ widget, block: true }).range(node.from, node.to),
         );
@@ -3987,55 +4122,66 @@ function buildWikiLinkDecorations(state: EditorState): DecorationSet {
 // ============ Callout StateField ============
 let calloutPositionsCache: { from: number; to: number }[] = [];
 
-const toggleCalloutEdit = StateEffect.define<{ from: number }>();
+const toggleCalloutEdit = StateEffect.define<{ from: number; height?: number }>();
+const closeCalloutEdit = StateEffect.define<{ from: number }>();
 
-const calloutEditingField = StateField.define<Set<number>>({
-  create: () => new Set(),
-  update(set, tr) {
-    let next = set;
+const calloutEditingField = StateField.define<Map<number, number | undefined>>({
+  create: () => new Map(),
+  update(map, tr) {
+    let next = map;
     for (const e of tr.effects) {
       if (e.is(toggleCalloutEdit)) {
-        next = new Set(next);
-        next.add(e.value.from);
+        next = new Map(next);
+        next.set(e.value.from, e.value.height);
+      } else if (e.is(closeCalloutEdit)) {
+        next = new Map(next);
+        next.delete(e.value.from);
       }
     }
     if (tr.docChanged) {
       const mapping = tr.changes;
-      const mapped = new Set<number>();
-      for (const pos of next) {
+      const mapped = new Map<number, number | undefined>();
+      for (const [pos, height] of next) {
         const newPos = mapping.mapPos(pos, 1);
-        mapped.add(newPos);
+        mapped.set(newPos, height);
       }
       next = mapped;
     }
     if (tr.selection && next.size > 0) {
       const sel = tr.state.selection.main;
-      const stillInside = [...next].some((pos) =>
+      const stillInside = [...next.keys()].some((pos) =>
         calloutPositionsCache.some(
           (c) => c.from === pos && sel.from >= c.from && sel.from <= c.to,
         ),
       );
-      if (!stillInside) next = new Set();
+      if (!stillInside) next = new Map();
     }
     return next;
   },
 });
 
+// Source mode stores the measured rendered height for each active callout.
+// The height lock is intentional: it keeps the outer block geometry stable
+// while the textarea scrolls internally if the raw markdown is taller.
+function getCalloutSourceHeight(
+  state: EditorState,
+  from: number,
+): number | undefined {
+  return state.field(calloutEditingField, false)?.get(from);
+}
+
 function shouldShowCalloutSource(
   state: EditorState,
   from: number,
-  to: number,
 ): boolean {
   const shouldCollapse = state.facet(collapseOnSelectionFacet);
   if (!shouldCollapse) return false;
   const editingSet = state.field(calloutEditingField, false);
   if (editingSet && editingSet.has(from)) return true;
-  const isDragging = state.field(mouseSelectingField, false);
-  if (isDragging) return false;
-  return state.selection.ranges.some(
-    (range) =>
-      range.from === range.to && range.from >= from && range.from <= to,
-  );
+  // Do not auto-open source just because the cursor enters the replaced range.
+  // Source mode must be entered through the widget so we can measure and lock
+  // the rendered shell height before swapping the internals.
+  return false;
 }
 
 function parseCalloutContent(
@@ -4084,39 +4230,34 @@ function buildCalloutDecorations(state: EditorState): DecorationSet {
     const lastLine = doc.lineAt(lastLineFrom);
     const blockFrom = line.from;
     const blockTo = lastLine.to;
+    const sourceMarkdown = doc.sliceString(blockFrom, blockTo);
+    const sourceMode = shouldShowCalloutSource(state, blockFrom);
+    const sourceHeight = getCalloutSourceHeight(state, blockFrom);
 
     calloutPositionsCache.push({ from: blockFrom, to: blockTo });
 
-    if (shouldShowCalloutSource(state, blockFrom, blockTo)) {
-      // Active: show source with line decorations (editing mode)
-      allLineFroms.forEach((from, idx) => {
-        let cls = `callout-editing callout-${resolved.color}`;
-        if (idx === 0) cls += " callout-editing-first";
-        if (idx === allLineFroms.length - 1) cls += " callout-editing-last";
-        decorations.push(Decoration.line({ class: cls }).range(from));
-      });
-    } else {
-      // Inactive: replace entire block with rendered widget
-      const contentMd = contentResult.lines.map((l) => l.text).join("\n");
-      const contentHtml = contentMd.trim() ? parseMarkdown(contentMd) : "";
+    const contentMd = contentResult.lines.map((l) => l.text).join("\n");
+    const contentHtml = contentMd.trim() ? parseMarkdown(contentMd) : "";
 
-      decorations.push(
-        Decoration.replace({
-          widget: new CalloutBlockWidget(
-            resolved.icon,
-            header.title,
-            contentHtml,
-            resolved.color,
-            header.foldable,
-            header.defaultFolded,
-            blockFrom,
-            allLineFroms.length,
-          ),
-          side: 1,
-          block: true,
-        }).range(blockFrom, blockTo),
-      );
-    }
+    decorations.push(
+      Decoration.replace({
+        widget: new CalloutBlockWidget(
+          resolved.icon,
+          header.title,
+          contentHtml,
+          resolved.color,
+          header.foldable,
+          header.defaultFolded,
+          blockFrom,
+          allLineFroms.length,
+          sourceMarkdown,
+          sourceMode,
+          sourceHeight,
+        ),
+        side: 1,
+        block: true,
+      }).range(blockFrom, blockTo),
+    );
 
     lineNo = contentResult.endLineNo;
   }
@@ -4132,7 +4273,7 @@ const calloutStateField = StateField.define<DecorationSet>({
   update(deco, tr) {
     if (tr.docChanged || tr.reconfigured)
       return buildCalloutDecorations(tr.state);
-    if (tr.effects.some((e) => e.is(toggleCalloutEdit)))
+    if (tr.effects.some((e) => e.is(toggleCalloutEdit) || e.is(closeCalloutEdit)))
       return buildCalloutDecorations(tr.state);
     const isDragging = tr.state.field(mouseSelectingField, false);
     const wasDragging = tr.startState.field(mouseSelectingField, false);
