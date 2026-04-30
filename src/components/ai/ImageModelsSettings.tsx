@@ -399,20 +399,60 @@ export function ImageModelsSettings() {
       <Field label={tImg?.apiKeyLabel ?? "API Key"}>
         {(id) => (
           <div className="space-y-2">
-            <TextInput
-              id={id}
-              type="password"
-              value={draft.apiKeyDraft}
-              onChange={(e) =>
-                updateDraft(selectedProvider.id, {
-                  apiKeyDraft: e.target.value.trim(),
-                  apiKeyDirty: true,
-                  test: { status: "idle" },
-                })
-              }
-              onFocus={(e) => e.currentTarget.select()}
-              placeholder={apiKeyPlaceholder}
-            />
+            <div className="flex items-center gap-3">
+              <TextInput
+                id={id}
+                type="password"
+                value={draft.apiKeyDraft}
+                onChange={(e) =>
+                  updateDraft(selectedProvider.id, {
+                    apiKeyDraft: e.target.value.trim(),
+                    apiKeyDirty: true,
+                    test: { status: "idle" },
+                  })
+                }
+                onFocus={(e) => e.currentTarget.select()}
+                placeholder={apiKeyPlaceholder}
+              />
+              <Button
+                type="button"
+                onClick={() => void handleTest()}
+                disabled={draft.test.status === "testing"}
+                className={[
+                  "h-10 shrink-0 px-3 text-sm",
+                  draft.test.status === "success"
+                    ? "border-success/40 bg-success/5 text-success hover:bg-success/10 hover:text-success"
+                    : draft.test.status === "error"
+                      ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      : "",
+                ].join(" ")}
+                title={t.aiSettings.testButton}
+                variant="secondary"
+                size="sm"
+              >
+                {draft.test.status === "testing" ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    {t.aiSettings.testing}
+                  </>
+                ) : draft.test.status === "success" ? (
+                  <>
+                    <Check size={16} />
+                    {t.aiSettings.testSuccessShort}
+                  </>
+                ) : draft.test.status === "error" ? (
+                  <>
+                    <X size={16} />
+                    {t.aiSettings.testFailed}
+                  </>
+                ) : (
+                  <>
+                    <Zap size={16} />
+                    {t.aiSettings.testButton}
+                  </>
+                )}
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               {apiKeyHint}
             </p>
@@ -428,44 +468,6 @@ export function ImageModelsSettings() {
               ) : (
                 <span />
               )}
-              <Button
-                type="button"
-                onClick={() => void handleTest()}
-                disabled={draft.test.status === "testing"}
-                className={[
-                  "h-auto px-2.5 py-1 text-xs",
-                  draft.test.status === "success"
-                    ? "border-success/40 bg-success/5 text-success hover:bg-success/10 hover:text-success"
-                    : draft.test.status === "error"
-                      ? "border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      : "",
-                ].join(" ")}
-                title={t.aiSettings.testButton}
-                variant="secondary"
-                size="sm"
-              >
-                {draft.test.status === "testing" ? (
-                  <>
-                    <Loader2 size={12} className="animate-spin" />
-                    {t.aiSettings.testing}
-                  </>
-                ) : draft.test.status === "success" ? (
-                  <>
-                    <Check size={12} />
-                    {t.aiSettings.testSuccessShort}
-                  </>
-                ) : draft.test.status === "error" ? (
-                  <>
-                    <X size={12} />
-                    {t.aiSettings.testFailed}
-                  </>
-                ) : (
-                  <>
-                    <Zap size={12} />
-                    {t.aiSettings.testButton}
-                  </>
-                )}
-              </Button>
             </div>
             {draft.test.status === "error" && draft.test.message ? (
               <div className="flex items-start gap-1.5 rounded-ui-sm bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
