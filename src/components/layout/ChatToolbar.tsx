@@ -1,5 +1,6 @@
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { Download, History, Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import type { ExportMessage } from "@/features/conversation-export/exportUtils";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,20 @@ interface ChatToolbarProps {
   onCancelExportSelection: () => void;
   onNewChat: () => void;
   title?: string;
+}
+
+function AIActionIcon({ children }: { children: ReactNode }) {
+  return (
+    <span className="relative flex h-4 w-4 items-center justify-center">
+      {children}
+      <span
+        aria-hidden
+        className="absolute -right-1 -top-1 text-[7px] font-semibold leading-none tracking-normal text-current"
+      >
+        AI
+      </span>
+    </span>
+  );
 }
 
 export function ChatToolbar({
@@ -30,6 +45,8 @@ export function ChatToolbar({
 
   const pillButton =
     "flex items-center gap-1.5 rounded-ui-sm px-2 h-7 text-ui-caption transition-colors duration-fast ease-out-subtle whitespace-nowrap text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+  const aiActionButton =
+    "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors duration-fast ease-out-subtle hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground";
 
   return (
     <div className="ui-compact-row h-11 flex items-center justify-between px-3 border-b border-border/60 shrink-0 min-w-0">
@@ -69,20 +86,27 @@ export function ChatToolbar({
               : onStartExportSelection
           }
           disabled={isLoading || exportCandidates.length === 0}
-          className={pillButton}
+          className={aiActionButton}
+          aria-label={
+            isExportSelectionMode ? t.ai.exportCancel : t.ai.exportConversation
+          }
+          title={
+            isExportSelectionMode ? t.ai.exportCancel : t.ai.exportConversation
+          }
         >
-          <Download size={13} />
-          <span className="ui-compact-text ui-compact-hide">
-            {isExportSelectionMode
-              ? t.ai.exportCancel
-              : t.ai.exportConversation}
-          </span>
+          <AIActionIcon>
+            <Download size={14} />
+          </AIActionIcon>
         </button>
-        <button onClick={onNewChat} className={pillButton}>
-          <Plus size={13} />
-          <span className="ui-compact-text ui-compact-hide">
-            {t.ai.newChat}
-          </span>
+        <button
+          onClick={onNewChat}
+          className={aiActionButton}
+          aria-label={t.ai.newChat}
+          title={t.ai.newChat}
+        >
+          <AIActionIcon>
+            <Plus size={14} />
+          </AIActionIcon>
         </button>
       </div>
     </div>
