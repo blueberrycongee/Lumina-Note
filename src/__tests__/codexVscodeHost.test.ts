@@ -588,6 +588,42 @@ exports.activate = async function activate() {
     );
   });
 
+  it("exposes extension context storage and log URIs", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-context-storage-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "context-storage-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate(context) {
+  const vscode = require("vscode");
+  if (!context.globalStorageUri || !context.storageUri || !context.logUri) {
+    throw new Error("missing context storage uris");
+  }
+  const file = vscode.Uri.joinPath(context.globalStorageUri, "state.txt");
+  await vscode.workspace.fs.writeFile(file, Buffer.from("ok"));
+  const bytes = await vscode.workspace.fs.readFile(file);
+  if (Buffer.from(bytes).toString("utf8") !== "ok") {
+    throw new Error("global storage write failed");
+  }
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.activateError).toBeNull();
+    expect(
+      fs.existsSync(path.join(extensionPath, ".lumina-host-storage", "global", "state.txt")),
+    ).toBe(true);
+  });
+
   it("supports minimal authentication provider and getSession compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-auth-ext-"));
     fs.writeFileSync(

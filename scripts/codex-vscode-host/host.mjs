@@ -1,5 +1,6 @@
 import http from "node:http";
 import { readFile } from "node:fs/promises";
+import fs from "node:fs";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2038,10 +2039,23 @@ function createVscodeApi(state, originForApi) {
 
 function createExtensionContext(state) {
   const extensionUri = Uri.file(state.extensionPath);
+  const storageRoot = path.join(state.extensionPath, ".lumina-host-storage");
+  const globalStoragePath = path.join(storageRoot, "global");
+  const workspaceStoragePath = path.join(storageRoot, "workspace");
+  const logPath = path.join(storageRoot, "logs");
+  fs.mkdirSync(globalStoragePath, { recursive: true });
+  fs.mkdirSync(workspaceStoragePath, { recursive: true });
+  fs.mkdirSync(logPath, { recursive: true });
   return {
     subscriptions: [],
     extensionUri,
     extensionPath: state.extensionPath,
+    globalStorageUri: Uri.file(globalStoragePath),
+    globalStoragePath,
+    storageUri: Uri.file(workspaceStoragePath),
+    storagePath: workspaceStoragePath,
+    logUri: Uri.file(logPath),
+    logPath,
     globalState: new Memento(),
     workspaceState: new Memento(),
     secrets: new SecretStorage(),
