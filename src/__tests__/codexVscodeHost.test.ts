@@ -782,6 +782,63 @@ exports.activate = async function activate() {
     });
   });
 
+  it("supports contributed configuration defaults and inspect()", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-config-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({
+        name: "config-ext",
+        version: "0.0.0",
+        main: "./extension.js",
+        contributes: {
+          configuration: {
+            properties: {
+              "claudeCode.initialPermissionMode": {
+                type: "string",
+                default: "default",
+              },
+              "claudeCode.preferredLocation": {
+                type: "string",
+                default: "panel",
+              },
+            },
+          },
+        },
+      }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const config = vscode.workspace.getConfiguration("claudeCode");
+  const inspected = config.inspect("initialPermissionMode");
+  if (inspected.defaultValue !== "default") {
+    throw new Error("missing contributed default");
+  }
+  if (config.get("preferredLocation") !== "panel") {
+    throw new Error("missing get() default");
+  }
+  if (!config.has("preferredLocation")) {
+    throw new Error("missing has() support");
+  }
+  await config.update("preferredLocation", "sidebar", vscode.ConfigurationTarget.Global);
+  if (config.inspect("preferredLocation").globalValue !== "sidebar") {
+    throw new Error("missing updated globalValue");
+  }
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.activateError).toBeNull();
+  });
+
   it("supports diagnostic collection compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-diagnostics-ext-"));
     fs.writeFileSync(

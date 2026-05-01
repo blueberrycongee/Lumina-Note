@@ -454,6 +454,20 @@ function openExternalUrl(input) {
   }
 }
 
+function getContributedConfigurationProperties(extensionPackage) {
+  const configuration = extensionPackage?.contributes?.configuration;
+  if (Array.isArray(configuration)) {
+    return Object.assign({}, ...configuration.map((entry) => entry?.properties ?? {}));
+  }
+  return configuration?.properties ?? {};
+}
+
+function getContributedConfigurationDefault(extensionPackage, key) {
+  const properties = getContributedConfigurationProperties(extensionPackage);
+  if (!Object.prototype.hasOwnProperty.call(properties, key)) return undefined;
+  return properties[key]?.default;
+}
+
 function json(res, status, body) {
   res.statusCode = status;
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -1787,13 +1801,44 @@ function createVscodeApi(state, originForApi) {
       onDidChangeTextDocument: onDidChangeTextDocumentEmitter.event,
       getConfiguration(section) {
         const prefix = section ? `${section}.` : "";
+        const fullKey = (key) => `${prefix}${key}`;
+        const defaultFor = (key) =>
+          getContributedConfigurationDefault(state.extensionPackage, fullKey(key));
+        const valueFor = (key, defaultValue) => {
+          const full = fullKey(key);
+          if (state.config.has(full)) return state.config.get(full);
+          const contributedDefault = defaultFor(key);
+          return contributedDefault === undefined ? defaultValue : contributedDefault;
+        };
         return {
           get: (key, defaultValue) => {
-            const full = `${prefix}${key}`;
-            return state.config.has(full) ? state.config.get(full) : defaultValue;
+            return valueFor(key, defaultValue);
+          },
+          has: (key) => {
+            const full = fullKey(key);
+            return (
+              state.config.has(full) ||
+              getContributedConfigurationDefault(state.extensionPackage, full) !== undefined
+            );
+          },
+          inspect: (key) => {
+            const full = fullKey(key);
+            if (
+              !state.config.has(full) &&
+              getContributedConfigurationDefault(state.extensionPackage, full) === undefined
+            ) {
+              return undefined;
+            }
+            return {
+              key: full,
+              defaultValue: getContributedConfigurationDefault(state.extensionPackage, full),
+              globalValue: state.config.has(full) ? state.config.get(full) : undefined,
+              workspaceValue: undefined,
+              workspaceFolderValue: undefined,
+            };
           },
           update: async (key, value) => {
-            const full = `${prefix}${key}`;
+            const full = fullKey(key);
             state.config.set(full, value);
             onDidChangeConfigurationEmitter.fire({
               affectsConfiguration: (s) => s === full || s === section,
