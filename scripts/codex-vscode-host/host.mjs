@@ -148,6 +148,13 @@ class CodeLens {
   }
 }
 
+const FileType = {
+  Unknown: 0,
+  File: 1,
+  Directory: 2,
+  SymbolicLink: 64,
+};
+
 class Webview {
   html = "";
   options = {};
@@ -1333,6 +1340,7 @@ function createVscodeApi(state, originForApi) {
     Range,
     Position,
     CodeLens,
+    FileType,
     env: {
       remoteName: undefined,
       async openExternal(uri) {
@@ -1528,6 +1536,71 @@ function createVscodeApi(state, originForApi) {
         async writeFile(uri, content) {
           const fs = await import("node:fs/promises");
           await fs.writeFile(uri.fsPath, content);
+        },
+        async stat(uri) {
+          const fs = await import("node:fs/promises");
+          const stat = await fs.stat(uri.fsPath);
+          return {
+            type: stat.isDirectory()
+              ? FileType.Directory
+              : stat.isFile()
+                ? FileType.File
+                : stat.isSymbolicLink()
+                  ? FileType.SymbolicLink
+                  : FileType.Unknown,
+            ctime: stat.ctimeMs,
+            mtime: stat.mtimeMs,
+            size: stat.size,
+          };
+        },
+        async readDirectory(uri) {
+          const fs = await import("node:fs/promises");
+          const entries = await fs.readdir(uri.fsPath, { withFileTypes: true });
+          return entries.map((entry) => [
+            entry.name,
+            entry.isDirectory()
+              ? FileType.Directory
+              : entry.isFile()
+                ? FileType.File
+                : entry.isSymbolicLink()
+                  ? FileType.SymbolicLink
+                  : FileType.Unknown,
+          ]);
+        },
+        async createDirectory(uri) {
+          const fs = await import("node:fs/promises");
+          await fs.mkdir(uri.fsPath, { recursive: true });
+        },
+        async delete(uri, options = {}) {
+          const fs = await import("node:fs/promises");
+          await fs.rm(uri.fsPath, {
+            recursive: options.recursive === true,
+            force: options.useTrash !== true,
+          });
+        },
+        async rename(source, target, options = {}) {
+          const fs = await import("node:fs/promises");
+          if (options.overwrite !== true) {
+            await fs.access(target.fsPath).then(
+              () => {
+                throw new Error(`Target already exists: ${target.fsPath}`);
+              },
+              () => undefined,
+            );
+          }
+          await fs.rename(source.fsPath, target.fsPath);
+        },
+        async copy(source, target, options = {}) {
+          const fs = await import("node:fs/promises");
+          if (options.overwrite !== true) {
+            await fs.access(target.fsPath).then(
+              () => {
+                throw new Error(`Target already exists: ${target.fsPath}`);
+              },
+              () => undefined,
+            );
+          }
+          await fs.copyFile(source.fsPath, target.fsPath);
         },
       },
     },

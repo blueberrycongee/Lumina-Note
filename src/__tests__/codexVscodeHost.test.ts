@@ -463,6 +463,55 @@ exports.activate = async function activate() {
     );
   });
 
+  it("supports workspace.fs directory and file mutation APIs", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-fs-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "fs-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate(context) {
+  const vscode = require("vscode");
+  const dir = vscode.Uri.joinPath(context.extensionUri, "tmp-fs");
+  const file = vscode.Uri.joinPath(dir, "hello.txt");
+  const renamed = vscode.Uri.joinPath(dir, "renamed.txt");
+  const copied = vscode.Uri.joinPath(dir, "copied.txt");
+  await vscode.workspace.fs.createDirectory(dir);
+  await vscode.workspace.fs.writeFile(file, Buffer.from("hello"));
+  const stat = await vscode.workspace.fs.stat(file);
+  if (stat.type !== vscode.FileType.File || stat.size !== 5) {
+    throw new Error("unexpected stat");
+  }
+  const entries = await vscode.workspace.fs.readDirectory(dir);
+  if (!entries.some(([name, type]) => name === "hello.txt" && type === vscode.FileType.File)) {
+    throw new Error("missing directory entry");
+  }
+  await vscode.workspace.fs.rename(file, renamed);
+  await vscode.workspace.fs.copy(renamed, copied);
+  const copiedBytes = await vscode.workspace.fs.readFile(copied);
+  if (Buffer.from(copiedBytes).toString("utf8") !== "hello") {
+    throw new Error("copy failed");
+  }
+  await vscode.workspace.fs.delete(dir, { recursive: true });
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await eventually(
+      () => fetch(`${origin}/health`).then((r) => r.json()),
+      () => !fs.existsSync(path.join(extensionPath, "tmp-fs")),
+    );
+    expect(health.activateError).toBeNull();
+    expect(fs.existsSync(path.join(extensionPath, "tmp-fs"))).toBe(false);
+  });
+
   it("exposes a minimal Lumina IDE bridge state endpoint", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-ide-bridge-ext-"));
     fs.writeFileSync(
