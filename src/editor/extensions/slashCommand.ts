@@ -26,7 +26,26 @@ import {
 export interface SlashCommand {
   id: string;
   label: string;
-  icon: string;
+  icon:
+    | "aiChat"
+    | "aiContinue"
+    | "aiRewrite"
+    | "aiExpand"
+    | "aiSummarize"
+    | "heading1"
+    | "heading2"
+    | "heading3"
+    | "bulletList"
+    | "orderedList"
+    | "taskList"
+    | "blockquote"
+    | "codeBlock"
+    | "callout"
+    | "mathBlock"
+    | "table"
+    | "divider"
+    | "image"
+    | "link";
   description: string;
   category: "ai" | "heading" | "list" | "block" | "insert";
   action: (view: EditorView, from: number, to: number) => void;
@@ -640,7 +659,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "ai-chat",
     label: labels?.aiChat || "AI Chat",
-    icon: "✨",
+    icon: "aiChat",
     description: labels?.aiChatDesc || "Open AI assistant chat",
     category: "ai",
     action: () => {
@@ -650,7 +669,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "ai-continue",
     label: labels?.aiContinue || "AI Continue",
-    icon: "🪄",
+    icon: "aiContinue",
     description: labels?.aiContinueDesc || "Continue writing with AI",
     category: "ai",
     action: () => {
@@ -660,7 +679,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "ai-rewrite-block",
     label: labels?.aiRewrite || "AI Rewrite Block",
-    icon: "✍️",
+    icon: "aiRewrite",
     description: labels?.aiRewriteDesc || "Rewrite current block in place",
     category: "ai",
     action: () => {
@@ -670,7 +689,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "ai-expand-block",
     label: labels?.aiExpand || "AI Expand Block",
-    icon: "➕",
+    icon: "aiExpand",
     description: labels?.aiExpandDesc || "Expand current block",
     category: "ai",
     action: () => {
@@ -680,7 +699,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "ai-summarize-block",
     label: labels?.aiSummarize || "AI Summarize Block",
-    icon: "📝",
+    icon: "aiSummarize",
     description: labels?.aiSummarizeDesc || "Summarize current block",
     category: "ai",
     action: () => {
@@ -692,7 +711,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "h1",
     label: labels?.heading1 || "Heading 1",
-    icon: "H1",
+    icon: "heading1",
     description: labels?.heading1Desc || "Large heading",
     category: "heading",
     action: transformOrInsert("ATXHeading1", "# ", 2),
@@ -700,7 +719,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "h2",
     label: labels?.heading2 || "Heading 2",
-    icon: "H2",
+    icon: "heading2",
     description: labels?.heading2Desc || "Section heading",
     category: "heading",
     action: transformOrInsert("ATXHeading2", "## ", 3),
@@ -708,7 +727,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "h3",
     label: labels?.heading3 || "Heading 3",
-    icon: "H3",
+    icon: "heading3",
     description: labels?.heading3Desc || "Subsection heading",
     category: "heading",
     action: transformOrInsert("ATXHeading3", "### ", 4),
@@ -718,7 +737,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "bullet-list",
     label: labels?.bulletList || "Bullet List",
-    icon: "•",
+    icon: "bulletList",
     description: labels?.bulletListDesc || "Bulleted list",
     category: "list",
     action: transformOrInsert("BulletList", "- ", 2),
@@ -726,7 +745,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "numbered-list",
     label: labels?.numberedList || "Numbered List",
-    icon: "1.",
+    icon: "orderedList",
     description: labels?.numberedListDesc || "Numbered list",
     category: "list",
     action: transformOrInsert("OrderedList", "1. ", 3),
@@ -734,7 +753,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "task-list",
     label: labels?.taskList || "Task List",
-    icon: "☐",
+    icon: "taskList",
     description: labels?.taskListDesc || "Todo list",
     category: "list",
     action: (view, from, to) => {
@@ -749,7 +768,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "quote",
     label: labels?.quote || "Quote",
-    icon: "❝",
+    icon: "blockquote",
     description: labels?.quoteDesc || "Blockquote",
     category: "block",
     action: transformOrInsert("Blockquote", "> ", 2),
@@ -757,7 +776,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "code-block",
     label: labels?.codeBlock || "Code Block",
-    icon: "</>",
+    icon: "codeBlock",
     description: labels?.codeBlockDesc || "Code snippet",
     category: "block",
     action: (view, from, to) => {
@@ -770,7 +789,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "callout",
     label: labels?.callout || "Callout",
-    icon: "💡",
+    icon: "callout",
     description: labels?.calloutDesc || "Callout block",
     category: "block",
     action: (view, from, to) => {
@@ -783,7 +802,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "math-block",
     label: labels?.mathBlock || "Math Block",
-    icon: "∑",
+    icon: "mathBlock",
     description: labels?.mathBlockDesc || "LaTeX block",
     category: "block",
     action: (view, from, to) => {
@@ -798,7 +817,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "table",
     label: labels?.table || "Table",
-    icon: "▦",
+    icon: "table",
     description: labels?.tableDesc || "Markdown table",
     category: "insert",
     action: (view, from, to) => {
@@ -811,7 +830,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "divider",
     label: labels?.divider || "Divider",
-    icon: "—",
+    icon: "divider",
     description: labels?.dividerDesc || "Horizontal divider",
     category: "insert",
     action: (view, from, to) => {
@@ -824,7 +843,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "image",
     label: labels?.image || "Image",
-    icon: "🖼",
+    icon: "image",
     description: labels?.imageDesc || "Insert image",
     category: "insert",
     action: (view, from, to) => {
@@ -837,7 +856,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
   {
     id: "link",
     label: labels?.link || "Link",
-    icon: "🔗",
+    icon: "link",
     description: labels?.linkDesc || "Insert link",
     category: "insert",
     action: (view, from, to) => {

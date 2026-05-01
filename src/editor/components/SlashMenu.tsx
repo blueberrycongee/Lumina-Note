@@ -5,8 +5,19 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { EditorView } from "@codemirror/view";
-import { Check, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import {
+  Check,
+  FileText,
+  ListPlus,
+  Loader2,
+  PenLine,
+  RotateCcw,
+  Sparkles,
+  WandSparkles,
+  X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BlockIcon, type BlockIconName } from "./BlockIcon";
 import {
   applySlashAIResult,
   clearSlashAIInlinePreview,
@@ -54,6 +65,43 @@ function createInitialAIStages(): Record<SlashAIStageId, AIPanelStageStatus> {
     generating: "pending",
     ready: "pending",
   };
+}
+
+const slashBlockIconMap: Partial<Record<SlashCommand["icon"], BlockIconName>> = {
+  heading1: "heading1",
+  heading2: "heading2",
+  heading3: "heading3",
+  bulletList: "bulletList",
+  orderedList: "orderedList",
+  taskList: "taskList",
+  blockquote: "blockquote",
+  codeBlock: "codeBlock",
+  callout: "callout",
+  mathBlock: "mathBlock",
+  table: "table",
+  divider: "divider",
+  image: "image",
+  link: "link",
+};
+
+function SlashCommandIcon({ command }: { command: SlashCommand }) {
+  const className = "h-4 w-4";
+  switch (command.icon) {
+    case "aiChat":
+      return <Sparkles className={className} aria-hidden="true" />;
+    case "aiContinue":
+      return <WandSparkles className={className} aria-hidden="true" />;
+    case "aiRewrite":
+      return <PenLine className={className} aria-hidden="true" />;
+    case "aiExpand":
+      return <ListPlus className={className} aria-hidden="true" />;
+    case "aiSummarize":
+      return <FileText className={className} aria-hidden="true" />;
+    default: {
+      const blockIcon = slashBlockIconMap[command.icon];
+      return blockIcon ? <BlockIcon name={blockIcon} className={className} /> : null;
+    }
+  }
 }
 
 export function SlashMenu({ view }: SlashMenuProps) {
@@ -736,13 +784,21 @@ export function SlashMenu({ view }: SlashMenuProps) {
                   <button
                     key={cmd.id}
                     data-selected={isSelected}
-                    className={`w-full flex items-center gap-3 px-2 py-1.5 text-left rounded-md transition-colors ${isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                    className={`group w-full flex items-center gap-3 px-2 py-1.5 text-left rounded-md transition-colors ${isSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
                       }`}
                     onClick={() => executeCommand(cmd)}
                     onMouseEnter={() => setSelectedIndex(globalIndex)}
                   >
-                    <span className="w-6 h-6 flex items-center justify-center text-sm bg-muted rounded">
-                      {cmd.icon}
+                    <span
+                      className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-md border transition-colors",
+                        cmd.category === "ai"
+                          ? "border-primary/15 bg-primary/8 text-primary"
+                          : "border-border/60 bg-background/70 text-muted-foreground group-hover:text-foreground",
+                        isSelected && "border-primary/25 bg-primary/10 text-primary",
+                      )}
+                    >
+                      <SlashCommandIcon command={cmd} />
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{cmd.label}</div>
