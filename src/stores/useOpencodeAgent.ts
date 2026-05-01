@@ -455,6 +455,10 @@ function sessionSummary(info: {
   };
 }
 
+function isVisibleAgentSession(info: { title?: string | null }): boolean {
+  return (info.title ?? "").trim() !== "Inline Insert";
+}
+
 // ── Store ───────────────────────────────────────────────────────────────────
 
 export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
@@ -660,6 +664,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       case "session.created":
       case "session.updated": {
         const info = event.properties.info;
+        if (!isVisibleAgentSession(info)) {
+          set((state) => ({
+            sessions: state.sessions.filter((s) => s.id !== info.id),
+          }));
+          return;
+        }
         set((state) => {
           const idx = state.sessions.findIndex((s) => s.id === info.id);
           const summary = sessionSummary(info);
@@ -945,7 +955,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           title: string;
           time: { created: number; updated: number };
         }>;
-        set({ sessions: list.map(sessionSummary) });
+        set({ sessions: list.filter(isVisibleAgentSession).map(sessionSummary) });
       } catch (err) {
         // Background refresh — keep the previous sessions list visible
         // and don't escalate to the global banner. Diagnostics panel
