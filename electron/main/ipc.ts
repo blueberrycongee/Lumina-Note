@@ -118,7 +118,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     baseDir: app.getPath("userData"),
     hostScriptPath:
       process.env.LUMINA_CODEX_VSCODE_HOST ??
-      path.join(app.getAppPath(), "scripts", "codex-vscode-host", "host.mjs"),
+      (app.isPackaged
+        ? path.join(process.resourcesPath, "codex-vscode-host", "host.mjs")
+        : path.join(app.getAppPath(), "scripts", "codex-vscode-host", "host.mjs")),
   });
 
   const luminaCloudLicenseHandlers = createLuminaCloudLicenseHandlers({

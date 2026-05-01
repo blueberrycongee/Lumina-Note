@@ -29,6 +29,9 @@ extraResources:
   - from: resources/agent
     to: agent
     filter: ['**/*']
+  - from: scripts/codex-vscode-host
+    to: codex-vscode-host
+    filter: ['host.mjs']
 
 # Per-platform extraResources for opencode's native node-pty addon.
 # `release-staging/native/` is populated by `npm run stage:native` (see
