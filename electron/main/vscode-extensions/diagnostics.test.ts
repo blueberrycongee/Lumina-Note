@@ -21,7 +21,7 @@ describe('vscode extension host capability diagnostics', () => {
     expect(diagnostic.canRunWithoutMissingCapabilities).toBe(true)
     expect(diagnostic.missingCapabilities).toEqual([])
     expect(diagnostic.implementedCapabilities).toContain('authentication.getSession')
-    expect(diagnostic.implementedCapabilities).toContain('webview-view')
+    expect(diagnostic.implementedCapabilities).toContain('workspace-fs')
   })
 
   it('reports Claude Code terminal and IDE bridge gaps explicitly', () => {

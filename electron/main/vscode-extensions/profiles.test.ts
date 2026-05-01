@@ -51,6 +51,20 @@ describe('vscode extension compatibility profiles', () => {
     expect(result.reason).toContain('manual opt-in')
   })
 
+  it('marks the smoke-tested OpenAI ChatGPT macOS VSIX as stable', () => {
+    const result = resolveCompatibilityProfile({
+      publisher: 'openai',
+      name: 'chatgpt',
+      version: '0.1.1740505811',
+      engines: { vscode: '^1.92.0' },
+    })
+
+    expect(result.status).toBe('stable')
+    expect(result.autoUpdateEligible).toBe(true)
+    expect(result.profile?.entryViewTypes).toEqual([])
+    expect(result.profile?.needsDiffViewer).toBe(false)
+  })
+
   it('allows auto-update only when a stable profile covers the version', () => {
     const result = resolveCompatibilityProfile(
       {

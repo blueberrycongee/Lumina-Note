@@ -82,6 +82,34 @@ export const TARGET_VSCODE_AI_EXTENSIONS: Record<
 export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] = [
   {
     extensionId: 'openai.chatgpt',
+    channel: 'stable',
+    versionRange: '0.1.1740505811',
+    hostApiVersion: 1,
+    entryViewTypes: [],
+    requiredCapabilities: [
+      'authentication.getSession',
+      'commands',
+      'env-open-external',
+      'memento',
+      'secret-storage',
+      'window-notifications',
+      'workspace-documents',
+      'workspace-fs',
+      'workspace-selection',
+    ],
+    commandMappings: {
+      setContext: 'lumina.setContext',
+    },
+    cspSourceDirectives: {},
+    needsTerminal: false,
+    needsDiffViewer: false,
+    needsIdeBridge: false,
+    disabledFeatures: [],
+    notes:
+      'Stable profile for the official OpenAI ChatGPT macOS Work with Apps VSIX verified against Lumina host activation smoke.',
+  },
+  {
+    extensionId: 'openai.chatgpt',
     channel: 'preview',
     versionRange: '*',
     hostApiVersion: 1,
