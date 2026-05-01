@@ -151,6 +151,56 @@ exports.activate = async function activate() {
     expect(JSON.stringify(state)).toContain('6.1.0')
   })
 
+  it('auto-activates latest installs when an external stable profile covers the version', async () => {
+    const compatDir = path.join(tmpDir, 'compat')
+    writeStableCodexProfile(compatDir)
+    const vsixBytes = createZip({
+      'extension/package.json': JSON.stringify({
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.1.0',
+        main: './extension.js',
+      }),
+      'extension/extension.js': `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.window.registerWebviewViewProvider("chatgpt.sidebarView", {
+    resolveWebviewView(view) {
+      view.webview.html = "<!doctype html><html><body>Codex</body></html>";
+    },
+  });
+};`,
+    })
+    const metadataFetch = vi.fn(async () => jsonResponse({
+      namespace: 'OpenAI',
+      name: 'chatgpt',
+      version: '6.1.0',
+      files: { download: 'https://example.com/openai.chatgpt-6.1.0.vsix' },
+    })) satisfies FetchLike
+    const binaryFetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      async arrayBuffer() {
+        return toArrayBuffer(vsixBytes)
+      },
+    })) satisfies BinaryFetchLike
+    const handlers = createHandlers({ metadataFetch, binaryFetch, compatProfilesDir: compatDir })
+
+    const result = await handlers.vscode_extensions_install_latest({
+      extensionId: 'openai.chatgpt',
+      source: 'open-vsx',
+    })
+
+    expect(result).toMatchObject({
+      smoke: { ok: true },
+      outcome: { decision: 'auto-activated' },
+    })
+    const state = await handlers.vscode_extensions_get_state({})
+    expect(state).toMatchObject({
+      activeById: { 'openai.chatgpt': '6.1.0' },
+    })
+  })
+
   it('imports a local VSIX through the manual install handler', async () => {
     const vsixPath = path.join(tmpDir, 'openai.chatgpt.vsix')
     fs.writeFileSync(
@@ -194,13 +244,53 @@ exports.activate = async function activate() {
 function createHandlers(options: {
   metadataFetch?: FetchLike
   binaryFetch?: BinaryFetchLike
+  compatProfilesDir?: string
 } = {}): VscodeExtensionHandlerMap {
   return createVscodeExtensionHandlers({
     baseDir: tmpDir,
     hostScriptPath: path.resolve('scripts/codex-vscode-host/host.mjs'),
+    compatProfilesDir: options.compatProfilesDir,
     metadataFetch: options.metadataFetch,
     binaryFetch: options.binaryFetch,
   })
+}
+
+function writeStableCodexProfile(root: string) {
+  const dir = path.join(root, 'openai.chatgpt')
+  fs.mkdirSync(dir, { recursive: true })
+  fs.writeFileSync(
+    path.join(dir, '6.x.json'),
+    JSON.stringify({
+      extensionId: 'openai.chatgpt',
+      channel: 'stable',
+      versionRange: '6.x',
+      hostApiVersion: 1,
+      entryViewTypes: ['chatgpt.sidebarView'],
+      requiredCapabilities: [
+        'commands',
+        'diff-viewer',
+        'env-open-external',
+        'memento',
+        'secret-storage',
+        'webview-view',
+        'window-notifications',
+        'workspace-documents',
+        'workspace-fs',
+        'workspace-selection',
+      ],
+      commandMappings: { 'vscode.diff': 'lumina.diff' },
+      cspSourceDirectives: {
+        'connect-src': ['self'],
+        'font-src': ['self', 'data:'],
+        'script-src': ['self', "'unsafe-eval'"],
+      },
+      needsTerminal: false,
+      needsDiffViewer: true,
+      needsIdeBridge: false,
+      disabledFeatures: [],
+    }),
+    'utf-8',
+  )
 }
 
 async function seedInstall(handlers: VscodeExtensionHandlerMap, version: string) {
