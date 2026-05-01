@@ -160,7 +160,7 @@ export function VscodeAiExtensionSidebarPanel() {
       setHostSession(session);
       setShowManage(false);
       return session.viewUrl
-        ? `Opened ${selected.displayName}`
+        ? null
         : `${selected.displayName} is running, but it did not register a sidebar view.`;
     });
 
