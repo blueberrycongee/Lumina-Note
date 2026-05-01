@@ -7,6 +7,7 @@ const checkLatestMock = vi.fn();
 const installLatestMock = vi.fn();
 const installLocalMock = vi.fn();
 const installCompatProfilesMock = vi.fn();
+const activateInstalledMock = vi.fn();
 const rollbackMock = vi.fn();
 const openDialogMock = vi.fn();
 
@@ -16,6 +17,7 @@ vi.mock("@/lib/host", async () => {
     ...actual,
     getVscodeAiExtensionDiagnostics: (...args: unknown[]) => diagnosticsMock(...args),
     checkLatestVscodeAiExtension: (...args: unknown[]) => checkLatestMock(...args),
+    activateInstalledVscodeAiExtension: (...args: unknown[]) => activateInstalledMock(...args),
     installLatestVscodeAiExtension: (...args: unknown[]) => installLatestMock(...args),
     installLocalVscodeAiExtensionVsix: (...args: unknown[]) => installLocalMock(...args),
     installVscodeAiCompatProfiles: (...args: unknown[]) => installCompatProfilesMock(...args),
@@ -35,6 +37,7 @@ describe("VscodeAiExtensionsSection", () => {
     installLatestMock.mockReset();
     installLocalMock.mockReset();
     installCompatProfilesMock.mockReset();
+    activateInstalledMock.mockReset();
     rollbackMock.mockReset();
     openDialogMock.mockReset();
     diagnosticsMock.mockResolvedValue([
@@ -55,8 +58,8 @@ describe("VscodeAiExtensionsSection", () => {
         displayName: "Claude Code",
         active: {
           extensionId: "anthropic.claude-code",
-          version: "2.1.0",
-          extensionPath: "/tmp/claude",
+          version: "2.0.0",
+          extensionPath: "/tmp/claude-old",
           source: "manual-vsix",
           installedAt: "2026-05-01T00:00:00.000Z",
           smokeTestPassed: true,
@@ -114,6 +117,7 @@ describe("VscodeAiExtensionsSection", () => {
     installLatestMock.mockResolvedValue({ outcome: { decision: "pending-manual-opt-in" } });
     installLocalMock.mockResolvedValue({ outcome: { decision: "pending-manual-opt-in" } });
     installCompatProfilesMock.mockResolvedValue({ profiles: [{ extensionId: "openai.chatgpt" }] });
+    activateInstalledMock.mockResolvedValue({ version: "2.1.0" });
     rollbackMock.mockResolvedValue({ version: "2.0.0" });
     openDialogMock.mockResolvedValue("/tmp/ext.vsix");
   });
@@ -223,6 +227,15 @@ describe("VscodeAiExtensionsSection", () => {
       expect(installLocalMock).toHaveBeenCalledWith({
         extensionId: "anthropic.claude-code",
         vsixPath: "/tmp/ext.vsix",
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Activate latest installed Claude Code" }));
+    await waitFor(() => {
+      expect(activateInstalledMock).toHaveBeenCalledWith({
+        extensionId: "anthropic.claude-code",
+        version: "2.1.0",
+        allowUnverified: true,
       });
     });
 

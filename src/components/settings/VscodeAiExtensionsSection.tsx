@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  Play,
   Download,
   FileUp,
   RefreshCw,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import {
   checkLatestVscodeAiExtension,
+  activateInstalledVscodeAiExtension,
   getVscodeAiExtensionDiagnostics,
   installVscodeAiCompatProfiles,
   installLatestVscodeAiExtension,
@@ -129,6 +131,18 @@ export function VscodeAiExtensionsSection() {
     runAction(`rollback:${extensionId}`, async () => {
       const record = await rollbackVscodeAiExtension({ extensionId });
       return `Rolled back to ${record.version}`;
+    });
+
+  const activateLatest = (item: VscodeAiExtensionDiagnosticsItem) =>
+    runAction(`activate:${item.extensionId}`, async () => {
+      const latest = item.installed[0];
+      if (!latest) return "No installed version to activate";
+      const record = await activateInstalledVscodeAiExtension({
+        extensionId: item.extensionId,
+        version: latest.version,
+        allowUnverified: latest.compatibility.status !== "stable",
+      });
+      return `Activated ${record.version}`;
     });
 
   return (
@@ -308,6 +322,16 @@ export function VscodeAiExtensionsSection() {
                     busy={action.key === `import:${item.extensionId}`}
                     onClick={() => void importVsix(item.extensionId)}
                     icon={<FileUp className="h-4 w-4" />}
+                  />
+                  <IconButton
+                    label={`Activate latest installed ${item.displayName}`}
+                    busy={action.key === `activate:${item.extensionId}`}
+                    onClick={() => void activateLatest(item)}
+                    disabled={
+                      !latestInstalled ||
+                      latestInstalled.version === item.active?.version
+                    }
+                    icon={<Play className="h-4 w-4" />}
                   />
                   <IconButton
                     label={`Rollback ${item.displayName}`}
