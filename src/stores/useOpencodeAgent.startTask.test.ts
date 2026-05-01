@@ -41,6 +41,15 @@ async function* disposedStream(): AsyncGenerator<unknown, void, unknown> {
   };
 }
 
+async function* singleEventStream(
+  event: unknown,
+  onYield: () => void,
+): AsyncGenerator<unknown, void, unknown> {
+  await Promise.resolve();
+  yield event;
+  onYield();
+}
+
 describe("useOpencodeAgent.startTask", () => {
   beforeEach(() => {
     vi.mocked(invoke).mockResolvedValue(true);
@@ -136,6 +145,82 @@ describe("useOpencodeAgent.startTask", () => {
       query: { directory: "/tmp/vault" },
       throwOnError: true,
     });
+  });
+
+  it("hides inline slash AI sessions from main AI history loading", async () => {
+    mocks.getOpencodeClient.mockResolvedValue({
+      session: {
+        list: vi.fn(async () => ({
+          data: [
+            {
+              id: "inline-session",
+              title: "Inline Insert",
+              time: { created: 1, updated: 3 },
+            },
+            {
+              id: "chat-session",
+              title: "Main chat",
+              time: { created: 2, updated: 4 },
+            },
+          ],
+        })),
+      },
+    });
+
+    await useOpencodeAgent.getState().loadSessions();
+
+    expect(useOpencodeAgent.getState().sessions).toEqual([
+      expect.objectContaining({
+        id: "chat-session",
+        title: "Main chat",
+      }),
+    ]);
+  });
+
+  it("ignores inline slash AI session events in main AI history", async () => {
+    let resolveEventHandled = () => {};
+    const eventHandled = new Promise<void>((resolve) => {
+      resolveEventHandled = resolve;
+    });
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({
+          stream: singleEventStream(
+            {
+              type: "session.created",
+              properties: {
+                info: {
+                  id: "inline-session",
+                  title: "Inline Insert",
+                  time: { created: 1, updated: 2 },
+                },
+              },
+            },
+            resolveEventHandled,
+          ),
+        })),
+      },
+      session: {
+        list: vi.fn(async () => ({ data: [] })),
+      },
+    });
+    useOpencodeAgent.setState({
+      sessions: [
+        {
+          id: "chat-session",
+          title: "Main chat",
+          createdAt: 1,
+          updatedAt: 3,
+        },
+      ],
+    });
+
+    await useOpencodeAgent.getState().subscribe();
+    await eventHandled;
+
+    expect(useOpencodeAgent.getState().sessions).toEqual([
+      expect.objectContaining({ id: "chat-session" }),
+    ]);
   });
 
   it("shows the optimistic user message before waiting for opencode startup", async () => {
