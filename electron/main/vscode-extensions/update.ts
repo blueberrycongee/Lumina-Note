@@ -71,15 +71,14 @@ export async function installLatestVscodeExtensionUpdate(
     installed.packageJson,
     options.profiles,
   )
-  const smoke =
-    compatibility.profile && compatibility.profile.entryViewTypes.length > 0
-      ? await runVscodeHostSmokeTest({
-          hostScriptPath: options.hostScriptPath,
-          extensionPath: installed.extensionPath,
-          workspacePath: options.workspacePath,
-          expectedViewTypes: compatibility.profile.entryViewTypes,
-        })
-      : null
+  const smoke = compatibility.profile
+    ? await runVscodeHostSmokeTest({
+        hostScriptPath: options.hostScriptPath,
+        extensionPath: installed.extensionPath,
+        workspacePath: options.workspacePath,
+        expectedViewTypes: compatibility.profile.entryViewTypes,
+      })
+    : null
 
   const outcome = manager.registerCandidateInstall({
     packageJson: installed.packageJson,

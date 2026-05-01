@@ -85,7 +85,7 @@ export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] =
     channel: 'preview',
     versionRange: '*',
     hostApiVersion: 1,
-    entryViewTypes: ['chatgpt.sidebarView'],
+    entryViewTypes: [],
     requiredCapabilities: [
       'authentication.getSession',
       'commands',
@@ -112,7 +112,7 @@ export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] =
     needsIdeBridge: false,
     disabledFeatures: [],
     notes:
-      'Preview profile for the official Codex VS Code extension. Stable auto-update requires a version-pinned smoke-tested profile.',
+      'Preview profile for the official OpenAI ChatGPT VS Code extension. Current official builds activate on startup and do not register a sidebar view.',
   },
   {
     extensionId: 'anthropic.claude-code',

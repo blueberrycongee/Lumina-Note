@@ -103,6 +103,68 @@ exports.activate = async function activate() {
     expect(store.getActive('openai.chatgpt')?.version).toBe('6.1.0')
     expect(fs.existsSync(path.join(result.installed.extensionPath, 'extension.js'))).toBe(true)
   })
+
+  it('smoke-tests activation-only extensions that do not declare entry views', async () => {
+    const activationOnlyProfile: VscodeExtensionCompatProfile = {
+      ...stableProfile,
+      entryViewTypes: [],
+    }
+    const vsixBytes = createZip({
+      'extension/package.json': JSON.stringify({
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.2.0',
+        main: './extension.js',
+      }),
+      'extension/extension.js': `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.commands.registerCommand("openai.chatgpt.askChatGPT", () => undefined);
+};`,
+    })
+    const metadataFetch = vi.fn(async () => jsonResponse({
+      namespace: 'OpenAI',
+      name: 'chatgpt',
+      version: '6.2.0',
+      files: { download: 'https://example.com/openai.chatgpt-6.2.0.vsix' },
+    })) satisfies FetchLike
+    const binaryFetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      async arrayBuffer() {
+        return toArrayBuffer(vsixBytes)
+      },
+    })) satisfies BinaryFetchLike
+
+    const store = new VscodeExtensionStore({ baseDir: tmpDir })
+    const manager = new VscodeExtensionManager(store, {
+      profiles: [activationOnlyProfile],
+      implementedCapabilities: new Set<VscodeHostCapability>([
+        'commands',
+        'webview-view',
+      ]),
+    })
+
+    const result = await installLatestVscodeExtensionUpdate(manager, {
+      extensionId: 'openai.chatgpt',
+      source: 'open-vsx',
+      cacheDir: path.join(tmpDir, 'cache'),
+      installRoot: path.join(tmpDir, 'installed'),
+      hostScriptPath: path.resolve('scripts/codex-vscode-host/host.mjs'),
+      profiles: [activationOnlyProfile],
+      implementedCapabilities: new Set<VscodeHostCapability>([
+        'commands',
+        'webview-view',
+      ]),
+      metadataFetch,
+      binaryFetch,
+    })
+
+    expect(result.smoke?.ok).toBe(true)
+    expect(result.smoke?.health.viewTypes).toEqual([])
+    expect(result.outcome.decision).toBe('auto-activated')
+    expect(store.getActive('openai.chatgpt')?.smokeTestPassed).toBe(true)
+  })
 })
 
 function jsonResponse(body: unknown, status = 200) {

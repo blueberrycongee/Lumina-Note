@@ -132,14 +132,13 @@ export function createVscodeExtensionHandlers(
       })
       const profiles = loadProfiles()
       const compatibility = resolveCompatibilityProfile(installed.packageJson, profiles)
-      const smoke =
-        compatibility.profile && compatibility.profile.entryViewTypes.length > 0
-          ? await runVscodeHostSmokeTest({
-              hostScriptPath: options.hostScriptPath,
-              extensionPath: installed.extensionPath,
-              expectedViewTypes: compatibility.profile.entryViewTypes,
-            })
-          : null
+      const smoke = compatibility.profile
+        ? await runVscodeHostSmokeTest({
+            hostScriptPath: options.hostScriptPath,
+            extensionPath: installed.extensionPath,
+            expectedViewTypes: compatibility.profile.entryViewTypes,
+          })
+        : null
       const packageBytes = fs.readFileSync(vsixPath)
       const outcome = createManager().registerCandidateInstall({
         packageJson: installed.packageJson,
