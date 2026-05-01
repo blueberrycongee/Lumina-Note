@@ -15,6 +15,7 @@ import { createProxyHandlers } from "./handlers/proxy.js";
 import { createUpdaterHandlers } from "./handlers/updater.js";
 import { createDiagnosticsHandlers } from "./handlers/diagnostics.js";
 import { createPluginsHandlers } from "./handlers/plugins.js";
+import { createVscodeExtensionHandlers } from "./handlers/vscodeExtensions.js";
 import { createLuminaCloudLicenseHandlers } from "./handlers/luminaCloudLicense.js";
 import { session, safeStorage } from "electron";
 import electronUpdater from "electron-updater";
@@ -113,6 +114,13 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
       : null,
   });
 
+  const vscodeExtensionHandlers = createVscodeExtensionHandlers({
+    baseDir: app.getPath("userData"),
+    hostScriptPath:
+      process.env.LUMINA_CODEX_VSCODE_HOST ??
+      path.join(app.getAppPath(), "scripts", "codex-vscode-host", "host.mjs"),
+  });
+
   const luminaCloudLicenseHandlers = createLuminaCloudLicenseHandlers({
     filePath: path.join(app.getPath("userData"), "lumina-cloud-license.bin"),
     safeStorage,
@@ -175,6 +183,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
       // ── Plugins ─────────────────────────────────────────────────────────
       if (cmd in pluginsHandlers) return pluginsHandlers[cmd](args);
+
+      // ── VS Code AI extension compatibility (Codex / Claude Code) ───────
+      if (cmd in vscodeExtensionHandlers) return vscodeExtensionHandlers[cmd](args);
 
       // ── Lumina Cloud license storage ────────────────────────────────────
       if (cmd in luminaCloudLicenseHandlers) return luminaCloudLicenseHandlers[cmd](args);
