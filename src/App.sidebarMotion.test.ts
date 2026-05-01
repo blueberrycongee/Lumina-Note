@@ -40,6 +40,9 @@ describe("App sidebar motion", () => {
   it("keeps sidebar toggles reachable when the main pane is collapsed", () => {
     expect(appSource).toContain("function CollapsedMainSidebarControls");
     expect(appSource).toContain(
+      'import { SidebarStateIcon } from "@/components/layout/SidebarStateIcon";',
+    );
+    expect(appSource).toContain(
       'data-testid="collapsed-main-sidebar-controls"',
     );
     expect(appSource).toContain(
@@ -48,6 +51,10 @@ describe("App sidebar motion", () => {
     expect(appSource).toContain(
       'data-testid="collapsed-main-toggle-right-sidebar"',
     );
+    expect(appSource).toContain('<SidebarStateIcon');
+    expect(appSource).toContain('side="left"');
+    expect(appSource).toContain('side="right"');
+    expect(appSource).toContain("openButtonClassName");
     expect(appSource).toContain("{isMainCollapsed ? (");
   });
 

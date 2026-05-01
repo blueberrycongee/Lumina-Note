@@ -68,6 +68,7 @@ import { PluginStatusBar } from "@/components/layout/PluginStatusBar";
 import { PluginContextMenuHost } from "@/components/plugins/PluginContextMenuHost";
 import { PluginShellSlotHost } from "@/components/plugins/PluginShellSlotHost";
 import { ErrorNotifications } from "@/components/layout/ErrorNotifications";
+import { SidebarStateIcon } from "@/components/layout/SidebarStateIcon";
 import { reportOperationError, reportUnhandledError } from "@/lib/reportError";
 import {
   initAutoUpdateCheck,
@@ -76,12 +77,7 @@ import {
 } from "@/stores/useUpdateStore";
 import { isTauriAvailable } from "@/lib/host";
 import { hydrateProxyConfigOnStartup } from "@/lib/proxyStartup";
-import {
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelRightClose,
-  PanelRightOpen,
-} from "lucide-react";
+import { useReducedMotion } from "framer-motion";
 
 // Debug logging is enabled via a runtime toggle (or always in dev).
 
@@ -112,8 +108,11 @@ function CollapsedMainSidebarControls({
   onToggleLeftSidebar,
   onToggleRightSidebar,
 }: CollapsedMainSidebarControlsProps) {
-  const LeftIcon = leftSidebarOpen ? PanelLeftClose : PanelLeftOpen;
-  const RightIcon = rightSidebarOpen ? PanelRightClose : PanelRightOpen;
+  const reduceMotion = useReducedMotion();
+  const buttonClassName =
+    "flex h-7 w-7 items-center justify-center rounded-ui-sm transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  const openButtonClassName = "text-primary hover:text-primary";
+  const closedButtonClassName = "text-muted-foreground hover:text-foreground";
 
   return (
     <div
@@ -122,25 +121,33 @@ function CollapsedMainSidebarControls({
     >
       <button
         type="button"
-        className="flex h-7 w-7 items-center justify-center rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className={`${buttonClassName} ${leftSidebarOpen ? openButtonClassName : closedButtonClassName}`}
         onClick={onToggleLeftSidebar}
         aria-label={leftSidebarLabel}
         aria-pressed={leftSidebarOpen}
         title={leftSidebarLabel}
         data-testid="collapsed-main-toggle-left-sidebar"
       >
-        <LeftIcon aria-hidden="true" size={16} />
+        <SidebarStateIcon
+          side="left"
+          open={leftSidebarOpen}
+          reduceMotion={reduceMotion}
+        />
       </button>
       <button
         type="button"
-        className="flex h-7 w-7 items-center justify-center rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        className={`${buttonClassName} ${rightSidebarOpen ? openButtonClassName : closedButtonClassName}`}
         onClick={onToggleRightSidebar}
         aria-label={rightSidebarLabel}
         aria-pressed={rightSidebarOpen}
         title={rightSidebarLabel}
         data-testid="collapsed-main-toggle-right-sidebar"
       >
-        <RightIcon aria-hidden="true" size={16} />
+        <SidebarStateIcon
+          side="right"
+          open={rightSidebarOpen}
+          reduceMotion={reduceMotion}
+        />
       </button>
     </div>
   );

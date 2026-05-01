@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { reportOperationError } from "@/lib/reportError";
 import { useShallow } from "zustand/react/shallow";
 import { useMacTopChromeEnabled } from "./MacTopChrome";
+import { SidebarStateIcon } from "./SidebarStateIcon";
 import { Popover, PopoverContent, PopoverList, Row } from "@/components/ui";
 
 const MAC_TRAFFIC_LIGHT_SAFE_AREA_WIDTH = 64;
@@ -54,73 +55,6 @@ const TABBAR_ICON_BUTTON_CLASS =
   "relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-ui-sm text-muted-foreground transition-[background-color,color,box-shadow] duration-200 ease-out hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 const TABBAR_ICON_BUTTON_OPEN_CLASS =
   "text-primary hover:text-primary";
-
-interface SidebarStateIconProps {
-  side: "left" | "right";
-  open: boolean;
-  reduceMotion: boolean | null;
-}
-
-function SidebarStateIcon({ side, open, reduceMotion }: SidebarStateIconProps) {
-  const panelX = side === "left" ? 4 : 12;
-  const dividerX = side === "left" ? 11 : 12;
-  const transformOrigin = side === "left" ? "4px 12px" : "20px 12px";
-  const closedStroke = "hsl(var(--muted-foreground))";
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-[18px] w-[18px]"
-      viewBox="0 0 24 24"
-      fill="none"
-    >
-      <motion.rect
-        x={panelX}
-        y="5"
-        width="8"
-        height="14"
-        rx="2"
-        fill="currentColor"
-        initial={false}
-        animate={{
-          opacity: open ? 1 : 0,
-          scaleX: open ? 1 : 0.35,
-        }}
-        transition={
-          reduceMotion
-            ? { duration: 0 }
-            : { duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }
-        }
-        style={{ transformOrigin }}
-      />
-      <rect
-        x="4"
-        y="4"
-        width="16"
-        height="16"
-        rx="5"
-        stroke="currentColor"
-        strokeWidth="2.2"
-      />
-      <motion.line
-        x1={dividerX}
-        y1="5.5"
-        x2={dividerX}
-        y2="18.5"
-        stroke={open ? "hsl(var(--popover))" : closedStroke}
-        strokeWidth="2"
-        strokeLinecap="round"
-        initial={false}
-        animate={{ opacity: open ? 0.95 : 1 }}
-        transition={
-          reduceMotion
-            ? { duration: 0 }
-            : { duration: 0.18, ease: [0.2, 0.9, 0.1, 1] }
-        }
-      />
-    </svg>
-  );
-}
 
 function tabShapeSegments(width: number, height: number): string[] {
   const w = Math.max(width, TAB_SHAPE_TOP_RADIUS * 2 + TAB_SHAPE_EAR_RADIUS * 2);
