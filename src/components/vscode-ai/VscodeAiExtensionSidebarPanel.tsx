@@ -68,6 +68,8 @@ export function VscodeAiExtensionSidebarPanel() {
     Boolean(selected?.active) &&
     selected?.platform?.compatible !== false &&
     selected?.hostCapabilities?.canRunWithoutMissingCapabilities !== false;
+  const canInstallFromSource =
+    source !== "marketplace" || marketplaceTermsAccepted;
   const needsActivation =
     Boolean(latestInstalled) &&
     latestInstalled?.version !== selected?.active?.version;
@@ -272,8 +274,13 @@ export function VscodeAiExtensionSidebarPanel() {
               <option value="open-vsx">Open VSX</option>
             </select>
             <IconButton
-              label="Install latest"
+              label={
+                canInstallFromSource
+                  ? "Install latest"
+                  : "Accept Marketplace terms first"
+              }
               busy={action.key === `install:${selectedId}`}
+              disabled={!canInstallFromSource}
               onClick={() => void installLatest()}
               icon={<Download size={14} />}
             />
@@ -353,8 +360,13 @@ export function VscodeAiExtensionSidebarPanel() {
               {!latestInstalled ? (
                 <>
                   <IconButton
-                    label="Install latest"
+                    label={
+                      canInstallFromSource
+                        ? "Install latest"
+                        : "Accept Marketplace terms first"
+                    }
                     busy={action.key === `install:${selectedId}`}
+                    disabled={!canInstallFromSource}
                     onClick={() => void installLatest()}
                     icon={<Download size={14} />}
                   />

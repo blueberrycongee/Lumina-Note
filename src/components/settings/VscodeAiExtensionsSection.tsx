@@ -174,6 +174,9 @@ export function VscodeAiExtensionsSection() {
     });
   };
 
+  const canUseSelectedRemoteSource =
+    source !== "marketplace" || marketplaceTermsAccepted;
+
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -345,12 +348,14 @@ export function VscodeAiExtensionsSection() {
                   <IconButton
                     label={`Check latest ${item.displayName}`}
                     busy={action.key === `check:${item.extensionId}`}
+                    disabled={!canUseSelectedRemoteSource}
                     onClick={() => void checkLatest(item.extensionId)}
                     icon={<RefreshCw className="h-4 w-4" />}
                   />
                   <IconButton
                     label={`Install latest ${item.displayName}`}
                     busy={action.key === `install:${item.extensionId}`}
+                    disabled={!canUseSelectedRemoteSource}
                     onClick={() => void installLatest(item.extensionId)}
                     icon={<Download className="h-4 w-4" />}
                   />

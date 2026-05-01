@@ -154,25 +154,20 @@ describe("VscodeAiExtensionsSection", () => {
     ).toBeInTheDocument();
   });
 
-  it("checks and installs latest extension from Marketplace by default", async () => {
+  it("requires Marketplace terms before checking or installing from Marketplace", async () => {
     render(<VscodeAiExtensionsSection />);
     await screen.findByText("Codex");
 
-    fireEvent.click(screen.getByRole("button", { name: "Check latest Codex" }));
-    await waitFor(() => {
-      expect(checkLatestMock).toHaveBeenCalledWith({
-        extensionId: "openai.chatgpt",
-        source: "marketplace",
-        marketplaceTermsAccepted: false,
-      });
-    });
+    expect(screen.getByRole("button", { name: "Check latest Codex" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Install latest Codex" })).toBeDisabled();
 
+    fireEvent.click(screen.getByLabelText(/Marketplace terms/));
     fireEvent.click(screen.getByRole("button", { name: "Install latest Codex" }));
     await waitFor(() => {
       expect(installLatestMock).toHaveBeenCalledWith({
         extensionId: "openai.chatgpt",
         source: "marketplace",
-        marketplaceTermsAccepted: false,
+        marketplaceTermsAccepted: true,
       });
     });
   });
