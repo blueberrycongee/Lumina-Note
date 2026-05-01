@@ -345,6 +345,124 @@ export async function scaffoldWorkspaceUiOverhaulPlugin(): Promise<string> {
   return invoke("plugin_scaffold_ui_overhaul");
 }
 
+// ── VS Code AI extension compatibility ───────────────────────────────────
+
+export type VscodeAiExtensionId = "openai.chatgpt" | "anthropic.claude-code";
+export type VscodeAiExtensionSource = "open-vsx" | "marketplace";
+export type VscodeAiExtensionDecision =
+  | "auto-activated"
+  | "pending-smoke-test"
+  | "pending-manual-opt-in"
+  | "blocked";
+
+export interface VscodeAiExtensionInstallRecord {
+  extensionId: VscodeAiExtensionId;
+  version: string;
+  extensionPath: string;
+  source: "manual-vsix" | VscodeAiExtensionSource | "github-release";
+  installedAt: string;
+  packageSha256?: string;
+  compatibility: {
+    status:
+      | "stable"
+      | "preview"
+      | "unknown-extension"
+      | "unknown-version"
+      | "incompatible-vscode-engine"
+      | "invalid-package";
+    reason: string;
+    autoUpdateEligible: boolean;
+    profileVersionRange: string | null;
+  };
+}
+
+export interface VscodeAiExtensionState {
+  schemaVersion: 1;
+  activeById: Partial<Record<VscodeAiExtensionId, string>>;
+  previousById: Partial<Record<VscodeAiExtensionId, string>>;
+  installed: Partial<
+    Record<VscodeAiExtensionId, Record<string, VscodeAiExtensionInstallRecord>>
+  >;
+}
+
+export interface VscodeAiExtensionDiagnosticsItem {
+  extensionId: VscodeAiExtensionId;
+  displayName: string;
+  active: VscodeAiExtensionInstallRecord | null;
+  installed: VscodeAiExtensionInstallRecord[];
+  compatibility: {
+    status: string;
+    reason: string;
+    autoUpdateEligible: boolean;
+    version: string | null;
+  } | null;
+  hostCapabilities: {
+    canRunWithoutMissingCapabilities: boolean;
+    missingCapabilities: string[];
+    implementedCapabilities: string[];
+  } | null;
+}
+
+export interface VscodeAiExtensionRemoteVersion {
+  extensionId: VscodeAiExtensionId;
+  source: VscodeAiExtensionSource;
+  version: string;
+  downloadUrl: string;
+  itemUrl: string;
+}
+
+export interface VscodeAiExtensionInstallOutcome {
+  record: VscodeAiExtensionInstallRecord | null;
+  decision: VscodeAiExtensionDecision;
+  reason: string;
+}
+
+export async function getVscodeAiExtensionState(): Promise<VscodeAiExtensionState> {
+  return invoke("vscode_extensions_get_state");
+}
+
+export async function getVscodeAiExtensionDiagnostics(): Promise<
+  VscodeAiExtensionDiagnosticsItem[]
+> {
+  return invoke("vscode_extensions_get_diagnostics");
+}
+
+export async function checkLatestVscodeAiExtension(input: {
+  extensionId: VscodeAiExtensionId;
+  source: VscodeAiExtensionSource;
+  marketplaceTermsAccepted?: boolean;
+}): Promise<VscodeAiExtensionRemoteVersion> {
+  return invoke("vscode_extensions_check_latest", input);
+}
+
+export async function installLatestVscodeAiExtension(input: {
+  extensionId: VscodeAiExtensionId;
+  source: VscodeAiExtensionSource;
+  marketplaceTermsAccepted?: boolean;
+}): Promise<{ outcome: VscodeAiExtensionInstallOutcome }> {
+  return invoke("vscode_extensions_install_latest", input);
+}
+
+export async function installLocalVscodeAiExtensionVsix(input: {
+  extensionId?: VscodeAiExtensionId;
+  vsixPath: string;
+}): Promise<{ outcome: VscodeAiExtensionInstallOutcome }> {
+  return invoke("vscode_extensions_install_local_vsix", input);
+}
+
+export async function activateInstalledVscodeAiExtension(input: {
+  extensionId: VscodeAiExtensionId;
+  version: string;
+}): Promise<VscodeAiExtensionInstallRecord> {
+  return invoke("vscode_extensions_activate_installed", input);
+}
+
+export async function rollbackVscodeAiExtension(input: {
+  extensionId: VscodeAiExtensionId;
+}): Promise<VscodeAiExtensionInstallRecord> {
+  return invoke("vscode_extensions_rollback", input);
+}
+
 // ── Misc ──────────────────────────────────────────────────────────────────
 
 export async function startFileWatcher(watchPath: string): Promise<void> {
