@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-05-02
+
+本次发版把 VS Code AI 插件兼容层从实验设置项推进到可用的侧栏入口，同时继续收口斜杠 AI 的 inline 生成体验。
+
+### 新功能
+- **VS Code AI 插件侧栏入口**：新增可选的 VS Code AI 侧栏 slot，可在侧栏中切换 Codex / Claude Code，并打开插件自己的 webview UI。
+- **Codex / Claude Code 插件兼容**：补齐 VS Code host 的 webview、terminal、workspace fs、findFiles、watcher、diff、status bar、progress、authentication、configuration inspect 等兼容 API，使插件更新后可以按兼容 profile 继续安装和激活。
+- **插件安装与更新来源**：支持从 Marketplace / GitHub Release / 手动 VSIX 导入安装 AI 插件，并通过远程兼容 profile 更新稳定版本覆盖范围。
+- **斜杠 AI inline 生成**：斜杠命令 AI 改为在编辑器内显示流式草稿、工作步骤和最终插入预览，接受前不污染 Markdown 正文。
+
+### 修复
+- **Codex / Claude Code webview 主题修复**：补齐 VS Code theme token，修复插件菜单、按钮、hover 卡片和弹层在浅色模式下透明或文字不可见的问题。
+- **插件平台校验**：拒绝安装与当前平台不匹配的 VSIX，避免用户点击安装后得到不可运行的扩展。
+- **插件激活门禁**：安装和手动激活前执行 smoke test，缺少 host API 时阻止激活并记录能力缺口。
+- **斜杠 AI 滚动修复**：生成过程中更新 inline preview 时保留用户当前滚动位置，避免编辑器被持续拉回生成位置导致无法向上滚动。
+- **本地聊天图片渲染修复**：聊天消息中的本地 Markdown 图片可以正确渲染。
+
+### 改进
+- **插件管理界面降噪**：移除无用的打开状态提示和诊断区，压平 VS Code AI 侧栏 chrome，减少卡片层级和冗余信息。
+- **侧栏折叠图标修复**：修复折叠侧栏 toggle icon 状态显示不一致的问题。
+
 ## [1.3.6] - 2026-05-01
 
 ### 修复
