@@ -502,6 +502,13 @@ async function generateInlineAIMarkdown(
           activities,
         );
       };
+      const hasAssistantOutputSignal = () =>
+        assistantMessageId !== null &&
+        (latestTextPart.trim().length > 0 ||
+          pendingTextDeltas.size > 0 ||
+          assistantParts.some(
+            (part) => part.type === "text" && part.text.trim().length > 0,
+          ));
 
       const promptReq = client.session
         .promptAsync({
@@ -639,7 +646,11 @@ async function generateInlineAIMarkdown(
             (event.type === "session.status" &&
               eventSessionId === sessionId &&
               (props.status as { type?: string } | undefined)?.type === "idle");
-          if (isIdle && promptAccepted) {
+          const isCompletionHeartbeat =
+            event.type === "server.heartbeat" &&
+            promptAccepted &&
+            hasAssistantOutputSignal();
+          if ((isIdle && promptAccepted) || isCompletionHeartbeat) {
             break;
           }
 
