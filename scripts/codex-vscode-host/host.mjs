@@ -1326,6 +1326,56 @@ function createVscodeApi(state, originForApi) {
     return [workspaceFolderFromPath(state.workspacePath, 0)];
   };
 
+  const findFiles = async (include, exclude, maxResults) => {
+    if (!state.workspacePath) return [];
+    const root = path.resolve(state.workspacePath);
+    const includeText = globPatternToText(include);
+    const excludeText = globPatternToText(exclude);
+    const results = [];
+    const visit = async (dir) => {
+      if (typeof maxResults === "number" && results.length >= maxResults) return;
+      const fs = await import("node:fs/promises");
+      const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+      for (const entry of entries) {
+        if (typeof maxResults === "number" && results.length >= maxResults) return;
+        const abs = path.join(dir, entry.name);
+        const rel = path.relative(root, abs).replaceAll("\\", "/");
+        if (shouldExcludePath(rel, excludeText)) continue;
+        if (entry.isDirectory()) {
+          await visit(abs);
+        } else if (entry.isFile() && matchesSimpleGlob(rel, includeText)) {
+          results.push(Uri.file(abs));
+        }
+      }
+    };
+    await visit(root);
+    return results;
+  };
+
+  const globPatternToText = (pattern) => {
+    if (!pattern) return "";
+    if (typeof pattern === "string") return pattern;
+    if (typeof pattern.pattern === "string") return pattern.pattern;
+    return String(pattern);
+  };
+
+  const shouldExcludePath = (rel, pattern) => {
+    if (!pattern) return rel.startsWith(".git/") || rel.includes("/.git/") || rel.includes("/node_modules/");
+    return matchesSimpleGlob(rel, pattern);
+  };
+
+  const matchesSimpleGlob = (rel, pattern) => {
+    if (!pattern || pattern === "**/*" || pattern === "*") return true;
+    const normalized = pattern.replaceAll("\\", "/");
+    if (normalized.startsWith("**/*.")) return rel.endsWith(normalized.slice(4));
+    if (normalized.startsWith("**/")) return rel.endsWith(normalized.slice(3));
+    if (normalized.includes("*")) {
+      const escaped = normalized.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*");
+      return new RegExp(`^${escaped}$`).test(rel);
+    }
+    return rel === normalized || rel.endsWith(`/${normalized}`);
+  };
+
   const openTextDocument = async (uriOrPath) => {
     const uri = typeof uriOrPath === "string" ? Uri.file(uriOrPath) : uriOrPath;
     const active = getActiveTextDocument();
@@ -1620,6 +1670,7 @@ function createVscodeApi(state, originForApi) {
         return getTextDocuments();
       },
       openTextDocument,
+      findFiles,
       asRelativePath(p) {
         const root = state.workspacePath ? path.resolve(state.workspacePath) : null;
         const input = typeof p === "string" ? p : p?.fsPath ?? p?.path ?? "";

@@ -333,6 +333,38 @@ exports.activate = async function activate() {
     });
   });
 
+  it("supports workspace.findFiles within the workspace folder", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-find-files-ext-"));
+    const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-workspace-"));
+    fs.mkdirSync(path.join(workspacePath, "src"), { recursive: true });
+    fs.writeFileSync(path.join(workspacePath, "src", "one.ts"), "export const one = 1;\n", "utf8");
+    fs.writeFileSync(path.join(workspacePath, "two.md"), "# Two\n", "utf8");
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "find-files-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const files = await vscode.workspace.findFiles("**/*.ts");
+  if (files.length !== 1 || !files[0].fsPath.endsWith("src/one.ts")) {
+    throw new Error("findFiles did not return expected TypeScript file");
+  }
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, workspacePath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.activateError).toBeNull();
+  });
+
   it("supports panel, terminal, showTextDocument, and vscode.diff compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-api-ext-"));
     fs.writeFileSync(
