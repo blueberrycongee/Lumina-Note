@@ -78,8 +78,20 @@ export interface SlashAIProgress {
   status: "active" | "done" | "error";
 }
 
+export interface SlashAIActivity {
+  id: string;
+  type: "reasoning" | "tool";
+  title: string;
+  detail?: string;
+  result?: string;
+  status: "running" | "done" | "error";
+  startedAt?: number;
+  endedAt?: number;
+}
+
 export interface SlashAIGenerationCallbacks {
   onProgress?: (progress: SlashAIProgress) => void;
+  onActivity?: (activities: SlashAIActivity[]) => void;
   signal?: AbortSignal;
 }
 
@@ -108,6 +120,8 @@ export interface SlashAIInlinePreview {
   commandLabel: string;
   labels: SlashAIInlinePreviewLabels;
   stageStatuses: Record<SlashAIStageId, SlashAIInlinePreviewStageStatus>;
+  activities?: SlashAIActivity[];
+  startedAt?: number;
 }
 
 export class SlashAIAbortError extends Error {
@@ -157,10 +171,116 @@ function emitSlashAIProgress(
   callbacks?.onProgress?.(progress);
 }
 
+function emitSlashAIActivities(
+  callbacks: SlashAIGenerationCallbacks | undefined,
+  activities: Map<string, SlashAIActivity>,
+) {
+  callbacks?.onActivity?.(Array.from(activities.values()));
+}
+
 function throwIfSlashAIAborted(signal?: AbortSignal) {
   if (signal?.aborted) {
     throw new SlashAIAbortError();
   }
+}
+
+function getSlashAIAgentLabels() {
+  return getCurrentTranslations().agentMessage ?? {
+    thinkingGroup: "Thinking",
+    file: "File",
+    directory: "Directory",
+    url: "URL",
+    query: "Query",
+    pattern: "Pattern",
+    params: "Params",
+    result: "Result",
+    working: "Working",
+    steps: "{count} steps",
+  };
+}
+
+function formatSlashAIToolParams(input: unknown): string {
+  if (!input || typeof input !== "object") return "";
+  const t = getSlashAIAgentLabels();
+  const data = input as Record<string, unknown>;
+  const parts: string[] = [];
+  const filePath = data.filePath ?? data.path;
+  if (typeof filePath === "string" && filePath) {
+    parts.push(`${t.file}: ${filePath}`);
+  }
+  const directory = data.directory ?? data.dir;
+  if (typeof directory === "string" && directory) {
+    parts.push(`${t.directory}: ${directory}`);
+  }
+  if (typeof data.url === "string" && data.url) {
+    parts.push(`${t.url}: ${data.url}`);
+  }
+  if (typeof data.query === "string" && data.query) {
+    parts.push(`${t.query}: ${data.query}`);
+  }
+  if (typeof data.pattern === "string" && data.pattern) {
+    parts.push(`${t.pattern}: ${data.pattern}`);
+  }
+  if (parts.length > 0) return parts.join(" | ");
+  return JSON.stringify(data).slice(0, 120);
+}
+
+function updateSlashAIActivityFromPart(
+  part: Part,
+  activities: Map<string, SlashAIActivity>,
+): boolean {
+  const record = part as Part & {
+    id?: string;
+    type?: string;
+    text?: string;
+    tool?: string;
+    state?: {
+      status?: string;
+      input?: Record<string, unknown>;
+      output?: string;
+      error?: string;
+      title?: string;
+      time?: { start?: number; end?: number };
+    };
+    time?: { start?: number; end?: number };
+  };
+  const id = record.id;
+  if (!id) return false;
+  if (record.type === "reasoning") {
+    const text = record.text ?? "";
+    if (!text.trim()) return false;
+    activities.set(id, {
+      id,
+      type: "reasoning",
+      title: getSlashAIAgentLabels().thinkingGroup,
+      detail: text,
+      status: record.time?.end === undefined ? "running" : "done",
+      startedAt: record.time?.start,
+      endedAt: record.time?.end,
+    });
+    return true;
+  }
+  if (record.type === "tool") {
+    const state = record.state ?? {};
+    const status =
+      state.status === "completed"
+        ? "done"
+        : state.status === "error"
+          ? "error"
+          : "running";
+    activities.set(id, {
+      id,
+      type: "tool",
+      title: record.tool ?? "tool",
+      detail: formatSlashAIToolParams(state.input),
+      result: status === "error" ? state.error : state.output ?? state.title,
+      status,
+      startedAt: state.time?.start,
+      endedAt: state.time?.end,
+    });
+    return true;
+  }
+  return false;
 }
 
 function clampPos(view: EditorView, pos: number): number {
@@ -301,6 +421,7 @@ async function generateInlineAIMarkdown(
       let sawDelta = false;
       const messageRoles = new Map<string, string>();
       const pendingTextDeltas = new Map<string, string>();
+      const activities = new Map<string, SlashAIActivity>();
       const startedAt = Date.now();
       const timeoutMs = 120_000;
 
@@ -357,10 +478,23 @@ async function generateInlineAIMarkdown(
 
           if (event.type === "message.part.delta") {
             const messageId = props.messageID as string | undefined;
+            const partId = props.partID as string | undefined;
             const field = props.field as string | undefined;
             const delta = props.delta as string | undefined;
             if (!messageId || field !== "text" || !delta) {
               continue;
+            }
+            if (partId) {
+              const activity = activities.get(partId);
+              if (activity?.type === "reasoning") {
+                activities.set(partId, {
+                  ...activity,
+                  detail: `${activity.detail ?? ""}${delta}`,
+                  status: "running",
+                });
+                emitSlashAIActivities(callbacks, activities);
+                continue;
+              }
             }
             const role = messageRoles.get(messageId);
             if (!role) {
@@ -379,14 +513,16 @@ async function generateInlineAIMarkdown(
             continue;
           }
 
-          if (event.type === "message.part.updated" && !sawDelta) {
-            const part = props.part as
-              | { messageID?: string; type?: string; text?: string }
-              | undefined;
-            if (!part || part.type !== "text" || !part.messageID) {
+          if (event.type === "message.part.updated") {
+            const part = props.part as (Part & { messageID?: string }) | undefined;
+            const messageId = part?.messageID;
+            const role = messageId ? messageRoles.get(messageId) : undefined;
+            if (part && role === "assistant" && updateSlashAIActivityFromPart(part, activities)) {
+              emitSlashAIActivities(callbacks, activities);
+            }
+            if (!part || part.type !== "text" || !part.messageID || sawDelta) {
               continue;
             }
-            const role = messageRoles.get(part.messageID);
             if (role !== "assistant") {
               continue;
             }
@@ -396,7 +532,7 @@ async function generateInlineAIMarkdown(
             if (assistantMessageId !== part.messageID) {
               continue;
             }
-            latestTextPart = part.text ?? "";
+            latestTextPart = (part as { text?: string }).text ?? "";
             continue;
           }
 
@@ -431,6 +567,13 @@ async function generateInlineAIMarkdown(
           });
           const msgParts =
             ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
+          let changed = false;
+          for (const part of msgParts) {
+            changed = updateSlashAIActivityFromPart(part, activities) || changed;
+          }
+          if (changed) {
+            emitSlashAIActivities(callbacks, activities);
+          }
           const fullText = extractTextFromParts(msgParts);
           if (fullText.trim()) {
             rawText = fullText;
@@ -922,6 +1065,116 @@ export const slashMenuField = StateField.define<SlashMenuState>({
   },
 });
 
+function formatSlashAIElapsed(seconds: number): string {
+  const safe = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safe / 60);
+  const rest = safe % 60;
+  return `${minutes}:${rest.toString().padStart(2, "0")}`;
+}
+
+function getSlashAIActivityStart(preview: SlashAIInlinePreview): number | null {
+  const starts = (preview.activities ?? [])
+    .map((activity) => activity.startedAt)
+    .filter((value): value is number => typeof value === "number");
+  if (starts.length > 0) return Math.min(...starts);
+  return preview.startedAt ?? null;
+}
+
+function getSlashAIActivityDuration(preview: SlashAIInlinePreview): number | null {
+  const activities = preview.activities ?? [];
+  const starts = activities
+    .map((activity) => activity.startedAt)
+    .filter((value): value is number => typeof value === "number");
+  const ends = activities
+    .map((activity) => activity.endedAt)
+    .filter((value): value is number => typeof value === "number");
+  if (starts.length === 0 || ends.length === 0) return null;
+  return Math.max(0, Math.floor((Math.max(...ends) - Math.min(...starts)) / 1000));
+}
+
+function getSlashAIWorkLabel(preview: SlashAIInlinePreview): string {
+  const t = getSlashAIAgentLabels();
+  const activities = preview.activities ?? [];
+  const isRunning =
+    preview.status === "running" ||
+    activities.some((activity) => activity.status === "running");
+  if (isRunning) {
+    const start = getSlashAIActivityStart(preview);
+    const elapsed = start == null ? 0 : Math.floor((Date.now() - start) / 1000);
+    return `${t.working} · ${formatSlashAIElapsed(elapsed)}`;
+  }
+  const duration = getSlashAIActivityDuration(preview);
+  const steps = (t.steps as string).replace("{count}", String(activities.length));
+  return duration == null ? steps : `${formatSlashAIElapsed(duration)} · ${steps}`;
+}
+
+function appendSlashAIActivityDetails(parent: HTMLElement, preview: SlashAIInlinePreview) {
+  const activities = preview.activities ?? [];
+  if (activities.length === 0) return;
+  const t = getSlashAIAgentLabels();
+  const details = document.createElement("details");
+  details.style.cssText = `
+    max-width: min(620px, 100%);
+    margin: 0 0 7px;
+    color: hsl(var(--muted-foreground));
+    font-size: 12px;
+    line-height: 1.55;
+  `;
+
+  const summary = document.createElement("summary");
+  summary.textContent = getSlashAIWorkLabel(preview);
+  summary.style.cssText = `
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  `;
+  details.appendChild(summary);
+
+  const list = document.createElement("div");
+  list.style.cssText = `
+    margin: 5px 0 0 8px;
+    padding-left: 12px;
+    border-left: 1px solid hsl(var(--border) / 0.72);
+    display: grid;
+    gap: 6px;
+  `;
+  for (const activity of activities) {
+    const item = document.createElement("div");
+    item.style.cssText = "min-width: 0;";
+    const title = document.createElement("div");
+    const statusLabel =
+      activity.status === "running"
+        ? ` · ${t.working}`
+        : activity.status === "error"
+          ? " · Error"
+          : "";
+    title.textContent = `${activity.title}${statusLabel}`;
+    title.style.cssText = "font-weight: 500; color: hsl(var(--foreground) / 0.72);";
+    item.appendChild(title);
+    const detailText = [activity.detail, activity.result].filter(Boolean).join("\n");
+    if (detailText) {
+      const detail = document.createElement("pre");
+      detail.textContent =
+        detailText.length > 600 ? `${detailText.slice(0, 600)}...` : detailText;
+      detail.style.cssText = `
+        margin: 3px 0 0;
+        white-space: pre-wrap;
+        overflow: auto;
+        max-height: 120px;
+        color: hsl(var(--muted-foreground));
+        font-family: inherit;
+        font-size: 12px;
+      `;
+      item.appendChild(detail);
+    }
+    list.appendChild(item);
+  }
+  details.appendChild(list);
+  parent.appendChild(details);
+}
+
 class SlashAIInlinePreviewWidget extends WidgetType {
   constructor(readonly preview: SlashAIInlinePreview) {
     super();
@@ -935,7 +1188,9 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       other.preview.result?.text === this.preview.result?.text &&
       other.preview.result?.from === this.preview.result?.from &&
       other.preview.result?.to === this.preview.result?.to &&
-      JSON.stringify(other.preview.stageStatuses) === JSON.stringify(this.preview.stageStatuses)
+      JSON.stringify(other.preview.stageStatuses) === JSON.stringify(this.preview.stageStatuses) &&
+      JSON.stringify(other.preview.activities ?? []) === JSON.stringify(this.preview.activities ?? []) &&
+      other.preview.startedAt === this.preview.startedAt
     );
   }
 
@@ -1030,6 +1285,7 @@ class SlashAIInlinePreviewWidget extends WidgetType {
 
       statusRow.append(pulse, label, ellipsis, cancel);
       wrapper.appendChild(statusRow);
+      appendSlashAIActivityDetails(wrapper, this.preview);
       return wrapper;
     }
 
@@ -1109,6 +1365,7 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       makeButton(this.preview.labels.regenerate, "regenerate"),
       makeButton(this.preview.labels.cancel, "cancel"),
     );
+    appendSlashAIActivityDetails(body, this.preview);
     body.append(text, footer);
     wrapper.appendChild(body);
     return wrapper;

@@ -32,6 +32,7 @@ import {
   SlashAIResult,
   SlashAIStageId,
   SlashAIProgress,
+  SlashAIActivity,
   slashMenuField,
 } from "../extensions/slashCommand";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -135,6 +136,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
     anchor: number,
     stageStatuses: Record<SlashAIStageId, AIPanelStageStatus>,
     result?: SlashAIResult,
+    activities: SlashAIActivity[] = [],
+    startedAt?: number,
   ) => ({
     id,
     status,
@@ -150,6 +153,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
       stages: inlineAI.stages,
     },
     stageStatuses,
+    activities,
+    startedAt,
   }), [
     aiPromptCommand?.label,
     t.editor.slashMenu.commands.aiChat,
@@ -263,7 +268,29 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const range = aiSlashRange;
     setAiSlashRange({ from: range.from, to: range.from });
     const previewId = `slash-ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const startedAt = Date.now();
     let inlineStageStatuses = createInitialAIStages();
+    let inlineActivities: SlashAIActivity[] = [];
+    let tickTimer: number | null = null;
+    const dispatchInlinePreview = (
+      status: "running" | "preview",
+      anchor: number,
+      result?: SlashAIResult,
+    ) => {
+      view.dispatch({
+        effects: showSlashAIInlinePreview.of(
+          buildInlinePreview(
+            previewId,
+            status,
+            anchor,
+            inlineStageStatuses,
+            result,
+            inlineActivities,
+            startedAt,
+          ),
+        ),
+      });
+    };
     setAiResult(null);
     setAiPreviewId(previewId);
     setAiError("");
@@ -274,10 +301,21 @@ export function SlashMenu({ view }: SlashMenuProps) {
       effects: [
         hideSlashMenu.of(),
         showSlashAIInlinePreview.of(
-          buildInlinePreview(previewId, "running", range.from, inlineStageStatuses),
+          buildInlinePreview(
+            previewId,
+            "running",
+            range.from,
+            inlineStageStatuses,
+            undefined,
+            inlineActivities,
+            startedAt,
+          ),
         ),
       ],
     });
+    tickTimer = window.setInterval(() => {
+      dispatchInlinePreview("running", range.from);
+    }, 1000);
     setVisible(false);
     setAiPromptOpen(false);
     const abortController = new AbortController();
@@ -297,11 +335,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
               [progress.stage]: progress.status,
             };
             setAiStages(inlineStageStatuses);
-            view.dispatch({
-              effects: showSlashAIInlinePreview.of(
-                buildInlinePreview(previewId, "running", range.from, inlineStageStatuses),
-              ),
-            });
+            dispatchInlinePreview("running", range.from);
+          },
+          onActivity: (activities) => {
+            inlineActivities = activities;
+            dispatchInlinePreview("running", range.from);
           },
         },
       );
@@ -315,11 +353,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
         ready: "done",
       };
       setAiStages(inlineStageStatuses);
-      view.dispatch({
-        effects: showSlashAIInlinePreview.of(
-          buildInlinePreview(previewId, "preview", result.from, inlineStageStatuses, result),
-        ),
-      });
+      dispatchInlinePreview("preview", result.from, result);
     } catch (error) {
       if (error instanceof SlashAIAbortError || abortController.signal.aborted) {
         return;
@@ -332,6 +366,9 @@ export function SlashMenu({ view }: SlashMenuProps) {
     } finally {
       if (aiAbortControllerRef.current === abortController) {
         aiAbortControllerRef.current = null;
+      }
+      if (tickTimer !== null) {
+        window.clearInterval(tickTimer);
       }
       setAiSubmitting(false);
     }
