@@ -466,7 +466,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
   // don't have to rebuild the whole array for every delta.
   const upsertMessage = (info: Message, parts: Part[]) => {
     set((state) => {
-      if (state.currentSessionId && info.sessionID !== state.currentSessionId) return state;
+      if (!state.currentSessionId || info.sessionID !== state.currentSessionId) return state;
       const next = state.messages.slice();
       const idx = next.findIndex((m) => m.id === info.id);
       const merged = makeAgentMessage(info, parts);
@@ -478,7 +478,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
   const applyPartUpdate = (part: Part) => {
     set((state) => {
-      if (state.currentSessionId && part.sessionID !== state.currentSessionId) return state;
+      if (!state.currentSessionId || part.sessionID !== state.currentSessionId) return state;
       const idx = state.messages.findIndex((m) => m.id === part.messageID);
       if (idx === -1) {
         // Part landed before its parent message.updated event — this is
@@ -521,7 +521,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     delta: string,
   ) => {
     set((state) => {
-      if (state.currentSessionId && sessionID !== state.currentSessionId) return state;
+      if (!state.currentSessionId || sessionID !== state.currentSessionId) return state;
       const msgIdx = state.messages.findIndex((m) => m.id === messageID);
       if (msgIdx === -1) return state;
       const msg = state.messages[msgIdx];
@@ -551,7 +551,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     partID: string,
   ) => {
     set((state) => {
-      if (state.currentSessionId && sessionID !== state.currentSessionId) return state;
+      if (!state.currentSessionId || sessionID !== state.currentSessionId) return state;
       const idx = state.messages.findIndex((m) => m.id === messageID);
       if (idx === -1) return state;
       const existing = state.messages[idx];
@@ -724,7 +724,11 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         return;
       }
       case "session.error": {
-        if (event.properties.sessionID && event.properties.sessionID !== get().currentSessionId)
+        if (
+          !get().currentSessionId ||
+          (event.properties.sessionID &&
+            event.properties.sessionID !== get().currentSessionId)
+        )
           return;
         // Extract a readable message — opencode wraps errors as NamedError
         // blobs `{name, data: {message, ...}}`. Fall back to raw JSON only
@@ -756,7 +760,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // stand-in. Server-assigned ids don't start with "optimistic-".
         if (info.role === "user") {
           set((state) => {
-            if (state.currentSessionId && info.sessionID !== state.currentSessionId)
+            if (!state.currentSessionId || info.sessionID !== state.currentSessionId)
               return state;
             const optimistic = state.messages.find((m) => m.id.startsWith("optimistic-"));
             const cleaned = state.messages.filter(
@@ -813,8 +817,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       const props = (event as unknown as { properties: PermissionAsked })
         .properties;
       if (
-        props.sessionID &&
-        props.sessionID !== get().currentSessionId
+        !get().currentSessionId ||
+        (props.sessionID && props.sessionID !== get().currentSessionId)
       ) {
         return;
       }
@@ -826,8 +830,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         properties: { sessionID?: string; requestID?: string };
       }).properties;
       if (
-        props.sessionID &&
-        props.sessionID !== get().currentSessionId
+        !get().currentSessionId ||
+        (props.sessionID && props.sessionID !== get().currentSessionId)
       ) {
         return;
       }

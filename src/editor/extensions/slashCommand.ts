@@ -166,65 +166,35 @@ function stripMarkdownFence(text: string): string {
   return text;
 }
 
-const INLINE_AI_ARTIFACT_START = "<lumina-inline-insert>";
-const INLINE_AI_ARTIFACT_END = "</lumina-inline-insert>";
+function extractInlineAIInsertTextFromParts(parts: Part[]): string {
+  return stripMarkdownFence(extractTextFromParts(parts)).trim();
+}
 
-function extractInlineAIArtifact(text: string): {
-  text: string;
-  hasArtifact: boolean;
-  complete: boolean;
-} {
-  const start = text.indexOf(INLINE_AI_ARTIFACT_START);
-  if (start === -1) {
-    return { text: "", hasArtifact: false, complete: false };
+function mergeSlashAIPart(parts: Part[], part: Part): Part[] {
+  const id = (part as { id?: string }).id;
+  const index = id ? parts.findIndex((item) => (item as { id?: string }).id === id) : -1;
+  if (index === -1) {
+    parts.push(part);
+  } else {
+    parts[index] = part;
   }
-  const contentStart = start + INLINE_AI_ARTIFACT_START.length;
-  const end = text.indexOf(INLINE_AI_ARTIFACT_END, contentStart);
-  const raw =
-    end === -1 ? text.slice(contentStart) : text.slice(contentStart, end);
-  return {
-    text: stripMarkdownFence(raw.replace(/^\r?\n/, "")).trim(),
-    hasArtifact: true,
-    complete: end !== -1,
-  };
+  return parts;
 }
 
-function getInlineAINonArtifactText(text: string): string {
-  const start = text.indexOf(INLINE_AI_ARTIFACT_START);
-  if (start === -1) return text.trim();
-  const end = text.indexOf(
-    INLINE_AI_ARTIFACT_END,
-    start + INLINE_AI_ARTIFACT_START.length,
-  );
-  const before = text.slice(0, start);
-  const after = end === -1 ? "" : text.slice(end + INLINE_AI_ARTIFACT_END.length);
-  return `${before}\n${after}`.trim();
-}
+function appendSlashAITextDelta(
+  parts: Part[],
+  partID: string,
+  delta: string,
+): boolean {
+  const index = parts.findIndex((part) => (part as { id?: string }).id === partID);
+  if (index === -1) return false;
 
-function prepareInlineAIInsertText(text: string): string {
-  const artifact = extractInlineAIArtifact(text);
-  if (!artifact.hasArtifact) return "";
-  return artifact.text;
-}
-
-function upsertSlashAIMessageActivity(
-  activities: Map<string, SlashAIActivity>,
-  text: string,
-) {
-  const detail = getInlineAINonArtifactText(text);
-  if (!detail) {
-    activities.delete("assistant-message");
-    return;
-  }
-  const existing = activities.get("assistant-message");
-  activities.set("assistant-message", {
-    id: "assistant-message",
-    type: "message",
-    title: "Message",
-    detail,
-    status: existing?.status ?? "running",
-    startedAt: existing?.startedAt ?? Date.now(),
-  });
+  const oldPart = parts[index] as Part & { text?: string };
+  parts[index] = {
+    ...oldPart,
+    text: `${oldPart.text ?? ""}${delta}`,
+  } as Part;
+  return true;
 }
 
 function completeSlashAIActivities(activities: Map<string, SlashAIActivity>) {
@@ -436,10 +406,9 @@ async function generateInlineAIMarkdown(
     "Your job is to produce new Markdown text that can be inserted at [INSERT_HERE].",
     "Use the surrounding note as context. If the user explicitly asks about workspace files, images, or paths, use the available tools to inspect the workspace before producing the insertable Markdown.",
     "Do not repeat, summarize, rewrite, or return the whole note unless the user explicitly asks for that.",
-    "You may briefly describe work in normal assistant text while you inspect context or use tools, but that text is not insertable.",
-    `When you are ready to provide content for the note, wrap only the final insertable Markdown between ${INLINE_AI_ARTIFACT_START} and ${INLINE_AI_ARTIFACT_END}.`,
-    "Do not put progress narration, apologies, tool explanations, or code fences inside those tags.",
-    "If inserting workspace images, put only the final Markdown image references inside those tags.",
+    "You may briefly describe work while you inspect context or use tools, but your final assistant text must be only the Markdown that should be inserted into the note.",
+    "Do not put progress narration, apologies, or tool explanations in the final insertable Markdown.",
+    "If inserting workspace images, use Markdown image references that are valid from the current note location.",
     currentFilePath ? `Current note path: ${currentFilePath}` : "",
     "",
     "[User request]",
@@ -496,9 +465,9 @@ async function generateInlineAIMarkdown(
       let promptAccepted = false;
       let assistantMessageId: string | null = null;
       let latestTextPart = "";
-      let sawDelta = false;
-      let streamingText = "";
+      const assistantParts: Part[] = [];
       const messageRoles = new Map<string, string>();
+      const pendingParts = new Map<string, Part[]>();
       const pendingTextDeltas = new Map<string, string>();
       const activities = new Map<string, SlashAIActivity>();
       const startedAt = Date.now();
@@ -510,15 +479,28 @@ async function generateInlineAIMarkdown(
         }
         return assistantMessageId === messageId;
       };
-      const syncAssistantText = (text: string) => {
-        latestTextPart = text;
-        streamingText = text;
-        const artifact = extractInlineAIArtifact(text);
-        if (artifact.hasArtifact) {
-          callbacks?.onText?.(artifact.text);
-        }
-        upsertSlashAIMessageActivity(activities, text);
+      const syncAssistantParts = () => {
+        latestTextPart = extractInlineAIInsertTextFromParts(assistantParts);
+        callbacks?.onText?.(latestTextPart);
         emitSlashAIActivities(callbacks, activities);
+      };
+      const ingestAssistantPart = (part: Part) => {
+        mergeSlashAIPart(assistantParts, part);
+        const partId = (part as { id?: string }).id;
+        const pending = partId ? pendingTextDeltas.get(partId) : undefined;
+        if (partId && pending) {
+          const currentPart = assistantParts.find(
+            (item) => (item as { id?: string }).id === partId,
+          ) as (Part & { text?: string }) | undefined;
+          if (!(currentPart?.text ?? "").endsWith(pending)) {
+            appendSlashAITextDelta(assistantParts, partId, pending);
+          }
+          pendingTextDeltas.delete(partId);
+        }
+        updateSlashAIActivityFromPart(
+          assistantParts.find((item) => (item as { id?: string }).id === partId) ?? part,
+          activities,
+        );
       };
 
       const promptReq = client.session
@@ -557,14 +539,14 @@ async function generateInlineAIMarkdown(
               messageRoles.set(info.id, info.role);
               if (info.role === "assistant") {
                 acceptAssistantMessageId(info.id);
-                const pending = pendingTextDeltas.get(info.id);
-                if (pending) {
-                  sawDelta = true;
-                  syncAssistantText(`${streamingText}${pending}`);
+                const queuedParts = pendingParts.get(info.id) ?? [];
+                for (const part of queuedParts) {
+                  ingestAssistantPart(part);
                 }
-                pendingTextDeltas.delete(info.id);
+                pendingParts.delete(info.id);
+                syncAssistantParts();
               } else {
-                pendingTextDeltas.delete(info.id);
+                pendingParts.delete(info.id);
               }
             }
             continue;
@@ -592,18 +574,35 @@ async function generateInlineAIMarkdown(
             }
             const role = messageRoles.get(messageId);
             if (!role) {
-              pendingTextDeltas.set(
-                messageId,
-                `${pendingTextDeltas.get(messageId) ?? ""}${delta}`,
-              );
+              if (partId) {
+                pendingTextDeltas.set(
+                  partId,
+                  `${pendingTextDeltas.get(partId) ?? ""}${delta}`,
+                );
+              }
               continue;
             }
             if (role !== "assistant") {
               continue;
             }
             if (acceptAssistantMessageId(messageId)) {
-              sawDelta = true;
-              syncAssistantText(`${streamingText}${delta}`);
+              if (!partId) {
+                continue;
+              }
+              if (!appendSlashAITextDelta(assistantParts, partId, delta)) {
+                pendingTextDeltas.set(
+                  partId,
+                  `${pendingTextDeltas.get(partId) ?? ""}${delta}`,
+                );
+                continue;
+              }
+              const changedPart = assistantParts.find(
+                (part) => (part as { id?: string }).id === partId,
+              );
+              if (changedPart) {
+                updateSlashAIActivityFromPart(changedPart, activities);
+              }
+              syncAssistantParts();
             }
             continue;
           }
@@ -612,10 +611,13 @@ async function generateInlineAIMarkdown(
             const part = props.part as (Part & { messageID?: string }) | undefined;
             const messageId = part?.messageID;
             const role = messageId ? messageRoles.get(messageId) : undefined;
-            if (part && role === "assistant" && updateSlashAIActivityFromPart(part, activities)) {
-              emitSlashAIActivities(callbacks, activities);
+            if (!part || !part.messageID) {
+              continue;
             }
-            if (!part || part.type !== "text" || !part.messageID || sawDelta) {
+            if (!role) {
+              const queuedParts = pendingParts.get(part.messageID) ?? [];
+              queuedParts.push(part);
+              pendingParts.set(part.messageID, queuedParts);
               continue;
             }
             if (role !== "assistant") {
@@ -627,7 +629,8 @@ async function generateInlineAIMarkdown(
             if (assistantMessageId !== part.messageID) {
               continue;
             }
-            syncAssistantText((part as { text?: string }).text ?? "");
+            ingestAssistantPart(part);
+            syncAssistantParts();
             continue;
           }
 
@@ -662,6 +665,7 @@ async function generateInlineAIMarkdown(
           });
           const msgParts =
             ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
+          assistantParts.splice(0, assistantParts.length, ...msgParts);
           let changed = false;
           for (const part of msgParts) {
             changed = updateSlashAIActivityFromPart(part, activities) || changed;
@@ -671,17 +675,15 @@ async function generateInlineAIMarkdown(
           }
           const fullText = extractTextFromParts(msgParts);
           if (fullText.trim()) {
-            rawText = fullText;
-            syncAssistantText(fullText);
+            rawText = extractInlineAIInsertTextFromParts(msgParts);
+            syncAssistantParts();
           }
         } catch {
           // Keep streamed text fallback.
         }
       }
 
-      const insertText =
-        prepareInlineAIInsertText(rawText) ||
-        (activities.size === 0 ? stripMarkdownFence(rawText).trim() : "");
+      const insertText = stripMarkdownFence(rawText).trim();
       if (!insertText) {
         throw new Error("AI did not return insertable Markdown");
       }
