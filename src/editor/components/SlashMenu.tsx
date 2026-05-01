@@ -55,6 +55,30 @@ const MENU_MAX_HEIGHT = 320;
 const AI_PANEL_WIDTH = 360;
 const AI_PANEL_MAX_HEIGHT = 420;
 
+function clampEditorScrollTop(view: EditorView, scrollTop: number) {
+  const scroller = view.scrollDOM;
+  const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+  return Math.min(Math.max(0, scrollTop), maxScrollTop);
+}
+
+function restoreEditorScrollTop(view: EditorView, scrollTop: number) {
+  const restore = () => {
+    if (!view.dom.isConnected) return;
+    view.scrollDOM.scrollTop = clampEditorScrollTop(view, scrollTop);
+  };
+  restore();
+  window.requestAnimationFrame(restore);
+}
+
+function dispatchInlinePreviewPreservingScroll(
+  view: EditorView,
+  transaction: Parameters<EditorView["dispatch"]>[0],
+) {
+  const scrollTop = view.scrollDOM.scrollTop;
+  view.dispatch(transaction);
+  restoreEditorScrollTop(view, scrollTop);
+}
+
 type AIPanelStatus = "prompt" | "running" | "preview" | "error";
 type AIPanelStageStatus = "pending" | SlashAIProgress["status"];
 
@@ -349,7 +373,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
       if (fileState.tabs[fileState.activeTabIndex]?.id !== taskTabId) {
         return;
       }
-      view.dispatch({ effects: showSlashAIInlinePreview.of(task.preview) });
+      // Preview updates are layout-only. Preserve the user's viewport while the
+      // streamed widget changes height so scrolling away is not pulled back.
+      dispatchInlinePreviewPreservingScroll(view, {
+        effects: showSlashAIInlinePreview.of(task.preview),
+      });
     };
     setAiResult(null);
     setAiPreviewId(previewId);
