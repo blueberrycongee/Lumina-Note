@@ -157,22 +157,6 @@ export default {
         aiChat: "AI チャット",
         aiChatDesc: "AI アシスタントのチャットを開く",
         aiChatPrompt: "ここに何を書きたいか AI に伝えてください",
-        aiContinue: "AI 続きを書く",
-        aiContinueDesc: "AI で続きを書く",
-        aiContinuePrompt:
-          "「{name}」の現在の内容をもとに、現在の挿入位置から自然に続きを書いてください。ここに挿入する本文だけを出力し、今後の方向性は提案しないでください。",
-        aiRewrite: "AI で現在ブロックを書き直す",
-        aiRewriteDesc: "意味を保って現在ブロックを改善",
-        aiRewritePrompt:
-          "現在のブロックを、意味とトーンを保ったまま、より明確で読みやすく書き直してください。",
-        aiExpand: "AI で現在ブロックを拡張",
-        aiExpandDesc: "現在ブロックに詳細を補足",
-        aiExpandPrompt:
-          "現在のブロックを、文体を保ちながら有用な詳細と文脈を補って拡張してください。",
-        aiSummarize: "AI で現在ブロックを要約",
-        aiSummarizeDesc: "現在ブロックを要点で要約",
-        aiSummarizePrompt:
-          "現在のブロックを、Markdown の箇条書きで簡潔な要点に要約してください。",
         heading1: "見出し 1",
         heading1Desc: "大見出し",
         heading2: "見出し 2",

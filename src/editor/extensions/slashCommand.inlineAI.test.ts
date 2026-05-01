@@ -29,12 +29,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
         inlineAI: {
           emptyTarget: "No target",
         },
-        commands: {
-          aiContinuePrompt: "Continue from {name}.",
-          aiRewritePrompt: "Rewrite this block.",
-          aiExpandPrompt: "Expand this block.",
-          aiSummarizePrompt: "Summarize this block.",
-        },
+        commands: {},
       },
     },
     ai: {
@@ -460,28 +455,6 @@ describe("slash inline AI", () => {
     expect(result?.text.match(/好一个双谜题！让我来拆解：/g)).toHaveLength(1);
     expect(result?.text).toContain("第一个：百香果");
     expect(textEvents.at(-1)?.match(/好一个双谜题！让我来拆解：/g)).toHaveLength(1);
-    cleanup();
-  });
-
-  it("uses an existing selection as the target for block AI actions", async () => {
-    const doc = "First sentence\nSecond /ai";
-    const slashFrom = doc.indexOf("/ai");
-    const { view, cleanup } = createView(doc, { anchor: 0, head: "First sentence".length });
-
-    const result = await runSlashAIAction(
-      view,
-      slashFrom,
-      slashFrom + 3,
-      "rewrite-block",
-      "make it sharper",
-    );
-
-    expect(result).toEqual({
-      text: "Final Markdown to insert",
-      from: 0,
-      to: "First sentence".length,
-    });
-    expect(view.state.doc.toString()).toBe("First sentence\nSecond ");
     cleanup();
   });
 

@@ -28,10 +28,6 @@ export interface SlashCommand {
   label: string;
   icon:
     | "aiChat"
-    | "aiContinue"
-    | "aiRewrite"
-    | "aiExpand"
-    | "aiSummarize"
     | "heading1"
     | "heading2"
     | "heading3"
@@ -51,12 +47,7 @@ export interface SlashCommand {
   action: (view: EditorView, from: number, to: number) => void;
 }
 
-export type SlashAIAction =
-  | "chat-insert"
-  | "continue"
-  | "rewrite-block"
-  | "expand-block"
-  | "summarize-block";
+export type SlashAIAction = "chat-insert";
 
 export type SlashAIStageId =
   | "understanding"
@@ -137,14 +128,6 @@ export function getSlashAIActionForCommandId(commandId: string): SlashAIAction |
   switch (commandId) {
     case "ai-chat":
       return "chat-insert";
-    case "ai-continue":
-      return "continue";
-    case "ai-rewrite-block":
-      return "rewrite-block";
-    case "ai-expand-block":
-      return "expand-block";
-    case "ai-summarize-block":
-      return "summarize-block";
     default:
       return null;
   }
@@ -359,33 +342,6 @@ function buildInlineContext(view: EditorView, insertPos: number): string {
   ]
     .filter(Boolean)
     .join("\n");
-}
-
-function resolveTargetRange(view: EditorView, pivotPos: number): { from: number; to: number } {
-  const hasText = (from: number, to: number) =>
-    view.state.doc.sliceString(from, to).trim().length > 0;
-  const sel = view.state.selection.main;
-  if (sel.from !== sel.to) {
-    return { from: sel.from, to: sel.to };
-  }
-  const safePos = clampPos(view, pivotPos);
-  const block = getBlockAtPos(view.state, safePos);
-  if (block && block.to > block.from && hasText(block.from, block.to)) {
-    return { from: block.from, to: block.to };
-  }
-  const line = view.state.doc.lineAt(safePos);
-  if (line.from > 0) {
-    const prevPos = line.from - 1;
-    const prevBlock = getBlockAtPos(view.state, prevPos);
-    if (prevBlock && prevBlock.to > prevBlock.from && hasText(prevBlock.from, prevBlock.to)) {
-      return { from: prevBlock.from, to: prevBlock.to };
-    }
-    const prevLine = view.state.doc.lineAt(prevPos);
-    if (hasText(prevLine.from, prevLine.to)) {
-      return { from: prevLine.from, to: prevLine.to };
-    }
-  }
-  return { from: line.from, to: line.to };
 }
 
 async function generateInlineAIMarkdown(
@@ -735,144 +691,24 @@ export async function runSlashAIAction(
   view: EditorView,
   from: number,
   to: number,
-  action: SlashAIAction,
+  _action: SlashAIAction,
   instruction?: string,
   callbacks?: SlashAIGenerationCallbacks,
 ): Promise<SlashAIResult | null> {
   const t = getCurrentTranslations();
-  const labels = t.editor?.slashMenu?.commands;
-  const inlineAI = t.editor?.slashMenu?.inlineAI;
   const safeFrom = clampPos(view, from);
   const safeTo = clampPos(view, to);
-  const originalSelection = view.state.selection.main;
-  const originalSelectionRange =
-    originalSelection.from !== originalSelection.to
-      ? { from: originalSelection.from, to: originalSelection.to }
-      : null;
 
   const removeSlashTransaction = view.state.update({
     changes: { from: safeFrom, to: safeTo, insert: "" },
     selection: { anchor: safeFrom },
   });
-  const selectedRange = originalSelectionRange
-    ? {
-        from: removeSlashTransaction.changes.mapPos(originalSelectionRange.from),
-        to: removeSlashTransaction.changes.mapPos(originalSelectionRange.to),
-      }
-    : null;
   view.dispatch(removeSlashTransaction);
 
-  const notePath = useFileStore.getState().currentFile || undefined;
-  const noteName =
-    notePath?.split(/[/\\]/).pop()?.replace(/\.md$/i, "") || t.common.untitled;
-  const targetRange =
-    selectedRange &&
-    selectedRange.from !== selectedRange.to &&
-    view.state.doc.sliceString(selectedRange.from, selectedRange.to).trim()
-      ? selectedRange
-      : resolveTargetRange(view, safeFrom);
-  const targetText = view.state.doc.sliceString(targetRange.from, targetRange.to).trim();
-
-  if (action === "chat-insert") {
-    const req = instruction?.trim();
-    if (!req) return null;
-    const text = await generateInlineAIMarkdown(view, req, t, safeFrom, callbacks);
-    return text ? { text, from: safeFrom, to: safeFrom } : null;
-  }
-
-  if (action === "continue") {
-    const continuePromptTemplate =
-      labels?.aiContinuePrompt ||
-      "Continue writing naturally from this point in the current note.";
-    const continuePrompt = [
-      continuePromptTemplate.replace("{name}", noteName),
-      instruction?.trim() ? "" : null,
-      instruction?.trim() ? "[User guidance]" : null,
-      instruction?.trim() || null,
-    ].filter(Boolean).join("\n");
-    const text = await generateInlineAIMarkdown(
-      view,
-      continuePrompt,
-      t,
-      safeFrom,
-      callbacks,
-    );
-    return text ? { text, from: safeFrom, to: safeFrom } : null;
-  }
-
-  if (!targetText) {
-    throw new Error(inlineAI?.emptyTarget || t.common.empty);
-  }
-
-  if (action === "rewrite-block") {
-    const rewritePromptTemplate =
-      labels?.aiRewritePrompt ||
-      "Rewrite the current block for clarity while preserving meaning.";
-    const rewritePrompt = [
-      rewritePromptTemplate.replace("{name}", noteName),
-      instruction?.trim() ? "" : null,
-      instruction?.trim() ? "[User guidance]" : null,
-      instruction?.trim() || null,
-      "",
-      "[Block to rewrite]",
-      targetText,
-    ].filter((part): part is string => part !== null).join("\n");
-    const text = await generateInlineAIMarkdown(
-      view,
-      rewritePrompt,
-      t,
-      targetRange.from,
-      callbacks,
-    );
-    return text ? { text, from: targetRange.from, to: targetRange.to } : null;
-  }
-
-  if (action === "expand-block") {
-    const expandPromptTemplate =
-      labels?.aiExpandPrompt ||
-      "Expand the current block with more detail while keeping the style consistent.";
-    const expandPrompt = [
-      expandPromptTemplate.replace("{name}", noteName),
-      instruction?.trim() ? "" : null,
-      instruction?.trim() ? "[User guidance]" : null,
-      instruction?.trim() || null,
-      "",
-      "[Block to expand]",
-      targetText,
-    ].filter((part): part is string => part !== null).join("\n");
-    const text = await generateInlineAIMarkdown(
-      view,
-      expandPrompt,
-      t,
-      targetRange.from,
-      callbacks,
-    );
-    return text ? { text, from: targetRange.from, to: targetRange.to } : null;
-  }
-
-  const summarizePromptTemplate =
-    labels?.aiSummarizePrompt ||
-    "Summarize the current block into concise bullet points.";
-  const summaryInstruction = [
-    summarizePromptTemplate.replace("{name}", noteName),
-    instruction?.trim() ? "" : null,
-    instruction?.trim() ? "[User guidance]" : null,
-    instruction?.trim() || null,
-    "",
-    "[Block to summarize]",
-    targetText,
-  ].filter((part): part is string => part !== null).join("\n");
-  const summary = await generateInlineAIMarkdown(
-    view,
-    summaryInstruction,
-    t,
-    targetRange.to,
-    callbacks,
-  );
-  if (!summary) return null;
-  const prefix = targetRange.to > 0 ? "\n\n" : "";
-  const inserted = `${prefix}${summary}`;
-  return { text: inserted, from: targetRange.to, to: targetRange.to };
+  const req = instruction?.trim();
+  if (!req) return null;
+  const text = await generateInlineAIMarkdown(view, req, t, safeFrom, callbacks);
+  return text ? { text, from: safeFrom, to: safeFrom } : null;
 }
 
 // ============ 命令注册 ============
@@ -932,46 +768,6 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     label: labels?.aiChat || "AI Chat",
     icon: "aiChat",
     description: labels?.aiChatDesc || "Open AI assistant chat",
-    category: "ai",
-    action: () => {
-      // SlashMenu handles this command with an inline input field.
-    },
-  },
-  {
-    id: "ai-continue",
-    label: labels?.aiContinue || "AI Continue",
-    icon: "aiContinue",
-    description: labels?.aiContinueDesc || "Continue writing with AI",
-    category: "ai",
-    action: () => {
-      // SlashMenu handles this command with an inline input field.
-    },
-  },
-  {
-    id: "ai-rewrite-block",
-    label: labels?.aiRewrite || "AI Rewrite Block",
-    icon: "aiRewrite",
-    description: labels?.aiRewriteDesc || "Rewrite current block in place",
-    category: "ai",
-    action: () => {
-      // SlashMenu handles this command with an inline input field.
-    },
-  },
-  {
-    id: "ai-expand-block",
-    label: labels?.aiExpand || "AI Expand Block",
-    icon: "aiExpand",
-    description: labels?.aiExpandDesc || "Expand current block",
-    category: "ai",
-    action: () => {
-      // SlashMenu handles this command with an inline input field.
-    },
-  },
-  {
-    id: "ai-summarize-block",
-    label: labels?.aiSummarize || "AI Summarize Block",
-    icon: "aiSummarize",
-    description: labels?.aiSummarizeDesc || "Summarize current block",
     category: "ai",
     action: () => {
       // SlashMenu handles this command with an inline input field.

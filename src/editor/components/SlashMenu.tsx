@@ -8,13 +8,9 @@ import { EditorView } from "@codemirror/view";
 import { useShallow } from "zustand/react/shallow";
 import {
   Check,
-  FileText,
-  ListPlus,
   Loader2,
-  PenLine,
   RotateCcw,
   Sparkles,
-  WandSparkles,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -102,14 +98,6 @@ function SlashCommandIcon({ command }: { command: SlashCommand }) {
   switch (command.icon) {
     case "aiChat":
       return <Sparkles className={className} aria-hidden="true" />;
-    case "aiContinue":
-      return <WandSparkles className={className} aria-hidden="true" />;
-    case "aiRewrite":
-      return <PenLine className={className} aria-hidden="true" />;
-    case "aiExpand":
-      return <ListPlus className={className} aria-hidden="true" />;
-    case "aiSummarize":
-      return <FileText className={className} aria-hidden="true" />;
     default: {
       const blockIcon = slashBlockIconMap[command.icon];
       return blockIcon ? <BlockIcon name={blockIcon} className={className} /> : null;
