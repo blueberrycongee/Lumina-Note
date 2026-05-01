@@ -132,7 +132,6 @@ async function generateInlineAIMarkdown(
   request: string,
   t: Translations,
   insertPos: number,
-  onUpdate?: (text: string) => void,
 ): Promise<string | null> {
   const genericErrorMessage =
     (t.ai as { errors?: { sendGeneric?: string } })?.errors?.sendGeneric ||
@@ -194,10 +193,19 @@ async function generateInlineAIMarkdown(
 
       let promptAccepted = false;
       let assistantMessageId: string | null = null;
-      let streamingText = "";
+      let latestTextPart = "";
       let sawDelta = false;
+      const messageRoles = new Map<string, string>();
+      const pendingTextDeltas = new Map<string, string>();
       const startedAt = Date.now();
       const timeoutMs = 120_000;
+
+      const acceptAssistantMessageId = (messageId: string) => {
+        if (!assistantMessageId) {
+          assistantMessageId = messageId;
+        }
+        return assistantMessageId === messageId;
+      };
 
       const promptReq = client.session
         .promptAsync({
@@ -229,8 +237,14 @@ async function generateInlineAIMarkdown(
           const info = props.info as
             | { id?: string; role?: string; sessionID?: string }
             | undefined;
-          if (info?.sessionID === sessionId && info.role === "assistant" && info.id) {
-            assistantMessageId = info.id;
+          if (info?.sessionID === sessionId && info.id && info.role) {
+            messageRoles.set(info.id, info.role);
+            if (info.role === "assistant") {
+              acceptAssistantMessageId(info.id);
+              pendingTextDeltas.delete(info.id);
+            } else {
+              pendingTextDeltas.delete(info.id);
+            }
           }
           continue;
         }
@@ -242,15 +256,20 @@ async function generateInlineAIMarkdown(
           if (!messageId || field !== "text" || !delta) {
             continue;
           }
-          if (!assistantMessageId) {
-            assistantMessageId = messageId;
-          }
-          if (assistantMessageId !== messageId) {
+          const role = messageRoles.get(messageId);
+          if (!role) {
+            pendingTextDeltas.set(
+              messageId,
+              `${pendingTextDeltas.get(messageId) ?? ""}${delta}`,
+            );
             continue;
           }
-          sawDelta = true;
-          streamingText += delta;
-          onUpdate?.(streamingText);
+          if (role !== "assistant") {
+            continue;
+          }
+          if (acceptAssistantMessageId(messageId)) {
+            sawDelta = true;
+          }
           continue;
         }
 
@@ -261,14 +280,17 @@ async function generateInlineAIMarkdown(
           if (!part || part.type !== "text" || !part.messageID) {
             continue;
           }
+          const role = messageRoles.get(part.messageID);
+          if (role !== "assistant") {
+            continue;
+          }
           if (!assistantMessageId) {
             assistantMessageId = part.messageID;
           }
           if (assistantMessageId !== part.messageID) {
             continue;
           }
-          streamingText = part.text ?? "";
-          onUpdate?.(streamingText);
+          latestTextPart = part.text ?? "";
           continue;
         }
 
@@ -289,7 +311,7 @@ async function generateInlineAIMarkdown(
       streamController.abort();
       await promptReq;
 
-      let rawText = streamingText;
+      let rawText = latestTextPart;
       if (assistantMessageId) {
         try {
           const msg = await client.session.message({
@@ -312,7 +334,6 @@ async function generateInlineAIMarkdown(
       if (!insertText) {
         throw new Error("AI returned empty content");
       }
-      onUpdate?.(insertText);
       return insertText;
     } finally {
       await client.session.delete({
@@ -355,7 +376,7 @@ async function runInlineAIMarkdownInsert(
     });
     inserted = next;
   };
-  const insertText = await generateInlineAIMarkdown(view, request, t, safePos, applyText);
+  const insertText = await generateInlineAIMarkdown(view, request, t, safePos);
   if (!insertText) return;
   if (inserted !== insertText) {
     applyText(insertText);
