@@ -585,9 +585,9 @@ export function SlashMenu({ view }: SlashMenuProps) {
         <div className="max-h-[inherit] overflow-y-auto p-2">
           <div className="flex items-center justify-between gap-3 px-1.5 pb-2">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted/45 text-muted-foreground">
                 {aiSubmitting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  <Loader2 className="h-3.5 w-3.5" aria-hidden="true" />
                 ) : (
                   <Sparkles className="h-4 w-4" aria-hidden="true" />
                 )}
@@ -598,7 +598,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
             </div>
             <button
               type="button"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/70 hover:text-foreground focus-visible:outline-none"
               onClick={closeMenu}
               aria-label={t.common.close}
             >
@@ -606,8 +606,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
             </button>
           </div>
 
-          <div className="rounded-lg border border-border/70 bg-background transition-colors focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/10">
-            <div className="px-2.5 pt-2.5">
+          <div className="rounded-lg bg-muted/20">
+            <div className="px-3 pt-3">
               <textarea
                 ref={aiPromptRef}
                 value={aiPromptText}
@@ -632,15 +632,15 @@ export function SlashMenu({ view }: SlashMenuProps) {
                 placeholder={aiPromptAction === "chat-insert"
                   ? t.editor.slashMenu.commands.aiChatPrompt
                   : inlineAI.optionalGuidance}
-                className="max-h-32 min-h-20 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/55 disabled:opacity-70"
+                className="max-h-32 min-h-24 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/55 focus:outline-none focus-visible:outline-none disabled:opacity-70"
               />
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-border/50 bg-muted/10 px-2 py-2">
+            <div className="flex items-center justify-end gap-2 px-2.5 pb-2.5 pt-1">
               <div className="flex items-center gap-2">
                 {(aiStatus === "preview" || aiStatus === "error") && (
                   <button
                     type="button"
-                    className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-accent/70 hover:text-foreground disabled:opacity-60"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground hover:bg-accent/70 hover:text-foreground focus-visible:outline-none disabled:opacity-60"
                     disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
                     onClick={() => void startAIGeneration()}
                   >
@@ -651,7 +651,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
                 {aiStatus === "preview" ? (
                   <button
                     type="button"
-                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-60"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground focus-visible:outline-none disabled:opacity-60"
                     disabled={!aiResult}
                     onClick={acceptAIResult}
                   >
@@ -661,12 +661,12 @@ export function SlashMenu({ view }: SlashMenuProps) {
                 ) : (
                   <button
                     type="button"
-                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-60"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground focus-visible:outline-none disabled:opacity-60"
                     disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
                     onClick={() => void startAIGeneration()}
                   >
                     {aiSubmitting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                      <Loader2 className="h-3.5 w-3.5" aria-hidden="true" />
                     ) : (
                       <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                     )}
