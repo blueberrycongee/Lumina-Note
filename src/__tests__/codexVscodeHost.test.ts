@@ -387,6 +387,16 @@ exports.activate = async function activate(context) {
         }),
       ]),
     );
+
+    const diff = await fetch(`${origin}/debug/diff`).then((r) => r.json());
+    expect(diff.requests).toEqual([
+      expect.objectContaining({
+        id: 1,
+        title: "fixture diff",
+        left: expect.stringContaining("README.md"),
+        right: expect.stringContaining("README.md"),
+      }),
+    ]);
   });
 
   it("returns 404 for unknown views", async () => {

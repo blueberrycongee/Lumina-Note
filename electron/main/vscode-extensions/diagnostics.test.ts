@@ -18,8 +18,8 @@ describe('vscode extension host capability diagnostics', () => {
   it('reports missing Codex host features explicitly', () => {
     const diagnostic = diagnoseHostCapabilities(profile('openai.chatgpt'))
 
-    expect(diagnostic.canRunWithoutMissingCapabilities).toBe(false)
-    expect(diagnostic.missingCapabilities).toEqual(['diff-viewer'])
+    expect(diagnostic.canRunWithoutMissingCapabilities).toBe(true)
+    expect(diagnostic.missingCapabilities).toEqual([])
     expect(diagnostic.implementedCapabilities).toContain('webview-view')
   })
 
@@ -27,10 +27,7 @@ describe('vscode extension host capability diagnostics', () => {
     const diagnostic = diagnoseHostCapabilities(profile('anthropic.claude-code'))
 
     expect(diagnostic.canRunWithoutMissingCapabilities).toBe(false)
-    expect(diagnostic.missingCapabilities).toEqual([
-      'diff-viewer',
-      'ide-bridge',
-    ])
+    expect(diagnostic.missingCapabilities).toEqual(['ide-bridge'])
   })
 
   it('passes when the caller supplies all required capabilities', () => {

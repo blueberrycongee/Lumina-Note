@@ -92,7 +92,7 @@ describe('vscode extension handlers', () => {
           active: expect.objectContaining({ version: '6.1.0' }),
           compatibility: expect.objectContaining({ status: 'preview' }),
           hostCapabilities: expect.objectContaining({
-            missingCapabilities: expect.arrayContaining(['diff-viewer']),
+            missingCapabilities: [],
           }),
         }),
         expect.objectContaining({
@@ -145,7 +145,7 @@ exports.activate = async function activate() {
     expect(result).toMatchObject({
       remote: { extensionId: 'openai.chatgpt', version: '6.1.0' },
       smoke: { ok: true },
-      outcome: { decision: 'blocked' },
+      outcome: { decision: 'pending-manual-opt-in' },
     })
     const state = await handlers.vscode_extensions_get_state({})
     expect(JSON.stringify(state)).toContain('6.1.0')
@@ -186,7 +186,7 @@ exports.activate = async function activate() {
         version: '6.1.0',
       },
       smoke: { ok: true },
-      outcome: { decision: 'blocked' },
+      outcome: { decision: 'pending-manual-opt-in' },
     })
   })
 })

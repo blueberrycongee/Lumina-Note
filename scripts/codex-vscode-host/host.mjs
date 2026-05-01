@@ -779,6 +779,8 @@ async function main() {
     workspacePath,
     theme: "dark",
     activeDocument: null, // { path, languageId, content, version }
+    diffRequests: [],
+    nextDiffRequestId: 1,
     runtimeIssues: [],
     nextRuntimeIssueId: 1,
     debugEvents: [],
@@ -859,6 +861,10 @@ async function main() {
 
       if (u.pathname === "/debug/traffic") {
         return json(res, 200, { events: state.debugEvents.map((event) => toSerializableDebugEvent(event)) });
+      }
+
+      if (u.pathname === "/debug/diff") {
+        return json(res, 200, { requests: state.diffRequests });
       }
 
       if (u.pathname === "/debug/traffic/reset" && req.method === "POST") {
@@ -1250,16 +1256,26 @@ function createVscodeApi(state, originForApi) {
 
   const handleBuiltInCommand = async (command, args) => {
     if (command === "vscode.diff") {
+      const request = {
+        id: state.nextDiffRequestId++,
+        left: args[0]?.toString?.() ?? String(args[0] ?? ""),
+        right: args[1]?.toString?.() ?? String(args[1] ?? ""),
+        title: typeof args[2] === "string" ? args[2] : "",
+        options: summarizeDebugValue(args[3] ?? null),
+        createdAt: Date.now(),
+      };
+      state.diffRequests = [request, ...state.diffRequests].slice(0, 20);
       recordDebugEvent(state, {
         category: "builtinCommand",
         summary: {
           command,
-          left: summarizeDebugValue(args[0]),
-          right: summarizeDebugValue(args[1]),
-          title: summarizeDebugValue(args[2]),
+          diffRequestId: request.id,
+          left: request.left,
+          right: request.right,
+          title: request.title,
         },
       });
-      return undefined;
+      return request;
     }
     return undefined;
   };

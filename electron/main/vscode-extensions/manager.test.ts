@@ -64,8 +64,22 @@ describe('VscodeExtensionManager', () => {
   })
 
   it('blocks installs when host capabilities do not satisfy the profile', () => {
+    const profile: VscodeExtensionCompatProfile = {
+      extensionId: 'openai.chatgpt',
+      channel: 'preview',
+      versionRange: '*',
+      hostApiVersion: 1,
+      entryViewTypes: ['chatgpt.sidebarView'],
+      requiredCapabilities: ['commands', 'ide-bridge'],
+      commandMappings: {},
+      cspSourceDirectives: {},
+      needsTerminal: false,
+      needsDiffViewer: false,
+      needsIdeBridge: true,
+      disabledFeatures: [],
+    }
     const store = new VscodeExtensionStore({ baseDir: tmpDir })
-    const manager = new VscodeExtensionManager(store)
+    const manager = new VscodeExtensionManager(store, { profiles: [profile] })
 
     const outcome = manager.registerCandidateInstall({
       packageJson: {
@@ -80,7 +94,7 @@ describe('VscodeExtensionManager', () => {
     })
 
     expect(outcome.decision).toBe('blocked')
-    expect(outcome.reason).toContain('diff-viewer')
+    expect(outcome.reason).toContain('ide-bridge')
     expect(store.getActive('openai.chatgpt')).toBeNull()
   })
 

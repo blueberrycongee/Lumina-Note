@@ -7,6 +7,7 @@ export const CURRENT_VSCODE_HOST_CAPABILITIES: ReadonlySet<VscodeHostCapability>
   new Set<VscodeHostCapability>([
     'commands',
     'diagnostics-read',
+    'diff-viewer',
     'env-open-external',
     'memento',
     'secret-storage',
