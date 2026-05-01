@@ -48,8 +48,8 @@ export async function installCompatProfilesFromIndex(options: {
 
 function normalizeCompatIndexUrl(input: string): string {
   const url = new URL(input)
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new Error('VS Code compatibility profile index URL must use http or https')
+  if (url.protocol !== 'https:') {
+    throw new Error('VS Code compatibility profile index URL must use https')
   }
   return url.toString()
 }

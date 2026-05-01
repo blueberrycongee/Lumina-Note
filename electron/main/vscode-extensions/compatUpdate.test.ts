@@ -91,6 +91,16 @@ describe('installCompatProfilesFromIndex', () => {
       }),
     ).rejects.toThrow(/unknown capability/)
   })
+
+  it('rejects non-HTTPS profile index URLs', async () => {
+    await expect(
+      installCompatProfilesFromIndex({
+        indexUrl: 'http://updates.example.com/index.json',
+        profilesRoot: tmpDir,
+        fetch: vi.fn(),
+      }),
+    ).rejects.toThrow(/must use https/)
+  })
 })
 
 function jsonResponse(body: unknown, status = 200) {
