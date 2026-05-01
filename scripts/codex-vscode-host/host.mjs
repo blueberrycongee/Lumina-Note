@@ -199,6 +199,37 @@ class WebviewView {
   }
 }
 
+class WebviewPanel {
+  active = true;
+  visible = true;
+  #disposeEmitter = new EventEmitter();
+  onDidDispose = this.#disposeEmitter.event;
+  #viewStateEmitter = new EventEmitter();
+  onDidChangeViewState = this.#viewStateEmitter.event;
+
+  constructor(viewType, title, webview, viewColumn = 1) {
+    this.viewType = viewType;
+    this.title = title;
+    this.webview = webview;
+    this.viewColumn = viewColumn;
+  }
+
+  reveal(viewColumn = this.viewColumn) {
+    this.active = true;
+    this.visible = true;
+    this.viewColumn = viewColumn;
+    this.#viewStateEmitter.fire({ webviewPanel: this });
+  }
+
+  dispose() {
+    this.active = false;
+    this.visible = false;
+    this.#disposeEmitter.fire();
+    this.#disposeEmitter.dispose();
+    this.#viewStateEmitter.dispose();
+  }
+}
+
 class OutputChannel {
   constructor(name) {
     this.name = name;
@@ -738,7 +769,11 @@ async function main() {
     quiet,
     viewProviders: new Map(), // viewType -> provider
     views: new Map(), // viewType -> { webview, view, queue }
+    panels: new Map(), // panelId -> { webview, panel, queue, token }
+    nextPanelId: 1,
     commands: new Map(),
+    terminals: new Map(),
+    nextTerminalId: 1,
     uriHandlers: [],
     config: new Map(),
     workspacePath,
@@ -812,7 +847,14 @@ async function main() {
       }
 
       if (u.pathname === "/debug/registered") {
-        return json(res, 200, { viewTypes: [...state.viewProviders.keys()] });
+        return json(res, 200, {
+          viewTypes: [...state.viewProviders.keys()],
+          panels: [...state.panels.entries()].map(([id, entry]) => ({
+            id,
+            viewType: entry.panel.viewType,
+            title: entry.panel.title,
+          })),
+        });
       }
 
       if (u.pathname === "/debug/traffic") {
@@ -837,7 +879,7 @@ async function main() {
         const body = await readJson(req);
         const viewType = body.viewType;
         const msg = body.message ?? { type: "debug" };
-        const entry = state.views.get(viewType);
+        const entry = getWebviewEntry(state, viewType);
         if (!entry) return json(res, 404, { ok: false, error: "unknown viewType" });
         await entry.webview.postMessage(msg);
         return json(res, 200, { ok: true });
@@ -914,12 +956,36 @@ async function main() {
         return res.end(html);
       }
 
+      if (u.pathname.startsWith("/panel/")) {
+        const panelId = decodeURIComponent(u.pathname.slice("/panel/".length));
+        const token = u.searchParams.get("token") ?? "";
+        const entry = state.panels.get(panelId);
+        if (!entry) {
+          res.statusCode = 404;
+          return res.end("unknown panel");
+        }
+        if (entry.token !== token) return json(res, 403, { ok: false, error: "bad token" });
+
+        const channel = `panel:${panelId}`;
+        const theme = u.searchParams.get("theme") || state.theme;
+        const raw = entry.webview.html;
+        const origin = `http://127.0.0.1:${server.address().port}`;
+        const withCsp = injectCspFontDataCompatibility(raw, origin);
+        const withApi = injectAcquireVsCodeApi(withCsp, { origin, viewType: channel, token });
+        const withRuntimeBridge = injectLuminaRuntimeBridge(withApi);
+        const withBase = injectBaseLayout(withRuntimeBridge);
+        const html = injectTheme(withBase, theme);
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        return res.end(html);
+      }
+
       if (u.pathname === "/vscode/message" && req.method === "POST") {
         const body = await readJson(req);
         const viewType = body.viewType;
         const token = body.token ?? "";
         const message = body.message;
-        const entry = state.views.get(viewType);
+        const entry = getWebviewEntry(state, viewType);
         if (!entry) return json(res, 404, { ok: false, error: "unknown viewType" });
         if (entry.token !== token) return json(res, 403, { ok: false, error: "bad token" });
         recordDebugEvent(state, {
@@ -945,7 +1011,7 @@ async function main() {
         const viewType = u.searchParams.get("viewType") ?? "";
         const token = u.searchParams.get("token") ?? "";
         const cursor = Number(u.searchParams.get("cursor") ?? "0");
-        const entry = state.views.get(viewType);
+        const entry = getWebviewEntry(state, viewType);
         if (!entry) return json(res, 404, { ok: false, error: "unknown viewType" });
         if (entry.token !== token) return json(res, 403, { ok: false, error: "bad token" });
         const { nextCursor, messages } = entry.queue.drain(cursor);
@@ -1014,6 +1080,14 @@ function createQueue() {
       return { nextCursor: maxId, messages: slice.map((x) => x.msg) };
     },
   };
+}
+
+function getWebviewEntry(state, channel) {
+  if (state.views.has(channel)) return state.views.get(channel);
+  if (typeof channel === "string" && channel.startsWith("panel:")) {
+    return state.panels.get(channel.slice("panel:".length)) ?? null;
+  }
+  return null;
 }
 
 function createVscodeApi(state, originForApi) {
@@ -1135,6 +1209,61 @@ function createVscodeApi(state, originForApi) {
     return [workspaceFolderFromPath(state.workspacePath, 0)];
   };
 
+  const openTextDocument = async (uriOrPath) => {
+    const uri = typeof uriOrPath === "string" ? Uri.file(uriOrPath) : uriOrPath;
+    const active = getActiveTextDocument();
+    if (active && uri?.fsPath && active.uri.fsPath === uri.fsPath) return active;
+
+    if (uri?.fsPath) {
+      const fs = await import("node:fs/promises");
+      const buf = await fs.readFile(uri.fsPath, "utf8").catch(() => "");
+      return makeTextDocument({ path: uri.fsPath, languageId: "plaintext", content: String(buf), version: 1 });
+    }
+    return makeTextDocument({ path: String(uriOrPath ?? "untitled"), languageId: "plaintext", content: "", version: 1 });
+  };
+
+  const createHostedWebview = ({ viewType, token }) => {
+    const asWebviewUri = (uri) => {
+      if (uri?.scheme === "file" && uri.fsPath) {
+        const rel = path.relative(state.extensionPath, uri.fsPath).replaceAll("\\", "/");
+        return Uri.parse(`${originForApi()}/ext/${encodeURIComponent(rel)}`);
+      }
+      return Uri.parse(`${originForApi()}/ext/`);
+    };
+
+    const queue = createQueue();
+    const webview = new Webview({
+      postMessageSink: (msg) => {
+        recordDebugEvent(state, {
+          category: "webviewMessage",
+          direction: "host->webview",
+          viewType,
+          summary: summarizeDebugValue(msg),
+        });
+        queue.push(msg);
+      },
+      asWebviewUri,
+      cspSource: originForApi(),
+    });
+    return { webview, queue };
+  };
+
+  const handleBuiltInCommand = async (command, args) => {
+    if (command === "vscode.diff") {
+      recordDebugEvent(state, {
+        category: "builtinCommand",
+        summary: {
+          command,
+          left: summarizeDebugValue(args[0]),
+          right: summarizeDebugValue(args[1]),
+          title: summarizeDebugValue(args[2]),
+        },
+      });
+      return undefined;
+    }
+    return undefined;
+  };
+
   return {
     Uri,
     Disposable,
@@ -1170,16 +1299,17 @@ function createVscodeApi(state, originForApi) {
       },
       async executeCommand(command, ...args) {
         const cb = state.commands.get(command);
+        const builtIn = command === "vscode.diff";
         recordDebugEvent(state, {
           category: "command",
           summary: {
             command,
-            handled: Boolean(cb),
+            handled: Boolean(cb) || builtIn,
             args: summarizeDebugValue(args),
           },
         });
-        if (!cb) return undefined;
-        const result = await cb(...args);
+        if (!cb && !builtIn) return undefined;
+        const result = cb ? await cb(...args) : await handleBuiltInCommand(command, args);
         recordDebugEvent(state, {
           category: "commandResult",
           summary: {
@@ -1258,18 +1388,7 @@ function createVscodeApi(state, originForApi) {
       get textDocuments() {
         return getTextDocuments();
       },
-      async openTextDocument(uriOrPath) {
-        const uri = typeof uriOrPath === "string" ? Uri.file(uriOrPath) : uriOrPath;
-        const active = getActiveTextDocument();
-        if (active && uri?.fsPath && active.uri.fsPath === uri.fsPath) return active;
-
-        if (uri?.fsPath) {
-          const fs = await import("node:fs/promises");
-          const buf = await fs.readFile(uri.fsPath, "utf8").catch(() => "");
-          return makeTextDocument({ path: uri.fsPath, languageId: "plaintext", content: String(buf), version: 1 });
-        }
-        return makeTextDocument({ path: String(uriOrPath ?? "untitled"), languageId: "plaintext", content: "", version: 1 });
-      },
+      openTextDocument,
       asRelativePath(p) {
         const root = state.workspacePath ? path.resolve(state.workspacePath) : null;
         const input = typeof p === "string" ? p : p?.fsPath ?? p?.path ?? "";
@@ -1331,6 +1450,12 @@ function createVscodeApi(state, originForApi) {
         const e = getActiveTextEditor();
         return e ? [e] : [];
       },
+      get activeTerminal() {
+        return state.activeTerminal;
+      },
+      get terminals() {
+        return [...state.terminals.values()];
+      },
       registerWebviewViewProvider(viewType, provider) {
         state.viewProviders.set(viewType, provider);
         recordDebugEvent(state, {
@@ -1339,8 +1464,96 @@ function createVscodeApi(state, originForApi) {
         });
         return new Disposable(() => state.viewProviders.delete(viewType));
       },
+      createWebviewPanel(viewType, title, showOptions, options = {}) {
+        const id = String(state.nextPanelId++);
+        const token = `panel-${id}`;
+        const channel = `panel:${id}`;
+        const { webview, queue } = createHostedWebview({ viewType: channel, token });
+        webview.options = options;
+        const viewColumn =
+          typeof showOptions === "number"
+            ? showOptions
+            : typeof showOptions?.viewColumn === "number"
+              ? showOptions.viewColumn
+              : 1;
+        const panel = new WebviewPanel(viewType, title, webview, viewColumn);
+        const entry = { webview, panel, queue, token };
+        state.panels.set(id, entry);
+        panel.onDidDispose(() => {
+          state.panels.delete(id);
+        });
+        recordDebugEvent(state, {
+          category: "webviewPanel",
+          summary: {
+            event: "create",
+            id,
+            viewType,
+            title,
+            url: `${originForApi()}/panel/${encodeURIComponent(id)}?token=${encodeURIComponent(token)}`,
+          },
+        });
+        return panel;
+      },
       createOutputChannel(name) {
         return new OutputChannel(name);
+      },
+      createTerminal(nameOrOptions, shellPath, shellArgs) {
+        const id = String(state.nextTerminalId++);
+        const name =
+          typeof nameOrOptions === "string"
+            ? nameOrOptions
+            : nameOrOptions?.name || `Terminal ${id}`;
+        const terminal = {
+          name,
+          processId: Promise.resolve(0),
+          creationOptions: typeof nameOrOptions === "object" ? nameOrOptions : { shellPath, shellArgs },
+          exitStatus: undefined,
+          sendText(text, addNewLine = true) {
+            recordDebugEvent(state, {
+              category: "terminal",
+              summary: {
+                event: "sendText",
+                id,
+                name,
+                text: truncateDebugString(text, 240),
+                addNewLine,
+              },
+            });
+          },
+          show() {
+            state.activeTerminal = terminal;
+            onDidChangeActiveTerminalEmitter.fire(terminal);
+            recordDebugEvent(state, {
+              category: "terminal",
+              summary: { event: "show", id, name },
+            });
+          },
+          hide() {
+            recordDebugEvent(state, {
+              category: "terminal",
+              summary: { event: "hide", id, name },
+            });
+          },
+          dispose() {
+            state.terminals.delete(id);
+            onDidCloseTerminalEmitter.fire(terminal);
+            if (state.activeTerminal === terminal) {
+              state.activeTerminal = undefined;
+              onDidChangeActiveTerminalEmitter.fire(undefined);
+            }
+            recordDebugEvent(state, {
+              category: "terminal",
+              summary: { event: "dispose", id, name },
+            });
+          },
+        };
+        state.terminals.set(id, terminal);
+        onDidOpenTerminalEmitter.fire(terminal);
+        recordDebugEvent(state, {
+          category: "terminal",
+          summary: { event: "create", id, name },
+        });
+        return terminal;
       },
       registerCustomEditorProvider() {
         return new Disposable(() => {});
@@ -1354,6 +1567,33 @@ function createVscodeApi(state, originForApi) {
       },
       setStatusBarMessage() {
         return new Disposable(() => {});
+      },
+      async showTextDocument(documentOrUri, columnOrOptions) {
+        const document =
+          documentOrUri?.getText && documentOrUri?.uri
+            ? documentOrUri
+            : await openTextDocument(documentOrUri);
+        const editor = {
+          document,
+          selection: undefined,
+          selections: [],
+          viewColumn:
+            typeof columnOrOptions === "number"
+              ? columnOrOptions
+              : typeof columnOrOptions?.viewColumn === "number"
+                ? columnOrOptions.viewColumn
+                : 1,
+          revealRange() {},
+          edit: async () => false,
+        };
+        recordDebugEvent(state, {
+          category: "editor",
+          summary: {
+            event: "showTextDocument",
+            fileName: document?.fileName ?? document?.uri?.toString?.() ?? null,
+          },
+        });
+        return editor;
       },
       showInformationMessage(message) {
         logger.info("info", message);

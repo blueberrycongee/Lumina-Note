@@ -30,8 +30,6 @@ describe('vscode extension host capability diagnostics', () => {
     expect(diagnostic.missingCapabilities).toEqual([
       'diff-viewer',
       'ide-bridge',
-      'terminal',
-      'webview-panel',
     ])
   })
 

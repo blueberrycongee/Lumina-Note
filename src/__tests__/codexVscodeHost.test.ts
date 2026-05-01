@@ -45,6 +45,17 @@ function startHost(extensionPath: string, workspacePath?: string) {
   return { proc, ready, getStderr: () => stderr };
 }
 
+async function eventually<T>(fn: () => Promise<T>, predicate: (value: T) => boolean): Promise<T> {
+  const deadline = Date.now() + 5_000;
+  let last: T;
+  while (Date.now() < deadline) {
+    last = await fn();
+    if (predicate(last)) return last;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return await fn();
+}
+
 let running: Array<ReturnType<typeof startHost>> = [];
 afterEach(async () => {
   for (const h of running) h.proc.kill();
@@ -313,6 +324,69 @@ exports.activate = async function activate() {
     const health = await fetch(`${origin}/health`).then((rr) => rr.json());
     expect(health.activeDocument?.path).toBe(docPath);
     expect(health.activeDocument?.languageId).toBe("markdown");
+  });
+
+  it("supports panel, terminal, showTextDocument, and vscode.diff compatibility APIs", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-api-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "api-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(path.join(extensionPath, "README.md"), "# API fixture\n", "utf8");
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate(context) {
+  const vscode = require("vscode");
+  const panel = vscode.window.createWebviewPanel("api.panel", "API Panel", vscode.ViewColumn.One, { enableScripts: true });
+  panel.webview.html = "<!doctype html><html><head></head><body>Panel Body</body></html>";
+  const terminal = vscode.window.createTerminal("Claude Code");
+  terminal.sendText("claude --help", false);
+  terminal.show();
+  const doc = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(context.extensionUri, "README.md"));
+  await vscode.window.showTextDocument(doc);
+  await vscode.commands.executeCommand(
+    "vscode.diff",
+    vscode.Uri.joinPath(context.extensionUri, "README.md"),
+    vscode.Uri.joinPath(context.extensionUri, "README.md"),
+    "fixture diff"
+  );
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const registered = await eventually(
+      () => fetch(`${origin}/debug/registered`).then((r) => r.json()),
+      (value) => Array.isArray(value.panels) && value.panels.length === 1,
+    );
+    expect(registered.panels[0]).toMatchObject({ id: "1", viewType: "api.panel", title: "API Panel" });
+
+    const html = await fetch(`${origin}/panel/1?token=panel-1`).then((r) => r.text());
+    expect(html).toContain("Panel Body");
+    expect(html).toContain("/vscode/api.js");
+
+    const traffic = await fetch(`${origin}/debug/traffic`).then((r) => r.json());
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "terminal",
+          summary: expect.objectContaining({ event: "create", name: "Claude Code" }),
+        }),
+        expect.objectContaining({
+          category: "builtinCommand",
+          summary: expect.objectContaining({ command: "vscode.diff", title: "fixture diff" }),
+        }),
+        expect.objectContaining({
+          category: "editor",
+          summary: expect.objectContaining({ event: "showTextDocument" }),
+        }),
+      ]),
+    );
   });
 
   it("returns 404 for unknown views", async () => {

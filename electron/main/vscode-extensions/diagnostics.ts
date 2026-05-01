@@ -10,6 +10,8 @@ export const CURRENT_VSCODE_HOST_CAPABILITIES: ReadonlySet<VscodeHostCapability>
     'env-open-external',
     'memento',
     'secret-storage',
+    'terminal',
+    'webview-panel',
     'webview-view',
     'window-notifications',
     'workspace-documents',
