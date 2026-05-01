@@ -166,6 +166,12 @@ const FileType = {
   SymbolicLink: 64,
 };
 
+const ProgressLocation = {
+  SourceControl: 1,
+  Window: 10,
+  Notification: 15,
+};
+
 class Webview {
   html = "";
   options = {};
@@ -1420,6 +1426,7 @@ function createVscodeApi(state, originForApi) {
     CodeLens,
     DiagnosticCollection,
     FileType,
+    ProgressLocation,
     env: {
       remoteName: undefined,
       async openExternal(uri) {
@@ -1853,6 +1860,44 @@ function createVscodeApi(state, originForApi) {
       },
       setStatusBarMessage() {
         return new Disposable(() => {});
+      },
+      async withProgress(options, task) {
+        recordDebugEvent(state, {
+          category: "progress",
+          summary: {
+            event: "start",
+            location: options?.location ?? null,
+            title: options?.title ?? null,
+            cancellable: options?.cancellable === true,
+          },
+        });
+        const progress = {
+          report(value) {
+            recordDebugEvent(state, {
+              category: "progress",
+              summary: {
+                event: "report",
+                message: value?.message ?? null,
+                increment: value?.increment ?? null,
+              },
+            });
+          },
+        };
+        const token = {
+          isCancellationRequested: false,
+          onCancellationRequested: new EventEmitter().event,
+        };
+        try {
+          return await task(progress, token);
+        } finally {
+          recordDebugEvent(state, {
+            category: "progress",
+            summary: {
+              event: "end",
+              title: options?.title ?? null,
+            },
+          });
+        }
       },
       async showTextDocument(documentOrUri, columnOrOptions) {
         const document =

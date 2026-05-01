@@ -489,6 +489,61 @@ exports.activate = async function activate(context) {
     );
   });
 
+  it("supports window.withProgress compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-progress-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "progress-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const result = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: "Working", cancellable: true },
+    async (progress, token) => {
+      if (token.isCancellationRequested) throw new Error("unexpected cancellation");
+      progress.report({ message: "Halfway", increment: 50 });
+      return "done";
+    }
+  );
+  if (result !== "done") throw new Error("unexpected progress result");
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "progress" && event.summary?.event === "end",
+        ),
+    );
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "progress",
+          summary: expect.objectContaining({ event: "start", title: "Working" }),
+        }),
+        expect.objectContaining({
+          category: "progress",
+          summary: expect.objectContaining({ event: "report", message: "Halfway" }),
+        }),
+        expect.objectContaining({
+          category: "progress",
+          summary: expect.objectContaining({ event: "end", title: "Working" }),
+        }),
+      ]),
+    );
+  });
+
   it("supports minimal authentication provider and getSession compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-auth-ext-"));
     fs.writeFileSync(
