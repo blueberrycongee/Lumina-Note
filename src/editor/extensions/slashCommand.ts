@@ -80,7 +80,7 @@ export interface SlashAIProgress {
 
 export interface SlashAIActivity {
   id: string;
-  type: "reasoning" | "tool";
+  type: "reasoning" | "tool" | "message";
   title: string;
   detail?: string;
   result?: string;
@@ -164,6 +164,79 @@ function stripMarkdownFence(text: string): string {
   const fenced = text.match(/^```(?:[a-zA-Z0-9_-]+)?\n([\s\S]*?)\n```$/);
   if (fenced) return fenced[1].trim();
   return text;
+}
+
+const INLINE_AI_ARTIFACT_START = "<lumina-inline-insert>";
+const INLINE_AI_ARTIFACT_END = "</lumina-inline-insert>";
+
+function extractInlineAIArtifact(text: string): {
+  text: string;
+  hasArtifact: boolean;
+  complete: boolean;
+} {
+  const start = text.indexOf(INLINE_AI_ARTIFACT_START);
+  if (start === -1) {
+    return { text: "", hasArtifact: false, complete: false };
+  }
+  const contentStart = start + INLINE_AI_ARTIFACT_START.length;
+  const end = text.indexOf(INLINE_AI_ARTIFACT_END, contentStart);
+  const raw =
+    end === -1 ? text.slice(contentStart) : text.slice(contentStart, end);
+  return {
+    text: stripMarkdownFence(raw.replace(/^\r?\n/, "")).trim(),
+    hasArtifact: true,
+    complete: end !== -1,
+  };
+}
+
+function getInlineAINonArtifactText(text: string): string {
+  const start = text.indexOf(INLINE_AI_ARTIFACT_START);
+  if (start === -1) return text.trim();
+  const end = text.indexOf(
+    INLINE_AI_ARTIFACT_END,
+    start + INLINE_AI_ARTIFACT_START.length,
+  );
+  const before = text.slice(0, start);
+  const after = end === -1 ? "" : text.slice(end + INLINE_AI_ARTIFACT_END.length);
+  return `${before}\n${after}`.trim();
+}
+
+function prepareInlineAIInsertText(text: string): string {
+  const artifact = extractInlineAIArtifact(text);
+  if (!artifact.hasArtifact) return "";
+  return artifact.text;
+}
+
+function upsertSlashAIMessageActivity(
+  activities: Map<string, SlashAIActivity>,
+  text: string,
+) {
+  const detail = getInlineAINonArtifactText(text);
+  if (!detail) {
+    activities.delete("assistant-message");
+    return;
+  }
+  const existing = activities.get("assistant-message");
+  activities.set("assistant-message", {
+    id: "assistant-message",
+    type: "message",
+    title: "Message",
+    detail,
+    status: existing?.status ?? "running",
+    startedAt: existing?.startedAt ?? Date.now(),
+  });
+}
+
+function completeSlashAIActivities(activities: Map<string, SlashAIActivity>) {
+  const endedAt = Date.now();
+  for (const [id, activity] of activities) {
+    if (activity.status !== "running") continue;
+    activities.set(id, {
+      ...activity,
+      status: "done",
+      endedAt: activity.endedAt ?? endedAt,
+    });
+  }
 }
 
 function emitSlashAIProgress(
@@ -360,10 +433,13 @@ async function generateInlineAIMarkdown(
 
   const prompt = [
     "You are an inline Markdown writing assistant.",
-    "Generate only the new Markdown text that should be inserted at [INSERT_HERE].",
-    "Use the surrounding note as context only.",
+    "Your job is to produce new Markdown text that can be inserted at [INSERT_HERE].",
+    "Use the surrounding note as context. If the user explicitly asks about workspace files, images, or paths, use the available tools to inspect the workspace before producing the insertable Markdown.",
     "Do not repeat, summarize, rewrite, or return the whole note unless the user explicitly asks for that.",
-    "Return only the Markdown text to insert. Do not include explanations or code fences.",
+    "You may briefly describe work in normal assistant text while you inspect context or use tools, but that text is not insertable.",
+    `When you are ready to provide content for the note, wrap only the final insertable Markdown between ${INLINE_AI_ARTIFACT_START} and ${INLINE_AI_ARTIFACT_END}.`,
+    "Do not put progress narration, apologies, tool explanations, or code fences inside those tags.",
+    "If inserting workspace images, put only the final Markdown image references inside those tags.",
     currentFilePath ? `Current note path: ${currentFilePath}` : "",
     "",
     "[User request]",
@@ -434,6 +510,16 @@ async function generateInlineAIMarkdown(
         }
         return assistantMessageId === messageId;
       };
+      const syncAssistantText = (text: string) => {
+        latestTextPart = text;
+        streamingText = text;
+        const artifact = extractInlineAIArtifact(text);
+        if (artifact.hasArtifact) {
+          callbacks?.onText?.(artifact.text);
+        }
+        upsertSlashAIMessageActivity(activities, text);
+        emitSlashAIActivities(callbacks, activities);
+      };
 
       const promptReq = client.session
         .promptAsync({
@@ -473,10 +559,8 @@ async function generateInlineAIMarkdown(
                 acceptAssistantMessageId(info.id);
                 const pending = pendingTextDeltas.get(info.id);
                 if (pending) {
-                  streamingText = `${streamingText}${pending}`;
-                  latestTextPart = streamingText;
                   sawDelta = true;
-                  callbacks?.onText?.(streamingText);
+                  syncAssistantText(`${streamingText}${pending}`);
                 }
                 pendingTextDeltas.delete(info.id);
               } else {
@@ -518,10 +602,8 @@ async function generateInlineAIMarkdown(
               continue;
             }
             if (acceptAssistantMessageId(messageId)) {
-              streamingText = `${streamingText}${delta}`;
-              latestTextPart = streamingText;
               sawDelta = true;
-              callbacks?.onText?.(streamingText);
+              syncAssistantText(`${streamingText}${delta}`);
             }
             continue;
           }
@@ -545,9 +627,7 @@ async function generateInlineAIMarkdown(
             if (assistantMessageId !== part.messageID) {
               continue;
             }
-            latestTextPart = (part as { text?: string }).text ?? "";
-            streamingText = latestTextPart;
-            callbacks?.onText?.(streamingText);
+            syncAssistantText((part as { text?: string }).text ?? "");
             continue;
           }
 
@@ -592,17 +672,21 @@ async function generateInlineAIMarkdown(
           const fullText = extractTextFromParts(msgParts);
           if (fullText.trim()) {
             rawText = fullText;
-            callbacks?.onText?.(fullText);
+            syncAssistantText(fullText);
           }
         } catch {
           // Keep streamed text fallback.
         }
       }
 
-      const insertText = stripMarkdownFence(rawText).trim();
+      const insertText =
+        prepareInlineAIInsertText(rawText) ||
+        (activities.size === 0 ? stripMarkdownFence(rawText).trim() : "");
       if (!insertText) {
-        throw new Error("AI returned empty content");
+        throw new Error("AI did not return insertable Markdown");
       }
+      completeSlashAIActivities(activities);
+      emitSlashAIActivities(callbacks, activities);
       emitSlashAIProgress(callbacks, { stage: "generating", status: "done" });
       emitSlashAIProgress(callbacks, { stage: "ready", status: "done" });
       return insertText;

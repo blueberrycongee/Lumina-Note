@@ -193,6 +193,15 @@ async function* streamEvents() {
     },
   };
   yield {
+    type: "message.part.delta",
+    properties: {
+      sessionID: "session-1",
+      messageID: "assistant-1",
+      field: "text",
+      delta: "\n<lumina-inline-insert>\nStreaming Markdown draft",
+    },
+  };
+  yield {
     type: "session.idle",
     properties: {
       sessionID: "session-1",
@@ -207,7 +216,17 @@ describe("slash inline AI", () => {
     mocks.client.session.promptAsync.mockResolvedValue({});
     mocks.client.session.message.mockResolvedValue({
       data: {
-        parts: [{ type: "text", text: "Final Markdown to insert" }],
+        parts: [
+          {
+            type: "text",
+            text: [
+              "Let me check what context is available.",
+              "<lumina-inline-insert>",
+              "Final Markdown to insert",
+              "</lumina-inline-insert>",
+            ].join("\n"),
+          },
+        ],
       },
     });
     mocks.client.session.delete.mockResolvedValue({});
@@ -246,14 +265,20 @@ describe("slash inline AI", () => {
     expect(view.state.doc.toString()).not.toContain("PROMPT ECHO");
     expect(view.state.doc.toString()).not.toContain("PARTIAL STREAM");
     expect(view.state.doc.toString()).not.toContain("Final Markdown");
-    expect(textEvents).toContain("PARTIAL STREAM SHOULD NOT BE INSERTED");
+    expect(textEvents).not.toContain("PARTIAL STREAM SHOULD NOT BE INSERTED");
+    expect(textEvents).toContain("Streaming Markdown draft");
 
     applySlashAIResult(view, result!);
 
     expect(view.state.doc.toString()).toBe("Hello Final Markdown to insert");
     expect(progress.some((event) => event.stage === "generating")).toBe(true);
     expect(progress.at(-1)).toEqual({ stage: "ready", status: "done" });
-    expect(activities.at(-1)).toEqual([
+    expect(activities.some((events) =>
+      events.some((event) =>
+        event.type === "message" && event.detail === "PARTIAL STREAM SHOULD NOT BE INSERTED",
+      ),
+    )).toBe(true);
+    expect(activities.at(-1)).toEqual(expect.arrayContaining([
       expect.objectContaining({
         type: "reasoning",
         detail: "Reading the nearby note context",
@@ -265,7 +290,12 @@ describe("slash inline AI", () => {
         result: "Loaded current note",
         status: "done",
       }),
-    ]);
+      expect.objectContaining({
+        type: "message",
+        detail: "Let me check what context is available.",
+        status: "done",
+      }),
+    ]));
     cleanup();
   });
 
