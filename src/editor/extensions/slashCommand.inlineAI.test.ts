@@ -42,6 +42,18 @@ vi.mock("@/stores/useLocaleStore", () => ({
         sendGeneric: "AI failed",
       },
     },
+    agentMessage: {
+      thinkingGroup: "Thinking",
+      working: "Working",
+      steps: "{count} steps",
+      file: "File",
+      directory: "Directory",
+      url: "URL",
+      query: "Query",
+      pattern: "Pattern",
+      params: "Params",
+      result: "Result",
+    },
   }),
 }));
 
@@ -94,6 +106,7 @@ import {
   runSlashAIAction,
   showSlashAIInlinePreview,
   slashAIInlinePreviewField,
+  type SlashAIActivity,
   type SlashAIProgress,
 } from "./slashCommand";
 
@@ -140,6 +153,37 @@ async function* streamEvents() {
     },
   };
   yield {
+    type: "message.part.updated",
+    properties: {
+      sessionID: "session-1",
+      part: {
+        id: "reasoning-1",
+        messageID: "assistant-1",
+        type: "reasoning",
+        text: "Reading the nearby note context",
+        time: { start: 1_000 },
+      },
+    },
+  };
+  yield {
+    type: "message.part.updated",
+    properties: {
+      sessionID: "session-1",
+      part: {
+        id: "tool-1",
+        messageID: "assistant-1",
+        type: "tool",
+        tool: "read",
+        state: {
+          status: "completed",
+          input: { path: "/tmp/vault/current.md" },
+          output: "Loaded current note",
+          time: { start: 1_500, end: 2_000 },
+        },
+      },
+    },
+  };
+  yield {
     type: "message.part.delta",
     properties: {
       sessionID: "session-1",
@@ -177,6 +221,7 @@ describe("slash inline AI", () => {
   it("keeps prompt and stream output out of Markdown until accept", async () => {
     const { view, cleanup } = createView("Hello /ai");
     const progress: SlashAIProgress[] = [];
+    const activities: SlashAIActivity[][] = [];
 
     const result = await runSlashAIAction(
       view,
@@ -184,7 +229,10 @@ describe("slash inline AI", () => {
       9,
       "chat-insert",
       "write a crisp sentence",
-      { onProgress: (event) => progress.push(event) },
+      {
+        onProgress: (event) => progress.push(event),
+        onActivity: (events) => activities.push(events),
+      },
     );
 
     expect(view.state.doc.toString()).toBe("Hello ");
@@ -202,6 +250,19 @@ describe("slash inline AI", () => {
     expect(view.state.doc.toString()).toBe("Hello Final Markdown to insert");
     expect(progress.some((event) => event.stage === "generating")).toBe(true);
     expect(progress.at(-1)).toEqual({ stage: "ready", status: "done" });
+    expect(activities.at(-1)).toEqual([
+      expect.objectContaining({
+        type: "reasoning",
+        detail: "Reading the nearby note context",
+      }),
+      expect.objectContaining({
+        type: "tool",
+        title: "read",
+        detail: "File: /tmp/vault/current.md",
+        result: "Loaded current note",
+        status: "done",
+      }),
+    ]);
     cleanup();
   });
 
@@ -325,6 +386,59 @@ describe("slash inline AI", () => {
     expect(preview?.querySelector('button[data-action="accept"]')).toBeNull();
     expect(preview?.querySelector('button[data-action="cancel"]')).not.toBeNull();
     expect(view.state.doc.toString()).toBe("Hello ");
+    cleanup();
+  });
+
+  it("renders inline AI work details in the editor preview", () => {
+    const { view, parent, cleanup } = createView("Hello ");
+
+    view.dispatch({
+      effects: showSlashAIInlinePreview.of({
+        id: "preview-work",
+        status: "running",
+        anchor: 6,
+        commandLabel: "AI Continue",
+        startedAt: Date.now() - 2_000,
+        labels: {
+          previewTitle: "Preview to insert",
+          generating: "Generating",
+          insert: "Insert",
+          cancel: "Cancel",
+          regenerate: "Regenerate",
+          stages: {
+            understanding: "Understanding request",
+            "reading-context": "Reading nearby note context",
+            "preparing-context": "Preparing related context",
+            generating: "Generating candidate",
+            ready: "Ready to insert",
+          },
+        },
+        stageStatuses: {
+          understanding: "done",
+          "reading-context": "done",
+          "preparing-context": "done",
+          generating: "active",
+          ready: "pending",
+        },
+        activities: [
+          {
+            id: "activity-1",
+            type: "tool",
+            title: "read",
+            detail: "File: /tmp/vault/current.md",
+            result: "Loaded current note",
+            status: "done",
+            startedAt: 1_000,
+            endedAt: 2_000,
+          },
+        ],
+      }),
+    });
+
+    const preview = parent.querySelector(".cm-slash-ai-inline-preview");
+    expect(preview?.textContent).toContain("Working");
+    expect(preview?.textContent).toContain("read");
+    expect(preview?.textContent).toContain("File: /tmp/vault/current.md");
     cleanup();
   });
 });
