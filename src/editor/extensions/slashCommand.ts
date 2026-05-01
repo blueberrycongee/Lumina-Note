@@ -1208,33 +1208,39 @@ function appendSlashAIActivityDetails(parent: HTMLElement, preview: SlashAIInlin
   const activities = preview.activities ?? [];
   if (activities.length === 0) return;
   const t = getSlashAIAgentLabels();
-  const details = document.createElement("details");
-  details.style.cssText = `
-    max-width: min(620px, 100%);
-    margin: 0 0 7px;
+  const work = document.createElement("div");
+  work.style.cssText = `
+    max-width: min(720px, 100%);
+    margin: 0 0 8px;
     color: hsl(var(--muted-foreground));
     font-size: 12px;
     line-height: 1.55;
   `;
 
-  const summary = document.createElement("summary");
-  summary.textContent = getSlashAIWorkLabel(preview);
-  summary.style.cssText = `
-    cursor: pointer;
+  const header = document.createElement("div");
+  const isRunning =
+    preview.status === "running" ||
+    activities.some((activity) => activity.status === "running");
+  const stepText = isRunning && activities.length > 0
+    ? ` · ${(t.steps as string).replace("{count}", String(activities.length))}`
+    : "";
+  header.textContent = `${getSlashAIWorkLabel(preview)}${stepText}`;
+  header.style.cssText = `
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    user-select: none;
+    min-height: 22px;
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
   `;
-  details.appendChild(summary);
+  work.appendChild(header);
 
   const list = document.createElement("div");
   list.style.cssText = `
-    margin: 5px 0 0 8px;
-    padding-left: 12px;
-    border-left: 1px solid hsl(var(--border) / 0.72);
+    margin: 2px 0 0;
+    padding-left: 14px;
+    border-left: 1px solid hsl(var(--border) / 0.82);
     display: grid;
-    gap: 6px;
+    gap: 7px;
   `;
   for (const activity of activities) {
     const item = document.createElement("div");
@@ -1243,11 +1249,11 @@ function appendSlashAIActivityDetails(parent: HTMLElement, preview: SlashAIInlin
     const statusLabel =
       activity.status === "running"
         ? ` · ${t.working}`
-        : activity.status === "error"
-          ? " · Error"
-          : "";
+          : activity.status === "error"
+            ? " · Error"
+            : "";
     title.textContent = `${activity.title}${statusLabel}`;
-    title.style.cssText = "font-weight: 500; color: hsl(var(--foreground) / 0.72);";
+    title.style.cssText = "font-weight: 500; color: hsl(var(--foreground) / 0.68);";
     item.appendChild(title);
     const detailText = [activity.detail, activity.result].filter(Boolean).join("\n");
     if (detailText) {
@@ -1267,8 +1273,8 @@ function appendSlashAIActivityDetails(parent: HTMLElement, preview: SlashAIInlin
     }
     list.appendChild(item);
   }
-  details.appendChild(list);
-  parent.appendChild(details);
+  work.appendChild(list);
+  parent.appendChild(work);
 }
 
 class SlashAIInlinePreviewWidget extends WidgetType {
@@ -1298,6 +1304,7 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       this.preview.status === "running"
         ? `
           box-sizing: border-box;
+          width: min(720px, 100%);
           margin: 8px 0 10px;
           color: hsl(var(--muted-foreground));
           font-size: 12px;
@@ -1305,6 +1312,7 @@ class SlashAIInlinePreviewWidget extends WidgetType {
         `
         : `
           box-sizing: border-box;
+          width: min(720px, 100%);
           margin: 10px 0 12px;
           color: hsl(var(--foreground));
         `;
@@ -1318,19 +1326,13 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       const statusRow = document.createElement("div");
       statusRow.style.cssText = `
         position: relative;
-        display: inline-flex;
-        max-width: min(520px, 100%);
+        display: flex;
+        width: 100%;
         align-items: center;
         gap: 8px;
         overflow: hidden;
         border-left: 2px solid hsl(var(--primary) / 0.34);
-        padding: 5px 9px 5px 10px;
-        background: linear-gradient(
-          90deg,
-          hsl(var(--primary) / 0.055),
-          hsl(var(--muted) / 0.11) 48%,
-          hsl(var(--primary) / 0.04)
-        );
+        padding: 4px 0 4px 10px;
         color: hsl(var(--muted-foreground));
       `;
 
@@ -1355,7 +1357,7 @@ class SlashAIInlinePreviewWidget extends WidgetType {
 
       const ellipsis = document.createElement("span");
       ellipsis.textContent = "...";
-      ellipsis.style.cssText = "letter-spacing: 1px; color: hsl(var(--foreground) / 0.42);";
+      ellipsis.style.cssText = "color: hsl(var(--foreground) / 0.42);";
 
       const cancel = document.createElement("button");
       cancel.type = "button";
@@ -1388,7 +1390,7 @@ class SlashAIInlinePreviewWidget extends WidgetType {
         const draft = document.createElement("pre");
         draft.textContent = liveText;
         draft.style.cssText = `
-          margin: 6px 0 0;
+          margin: 7px 0 0;
           max-height: 220px;
           overflow: auto;
           white-space: pre-wrap;
