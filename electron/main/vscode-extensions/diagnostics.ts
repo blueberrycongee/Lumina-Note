@@ -9,6 +9,7 @@ export const CURRENT_VSCODE_HOST_CAPABILITIES: ReadonlySet<VscodeHostCapability>
     'diagnostics-read',
     'diff-viewer',
     'env-open-external',
+    'ide-bridge',
     'memento',
     'secret-storage',
     'terminal',

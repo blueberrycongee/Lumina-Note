@@ -399,6 +399,52 @@ exports.activate = async function activate(context) {
     ]);
   });
 
+  it("exposes a minimal Lumina IDE bridge state endpoint", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-ide-bridge-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "bridge-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const state = vscode.lumina.ideBridge.getState();
+  if (!state.workspaceFolders.length) throw new Error("missing workspace");
+};`,
+      "utf8",
+    );
+
+    const workspacePath = extensionPath;
+    const host = startHost(extensionPath, workspacePath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const state = await fetch(`${origin}/lumina/ide-bridge`).then((r) => r.json());
+    expect(state.workspaceFolders).toEqual([workspacePath]);
+
+    await fetch(`${origin}/lumina/state`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        activeDocument: {
+          path: path.join(workspacePath, "README.md"),
+          languageId: "markdown",
+          content: "# Bridge\\n",
+        },
+      }),
+    });
+
+    const next = await fetch(`${origin}/lumina/ide-bridge`).then((r) => r.json());
+    expect(next.activeDocument).toMatchObject({
+      path: path.join(workspacePath, "README.md"),
+      languageId: "markdown",
+      content: "# Bridge\\n",
+    });
+  });
+
   it("returns 404 for unknown views", async () => {
     const extensionPath = path.resolve("scripts/codex-vscode-host/fixtures/hello-ext");
     const host = startHost(extensionPath);

@@ -867,6 +867,10 @@ async function main() {
         return json(res, 200, { requests: state.diffRequests });
       }
 
+      if (u.pathname === "/lumina/ide-bridge") {
+        return json(res, 200, buildIdeBridgeState(state));
+      }
+
       if (u.pathname === "/debug/traffic/reset" && req.method === "POST") {
         state.debugEvents = [];
         state.nextDebugEventId = 1;
@@ -1094,6 +1098,22 @@ function getWebviewEntry(state, channel) {
     return state.panels.get(channel.slice("panel:".length)) ?? null;
   }
   return null;
+}
+
+function buildIdeBridgeState(state) {
+  return {
+    workspaceFolders: state.workspacePath ? [state.workspacePath] : [],
+    activeDocument: state.activeDocument
+      ? {
+          path: state.activeDocument.path,
+          languageId: state.activeDocument.languageId ?? null,
+          content: state.activeDocument.content ?? "",
+          version: state.activeDocument.version ?? 1,
+        }
+      : null,
+    selection: null,
+    diffRequests: state.diffRequests,
+  };
 }
 
 function createVscodeApi(state, originForApi) {
@@ -1647,6 +1667,12 @@ function createVscodeApi(state, originForApi) {
     // Minimal shape: extensions may check for proposed APIs via namespaces existing.
     _lumina: {
       originForApi,
+    },
+    lumina: {
+      ideBridge: {
+        getState: () => buildIdeBridgeState(state),
+        getEndpoint: () => `${originForApi()}/lumina/ide-bridge`,
+      },
     },
   };
 }

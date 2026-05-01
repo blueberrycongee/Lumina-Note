@@ -26,8 +26,8 @@ describe('vscode extension host capability diagnostics', () => {
   it('reports Claude Code terminal and IDE bridge gaps explicitly', () => {
     const diagnostic = diagnoseHostCapabilities(profile('anthropic.claude-code'))
 
-    expect(diagnostic.canRunWithoutMissingCapabilities).toBe(false)
-    expect(diagnostic.missingCapabilities).toEqual(['ide-bridge'])
+    expect(diagnostic.canRunWithoutMissingCapabilities).toBe(true)
+    expect(diagnostic.missingCapabilities).toEqual([])
   })
 
   it('passes when the caller supplies all required capabilities', () => {
