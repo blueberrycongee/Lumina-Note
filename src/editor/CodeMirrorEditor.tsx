@@ -908,7 +908,38 @@ const createEditorTheme = (fontSize: number) =>
       fontStyle: "italic",
       opacity: 0.8,
     },
-    ".cm-image-widget": { display: "block" },
+    ".cm-image-widget": {
+      display: "block",
+      backgroundColor: "transparent",
+      borderRadius: "0",
+    },
+    ".cm-image-scale-controls": {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: "4px",
+      padding: "3px",
+      borderRadius: "6px",
+      backgroundColor: "hsl(var(--muted) / 0.45)",
+    },
+    ".cm-image-scale-button": {
+      border: "0",
+      borderRadius: "4px",
+      backgroundColor: "transparent",
+      color: "hsl(var(--muted-foreground))",
+      cursor: "pointer",
+      fontSize: "12px",
+      lineHeight: "1",
+      padding: "5px 8px",
+    },
+    ".cm-image-scale-button:hover": {
+      backgroundColor: "hsl(var(--background) / 0.75)",
+      color: "hsl(var(--foreground))",
+    },
+    ".cm-image-scale-button.is-active": {
+      backgroundColor: "hsl(var(--background))",
+      color: "hsl(var(--foreground))",
+      boxShadow: "0 1px 2px hsl(var(--foreground) / 0.08)",
+    },
     ".cm-image-info": {
       background: "hsl(var(--muted))",
       padding: "4px 8px",
@@ -920,6 +951,7 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".markdown-image": {
       maxWidth: "100%",
+      height: "auto",
       borderRadius: "6px",
       cursor: "pointer",
     },
@@ -1752,11 +1784,22 @@ class HorizontalRuleWidget extends WidgetType {
   }
 }
 
+const IMAGE_SCALE_OPTIONS = [25, 50, 100] as const;
+type ImageScale = (typeof IMAGE_SCALE_OPTIONS)[number];
+const DEFAULT_IMAGE_SCALE: ImageScale = 50;
+
+function normalizeImageScale(value: number): ImageScale {
+  return IMAGE_SCALE_OPTIONS.includes(value as ImageScale)
+    ? (value as ImageScale)
+    : DEFAULT_IMAGE_SCALE;
+}
+
 class ImageWidget extends WidgetType {
   constructor(
     readonly src: string,
     readonly alt: string,
     readonly showInfo: boolean = false,
+    readonly scale: ImageScale = DEFAULT_IMAGE_SCALE,
     readonly vaultPath: string = "",
     readonly notePath: string | null = null,
   ) {
@@ -1767,6 +1810,7 @@ class ImageWidget extends WidgetType {
       other.src === this.src &&
       other.alt === this.alt &&
       other.showInfo === this.showInfo &&
+      other.scale === this.scale &&
       other.notePath === this.notePath
     );
   }
@@ -1802,7 +1846,7 @@ class ImageWidget extends WidgetType {
   }
   toDOM(view: EditorView) {
     const container = document.createElement("div");
-    container.className = "cm-image-widget markdown-block-shell markdown-image-block";
+    container.className = "cm-image-widget markdown-image-block";
     container.style.minHeight = `${this.estimatedHeight}px`;
     container.dataset.widgetType = "image";
     container.dataset.imageSrc = this.src;
@@ -1824,6 +1868,7 @@ class ImageWidget extends WidgetType {
     img.alt = this.alt;
     img.className = "markdown-image";
     img.loading = "lazy";
+    img.style.maxWidth = `${this.scale}%`;
     let pendingImageResizeSnapshot: AsyncWidgetSnapshot | null = null;
     img.addEventListener("load", () => {
       container.style.minHeight = "";
@@ -1900,6 +1945,30 @@ class ImageWidget extends WidgetType {
     }
 
     body.appendChild(img);
+
+    const controls = document.createElement("div");
+    controls.className = "cm-image-scale-controls";
+    controls.setAttribute("aria-label", "Image size");
+    for (const scale of IMAGE_SCALE_OPTIONS) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className =
+        scale === this.scale
+          ? "cm-image-scale-button is-active"
+          : "cm-image-scale-button";
+      button.textContent = `${scale}%`;
+      button.setAttribute("aria-label", `Set image size to ${scale}%`);
+      button.setAttribute("aria-pressed", String(scale === this.scale));
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        view.dispatch({
+          effects: setImageScale.of({ src: this.src, scale }),
+        });
+      });
+      controls.appendChild(button);
+    }
+    body.appendChild(controls);
     container.appendChild(body);
     return container;
   }
@@ -4472,6 +4541,7 @@ const calloutStateField = StateField.define<DecorationSet>({
 
 // 用于跟踪哪些图片应该显示信息
 const setImageShowInfo = StateEffect.define<{ src: string; show: boolean }>();
+const setImageScale = StateEffect.define<{ src: string; scale: ImageScale }>();
 let imagePositionsCache: { from: number; to: number }[] = [];
 
 function selectionTouchesCachedRange(
@@ -4501,6 +4571,20 @@ const imageInfoField = StateField.define<Set<string>>({
   },
 });
 
+const imageScaleField = StateField.define<Map<string, ImageScale>>({
+  create: () => new Map(),
+  update(val, tr) {
+    let result = val;
+    for (const e of tr.effects) {
+      if (e.is(setImageScale)) {
+        result = new Map(result);
+        result.set(e.value.src, normalizeImageScale(e.value.scale));
+      }
+    }
+    return result;
+  },
+});
+
 // 创建图片装饰的工厂函数
 function createImageStateField(vaultPath: string, notePath: string | null) {
   return StateField.define<DecorationSet>({
@@ -4510,7 +4594,10 @@ function createImageStateField(vaultPath: string, notePath: string | null) {
         tr.docChanged ||
         tr.reconfigured ||
         tr.effects.some(
-          (e) => e.is(setMouseSelecting) || e.is(setImageShowInfo),
+          (e) =>
+            e.is(setMouseSelecting) ||
+            e.is(setImageShowInfo) ||
+            e.is(setImageScale),
         )
       ) {
         return buildImageDecorations(tr.state, vaultPath, notePath);
@@ -4548,6 +4635,8 @@ function buildImageDecorations(
   const decorations: any[] = [];
   const doc = docString(state);
   const showInfoSet = state.field(imageInfoField, false) || new Set<string>();
+  const imageScaleMap =
+    state.field(imageScaleField, false) || new Map<string, ImageScale>();
   imagePositionsCache = [];
 
   const imageMatches: Array<{
@@ -4591,7 +4680,14 @@ function buildImageDecorations(
       );
       decorations.push(
         Decoration.widget({
-          widget: new ImageWidget(src, alt, true, vaultPath, notePath),
+          widget: new ImageWidget(
+            src,
+            alt,
+            true,
+            imageScaleMap.get(src) ?? DEFAULT_IMAGE_SCALE,
+            vaultPath,
+            notePath,
+          ),
           side: 1,
           block: true,
         }).range(to),
@@ -4601,7 +4697,14 @@ function buildImageDecorations(
       const showInfo = showInfoSet.has(src);
       decorations.push(
         Decoration.replace({
-          widget: new ImageWidget(src, alt, showInfo, vaultPath, notePath),
+          widget: new ImageWidget(
+            src,
+            alt,
+            showInfo,
+            imageScaleMap.get(src) ?? DEFAULT_IMAGE_SCALE,
+            vaultPath,
+            notePath,
+          ),
           block: true,
         }).range(from, to),
       );
@@ -5276,6 +5379,7 @@ export const CodeMirrorEditor = forwardRef<
         voicePreviewField,
         markdownStylePlugin,
         imageInfoField,
+        imageScaleField,
         // Slash Command 扩展（默认关闭，未完工：滚动时弹层不跟随光标）
         ...(slashCommandsEnabled ? slashCommandExtensions : []),
         placeholderExtension(t.editor.slashMenu.placeholder),

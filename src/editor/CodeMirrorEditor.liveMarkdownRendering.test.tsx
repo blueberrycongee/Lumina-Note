@@ -139,7 +139,7 @@ describe("CodeMirror live markdown rendering polish", () => {
     expect(style.maxWidth).toBe("100%");
   });
 
-  it("uses the shared block surface and fallback UI for image widgets", () => {
+  it("renders image widgets without the shared block frame", () => {
     useFileStore.setState({
       vaultPath: "/vault",
       currentFile: "/vault/note.md",
@@ -152,14 +152,49 @@ describe("CodeMirror live markdown rendering polish", () => {
     const image = widget?.querySelector<HTMLImageElement>("img.markdown-image");
 
     expect(widget).not.toBeNull();
-    expect(widget).toHaveClass("markdown-block-shell");
+    expect(widget?.classList.contains("markdown-block-shell")).toBe(false);
     expect(widget).toHaveClass("markdown-image-block");
+    expect(getComputedStyle(widget!).backgroundColor).toBe(
+      "rgba(0, 0, 0, 0)",
+    );
     expect(image).not.toBeNull();
+    expect(image?.style.maxWidth).toBe("50%");
+    expect(
+      widget?.querySelector<HTMLButtonElement>(
+        '.cm-image-scale-button[aria-pressed="true"]',
+      )?.textContent,
+    ).toBe("50%");
 
     fireEvent.error(image!);
 
     expect(widget?.querySelector(".markdown-image-error")).not.toBeNull();
     expect(widget?.textContent).toContain("missing.png");
+  });
+
+  it("changes rendered image size from the image controls", () => {
+    useFileStore.setState({
+      vaultPath: "/vault",
+      currentFile: "/vault/note.md",
+    });
+    const { container } = setupEditor(
+      "Intro\n\n![Missing](missing.png)\n\nOutro",
+      "live",
+    );
+    const button25 = Array.from(
+      container.querySelectorAll<HTMLButtonElement>(".cm-image-scale-button"),
+    ).find((button) => button.textContent === "25%");
+
+    expect(button25).toBeDefined();
+    fireEvent.click(button25!);
+
+    const image = container.querySelector<HTMLImageElement>(
+      ".cm-image-widget img.markdown-image",
+    );
+    const activeButton = container.querySelector<HTMLButtonElement>(
+      '.cm-image-scale-button[aria-pressed="true"]',
+    );
+    expect(image?.style.maxWidth).toBe("25%");
+    expect(activeButton?.textContent).toBe("25%");
   });
 
   it("reveals horizontal rule source when clicking the rendered block", () => {
