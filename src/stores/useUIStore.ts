@@ -211,9 +211,8 @@ export const useUIStore = create<UIState>()(
       blockEditorEnabled: false,
       setBlockEditorEnabled: (enabled) => set({ blockEditorEnabled: enabled }),
 
-      // Off by default — the slash menu was unfinished and its popup
-      // didn't track the slash position when the editor scrolled.
-      slashCommandsEnabled: false,
+      // Slash commands are enabled by default.
+      slashCommandsEnabled: true,
       setSlashCommandsEnabled: (enabled) =>
         set({ slashCommandsEnabled: enabled }),
 
@@ -268,6 +267,9 @@ export const useUIStore = create<UIState>()(
           pluginThemeRuntime.reapply();
         }
         if (state) {
+          // Re-enable slash commands for existing persisted state from
+          // the previous release where the feature was disabled by default.
+          state.slashCommandsEnabled = true;
           state.isSettingsOpen = false;
           state.isSkillManagerOpen = false;
           state.floatingPanelOpen = false;

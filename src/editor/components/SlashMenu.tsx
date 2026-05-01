@@ -5,7 +5,13 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { EditorView } from "@codemirror/view";
-import { getDefaultCommands, hideSlashMenu, SlashCommand, slashMenuField } from "../extensions/slashCommand";
+import {
+  getDefaultCommands,
+  hideSlashMenu,
+  runSlashAIAction,
+  SlashCommand,
+  slashMenuField,
+} from "../extensions/slashCommand";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 
 interface SlashMenuProps {
@@ -13,6 +19,8 @@ interface SlashMenuProps {
 }
 
 const categoryOrder = ["ai", "heading", "list", "block", "insert"];
+const MENU_WIDTH = 320;
+const MENU_MAX_HEIGHT = 320;
 
 export function SlashMenu({ view }: SlashMenuProps) {
   const { t } = useLocaleStore();
@@ -21,8 +29,25 @@ export function SlashMenu({ view }: SlashMenuProps) {
   const [_slashPos, setSlashPos] = useState(0);
   const [filter, setFilter] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [aiPromptOpen, setAiPromptOpen] = useState(false);
+  const [aiPromptText, setAiPromptText] = useState("");
+  const [aiSubmitting, setAiSubmitting] = useState(false);
+  const [aiSlashRange, setAiSlashRange] = useState<{ from: number; to: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const aiPromptRef = useRef<HTMLInputElement>(null);
   const commands = useMemo(() => getDefaultCommands(t), [t]);
+
+  const closeMenu = useCallback(() => {
+    if (view) {
+      view.dispatch({ effects: hideSlashMenu.of() });
+      view.focus();
+    }
+    setAiPromptOpen(false);
+    setAiPromptText("");
+    setAiSubmitting(false);
+    setAiSlashRange(null);
+    setVisible(false);
+  }, [view]);
 
   // 过滤命令
   const filteredCommands = useMemo(() => {
@@ -66,14 +91,35 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const from = state.pos;
     const to = view.state.selection.main.head;
 
+    if (cmd.id === "ai-chat") {
+      setAiPromptOpen(true);
+      setAiPromptText("");
+      setAiSlashRange({ from, to });
+      return;
+    }
+
     // 执行命令
     cmd.action(view, from, to);
+    closeMenu();
+  }, [view, closeMenu]);
 
-    // 关闭菜单
-    view.dispatch({ effects: hideSlashMenu.of() });
-    setVisible(false);
-    view.focus();
-  }, [view]);
+  const submitAIPrompt = useCallback(async () => {
+    if (!view || !aiSlashRange || aiSubmitting) return;
+    const request = aiPromptText.trim();
+    if (!request) {
+      closeMenu();
+      return;
+    }
+    setAiSubmitting(true);
+    await runSlashAIAction(
+      view,
+      aiSlashRange.from,
+      aiSlashRange.to,
+      "chat-insert",
+      request,
+    );
+    closeMenu();
+  }, [view, aiSlashRange, aiSubmitting, aiPromptText, closeMenu]);
 
   // 监听菜单显示事件
   useEffect(() => {
@@ -82,6 +128,10 @@ export function SlashMenu({ view }: SlashMenuProps) {
       setSlashPos(e.detail.pos);
       setFilter("");
       setSelectedIndex(0);
+      setAiPromptOpen(false);
+      setAiPromptText("");
+      setAiSubmitting(false);
+      setAiSlashRange(null);
       setVisible(true);
     };
 
@@ -94,6 +144,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const handleState = (e: CustomEvent<{ active: boolean; filter: string }>) => {
       if (!e.detail.active) {
         setVisible(false);
+        setAiPromptOpen(false);
         return;
       }
       setFilter(e.detail.filter);
@@ -108,6 +159,13 @@ export function SlashMenu({ view }: SlashMenuProps) {
     if (!visible || !view) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (aiPromptOpen) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeMenu();
+        }
+        return;
+      }
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
@@ -129,16 +187,14 @@ export function SlashMenu({ view }: SlashMenuProps) {
           break;
         case "Escape":
           e.preventDefault();
-          view.dispatch({ effects: hideSlashMenu.of() });
-          setVisible(false);
-          view.focus();
+          closeMenu();
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [visible, view, flatCommands, selectedIndex, executeCommand]);
+  }, [visible, view, flatCommands, selectedIndex, executeCommand, aiPromptOpen, closeMenu]);
 
   // 点击外部关闭
   useEffect(() => {
@@ -146,14 +202,18 @@ export function SlashMenu({ view }: SlashMenuProps) {
 
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        view?.dispatch({ effects: hideSlashMenu.of() });
-        setVisible(false);
+        closeMenu();
       }
     };
 
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, [visible, view]);
+  }, [visible, closeMenu]);
+
+  useEffect(() => {
+    if (!aiPromptOpen) return;
+    aiPromptRef.current?.focus();
+  }, [aiPromptOpen]);
 
   // 滚动选中项到可见区域
   useEffect(() => {
@@ -162,6 +222,33 @@ export function SlashMenu({ view }: SlashMenuProps) {
     selected?.scrollIntoView({ block: "nearest" });
   }, [selectedIndex, visible]);
 
+  const clampedPosition = useMemo(() => {
+    if (typeof window === "undefined") {
+      return {
+        left: position.x,
+        top: position.y,
+        width: MENU_WIDTH,
+      };
+    }
+
+    const viewportWidth = Math.max(1, window.innerWidth);
+    const viewportHeight = Math.max(1, window.innerHeight);
+    const width = Math.max(
+      1,
+      Math.min(MENU_WIDTH, viewportWidth - 16),
+    );
+    const safeTop = Math.min(
+      position.y,
+      Math.max(8, viewportHeight - MENU_MAX_HEIGHT - 8),
+    );
+    const left = Math.min(
+      position.x,
+      Math.max(8, viewportWidth - width - 8),
+    );
+
+    return { left, top: Math.max(8, safeTop), width };
+  }, [position.x, position.y]);
+
   if (!visible || flatCommands.length === 0) return null;
 
   return (
@@ -169,14 +256,54 @@ export function SlashMenu({ view }: SlashMenuProps) {
       ref={menuRef}
       className="fixed z-50 bg-popover border border-border rounded-lg shadow-elev-2 overflow-hidden"
       style={{
-        left: position.x,
-        top: position.y,
-        minWidth: 220,
-        maxWidth: 320,
-        maxHeight: 320,
+        left: clampedPosition.left,
+        top: clampedPosition.top,
+        width: clampedPosition.width,
+        maxHeight: MENU_MAX_HEIGHT,
       }}
     >
-      <div className="overflow-y-auto max-h-[300px] p-1">
+      {aiPromptOpen ? (
+        <div className="p-3 space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">
+            {t.editor.slashMenu.commands.aiChat}
+          </div>
+          <input
+            ref={aiPromptRef}
+            value={aiPromptText}
+            onChange={(e) => setAiPromptText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void submitAIPrompt();
+              }
+              if (e.key === "Escape") {
+                e.preventDefault();
+                closeMenu();
+              }
+            }}
+            placeholder={t.editor.slashMenu.commands.aiChatPrompt}
+            className="w-full h-9 px-2 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="h-8 px-2 rounded-md text-xs border border-border hover:bg-accent/60"
+              onClick={closeMenu}
+            >
+              {t.common.cancel}
+            </button>
+            <button
+              type="button"
+              className="h-8 px-2 rounded-md text-xs bg-primary text-primary-foreground disabled:opacity-60"
+              disabled={aiSubmitting || !aiPromptText.trim()}
+              onClick={() => void submitAIPrompt()}
+            >
+              {aiSubmitting ? t.common.loading : t.common.confirm}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="overflow-y-auto max-h-[300px] p-1">
         {categoryOrder.map(cat => {
           const categoryCommands = groupedCommands[cat];
           if (!categoryCommands?.length) return null;
@@ -212,7 +339,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {filter && flatCommands.length === 0 && (
         <div className="p-4 text-center text-sm text-muted-foreground">

@@ -156,8 +156,23 @@ export default {
       commands: {
         aiChat: "AI Chat",
         aiChatDesc: "Open AI assistant chat",
+        aiChatPrompt: "Tell AI what to insert here",
         aiContinue: "AI Continue",
         aiContinueDesc: "Continue writing with AI",
+        aiContinuePrompt:
+          "Continue writing based on the current content of \"{name}\". First provide a continuation I can paste at the end of the note, then suggest 2-3 possible directions.",
+        aiRewrite: "AI Rewrite Block",
+        aiRewriteDesc: "Rewrite current block in place",
+        aiRewritePrompt:
+          "Rewrite the current block for clarity and readability while preserving meaning and tone.",
+        aiExpand: "AI Expand Block",
+        aiExpandDesc: "Expand current block with more detail",
+        aiExpandPrompt:
+          "Expand the current block with useful detail and context while keeping style consistent.",
+        aiSummarize: "AI Summarize Block",
+        aiSummarizeDesc: "Summarize current block into key points",
+        aiSummarizePrompt:
+          "Summarize the current block as concise key points in Markdown bullets.",
         heading1: "Heading 1",
         heading1Desc: "Large heading",
         heading2: "Heading 2",

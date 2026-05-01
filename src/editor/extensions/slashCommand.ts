@@ -5,8 +5,16 @@
 
 import { EditorView, ViewPlugin, ViewUpdate, WidgetType, Decoration, DecorationSet } from "@codemirror/view";
 import { StateField, StateEffect } from "@codemirror/state";
+import type { FilePartInput, Part } from "@opencode-ai/sdk/client";
 import type { Translations } from "@/i18n";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
+import { getAIConfig } from "@/services/ai/ai";
+import { waitForAIConfigSync } from "@/services/ai/config-sync";
+import { getOpencodeClient, setDefaultDirectory } from "@/services/opencode/client";
+import { resolveOpencodePromptModel } from "@/stores/useOpencodeAgent";
+import { useAIStore } from "@/stores/useAIStore";
+import { useFileStore } from "@/stores/useFileStore";
+import { reportOperationError } from "@/lib/reportError";
 import {
   isAtBlockStart,
   transformBlockType,
@@ -22,6 +30,403 @@ export interface SlashCommand {
   description: string;
   category: "ai" | "heading" | "list" | "block" | "insert";
   action: (view: EditorView, from: number, to: number) => void;
+}
+
+export type SlashAIAction =
+  | "chat-insert"
+  | "continue"
+  | "rewrite-block"
+  | "expand-block"
+  | "summarize-block";
+
+function extractTextFromParts(parts: Part[]): string {
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part.type === "text") {
+      out.push(part.text);
+    }
+  }
+  return out.join("").trim();
+}
+
+function stripMarkdownFence(text: string): string {
+  const fenced = text.match(/^```(?:[a-zA-Z0-9_-]+)?\n([\s\S]*?)\n```$/);
+  if (fenced) return fenced[1].trim();
+  return text;
+}
+
+function clampPos(view: EditorView, pos: number): number {
+  return Math.max(0, Math.min(pos, view.state.doc.length));
+}
+
+function resolveTargetRange(view: EditorView, pivotPos: number): { from: number; to: number } {
+  const hasText = (from: number, to: number) =>
+    view.state.doc.sliceString(from, to).trim().length > 0;
+  const sel = view.state.selection.main;
+  if (sel.from !== sel.to) {
+    return { from: sel.from, to: sel.to };
+  }
+  const safePos = clampPos(view, pivotPos);
+  const block = getBlockAtPos(view.state, safePos);
+  if (block && block.to > block.from && hasText(block.from, block.to)) {
+    return { from: block.from, to: block.to };
+  }
+  const line = view.state.doc.lineAt(safePos);
+  if (line.from > 0) {
+    const prevPos = line.from - 1;
+    const prevBlock = getBlockAtPos(view.state, prevPos);
+    if (prevBlock && prevBlock.to > prevBlock.from && hasText(prevBlock.from, prevBlock.to)) {
+      return { from: prevBlock.from, to: prevBlock.to };
+    }
+    const prevLine = view.state.doc.lineAt(prevPos);
+    if (hasText(prevLine.from, prevLine.to)) {
+      return { from: prevLine.from, to: prevLine.to };
+    }
+  }
+  return { from: line.from, to: line.to };
+}
+
+async function generateInlineAIMarkdown(
+  view: EditorView,
+  request: string,
+  t: Translations,
+  onUpdate?: (text: string) => void,
+): Promise<string | null> {
+  const genericErrorMessage =
+    (t.ai as { errors?: { sendGeneric?: string } })?.errors?.sendGeneric ||
+    t.common.unknownError;
+  const fileState = useFileStore.getState();
+  const vaultPath = fileState.vaultPath || undefined;
+  const currentFilePath = fileState.currentFile || undefined;
+  const currentDoc = view.state.doc.toString();
+  const trimmedRequest = request.trim();
+  if (!trimmedRequest) return null;
+
+  const cappedDoc = currentDoc.length > 24000
+    ? `${currentDoc.slice(0, 24000)}\n\n[Document snapshot truncated]`
+    : currentDoc;
+
+  const prompt = [
+    "You are an inline writing assistant for a Markdown editor.",
+    "Write content to insert at the current cursor location.",
+    "Return only the Markdown text to insert. Do not include explanations or code fences.",
+    currentFilePath ? `Current note path: ${currentFilePath}` : "",
+    "",
+    "[User request]",
+    trimmedRequest,
+    "",
+    "[Current note content]",
+    cappedDoc,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    await waitForAIConfigSync();
+    const cfg = getAIConfig();
+    const selection = useAIStore.getState().runtimeModelSelection ?? {
+      provider: cfg.provider,
+      model: cfg.model,
+      customModelId: cfg.customModelId,
+      baseUrl: cfg.baseUrl,
+    };
+    const promptModel = resolveOpencodePromptModel(selection);
+    const query = vaultPath ? { directory: vaultPath } : undefined;
+    setDefaultDirectory(vaultPath ?? null);
+    const client = await getOpencodeClient();
+
+    const createRes = await client.session.create({
+      body: { title: "Inline Insert" },
+      query,
+      throwOnError: true,
+    });
+    const sessionId = (createRes.data as { id?: string } | undefined)?.id;
+    if (!sessionId) {
+      throw new Error("Failed to create inline AI session");
+    }
+
+    try {
+      const parts: Array<FilePartInput | { type: "text"; text: string }> = [
+        { type: "text", text: prompt },
+      ];
+      const streamController = new AbortController();
+      const stream = await client.event.subscribe({
+        signal: streamController.signal,
+      });
+
+      let promptAccepted = false;
+      let assistantMessageId: string | null = null;
+      let streamingText = "";
+      let sawDelta = false;
+      const startedAt = Date.now();
+      const timeoutMs = 120_000;
+
+      const promptReq = client.session
+        .promptAsync({
+          path: { id: sessionId },
+          body: {
+            agent: "build",
+            ...(promptModel ? { model: promptModel } : {}),
+            parts,
+          } as never,
+          query,
+          throwOnError: true,
+        })
+        .then(() => {
+          promptAccepted = true;
+        });
+
+      for await (const evt of stream.stream) {
+        const event = evt as unknown as {
+          type: string;
+          properties?: Record<string, unknown>;
+        };
+        const props = event.properties ?? {};
+        const eventSessionId = props.sessionID as string | undefined;
+        if (eventSessionId && eventSessionId !== sessionId) {
+          continue;
+        }
+
+        if (event.type === "message.updated") {
+          const info = props.info as
+            | { id?: string; role?: string; sessionID?: string }
+            | undefined;
+          if (info?.sessionID === sessionId && info.role === "assistant" && info.id) {
+            assistantMessageId = info.id;
+          }
+          continue;
+        }
+
+        if (event.type === "message.part.delta") {
+          const messageId = props.messageID as string | undefined;
+          const field = props.field as string | undefined;
+          const delta = props.delta as string | undefined;
+          if (!messageId || field !== "text" || !delta) {
+            continue;
+          }
+          if (!assistantMessageId) {
+            assistantMessageId = messageId;
+          }
+          if (assistantMessageId !== messageId) {
+            continue;
+          }
+          sawDelta = true;
+          streamingText += delta;
+          onUpdate?.(streamingText);
+          continue;
+        }
+
+        if (event.type === "message.part.updated" && !sawDelta) {
+          const part = props.part as
+            | { messageID?: string; type?: string; text?: string }
+            | undefined;
+          if (!part || part.type !== "text" || !part.messageID) {
+            continue;
+          }
+          if (!assistantMessageId) {
+            assistantMessageId = part.messageID;
+          }
+          if (assistantMessageId !== part.messageID) {
+            continue;
+          }
+          streamingText = part.text ?? "";
+          onUpdate?.(streamingText);
+          continue;
+        }
+
+        const isIdle =
+          (event.type === "session.idle" && eventSessionId === sessionId) ||
+          (event.type === "session.status" &&
+            eventSessionId === sessionId &&
+            (props.status as { type?: string } | undefined)?.type === "idle");
+        if (isIdle && promptAccepted) {
+          break;
+        }
+
+        if (Date.now() - startedAt > timeoutMs) {
+          throw new Error("Inline AI streaming timeout");
+        }
+      }
+
+      streamController.abort();
+      await promptReq;
+
+      let rawText = streamingText;
+      if (assistantMessageId) {
+        try {
+          const msg = await client.session.message({
+            path: { id: sessionId, messageID: assistantMessageId },
+            query,
+            throwOnError: true,
+          });
+          const msgParts =
+            ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
+          const fullText = extractTextFromParts(msgParts);
+          if (fullText.trim()) {
+            rawText = fullText;
+          }
+        } catch {
+          // Keep streamed text fallback.
+        }
+      }
+
+      const insertText = stripMarkdownFence(rawText).trim();
+      if (!insertText) {
+        throw new Error("AI returned empty content");
+      }
+      onUpdate?.(insertText);
+      return insertText;
+    } finally {
+      await client.session.delete({
+        path: { id: sessionId },
+        query,
+      }).catch(() => undefined);
+    }
+  } catch (error) {
+    reportOperationError({
+      source: "slashCommand.runInlineAIMarkdownInsert",
+      action: "Generate inline markdown with slash command",
+      error,
+      userMessage: genericErrorMessage,
+      level: "warning",
+      context: {
+        currentFilePath,
+      },
+    });
+    window.alert(genericErrorMessage);
+    return null;
+  }
+}
+
+async function runInlineAIMarkdownInsert(
+  view: EditorView,
+  insertPos: number,
+  request: string,
+  t: Translations,
+): Promise<void> {
+  const safePos = clampPos(view, insertPos);
+  let inserted = "";
+  const applyText = (next: string) => {
+    view.dispatch({
+      changes: {
+        from: safePos,
+        to: safePos + inserted.length,
+        insert: next,
+      },
+      selection: { anchor: safePos + next.length },
+    });
+    inserted = next;
+  };
+  const insertText = await generateInlineAIMarkdown(view, request, t, applyText);
+  if (!insertText) return;
+  if (inserted !== insertText) {
+    applyText(insertText);
+  }
+  view.focus();
+}
+
+export async function runSlashAIAction(
+  view: EditorView,
+  from: number,
+  to: number,
+  action: SlashAIAction,
+  instruction?: string,
+): Promise<void> {
+  const t = getCurrentTranslations();
+  const labels = t.editor?.slashMenu?.commands;
+  const safeFrom = clampPos(view, from);
+  const safeTo = clampPos(view, to);
+
+  view.dispatch({
+    changes: { from: safeFrom, to: safeTo, insert: "" },
+    selection: { anchor: safeFrom },
+  });
+
+  const notePath = useFileStore.getState().currentFile || undefined;
+  const noteName =
+    notePath?.split(/[/\\]/).pop()?.replace(/\.md$/i, "") || t.common.untitled;
+  const targetRange = resolveTargetRange(view, safeFrom);
+  const targetText = view.state.doc.sliceString(targetRange.from, targetRange.to).trim();
+
+  if (action === "chat-insert") {
+    const req = instruction?.trim();
+    if (!req) return;
+    await runInlineAIMarkdownInsert(view, safeFrom, req, t);
+    return;
+  }
+
+  if (action === "continue") {
+    const continuePromptTemplate =
+      labels?.aiContinuePrompt ||
+      "Continue writing naturally from this point in the current note.";
+    const continuePrompt = continuePromptTemplate.replace("{name}", noteName);
+    await runInlineAIMarkdownInsert(view, safeFrom, continuePrompt, t);
+    return;
+  }
+
+  if (!targetText) {
+    window.alert(t.common.empty);
+    return;
+  }
+
+  if (action === "rewrite-block") {
+    const rewritePromptTemplate =
+      labels?.aiRewritePrompt ||
+      "Rewrite the current block for clarity while preserving meaning.";
+    const rewritePrompt = [
+      rewritePromptTemplate.replace("{name}", noteName),
+      "",
+      "[Block to rewrite]",
+      targetText,
+    ].join("\n");
+    const rewritten = await generateInlineAIMarkdown(view, rewritePrompt, t);
+    if (!rewritten) return;
+    view.dispatch({
+      changes: { from: targetRange.from, to: targetRange.to, insert: rewritten },
+      selection: { anchor: targetRange.from + rewritten.length },
+    });
+    view.focus();
+    return;
+  }
+
+  if (action === "expand-block") {
+    const expandPromptTemplate =
+      labels?.aiExpandPrompt ||
+      "Expand the current block with more detail while keeping the style consistent.";
+    const expandPrompt = [
+      expandPromptTemplate.replace("{name}", noteName),
+      "",
+      "[Block to expand]",
+      targetText,
+    ].join("\n");
+    const expanded = await generateInlineAIMarkdown(view, expandPrompt, t);
+    if (!expanded) return;
+    view.dispatch({
+      changes: { from: targetRange.from, to: targetRange.to, insert: expanded },
+      selection: { anchor: targetRange.from + expanded.length },
+    });
+    view.focus();
+    return;
+  }
+
+  const summarizePromptTemplate =
+    labels?.aiSummarizePrompt ||
+    "Summarize the current block into concise bullet points.";
+  const summaryInstruction = [
+    summarizePromptTemplate.replace("{name}", noteName),
+    "",
+    "[Block to summarize]",
+    targetText,
+  ].join("\n");
+  const summary = await generateInlineAIMarkdown(view, summaryInstruction, t);
+  if (!summary) return;
+  const prefix = targetRange.to > 0 ? "\n\n" : "";
+  const inserted = `${prefix}${summary}`;
+  view.dispatch({
+    changes: { from: targetRange.to, to: targetRange.to, insert: inserted },
+    selection: { anchor: targetRange.to + inserted.length },
+  });
+  view.focus();
 }
 
 // ============ 命令注册 ============
@@ -59,9 +464,8 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "✨",
     description: labels?.aiChatDesc || "Open AI assistant chat",
     category: "ai",
-    action: (view, from, to) => {
-      view.dispatch({ changes: { from, to, insert: "" } });
-      window.dispatchEvent(new CustomEvent("open-ai-chat"));
+    action: () => {
+      // SlashMenu handles this command with an inline input field.
     },
   },
   {
@@ -71,8 +475,37 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.aiContinueDesc || "Continue writing with AI",
     category: "ai",
     action: (view, from, to) => {
-      view.dispatch({ changes: { from, to, insert: "" } });
-      window.dispatchEvent(new CustomEvent("ai-continue-writing"));
+      void runSlashAIAction(view, from, to, "continue");
+    },
+  },
+  {
+    id: "ai-rewrite-block",
+    label: labels?.aiRewrite || "AI Rewrite Block",
+    icon: "✍️",
+    description: labels?.aiRewriteDesc || "Rewrite current block in place",
+    category: "ai",
+    action: (view, from, to) => {
+      void runSlashAIAction(view, from, to, "rewrite-block");
+    },
+  },
+  {
+    id: "ai-expand-block",
+    label: labels?.aiExpand || "AI Expand Block",
+    icon: "➕",
+    description: labels?.aiExpandDesc || "Expand current block",
+    category: "ai",
+    action: (view, from, to) => {
+      void runSlashAIAction(view, from, to, "expand-block");
+    },
+  },
+  {
+    id: "ai-summarize-block",
+    label: labels?.aiSummarize || "AI Summarize Block",
+    icon: "📝",
+    description: labels?.aiSummarizeDesc || "Summarize current block",
+    category: "ai",
+    action: (view, from, to) => {
+      void runSlashAIAction(view, from, to, "summarize-block");
     },
   },
   
