@@ -1,9 +1,11 @@
 import path from 'node:path'
 
 import {
+  BUILTIN_VSCODE_AI_COMPAT_PROFILES,
   isSupportedVscodeAiExtensionId,
   type SupportedVscodeAiExtensionId,
 } from '../vscode-extensions/profiles.js'
+import { loadExternalCompatProfiles } from '../vscode-extensions/profileLoader.js'
 import { VscodeExtensionStore } from '../vscode-extensions/store.js'
 import { VscodeExtensionManager } from '../vscode-extensions/manager.js'
 import {
@@ -19,6 +21,7 @@ import type { BinaryFetchLike } from '../vscode-extensions/download.js'
 export interface CreateVscodeExtensionHandlersOptions {
   baseDir: string
   hostScriptPath: string
+  compatProfilesDir?: string
   metadataFetch?: FetchLike
   binaryFetch?: BinaryFetchLike
 }
@@ -32,7 +35,14 @@ export function createVscodeExtensionHandlers(
   options: CreateVscodeExtensionHandlersOptions,
 ): VscodeExtensionHandlerMap {
   const store = new VscodeExtensionStore({ baseDir: options.baseDir })
-  const manager = new VscodeExtensionManager(store)
+  const profiles = [
+    ...BUILTIN_VSCODE_AI_COMPAT_PROFILES,
+    ...loadExternalCompatProfiles(
+      options.compatProfilesDir ??
+        path.join(options.baseDir, 'vscode-extension-compat'),
+    ),
+  ]
+  const manager = new VscodeExtensionManager(store, { profiles })
   const cacheDir = path.join(options.baseDir, 'vscode-extension-cache')
   const installRoot = path.join(options.baseDir, 'vscode-extensions')
 
@@ -62,6 +72,7 @@ export function createVscodeExtensionHandlers(
           cacheDir,
           installRoot,
           hostScriptPath: options.hostScriptPath,
+          profiles,
           metadataFetch: options.metadataFetch,
           binaryFetch: options.binaryFetch,
         }),
