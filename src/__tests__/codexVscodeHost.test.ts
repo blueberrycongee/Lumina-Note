@@ -136,6 +136,8 @@ describe("codex-vscode-host", () => {
       r.text(),
     );
     expect(htmlLight).toContain("vscode-light");
+    expect(htmlLight).toContain("--vscode-menu-background");
+    expect(htmlLight).toContain("--vscode-input-background");
   });
 
   it("applies the view theme query before resolving the webview", async () => {

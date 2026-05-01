@@ -782,6 +782,12 @@ function injectTheme(html, theme) {
   const mode = theme === "dark" ? "dark" : "light";
   const cls = `vscode-${mode}`;
   const other = mode === "dark" ? "vscode-light" : "vscode-dark";
+  const variables = themeVariablesCss(mode);
+  const style = `<style data-lumina-webview-theme>
+:root {
+${variables}
+}
+</style>`;
   const script = `<script>
 (() => {
   const cls = ${JSON.stringify(cls)};
@@ -807,9 +813,169 @@ function injectTheme(html, theme) {
 })();
 </script>`;
 
-  if (html.includes("<head>")) return html.replace("<head>", `<head>${script}`);
-  if (html.includes("<head ")) return html.replace(/<head[^>]*>/, (m) => `${m}${script}`);
-  return `${script}\n${html}`;
+  const injection = `${style}${script}`;
+  if (html.includes("<head>")) return html.replace("<head>", `<head>${injection}`);
+  if (html.includes("<head ")) return html.replace(/<head[^>]*>/, (m) => `${m}${injection}`);
+  return `${injection}\n${html}`;
+}
+
+function themeVariablesCss(mode) {
+  const light = {
+    "--vscode-font-family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "--vscode-font-size": "13px",
+    "--vscode-chat-font-family": "var(--vscode-font-family)",
+    "--vscode-chat-font-size": "13px",
+    "--vscode-editor-font-family": "Menlo, Monaco, 'Courier New', monospace",
+    "--vscode-editor-font-size": "12px",
+    "--vscode-foreground": "#1f2328",
+    "--vscode-descriptionForeground": "#6e7781",
+    "--vscode-disabledForeground": "#8c959f",
+    "--vscode-focusBorder": "#0969da",
+    "--vscode-icon-foreground": "#57606a",
+    "--vscode-errorForeground": "#cf222e",
+    "--vscode-editor-background": "#ffffff",
+    "--vscode-editor-foreground": "#1f2328",
+    "--vscode-editor-lineHighlightBackground": "#f6f8fa",
+    "--vscode-editor-selectionBackground": "#add6ff",
+    "--vscode-editorWidget-background": "#ffffff",
+    "--vscode-editorWidget-border": "#d0d7de",
+    "--vscode-editorWidget-foreground": "#1f2328",
+    "--vscode-sideBar-background": "#ffffff",
+    "--vscode-sideBarActivityBarTop-border": "#d0d7de",
+    "--vscode-sideBarSectionHeader-border": "#d0d7de",
+    "--vscode-input-background": "#ffffff",
+    "--vscode-input-foreground": "#1f2328",
+    "--vscode-input-border": "#d0d7de",
+    "--vscode-inlineChatInput-border": "#d0d7de",
+    "--vscode-input-placeholderForeground": "#6e7781",
+    "--vscode-inputOption-activeBorder": "#0969da",
+    "--vscode-inputOption-hoverBackground": "#f6f8fa",
+    "--vscode-menu-background": "#ffffff",
+    "--vscode-menu-border": "#d0d7de",
+    "--vscode-menu-foreground": "#1f2328",
+    "--vscode-menu-selectionBackground": "#0969da",
+    "--vscode-menu-selectionForeground": "#ffffff",
+    "--vscode-menu-separatorBackground": "#d0d7de",
+    "--vscode-list-hoverBackground": "#f6f8fa",
+    "--vscode-list-activeSelectionBackground": "#0969da",
+    "--vscode-list-activeSelectionForeground": "#ffffff",
+    "--vscode-list-highlightForeground": "#0969da",
+    "--vscode-button-background": "#0969da",
+    "--vscode-button-foreground": "#ffffff",
+    "--vscode-button-hoverBackground": "#0757b7",
+    "--vscode-button-secondaryBackground": "#f6f8fa",
+    "--vscode-button-secondaryForeground": "#1f2328",
+    "--vscode-button-secondaryHoverBackground": "#eaeef2",
+    "--vscode-button-border": "#0969da",
+    "--vscode-badge-background": "#0969da",
+    "--vscode-badge-foreground": "#ffffff",
+    "--vscode-toolbar-hoverBackground": "#f6f8fa",
+    "--vscode-widget-border": "#d0d7de",
+    "--vscode-widget-shadow": "0 8px 24px rgba(140, 149, 159, 0.2)",
+    "--vscode-progressBar-background": "#0969da",
+    "--vscode-sash-hoverBorder": "#0969da",
+    "--vscode-scrollbarSlider-background": "rgba(31, 35, 40, 0.18)",
+    "--vscode-scrollbarSlider-hoverBackground": "rgba(31, 35, 40, 0.28)",
+    "--vscode-scrollbarSlider-activeBackground": "rgba(31, 35, 40, 0.38)",
+    "--vscode-textLink-foreground": "#0969da",
+    "--vscode-textLink-activeForeground": "#0550ae",
+    "--vscode-textCodeBlock-background": "#f6f8fa",
+    "--vscode-keybindingLabel-background": "#f6f8fa",
+    "--vscode-keybindingLabel-foreground": "#57606a",
+    "--vscode-keybindingLabel-border": "#d0d7de",
+    "--vscode-keybindingLabel-bottomBorder": "#afb8c1",
+    "--vscode-gitDecoration-addedResourceForeground": "#1a7f37",
+    "--vscode-gitDecoration-deletedResourceForeground": "#cf222e",
+    "--vscode-editorMarkerNavigationInfo-headerBackground": "#ddf4ff",
+    "--vscode-charts-blue": "#0969da",
+    "--vscode-charts-green": "#1a7f37",
+    "--vscode-charts-orange": "#bc4c00",
+    "--vscode-charts-purple": "#8250df",
+    "--vscode-charts-red": "#cf222e",
+    "--vscode-charts-yellow": "#9a6700",
+    "--vscode-charts-foreground": "#57606a",
+    "--vscode-terminal-ansiCyan": "#1b7c83",
+  };
+  const dark = {
+    "--vscode-font-family": "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    "--vscode-font-size": "13px",
+    "--vscode-chat-font-family": "var(--vscode-font-family)",
+    "--vscode-chat-font-size": "13px",
+    "--vscode-editor-font-family": "Menlo, Monaco, 'Courier New', monospace",
+    "--vscode-editor-font-size": "12px",
+    "--vscode-foreground": "#cccccc",
+    "--vscode-descriptionForeground": "#9d9d9d",
+    "--vscode-disabledForeground": "#777777",
+    "--vscode-focusBorder": "#0078d4",
+    "--vscode-icon-foreground": "#c5c5c5",
+    "--vscode-errorForeground": "#f85149",
+    "--vscode-editor-background": "#1e1e1e",
+    "--vscode-editor-foreground": "#d4d4d4",
+    "--vscode-editor-lineHighlightBackground": "#2a2d2e",
+    "--vscode-editor-selectionBackground": "#264f78",
+    "--vscode-editorWidget-background": "#252526",
+    "--vscode-editorWidget-border": "#454545",
+    "--vscode-editorWidget-foreground": "#cccccc",
+    "--vscode-sideBar-background": "#181818",
+    "--vscode-sideBarActivityBarTop-border": "#2b2b2b",
+    "--vscode-sideBarSectionHeader-border": "#2b2b2b",
+    "--vscode-input-background": "#313131",
+    "--vscode-input-foreground": "#cccccc",
+    "--vscode-input-border": "#3c3c3c",
+    "--vscode-inlineChatInput-border": "#3c3c3c",
+    "--vscode-input-placeholderForeground": "#989898",
+    "--vscode-inputOption-activeBorder": "#0078d4",
+    "--vscode-inputOption-hoverBackground": "#2a2d2e",
+    "--vscode-menu-background": "#252526",
+    "--vscode-menu-border": "#454545",
+    "--vscode-menu-foreground": "#cccccc",
+    "--vscode-menu-selectionBackground": "#094771",
+    "--vscode-menu-selectionForeground": "#ffffff",
+    "--vscode-menu-separatorBackground": "#454545",
+    "--vscode-list-hoverBackground": "#2a2d2e",
+    "--vscode-list-activeSelectionBackground": "#04395e",
+    "--vscode-list-activeSelectionForeground": "#ffffff",
+    "--vscode-list-highlightForeground": "#2aaaff",
+    "--vscode-button-background": "#0e639c",
+    "--vscode-button-foreground": "#ffffff",
+    "--vscode-button-hoverBackground": "#1177bb",
+    "--vscode-button-secondaryBackground": "#3a3d41",
+    "--vscode-button-secondaryForeground": "#ffffff",
+    "--vscode-button-secondaryHoverBackground": "#45494e",
+    "--vscode-button-border": "#0e639c",
+    "--vscode-badge-background": "#4d4d4d",
+    "--vscode-badge-foreground": "#ffffff",
+    "--vscode-toolbar-hoverBackground": "#2a2d2e",
+    "--vscode-widget-border": "#454545",
+    "--vscode-widget-shadow": "0 8px 24px rgba(0, 0, 0, 0.35)",
+    "--vscode-progressBar-background": "#0e70c0",
+    "--vscode-sash-hoverBorder": "#0078d4",
+    "--vscode-scrollbarSlider-background": "rgba(121, 121, 121, 0.4)",
+    "--vscode-scrollbarSlider-hoverBackground": "rgba(100, 100, 100, 0.7)",
+    "--vscode-scrollbarSlider-activeBackground": "rgba(191, 191, 191, 0.4)",
+    "--vscode-textLink-foreground": "#4daafc",
+    "--vscode-textLink-activeForeground": "#4daafc",
+    "--vscode-textCodeBlock-background": "#2a2d2e",
+    "--vscode-keybindingLabel-background": "#3c3c3c",
+    "--vscode-keybindingLabel-foreground": "#cccccc",
+    "--vscode-keybindingLabel-border": "#6b6b6b",
+    "--vscode-keybindingLabel-bottomBorder": "#555555",
+    "--vscode-gitDecoration-addedResourceForeground": "#81b88b",
+    "--vscode-gitDecoration-deletedResourceForeground": "#c74e39",
+    "--vscode-editorMarkerNavigationInfo-headerBackground": "#063b49",
+    "--vscode-charts-blue": "#3794ff",
+    "--vscode-charts-green": "#89d185",
+    "--vscode-charts-orange": "#d18616",
+    "--vscode-charts-purple": "#b180d7",
+    "--vscode-charts-red": "#f14c4c",
+    "--vscode-charts-yellow": "#cca700",
+    "--vscode-charts-foreground": "#cccccc",
+    "--vscode-terminal-ansiCyan": "#4ec9b0",
+  };
+  const selected = mode === "dark" ? dark : light;
+  return Object.entries(selected)
+    .map(([key, value]) => `  ${key}: ${value};`)
+    .join("\n");
 }
 
 function injectBaseLayout(html) {
