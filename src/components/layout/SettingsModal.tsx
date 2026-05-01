@@ -16,6 +16,7 @@ import { MobileOptionsSection } from "../settings/MobileOptionsSection";
 import { ProxySection } from "../settings/ProxySection";
 import { LicenseSettings } from "../settings/LicenseSettings";
 import { CloudUsagePanel } from "../settings/CloudUsagePanel";
+import { MODAL_SIZES } from "./modalSizes";
 
 type TabId = "general" | "ai" | "sync" | "network" | "account" | "system";
 
@@ -28,7 +29,14 @@ const TAB_ICONS: Record<TabId, typeof Settings> = {
   system: Info,
 };
 
-const TAB_ORDER: TabId[] = ["general", "ai", "sync", "network", "account", "system"];
+const TAB_ORDER: TabId[] = [
+  "general",
+  "ai",
+  "sync",
+  "network",
+  "account",
+  "system",
+];
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -36,7 +44,11 @@ interface SettingsModalProps {
   onOpenUpdateModal: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsModalProps) {
+export function SettingsModal({
+  isOpen,
+  onClose,
+  onOpenUpdateModal,
+}: SettingsModalProps) {
   const { t } = useLocaleStore();
   const [activeTab, setActiveTab] = useState<TabId>("general");
 
@@ -85,10 +97,14 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
       />
 
       {/* 设置面板 */}
-      <div className="relative w-[720px] h-[80vh] rounded-xl shadow-elev-3 overflow-hidden border border-border bg-popover animate-spotlight-in flex flex-col">
+      <div
+        className={`relative ${MODAL_SIZES.settings.panel} rounded-xl shadow-elev-3 overflow-hidden border border-border bg-popover animate-spotlight-in flex flex-col`}
+      >
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-muted/50">
-          <h2 className="text-lg font-semibold text-foreground/90">{t.settingsModal.title}</h2>
+          <h2 className="text-lg font-semibold text-foreground/90">
+            {t.settingsModal.title}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 rounded-full transition-colors hover:bg-muted"
@@ -131,5 +147,7 @@ export function SettingsModal({ isOpen, onClose, onOpenUpdateModal }: SettingsMo
     </div>
   );
 
-  return typeof document !== "undefined" ? createPortal(modal, document.body) : modal;
+  return typeof document !== "undefined"
+    ? createPortal(modal, document.body)
+    : modal;
 }
