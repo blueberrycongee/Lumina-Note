@@ -10,12 +10,14 @@ import {
 import {
   checkLatestVscodeAiExtension,
   getVscodeAiExtensionDiagnostics,
+  installVscodeAiCompatProfiles,
   installLatestVscodeAiExtension,
   installLocalVscodeAiExtensionVsix,
   openDialog,
   rollbackVscodeAiExtension,
   type VscodeAiExtensionDiagnosticsItem,
   type VscodeAiExtensionId,
+  type VscodeAiExtensionSource,
 } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 
@@ -28,6 +30,10 @@ export function VscodeAiExtensionsSection() {
   const [items, setItems] = useState<VscodeAiExtensionDiagnosticsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<ActionState>({ key: "", message: null });
+  const [source, setSource] = useState<VscodeAiExtensionSource>("open-vsx");
+  const [marketplaceTermsAccepted, setMarketplaceTermsAccepted] =
+    useState(false);
+  const [compatIndexUrl, setCompatIndexUrl] = useState("");
 
   const refresh = async () => {
     setLoading(true);
@@ -69,18 +75,26 @@ export function VscodeAiExtensionsSection() {
     runAction(`check:${extensionId}`, async () => {
       const latest = await checkLatestVscodeAiExtension({
         extensionId,
-        source: "open-vsx",
+        ...remoteSourceOptions(source, marketplaceTermsAccepted),
       });
-      return `Latest ${latest.version} from Open VSX`;
+      return `Latest ${latest.version} from ${sourceLabel(source)}`;
     });
 
   const installLatest = (extensionId: VscodeAiExtensionId) =>
     runAction(`install:${extensionId}`, async () => {
       const result = await installLatestVscodeAiExtension({
         extensionId,
-        source: "open-vsx",
+        ...remoteSourceOptions(source, marketplaceTermsAccepted),
       });
       return `Install result: ${result.outcome.decision}`;
+    });
+
+  const installCompatProfiles = () =>
+    runAction("compat-profiles", async () => {
+      const indexUrl = compatIndexUrl.trim();
+      if (!indexUrl) return "Compatibility profile index URL is required";
+      const result = await installVscodeAiCompatProfiles({ indexUrl });
+      return `Installed ${result.profiles.length} compatibility profiles`;
     });
 
   const importVsix = (extensionId: VscodeAiExtensionId) =>
@@ -132,6 +146,63 @@ export function VscodeAiExtensionsSection() {
           {action.message}
         </div>
       ) : null}
+
+      <div className="grid gap-3 rounded-lg border border-border/60 bg-background/40 p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-muted-foreground">
+            Remote source
+          </label>
+          <select
+            aria-label="VS Code extension remote source"
+            value={source}
+            onChange={(event) =>
+              setSource(event.target.value as VscodeAiExtensionSource)
+            }
+            className="h-8 w-full rounded-lg border border-border bg-background px-2 text-sm"
+          >
+            <option value="open-vsx">Open VSX</option>
+            <option value="marketplace">Marketplace</option>
+          </select>
+          {source === "marketplace" ? (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={marketplaceTermsAccepted}
+                onChange={(event) =>
+                  setMarketplaceTermsAccepted(event.target.checked)
+                }
+              />
+              <span>I have accepted Marketplace terms</span>
+            </label>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <label
+            className="block text-xs font-medium text-muted-foreground"
+            htmlFor="vscode-ai-compat-index"
+          >
+            Compatibility profile index URL
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="vscode-ai-compat-index"
+              value={compatIndexUrl}
+              onChange={(event) => setCompatIndexUrl(event.target.value)}
+              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 text-sm"
+              placeholder="https://..."
+            />
+            <button
+              type="button"
+              onClick={() => void installCompatProfiles()}
+              disabled={action.key === "compat-profiles"}
+              className="h-8 shrink-0 rounded-lg border border-border bg-background/60 px-3 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {action.key === "compat-profiles" ? "Updating" : "Update"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-3">
         {items.map((item) => {
@@ -207,6 +278,24 @@ export function VscodeAiExtensionsSection() {
       </div>
     </section>
   );
+}
+
+function sourceLabel(source: VscodeAiExtensionSource): string {
+  if (source === "marketplace") return "Marketplace";
+  if (source === "github-release") return "GitHub Releases";
+  return "Open VSX";
+}
+
+function remoteSourceOptions(
+  source: VscodeAiExtensionSource,
+  marketplaceTermsAccepted: boolean,
+): {
+  source: VscodeAiExtensionSource;
+  marketplaceTermsAccepted?: boolean;
+} {
+  return source === "marketplace"
+    ? { source, marketplaceTermsAccepted }
+    : { source };
 }
 
 function IconButton({

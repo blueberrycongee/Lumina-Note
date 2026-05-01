@@ -6,6 +6,7 @@ const diagnosticsMock = vi.fn();
 const checkLatestMock = vi.fn();
 const installLatestMock = vi.fn();
 const installLocalMock = vi.fn();
+const installCompatProfilesMock = vi.fn();
 const rollbackMock = vi.fn();
 const openDialogMock = vi.fn();
 
@@ -17,6 +18,7 @@ vi.mock("@/lib/host", async () => {
     checkLatestVscodeAiExtension: (...args: unknown[]) => checkLatestMock(...args),
     installLatestVscodeAiExtension: (...args: unknown[]) => installLatestMock(...args),
     installLocalVscodeAiExtensionVsix: (...args: unknown[]) => installLocalMock(...args),
+    installVscodeAiCompatProfiles: (...args: unknown[]) => installCompatProfilesMock(...args),
     rollbackVscodeAiExtension: (...args: unknown[]) => rollbackMock(...args),
     openDialog: (...args: unknown[]) => openDialogMock(...args),
   };
@@ -32,6 +34,7 @@ describe("VscodeAiExtensionsSection", () => {
     checkLatestMock.mockReset();
     installLatestMock.mockReset();
     installLocalMock.mockReset();
+    installCompatProfilesMock.mockReset();
     rollbackMock.mockReset();
     openDialogMock.mockReset();
     diagnosticsMock.mockResolvedValue([
@@ -84,6 +87,7 @@ describe("VscodeAiExtensionsSection", () => {
     checkLatestMock.mockResolvedValue({ version: "6.1.0" });
     installLatestMock.mockResolvedValue({ outcome: { decision: "pending-manual-opt-in" } });
     installLocalMock.mockResolvedValue({ outcome: { decision: "pending-manual-opt-in" } });
+    installCompatProfilesMock.mockResolvedValue({ profiles: [{ extensionId: "openai.chatgpt" }] });
     rollbackMock.mockResolvedValue({ version: "2.0.0" });
     openDialogMock.mockResolvedValue("/tmp/ext.vsix");
   });
@@ -113,6 +117,41 @@ describe("VscodeAiExtensionsSection", () => {
       expect(installLatestMock).toHaveBeenCalledWith({
         extensionId: "openai.chatgpt",
         source: "open-vsx",
+      });
+    });
+  });
+
+  it("passes explicit Marketplace terms acceptance to remote checks", async () => {
+    render(<VscodeAiExtensionsSection />);
+    await screen.findByText("Codex");
+
+    fireEvent.change(screen.getByLabelText("VS Code extension remote source"), {
+      target: { value: "marketplace" },
+    });
+    fireEvent.click(screen.getByLabelText(/Marketplace terms/));
+    fireEvent.click(screen.getByRole("button", { name: "Check latest Codex" }));
+
+    await waitFor(() => {
+      expect(checkLatestMock).toHaveBeenCalledWith({
+        extensionId: "openai.chatgpt",
+        source: "marketplace",
+        marketplaceTermsAccepted: true,
+      });
+    });
+  });
+
+  it("installs remote compatibility profile indexes", async () => {
+    render(<VscodeAiExtensionsSection />);
+    await screen.findByText("Codex");
+
+    fireEvent.change(screen.getByLabelText("Compatibility profile index URL"), {
+      target: { value: "https://updates.example.com/compat/index.json" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update" }));
+
+    await waitFor(() => {
+      expect(installCompatProfilesMock).toHaveBeenCalledWith({
+        indexUrl: "https://updates.example.com/compat/index.json",
       });
     });
   });
