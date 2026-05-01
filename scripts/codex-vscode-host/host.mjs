@@ -266,6 +266,42 @@ class OutputChannel {
   dispose() {}
 }
 
+class DiagnosticCollection {
+  #entries = new Map();
+  constructor(name = "") {
+    this.name = name;
+  }
+  set(uri, diagnostics) {
+    if (Array.isArray(uri)) {
+      for (const [entryUri, entryDiagnostics] of uri) {
+        this.set(entryUri, entryDiagnostics);
+      }
+      return;
+    }
+    this.#entries.set(uri.toString(), { uri, diagnostics: diagnostics ?? [] });
+  }
+  delete(uri) {
+    this.#entries.delete(uri.toString());
+  }
+  clear() {
+    this.#entries.clear();
+  }
+  forEach(callback, thisArg) {
+    for (const entry of this.#entries.values()) {
+      callback.call(thisArg, entry.uri, entry.diagnostics, this);
+    }
+  }
+  get(uri) {
+    return this.#entries.get(uri.toString())?.diagnostics;
+  }
+  has(uri) {
+    return this.#entries.has(uri.toString());
+  }
+  dispose() {
+    this.clear();
+  }
+}
+
 function openExternalUrl(input) {
   const url = input?.toString?.() ?? String(input ?? "");
   if (!url) return false;
@@ -1382,6 +1418,7 @@ function createVscodeApi(state, originForApi) {
     Position,
     Selection,
     CodeLens,
+    DiagnosticCollection,
     FileType,
     env: {
       remoteName: undefined,
@@ -1647,7 +1684,18 @@ function createVscodeApi(state, originForApi) {
       },
     },
     languages: {
-      DiagnosticCollection: class {},
+      DiagnosticCollection,
+      createDiagnosticCollection(name) {
+        const collection = new DiagnosticCollection(name);
+        recordDebugEvent(state, {
+          category: "diagnostics",
+          summary: {
+            event: "createDiagnosticCollection",
+            name,
+          },
+        });
+        return collection;
+      },
       getDiagnostics(uri) {
         if (uri) return [];
         return [];

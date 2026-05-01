@@ -439,6 +439,56 @@ exports.activate = async function activate() {
     });
   });
 
+  it("supports diagnostic collection compatibility APIs", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-diagnostics-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "diagnostics-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate(context) {
+  const vscode = require("vscode");
+  const collection = vscode.languages.createDiagnosticCollection("lumina-test");
+  const uri = vscode.Uri.joinPath(context.extensionUri, "README.md");
+  collection.set(uri, []);
+  if (!collection.has(uri) || !Array.isArray(collection.get(uri))) {
+    throw new Error("diagnostic collection did not store entries");
+  }
+  collection.clear();
+  collection.dispose();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "diagnostics" &&
+            event.summary?.event === "createDiagnosticCollection",
+        ),
+    );
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "diagnostics",
+          summary: expect.objectContaining({
+            event: "createDiagnosticCollection",
+            name: "lumina-test",
+          }),
+        }),
+      ]),
+    );
+  });
+
   it("supports minimal authentication provider and getSession compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-auth-ext-"));
     fs.writeFileSync(
