@@ -8,6 +8,7 @@ import {
 } from './profiles.js'
 
 const KNOWN_CAPABILITIES = new Set<VscodeHostCapability>([
+  'authentication.getSession',
   'commands',
   'diagnostics-read',
   'diff-viewer',

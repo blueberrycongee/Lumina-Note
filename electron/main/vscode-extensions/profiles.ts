@@ -5,6 +5,7 @@ export type SupportedVscodeAiExtensionId =
 export type VscodeAiExtensionChannel = 'stable' | 'preview'
 
 export type VscodeHostCapability =
+  | 'authentication.getSession'
   | 'commands'
   | 'diagnostics-read'
   | 'diff-viewer'
@@ -86,6 +87,7 @@ export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] =
     hostApiVersion: 1,
     entryViewTypes: ['chatgpt.sidebarView'],
     requiredCapabilities: [
+      'authentication.getSession',
       'commands',
       'diff-viewer',
       'env-open-external',
@@ -119,6 +121,7 @@ export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] =
     hostApiVersion: 1,
     entryViewTypes: [],
     requiredCapabilities: [
+      'authentication.getSession',
       'commands',
       'diagnostics-read',
       'diff-viewer',

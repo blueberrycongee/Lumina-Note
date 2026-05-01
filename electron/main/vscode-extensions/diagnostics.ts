@@ -5,6 +5,7 @@ import type {
 
 export const CURRENT_VSCODE_HOST_CAPABILITIES: ReadonlySet<VscodeHostCapability> =
   new Set<VscodeHostCapability>([
+    'authentication.getSession',
     'commands',
     'diagnostics-read',
     'diff-viewer',

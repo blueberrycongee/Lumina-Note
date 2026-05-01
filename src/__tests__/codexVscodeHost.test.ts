@@ -399,6 +399,70 @@ exports.activate = async function activate(context) {
     ]);
   });
 
+  it("supports minimal authentication provider and getSession compatibility APIs", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-auth-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "auth-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.authentication.registerAuthenticationProvider("lumina-test", "Lumina Test", {
+    onDidChangeSessions: new vscode.EventEmitter().event,
+    async getSessions() {
+      return [];
+    },
+    async createSession(scopes) {
+      return {
+        id: "session-1",
+        accessToken: "token",
+        account: { id: "account-1", label: "Test Account" },
+        scopes,
+      };
+    },
+    async removeSession() {},
+  }, { supportsMultipleAccounts: false });
+  const session = await vscode.authentication.getSession("lumina-test", ["chat"], { createIfNone: true });
+  if (!session || session.account.label !== "Test Account") {
+    throw new Error("missing authentication session");
+  }
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "authentication" &&
+            event.summary?.event === "getSession" &&
+            event.summary?.hasSession === true,
+        ),
+    );
+
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "authentication",
+          summary: expect.objectContaining({ event: "registerProvider", providerId: "lumina-test" }),
+        }),
+        expect.objectContaining({
+          category: "authentication",
+          summary: expect.objectContaining({ event: "getSession", hasSession: true }),
+        }),
+      ]),
+    );
+  });
+
   it("exposes a minimal Lumina IDE bridge state endpoint", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-ide-bridge-ext-"));
     fs.writeFileSync(

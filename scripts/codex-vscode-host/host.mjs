@@ -772,6 +772,7 @@ async function main() {
     panels: new Map(), // panelId -> { webview, panel, queue, token }
     nextPanelId: 1,
     commands: new Map(),
+    authenticationProviders: new Map(),
     terminals: new Map(),
     nextTerminalId: 1,
     uriHandlers: [],
@@ -1138,6 +1139,7 @@ function createVscodeApi(state, originForApi) {
   const onDidSaveTextDocumentEmitter = new EventEmitter();
   const onDidChangeTextDocumentEmitter = new EventEmitter();
   const onDidChangeActiveColorThemeEmitter = new EventEmitter();
+  const onDidChangeAuthenticationSessionsEmitter = new EventEmitter();
 
   const ColorThemeKind = {
     Light: 1,
@@ -1300,6 +1302,30 @@ function createVscodeApi(state, originForApi) {
     return undefined;
   };
 
+  const normalizeAuthenticationScopes = (scopes) => {
+    if (!Array.isArray(scopes)) return [];
+    return scopes.map((scope) => String(scope));
+  };
+
+  const getAuthenticationSessions = async (providerId, scopes) => {
+    const provider = state.authenticationProviders.get(providerId);
+    if (!provider?.provider?.getSessions) return [];
+    const sessions = await provider.provider.getSessions(normalizeAuthenticationScopes(scopes));
+    return Array.isArray(sessions) ? sessions : [];
+  };
+
+  const matchAuthenticationSession = (sessions, scopes) => {
+    if (!sessions.length) return undefined;
+    const wanted = normalizeAuthenticationScopes(scopes);
+    if (!wanted.length) return sessions[0];
+    return (
+      sessions.find((session) => {
+        const available = Array.isArray(session?.scopes) ? session.scopes : [];
+        return wanted.every((scope) => available.includes(scope));
+      }) ?? sessions[0]
+    );
+  };
+
   return {
     Uri,
     Disposable,
@@ -1317,6 +1343,67 @@ function createVscodeApi(state, originForApi) {
           summary: { url: summarizeDebugValue(url) },
         });
         return openExternalUrl(url);
+      },
+    },
+    authentication: {
+      onDidChangeSessions: onDidChangeAuthenticationSessionsEmitter.event,
+      async getSession(providerId, scopes = [], options = {}) {
+        const provider = state.authenticationProviders.get(providerId);
+        let sessions = await getAuthenticationSessions(providerId, scopes);
+        let session = matchAuthenticationSession(sessions, scopes);
+
+        if (!session && options?.createIfNone === true && provider?.provider?.createSession) {
+          session = await provider.provider.createSession(normalizeAuthenticationScopes(scopes));
+          sessions = await getAuthenticationSessions(providerId, scopes);
+          onDidChangeAuthenticationSessionsEmitter.fire({
+            provider: { id: providerId, label: provider.label },
+            added: session ? [session] : [],
+            removed: [],
+            changed: [],
+          });
+        }
+
+        recordDebugEvent(state, {
+          category: "authentication",
+          summary: {
+            event: "getSession",
+            providerId,
+            scopes: normalizeAuthenticationScopes(scopes),
+            createIfNone: options?.createIfNone === true,
+            hasSession: Boolean(session),
+            registeredProvider: Boolean(provider),
+            knownSessionCount: sessions.length,
+          },
+        });
+        return session;
+      },
+      async getAccounts(providerId) {
+        const sessions = await getAuthenticationSessions(providerId, []);
+        const accounts = sessions.map((session) => session?.account).filter(Boolean);
+        recordDebugEvent(state, {
+          category: "authentication",
+          summary: {
+            event: "getAccounts",
+            providerId,
+            accountCount: accounts.length,
+          },
+        });
+        return accounts;
+      },
+      registerAuthenticationProvider(id, label, provider, options = {}) {
+        state.authenticationProviders.set(id, { label, provider, options });
+        recordDebugEvent(state, {
+          category: "authentication",
+          summary: {
+            event: "registerProvider",
+            providerId: id,
+            label,
+            supportsMultipleAccounts: options?.supportsMultipleAccounts === true,
+          },
+        });
+        return new Disposable(() => {
+          state.authenticationProviders.delete(id);
+        });
       },
     },
     ConfigurationTarget: {
