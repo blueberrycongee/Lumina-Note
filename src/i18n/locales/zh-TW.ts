@@ -192,7 +192,7 @@ export default {
         mathBlockDesc: "LaTeX 公式區塊",
         table: "表格",
         tableDesc: "Markdown 表格",
-        tableTemplate: "| 欄1 | 欄2 | 欄3 |\\n| --- | --- | --- |\\n|  |  |  |",
+        tableTemplate: "| 欄1 | 欄2 | 欄3 |\n| --- | --- | --- |\n|  |  |  |",
         divider: "分隔線",
         dividerDesc: "水平分隔線",
         image: "圖片",

@@ -196,7 +196,7 @@ export default {
         table: "Table",
         tableDesc: "Markdown table",
         tableTemplate:
-          "| Col 1 | Col 2 | Col 3 |\\n| --- | --- | --- |\\n|  |  |  |",
+          "| Col 1 | Col 2 | Col 3 |\n| --- | --- | --- |\n|  |  |  |",
         divider: "Divider",
         dividerDesc: "Horizontal divider",
         image: "Image",

@@ -632,7 +632,33 @@ export async function runSlashAIAction(
 export function getDefaultCommands(translations?: Translations): SlashCommand[] {
   const t = translations ?? getCurrentTranslations();
   const labels = t.editor?.slashMenu?.commands;
-  const tableTemplate = labels?.tableTemplate || "| Col 1 | Col 2 | Col 3 |\n| --- | --- | --- |\n|  |  |  |";
+  const tableTemplate = (labels?.tableTemplate || "| Col 1 | Col 2 | Col 3 |\n| --- | --- | --- |\n|  |  |  |")
+    .replace(/\\n/g, "\n");
+
+  const insertMarkdownBlock = (
+    view: EditorView,
+    from: number,
+    to: number,
+    template: string,
+    cursorOffset: number,
+  ) => {
+    const state = view.state;
+    const line = state.doc.lineAt(from);
+    const toLine = state.doc.lineAt(to);
+    const textBefore = state.doc.sliceString(line.from, from);
+    const hasContentBefore = textBefore.trim().length > 0;
+    const hasContentAfter = state.doc.sliceString(to, toLine.to).trim().length > 0;
+    const changeFrom = hasContentBefore
+      ? from - (textBefore.match(/\s*$/)?.[0].length ?? 0)
+      : from;
+    const prefix = hasContentBefore ? "\n\n" : "";
+    const suffix = hasContentAfter ? "\n\n" : "";
+    const insert = `${prefix}${template}${suffix}`;
+    view.dispatch({
+      changes: { from: changeFrom, to, insert },
+      selection: { anchor: changeFrom + prefix.length + cursorOffset },
+    });
+  };
 
   const transformOrInsert = (
     targetType: string,
@@ -647,10 +673,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
           return;
         }
       }
-      view.dispatch({
-        changes: { from, to, insert: fallbackInsert },
-        selection: { anchor: from + fallbackOffset },
-      });
+      insertMarkdownBlock(view, from, to, fallbackInsert, fallbackOffset);
     };
   };
 
@@ -757,10 +780,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.taskListDesc || "Todo list",
     category: "list",
     action: (view, from, to) => {
-      view.dispatch({
-        changes: { from, to, insert: "- [ ] " },
-        selection: { anchor: from + 6 },
-      });
+      insertMarkdownBlock(view, from, to, "- [ ] ", 6);
     },
   },
   
@@ -780,10 +800,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.codeBlockDesc || "Code snippet",
     category: "block",
     action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "```\n\n```" },
-        selection: { anchor: from + 4 }
-      });
+      insertMarkdownBlock(view, from, to, "```\n\n```", 4);
     },
   },
   {
@@ -793,10 +810,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.calloutDesc || "Callout block",
     category: "block",
     action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "> [!note]\n> " },
-        selection: { anchor: from + 12 }
-      });
+      insertMarkdownBlock(view, from, to, "> [!note]\n> ", 12);
     },
   },
   {
@@ -806,10 +820,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.mathBlockDesc || "LaTeX block",
     category: "block",
     action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "$$\n\n$$" },
-        selection: { anchor: from + 3 }
-      });
+      insertMarkdownBlock(view, from, to, "$$\n\n$$", 3);
     },
   },
   
@@ -821,10 +832,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.tableDesc || "Markdown table",
     category: "insert",
     action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: tableTemplate },
-        selection: { anchor: from + 2 }
-      });
+      insertMarkdownBlock(view, from, to, tableTemplate, 2);
     },
   },
   {
@@ -834,10 +842,7 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     description: labels?.dividerDesc || "Horizontal divider",
     category: "insert",
     action: (view, from, to) => {
-      view.dispatch({ 
-        changes: { from, to, insert: "---\n" },
-        selection: { anchor: from + 4 }
-      });
+      insertMarkdownBlock(view, from, to, "---\n", 4);
     },
   },
   {
