@@ -1227,7 +1227,13 @@ function appendSlashAIActivityDetails(parent: HTMLElement, preview: SlashAIInlin
   `;
 
   const summary = document.createElement("div");
-  summary.textContent = getSlashAIWorkLabel(preview);
+  const isRunning =
+    preview.status === "running" ||
+    activities.some((activity) => activity.status === "running");
+  const stepText = isRunning && activities.length > 0
+    ? ` · ${(t.steps as string).replace("{count}", String(activities.length))}`
+    : "";
+  summary.textContent = `${getSlashAIWorkLabel(preview)}${stepText}`;
   summary.style.cssText = `
     display: inline-flex;
     align-items: center;
@@ -1243,7 +1249,7 @@ function appendSlashAIActivityDetails(parent: HTMLElement, preview: SlashAIInlin
     padding-left: 11px;
     border-left: 1px solid hsl(var(--border) / 0.82);
     display: grid;
-    gap: 6px;
+    gap: 7px;
   `;
   for (const activity of activities) {
     const item = document.createElement("div");

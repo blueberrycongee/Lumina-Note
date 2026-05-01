@@ -14,6 +14,7 @@ import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useWorkspaceStore } from "@/stores/useWorkspaceStore";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 import { reportOperationError } from "@/lib/reportError";
+import { cancelSlashAIInlineTasksForTabIds } from "@/stores/useSlashAIInlineStore";
 
 // 历史记录条目
 interface HistoryEntry {
@@ -789,6 +790,7 @@ export const useFileStore = create<FileState>()(
 
         // 固定标签不能关闭
         if (tabToClose.isPinned) return;
+        cancelSlashAIInlineTasksForTabIds([tabToClose.id]);
 
         // 如果要关闭的是当前标签页且有未保存的更改，先保存
         if (index === activeTabIndex && isDirty) {
@@ -866,6 +868,11 @@ export const useFileStore = create<FileState>()(
         if (index < 0 || index >= tabs.length) return;
 
         const targetTab = tabs[index];
+        cancelSlashAIInlineTasksForTabIds(
+          tabs
+            .filter((tab) => tab.id !== targetTab.id && !tab.isPinned)
+            .map((tab) => tab.id),
+        );
 
         // Save tabs that will be closed
         for (const tab of tabs) {
@@ -899,6 +906,9 @@ export const useFileStore = create<FileState>()(
       // Close all tabs (keep pinned)
       closeAllTabs: async () => {
         const { tabs } = get();
+        cancelSlashAIInlineTasksForTabIds(
+          tabs.filter((tab) => !tab.isPinned).map((tab) => tab.id),
+        );
 
         // Save tabs that will be closed
         for (const tab of tabs) {

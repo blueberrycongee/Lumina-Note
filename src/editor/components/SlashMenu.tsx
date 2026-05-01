@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { EditorView } from "@codemirror/view";
+import { useShallow } from "zustand/react/shallow";
 import {
   Check,
   FileText,
@@ -17,6 +18,17 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFileStore } from "@/stores/useFileStore";
+import {
+  cancelSlashAIInlineTask,
+  finishSlashAIInlineTask,
+  getSlashAIInlineTask,
+  removeSlashAIInlineTask,
+  startSlashAIInlineTask,
+  updateSlashAIInlineTask,
+  useSlashAIInlineStore,
+  type SlashAIInlineTask,
+} from "@/stores/useSlashAIInlineStore";
 import { BlockIcon, type BlockIconName } from "./BlockIcon";
 import {
   applySlashAIResult,
@@ -107,6 +119,16 @@ function SlashCommandIcon({ command }: { command: SlashCommand }) {
 
 export function SlashMenu({ view }: SlashMenuProps) {
   const { t } = useLocaleStore();
+  const { activeTabId, activeTabPath, activeTabType } = useFileStore(
+    useShallow((state) => {
+      const tab = state.activeTabIndex >= 0 ? state.tabs[state.activeTabIndex] : null;
+      return {
+        activeTabId: tab?.id ?? null,
+        activeTabPath: tab?.path || state.currentFile || null,
+        activeTabType: tab?.type ?? null,
+      };
+    }),
+  );
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [_slashPos, setSlashPos] = useState(0);
@@ -128,8 +150,18 @@ export function SlashMenu({ view }: SlashMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const aiPromptRef = useRef<HTMLTextAreaElement>(null);
   const aiAbortControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(false);
   const commands = useMemo(() => getDefaultCommands(t), [t]);
   const inlineAI = t.editor.slashMenu.inlineAI;
+  const activeInlineTask = useSlashAIInlineStore(
+    useShallow((state) => {
+      if (!activeTabId) return null;
+      const tasks = Object.values(state.tasks)
+        .filter((task) => task.tabId === activeTabId)
+        .sort((a, b) => (a.preview.startedAt ?? 0) - (b.preview.startedAt ?? 0));
+      return tasks.at(-1) ?? null;
+    }),
+  );
   const buildInlinePreview = useCallback((
     id: string,
     status: "running" | "preview",
@@ -167,6 +199,24 @@ export function SlashMenu({ view }: SlashMenuProps) {
     inlineAI.regenerate,
     inlineAI.stages,
   ]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!view) return;
+    if (activeTabType !== "file" || !activeInlineTask) {
+      view.dispatch({ effects: clearSlashAIInlinePreview.of() });
+      return;
+    }
+    view.dispatch({
+      effects: showSlashAIInlinePreview.of(activeInlineTask.preview),
+    });
+  }, [activeInlineTask, activeTabType, view]);
 
   const closeMenu = useCallback(() => {
     aiAbortControllerRef.current?.abort();
@@ -261,6 +311,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
 
   const startAIGeneration = useCallback(async () => {
     if (!view || !aiSlashRange || !aiPromptAction || aiSubmitting) return;
+    const taskTabId = activeTabId;
+    if (!taskTabId || activeTabType !== "file") return;
     const request = aiPromptText.trim();
     if (aiPromptAction === "chat-insert" && !request) {
       setAiStatus("error");
@@ -275,25 +327,41 @@ export function SlashMenu({ view }: SlashMenuProps) {
     let inlineActivities: SlashAIActivity[] = [];
     let inlineStreamingText = "";
     let tickTimer: number | null = null;
+    const abortController = new AbortController();
+    const buildTask = (
+      status: "running" | "preview",
+      anchor: number,
+      result?: SlashAIResult,
+    ): SlashAIInlineTask => ({
+      id: previewId,
+      tabId: taskTabId,
+      filePath: activeTabPath,
+      action: aiPromptAction,
+      request,
+      slashRange: range,
+      preview: buildInlinePreview(
+        previewId,
+        status,
+        anchor,
+        inlineStageStatuses,
+        result,
+        inlineActivities,
+        startedAt,
+        inlineStreamingText,
+      ),
+    });
     const dispatchInlinePreview = (
       status: "running" | "preview",
       anchor: number,
       result?: SlashAIResult,
     ) => {
-      view.dispatch({
-        effects: showSlashAIInlinePreview.of(
-          buildInlinePreview(
-            previewId,
-            status,
-            anchor,
-            inlineStageStatuses,
-            result,
-            inlineActivities,
-            startedAt,
-            inlineStreamingText,
-          ),
-        ),
-      });
+      const task = buildTask(status, anchor, result);
+      updateSlashAIInlineTask(task);
+      const fileState = useFileStore.getState();
+      if (fileState.tabs[fileState.activeTabIndex]?.id !== taskTabId) {
+        return;
+      }
+      view.dispatch({ effects: showSlashAIInlinePreview.of(task.preview) });
     };
     setAiResult(null);
     setAiPreviewId(previewId);
@@ -301,29 +369,22 @@ export function SlashMenu({ view }: SlashMenuProps) {
     setAiStages(inlineStageStatuses);
     setAiStatus("running");
     setAiSubmitting(true);
-    view.dispatch({
-      effects: [
-        hideSlashMenu.of(),
-        showSlashAIInlinePreview.of(
-          buildInlinePreview(
-            previewId,
-            "running",
-            range.from,
-            inlineStageStatuses,
-            undefined,
-            inlineActivities,
-            startedAt,
-            inlineStreamingText,
-          ),
-        ),
-      ],
-    });
+    const initialTask = buildTask("running", range.from);
+    startSlashAIInlineTask(initialTask, abortController);
+    const fileState = useFileStore.getState();
+    if (fileState.tabs[fileState.activeTabIndex]?.id === taskTabId) {
+      view.dispatch({
+        effects: [
+          hideSlashMenu.of(),
+          showSlashAIInlinePreview.of(initialTask.preview),
+        ],
+      });
+    }
     tickTimer = window.setInterval(() => {
       dispatchInlinePreview("running", range.from);
     }, 1000);
     setVisible(false);
     setAiPromptOpen(false);
-    const abortController = new AbortController();
     aiAbortControllerRef.current = abortController;
     try {
       const result = await runSlashAIAction(
@@ -339,7 +400,9 @@ export function SlashMenu({ view }: SlashMenuProps) {
               ...inlineStageStatuses,
               [progress.stage]: progress.status,
             };
-            setAiStages(inlineStageStatuses);
+            if (mountedRef.current) {
+              setAiStages(inlineStageStatuses);
+            }
             dispatchInlinePreview("running", range.from);
           },
           onActivity: (activities) => {
@@ -353,26 +416,37 @@ export function SlashMenu({ view }: SlashMenuProps) {
         },
       );
       if (!result || abortController.signal.aborted) return;
-      setAiResult(result);
-      setAiPreviewId(previewId);
-      setAiStatus("preview");
+      if (mountedRef.current) {
+        setAiResult(result);
+        setAiPreviewId(previewId);
+        setAiStatus("preview");
+      }
       inlineStageStatuses = {
         ...inlineStageStatuses,
         generating: inlineStageStatuses.generating === "error" ? "error" : "done",
         ready: "done",
       };
       inlineStreamingText = result.text;
-      setAiStages(inlineStageStatuses);
+      if (mountedRef.current) {
+        setAiStages(inlineStageStatuses);
+      }
       dispatchInlinePreview("preview", result.from, result);
+      finishSlashAIInlineTask(previewId);
     } catch (error) {
       if (error instanceof SlashAIAbortError || abortController.signal.aborted) {
         return;
       }
-      view.dispatch({ effects: clearSlashAIInlinePreview.of() });
-      setVisible(true);
-      setAiPromptOpen(true);
-      setAiStatus("error");
-      setAiError(error instanceof Error ? error.message : inlineAI.genericError);
+      removeSlashAIInlineTask(previewId);
+      const fileState = useFileStore.getState();
+      if (fileState.tabs[fileState.activeTabIndex]?.id === taskTabId) {
+        view.dispatch({ effects: clearSlashAIInlinePreview.of() });
+      }
+      if (mountedRef.current) {
+        setVisible(true);
+        setAiPromptOpen(true);
+        setAiStatus("error");
+        setAiError(error instanceof Error ? error.message : inlineAI.genericError);
+      }
     } finally {
       if (aiAbortControllerRef.current === abortController) {
         aiAbortControllerRef.current = null;
@@ -380,10 +454,15 @@ export function SlashMenu({ view }: SlashMenuProps) {
       if (tickTimer !== null) {
         window.clearInterval(tickTimer);
       }
-      setAiSubmitting(false);
+      if (mountedRef.current) {
+        setAiSubmitting(false);
+      }
     }
   }, [
     view,
+    activeTabId,
+    activeTabPath,
+    activeTabType,
     aiSlashRange,
     aiPromptAction,
     aiSubmitting,
@@ -403,19 +482,40 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const handlePreviewAction = (
       e: CustomEvent<{ id: string; action: "accept" | "cancel" | "regenerate" }>,
     ) => {
-      if (!view || e.detail.id !== aiPreviewId) return;
+      if (!view) return;
+      const task = getSlashAIInlineTask(e.detail.id);
+      if (e.detail.id !== aiPreviewId && !task) return;
       if (e.detail.action === "accept") {
-        if (!aiResult) return;
-        applySlashAIResult(view, aiResult);
-        closeMenu();
+        const result = task?.preview.result ?? aiResult;
+        if (!result) return;
+        applySlashAIResult(view, result);
+        removeSlashAIInlineTask(e.detail.id);
+        setAiResult(null);
+        setAiPreviewId(null);
+        setAiStatus("prompt");
+        setAiSubmitting(false);
+        setVisible(false);
+        setAiPromptOpen(false);
         return;
       }
       view.dispatch({ effects: clearSlashAIInlinePreview.of() });
       if (e.detail.action === "cancel") {
-        closeMenu();
+        cancelSlashAIInlineTask(e.detail.id);
+        setAiResult(null);
+        setAiPreviewId(null);
+        setAiStatus("prompt");
+        setAiSubmitting(false);
+        setVisible(false);
+        setAiPromptOpen(false);
         return;
       }
       if (e.detail.action === "regenerate") {
+        if (task) {
+          setAiPromptAction(task.action);
+          setAiPromptText(task.request);
+          setAiSlashRange(task.slashRange);
+        }
+        removeSlashAIInlineTask(e.detail.id);
         setVisible(true);
         setAiPromptOpen(true);
         setAiStatus("prompt");

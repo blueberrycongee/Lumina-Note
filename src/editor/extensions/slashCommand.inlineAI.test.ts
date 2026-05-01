@@ -638,6 +638,7 @@ describe("slash inline AI", () => {
     expect(preview?.textContent).toContain("read");
     expect(preview?.textContent).toContain("File: /tmp/vault/current.md");
     expect(preview?.textContent).toContain("Live draft text");
+    expect(preview?.querySelector("details")).toBeNull();
     cleanup();
   });
 });
