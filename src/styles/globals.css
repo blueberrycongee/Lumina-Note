@@ -1699,6 +1699,10 @@ mark {
 
 .markdown-math-body .katex-display {
   margin: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 2px;
 }
 
 /* Smooth fade and scale animation */

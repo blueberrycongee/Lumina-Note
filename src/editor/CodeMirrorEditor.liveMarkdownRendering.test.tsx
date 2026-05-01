@@ -126,6 +126,19 @@ describe("CodeMirror live markdown rendering polish", () => {
     },
   );
 
+  it("keeps rendered math blocks from becoming vertical scrollers", () => {
+    const { container } = setupEditor("Intro\n\n$$\na^2+b^2=c^2\n$$", "live");
+    const display = container.querySelector<HTMLElement>(
+      ".cm-math-block .katex-display",
+    );
+
+    expect(display).not.toBeNull();
+    const style = getComputedStyle(display!);
+    expect(style.overflowX).toBe("auto");
+    expect(style.overflowY).toBe("hidden");
+    expect(style.maxWidth).toBe("100%");
+  });
+
   it("uses the shared block surface and fallback UI for image widgets", () => {
     useFileStore.setState({
       vaultPath: "/vault",

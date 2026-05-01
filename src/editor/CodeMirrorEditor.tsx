@@ -495,6 +495,11 @@ const createEditorTheme = (fontSize: number) =>
     },
     ".cm-math-block .katex-display": {
       margin: "0",
+      maxWidth: "100%",
+      overflowX: "auto",
+      overflowY: "hidden",
+      paddingTop: "2px",
+      paddingBottom: "2px",
     },
 
     // 编辑模式：源码背景 (淡绿色) - 带淡入动画
