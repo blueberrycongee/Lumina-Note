@@ -324,6 +324,13 @@ exports.activate = async function activate() {
     const health = await fetch(`${origin}/health`).then((rr) => rr.json());
     expect(health.activeDocument?.path).toBe(docPath);
     expect(health.activeDocument?.languageId).toBe("markdown");
+
+    const bridge = await fetch(`${origin}/lumina/ide-bridge`).then((rr) => rr.json());
+    expect(bridge.selection).toMatchObject({
+      anchor: { line: 0, character: 0 },
+      active: { line: 0, character: 0 },
+      isReversed: false,
+    });
   });
 
   it("supports panel, terminal, showTextDocument, and vscode.diff compatibility APIs", async () => {
@@ -345,7 +352,10 @@ exports.activate = async function activate(context) {
   terminal.sendText("claude --help", false);
   terminal.show();
   const doc = await vscode.workspace.openTextDocument(vscode.Uri.joinPath(context.extensionUri, "README.md"));
-  await vscode.window.showTextDocument(doc);
+  const editor = await vscode.window.showTextDocument(doc);
+  if (!editor.selection || editor.selections.length !== 1 || editor.selection.anchor.line !== 0) {
+    throw new Error("missing editor selection");
+  }
   await vscode.commands.executeCommand(
     "vscode.diff",
     vscode.Uri.joinPath(context.extensionUri, "README.md"),

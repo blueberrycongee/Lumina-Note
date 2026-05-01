@@ -141,6 +141,17 @@ class Position {
   }
 }
 
+class Selection extends Range {
+  constructor(anchor, active) {
+    super(anchor, active);
+    this.anchor = anchor;
+    this.active = active;
+    this.isReversed =
+      active.line < anchor.line ||
+      (active.line === anchor.line && active.character < anchor.character);
+  }
+}
+
 class CodeLens {
   constructor(range, command) {
     this.range = range;
@@ -1109,6 +1120,7 @@ function getWebviewEntry(state, channel) {
 }
 
 function buildIdeBridgeState(state) {
+  const selection = state.activeDocument ? emptySelectionJson() : null;
   return {
     workspaceFolders: state.workspacePath ? [state.workspacePath] : [],
     activeDocument: state.activeDocument
@@ -1119,8 +1131,20 @@ function buildIdeBridgeState(state) {
           version: state.activeDocument.version ?? 1,
         }
       : null,
-    selection: null,
+    selection,
     diffRequests: state.diffRequests,
+  };
+}
+
+function emptySelectionJson() {
+  const anchor = { line: 0, character: 0 };
+  const active = { line: 0, character: 0 };
+  return {
+    anchor,
+    active,
+    start: anchor,
+    end: active,
+    isReversed: false,
   };
 }
 
@@ -1187,10 +1211,11 @@ function createVscodeApi(state, originForApi) {
   const getActiveTextEditor = () => {
     const doc = getActiveTextDocument();
     if (!doc) return undefined;
+    const selection = new Selection(new Position(0, 0), new Position(0, 0));
     return {
       document: doc,
-      selection: undefined,
-      selections: [],
+      selection,
+      selections: [selection],
       viewColumn: 1,
     };
   };
@@ -1339,6 +1364,7 @@ function createVscodeApi(state, originForApi) {
     EventEmitter,
     Range,
     Position,
+    Selection,
     CodeLens,
     FileType,
     env: {
@@ -1769,10 +1795,11 @@ function createVscodeApi(state, originForApi) {
           documentOrUri?.getText && documentOrUri?.uri
             ? documentOrUri
             : await openTextDocument(documentOrUri);
+        const selection = new Selection(new Position(0, 0), new Position(0, 0));
         const editor = {
           document,
-          selection: undefined,
-          selections: [],
+          selection,
+          selections: [selection],
           viewColumn:
             typeof columnOrOptions === "number"
               ? columnOrOptions
