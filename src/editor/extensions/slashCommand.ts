@@ -472,6 +472,8 @@ async function generateInlineAIMarkdown(
       const activities = new Map<string, SlashAIActivity>();
       const startedAt = Date.now();
       const timeoutMs = 120_000;
+      const wait = (ms: number) =>
+        new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
       const acceptAssistantMessageId = (messageId: string) => {
         if (!assistantMessageId) {
@@ -509,6 +511,34 @@ async function generateInlineAIMarkdown(
           assistantParts.some(
             (part) => part.type === "text" && part.text.trim().length > 0,
           ));
+      const readFinalAssistantText = async () => {
+        if (!assistantMessageId) return "";
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const msg = await client.session.message({
+            path: { id: sessionId, messageID: assistantMessageId },
+            query,
+            throwOnError: true,
+          });
+          const msgParts =
+            ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
+          assistantParts.splice(0, assistantParts.length, ...msgParts);
+          let changed = false;
+          for (const part of msgParts) {
+            changed = updateSlashAIActivityFromPart(part, activities) || changed;
+          }
+          if (changed) {
+            emitSlashAIActivities(callbacks, activities);
+          }
+          const text = extractInlineAIInsertTextFromParts(msgParts);
+          if (text.trim()) {
+            syncAssistantParts();
+            return text;
+          }
+          if (pendingTextDeltas.size === 0) break;
+          await wait(250);
+        }
+        return "";
+      };
 
       const promptReq = client.session
         .promptAsync({
@@ -669,32 +699,17 @@ async function generateInlineAIMarkdown(
       let rawText = latestTextPart;
       if (assistantMessageId) {
         try {
-          const msg = await client.session.message({
-            path: { id: sessionId, messageID: assistantMessageId },
-            query,
-            throwOnError: true,
-          });
-          const msgParts =
-            ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
-          assistantParts.splice(0, assistantParts.length, ...msgParts);
-          let changed = false;
-          for (const part of msgParts) {
-            changed = updateSlashAIActivityFromPart(part, activities) || changed;
-          }
-          if (changed) {
-            emitSlashAIActivities(callbacks, activities);
-          }
-          const fullText = extractTextFromParts(msgParts);
-          if (fullText.trim()) {
-            rawText = extractInlineAIInsertTextFromParts(msgParts);
-            syncAssistantParts();
-          }
+          rawText = (await readFinalAssistantText()) || rawText;
         } catch {
           // Keep streamed text fallback.
         }
       }
 
-      const insertText = stripMarkdownFence(rawText).trim();
+      const pendingFallback =
+        activities.size === 0
+          ? Array.from(pendingTextDeltas.values()).join("").trim()
+          : "";
+      const insertText = stripMarkdownFence(rawText || pendingFallback).trim();
       if (!insertText) {
         throw new Error("AI did not return insertable Markdown");
       }

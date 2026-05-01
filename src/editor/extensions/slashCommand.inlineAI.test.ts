@@ -249,6 +249,31 @@ async function* streamEventsWithoutIdle() {
   };
 }
 
+async function* streamEventsWithoutPartMetadata() {
+  await Promise.resolve();
+  yield {
+    type: "message.updated",
+    properties: {
+      sessionID: "session-1",
+      info: { id: "assistant-1", role: "assistant", sessionID: "session-1" },
+    },
+  };
+  yield {
+    type: "message.part.delta",
+    properties: {
+      sessionID: "session-1",
+      messageID: "assistant-1",
+      partID: "draft-1",
+      field: "text",
+      delta: "Fallback Markdown from pending delta",
+    },
+  };
+  yield {
+    type: "server.heartbeat",
+    properties: {},
+  };
+}
+
 describe("slash inline AI", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -377,6 +402,29 @@ describe("slash inline AI", () => {
 
     expect(result).toEqual({
       text: "Final Markdown after heartbeat",
+      from: 6,
+      to: 6,
+    });
+    cleanup();
+  });
+
+  it("uses pending text deltas when opencode omits part metadata for simple text", async () => {
+    mocks.client.event.subscribe.mockResolvedValue({
+      stream: streamEventsWithoutPartMetadata(),
+    });
+    mocks.client.session.message.mockResolvedValue({ data: { parts: [] } });
+    const { view, cleanup } = createView("Hello /ai");
+
+    const result = await runSlashAIAction(
+      view,
+      6,
+      9,
+      "chat-insert",
+      "write a crisp sentence",
+    );
+
+    expect(result).toEqual({
+      text: "Fallback Markdown from pending delta",
       from: 6,
       to: 6,
     });
