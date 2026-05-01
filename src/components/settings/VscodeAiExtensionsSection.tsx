@@ -33,6 +33,9 @@ export function VscodeAiExtensionsSection() {
   const [source, setSource] = useState<VscodeAiExtensionSource>("open-vsx");
   const [marketplaceTermsAccepted, setMarketplaceTermsAccepted] =
     useState(false);
+  const [githubOwner, setGithubOwner] = useState("");
+  const [githubRepo, setGithubRepo] = useState("");
+  const [githubAssetPattern, setGithubAssetPattern] = useState("");
   const [compatIndexUrl, setCompatIndexUrl] = useState("");
 
   const refresh = async () => {
@@ -75,7 +78,12 @@ export function VscodeAiExtensionsSection() {
     runAction(`check:${extensionId}`, async () => {
       const latest = await checkLatestVscodeAiExtension({
         extensionId,
-        ...remoteSourceOptions(source, marketplaceTermsAccepted),
+        ...remoteSourceOptions(source, {
+          marketplaceTermsAccepted,
+          githubOwner,
+          githubRepo,
+          githubAssetPattern,
+        }),
       });
       return `Latest ${latest.version} from ${sourceLabel(source)}`;
     });
@@ -84,7 +92,12 @@ export function VscodeAiExtensionsSection() {
     runAction(`install:${extensionId}`, async () => {
       const result = await installLatestVscodeAiExtension({
         extensionId,
-        ...remoteSourceOptions(source, marketplaceTermsAccepted),
+        ...remoteSourceOptions(source, {
+          marketplaceTermsAccepted,
+          githubOwner,
+          githubRepo,
+          githubAssetPattern,
+        }),
       });
       return `Install result: ${result.outcome.decision}`;
     });
@@ -162,6 +175,7 @@ export function VscodeAiExtensionsSection() {
           >
             <option value="open-vsx">Open VSX</option>
             <option value="marketplace">Marketplace</option>
+            <option value="github-release">GitHub Release</option>
           </select>
           {source === "marketplace" ? (
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -174,6 +188,31 @@ export function VscodeAiExtensionsSection() {
               />
               <span>I have accepted Marketplace terms</span>
             </label>
+          ) : null}
+          {source === "github-release" ? (
+            <div className="grid gap-2 sm:grid-cols-3">
+              <input
+                aria-label="GitHub owner"
+                value={githubOwner}
+                onChange={(event) => setGithubOwner(event.target.value)}
+                className="h-8 min-w-0 rounded-lg border border-border bg-background px-2 text-sm"
+                placeholder="owner"
+              />
+              <input
+                aria-label="GitHub repo"
+                value={githubRepo}
+                onChange={(event) => setGithubRepo(event.target.value)}
+                className="h-8 min-w-0 rounded-lg border border-border bg-background px-2 text-sm"
+                placeholder="repo"
+              />
+              <input
+                aria-label="GitHub asset pattern"
+                value={githubAssetPattern}
+                onChange={(event) => setGithubAssetPattern(event.target.value)}
+                className="h-8 min-w-0 rounded-lg border border-border bg-background px-2 text-sm"
+                placeholder="asset regex"
+              />
+            </div>
           ) : null}
         </div>
 
@@ -288,14 +327,31 @@ function sourceLabel(source: VscodeAiExtensionSource): string {
 
 function remoteSourceOptions(
   source: VscodeAiExtensionSource,
-  marketplaceTermsAccepted: boolean,
+  options: {
+    marketplaceTermsAccepted: boolean;
+    githubOwner: string;
+    githubRepo: string;
+    githubAssetPattern: string;
+  },
 ): {
   source: VscodeAiExtensionSource;
   marketplaceTermsAccepted?: boolean;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubAssetPattern?: string;
 } {
-  return source === "marketplace"
-    ? { source, marketplaceTermsAccepted }
-    : { source };
+  if (source === "marketplace") {
+    return { source, marketplaceTermsAccepted: options.marketplaceTermsAccepted };
+  }
+  if (source === "github-release") {
+    return {
+      source,
+      githubOwner: options.githubOwner.trim(),
+      githubRepo: options.githubRepo.trim(),
+      githubAssetPattern: options.githubAssetPattern.trim() || undefined,
+    };
+  }
+  return { source };
 }
 
 function IconButton({

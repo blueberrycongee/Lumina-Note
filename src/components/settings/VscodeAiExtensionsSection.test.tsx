@@ -140,6 +140,35 @@ describe("VscodeAiExtensionsSection", () => {
     });
   });
 
+  it("passes GitHub release source options to remote installs", async () => {
+    render(<VscodeAiExtensionsSection />);
+    await screen.findByText("Codex");
+
+    fireEvent.change(screen.getByLabelText("VS Code extension remote source"), {
+      target: { value: "github-release" },
+    });
+    fireEvent.change(screen.getByLabelText("GitHub owner"), {
+      target: { value: "openai" },
+    });
+    fireEvent.change(screen.getByLabelText("GitHub repo"), {
+      target: { value: "codex" },
+    });
+    fireEvent.change(screen.getByLabelText("GitHub asset pattern"), {
+      target: { value: "chatgpt.*vsix" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Install latest Codex" }));
+
+    await waitFor(() => {
+      expect(installLatestMock).toHaveBeenCalledWith({
+        extensionId: "openai.chatgpt",
+        source: "github-release",
+        githubOwner: "openai",
+        githubRepo: "codex",
+        githubAssetPattern: "chatgpt.*vsix",
+      });
+    });
+  });
+
   it("installs remote compatibility profile indexes", async () => {
     render(<VscodeAiExtensionsSection />);
     await screen.findByText("Codex");
