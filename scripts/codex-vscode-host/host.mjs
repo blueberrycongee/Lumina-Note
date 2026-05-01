@@ -1120,11 +1120,87 @@ body {
   flex: 1 1 auto;
   min-height: 0;
 }
+[data-radix-popper-content-wrapper] {
+  max-width: calc(100vw - 16px) !important;
+}
+[data-radix-popper-content-wrapper] > [role="menu"],
+[data-radix-popper-content-wrapper] [role="menu"] {
+  max-width: calc(100vw - 16px) !important;
+}
+[data-radix-popper-content-wrapper][data-lumina-overlay-adjusted="true"] {
+  translate: var(--lumina-overlay-shift-x, 0px) 0 !important;
+}
 </style>`;
+  const script = `<script data-lumina-webview-overlay-bounds>
+(() => {
+  const gutter = 8;
+  const selector = "[data-radix-popper-content-wrapper]";
+  let raf = 0;
 
-  if (html.includes("<head>")) return html.replace("<head>", `<head>${style}`);
-  if (html.includes("<head ")) return html.replace(/<head[^>]*>/, (m) => `${m}${style}`);
-  return `${style}\n${html}`;
+  const clampOverlay = (element) => {
+    if (!(element instanceof HTMLElement)) return;
+    element.style.removeProperty("--lumina-overlay-shift-x");
+    element.removeAttribute("data-lumina-overlay-adjusted");
+
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    if (!viewportWidth || rect.width <= 0 || rect.height <= 0) return;
+
+    let shiftX = 0;
+    if (rect.left < gutter) {
+      shiftX = gutter - rect.left;
+    } else if (rect.right > viewportWidth - gutter) {
+      shiftX = viewportWidth - gutter - rect.right;
+    }
+
+    if (shiftX !== 0) {
+      element.style.setProperty("--lumina-overlay-shift-x", \`\${shiftX}px\`);
+      element.setAttribute("data-lumina-overlay-adjusted", "true");
+    }
+  };
+
+  const clampAll = () => {
+    for (const element of document.querySelectorAll(selector)) {
+      clampOverlay(element);
+    }
+  };
+
+  const schedule = () => {
+    if (raf) return;
+    raf = window.requestAnimationFrame(() => {
+      raf = 0;
+      clampAll();
+      window.requestAnimationFrame(clampAll);
+    });
+  };
+
+  const start = () => {
+    schedule();
+    const observer = new MutationObserver(schedule);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style", "data-state", "data-side", "data-align"],
+    });
+    window.addEventListener("resize", schedule);
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("pointerdown", schedule, true);
+    window.addEventListener("keydown", schedule, true);
+  };
+
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
+})();
+</script>`;
+  const injection = `${style}${script}`;
+
+  if (html.includes("<head>")) return html.replace("<head>", `<head>${injection}`);
+  if (html.includes("<head ")) return html.replace(/<head[^>]*>/, (m) => `${m}${injection}`);
+  return `${injection}\n${html}`;
 }
 
 function normalizeTheme(value, fallback = "dark") {

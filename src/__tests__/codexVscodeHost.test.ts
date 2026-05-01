@@ -190,6 +190,8 @@ exports.activate = async function activate() {
     const { origin } = await host.ready;
     const html = await fetch(`${origin}/view/${encodeURIComponent("hello.view")}?token=t`).then((r) => r.text());
     expect(html).toContain("data-lumina-webview-base");
+    expect(html).toContain("data-lumina-webview-overlay-bounds");
+    expect(html).toContain("data-radix-popper-content-wrapper");
   });
 
   it("adds compatibility sources to extension CSP without broadening unrelated directives", async () => {
