@@ -111,9 +111,9 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
   const pluginsHandlers = createPluginsHandlers({
     userPluginsDir: path.join(app.getPath("userData"), "plugins"),
     fallbackPluginsDir: path.join(app.getPath("userData"), "global-plugins"),
-    builtinPluginsDir: process.resourcesPath
+    builtinPluginsDir: app.isPackaged
       ? path.join(process.resourcesPath, "plugins")
-      : null,
+      : path.join(app.getAppPath(), "resources", "plugins"),
   });
 
   const vscodeExtensionHandlers = createVscodeExtensionHandlers({

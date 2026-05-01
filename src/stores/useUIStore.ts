@@ -39,8 +39,8 @@ interface UIState {
   setLeftSidebarMode: (mode: "files" | "search") => void;
 
   // Right panel tabs
-  rightPanelTab: "chat" | "outline" | "backlinks" | "tags";
-  setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags") => void;
+  rightPanelTab: "chat" | "outline" | "backlinks" | "tags" | "vscode-ai";
+  setRightPanelTab: (tab: "chat" | "outline" | "backlinks" | "tags" | "vscode-ai") => void;
 
   // AI Panel (docked in right panel or floating)
   aiPanelMode: AIPanelMode;

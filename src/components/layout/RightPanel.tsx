@@ -14,9 +14,13 @@ import {
   Tag,
   ArrowUpRight,
   ChevronRight,
+  Code2,
 } from "lucide-react";
 import { extractMarkdownHeadings } from "@/services/markdown/headings";
 import { useShallow } from "zustand/react/shallow";
+import { usePluginStore } from "@/stores/usePluginStore";
+import { VscodeAiExtensionSidebarPanel } from "@/components/vscode-ai/VscodeAiExtensionSidebarPanel";
+import { isVscodeAiExtensionsPluginEnabled } from "@/features/vscode-ai-extensions/systemPlugin";
 
 // Backlinks view component
 function BacklinksView() {
@@ -322,6 +326,14 @@ function OutlineView() {
 export function RightPanel() {
   const { t } = useLocaleStore();
   const { rightPanelTab, setRightPanelTab, aiPanelMode } = useUIStore();
+  const vscodeAiExtensionsEnabled = usePluginStore(
+    useShallow((state) =>
+      isVscodeAiExtensionsPluginEnabled({
+        plugins: state.plugins,
+        enabledById: state.enabledById,
+      }),
+    ),
+  );
   const { tabs, activeTabIndex } = useFileStore(
     useShallow((state) => ({
       tabs: state.tabs,
@@ -334,6 +346,12 @@ export function RightPanel() {
 
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
   const isMainAIActive = activeTab?.type === "ai-chat";
+
+  useEffect(() => {
+    if (!vscodeAiExtensionsEnabled && rightPanelTab === "vscode-ai") {
+      setRightPanelTab("outline");
+    }
+  }, [rightPanelTab, setRightPanelTab, vscodeAiExtensionsEnabled]);
 
   // Listen for tag-clicked events to switch to Tags tab
   useEffect(() => {
@@ -466,6 +484,22 @@ export function RightPanel() {
             {t.graph.tags}
           </span>
         </button>
+        {vscodeAiExtensionsEnabled ? (
+          <button
+            onClick={() => setRightPanelTab("vscode-ai")}
+            className={`flex-1 py-2.5 text-xs font-medium transition-colors flex items-center justify-center gap-1 whitespace-nowrap hover:bg-accent/50 ${
+              rightPanelTab === "vscode-ai"
+                ? "text-primary border-b-2 border-primary bg-primary/5"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="VS Code AI"
+          >
+            <Code2 size={12} />
+            <span className="ui-compact-text ui-compact-hide">
+              VS Code AI
+            </span>
+          </button>
+        ) : null}
       </div>
 
       {/* Outline View */}
@@ -476,6 +510,11 @@ export function RightPanel() {
 
       {/* Tags View */}
       {rightPanelTab === "tags" && <TagsView />}
+
+      {/* VS Code AI Extensions */}
+      {vscodeAiExtensionsEnabled && rightPanelTab === "vscode-ai" && (
+        <VscodeAiExtensionSidebarPanel />
+      )}
     </aside>
   );
 }

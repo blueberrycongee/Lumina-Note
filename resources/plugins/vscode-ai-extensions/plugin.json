@@ -1,0 +1,13 @@
+{
+  "id": "vscode-ai-extensions",
+  "name": "VS Code AI Extensions",
+  "version": "0.1.0",
+  "description": "Optional right sidebar host for Codex and Claude Code VS Code extensions.",
+  "author": "Lumina",
+  "entry": "index.js",
+  "min_app_version": "0.1.0",
+  "api_version": "1",
+  "permissions": ["workspace:panel"],
+  "enabled_by_default": false,
+  "is_desktop_only": true
+}
