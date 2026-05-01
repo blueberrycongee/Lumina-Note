@@ -5,7 +5,7 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import type { VscodeExtensionDownloadResult } from './download.js'
-import { installDownloadedVsix } from './install.js'
+import { installDownloadedVsix, installLocalVsixFile } from './install.js'
 
 let tmpDir = ''
 
@@ -99,6 +99,53 @@ describe('installDownloadedVsix', () => {
         platform: 'test-platform',
       }),
     ).rejects.toThrow(/package version mismatch/)
+  })
+
+  it('imports a local VSIX after reading its package metadata', async () => {
+    const vsixPath = path.join(tmpDir, 'claude-code.vsix')
+    fs.writeFileSync(
+      vsixPath,
+      createZip({
+        'extension/package.json': JSON.stringify({
+          publisher: 'Anthropic',
+          name: 'claude-code',
+          version: '2.1.81',
+        }),
+      }),
+    )
+
+    const result = await installLocalVsixFile(vsixPath, {
+      installRoot: path.join(tmpDir, 'installed'),
+      platform: 'test-platform',
+      expectedExtensionId: 'anthropic.claude-code',
+    })
+
+    expect(result.extensionId).toBe('anthropic.claude-code')
+    expect(result.version).toBe('2.1.81')
+    expect(result.extensionPath).toBe(
+      path.join(tmpDir, 'installed', 'anthropic.claude-code-2.1.81-test-platform', 'extension'),
+    )
+  })
+
+  it('rejects local VSIX files for unsupported extensions', async () => {
+    const vsixPath = path.join(tmpDir, 'python.vsix')
+    fs.writeFileSync(
+      vsixPath,
+      createZip({
+        'extension/package.json': JSON.stringify({
+          publisher: 'ms-python',
+          name: 'python',
+          version: '2026.1.0',
+        }),
+      }),
+    )
+
+    await expect(
+      installLocalVsixFile(vsixPath, {
+        installRoot: path.join(tmpDir, 'installed'),
+        platform: 'test-platform',
+      }),
+    ).rejects.toThrow(/Unsupported VS Code extension/)
   })
 })
 

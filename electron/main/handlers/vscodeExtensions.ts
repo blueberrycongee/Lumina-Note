@@ -1,4 +1,5 @@
 import path from 'node:path'
+import fs from 'node:fs'
 
 import {
   BUILTIN_VSCODE_AI_COMPAT_PROFILES,
@@ -20,6 +21,8 @@ import {
   type VscodeExtensionUpdateResult,
 } from '../vscode-extensions/update.js'
 import type { BinaryFetchLike } from '../vscode-extensions/download.js'
+import { installLocalVsixFile } from '../vscode-extensions/install.js'
+import { runVscodeHostSmokeTest } from '../vscode-extensions/smoke.js'
 
 export interface CreateVscodeExtensionHandlersOptions {
   baseDir: string
@@ -111,6 +114,40 @@ export function createVscodeExtensionHandlers(
       )
     },
 
+    async vscode_extensions_install_local_vsix(args) {
+      const vsixPath = parseVsixPath(args.vsixPath)
+      const expectedExtensionId =
+        typeof args.extensionId === 'string'
+          ? parseExtensionId(args.extensionId)
+          : undefined
+      const installed = await installLocalVsixFile(vsixPath, {
+        installRoot,
+        expectedExtensionId,
+      })
+      const compatibility = resolveCompatibilityProfile(installed.packageJson, profiles)
+      const smoke =
+        compatibility.profile && compatibility.profile.entryViewTypes.length > 0
+          ? await runVscodeHostSmokeTest({
+              hostScriptPath: options.hostScriptPath,
+              extensionPath: installed.extensionPath,
+              expectedViewTypes: compatibility.profile.entryViewTypes,
+            })
+          : null
+      const packageBytes = fs.readFileSync(vsixPath)
+      const outcome = manager.registerCandidateInstall({
+        packageJson: installed.packageJson,
+        extensionPath: installed.extensionPath,
+        source: 'manual-vsix',
+        packageBytes,
+        smokeTestPassed: smoke?.ok ?? false,
+      })
+      return {
+        installed,
+        smoke,
+        outcome,
+      }
+    },
+
     async vscode_extensions_activate_installed(args) {
       const extensionId = parseExtensionId(args.extensionId)
       const version = parseVersion(args.version)
@@ -140,6 +177,13 @@ function parseRemoteSource(value: unknown): 'marketplace' | 'open-vsx' {
 function parseVersion(value: unknown): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
     throw new Error('version is required')
+  }
+  return value.trim()
+}
+
+function parseVsixPath(value: unknown): string {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error('vsixPath is required')
   }
   return value.trim()
 }

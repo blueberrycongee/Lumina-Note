@@ -150,6 +150,45 @@ exports.activate = async function activate() {
     const state = await handlers.vscode_extensions_get_state({})
     expect(JSON.stringify(state)).toContain('6.1.0')
   })
+
+  it('imports a local VSIX through the manual install handler', async () => {
+    const vsixPath = path.join(tmpDir, 'openai.chatgpt.vsix')
+    fs.writeFileSync(
+      vsixPath,
+      createZip({
+        'extension/package.json': JSON.stringify({
+          publisher: 'OpenAI',
+          name: 'chatgpt',
+          version: '6.1.0',
+          main: './extension.js',
+        }),
+        'extension/extension.js': `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.window.registerWebviewViewProvider("chatgpt.sidebarView", {
+    resolveWebviewView(view) {
+      view.webview.html = "<!doctype html><html><body>Codex</body></html>";
+    },
+  });
+};`,
+      }),
+    )
+    const handlers = createHandlers()
+
+    const result = await handlers.vscode_extensions_install_local_vsix({
+      extensionId: 'openai.chatgpt',
+      vsixPath,
+    })
+
+    expect(result).toMatchObject({
+      installed: {
+        extensionId: 'openai.chatgpt',
+        version: '6.1.0',
+      },
+      smoke: { ok: true },
+      outcome: { decision: 'blocked' },
+    })
+  })
 })
 
 function createHandlers(options: {
