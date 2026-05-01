@@ -92,6 +92,7 @@ export interface SlashAIActivity {
 export interface SlashAIGenerationCallbacks {
   onProgress?: (progress: SlashAIProgress) => void;
   onActivity?: (activities: SlashAIActivity[]) => void;
+  onText?: (text: string) => void;
   signal?: AbortSignal;
 }
 
@@ -122,6 +123,7 @@ export interface SlashAIInlinePreview {
   stageStatuses: Record<SlashAIStageId, SlashAIInlinePreviewStageStatus>;
   activities?: SlashAIActivity[];
   startedAt?: number;
+  streamingText?: string;
 }
 
 export class SlashAIAbortError extends Error {
@@ -419,6 +421,7 @@ async function generateInlineAIMarkdown(
       let assistantMessageId: string | null = null;
       let latestTextPart = "";
       let sawDelta = false;
+      let streamingText = "";
       const messageRoles = new Map<string, string>();
       const pendingTextDeltas = new Map<string, string>();
       const activities = new Map<string, SlashAIActivity>();
@@ -468,6 +471,13 @@ async function generateInlineAIMarkdown(
               messageRoles.set(info.id, info.role);
               if (info.role === "assistant") {
                 acceptAssistantMessageId(info.id);
+                const pending = pendingTextDeltas.get(info.id);
+                if (pending) {
+                  streamingText = `${streamingText}${pending}`;
+                  latestTextPart = streamingText;
+                  sawDelta = true;
+                  callbacks?.onText?.(streamingText);
+                }
                 pendingTextDeltas.delete(info.id);
               } else {
                 pendingTextDeltas.delete(info.id);
@@ -508,7 +518,10 @@ async function generateInlineAIMarkdown(
               continue;
             }
             if (acceptAssistantMessageId(messageId)) {
+              streamingText = `${streamingText}${delta}`;
+              latestTextPart = streamingText;
               sawDelta = true;
+              callbacks?.onText?.(streamingText);
             }
             continue;
           }
@@ -533,6 +546,8 @@ async function generateInlineAIMarkdown(
               continue;
             }
             latestTextPart = (part as { text?: string }).text ?? "";
+            streamingText = latestTextPart;
+            callbacks?.onText?.(streamingText);
             continue;
           }
 
@@ -577,6 +592,7 @@ async function generateInlineAIMarkdown(
           const fullText = extractTextFromParts(msgParts);
           if (fullText.trim()) {
             rawText = fullText;
+            callbacks?.onText?.(fullText);
           }
         } catch {
           // Keep streamed text fallback.
@@ -1190,7 +1206,8 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       other.preview.result?.to === this.preview.result?.to &&
       JSON.stringify(other.preview.stageStatuses) === JSON.stringify(this.preview.stageStatuses) &&
       JSON.stringify(other.preview.activities ?? []) === JSON.stringify(this.preview.activities ?? []) &&
-      other.preview.startedAt === this.preview.startedAt
+      other.preview.startedAt === this.preview.startedAt &&
+      other.preview.streamingText === this.preview.streamingText
     );
   }
 
@@ -1286,6 +1303,24 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       statusRow.append(pulse, label, ellipsis, cancel);
       wrapper.appendChild(statusRow);
       appendSlashAIActivityDetails(wrapper, this.preview);
+      const liveText = (this.preview.streamingText ?? "").trim();
+      if (liveText) {
+        const draft = document.createElement("pre");
+        draft.textContent = liveText;
+        draft.style.cssText = `
+          margin: 6px 0 0;
+          max-height: 220px;
+          overflow: auto;
+          white-space: pre-wrap;
+          border-left: 2px solid hsl(var(--primary) / 0.22);
+          padding: 5px 0 6px 10px;
+          color: hsl(var(--foreground) / 0.58);
+          font-family: inherit;
+          font-size: 0.95em;
+          line-height: 1.7;
+        `;
+        wrapper.appendChild(draft);
+      }
       return wrapper;
     }
 

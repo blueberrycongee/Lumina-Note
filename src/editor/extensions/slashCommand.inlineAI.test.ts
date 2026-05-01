@@ -222,6 +222,7 @@ describe("slash inline AI", () => {
     const { view, cleanup } = createView("Hello /ai");
     const progress: SlashAIProgress[] = [];
     const activities: SlashAIActivity[][] = [];
+    const textEvents: string[] = [];
 
     const result = await runSlashAIAction(
       view,
@@ -232,6 +233,7 @@ describe("slash inline AI", () => {
       {
         onProgress: (event) => progress.push(event),
         onActivity: (events) => activities.push(events),
+        onText: (text) => textEvents.push(text),
       },
     );
 
@@ -244,6 +246,7 @@ describe("slash inline AI", () => {
     expect(view.state.doc.toString()).not.toContain("PROMPT ECHO");
     expect(view.state.doc.toString()).not.toContain("PARTIAL STREAM");
     expect(view.state.doc.toString()).not.toContain("Final Markdown");
+    expect(textEvents).toContain("PARTIAL STREAM SHOULD NOT BE INSERTED");
 
     applySlashAIResult(view, result!);
 
@@ -432,6 +435,7 @@ describe("slash inline AI", () => {
             endedAt: 2_000,
           },
         ],
+        streamingText: "Live draft text",
       }),
     });
 
@@ -439,6 +443,7 @@ describe("slash inline AI", () => {
     expect(preview?.textContent).toContain("Working");
     expect(preview?.textContent).toContain("read");
     expect(preview?.textContent).toContain("File: /tmp/vault/current.md");
+    expect(preview?.textContent).toContain("Live draft text");
     cleanup();
   });
 });
