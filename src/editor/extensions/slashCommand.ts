@@ -942,142 +942,124 @@ class SlashAIInlinePreviewWidget extends WidgetType {
   toDOM() {
     const wrapper = document.createElement("div");
     wrapper.className = "cm-slash-ai-inline-preview";
-    wrapper.style.cssText = `
-      box-sizing: border-box;
-      margin: 10px 0 12px;
-      display: grid;
-      grid-template-columns: minmax(112px, 0.28fr) minmax(0, 1fr);
-      gap: 12px;
-      color: hsl(var(--foreground));
-    `;
+    wrapper.style.cssText =
+      this.preview.status === "running"
+        ? `
+          box-sizing: border-box;
+          margin: 8px 0 10px;
+          color: hsl(var(--muted-foreground));
+          font-size: 12px;
+          line-height: 1.5;
+        `
+        : `
+          box-sizing: border-box;
+          margin: 10px 0 12px;
+          color: hsl(var(--foreground));
+        `;
 
-    const rail = document.createElement("aside");
-    rail.style.cssText = `
-      border-right: 1px solid hsl(var(--border) / 0.65);
-      padding: 8px 12px 8px 0;
-      color: hsl(var(--muted-foreground));
-      font-size: 11px;
-      line-height: 1.45;
-    `;
+    const currentStage =
+      slashAIStageOrder.find((stage) => this.preview.stageStatuses[stage] === "active") ??
+      slashAIStageOrder.findLast((stage) => this.preview.stageStatuses[stage] === "done") ??
+      "understanding";
 
-    const railTitle = document.createElement("div");
-    railTitle.textContent = "AI";
-    railTitle.style.cssText = `
-      display: inline-flex;
-      align-items: center;
-      height: 20px;
-      padding: 0 7px;
-      border-radius: 999px;
-      border: 1px solid hsl(var(--primary) / 0.18);
-      background: hsl(var(--primary) / 0.08);
-      color: hsl(var(--primary));
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 7px;
-    `;
-    rail.appendChild(railTitle);
+    if (this.preview.status === "running") {
+      const statusRow = document.createElement("div");
+      statusRow.style.cssText = `
+        position: relative;
+        display: inline-flex;
+        max-width: min(520px, 100%);
+        align-items: center;
+        gap: 8px;
+        overflow: hidden;
+        border-left: 2px solid hsl(var(--primary) / 0.34);
+        padding: 5px 9px 5px 10px;
+        background: linear-gradient(
+          90deg,
+          hsl(var(--primary) / 0.055),
+          hsl(var(--muted) / 0.11) 48%,
+          hsl(var(--primary) / 0.04)
+        );
+        color: hsl(var(--muted-foreground));
+      `;
 
-    const stageList = document.createElement("div");
-    stageList.style.cssText = "display: grid; gap: 5px;";
-    for (const stage of slashAIStageOrder) {
-      const status = this.preview.stageStatuses[stage];
-      const item = document.createElement("div");
-      item.style.cssText = "display: flex; align-items: center; gap: 6px;";
-      const dot = document.createElement("span");
-      dot.style.cssText = `
-        width: 5px;
-        height: 5px;
+      const pulse = document.createElement("span");
+      pulse.style.cssText = `
+        width: 6px;
+        height: 6px;
         border-radius: 999px;
-        background: ${
-          status === "done"
-            ? "hsl(var(--primary) / 0.55)"
-            : status === "active"
-              ? "hsl(var(--primary))"
-              : status === "error"
-                ? "hsl(var(--destructive))"
-                : "hsl(var(--muted-foreground) / 0.35)"
-        };
+        background: hsl(var(--primary) / 0.72);
+        box-shadow: 0 0 0 4px hsl(var(--primary) / 0.08);
         flex: 0 0 auto;
       `;
+
       const label = document.createElement("span");
-      label.textContent = this.preview.labels.stages[stage];
-      label.style.cssText = "min-width: 0; overflow: hidden; text-overflow: ellipsis;";
-      item.append(dot, label);
-      stageList.appendChild(item);
+      label.textContent = this.preview.labels.stages[currentStage];
+      label.style.cssText = `
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      `;
+
+      const ellipsis = document.createElement("span");
+      ellipsis.textContent = "...";
+      ellipsis.style.cssText = "letter-spacing: 1px; color: hsl(var(--foreground) / 0.42);";
+
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = this.preview.labels.cancel;
+      cancel.dataset.action = "cancel";
+      cancel.style.cssText = `
+        margin-left: 6px;
+        border: 0;
+        background: transparent;
+        color: hsl(var(--muted-foreground));
+        font-size: 12px;
+        cursor: pointer;
+        padding: 0 2px;
+      `;
+      cancel.addEventListener("mousedown", (event) => event.preventDefault());
+      cancel.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("slash-ai-inline-preview-action", {
+            detail: { id: this.preview.id, action: "cancel" },
+          }),
+        );
+      });
+
+      statusRow.append(pulse, label, ellipsis, cancel);
+      wrapper.appendChild(statusRow);
+      return wrapper;
     }
-    rail.appendChild(stageList);
 
     const body = document.createElement("section");
     body.style.cssText = `
       overflow: hidden;
-      border: 1px solid hsl(var(--border) / 0.72);
-      border-radius: 10px;
-      background: hsl(var(--background) / 0.74);
-      box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.025);
+      border-left: 2px solid hsl(var(--primary) / 0.30);
+      padding-left: 12px;
     `;
-
-    const header = document.createElement("div");
-    header.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 7px 10px;
-      border-bottom: 1px solid hsl(var(--border) / 0.6);
-      background: hsl(var(--muted) / 0.16);
-      color: hsl(var(--muted-foreground));
-      font-size: 11px;
-      font-weight: 600;
-    `;
-    const title = document.createElement("span");
-    title.textContent = this.preview.commandLabel;
-    title.style.cssText = "min-width: 0; overflow: hidden; text-overflow: ellipsis;";
-    const unsaved = document.createElement("span");
-    unsaved.textContent =
-      this.preview.status === "running"
-        ? this.preview.labels.generating
-        : this.preview.labels.previewTitle;
-    unsaved.style.cssText = `
-      flex: 0 0 auto;
-      border: 1px solid hsl(var(--border) / 0.65);
-      border-radius: 999px;
-      padding: 1px 7px;
-      background: hsl(var(--background) / 0.72);
-      color: hsl(var(--muted-foreground));
-      font-size: 10px;
-      font-weight: 500;
-    `;
-    header.append(title, unsaved);
 
     const text = document.createElement("pre");
-    text.textContent =
-      this.preview.status === "running"
-        ? this.preview.labels.generating
-        : this.preview.result?.text ?? "";
+    text.textContent = this.preview.result?.text ?? "";
     text.style.cssText = `
       margin: 0;
       max-height: 260px;
       overflow: auto;
       white-space: pre-wrap;
-      padding: 10px 12px 11px;
-      color: hsl(var(--foreground) / 0.82);
+      padding: 8px 0 9px;
+      color: hsl(var(--foreground) / 0.68);
       font-family: inherit;
       font-size: 0.95em;
       line-height: 1.7;
-      background:
-        linear-gradient(90deg, hsl(var(--primary) / 0.10), transparent 5px)
-        hsl(var(--background) / 0.46);
     `;
 
     const footer = document.createElement("div");
     footer.style.cssText = `
       display: flex;
       align-items: center;
-      justify-content: flex-end;
-      gap: 7px;
-      padding: 8px 10px;
-      border-top: 1px solid hsl(var(--border) / 0.58);
-      background: hsl(var(--muted) / 0.10);
+      gap: 8px;
+      padding: 3px 0 0;
     `;
 
     const makeButton = (label: string, action: "accept" | "cancel" | "regenerate", primary = false) => {
@@ -1087,10 +1069,10 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       button.dataset.action = action;
       button.style.cssText = primary
         ? `
-          height: 28px;
-          padding: 0 11px;
-          border: 1px solid hsl(var(--primary));
-          border-radius: 7px;
+          height: 26px;
+          padding: 0 10px;
+          border: 1px solid hsl(var(--primary) / 0.92);
+          border-radius: 6px;
           background: hsl(var(--primary));
           color: hsl(var(--primary-foreground));
           font-size: 12px;
@@ -1098,12 +1080,12 @@ class SlashAIInlinePreviewWidget extends WidgetType {
           cursor: pointer;
         `
         : `
-          height: 28px;
-          padding: 0 10px;
-          border: 1px solid hsl(var(--border) / 0.72);
-          border-radius: 7px;
-          background: hsl(var(--background) / 0.74);
-          color: hsl(var(--foreground) / 0.78);
+          height: 26px;
+          padding: 0 6px;
+          border: 0;
+          border-radius: 6px;
+          background: transparent;
+          color: hsl(var(--muted-foreground));
           font-size: 12px;
           font-weight: 500;
           cursor: pointer;
@@ -1122,17 +1104,13 @@ class SlashAIInlinePreviewWidget extends WidgetType {
       return button;
     };
 
-    if (this.preview.status === "running") {
-      footer.append(makeButton(this.preview.labels.cancel, "cancel"));
-    } else {
-      footer.append(
-        makeButton(this.preview.labels.cancel, "cancel"),
-        makeButton(this.preview.labels.regenerate, "regenerate"),
-        makeButton(this.preview.labels.insert, "accept", true),
-      );
-    }
-    body.append(header, text, footer);
-    wrapper.append(rail, body);
+    footer.append(
+      makeButton(this.preview.labels.insert, "accept", true),
+      makeButton(this.preview.labels.regenerate, "regenerate"),
+      makeButton(this.preview.labels.cancel, "cancel"),
+    );
+    body.append(text, footer);
+    wrapper.appendChild(body);
     return wrapper;
   }
 

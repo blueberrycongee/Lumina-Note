@@ -270,7 +270,7 @@ describe("slash inline AI", () => {
     expect(view.state.doc.toString()).toBe("Hello ");
     const preview = parent.querySelector(".cm-slash-ai-inline-preview");
     expect(preview?.textContent).toContain("Final Markdown to insert");
-    expect(preview?.textContent).toContain("Reading nearby note context");
+    expect(preview?.textContent).not.toContain("Reading nearby note context");
 
     (preview?.querySelector('button[data-action="accept"]') as HTMLButtonElement).click();
 
@@ -321,7 +321,7 @@ describe("slash inline AI", () => {
     });
 
     const preview = parent.querySelector(".cm-slash-ai-inline-preview");
-    expect(preview?.textContent).toContain("Generating");
+    expect(preview?.textContent).toContain("Reading nearby note context");
     expect(preview?.querySelector('button[data-action="accept"]')).toBeNull();
     expect(preview?.querySelector('button[data-action="cancel"]')).not.toBeNull();
     expect(view.state.doc.toString()).toBe("Hello ");
