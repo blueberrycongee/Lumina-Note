@@ -139,6 +139,54 @@ describe('VscodeExtensionManager', () => {
     expect(store.getActive('openai.chatgpt')).toBeNull()
   })
 
+  it('records supported target versions without matching profiles as unverified installs', () => {
+    const stableProfile: VscodeExtensionCompatProfile = {
+      extensionId: 'openai.chatgpt',
+      channel: 'stable',
+      versionRange: '6.x',
+      hostApiVersion: 1,
+      entryViewTypes: [],
+      requiredCapabilities: ['commands'],
+      commandMappings: {},
+      cspSourceDirectives: {},
+      needsTerminal: false,
+      needsDiffViewer: false,
+      needsIdeBridge: false,
+      disabledFeatures: [],
+    }
+    const store = new VscodeExtensionStore({ baseDir: tmpDir })
+    const manager = new VscodeExtensionManager(store, {
+      profiles: [stableProfile],
+      implementedCapabilities: new Set<VscodeHostCapability>(['commands']),
+    })
+
+    const outcome = manager.registerCandidateInstall({
+      packageJson: {
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '7.0.0',
+      },
+      extensionPath: path.join(tmpDir, 'openai.chatgpt-7.0.0'),
+      source: 'manual-vsix',
+      installedAt: '2026-05-01T12:00:00.000Z',
+      smokeTestPassed: true,
+    })
+
+    expect(outcome.decision).toBe('pending-manual-opt-in')
+    expect(outcome.record).toMatchObject({
+      extensionId: 'openai.chatgpt',
+      version: '7.0.0',
+      smokeTestPassed: true,
+      compatibility: {
+        status: 'unknown-version',
+        autoUpdateEligible: false,
+        profileVersionRange: null,
+      },
+    })
+    expect(store.getActive('openai.chatgpt')).toBeNull()
+    expect(store.listInstalled('openai.chatgpt')).toHaveLength(1)
+  })
+
   it('blocks unsupported extensions before writing store state', () => {
     const store = new VscodeExtensionStore({ baseDir: tmpDir })
     const manager = new VscodeExtensionManager(store)

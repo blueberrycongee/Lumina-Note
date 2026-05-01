@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 
 import { diagnoseHostCapabilities } from './diagnostics.js'
 import {
+  isSupportedVscodeAiExtensionId,
   resolveCompatibilityProfile,
   type VscodeExtensionPackageLike,
   type VscodeExtensionCompatProfile,
@@ -51,10 +52,23 @@ export class VscodeExtensionManager {
       input.packageJson,
       this.options.profiles,
     )
+    if (!compatibility.extensionId || !compatibility.version) {
+      return {
+        record: null,
+        decision: 'blocked',
+        reason: compatibility.reason,
+      }
+    }
+    if (!isSupportedVscodeAiExtensionId(compatibility.extensionId)) {
+      return {
+        record: null,
+        decision: 'blocked',
+        reason: compatibility.reason,
+      }
+    }
     if (
-      !compatibility.extensionId ||
-      !compatibility.version ||
-      !compatibility.profile
+      compatibility.status === 'incompatible-vscode-engine' ||
+      compatibility.status === 'invalid-package'
     ) {
       return {
         record: null,
@@ -62,7 +76,7 @@ export class VscodeExtensionManager {
         reason: compatibility.reason,
       }
     }
-    const extensionId = compatibility.profile.extensionId
+    const extensionId = compatibility.extensionId
 
     const record: VscodeExtensionInstallRecord = {
       extensionId,
@@ -78,11 +92,23 @@ export class VscodeExtensionManager {
         status: compatibility.status,
         reason: compatibility.reason,
         autoUpdateEligible: compatibility.autoUpdateEligible,
-        profileVersionRange: compatibility.profile.versionRange,
+        profileVersionRange: compatibility.profile?.versionRange ?? null,
       },
     }
 
     this.store.recordInstall(record)
+
+    if (!compatibility.profile) {
+      return {
+        record,
+        decision: input.smokeTestPassed
+          ? 'pending-manual-opt-in'
+          : 'pending-smoke-test',
+        reason: input.smokeTestPassed
+          ? 'Install recorded as unverified; no compatibility profile covers this version.'
+          : 'Install recorded as unverified, but smoke test has not passed.',
+      }
+    }
 
     const hostDiagnostic = diagnoseHostCapabilities(
       compatibility.profile,

@@ -204,6 +204,14 @@ function validateManualActivation(options: {
     options.profiles,
   )
   if (!compatibility.profile) {
+    if (!record.smokeTestPassed) {
+      throw new Error(
+        `Cannot activate ${options.extensionId}@${options.version}; smoke test has not passed. Pass allowUnverified only after a successful smoke test.`,
+      )
+    }
+    if (compatibility.status === 'unknown-version' && options.allowUnverified) {
+      return
+    }
     throw new Error(compatibility.reason)
   }
 
