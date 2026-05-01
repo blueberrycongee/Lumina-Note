@@ -57,6 +57,7 @@
     "ai": "^6.0.168",
     "clsx": "^2.1.1",
     "codemirror-live-markdown": "0.5.1-alpha.1",
+    "extract-zip": "^2.0.1",
     "electron-updater": "^6.8.3",
     "framer-motion": "^12.23.25",
     "html2canvas": "^1.4.1",
