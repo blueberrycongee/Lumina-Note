@@ -65,6 +65,31 @@ describe('vscode extension compatibility profiles', () => {
     expect(result.profile?.needsDiffViewer).toBe(false)
   })
 
+  it('marks the smoke-tested Claude Code VSIX as stable', () => {
+    const result = resolveCompatibilityProfile({
+      publisher: 'Anthropic',
+      name: 'claude-code',
+      version: '2.1.126',
+      engines: { vscode: '^1.94.0' },
+    })
+
+    expect(result.status).toBe('stable')
+    expect(result.autoUpdateEligible).toBe(true)
+    expect(result.profile?.entryViewTypes).toEqual([
+      'claudeVSCodeSidebar',
+      'claudeVSCodeSidebarSecondary',
+      'claudeVSCodeSessionsList',
+    ])
+    expect(result.profile?.requiredCapabilities).toEqual(
+      expect.arrayContaining([
+        'extension-environment',
+        'workspace-custom-fs',
+        'workspace-content-provider',
+        'webview-panel-serializer',
+      ]),
+    )
+  })
+
   it('allows auto-update only when a stable profile covers the version', () => {
     const result = resolveCompatibilityProfile(
       {

@@ -9,16 +9,23 @@ export type VscodeHostCapability =
   | 'commands'
   | 'diagnostics-read'
   | 'diff-viewer'
+  | 'env-metadata'
   | 'env-open-external'
+  | 'extension-environment'
   | 'ide-bridge'
   | 'memento'
+  | 'notebook-output'
   | 'secret-storage'
   | 'terminal'
+  | 'webview-panel-serializer'
   | 'webview-panel'
   | 'webview-view'
   | 'window-notifications'
+  | 'workspace-content-provider'
+  | 'workspace-custom-fs'
   | 'workspace-documents'
   | 'workspace-fs'
+  | 'workspace-file-watchers'
   | 'workspace-selection'
 
 export interface VscodeExtensionPackageLike {
@@ -144,6 +151,55 @@ export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] =
   },
   {
     extensionId: 'anthropic.claude-code',
+    channel: 'stable',
+    versionRange: '2.1.126',
+    hostApiVersion: 1,
+    entryViewTypes: [
+      'claudeVSCodeSidebar',
+      'claudeVSCodeSidebarSecondary',
+      'claudeVSCodeSessionsList',
+    ],
+    requiredCapabilities: [
+      'authentication.getSession',
+      'commands',
+      'diagnostics-read',
+      'diff-viewer',
+      'env-metadata',
+      'env-open-external',
+      'extension-environment',
+      'ide-bridge',
+      'memento',
+      'notebook-output',
+      'secret-storage',
+      'terminal',
+      'webview-panel',
+      'webview-panel-serializer',
+      'webview-view',
+      'window-notifications',
+      'workspace-content-provider',
+      'workspace-custom-fs',
+      'workspace-documents',
+      'workspace-file-watchers',
+      'workspace-fs',
+      'workspace-selection',
+    ],
+    commandMappings: {
+      'vscode.diff': 'lumina.diff',
+    },
+    cspSourceDirectives: {
+      'connect-src': ['self'],
+      'font-src': ['self', 'data:'],
+      'script-src': ['self', "'unsafe-eval'"],
+    },
+    needsTerminal: true,
+    needsDiffViewer: true,
+    needsIdeBridge: true,
+    disabledFeatures: [],
+    notes:
+      'Stable profile for the official Claude Code VS Code extension 2.1.126 verified against Lumina host activation smoke, MCP environment collection, virtual file systems, and sidebar registrations.',
+  },
+  {
+    extensionId: 'anthropic.claude-code',
     channel: 'preview',
     versionRange: '*',
     hostApiVersion: 1,
@@ -153,15 +209,22 @@ export const BUILTIN_VSCODE_AI_COMPAT_PROFILES: VscodeExtensionCompatProfile[] =
       'commands',
       'diagnostics-read',
       'diff-viewer',
+      'env-metadata',
       'env-open-external',
+      'extension-environment',
       'ide-bridge',
       'memento',
+      'notebook-output',
       'secret-storage',
       'terminal',
       'webview-panel',
+      'webview-panel-serializer',
       'webview-view',
       'window-notifications',
+      'workspace-content-provider',
+      'workspace-custom-fs',
       'workspace-documents',
+      'workspace-file-watchers',
       'workspace-fs',
       'workspace-selection',
     ],

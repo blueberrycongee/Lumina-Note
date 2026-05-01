@@ -412,6 +412,270 @@ exports.activate = async function activate() {
     );
   });
 
+  it("supports notebook output item compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-notebook-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "notebook-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const item = vscode.NotebookCellOutputItem.error(new Error("boom"));
+  if (item.mime !== "application/vnd.code.notebook.error") {
+    throw new Error("unexpected notebook error mime: " + item.mime);
+  }
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.ok).toBe(true);
+    expect(health.activateError).toBeNull();
+  });
+
+  it("exposes env metadata and clipboard compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-env-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "env-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  if (!vscode.env.appName.toLowerCase().includes("lumina")) {
+    throw new Error("missing appName");
+  }
+  if (!vscode.env.uriScheme || !vscode.env.machineId || !vscode.env.sessionId) {
+    throw new Error("missing env metadata");
+  }
+  await vscode.env.clipboard.writeText("copied");
+  const text = await vscode.env.clipboard.readText();
+  if (text !== "copied") throw new Error("clipboard mismatch");
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.ok).toBe(true);
+    expect(health.activateError).toBeNull();
+  });
+
+  it("exposes environment variable collection on extension context", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-env-collection-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "env-collection-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate(context) {
+  context.environmentVariableCollection.replace("CLAUDE_CODE_SSE_PORT", "12345");
+  const value = context.environmentVariableCollection.get("CLAUDE_CODE_SSE_PORT");
+  if (value?.value !== "12345") throw new Error("missing env collection value");
+  context.environmentVariableCollection.clear();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.ok).toBe(true);
+    expect(health.activateError).toBeNull();
+  });
+
+  it("supports custom file system provider compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-fs-provider-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "fs-provider-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const emitter = new vscode.EventEmitter();
+  const files = new Map();
+  const provider = {
+    onDidChangeFile: emitter.event,
+    watch() { return new vscode.Disposable(() => undefined); },
+    stat(uri) { return { type: vscode.FileType.File, ctime: 1, mtime: 2, size: files.get(uri.path)?.length ?? 0 }; },
+    readDirectory() { return []; },
+    readFile(uri) { return files.get(uri.path) ?? new Uint8Array(); },
+    writeFile(uri, content) {
+      files.set(uri.path, content);
+      emitter.fire([{ type: vscode.FileChangeType.Changed, uri }]);
+    },
+    createDirectory() {},
+    delete() {},
+    rename() {},
+  };
+  const disposable = vscode.workspace.registerFileSystemProvider("mem", provider, { isReadonly: false });
+  const uri = vscode.Uri.from({ scheme: "mem", path: "/note.txt" });
+  await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode("hello"));
+  const doc = await vscode.workspace.openTextDocument(uri);
+  if (doc.getText() !== "hello") throw new Error("unexpected custom fs content");
+  disposable.dispose();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "fileSystemProvider" && event.summary?.event === "dispose",
+        ),
+    );
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.ok).toBe(true);
+    expect(health.activateError).toBeNull();
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "fileSystemProvider",
+          summary: expect.objectContaining({ event: "register", scheme: "mem" }),
+        }),
+        expect.objectContaining({
+          category: "fileSystemProvider",
+          summary: expect.objectContaining({ event: "dispose", scheme: "mem" }),
+        }),
+      ]),
+    );
+  });
+
+  it("supports text document content provider compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-content-provider-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "content-provider-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const emitter = new vscode.EventEmitter();
+  const disposable = vscode.workspace.registerTextDocumentContentProvider("readonly", {
+    onDidChange: emitter.event,
+    provideTextDocumentContent(uri) {
+      return "content:" + uri.path;
+    },
+  });
+  const uri = vscode.Uri.from({ scheme: "readonly", path: "/note.txt" });
+  emitter.fire(uri);
+  const doc = await vscode.workspace.openTextDocument(uri);
+  if (doc.getText() !== "content:/note.txt") throw new Error("unexpected readonly content");
+  disposable.dispose();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "textDocumentContentProvider" && event.summary?.event === "dispose",
+        ),
+    );
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.ok).toBe(true);
+    expect(health.activateError).toBeNull();
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "textDocumentContentProvider",
+          summary: expect.objectContaining({ event: "register", scheme: "readonly" }),
+        }),
+        expect.objectContaining({
+          category: "textDocumentContentProvider",
+          summary: expect.objectContaining({ event: "dispose", scheme: "readonly" }),
+        }),
+      ]),
+    );
+  });
+
+  it("supports webview panel serializer compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-panel-serializer-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "panel-serializer-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const disposable = vscode.window.registerWebviewPanelSerializer("restored.panel", {
+    async deserializeWebviewPanel() {},
+  });
+  disposable.dispose();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "webviewPanelSerializer" && event.summary?.event === "dispose",
+        ),
+    );
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+    expect(health.ok).toBe(true);
+    expect(health.activateError).toBeNull();
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "webviewPanelSerializer",
+          summary: expect.objectContaining({ event: "register", viewType: "restored.panel" }),
+        }),
+        expect.objectContaining({
+          category: "webviewPanelSerializer",
+          summary: expect.objectContaining({ event: "dispose", viewType: "restored.panel" }),
+        }),
+      ]),
+    );
+  });
+
   it("supports panel, terminal, showTextDocument, and vscode.diff compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-api-ext-"));
     fs.writeFileSync(

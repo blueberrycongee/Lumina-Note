@@ -72,11 +72,34 @@ class Uri {
     this.scheme = scheme;
     this.fsPath = scheme === "file" ? fsPathOrPathname : undefined;
     this.path = scheme === "file" ? undefined : fsPathOrPathname;
+    this.authority = "";
+    this.query = "";
+    this.fragment = "";
     this.#raw = raw ?? null;
   }
   #raw;
   static file(fsPath) {
     return new Uri("file", path.resolve(fsPath));
+  }
+  static from(components) {
+    const scheme = String(components?.scheme ?? "");
+    const uriPath = String(components?.path ?? "");
+    if (scheme === "file") return Uri.file(uriPath);
+
+    const authority = String(components?.authority ?? "");
+    const query = String(components?.query ?? "");
+    const fragment = String(components?.fragment ?? "");
+    const raw =
+      `${scheme}:` +
+      (authority ? `//${authority}` : "") +
+      uriPath +
+      (query ? `?${query}` : "") +
+      (fragment ? `#${fragment}` : "");
+    const uri = new Uri(scheme, uriPath, raw);
+    uri.authority = authority;
+    uri.query = query;
+    uri.fragment = fragment;
+    return uri;
   }
   static parse(input) {
     if (input.startsWith("file://")) {
@@ -85,7 +108,11 @@ class Uri {
     }
     try {
       const u = new URL(input);
-      return new Uri(u.protocol.replace(":", ""), `${u.host}${u.pathname}${u.search}${u.hash}`, u.toString());
+      const uri = new Uri(u.protocol.replace(":", ""), u.pathname, u.toString());
+      uri.authority = u.host;
+      uri.query = u.search ? u.search.slice(1) : "";
+      uri.fragment = u.hash ? u.hash.slice(1) : "";
+      return uri;
     } catch {
       return new Uri("unknown", input, input);
     }
@@ -128,6 +155,35 @@ class SecretStorage {
   onDidChange = new EventEmitter().event;
 }
 
+class EnvironmentVariableCollection {
+  #entries = new Map();
+  persistent = false;
+  description = undefined;
+  replace(variable, value, options) {
+    this.#entries.set(variable, { type: 1, value: String(value ?? ""), options });
+  }
+  append(variable, value, options) {
+    this.#entries.set(variable, { type: 2, value: String(value ?? ""), options });
+  }
+  prepend(variable, value, options) {
+    this.#entries.set(variable, { type: 3, value: String(value ?? ""), options });
+  }
+  get(variable) {
+    return this.#entries.get(variable);
+  }
+  forEach(callback, thisArg) {
+    for (const [variable, mutator] of this.#entries.entries()) {
+      callback.call(thisArg, variable, mutator, this);
+    }
+  }
+  delete(variable) {
+    this.#entries.delete(variable);
+  }
+  clear() {
+    this.#entries.clear();
+  }
+}
+
 class Range {
   constructor(start, end) {
     this.start = start;
@@ -166,6 +222,32 @@ const FileType = {
   Directory: 2,
   SymbolicLink: 64,
 };
+
+const FileChangeType = {
+  Changed: 1,
+  Created: 2,
+  Deleted: 3,
+};
+
+class FileSystemError extends Error {
+  constructor(message, code) {
+    super(message);
+    this.name = "EntryNotFound";
+    this.code = code;
+  }
+  static FileNotFound(uri) {
+    return new FileSystemError(`File not found: ${uri?.toString?.() ?? uri}`, "FileNotFound");
+  }
+  static Unavailable(message = "File system unavailable") {
+    return new FileSystemError(message, "Unavailable");
+  }
+  static NoPermissions(message = "No permissions") {
+    return new FileSystemError(message, "NoPermissions");
+  }
+  static FileExists(uri) {
+    return new FileSystemError(`File exists: ${uri?.toString?.() ?? uri}`, "FileExists");
+  }
+}
 
 const ProgressLocation = {
   SourceControl: 1,
@@ -276,6 +358,35 @@ class OutputChannel {
   show() {}
   hide() {}
   dispose() {}
+}
+
+class NotebookCellOutputItem {
+  constructor(data, mime) {
+    this.data = data;
+    this.mime = mime;
+  }
+  static text(value, mime = "text/plain") {
+    return new NotebookCellOutputItem(new TextEncoder().encode(String(value ?? "")), mime);
+  }
+  static json(value, mime = "application/json") {
+    return new NotebookCellOutputItem(new TextEncoder().encode(JSON.stringify(value)), mime);
+  }
+  static stdout(value) {
+    return new NotebookCellOutputItem(new TextEncoder().encode(String(value ?? "")), "application/vnd.code.notebook.stdout");
+  }
+  static stderr(value) {
+    return new NotebookCellOutputItem(new TextEncoder().encode(String(value ?? "")), "application/vnd.code.notebook.stderr");
+  }
+  static error(value) {
+    const err =
+      value instanceof Error
+        ? { name: value.name, message: value.message, stack: value.stack }
+        : value;
+    return new NotebookCellOutputItem(
+      new TextEncoder().encode(JSON.stringify(err ?? {})),
+      "application/vnd.code.notebook.error",
+    );
+  }
 }
 
 class DiagnosticCollection {
@@ -837,9 +948,12 @@ async function main() {
     views: new Map(), // viewType -> { webview, view, queue }
     panels: new Map(), // panelId -> { webview, panel, queue, token }
     nextPanelId: 1,
+    panelSerializers: new Map(),
     commands: new Map(),
     contextKeys: new Map(),
     authenticationProviders: new Map(),
+    fileSystemProviders: new Map(),
+    textDocumentContentProviders: new Map(),
     statusBarItems: new Map(),
     nextStatusBarItemId: 1,
     terminals: new Map(),
@@ -1381,6 +1495,39 @@ function createVscodeApi(state, originForApi) {
     const active = getActiveTextDocument();
     if (active && uri?.fsPath && active.uri.fsPath === uri.fsPath) return active;
 
+    if (uri?.scheme && uri.scheme !== "file") {
+      const contentProvider = state.textDocumentContentProviders.get(uri.scheme)?.provider;
+      if (contentProvider?.provideTextDocumentContent) {
+        const content = String(await contentProvider.provideTextDocumentContent(uri, { isCancellationRequested: false }));
+        return {
+          uri,
+          fileName: uri.toString(),
+          languageId: "plaintext",
+          version: 1,
+          isDirty: false,
+          getText: () => content,
+          lineCount: content.split(/\r?\n/).length,
+          save: async () => true,
+        };
+      }
+
+      const provider = state.fileSystemProviders.get(uri.scheme)?.provider;
+      if (provider?.readFile) {
+        const bytes = await provider.readFile(uri);
+        const content = new TextDecoder().decode(bytes);
+        return {
+          uri,
+          fileName: uri.toString(),
+          languageId: "plaintext",
+          version: 1,
+          isDirty: false,
+          getText: () => content,
+          lineCount: content.split(/\r?\n/).length,
+          save: async () => true,
+        };
+      }
+    }
+
     if (uri?.fsPath) {
       const fs = await import("node:fs/promises");
       const buf = await fs.readFile(uri.fsPath, "utf8").catch(() => "");
@@ -1488,11 +1635,30 @@ function createVscodeApi(state, originForApi) {
     Selection,
     CodeLens,
     DiagnosticCollection,
+    NotebookCellOutputItem,
     FileType,
+    FileChangeType,
+    FileSystemError,
     ProgressLocation,
     StatusBarAlignment,
     env: {
+      appName: "Lumina Note",
+      appHost: "desktop",
+      uriScheme: "lumina-note",
+      language: "en",
+      machineId: "lumina-vscode-host",
+      sessionId: "lumina-vscode-host-session",
+      isTelemetryEnabled: false,
       remoteName: undefined,
+      clipboard: {
+        _text: "",
+        async readText() {
+          return this._text;
+        },
+        async writeText(value) {
+          this._text = String(value ?? "");
+        },
+      },
       async openExternal(uri) {
         const url = uri?.toString?.() ?? uri;
         logger.info("openExternal", url);
@@ -1636,6 +1802,63 @@ function createVscodeApi(state, originForApi) {
         };
       },
       onDidChangeConfiguration: onDidChangeConfigurationEmitter.event,
+      registerFileSystemProvider(scheme, provider, options = {}) {
+        const key = String(scheme);
+        state.fileSystemProviders.set(key, { provider, options });
+        const changeSubscription = provider?.onDidChangeFile?.((events) => {
+          recordDebugEvent(state, {
+            category: "fileSystemProvider",
+            summary: {
+              event: "change",
+              scheme: key,
+              events: summarizeDebugValue(events),
+            },
+          });
+        });
+        recordDebugEvent(state, {
+          category: "fileSystemProvider",
+          summary: {
+            event: "register",
+            scheme: key,
+            isReadonly: options?.isReadonly === true,
+            isCaseSensitive: options?.isCaseSensitive === true,
+          },
+        });
+        return new Disposable(() => {
+          changeSubscription?.dispose?.();
+          state.fileSystemProviders.delete(key);
+          recordDebugEvent(state, {
+            category: "fileSystemProvider",
+            summary: { event: "dispose", scheme: key },
+          });
+        });
+      },
+      registerTextDocumentContentProvider(scheme, provider) {
+        const key = String(scheme);
+        state.textDocumentContentProviders.set(key, { provider });
+        const changeSubscription = provider?.onDidChange?.((uri) => {
+          recordDebugEvent(state, {
+            category: "textDocumentContentProvider",
+            summary: {
+              event: "change",
+              scheme: key,
+              uri: uri?.toString?.() ?? null,
+            },
+          });
+        });
+        recordDebugEvent(state, {
+          category: "textDocumentContentProvider",
+          summary: { event: "register", scheme: key },
+        });
+        return new Disposable(() => {
+          changeSubscription?.dispose?.();
+          state.textDocumentContentProviders.delete(key);
+          recordDebugEvent(state, {
+            category: "textDocumentContentProvider",
+            summary: { event: "dispose", scheme: key },
+          });
+        });
+      },
       createFileSystemWatcher(pattern, ignoreCreateEvents = false, ignoreChangeEvents = false, ignoreDeleteEvents = false) {
         const createEmitter = new EventEmitter();
         const changeEmitter = new EventEmitter();
@@ -1716,14 +1939,20 @@ function createVscodeApi(state, originForApi) {
       },
       fs: {
         async readFile(uri) {
+          const provider = state.fileSystemProviders.get(uri?.scheme)?.provider;
+          if (provider?.readFile) return provider.readFile(uri);
           const fs = await import("node:fs/promises");
           return fs.readFile(uri.fsPath);
         },
         async writeFile(uri, content) {
+          const provider = state.fileSystemProviders.get(uri?.scheme)?.provider;
+          if (provider?.writeFile) return provider.writeFile(uri, content, { create: true, overwrite: true });
           const fs = await import("node:fs/promises");
           await fs.writeFile(uri.fsPath, content);
         },
         async stat(uri) {
+          const provider = state.fileSystemProviders.get(uri?.scheme)?.provider;
+          if (provider?.stat) return provider.stat(uri);
           const fs = await import("node:fs/promises");
           const stat = await fs.stat(uri.fsPath);
           return {
@@ -1740,6 +1969,8 @@ function createVscodeApi(state, originForApi) {
           };
         },
         async readDirectory(uri) {
+          const provider = state.fileSystemProviders.get(uri?.scheme)?.provider;
+          if (provider?.readDirectory) return provider.readDirectory(uri);
           const fs = await import("node:fs/promises");
           const entries = await fs.readdir(uri.fsPath, { withFileTypes: true });
           return entries.map((entry) => [
@@ -1754,10 +1985,14 @@ function createVscodeApi(state, originForApi) {
           ]);
         },
         async createDirectory(uri) {
+          const provider = state.fileSystemProviders.get(uri?.scheme)?.provider;
+          if (provider?.createDirectory) return provider.createDirectory(uri);
           const fs = await import("node:fs/promises");
           await fs.mkdir(uri.fsPath, { recursive: true });
         },
         async delete(uri, options = {}) {
+          const provider = state.fileSystemProviders.get(uri?.scheme)?.provider;
+          if (provider?.delete) return provider.delete(uri, options);
           const fs = await import("node:fs/promises");
           await fs.rm(uri.fsPath, {
             recursive: options.recursive === true,
@@ -1765,6 +2000,8 @@ function createVscodeApi(state, originForApi) {
           });
         },
         async rename(source, target, options = {}) {
+          const sourceProvider = state.fileSystemProviders.get(source?.scheme)?.provider;
+          if (sourceProvider?.rename && source?.scheme === target?.scheme) return sourceProvider.rename(source, target, options);
           const fs = await import("node:fs/promises");
           if (options.overwrite !== true) {
             await fs.access(target.fsPath).then(
@@ -1777,6 +2014,14 @@ function createVscodeApi(state, originForApi) {
           await fs.rename(source.fsPath, target.fsPath);
         },
         async copy(source, target, options = {}) {
+          const sourceProvider = state.fileSystemProviders.get(source?.scheme)?.provider;
+          if (sourceProvider?.readFile && source?.scheme === target?.scheme) {
+            const content = await sourceProvider.readFile(source);
+            if (sourceProvider.writeFile) return sourceProvider.writeFile(target, content, {
+              create: true,
+              overwrite: options.overwrite === true,
+            });
+          }
           const fs = await import("node:fs/promises");
           if (options.overwrite !== true) {
             await fs.access(target.fsPath).then(
@@ -1856,6 +2101,20 @@ function createVscodeApi(state, originForApi) {
           summary: { viewType },
         });
         return new Disposable(() => state.viewProviders.delete(viewType));
+      },
+      registerWebviewPanelSerializer(viewType, serializer) {
+        state.panelSerializers.set(viewType, serializer);
+        recordDebugEvent(state, {
+          category: "webviewPanelSerializer",
+          summary: { event: "register", viewType },
+        });
+        return new Disposable(() => {
+          state.panelSerializers.delete(viewType);
+          recordDebugEvent(state, {
+            category: "webviewPanelSerializer",
+            summary: { event: "dispose", viewType },
+          });
+        });
       },
       createWebviewPanel(viewType, title, showOptions, options = {}) {
         const id = String(state.nextPanelId++);
@@ -2145,6 +2404,7 @@ function createExtensionContext(state) {
     globalState: new Memento(),
     workspaceState: new Memento(),
     secrets: new SecretStorage(),
+    environmentVariableCollection: new EnvironmentVariableCollection(),
     extension: {
       packageJSON: state.extensionPackage,
     },
