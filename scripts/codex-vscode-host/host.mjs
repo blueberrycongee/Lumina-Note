@@ -172,6 +172,11 @@ const ProgressLocation = {
   Notification: 15,
 };
 
+const StatusBarAlignment = {
+  Left: 1,
+  Right: 2,
+};
+
 class Webview {
   html = "";
   options = {};
@@ -834,6 +839,8 @@ async function main() {
     commands: new Map(),
     contextKeys: new Map(),
     authenticationProviders: new Map(),
+    statusBarItems: new Map(),
+    nextStatusBarItemId: 1,
     terminals: new Map(),
     nextTerminalId: 1,
     uriHandlers: [],
@@ -914,6 +921,11 @@ async function main() {
         return json(res, 200, {
           viewTypes: [...state.viewProviders.keys()],
           contextKeys: Object.fromEntries(state.contextKeys.entries()),
+          statusBarItems: [...state.statusBarItems.values()].map((item) => ({
+            id: item.id,
+            text: item.text,
+            name: item.name,
+          })),
           panels: [...state.panels.entries()].map(([id, entry]) => ({
             id,
             viewType: entry.panel.viewType,
@@ -1427,6 +1439,7 @@ function createVscodeApi(state, originForApi) {
     DiagnosticCollection,
     FileType,
     ProgressLocation,
+    StatusBarAlignment,
     env: {
       remoteName: undefined,
       async openExternal(uri) {
@@ -1789,6 +1802,56 @@ function createVscodeApi(state, originForApi) {
       },
       createOutputChannel(name) {
         return new OutputChannel(name);
+      },
+      createStatusBarItem(idOrAlignment, alignmentOrPriority, priority) {
+        const id = typeof idOrAlignment === "string" ? idOrAlignment : `status-${state.nextStatusBarItemId++}`;
+        const alignment =
+          typeof idOrAlignment === "number"
+            ? idOrAlignment
+            : typeof alignmentOrPriority === "number"
+              ? alignmentOrPriority
+              : StatusBarAlignment.Left;
+        const resolvedPriority =
+          typeof idOrAlignment === "number"
+            ? alignmentOrPriority
+            : priority;
+        const item = {
+          id,
+          alignment,
+          priority: typeof resolvedPriority === "number" ? resolvedPriority : undefined,
+          name: undefined,
+          text: "",
+          tooltip: undefined,
+          color: undefined,
+          backgroundColor: undefined,
+          command: undefined,
+          accessibilityInformation: undefined,
+          show() {
+            state.statusBarItems.set(id, item);
+            recordDebugEvent(state, {
+              category: "statusBar",
+              summary: { event: "show", id, text: item.text },
+            });
+          },
+          hide() {
+            recordDebugEvent(state, {
+              category: "statusBar",
+              summary: { event: "hide", id },
+            });
+          },
+          dispose() {
+            state.statusBarItems.delete(id);
+            recordDebugEvent(state, {
+              category: "statusBar",
+              summary: { event: "dispose", id },
+            });
+          },
+        };
+        recordDebugEvent(state, {
+          category: "statusBar",
+          summary: { event: "create", id, alignment: item.alignment },
+        });
+        return item;
       },
       createTerminal(nameOrOptions, shellPath, shellArgs) {
         const id = String(state.nextTerminalId++);

@@ -544,6 +544,50 @@ exports.activate = async function activate() {
     );
   });
 
+  it("supports status bar item compatibility APIs", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-status-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "status-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const item = vscode.window.createStatusBarItem("lumina.status", vscode.StatusBarAlignment.Left, 10);
+  item.name = "Lumina Status";
+  item.text = "Ready";
+  item.tooltip = "Lumina ready";
+  item.show();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const registered = await eventually(
+      () => fetch(`${origin}/debug/registered`).then((r) => r.json()),
+      (value) =>
+        value.statusBarItems?.some(
+          (item: { id?: string; text?: string }) =>
+            item.id === "lumina.status" && item.text === "Ready",
+        ),
+    );
+    expect(registered.statusBarItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "lumina.status",
+          text: "Ready",
+          name: "Lumina Status",
+        }),
+      ]),
+    );
+  });
+
   it("supports minimal authentication provider and getSession compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-auth-ext-"));
     fs.writeFileSync(
