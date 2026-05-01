@@ -20,6 +20,8 @@ export interface LocalVsixInstallFilesResult extends VscodeExtensionInstallFiles
   version: string
 }
 
+const UNIVERSAL_TARGET_PLATFORMS = new Set(['universal'])
+
 export async function installDownloadedVsix(
   download: VscodeExtensionDownloadResult,
   options: {
@@ -27,7 +29,7 @@ export async function installDownloadedVsix(
     platform?: string
   },
 ): Promise<VscodeExtensionInstallFilesResult> {
-  const platform = options.platform ?? `${process.platform}-${process.arch}`
+  const platform = options.platform ?? getCurrentVsixTargetPlatform()
   const installDir = path.join(
     options.installRoot,
     `${download.remote.extensionId}-${download.remote.version}-${platform}`,
@@ -39,6 +41,7 @@ export async function installDownloadedVsix(
 
   try {
     await extract(download.filePath, { dir: tmpDir })
+    validateExtractedVsixTargetPlatform(tmpDir, platform)
     const extensionPath = resolveExtractedExtensionPath(tmpDir)
     const packagePath = path.join(extensionPath, 'package.json')
     const packageJson = JSON.parse(
@@ -90,6 +93,8 @@ export async function installLocalVsixFile(
 
   try {
     await extract(vsixPath, { dir: tmpDir })
+    const platform = options.platform ?? getCurrentVsixTargetPlatform()
+    validateExtractedVsixTargetPlatform(tmpDir, platform)
     const extensionPath = resolveExtractedExtensionPath(tmpDir)
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(extensionPath, 'package.json'), 'utf-8'),
@@ -106,7 +111,6 @@ export async function installLocalVsixFile(
     const version = packageJson.version?.trim()
     if (!version) throw new Error('VSIX package version is missing')
 
-    const platform = options.platform ?? `${process.platform}-${process.arch}`
     const installDir = path.join(
       options.installRoot,
       `${extensionId}-${version}-${platform}`,
@@ -124,6 +128,28 @@ export async function installLocalVsixFile(
     fs.rmSync(tmpDir, { recursive: true, force: true })
     throw err
   }
+}
+
+export function getCurrentVsixTargetPlatform(): string {
+  return `${process.platform}-${process.arch}`
+}
+
+function validateExtractedVsixTargetPlatform(root: string, platform: string): void {
+  const targetPlatform = readExtractedVsixTargetPlatform(root)
+  if (!targetPlatform || UNIVERSAL_TARGET_PLATFORMS.has(targetPlatform)) return
+  if (targetPlatform !== platform) {
+    throw new Error(
+      `VSIX target platform mismatch: expected ${platform}, got ${targetPlatform}`,
+    )
+  }
+}
+
+function readExtractedVsixTargetPlatform(root: string): string | null {
+  const manifestPath = path.join(root, 'extension.vsixmanifest')
+  if (!fs.existsSync(manifestPath)) return null
+  const manifest = fs.readFileSync(manifestPath, 'utf-8')
+  const match = manifest.match(/\bTargetPlatform=(["'])([^"']+)\1/)
+  return match?.[2]?.trim() || null
 }
 
 function resolveExtractedExtensionPath(root: string): string {

@@ -101,6 +101,46 @@ describe('installDownloadedVsix', () => {
     ).rejects.toThrow(/package version mismatch/)
   })
 
+  it('rejects downloaded VSIX packages for a different target platform', async () => {
+    const download = makeDownload('openai.chatgpt', '6.1.0', {
+      'extension.vsixmanifest':
+        '<PackageManifest><Metadata><Identity Publisher="OpenAI" Id="chatgpt" Version="6.1.0" TargetPlatform="alpine-arm64"/></Metadata></PackageManifest>',
+      'extension/package.json': JSON.stringify({
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.1.0',
+      }),
+    })
+
+    await expect(
+      installDownloadedVsix(download, {
+        installRoot: path.join(tmpDir, 'installed'),
+        platform: 'darwin-arm64',
+      }),
+    ).rejects.toThrow(/target platform mismatch: expected darwin-arm64, got alpine-arm64/)
+  })
+
+  it('accepts downloaded VSIX packages for the current target platform', async () => {
+    const download = makeDownload('openai.chatgpt', '6.1.0', {
+      'extension.vsixmanifest':
+        '<PackageManifest><Metadata><Identity Publisher="OpenAI" Id="chatgpt" Version="6.1.0" TargetPlatform="test-platform"/></Metadata></PackageManifest>',
+      'extension/package.json': JSON.stringify({
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.1.0',
+      }),
+    })
+
+    const result = await installDownloadedVsix(download, {
+      installRoot: path.join(tmpDir, 'installed'),
+      platform: 'test-platform',
+    })
+
+    expect(result.extensionPath).toBe(
+      path.join(tmpDir, 'installed', 'openai.chatgpt-6.1.0-test-platform', 'extension'),
+    )
+  })
+
   it('imports a local VSIX after reading its package metadata', async () => {
     const vsixPath = path.join(tmpDir, 'claude-code.vsix')
     fs.writeFileSync(
@@ -125,6 +165,30 @@ describe('installDownloadedVsix', () => {
     expect(result.extensionPath).toBe(
       path.join(tmpDir, 'installed', 'anthropic.claude-code-2.1.81-test-platform', 'extension'),
     )
+  })
+
+  it('rejects local VSIX packages for a different target platform', async () => {
+    const vsixPath = path.join(tmpDir, 'claude-code.vsix')
+    fs.writeFileSync(
+      vsixPath,
+      createZip({
+        'extension.vsixmanifest':
+          '<PackageManifest><Metadata><Identity Publisher="Anthropic" Id="claude-code" Version="2.1.81" TargetPlatform="alpine-arm64"/></Metadata></PackageManifest>',
+        'extension/package.json': JSON.stringify({
+          publisher: 'Anthropic',
+          name: 'claude-code',
+          version: '2.1.81',
+        }),
+      }),
+    )
+
+    await expect(
+      installLocalVsixFile(vsixPath, {
+        installRoot: path.join(tmpDir, 'installed'),
+        platform: 'darwin-arm64',
+        expectedExtensionId: 'anthropic.claude-code',
+      }),
+    ).rejects.toThrow(/target platform mismatch: expected darwin-arm64, got alpine-arm64/)
   })
 
   it('rejects local VSIX files for unsupported extensions', async () => {
