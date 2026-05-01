@@ -28,6 +28,7 @@ function record(
     extensionPath: path.join(tmpDir, `openai.chatgpt-${version}`),
     source: 'manual-vsix',
     installedAt,
+    smokeTestPassed: true,
     compatibility: {
       status: 'stable',
       reason: 'verified in test',

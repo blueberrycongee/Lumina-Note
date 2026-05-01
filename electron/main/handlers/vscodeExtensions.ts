@@ -167,6 +167,13 @@ export function createVscodeExtensionHandlers(
     async vscode_extensions_activate_installed(args) {
       const extensionId = parseExtensionId(args.extensionId)
       const version = parseVersion(args.version)
+      validateManualActivation({
+        extensionId,
+        version,
+        allowUnverified: args.allowUnverified === true,
+        store,
+        profiles: loadProfiles(),
+      })
       store.activate(extensionId, version)
       return store.getActive(extensionId)
     },
@@ -175,6 +182,43 @@ export function createVscodeExtensionHandlers(
       const extensionId = parseExtensionId(args.extensionId)
       return store.rollback(extensionId)
     },
+  }
+}
+
+function validateManualActivation(options: {
+  extensionId: SupportedVscodeAiExtensionId
+  version: string
+  allowUnverified: boolean
+  store: VscodeExtensionStore
+  profiles: ReturnType<typeof loadExternalCompatProfiles>
+}): void {
+  const record = options.store
+    .listInstalled(options.extensionId)
+    .find((item) => item.version === options.version)
+  if (!record) {
+    throw new Error(`Cannot activate missing extension ${options.extensionId}@${options.version}`)
+  }
+
+  const [publisher, name] = options.extensionId.split('.')
+  const compatibility = resolveCompatibilityProfile(
+    { publisher, name, version: options.version },
+    options.profiles,
+  )
+  if (!compatibility.profile) {
+    throw new Error(compatibility.reason)
+  }
+
+  const hostCapabilities = diagnoseHostCapabilities(compatibility.profile)
+  if (!hostCapabilities.canRunWithoutMissingCapabilities) {
+    throw new Error(
+      `Cannot activate ${options.extensionId}@${options.version}; host is missing required VS Code capabilities: ${hostCapabilities.missingCapabilities.join(', ')}.`,
+    )
+  }
+
+  if (!record.smokeTestPassed && !options.allowUnverified) {
+    throw new Error(
+      `Cannot activate ${options.extensionId}@${options.version}; smoke test has not passed. Pass allowUnverified only for an explicit preview trial.`,
+    )
   }
 }
 

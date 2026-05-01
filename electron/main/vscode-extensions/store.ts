@@ -26,6 +26,7 @@ export interface VscodeExtensionInstallRecord {
   source: VscodeExtensionInstallSource
   installedAt: string
   packageSha256?: string
+  smokeTestPassed: boolean
   compatibility: VscodeExtensionCompatibilitySnapshot
 }
 

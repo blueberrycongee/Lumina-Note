@@ -73,6 +73,7 @@ export class VscodeExtensionManager {
       packageSha256:
         input.packageSha256 ??
         (input.packageBytes ? sha256Hex(input.packageBytes) : undefined),
+      smokeTestPassed: input.smokeTestPassed === true,
       compatibility: {
         status: compatibility.status,
         reason: compatibility.reason,

@@ -103,6 +103,29 @@ describe('vscode extension handlers', () => {
     expect(rolledBack).toMatchObject({ extensionId: 'openai.chatgpt', version: '6.0.0' })
   })
 
+  it('blocks manual activation until smoke test has passed unless preview trial is explicit', async () => {
+    const handlers = createHandlers()
+    await seedInstall(handlers, '6.1.0', { smokeTestPassed: false })
+
+    await expect(
+      handlers.vscode_extensions_activate_installed({
+        extensionId: 'openai.chatgpt',
+        version: '6.1.0',
+      }),
+    ).rejects.toThrow(/smoke test has not passed/)
+
+    const active = await handlers.vscode_extensions_activate_installed({
+      extensionId: 'openai.chatgpt',
+      version: '6.1.0',
+      allowUnverified: true,
+    })
+
+    expect(active).toMatchObject({
+      extensionId: 'openai.chatgpt',
+      version: '6.1.0',
+    })
+  })
+
   it('returns diagnostics for supported AI extensions', async () => {
     const handlers = createHandlers()
     await seedInstall(handlers, '6.1.0')
@@ -390,7 +413,11 @@ function stableCodexProfile() {
   }
 }
 
-async function seedInstall(handlers: VscodeExtensionHandlerMap, version: string) {
+async function seedInstall(
+  handlers: VscodeExtensionHandlerMap,
+  version: string,
+  options: { smokeTestPassed?: boolean } = {},
+) {
   const state = (await handlers.vscode_extensions_get_state({})) as {
     installed: Record<string, Record<string, unknown>>
   }
@@ -402,6 +429,7 @@ async function seedInstall(handlers: VscodeExtensionHandlerMap, version: string)
       extensionPath: path.join(tmpDir, `openai.chatgpt-${version}`),
       source: 'manual-vsix',
       installedAt: `2026-05-01T${version.endsWith('0') ? '10' : '11'}:00:00.000Z`,
+      smokeTestPassed: options.smokeTestPassed ?? true,
       compatibility: {
         status: 'stable',
         reason: 'seeded',

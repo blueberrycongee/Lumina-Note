@@ -362,6 +362,7 @@ export interface VscodeAiExtensionInstallRecord {
   source: "manual-vsix" | VscodeAiExtensionSource | "github-release";
   installedAt: string;
   packageSha256?: string;
+  smokeTestPassed: boolean;
   compatibility: {
     status:
       | "stable"
@@ -470,6 +471,7 @@ export async function installLocalVscodeAiExtensionVsix(input: {
 export async function activateInstalledVscodeAiExtension(input: {
   extensionId: VscodeAiExtensionId;
   version: string;
+  allowUnverified?: boolean;
 }): Promise<VscodeAiExtensionInstallRecord> {
   return invoke("vscode_extensions_activate_installed", input);
 }

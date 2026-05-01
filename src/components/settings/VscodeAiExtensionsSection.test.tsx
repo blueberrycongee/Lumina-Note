@@ -56,6 +56,7 @@ describe("VscodeAiExtensionsSection", () => {
           extensionPath: "/tmp/claude",
           source: "manual-vsix",
           installedAt: "2026-05-01T00:00:00.000Z",
+          smokeTestPassed: true,
           compatibility: {
             status: "preview",
             reason: "manual opt-in required",
