@@ -790,6 +790,7 @@ async function main() {
     panels: new Map(), // panelId -> { webview, panel, queue, token }
     nextPanelId: 1,
     commands: new Map(),
+    contextKeys: new Map(),
     authenticationProviders: new Map(),
     terminals: new Map(),
     nextTerminalId: 1,
@@ -870,6 +871,7 @@ async function main() {
       if (u.pathname === "/debug/registered") {
         return json(res, 200, {
           viewTypes: [...state.viewProviders.keys()],
+          contextKeys: Object.fromEntries(state.contextKeys.entries()),
           panels: [...state.panels.entries()].map(([id, entry]) => ({
             id,
             viewType: entry.panel.viewType,
@@ -1309,6 +1311,20 @@ function createVscodeApi(state, originForApi) {
   };
 
   const handleBuiltInCommand = async (command, args) => {
+    if (command === "setContext") {
+      const key = String(args[0] ?? "");
+      const value = args[1];
+      if (key) state.contextKeys.set(key, value);
+      recordDebugEvent(state, {
+        category: "builtinCommand",
+        summary: {
+          command,
+          key,
+          value: summarizeDebugValue(value),
+        },
+      });
+      return undefined;
+    }
     if (command === "vscode.diff") {
       const request = {
         id: state.nextDiffRequestId++,
@@ -1456,7 +1472,7 @@ function createVscodeApi(state, originForApi) {
       },
       async executeCommand(command, ...args) {
         const cb = state.commands.get(command);
-        const builtIn = command === "vscode.diff";
+        const builtIn = command === "vscode.diff" || command === "setContext";
         recordDebugEvent(state, {
           category: "command",
           summary: {

@@ -409,6 +409,36 @@ exports.activate = async function activate(context) {
     ]);
   });
 
+  it("tracks VS Code setContext command state", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-context-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "context-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  await vscode.commands.executeCommand("setContext", "openai.chatgpt.ctx.app.supportsPairing", true);
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const registered = await eventually(
+      () => fetch(`${origin}/debug/registered`).then((r) => r.json()),
+      (value) => value.contextKeys?.["openai.chatgpt.ctx.app.supportsPairing"] === true,
+    );
+    expect(registered.contextKeys).toMatchObject({
+      "openai.chatgpt.ctx.app.supportsPairing": true,
+    });
+  });
+
   it("supports minimal authentication provider and getSession compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-auth-ext-"));
     fs.writeFileSync(
