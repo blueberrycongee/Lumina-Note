@@ -25,6 +25,7 @@ export interface VscodeExtensionCandidateInstall {
   source: VscodeExtensionInstallSource
   installedAt?: string
   packageBytes?: Uint8Array
+  packageSha256?: string
   smokeTestPassed?: boolean
 }
 
@@ -69,9 +70,9 @@ export class VscodeExtensionManager {
       extensionPath: input.extensionPath,
       source: input.source,
       installedAt: input.installedAt ?? new Date().toISOString(),
-      packageSha256: input.packageBytes
-        ? sha256Hex(input.packageBytes)
-        : undefined,
+      packageSha256:
+        input.packageSha256 ??
+        (input.packageBytes ? sha256Hex(input.packageBytes) : undefined),
       compatibility: {
         status: compatibility.status,
         reason: compatibility.reason,
