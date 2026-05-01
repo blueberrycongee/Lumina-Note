@@ -148,7 +148,7 @@ describe("VscodeAiExtensionsSection", () => {
     ).toBeInTheDocument();
   });
 
-  it("checks and installs latest extension from Open VSX", async () => {
+  it("checks and installs latest extension from Marketplace by default", async () => {
     render(<VscodeAiExtensionsSection />);
     await screen.findByText("Codex");
 
@@ -156,7 +156,8 @@ describe("VscodeAiExtensionsSection", () => {
     await waitFor(() => {
       expect(checkLatestMock).toHaveBeenCalledWith({
         extensionId: "openai.chatgpt",
-        source: "open-vsx",
+        source: "marketplace",
+        marketplaceTermsAccepted: false,
       });
     });
 
@@ -164,7 +165,8 @@ describe("VscodeAiExtensionsSection", () => {
     await waitFor(() => {
       expect(installLatestMock).toHaveBeenCalledWith({
         extensionId: "openai.chatgpt",
-        source: "open-vsx",
+        source: "marketplace",
+        marketplaceTermsAccepted: false,
       });
     });
   });

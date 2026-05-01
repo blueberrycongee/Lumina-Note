@@ -36,7 +36,7 @@ export function VscodeAiExtensionsSection() {
   const [items, setItems] = useState<VscodeAiExtensionDiagnosticsItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState<ActionState>({ key: "", message: null });
-  const [source, setSource] = useState<VscodeAiExtensionSource>("open-vsx");
+  const [source, setSource] = useState<VscodeAiExtensionSource>("marketplace");
   const [marketplaceTermsAccepted, setMarketplaceTermsAccepted] =
     useState(false);
   const [githubOwner, setGithubOwner] = useState("");

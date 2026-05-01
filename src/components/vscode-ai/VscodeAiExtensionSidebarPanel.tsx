@@ -46,6 +46,7 @@ export function VscodeAiExtensionSidebarPanel() {
     key: "",
     message: null,
   });
+  const [showManage, setShowManage] = useState(false);
   const [hostSession, setHostSession] =
     useState<VscodeAiExtensionHostSession | null>(null);
 
@@ -53,11 +54,17 @@ export function VscodeAiExtensionSidebarPanel() {
     () => items.find((item) => item.extensionId === selectedId) ?? null,
     [items, selectedId],
   );
-  const missingCapabilities = selected?.hostCapabilities?.missingCapabilities ?? [];
+  const activeHostSession =
+    hostSession?.extensionId === selectedId ? hostSession : null;
+  const missingCapabilities =
+    selected?.hostCapabilities?.missingCapabilities ?? [];
   const latestInstalled = selected?.installed[0] ?? null;
   const canOpen =
     Boolean(selected?.active) &&
     selected?.hostCapabilities?.canRunWithoutMissingCapabilities !== false;
+  const needsActivation =
+    Boolean(latestInstalled) &&
+    latestInstalled?.version !== selected?.active?.version;
 
   const refresh = async () => {
     try {
@@ -114,7 +121,9 @@ export function VscodeAiExtensionSidebarPanel() {
         filters: [{ name: "VSIX", extensions: ["vsix"] }],
         multiple: false,
       });
-      const vsixPath = Array.isArray(selectedPath) ? selectedPath[0] : selectedPath;
+      const vsixPath = Array.isArray(selectedPath)
+        ? selectedPath[0]
+        : selectedPath;
       if (!vsixPath) return null;
       const result = await installLocalVscodeAiExtensionVsix({
         extensionId: selectedId,
@@ -141,6 +150,7 @@ export function VscodeAiExtensionSidebarPanel() {
         extensionId: selectedId,
       });
       setHostSession(session);
+      setShowManage(false);
       return session.viewUrl
         ? `Opened ${selected.displayName}`
         : `${selected.displayName} is running, but it did not register a sidebar view.`;
@@ -155,15 +165,15 @@ export function VscodeAiExtensionSidebarPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="border-b border-border/60 p-2">
-        <div className="flex rounded-ui-md border border-border/60 bg-muted/35 p-0.5">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border/60 bg-muted/15 px-1.5">
+        <div className="flex min-w-0 flex-1 rounded-ui-sm border border-border/50 bg-muted/25 p-0.5">
           {EXTENSIONS.map((extension) => (
             <button
               key={extension.id}
               type="button"
               onClick={() => setSelectedId(extension.id)}
               className={cn(
-                "min-w-0 flex-1 rounded-ui-sm px-2 py-1.5 text-xs font-medium transition-colors",
+                "min-w-0 flex-1 rounded-ui-sm px-2 py-1 text-xs font-medium transition-colors",
                 selectedId === extension.id
                   ? "bg-background text-foreground shadow-ui-card"
                   : "text-muted-foreground hover:text-foreground",
@@ -173,99 +183,154 @@ export function VscodeAiExtensionSidebarPanel() {
             </button>
           ))}
         </div>
-
-        <div className="mt-2 flex items-center gap-1">
-          <select
-            aria-label="VS Code AI extension source"
-            value={source}
-            onChange={(event) =>
-              setSource(event.target.value as VscodeAiExtensionSource)
-            }
-            className="h-8 min-w-0 flex-1 rounded-ui-md border border-border bg-background px-2 text-xs"
-          >
-            <option value="marketplace">Marketplace</option>
-            <option value="open-vsx">Open VSX</option>
-          </select>
+        <IconButton
+          label="Refresh"
+          busy={action.key === "refresh"}
+          onClick={() => void runAction("refresh", async () => null)}
+          icon={<RefreshCw size={14} />}
+        />
+        <IconButton
+          label={showManage ? "Hide setup" : "Setup"}
+          onClick={() => setShowManage((value) => !value)}
+          icon={<Settings size={14} />}
+        />
+        {activeHostSession ? (
           <IconButton
-            label="Refresh"
-            busy={action.key === "refresh"}
-            onClick={() => void runAction("refresh", async () => null)}
-            icon={<RefreshCw size={14} />}
+            label="Stop host"
+            busy={action.key === "stop-host"}
+            onClick={() => void stopHost()}
+            icon={<Square size={14} />}
           />
-        </div>
-        {source === "marketplace" ? (
-          <label className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={marketplaceTermsAccepted}
-              onChange={(event) =>
-                setMarketplaceTermsAccepted(event.target.checked)
-              }
-            />
-            <span>I have accepted Marketplace terms.</span>
-          </label>
-        ) : null}
+        ) : (
+          <IconButton
+            label="Open"
+            busy={action.key === `open:${selectedId}`}
+            disabled={!canOpen}
+            onClick={() => void openExtension()}
+            icon={<Play size={14} />}
+          />
+        )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="space-y-3 p-3">
-          <div className="rounded-ui-md border border-border/60 bg-popover/40 p-3">
-            <div className="flex items-start gap-2">
-              {missingCapabilities.length === 0 ? (
-                <CheckCircle2 size={16} className="mt-0.5 text-emerald-500" />
-              ) : (
-                <AlertTriangle size={16} className="mt-0.5 text-warning" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium">
-                  {selected?.displayName ?? "VS Code AI extension"}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Active: {selected?.active?.version ?? "none"}
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  Installed: {selected?.installed.length ?? 0}
-                  {latestInstalled
-                    ? ` · Latest ${latestInstalled.version}`
-                    : ""}
-                </div>
-                {selected?.compatibility?.reason ? (
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {selected.compatibility.reason}
-                  </div>
-                ) : null}
-                {missingCapabilities.length > 0 ? (
-                  <div className="mt-1 text-xs text-warning">
-                    Missing: {missingCapabilities.join(", ")}
-                  </div>
-                ) : null}
-              </div>
-            </div>
+      {action.message ? (
+        <div className="shrink-0 border-b border-border/60 bg-muted/20 px-2 py-1.5 text-xs text-muted-foreground">
+          {action.message}
+        </div>
+      ) : null}
 
-            <div className="mt-3 grid grid-cols-5 gap-1">
-              <IconButton
-                label="Install latest"
-                busy={action.key === `install:${selectedId}`}
-                onClick={() => void installLatest()}
-                icon={<Download size={14} />}
-              />
-              <IconButton
-                label="Import VSIX"
-                busy={action.key === `import:${selectedId}`}
-                onClick={() => void importVsix()}
-                icon={<FileUp size={14} />}
-              />
-              <IconButton
-                label="Activate latest installed"
-                busy={action.key === `activate:${selectedId}`}
-                disabled={
-                  !latestInstalled ||
-                  latestInstalled.version === selected?.active?.version
+      {showManage || !activeHostSession ? (
+        <div className="shrink-0 border-b border-border/60 bg-background/95 p-2">
+          <div className="flex items-start gap-2">
+            {missingCapabilities.length === 0 ? (
+              <CheckCircle2 size={15} className="mt-0.5 text-emerald-500" />
+            ) : (
+              <AlertTriangle size={15} className="mt-0.5 text-warning" />
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-medium">
+                {selected?.displayName ?? "VS Code AI extension"}
+              </div>
+              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                Active {selected?.active?.version ?? "none"}
+                {latestInstalled ? ` · Installed ${latestInstalled.version}` : ""}
+              </div>
+              {selected?.compatibility?.reason ? (
+                <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
+                  {selected.compatibility.reason}
+                </div>
+              ) : null}
+              {missingCapabilities.length > 0 ? (
+                <div className="mt-0.5 line-clamp-2 text-[11px] text-warning">
+                  Missing: {missingCapabilities.join(", ")}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-2 flex items-center gap-1">
+            <select
+              aria-label="VS Code AI extension source"
+              value={source}
+              onChange={(event) =>
+                setSource(event.target.value as VscodeAiExtensionSource)
+              }
+              className="h-8 min-w-0 flex-1 rounded-ui-md border border-border bg-background px-2 text-xs"
+            >
+              <option value="marketplace">Marketplace</option>
+              <option value="open-vsx">Open VSX</option>
+            </select>
+            <IconButton
+              label="Install latest"
+              busy={action.key === `install:${selectedId}`}
+              onClick={() => void installLatest()}
+              icon={<Download size={14} />}
+            />
+            <IconButton
+              label="Import VSIX"
+              busy={action.key === `import:${selectedId}`}
+              onClick={() => void importVsix()}
+              icon={<FileUp size={14} />}
+            />
+            <IconButton
+              label="Activate latest installed"
+              busy={action.key === `activate:${selectedId}`}
+              disabled={!needsActivation}
+              onClick={() => void activateLatest()}
+              icon={<Settings size={14} />}
+            />
+          </div>
+          {source === "marketplace" ? (
+            <label className="mt-2 flex items-start gap-2 text-[11px] text-muted-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={marketplaceTermsAccepted}
+                onChange={(event) =>
+                  setMarketplaceTermsAccepted(event.target.checked)
                 }
-                onClick={() => void activateLatest()}
-                icon={<Settings size={14} />}
               />
+              <span>I have accepted Marketplace terms.</span>
+            </label>
+          ) : null}
+        </div>
+      ) : null}
+
+      {activeHostSession ? (
+        activeHostSession.viewUrl ? (
+          <iframe
+            title={`${activeHostSession.extensionId} sidebar`}
+            src={activeHostSession.viewUrl}
+            className="min-h-0 flex-1 border-0 bg-background"
+            sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
+            data-codex-iframe="true"
+          />
+        ) : (
+          <div className="flex min-h-0 flex-1 items-center justify-center p-4 text-center text-xs text-muted-foreground">
+            This extension is active but did not register a sidebar view.
+          </div>
+        )
+      ) : (
+        <div className="flex min-h-0 flex-1 items-center justify-center p-4 text-center text-xs text-muted-foreground">
+          <div className="max-w-[260px]">
+            <div className="font-medium text-foreground">
+              {selected?.displayName ?? "VS Code AI extension"}
+            </div>
+            <div className="mt-1">
+              {selected?.active
+                ? "Open the active VS Code extension to show its own sidebar here."
+                : latestInstalled
+                  ? "Activate the installed VS Code extension, then open it."
+                  : "Install or import a VSIX before opening the extension."}
+            </div>
+            <div className="mt-3 flex justify-center gap-1">
+              {latestInstalled && !selected?.active ? (
+                <IconButton
+                  label="Activate latest installed"
+                  busy={action.key === `activate:${selectedId}`}
+                  onClick={() => void activateLatest()}
+                  icon={<Settings size={14} />}
+                />
+              ) : null}
               <IconButton
                 label="Open"
                 busy={action.key === `open:${selectedId}`}
@@ -273,49 +338,26 @@ export function VscodeAiExtensionSidebarPanel() {
                 onClick={() => void openExtension()}
                 icon={<Play size={14} />}
               />
-              <IconButton
-                label="Stop host"
-                busy={action.key === "stop-host"}
-                disabled={!hostSession}
-                onClick={() => void stopHost()}
-                icon={<Square size={14} />}
-              />
+              {!latestInstalled ? (
+                <>
+                  <IconButton
+                    label="Install latest"
+                    busy={action.key === `install:${selectedId}`}
+                    onClick={() => void installLatest()}
+                    icon={<Download size={14} />}
+                  />
+                  <IconButton
+                    label="Import VSIX"
+                    busy={action.key === `import:${selectedId}`}
+                    onClick={() => void importVsix()}
+                    icon={<FileUp size={14} />}
+                  />
+                </>
+              ) : null}
             </div>
-
-            {action.message ? (
-              <div className="mt-3 rounded-ui-sm border border-border/60 bg-background/60 px-2 py-1.5 text-xs text-muted-foreground">
-                {action.message}
-              </div>
-            ) : null}
           </div>
-
-          {hostSession ? (
-            <div className="min-h-[420px] overflow-hidden rounded-ui-md border border-border bg-background">
-              <div className="border-b border-border/60 px-2 py-1.5 text-xs text-muted-foreground">
-                <div className="truncate">
-                  {hostSession.extensionId}@{hostSession.version}
-                </div>
-                <div className="truncate">
-                  {hostSession.viewType ?? "No webview registered"}
-                </div>
-              </div>
-              {hostSession.viewUrl ? (
-                <iframe
-                  title={`${hostSession.extensionId} sidebar`}
-                  src={hostSession.viewUrl}
-                  className="h-[520px] w-full border-0 bg-background"
-                  sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
-                  data-codex-iframe="true"
-                />
-              ) : (
-                <div className="p-3 text-xs text-muted-foreground">
-                  This extension is active but did not register a sidebar view.
-                </div>
-              )}
-            </div>
-          ) : null}
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -340,7 +382,7 @@ function IconButton({
       title={label}
       onClick={onClick}
       disabled={disabled || busy}
-      className="inline-flex h-8 min-w-0 items-center justify-center rounded-ui-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
     >
       {busy ? <RefreshCw size={14} className="animate-spin" /> : icon}
     </button>
