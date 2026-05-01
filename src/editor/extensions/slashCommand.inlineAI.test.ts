@@ -383,6 +383,86 @@ describe("slash inline AI", () => {
     cleanup();
   });
 
+  it("deduplicates overlapping streamed text parts in inline preview and final text", async () => {
+    mocks.client.event.subscribe.mockResolvedValue({
+      stream: (async function* () {
+        yield {
+          type: "message.updated",
+          properties: {
+            sessionID: "session-1",
+            info: { id: "assistant-1", role: "assistant", sessionID: "session-1" },
+          },
+        };
+        yield {
+          type: "message.part.updated",
+          properties: {
+            sessionID: "session-1",
+            part: {
+              id: "draft-prefix",
+              messageID: "assistant-1",
+              type: "text",
+              text: "好一个双谜题！让我来拆解：",
+            },
+          },
+        };
+        yield {
+          type: "message.part.updated",
+          properties: {
+            sessionID: "session-1",
+            part: {
+              id: "draft-full",
+              messageID: "assistant-1",
+              type: "text",
+              text: "好一个双谜题！让我来拆解：\n\n## 第一个：百香果",
+            },
+          },
+        };
+        yield {
+          type: "session.idle",
+          properties: {
+            sessionID: "session-1",
+          },
+        };
+      })(),
+    });
+    mocks.client.session.message.mockResolvedValue({
+      data: {
+        parts: [
+          {
+            id: "draft-prefix",
+            messageID: "assistant-1",
+            type: "text",
+            text: "好一个双谜题！让我来拆解：",
+          },
+          {
+            id: "draft-full",
+            messageID: "assistant-1",
+            type: "text",
+            text: "好一个双谜题！让我来拆解：\n\n## 第一个：百香果",
+          },
+        ],
+      },
+    });
+    const { view, cleanup } = createView("Hello /ai");
+    const textEvents: string[] = [];
+
+    const result = await runSlashAIAction(
+      view,
+      6,
+      9,
+      "chat-insert",
+      "write the answer",
+      {
+        onText: (text) => textEvents.push(text),
+      },
+    );
+
+    expect(result?.text.match(/好一个双谜题！让我来拆解：/g)).toHaveLength(1);
+    expect(result?.text).toContain("第一个：百香果");
+    expect(textEvents.at(-1)?.match(/好一个双谜题！让我来拆解：/g)).toHaveLength(1);
+    cleanup();
+  });
+
   it("uses an existing selection as the target for block AI actions", async () => {
     const doc = "First sentence\nSecond /ai";
     const slashFrom = doc.indexOf("/ai");

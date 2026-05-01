@@ -154,7 +154,12 @@ function extractTextFromParts(parts: Part[]): string {
   const out: string[] = [];
   for (const part of parts) {
     if (part.type === "text") {
-      out.push(part.text);
+      const last = out[out.length - 1];
+      if (last && part.text.startsWith(last)) {
+        out[out.length - 1] = part.text;
+      } else if (!last || !last.startsWith(part.text)) {
+        out.push(part.text);
+      }
     }
   }
   return out.join("").trim();
