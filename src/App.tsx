@@ -93,7 +93,7 @@ const DiagramView = lazy(async () => {
 const MAIN_WORKSPACE_WINDOW_WIDTH = 1280;
 const MAIN_WORKSPACE_WINDOW_HEIGHT = 840;
 const MAIN_CONTENT_PANE_CLASS =
-  "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover";
+  "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover dark:bg-background";
 
 interface CollapsedMainSidebarControlsProps {
   leftSidebarOpen: boolean;
@@ -164,7 +164,7 @@ function EmptyNewTabPage({
   const shortcutModifier = getShortcutModifierLabel();
 
   return (
-    <div className="flex flex-1 flex-col bg-popover">
+    <div className="flex flex-1 flex-col bg-popover dark:bg-background">
       <div className="flex flex-1 items-center justify-center pb-28">
         <div className="flex flex-col items-center gap-3.5 text-ui-body font-medium">
           <button
@@ -202,7 +202,7 @@ function EditorWithGraph({
   const showNewTabPage = !activeTab || activeTab.type === "new-tab";
 
   return (
-    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover transition-colors duration-300">
+    <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover dark:bg-background transition-colors duration-300">
       {showNewTabPage ? (
         <EmptyNewTabPage
           onCreateNewFile={onCreateNewFile}
@@ -562,6 +562,7 @@ function App() {
     toggleLeftSidebar,
     toggleRightSidebar,
     splitView,
+    isDarkMode,
     isSkillManagerOpen,
     setSkillManagerOpen,
     diagnosticsEnabled,
@@ -578,6 +579,7 @@ function App() {
       toggleLeftSidebar: state.toggleLeftSidebar,
       toggleRightSidebar: state.toggleRightSidebar,
       splitView: state.splitView,
+      isDarkMode: state.isDarkMode,
       isSkillManagerOpen: state.isSkillManagerOpen,
       setSkillManagerOpen: state.setSkillManagerOpen,
       diagnosticsEnabled: state.diagnosticsEnabled,
@@ -1122,7 +1124,7 @@ function App() {
         </div>
 
         {/* Left Resize Handle - VS Code 风格，始终显示，可拖拽展开/折叠 */}
-        <div className="relative flex-shrink-0 h-full z-20 bg-popover">
+        <div className="relative flex-shrink-0 h-full z-20 bg-popover dark:bg-background">
           <ResizeHandle
             direction="left"
             onResize={handleLeftResize}
@@ -1132,14 +1134,14 @@ function App() {
 
         {/* Main content - switches between Editor, Graph, Split, Diff and AI Chat based on state */}
         <main
-          className={`relative flex flex-col overflow-hidden min-w-0 bg-popover transition-[width,opacity] duration-200 ${
+          className={`relative flex flex-col overflow-hidden min-w-0 bg-popover dark:bg-background transition-[width,opacity] duration-200 ${
             isMainCollapsed
               ? "flex-none w-0 opacity-0 pointer-events-none"
               : "flex-1 w-auto opacity-100"
           }`}
         >
           <PanelErrorBoundary label="Editor">
-            <div className="flex h-full min-h-0 flex-col bg-popover">
+            <div className="flex h-full min-h-0 flex-col bg-popover dark:bg-background">
               <TabBar />
               <div className="flex min-h-0 flex-1 overflow-hidden">
                 {pendingDiff && activeTab?.type !== "ai-chat" ? (
@@ -1155,7 +1157,9 @@ function App() {
                     <ImageViewer filePath={activeTab.path} className="flex-1" />
                   </div>
                 ) : activeTab?.type === "diagram" && activeTab.path ? (
-                  <div className={MAIN_CONTENT_PANE_CLASS}>
+                  <div
+                    className={`${MAIN_CONTENT_PANE_CLASS}${isDarkMode ? " !bg-[hsl(var(--diagram-surface))]" : ""}`}
+                  >
                     <Suspense
                       fallback={
                         <div className="flex flex-1 items-center justify-center text-ui-control text-muted-foreground">

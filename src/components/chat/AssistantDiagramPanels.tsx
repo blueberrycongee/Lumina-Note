@@ -41,7 +41,7 @@ export function AssistantDiagramPanels({ filePaths, className }: AssistantDiagra
       {uniquePaths.map((filePath) => (
         <div
           key={filePath}
-          className="overflow-hidden rounded-ui-lg border border-border/60 bg-background/70"
+          className="overflow-hidden rounded-ui-lg border border-border/60 bg-background/70 dark:bg-[hsl(var(--diagram-surface))]"
         >
           <div className="h-[360px] min-h-[260px]">
             <Suspense

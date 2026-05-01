@@ -213,7 +213,7 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
           stroke="none"
           className={cn(
             "transition-[fill] duration-150",
-            isActive ? "fill-[hsl(var(--popover))]" : "fill-transparent"
+            isActive ? "fill-[var(--tab-active-fill)]" : "fill-transparent"
           )}
         />
         <path
@@ -392,16 +392,20 @@ export function TabBar() {
   const {
     leftSidebarOpen,
     rightSidebarOpen,
+    isDarkMode,
     toggleLeftSidebar,
     toggleRightSidebar,
   } = useUIStore(
     useShallow((state) => ({
       leftSidebarOpen: state.leftSidebarOpen,
       rightSidebarOpen: state.rightSidebarOpen,
+      isDarkMode: state.isDarkMode,
       toggleLeftSidebar: state.toggleLeftSidebar,
       toggleRightSidebar: state.toggleRightSidebar,
     })),
   );
+  const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
+  const isDarkDiagramTab = isDarkMode && activeTab?.type === "diagram";
   const showMacTrafficLightInset = showMacTopActions && !leftSidebarOpen;
   const reduceMotion = useReducedMotion();
   const reorderTabs = useFileStore((state) => state.reorderTabs);
@@ -699,7 +703,11 @@ export function TabBar() {
   return (
     <>
       <div
-        className="relative flex h-11 shrink-0 items-stretch bg-popover"
+        className={cn(
+          "relative flex h-11 shrink-0 items-stretch bg-popover dark:bg-background [--tab-active-fill:hsl(var(--popover))] dark:[--tab-active-fill:hsl(var(--background))]",
+          isDarkDiagramTab &&
+            "!bg-[hsl(var(--diagram-surface))] [--tab-active-fill:hsl(var(--diagram-surface))]",
+        )}
         data-tauri-drag-region={showMacTopActions ? true : undefined}
       >
         <div

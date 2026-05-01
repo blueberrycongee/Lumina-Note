@@ -512,7 +512,7 @@ export function Editor() {
   }, [isDirty, save, activeTab?.type]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-popover transition-colors duration-300">
+    <div className="flex-1 flex flex-col overflow-hidden bg-popover dark:bg-background transition-colors duration-300">
       {/* Top Navigation Bar — 非 AI 聊天模式下显示 */}
       {activeTab?.type !== "ai-chat" && (
         <div className="ui-compact-row h-10 flex items-center px-1.5 justify-between select-none border-b border-border shrink-0">

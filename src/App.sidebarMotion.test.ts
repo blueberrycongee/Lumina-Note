@@ -11,11 +11,13 @@ const globalsSource = readFileSync(
 describe("App sidebar motion", () => {
   it("keeps specialized tab panes stretched across the main content area", () => {
     expect(appSource).toContain(
-      'const MAIN_CONTENT_PANE_CLASS =\n  "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover";',
+      'const MAIN_CONTENT_PANE_CLASS =\n  "flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-popover dark:bg-background";',
     );
-    expect(
-      appSource.match(/<div className=\{MAIN_CONTENT_PANE_CLASS\}>/g) ?? [],
-    ).toHaveLength(5);
+    const plainPaneUses =
+      appSource.match(/<div className=\{MAIN_CONTENT_PANE_CLASS\}>/g) ?? [];
+    const extendedPaneUses =
+      appSource.match(/<div\s+className=\{`?\$\{MAIN_CONTENT_PANE_CLASS\}/g) ?? [];
+    expect(plainPaneUses.length + extendedPaneUses.length).toBe(5);
   });
 
   it("wraps both sidebars in animated shells with fixed-width inner content", () => {

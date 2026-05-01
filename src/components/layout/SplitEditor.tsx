@@ -39,7 +39,7 @@ function EditorPane({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-popover">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <Loader2 className="animate-spin text-muted-foreground" />
       </div>
     );
@@ -47,7 +47,7 @@ function EditorPane({
 
   if (!file) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center bg-popover text-muted-foreground">
+      <div className="flex-1 flex flex-col items-center justify-center bg-background text-muted-foreground">
         <FileText size={32} className="opacity-30 mb-2" />
         <p className="text-sm">{t.layout.emptyFileTitle}</p>
         <p className="text-xs opacity-70">{t.layout.emptyFileHint}</p>
@@ -56,9 +56,9 @@ function EditorPane({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-popover">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
       {/* Pane header */}
-      <div className="h-9 flex items-center px-3 justify-between border-b border-border/60 bg-popover shrink-0">
+      <div className="h-9 flex items-center px-3 justify-between border-b border-border/60 bg-background shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <FileText size={14} className="text-muted-foreground shrink-0" />
           <span className="text-sm font-medium truncate">
@@ -80,7 +80,7 @@ function EditorPane({
       </div>
 
       {/* Editor content */}
-      <div className="flex-1 overflow-auto bg-popover">
+      <div className="flex-1 overflow-auto bg-background">
         <div className="max-w-3xl mx-auto px-6 py-4">
           <CodeMirrorEditor 
             content={content} 
@@ -209,9 +209,9 @@ export function SplitEditor() {
   }, [splitDirection]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-popover">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
       {/* Split toolbar */}
-      <div className="h-8 flex items-center px-2 gap-1 border-b border-border/60 bg-popover shrink-0">
+      <div className="h-8 flex items-center px-2 gap-1 border-b border-border/60 bg-background shrink-0">
         <button
           onClick={() => setSplitDirection(isHorizontal ? "vertical" : "horizontal")}
           className={cn(
@@ -239,7 +239,7 @@ export function SplitEditor() {
       <div 
         ref={containerRef}
         className={cn(
-          "flex-1 flex overflow-hidden bg-popover",
+          "flex-1 flex overflow-hidden bg-background",
           isHorizontal ? "flex-row" : "flex-col"
         )}
       >

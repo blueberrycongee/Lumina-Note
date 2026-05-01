@@ -1358,7 +1358,7 @@ export function MainAIChatShell() {
   return (
     <div
       ref={chatContainerRef}
-      className="h-full bg-popover text-foreground flex flex-col overflow-hidden relative"
+      className="h-full bg-popover dark:bg-background text-foreground flex flex-col overflow-hidden relative"
     >
       {/* Toolbar */}
       <ChatToolbar

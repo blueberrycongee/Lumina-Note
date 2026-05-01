@@ -466,7 +466,7 @@ export function ImageManagerView() {
   const showScanningState = loading && images.length === 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-popover">
+    <div className="flex min-h-0 flex-1 flex-col bg-popover dark:bg-background">
       {/* Compact header */}
       <div className="flex flex-col gap-2 border-b border-border/60 px-4 py-2.5">
         {/* Row 1: title + stats + view buttons */}
@@ -556,7 +556,7 @@ export function ImageManagerView() {
         <div className="flex min-h-0 h-full">
           <div className="min-h-0 flex-1 overflow-hidden">
             {currentSelection.length > 1 ? (
-              <div className="border-b border-border/60 bg-popover px-4 py-2">
+              <div className="border-b border-border/60 bg-popover dark:bg-background px-4 py-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-2 rounded-md bg-popover px-2.5 py-1 text-xs font-medium">
                     <CheckSquare className="h-4 w-4 text-primary" />

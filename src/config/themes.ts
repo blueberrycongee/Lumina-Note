@@ -111,19 +111,16 @@ function createThemeColors(
     },
     dark: {
       // Aligned with globals.css `.dark` — same elevation hierarchy
-      // (canvas / panel / accent / popover) just shifted to the theme's
-      // hue + saturation. Popover surface bumped to L=23 so lifted
-      // cards clearly stand off the panel tier (L=15); see globals.css
-      // `--elev-2/3` for the matching inner-top-highlight.
-      background: `${hue} ${satDark}% 9%`,
-      foreground: `${hue} ${satDark + 3}% 96%`,
-      muted: `${hue} ${satDark}% 14%`,
-      mutedForeground: `${hue} ${satDark}% 66%`,
-      accent: `${hue} ${satDark}% 19%`,
-      accentForeground: `${hue} ${satDark + 3}% 96%`,
+      // (canvas / panel / hover) just shifted to the theme's hue.
+      background: `${hue} ${satDark}% 10%`,
+      foreground: `${hue} ${satDark + 3}% 94%`,
+      muted: `${hue} ${satDark}% 13%`,
+      mutedForeground: `${hue} ${satDark}% 68%`,
+      accent: `${hue} ${satDark}% 17%`,
+      accentForeground: `${hue} ${satDark + 3}% 94%`,
       primary: `${primaryHue} ${primarySat - 10}% 55%`,
       primaryForeground: `${hue} ${satDark}% 12%`,
-      border: `${hue} ${satDark}% 28%`,
+      border: `${hue} ${satDark}% 24%`,
       heading: `${primaryHue} ${primarySat}% 70%`,
       link: `${primaryHue} ${primarySat + 5}% 65%`,
       linkHover: `${primaryHue} ${primarySat + 10}% 70%`,
@@ -616,6 +613,23 @@ export const OFFICIAL_THEMES: Theme[] = [
 export function applyTheme(theme: Theme, isDark: boolean) {
   const colors = isDark ? theme.dark : theme.light;
   const root = document.documentElement;
+  const parseHsl = (value: string) => {
+    const match = value.match(
+      /^\s*(-?\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%\s*$/,
+    );
+    if (!match) return null;
+    return {
+      hue: Number(match[1]),
+      saturation: Number(match[2]),
+      lightness: Number(match[3]),
+    };
+  };
+  const hslWithLightness = (value: string, fallback: string, delta: number) => {
+    const parsed = parseHsl(value);
+    if (!parsed) return fallback;
+    const lightness = Math.max(0, Math.min(100, parsed.lightness + delta));
+    return `${parsed.hue} ${parsed.saturation}% ${lightness}%`;
+  };
   
   // 基础 UI 颜色
   root.style.setProperty("--background", colors.background);
@@ -627,6 +641,36 @@ export function applyTheme(theme: Theme, isDark: boolean) {
   root.style.setProperty("--primary", colors.primary);
   root.style.setProperty("--primary-foreground", colors.primaryForeground);
   root.style.setProperty("--border", colors.border);
+
+  if (isDark) {
+    root.style.setProperty(
+      "--popover",
+      hslWithLightness(colors.background, colors.accent, 6),
+    );
+    root.style.setProperty("--popover-foreground", colors.foreground);
+    root.style.setProperty("--ui-surface", colors.background);
+    root.style.setProperty("--ui-panel", colors.muted);
+    root.style.setProperty("--ui-panel-2", colors.accent);
+    root.style.setProperty(
+      "--ui-ribbon",
+      hslWithLightness(colors.background, colors.background, -3),
+    );
+    root.style.setProperty(
+      "--diagram-surface",
+      hslWithLightness(colors.background, colors.background, -2),
+    );
+  } else {
+    root.style.setProperty("--popover", "0 0% 100%");
+    root.style.setProperty("--popover-foreground", colors.foreground);
+    root.style.setProperty("--ui-surface", colors.background);
+    root.style.setProperty("--ui-panel", colors.muted);
+    root.style.setProperty("--ui-panel-2", colors.accent);
+    root.style.setProperty(
+      "--ui-ribbon",
+      hslWithLightness(colors.muted, colors.muted, -3),
+    );
+    root.style.setProperty("--diagram-surface", "0 0% 100%");
+  }
   
   // Markdown 渲染颜色
   root.style.setProperty("--md-heading", colors.heading);

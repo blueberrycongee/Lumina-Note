@@ -120,7 +120,7 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
   const fitToScreen = () => setScale(1);
 
   return (
-    <div className={cn("flex flex-1 flex-col overflow-hidden bg-popover", className)}>
+    <div className={cn("flex flex-1 flex-col overflow-hidden bg-popover dark:bg-background", className)}>
       <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2 text-xs text-muted-foreground">
         <span className="truncate font-medium text-foreground" title={filePath}>
           {fileName}
@@ -196,7 +196,7 @@ export function ImageViewer({ filePath, className }: ImageViewerProps) {
         </div>
       </div>
 
-      <div className="relative flex flex-1 items-center justify-center overflow-auto bg-popover">
+      <div className="relative flex flex-1 items-center justify-center overflow-auto bg-popover dark:bg-background">
         {loading && (
           <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
             <Loader2 size={20} className="animate-spin" />

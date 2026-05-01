@@ -1059,10 +1059,10 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
   }, [hoverPreviewNode]);
 
   return (
-    <div className={`flex h-full bg-popover ${className}`}>
+    <div className={`flex h-full bg-popover dark:bg-background ${className}`}>
       {/* Settings Panel */}
       <div className={cn(
-        "w-64 border-r border-border/60 bg-popover flex-shrink-0 overflow-y-auto transition-[width,opacity] duration-200 ease-out",
+        "w-64 border-r border-border/60 bg-popover dark:bg-background flex-shrink-0 overflow-y-auto transition-[width,opacity] duration-200 ease-out",
         showSettings ? "opacity-100" : "w-0 opacity-0 overflow-hidden"
       )}>
         <div className="p-4 space-y-6">
@@ -1175,7 +1175,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       {/* Main Graph Area */}
       <div className="flex-1 flex flex-col">
         {/* Controls */}
-        <div className="py-2 px-1.5 border-b border-border/60 flex items-center justify-between bg-popover">
+        <div className="py-2 px-1.5 border-b border-border/60 flex items-center justify-between bg-popover dark:bg-background">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(!showSettings)}
@@ -1218,7 +1218,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
         </div>
 
         {/* Canvas */}
-        <div ref={containerRef} className="flex-1 relative bg-popover overflow-hidden">
+        <div ref={containerRef} className="flex-1 relative bg-popover dark:bg-background overflow-hidden">
           <canvas
             ref={canvasRef}
             width={dimensions.width}
@@ -1339,7 +1339,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
 
         {/* Node details */}
         {selectedNode && (
-          <div className="p-3 border-t border-border/60 bg-popover space-y-2 max-h-40 overflow-y-auto">
+          <div className="p-3 border-t border-border/60 bg-popover dark:bg-background space-y-2 max-h-40 overflow-y-auto">
             <div className="flex items-center gap-2">
               <FileText size={14} className="text-primary" />
               <span
