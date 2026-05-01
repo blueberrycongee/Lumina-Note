@@ -126,6 +126,26 @@ describe('vscode extension handlers', () => {
     })
   })
 
+  it('blocks activation for an installed VSIX with a mismatched target platform', async () => {
+    const handlers = createHandlers()
+    const extensionPath = path.join(tmpDir, 'openai.chatgpt-6.1.0-test-platform', 'extension')
+    fs.mkdirSync(extensionPath, { recursive: true })
+    fs.writeFileSync(
+      path.join(path.dirname(extensionPath), 'extension.vsixmanifest'),
+      '<PackageManifest><Metadata><Identity Publisher="OpenAI" Id="chatgpt" Version="6.1.0" TargetPlatform="alpine-arm64"/></Metadata></PackageManifest>',
+      'utf-8',
+    )
+    await seedInstall(handlers, '6.1.0', { extensionPath })
+
+    await expect(
+      handlers.vscode_extensions_activate_installed({
+        extensionId: 'openai.chatgpt',
+        version: '6.1.0',
+        allowUnverified: true,
+      }),
+    ).rejects.toThrow(/target platform mismatch/)
+  })
+
   it('returns diagnostics for supported AI extensions', async () => {
     const handlers = createHandlers()
     await seedInstall(handlers, '6.1.0')
@@ -145,6 +165,9 @@ describe('vscode extension handlers', () => {
           compatibility: expect.objectContaining({ status: 'preview' }),
           hostCapabilities: expect.objectContaining({
             missingCapabilities: [],
+          }),
+          platform: expect.objectContaining({
+            compatible: true,
           }),
         }),
         expect.objectContaining({
@@ -465,7 +488,7 @@ function stableCodexProfile() {
 async function seedInstall(
   handlers: VscodeExtensionHandlerMap,
   version: string,
-  options: { smokeTestPassed?: boolean } = {},
+  options: { smokeTestPassed?: boolean; extensionPath?: string } = {},
 ) {
   const state = (await handlers.vscode_extensions_get_state({})) as {
     installed: Record<string, Record<string, unknown>>
@@ -475,7 +498,7 @@ async function seedInstall(
     [version]: {
       extensionId: 'openai.chatgpt',
       version,
-      extensionPath: path.join(tmpDir, `openai.chatgpt-${version}`),
+      extensionPath: options.extensionPath ?? path.join(tmpDir, `openai.chatgpt-${version}`),
       source: 'manual-vsix',
       installedAt: `2026-05-01T${version.endsWith('0') ? '10' : '11'}:00:00.000Z`,
       smokeTestPassed: options.smokeTestPassed ?? true,

@@ -23,7 +23,10 @@ import {
 } from '../vscode-extensions/update.js'
 import { installCompatProfilesFromIndex } from '../vscode-extensions/compatUpdate.js'
 import type { BinaryFetchLike } from '../vscode-extensions/download.js'
-import { installLocalVsixFile } from '../vscode-extensions/install.js'
+import {
+  diagnoseInstalledVsixTargetPlatform,
+  installLocalVsixFile,
+} from '../vscode-extensions/install.js'
 import { runVscodeHostSmokeTest } from '../vscode-extensions/smoke.js'
 import { VscodeExtensionHostRuntime } from '../vscode-extensions/runtime.js'
 
@@ -86,6 +89,9 @@ export function createVscodeExtensionHandlers(
         const hostCapabilities = compatibility?.profile
           ? diagnoseHostCapabilities(compatibility.profile)
           : null
+        const platform = active
+          ? diagnoseInstalledVsixTargetPlatform(active.extensionPath)
+          : null
         return {
           extensionId: id,
           displayName: TARGET_VSCODE_AI_EXTENSIONS[id].displayName,
@@ -93,6 +99,7 @@ export function createVscodeExtensionHandlers(
           installed,
           compatibility,
           hostCapabilities,
+          platform,
         }
       })
     },
@@ -220,6 +227,12 @@ function validateManualActivation(options: {
     .find((item) => item.version === options.version)
   if (!record) {
     throw new Error(`Cannot activate missing extension ${options.extensionId}@${options.version}`)
+  }
+  const platformDiagnostic = diagnoseInstalledVsixTargetPlatform(record.extensionPath)
+  if (!platformDiagnostic.compatible) {
+    throw new Error(
+      `Cannot activate ${options.extensionId}@${options.version}; VSIX target platform mismatch: expected ${platformDiagnostic.expectedPlatform}, got ${platformDiagnostic.targetPlatform}. Reinstall this extension from Marketplace or import a matching VSIX.`,
+    )
   }
 
   const [publisher, name] = options.extensionId.split('.')

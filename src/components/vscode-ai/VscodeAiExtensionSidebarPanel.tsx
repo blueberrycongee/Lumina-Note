@@ -61,6 +61,7 @@ export function VscodeAiExtensionSidebarPanel() {
   const latestInstalled = selected?.installed[0] ?? null;
   const canOpen =
     Boolean(selected?.active) &&
+    selected?.platform?.compatible !== false &&
     selected?.hostCapabilities?.canRunWithoutMissingCapabilities !== false;
   const needsActivation =
     Boolean(latestInstalled) &&
@@ -242,6 +243,12 @@ export function VscodeAiExtensionSidebarPanel() {
               {missingCapabilities.length > 0 ? (
                 <div className="mt-0.5 line-clamp-2 text-[11px] text-warning">
                   Missing: {missingCapabilities.join(", ")}
+                </div>
+              ) : null}
+              {selected?.platform?.compatible === false ? (
+                <div className="mt-0.5 line-clamp-2 text-[11px] text-warning">
+                  Platform mismatch: expected {selected.platform.expectedPlatform},
+                  got {selected.platform.targetPlatform ?? "unknown"}.
                 </div>
               ) : null}
             </div>

@@ -53,6 +53,7 @@ describe("VscodeAiExtensionsSection", () => {
         active: null,
         installed: [],
         compatibility: null,
+        platform: null,
         hostCapabilities: {
           canRunWithoutMissingCapabilities: true,
           missingCapabilities: [],
@@ -111,6 +112,11 @@ describe("VscodeAiExtensionsSection", () => {
           reason: "manual opt-in required",
           autoUpdateEligible: false,
           version: "2.1.0",
+        },
+        platform: {
+          expectedPlatform: "darwin-arm64",
+          targetPlatform: null,
+          compatible: true,
         },
         hostCapabilities: {
           canRunWithoutMissingCapabilities: false,
@@ -289,6 +295,11 @@ describe("VscodeAiExtensionsSection", () => {
           reason: "verified",
           autoUpdateEligible: true,
           version: "2.0.0",
+        },
+        platform: {
+          expectedPlatform: "darwin-arm64",
+          targetPlatform: null,
+          compatible: true,
         },
         hostCapabilities: {
           canRunWithoutMissingCapabilities: true,

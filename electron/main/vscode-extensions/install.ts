@@ -134,6 +134,32 @@ export function getCurrentVsixTargetPlatform(): string {
   return `${process.platform}-${process.arch}`
 }
 
+export interface VsixTargetPlatformDiagnostic {
+  expectedPlatform: string
+  targetPlatform: string | null
+  compatible: boolean
+}
+
+export function diagnoseInstalledVsixTargetPlatform(
+  extensionPath: string,
+  platform: string = getCurrentVsixTargetPlatform(),
+): VsixTargetPlatformDiagnostic {
+  const roots = [
+    path.dirname(extensionPath),
+    extensionPath,
+  ]
+  const targetPlatform =
+    roots.map((root) => readExtractedVsixTargetPlatform(root)).find(Boolean) ?? null
+  return {
+    expectedPlatform: platform,
+    targetPlatform,
+    compatible:
+      !targetPlatform ||
+      UNIVERSAL_TARGET_PLATFORMS.has(targetPlatform) ||
+      targetPlatform === platform,
+  }
+}
+
 function validateExtractedVsixTargetPlatform(root: string, platform: string): void {
   const targetPlatform = readExtractedVsixTargetPlatform(root)
   if (!targetPlatform || UNIVERSAL_TARGET_PLATFORMS.has(targetPlatform)) return

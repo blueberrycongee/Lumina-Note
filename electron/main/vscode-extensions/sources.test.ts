@@ -146,6 +146,51 @@ describe('vscode extension remote sources', () => {
     })
   })
 
+  it('selects the Marketplace VSIX for the current target platform', async () => {
+    const targetPlatform = `${process.platform}-${process.arch}`
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        results: [
+          {
+            extensions: [
+              {
+                versions: [
+                  {
+                    version: '2.1.81',
+                    targetPlatform: 'win32-x64',
+                    files: [
+                      {
+                        assetType: 'Microsoft.VisualStudio.Services.VSIXPackage',
+                        source: 'https://marketplace.example/anthropic.claude-code-2.1.81.vsix',
+                      },
+                    ],
+                  },
+                  {
+                    version: '2.1.81',
+                    targetPlatform,
+                    files: [
+                      {
+                        assetType: 'Microsoft.VisualStudio.Services.VSIXPackage',
+                        source: 'https://marketplace.example/anthropic.claude-code-2.1.81.vsix',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    ) satisfies FetchLike
+
+    const latest = await queryLatestMarketplaceVersion('anthropic.claude-code', fetcher)
+
+    expect(latest).toMatchObject({
+      targetPlatform,
+      downloadUrl: `https://marketplace.example/anthropic.claude-code-2.1.81.vsix?targetPlatform=${targetPlatform}`,
+    })
+  })
+
   it('fails closed when remote metadata has no VSIX download', async () => {
     await expect(
       queryLatestMarketplaceVersion(

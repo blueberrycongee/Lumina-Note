@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
 import { diagnoseHostCapabilities } from './diagnostics.js'
+import { diagnoseInstalledVsixTargetPlatform } from './install.js'
 import {
   resolveCompatibilityProfile,
   type SupportedVscodeAiExtensionId,
@@ -138,6 +139,12 @@ function validateRunnable(
   active: VscodeExtensionInstallRecord,
   profiles: VscodeExtensionCompatProfile[],
 ): void {
+  const platformDiagnostic = diagnoseInstalledVsixTargetPlatform(active.extensionPath)
+  if (!platformDiagnostic.compatible) {
+    throw new Error(
+      `Cannot open ${active.extensionId}@${active.version}; VSIX target platform mismatch: expected ${platformDiagnostic.expectedPlatform}, got ${platformDiagnostic.targetPlatform}. Reinstall this extension from Marketplace or import a matching VSIX.`,
+    )
+  }
   if (!active.smokeTestPassed) {
     throw new Error(`Cannot open ${active.extensionId}@${active.version}; smoke test has not passed.`)
   }

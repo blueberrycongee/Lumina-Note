@@ -402,6 +402,11 @@ export interface VscodeAiExtensionDiagnosticsItem {
     missingCapabilities: string[];
     implementedCapabilities: string[];
   } | null;
+  platform: {
+    expectedPlatform: string;
+    targetPlatform: string | null;
+    compatible: boolean;
+  } | null;
 }
 
 export interface VscodeAiExtensionRemoteVersion {

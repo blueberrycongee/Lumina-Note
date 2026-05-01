@@ -11,6 +11,7 @@ export interface VscodeExtensionRemoteVersion {
   version: string
   downloadUrl: string
   itemUrl: string
+  targetPlatform?: string
 }
 
 export type FetchLike = (
@@ -173,11 +174,15 @@ export async function queryLatestMarketplaceVersion(
   }
   const body = (await res.json()) as MarketplaceQueryResponse
   const extension = body.results?.flatMap((result) => result.extensions ?? [])[0]
-  const latest = extension?.versions?.[0]
+  const latest = selectMarketplaceVersion(extension?.versions ?? [])
   const version = latest?.version?.trim()
-  const downloadUrl = latest?.files
+  const rawDownloadUrl = latest?.files
     ?.find((file) => file.assetType === 'Microsoft.VisualStudio.Services.VSIXPackage')
     ?.source?.trim()
+  const downloadUrl =
+    rawDownloadUrl && latest?.targetPlatform
+      ? appendQueryParam(rawDownloadUrl, 'targetPlatform', latest.targetPlatform)
+      : rawDownloadUrl
   if (!version || !downloadUrl) {
     throw new Error(`Marketplace response missing version/download for ${extensionId}`)
   }
@@ -191,6 +196,7 @@ export async function queryLatestMarketplaceVersion(
     version,
     downloadUrl,
     itemUrl: `https://marketplace.visualstudio.com/items?itemName=${encodeURIComponent(target.marketplaceItemName)}`,
+    targetPlatform: latest?.targetPlatform,
   }
 }
 
@@ -199,6 +205,7 @@ interface MarketplaceQueryResponse {
     extensions?: Array<{
       versions?: Array<{
         version?: string
+        targetPlatform?: string
         files?: Array<{
           assetType?: string
           source?: string
@@ -206,6 +213,32 @@ interface MarketplaceQueryResponse {
       }>
     }>
   }>
+}
+
+function selectMarketplaceVersion(
+  versions: Array<{
+    version?: string
+    targetPlatform?: string
+    files?: Array<{ assetType?: string; source?: string }>
+  }>,
+) {
+  const targetPlatform = getCurrentMarketplaceTargetPlatform()
+  const targeted = versions.filter((version) => version.targetPlatform)
+  const matching = targeted.find((version) => version.targetPlatform === targetPlatform)
+  if (matching) return matching
+  if (targeted.length > 0) {
+    throw new Error(`Marketplace response has no VSIX for target platform ${targetPlatform}`)
+  }
+  return versions[0]
+}
+
+function getCurrentMarketplaceTargetPlatform(): string {
+  return `${process.platform}-${process.arch}`
+}
+
+function appendQueryParam(url: string, key: string, value: string): string {
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}${encodeURIComponent(key)}=${encodeURIComponent(value)}`
 }
 
 function normalizeReleaseVersion(tagName: string | undefined): string | null {

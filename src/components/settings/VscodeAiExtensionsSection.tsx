@@ -290,9 +290,11 @@ export function VscodeAiExtensionsSection() {
         {items.map((item) => {
           const missing = item.hostCapabilities?.missingCapabilities ?? [];
           const latestInstalled = item.installed[0] ?? null;
+          const platformMismatch = item.platform?.compatible === false;
           const isReady =
             item.compatibility?.status === "stable" &&
-            item.hostCapabilities?.canRunWithoutMissingCapabilities === true;
+            item.hostCapabilities?.canRunWithoutMissingCapabilities === true &&
+            !platformMismatch;
           return (
             <article
               key={item.extensionId}
@@ -301,7 +303,7 @@ export function VscodeAiExtensionsSection() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    {missing.length === 0 ? (
+                    {missing.length === 0 && !platformMismatch ? (
                       <CheckCircle2 className="h-4 w-4 text-emerald-500" />
                     ) : (
                       <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -325,6 +327,12 @@ export function VscodeAiExtensionsSection() {
                   {missing.length > 0 ? (
                     <p className="mt-1 text-xs text-amber-600">
                       Missing: {missing.join(", ")}
+                    </p>
+                  ) : null}
+                  {platformMismatch ? (
+                    <p className="mt-1 text-xs text-amber-600">
+                      Platform mismatch: expected {item.platform?.expectedPlatform},
+                      got {item.platform?.targetPlatform ?? "unknown"}.
                     </p>
                   ) : null}
                   {item.compatibility?.reason ? (
@@ -368,6 +376,7 @@ export function VscodeAiExtensionsSection() {
                     onClick={() => void openExtension(item)}
                     disabled={
                       !item.active ||
+                      platformMismatch ||
                       item.hostCapabilities?.canRunWithoutMissingCapabilities === false
                     }
                     icon={<Play className="h-4 w-4" />}
