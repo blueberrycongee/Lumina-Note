@@ -326,6 +326,63 @@ describe("slash inline AI", () => {
     cleanup();
   });
 
+  it("keeps listening through long-running tool work until opencode reports idle", async () => {
+    let now = 1_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mocks.client.event.subscribe.mockResolvedValue({
+      stream: (async function* () {
+        yield {
+          type: "message.updated",
+          properties: {
+            sessionID: "session-1",
+            info: { id: "assistant-1", role: "assistant", sessionID: "session-1" },
+          },
+        };
+        yield {
+          type: "message.part.updated",
+          properties: {
+            sessionID: "session-1",
+            part: {
+              id: "draft-1",
+              messageID: "assistant-1",
+              type: "text",
+              text: "Long running draft",
+            },
+          },
+        };
+        now = 123_000;
+        yield {
+          type: "server.heartbeat",
+          properties: {},
+        };
+        yield {
+          type: "session.idle",
+          properties: {
+            sessionID: "session-1",
+          },
+        };
+      })(),
+    });
+
+    const { view, cleanup } = createView("Hello /ai");
+
+    const result = await runSlashAIAction(
+      view,
+      6,
+      9,
+      "chat-insert",
+      "insert images from the workspace",
+    );
+
+    expect(result?.text).toBe("Final Markdown to insert");
+    expect(mocks.client.session.message).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: { id: "session-1", messageID: "assistant-1" },
+      }),
+    );
+    cleanup();
+  });
+
   it("uses an existing selection as the target for block AI actions", async () => {
     const doc = "First sentence\nSecond /ai";
     const slashFrom = doc.indexOf("/ai");
