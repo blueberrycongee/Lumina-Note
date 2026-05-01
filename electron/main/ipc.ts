@@ -74,6 +74,7 @@ export interface IpcHandlersOptions {
    * vault path (read by the opencode plugin via globalThis).
    */
   onActiveVaultChanged?: (vaultPath: string) => void;
+  getActiveVaultPath?: () => string | null | undefined;
   /**
    * Called after a renderer-initiated mutation to provider settings
    * (active provider / per-provider baseUrl / per-provider apiKey).
@@ -90,6 +91,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     wikiSettings,
     wikiManager,
     onActiveVaultChanged,
+    getActiveVaultPath,
     onProviderSettingsChanged,
   } = options;
 
@@ -116,6 +118,7 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
 
   const vscodeExtensionHandlers = createVscodeExtensionHandlers({
     baseDir: app.getPath("userData"),
+    getWorkspacePath: getActiveVaultPath,
     hostScriptPath:
       process.env.LUMINA_CODEX_VSCODE_HOST ??
       (app.isPackaged

@@ -10,6 +10,8 @@ const installCompatProfilesMock = vi.fn();
 const activateInstalledMock = vi.fn();
 const rollbackMock = vi.fn();
 const openDialogMock = vi.fn();
+const openActiveMock = vi.fn();
+const stopHostMock = vi.fn();
 
 vi.mock("@/lib/host", async () => {
   const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
@@ -21,7 +23,9 @@ vi.mock("@/lib/host", async () => {
     installLatestVscodeAiExtension: (...args: unknown[]) => installLatestMock(...args),
     installLocalVscodeAiExtensionVsix: (...args: unknown[]) => installLocalMock(...args),
     installVscodeAiCompatProfiles: (...args: unknown[]) => installCompatProfilesMock(...args),
+    openActiveVscodeAiExtension: (...args: unknown[]) => openActiveMock(...args),
     rollbackVscodeAiExtension: (...args: unknown[]) => rollbackMock(...args),
+    stopVscodeAiExtensionHost: (...args: unknown[]) => stopHostMock(...args),
     openDialog: (...args: unknown[]) => openDialogMock(...args),
   };
 });
@@ -40,6 +44,8 @@ describe("VscodeAiExtensionsSection", () => {
     activateInstalledMock.mockReset();
     rollbackMock.mockReset();
     openDialogMock.mockReset();
+    openActiveMock.mockReset();
+    stopHostMock.mockReset();
     diagnosticsMock.mockResolvedValue([
       {
         extensionId: "openai.chatgpt",
@@ -120,6 +126,15 @@ describe("VscodeAiExtensionsSection", () => {
     activateInstalledMock.mockResolvedValue({ version: "2.1.0" });
     rollbackMock.mockResolvedValue({ version: "2.0.0" });
     openDialogMock.mockResolvedValue("/tmp/ext.vsix");
+    openActiveMock.mockResolvedValue({
+      extensionId: "anthropic.claude-code",
+      version: "2.0.0",
+      origin: "http://127.0.0.1:4100",
+      viewTypes: ["claudeVSCodeSidebar"],
+      viewType: "claudeVSCodeSidebar",
+      viewUrl: "http://127.0.0.1:4100/view/claudeVSCodeSidebar?token=t",
+    });
+    stopHostMock.mockResolvedValue(undefined);
   });
 
   it("renders diagnostics and missing host capabilities", async () => {
@@ -244,6 +259,61 @@ describe("VscodeAiExtensionsSection", () => {
       expect(rollbackMock).toHaveBeenCalledWith({
         extensionId: "anthropic.claude-code",
       });
+    });
+  });
+
+  it("opens and closes an active VS Code AI extension webview", async () => {
+    diagnosticsMock.mockResolvedValueOnce([
+      {
+        extensionId: "anthropic.claude-code",
+        displayName: "Claude Code",
+        active: {
+          extensionId: "anthropic.claude-code",
+          version: "2.0.0",
+          extensionPath: "/tmp/claude-old",
+          source: "manual-vsix",
+          installedAt: "2026-05-01T00:00:00.000Z",
+          smokeTestPassed: true,
+          compatibility: {
+            status: "stable",
+            reason: "verified",
+            autoUpdateEligible: true,
+            profileVersionRange: "2.0.0",
+          },
+        },
+        installed: [],
+        compatibility: {
+          status: "stable",
+          reason: "verified",
+          autoUpdateEligible: true,
+          version: "2.0.0",
+        },
+        hostCapabilities: {
+          canRunWithoutMissingCapabilities: true,
+          missingCapabilities: [],
+          implementedCapabilities: ["commands"],
+        },
+      },
+    ]);
+    render(<VscodeAiExtensionsSection />);
+    await screen.findByText("Claude Code");
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Claude Code" }));
+    await waitFor(() => {
+      expect(openActiveMock).toHaveBeenCalledWith({
+        extensionId: "anthropic.claude-code",
+      });
+    });
+
+    const iframe = await screen.findByTitle("anthropic.claude-code webview");
+    expect(iframe).toHaveAttribute(
+      "src",
+      "http://127.0.0.1:4100/view/claudeVSCodeSidebar?token=t",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Close VS Code AI extension" }));
+    await waitFor(() => {
+      expect(stopHostMock).toHaveBeenCalled();
     });
   });
 });

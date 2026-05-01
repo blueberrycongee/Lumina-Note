@@ -355,6 +355,55 @@ exports.activate = async function activate() {
       outcome: { decision: 'pending-manual-opt-in' },
     })
   })
+
+  it('opens an active extension host webview session', async () => {
+    const compatDir = path.join(tmpDir, 'compat')
+    writeStableCodexProfile(compatDir)
+    const vsixPath = path.join(tmpDir, 'openai.chatgpt.vsix')
+    fs.writeFileSync(
+      vsixPath,
+      createZip({
+        'extension/package.json': JSON.stringify({
+          publisher: 'OpenAI',
+          name: 'chatgpt',
+          version: '6.1.0',
+          main: './extension.js',
+        }),
+        'extension/extension.js': `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.window.registerWebviewViewProvider("chatgpt.sidebarView", {
+    resolveWebviewView(view) {
+      view.webview.html = "<!doctype html><html><body>Codex runtime</body></html>";
+    },
+  });
+};`,
+      }),
+    )
+    const handlers = createHandlers({ compatProfilesDir: compatDir })
+
+    await handlers.vscode_extensions_install_local_vsix({
+      extensionId: 'openai.chatgpt',
+      vsixPath,
+    })
+    await handlers.vscode_extensions_activate_installed({
+      extensionId: 'openai.chatgpt',
+      version: '6.1.0',
+    })
+
+    const session = await handlers.vscode_extensions_open_active({
+      extensionId: 'openai.chatgpt',
+    })
+
+    expect(session).toMatchObject({
+      extensionId: 'openai.chatgpt',
+      version: '6.1.0',
+      viewType: 'chatgpt.sidebarView',
+      viewTypes: ['chatgpt.sidebarView'],
+    })
+    expect((session as { viewUrl?: string }).viewUrl).toMatch(/\/view\/chatgpt\.sidebarView\?token=/)
+    await handlers.vscode_extensions_stop_host({})
+  })
 })
 
 function createHandlers(options: {

@@ -429,6 +429,15 @@ export interface VscodeAiCompatProfileInstallResult {
   }>;
 }
 
+export interface VscodeAiExtensionHostSession {
+  extensionId: VscodeAiExtensionId;
+  version: string;
+  origin: string;
+  viewTypes: string[];
+  viewType: string | null;
+  viewUrl: string | null;
+}
+
 export async function getVscodeAiExtensionState(): Promise<VscodeAiExtensionState> {
   return invoke("vscode_extensions_get_state");
 }
@@ -486,6 +495,21 @@ export async function installVscodeAiCompatProfiles(input: {
   indexUrl: string;
 }): Promise<VscodeAiCompatProfileInstallResult> {
   return invoke("vscode_extensions_install_compat_profiles", input);
+}
+
+export async function openActiveVscodeAiExtension(input: {
+  extensionId: VscodeAiExtensionId;
+  viewType?: string;
+}): Promise<VscodeAiExtensionHostSession> {
+  return invoke("vscode_extensions_open_active", input);
+}
+
+export async function getVscodeAiExtensionRuntimeState(): Promise<VscodeAiExtensionHostSession | null> {
+  return invoke("vscode_extensions_get_runtime_state");
+}
+
+export async function stopVscodeAiExtensionHost(): Promise<void> {
+  return invoke("vscode_extensions_stop_host");
 }
 
 // ── Misc ──────────────────────────────────────────────────────────────────

@@ -265,6 +265,7 @@ app.whenReady().then(() => {
     onActiveVaultChanged: (vaultPath: string) => {
       activeVaultPath = vaultPath;
     },
+    getActiveVaultPath: () => activeVaultPath,
     onProviderSettingsChanged: () => scheduleOpencodeRestart(),
   });
   registerOpencodeIpc();

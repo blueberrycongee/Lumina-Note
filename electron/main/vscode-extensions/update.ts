@@ -76,6 +76,7 @@ export async function installLatestVscodeExtensionUpdate(
         hostScriptPath: options.hostScriptPath,
         extensionPath: installed.extensionPath,
         workspacePath: options.workspacePath,
+        timeoutMs: 30_000,
         expectedViewTypes: compatibility.profile.entryViewTypes,
       })
     : null

@@ -25,6 +25,7 @@ import { installCompatProfilesFromIndex } from '../vscode-extensions/compatUpdat
 import type { BinaryFetchLike } from '../vscode-extensions/download.js'
 import { installLocalVsixFile } from '../vscode-extensions/install.js'
 import { runVscodeHostSmokeTest } from '../vscode-extensions/smoke.js'
+import { VscodeExtensionHostRuntime } from '../vscode-extensions/runtime.js'
 
 export interface CreateVscodeExtensionHandlersOptions {
   baseDir: string
@@ -32,6 +33,7 @@ export interface CreateVscodeExtensionHandlersOptions {
   compatProfilesDir?: string
   metadataFetch?: FetchLike
   binaryFetch?: BinaryFetchLike
+  getWorkspacePath?: () => string | null | undefined
 }
 
 export type VscodeExtensionHandlerMap = Record<
@@ -53,6 +55,12 @@ export function createVscodeExtensionHandlers(
   const createManager = () => new VscodeExtensionManager(store, { profiles: loadProfiles() })
   const cacheDir = path.join(options.baseDir, 'vscode-extension-cache')
   const installRoot = path.join(options.baseDir, 'vscode-extensions')
+  const runtime = new VscodeExtensionHostRuntime({
+    store,
+    hostScriptPath: options.hostScriptPath,
+    getWorkspacePath: options.getWorkspacePath,
+    profiles: loadProfiles,
+  })
 
   return {
     async vscode_extensions_get_state() {
@@ -134,10 +142,11 @@ export function createVscodeExtensionHandlers(
       const compatibility = resolveCompatibilityProfile(installed.packageJson, profiles)
       const smoke = compatibility.profile
         ? await runVscodeHostSmokeTest({
-            hostScriptPath: options.hostScriptPath,
-            extensionPath: installed.extensionPath,
-            expectedViewTypes: compatibility.profile.entryViewTypes,
-          })
+          hostScriptPath: options.hostScriptPath,
+          extensionPath: installed.extensionPath,
+          timeoutMs: 30_000,
+          expectedViewTypes: compatibility.profile.entryViewTypes,
+        })
         : null
       const packageBytes = fs.readFileSync(vsixPath)
       const outcome = createManager().registerCandidateInstall({
@@ -180,6 +189,21 @@ export function createVscodeExtensionHandlers(
     async vscode_extensions_rollback(args) {
       const extensionId = parseExtensionId(args.extensionId)
       return store.rollback(extensionId)
+    },
+
+    async vscode_extensions_open_active(args) {
+      const extensionId = parseExtensionId(args.extensionId)
+      const viewType = typeof args.viewType === 'string' ? args.viewType : undefined
+      return runtime.open(extensionId, viewType)
+    },
+
+    async vscode_extensions_get_runtime_state() {
+      return runtime.getState()
+    },
+
+    async vscode_extensions_stop_host() {
+      runtime.stop()
+      return null
     },
   }
 }

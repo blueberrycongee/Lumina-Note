@@ -7,17 +7,21 @@ import {
   FileUp,
   RefreshCw,
   RotateCcw,
+  X,
 } from "lucide-react";
 import {
   checkLatestVscodeAiExtension,
   activateInstalledVscodeAiExtension,
   getVscodeAiExtensionDiagnostics,
+  openActiveVscodeAiExtension,
   installVscodeAiCompatProfiles,
   installLatestVscodeAiExtension,
   installLocalVscodeAiExtensionVsix,
   openDialog,
   rollbackVscodeAiExtension,
+  stopVscodeAiExtensionHost,
   type VscodeAiExtensionDiagnosticsItem,
+  type VscodeAiExtensionHostSession,
   type VscodeAiExtensionId,
   type VscodeAiExtensionSource,
 } from "@/lib/host";
@@ -39,6 +43,8 @@ export function VscodeAiExtensionsSection() {
   const [githubRepo, setGithubRepo] = useState("");
   const [githubAssetPattern, setGithubAssetPattern] = useState("");
   const [compatIndexUrl, setCompatIndexUrl] = useState("");
+  const [hostSession, setHostSession] =
+    useState<VscodeAiExtensionHostSession | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -144,6 +150,29 @@ export function VscodeAiExtensionsSection() {
       });
       return `Activated ${record.version}`;
     });
+
+  const openExtension = (item: VscodeAiExtensionDiagnosticsItem) =>
+    runAction(`open:${item.extensionId}`, async () => {
+      if (!item.active) return "No active version to open";
+      const session = await openActiveVscodeAiExtension({
+        extensionId: item.extensionId,
+      });
+      setHostSession(session);
+      return session.viewUrl
+        ? `Opened ${item.displayName}`
+        : `${item.displayName} is running, but it did not register a webview.`;
+    });
+
+  const closeHostSession = async () => {
+    setHostSession(null);
+    await stopVscodeAiExtensionHost().catch((err) => {
+      reportOperationError({
+        source: "VscodeAiExtensionsSection",
+        action: "Stop VS Code AI extension host",
+        error: err,
+      });
+    });
+  };
 
   return (
     <section className="space-y-4">
@@ -334,6 +363,16 @@ export function VscodeAiExtensionsSection() {
                     icon={<Play className="h-4 w-4" />}
                   />
                   <IconButton
+                    label={`Open ${item.displayName}`}
+                    busy={action.key === `open:${item.extensionId}`}
+                    onClick={() => void openExtension(item)}
+                    disabled={
+                      !item.active ||
+                      item.hostCapabilities?.canRunWithoutMissingCapabilities === false
+                    }
+                    icon={<Play className="h-4 w-4" />}
+                  />
+                  <IconButton
                     label={`Rollback ${item.displayName}`}
                     busy={action.key === `rollback:${item.extensionId}`}
                     onClick={() => void rollback(item.extensionId)}
@@ -346,6 +385,44 @@ export function VscodeAiExtensionsSection() {
           );
         })}
       </div>
+      {hostSession ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4">
+          <div className="flex h-[82vh] w-[min(1120px,96vw)] flex-col overflow-hidden rounded-xl border border-border bg-background shadow-elev-3">
+            <div className="flex items-center justify-between border-b border-border/60 px-4 py-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">
+                  {hostSession.extensionId}@{hostSession.version}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {hostSession.viewType ?? "No webview registered"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void closeHostSession()}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-background/60 hover:bg-muted"
+                aria-label="Close VS Code AI extension"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {hostSession.viewUrl ? (
+              <iframe
+                title={`${hostSession.extensionId} webview`}
+                src={hostSession.viewUrl}
+                className="min-h-0 flex-1 border-0 bg-background"
+                sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
+                data-codex-iframe="true"
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center p-6 text-sm text-muted-foreground">
+                This extension is active but did not register a webview entry.
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
