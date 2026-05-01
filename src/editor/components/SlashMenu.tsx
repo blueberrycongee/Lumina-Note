@@ -138,6 +138,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     result?: SlashAIResult,
     activities: SlashAIActivity[] = [],
     startedAt?: number,
+    streamingText = "",
   ) => ({
     id,
     status,
@@ -155,6 +156,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     stageStatuses,
     activities,
     startedAt,
+    streamingText,
   }), [
     aiPromptCommand?.label,
     t.editor.slashMenu.commands.aiChat,
@@ -271,6 +273,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const startedAt = Date.now();
     let inlineStageStatuses = createInitialAIStages();
     let inlineActivities: SlashAIActivity[] = [];
+    let inlineStreamingText = "";
     let tickTimer: number | null = null;
     const dispatchInlinePreview = (
       status: "running" | "preview",
@@ -287,6 +290,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
             result,
             inlineActivities,
             startedAt,
+            inlineStreamingText,
           ),
         ),
       });
@@ -309,6 +313,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
             undefined,
             inlineActivities,
             startedAt,
+            inlineStreamingText,
           ),
         ),
       ],
@@ -341,6 +346,10 @@ export function SlashMenu({ view }: SlashMenuProps) {
             inlineActivities = activities;
             dispatchInlinePreview("running", range.from);
           },
+          onText: (text) => {
+            inlineStreamingText = text;
+            dispatchInlinePreview("running", range.from);
+          },
         },
       );
       if (!result || abortController.signal.aborted) return;
@@ -352,6 +361,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
         generating: inlineStageStatuses.generating === "error" ? "error" : "done",
         ready: "done",
       };
+      inlineStreamingText = result.text;
       setAiStages(inlineStageStatuses);
       dispatchInlinePreview("preview", result.from, result);
     } catch (error) {
