@@ -50,6 +50,14 @@ async function* singleEventStream(
   onYield();
 }
 
+async function* delayedEventStream(
+  event: unknown,
+  waitForRelease: Promise<void>,
+): AsyncGenerator<unknown, void, unknown> {
+  await waitForRelease;
+  yield event;
+}
+
 describe("useOpencodeAgent.startTask", () => {
   beforeEach(() => {
     vi.mocked(invoke).mockResolvedValue(true);
@@ -391,6 +399,178 @@ describe("useOpencodeAgent.startTask", () => {
       expect(useOpencodeAgent.getState().messages.at(-1)?.content).toBe(
         "partial answer with complete tail",
       );
+    });
+  });
+
+  it("does not replace streamed assistant text with an idle refresh that has no text yet", async () => {
+    let resolveEventHandled = () => {};
+    const eventHandled = new Promise<void>((resolve) => {
+      resolveEventHandled = resolve;
+    });
+    const messages = vi.fn(async () => ({
+      data: [
+        {
+          info: {
+            id: "user-1",
+            sessionID: "session-1",
+            role: "user",
+            time: { created: 1 },
+          },
+          parts: [{ id: "user-part", type: "text", text: "question" }],
+        },
+        {
+          info: {
+            id: "assistant-1",
+            sessionID: "session-1",
+            role: "assistant",
+            time: { created: 2 },
+          },
+          parts: [
+            {
+              id: "reasoning-1",
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              type: "reasoning",
+              text: "thinking only snapshot",
+              time: { start: 1, end: 2 },
+            },
+          ],
+        },
+      ],
+    }));
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({
+          stream: singleEventStream(
+            {
+              type: "session.idle",
+              properties: { sessionID: "session-1" },
+            },
+            resolveEventHandled,
+          ),
+        })),
+      },
+      session: {
+        list: vi.fn(async () => ({ data: [] })),
+        messages,
+      },
+    });
+    useOpencodeAgent.setState({
+      currentSessionId: "session-1",
+      status: "running",
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "question",
+          rawParts: [],
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "streamed visible answer",
+          rawParts: [
+            {
+              id: "text-1",
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              type: "text",
+              text: "streamed visible answer",
+            } as never,
+          ],
+        },
+      ],
+    });
+
+    await useOpencodeAgent.getState().subscribe();
+    await eventHandled;
+
+    await waitFor(() => expect(messages).toHaveBeenCalled());
+    await Promise.resolve();
+    expect(useOpencodeAgent.getState().messages.at(-1)?.content).toBe(
+      "streamed visible answer",
+    );
+  });
+
+  it("ignores events from stale subscriptions after reconnecting", async () => {
+    let releaseOld = () => {};
+    let releaseNew = () => {};
+    const oldReleased = new Promise<void>((resolve) => {
+      releaseOld = resolve;
+    });
+    const newReleased = new Promise<void>((resolve) => {
+      releaseNew = resolve;
+    });
+    const subscribe = vi
+      .fn()
+      .mockResolvedValueOnce({
+        stream: delayedEventStream(
+          {
+            type: "message.part.delta",
+            properties: {
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              partID: "text-1",
+              field: "text",
+              delta: "Hello",
+            },
+          },
+          oldReleased,
+        ),
+      })
+      .mockResolvedValueOnce({
+        stream: delayedEventStream(
+          {
+            type: "message.part.delta",
+            properties: {
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              partID: "text-1",
+              field: "text",
+              delta: "Hello",
+            },
+          },
+          newReleased,
+        ),
+      });
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: { subscribe },
+      session: {
+        list: vi.fn(async () => ({ data: [] })),
+      },
+    });
+    useOpencodeAgent.setState({
+      currentSessionId: "session-1",
+      status: "running",
+      messages: [
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "",
+          rawParts: [
+            {
+              id: "text-1",
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              type: "text",
+              text: "",
+            } as never,
+          ],
+        },
+      ],
+    });
+
+    await useOpencodeAgent.getState().subscribe();
+    await waitFor(() => expect(subscribe).toHaveBeenCalledTimes(1));
+    useOpencodeAgent.getState().unsubscribe();
+    await useOpencodeAgent.getState().subscribe();
+    await waitFor(() => expect(subscribe).toHaveBeenCalledTimes(2));
+
+    releaseOld();
+    releaseNew();
+
+    await waitFor(() => {
+      expect(useOpencodeAgent.getState().messages[0].content).toBe("Hello");
     });
   });
 

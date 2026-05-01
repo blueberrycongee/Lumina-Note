@@ -463,6 +463,7 @@ function isVisibleAgentSession(info: { title?: string | null }): boolean {
 
 export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
   const refreshingSessions = new Set<string>();
+  let subscriptionGeneration = 0;
 
   const refreshSessionMessages = async (sessionId: string) => {
     if (refreshingSessions.has(sessionId)) return;
@@ -482,12 +483,31 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const existingById = new Map(state.messages.map((message) => [message.id, message]));
         const nextMessages = messages.map((message) => {
           const existing = existingById.get(message.id);
-          if (message.role !== "user" || !existing) return message;
-          return {
-            ...message,
-            content: existing.content,
-            attachments: existing.attachments,
-          };
+          if (!existing) return message;
+          if (message.role === "user") {
+            return {
+              ...message,
+              content: existing.content,
+              attachments: existing.attachments,
+            };
+          }
+          if (
+            message.role === "assistant" &&
+            partsToText(message.rawParts).trim().length === 0 &&
+            partsToText(existing.rawParts).trim().length > 0
+          ) {
+            const nextPartIds = new Set(message.rawParts.map((part) => part.id));
+            const preservedTextParts = existing.rawParts.filter(
+              (part) => part.type === "text" && !nextPartIds.has(part.id),
+            );
+            const rawParts = [...message.rawParts, ...preservedTextParts];
+            return {
+              ...message,
+              content: messageContentFromParts(rawParts, message.role),
+              rawParts,
+            };
+          }
+          return message;
         });
         return { messages: nextMessages };
       });
@@ -914,6 +934,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
     async subscribe() {
       if (get()._subscribed) return;
+      const generation = ++subscriptionGeneration;
       set({ _subscribed: true });
 
       const controller = new AbortController();
@@ -952,11 +973,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
               console.log("[opencode-sse] connected");
               reconnectAttempt = 0;
               for await (const event of result.stream) {
+                if (generation !== subscriptionGeneration || controller.signal.aborted) {
+                  break;
+                }
                 handleEvent(event as Event);
               }
+              if (generation !== subscriptionGeneration) break;
               if (controller.signal.aborted) break;
               console.warn("[opencode-sse] stream ended; reconnecting…");
             } catch (err) {
+              if (generation !== subscriptionGeneration) break;
               if (controller.signal.aborted) {
                 console.log("[opencode-sse] aborted");
                 break;
@@ -969,6 +995,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             await waitForReconnect(delay);
           }
         } catch (err) {
+          if (generation !== subscriptionGeneration) {
+            return;
+          }
           if (controller.signal.aborted) {
             console.log("[opencode-sse] aborted");
             return;
@@ -986,11 +1015,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           });
           return;
         }
-        set({ _subscribed: false, _abortController: null });
+        if (generation === subscriptionGeneration) {
+          set({ _subscribed: false, _abortController: null });
+        }
       })();
     },
 
     unsubscribe() {
+      subscriptionGeneration += 1;
       get()._abortController?.abort();
       set({ _subscribed: false, _abortController: null });
     },

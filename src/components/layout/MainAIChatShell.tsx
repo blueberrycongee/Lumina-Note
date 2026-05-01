@@ -17,10 +17,7 @@ import {
 } from "@/services/imageGen/direct";
 import { findModelInCatalog } from "@/services/llm/providers/models";
 import { toast } from "sonner";
-import {
-  useOpencodeAgent,
-  initOpencodeAgentListeners,
-} from "@/stores/useOpencodeAgent";
+import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useErrorBanner } from "@/stores/useErrorBanner";
 import { ErrorBanner } from "../chat/ErrorBanner";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -349,11 +346,6 @@ export function MainAIChatShell() {
     llmRetryState,
     retryTimeout,
   } = useOpencodeAgent();
-
-  // 初始化 Opencode Agent 事件监听器
-  useEffect(() => {
-    initOpencodeAgentListeners();
-  }, []);
 
   // 阻塞型错误信封 — 取代旧的 agentStatus==="error" 门控
   const bannerError = useErrorBanner((s) => s.active);
