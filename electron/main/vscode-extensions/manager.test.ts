@@ -4,6 +4,10 @@ import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { VscodeExtensionManager } from './manager.js'
+import type {
+  VscodeExtensionCompatProfile,
+  VscodeHostCapability,
+} from './profiles.js'
 import { VscodeExtensionStore } from './store.js'
 
 let tmpDir = ''
@@ -19,7 +23,24 @@ afterEach(() => {
 describe('VscodeExtensionManager', () => {
   it('records preview-compatible installs without auto-activating them', () => {
     const store = new VscodeExtensionStore({ baseDir: tmpDir })
-    const manager = new VscodeExtensionManager(store)
+    const manager = new VscodeExtensionManager(store, {
+      implementedCapabilities: new Set<VscodeHostCapability>([
+        'commands',
+        'diagnostics-read',
+        'diff-viewer',
+        'env-open-external',
+        'ide-bridge',
+        'memento',
+        'secret-storage',
+        'terminal',
+        'webview-panel',
+        'webview-view',
+        'window-notifications',
+        'workspace-documents',
+        'workspace-fs',
+        'workspace-selection',
+      ]),
+    })
 
     const outcome = manager.registerCandidateInstall({
       packageJson: {
@@ -42,9 +63,47 @@ describe('VscodeExtensionManager', () => {
     expect(store.listInstalled('anthropic.claude-code')).toHaveLength(1)
   })
 
-  it('keeps stable-compatible installs pending until smoke test passes', () => {
+  it('blocks installs when host capabilities do not satisfy the profile', () => {
     const store = new VscodeExtensionStore({ baseDir: tmpDir })
     const manager = new VscodeExtensionManager(store)
+
+    const outcome = manager.registerCandidateInstall({
+      packageJson: {
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.1.0',
+      },
+      extensionPath: path.join(tmpDir, 'openai.chatgpt-6.1.0'),
+      source: 'manual-vsix',
+      installedAt: '2026-05-01T12:00:00.000Z',
+      smokeTestPassed: true,
+    })
+
+    expect(outcome.decision).toBe('blocked')
+    expect(outcome.reason).toContain('diff-viewer')
+    expect(store.getActive('openai.chatgpt')).toBeNull()
+  })
+
+  it('keeps stable-compatible installs pending until smoke test passes', () => {
+    const stableProfile: VscodeExtensionCompatProfile = {
+      extensionId: 'openai.chatgpt',
+      channel: 'stable',
+      versionRange: '6.x',
+      hostApiVersion: 1,
+      entryViewTypes: ['chatgpt.sidebarView'],
+      requiredCapabilities: ['commands'],
+      commandMappings: {},
+      cspSourceDirectives: {},
+      needsTerminal: false,
+      needsDiffViewer: false,
+      needsIdeBridge: false,
+      disabledFeatures: [],
+    }
+    const store = new VscodeExtensionStore({ baseDir: tmpDir })
+    const manager = new VscodeExtensionManager(store, {
+      profiles: [stableProfile],
+      implementedCapabilities: new Set<VscodeHostCapability>(['commands']),
+    })
 
     const outcome = manager.registerCandidateInstall({
       packageJson: {

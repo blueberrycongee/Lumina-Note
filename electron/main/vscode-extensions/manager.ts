@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto'
 
+import { diagnoseHostCapabilities } from './diagnostics.js'
 import {
   resolveCompatibilityProfile,
   type VscodeExtensionPackageLike,
+  type VscodeExtensionCompatProfile,
+  type VscodeHostCapability,
 } from './profiles.js'
 import {
   VscodeExtensionStore,
@@ -32,12 +35,21 @@ export interface VscodeExtensionInstallOutcome {
 }
 
 export class VscodeExtensionManager {
-  constructor(private readonly store: VscodeExtensionStore) {}
+  constructor(
+    private readonly store: VscodeExtensionStore,
+    private readonly options: {
+      profiles?: VscodeExtensionCompatProfile[]
+      implementedCapabilities?: ReadonlySet<VscodeHostCapability>
+    } = {},
+  ) {}
 
   registerCandidateInstall(
     input: VscodeExtensionCandidateInstall,
   ): VscodeExtensionInstallOutcome {
-    const compatibility = resolveCompatibilityProfile(input.packageJson)
+    const compatibility = resolveCompatibilityProfile(
+      input.packageJson,
+      this.options.profiles,
+    )
     if (
       !compatibility.extensionId ||
       !compatibility.version ||
@@ -69,6 +81,18 @@ export class VscodeExtensionManager {
     }
 
     this.store.recordInstall(record)
+
+    const hostDiagnostic = diagnoseHostCapabilities(
+      compatibility.profile,
+      this.options.implementedCapabilities,
+    )
+    if (!hostDiagnostic.canRunWithoutMissingCapabilities) {
+      return {
+        record,
+        decision: 'blocked',
+        reason: `Host is missing required VS Code capabilities: ${hostDiagnostic.missingCapabilities.join(', ')}.`,
+      }
+    }
 
     if (!input.smokeTestPassed) {
       return {
