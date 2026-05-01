@@ -223,6 +223,45 @@ describe("useOpencodeAgent.startTask", () => {
     ]);
   });
 
+  it("ignores message events when no main AI session is active", async () => {
+    let resolveEventHandled = () => {};
+    const eventHandled = new Promise<void>((resolve) => {
+      resolveEventHandled = resolve;
+    });
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({
+          stream: singleEventStream(
+            {
+              type: "message.updated",
+              properties: {
+                info: {
+                  id: "inline-message",
+                  sessionID: "inline-session",
+                  role: "assistant",
+                  time: { created: 1 },
+                },
+              },
+            },
+            resolveEventHandled,
+          ),
+        })),
+      },
+      session: {
+        list: vi.fn(async () => ({ data: [] })),
+      },
+    });
+    useOpencodeAgent.setState({
+      currentSessionId: null,
+      messages: [],
+    });
+
+    await useOpencodeAgent.getState().subscribe();
+    await eventHandled;
+
+    expect(useOpencodeAgent.getState().messages).toEqual([]);
+  });
+
   it("shows the optimistic user message before waiting for opencode startup", async () => {
     const promise = useOpencodeAgent
       .getState()
