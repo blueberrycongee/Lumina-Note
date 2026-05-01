@@ -90,7 +90,10 @@ vi.mock("@/lib/reportError", () => ({
 
 import {
   applySlashAIResult,
+  clearSlashAIInlinePreview,
   runSlashAIAction,
+  showSlashAIInlinePreview,
+  slashAIInlinePreviewField,
   type SlashAIProgress,
 } from "./slashCommand";
 
@@ -98,10 +101,11 @@ function createView(text: string, selection?: { anchor: number; head?: number })
   const parent = document.createElement("div");
   document.body.appendChild(parent);
   const view = new EditorView({
-    state: EditorState.create({ doc: text, selection }),
+    state: EditorState.create({ doc: text, selection, extensions: [slashAIInlinePreviewField] }),
     parent,
   });
   return {
+    parent,
     view,
     cleanup: () => {
       view.destroy();
@@ -220,6 +224,107 @@ describe("slash inline AI", () => {
       to: "First sentence".length,
     });
     expect(view.state.doc.toString()).toBe("First sentence\nSecond ");
+    cleanup();
+  });
+
+  it("renders generated text as an editor inline approval preview", () => {
+    const { view, parent, cleanup } = createView("Hello ");
+    const handler = vi.fn();
+    window.addEventListener("slash-ai-inline-preview-action", handler as EventListener);
+
+    view.dispatch({
+      effects: showSlashAIInlinePreview.of({
+        id: "preview-1",
+        status: "preview",
+        anchor: 6,
+        commandLabel: "AI Continue",
+        result: {
+          text: "Final Markdown to insert",
+          from: 6,
+          to: 6,
+        },
+        labels: {
+          previewTitle: "Preview to insert",
+          generating: "Generating",
+          insert: "Insert",
+          cancel: "Cancel",
+          regenerate: "Regenerate",
+          stages: {
+            understanding: "Understanding request",
+            "reading-context": "Reading nearby note context",
+            "preparing-context": "Preparing related context",
+            generating: "Generating candidate",
+            ready: "Ready to insert",
+          },
+        },
+        stageStatuses: {
+          understanding: "done",
+          "reading-context": "done",
+          "preparing-context": "done",
+          generating: "done",
+          ready: "done",
+        },
+      }),
+    });
+
+    expect(view.state.doc.toString()).toBe("Hello ");
+    const preview = parent.querySelector(".cm-slash-ai-inline-preview");
+    expect(preview?.textContent).toContain("Final Markdown to insert");
+    expect(preview?.textContent).toContain("Reading nearby note context");
+
+    (preview?.querySelector('button[data-action="accept"]') as HTMLButtonElement).click();
+
+    expect(handler).toHaveBeenCalled();
+    expect((handler.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      id: "preview-1",
+      action: "accept",
+    });
+    expect(view.state.doc.toString()).toBe("Hello ");
+
+    view.dispatch({ effects: clearSlashAIInlinePreview.of() });
+    expect(parent.querySelector(".cm-slash-ai-inline-preview")).toBeNull();
+    window.removeEventListener("slash-ai-inline-preview-action", handler as EventListener);
+    cleanup();
+  });
+
+  it("renders running status in the editor before approval is available", () => {
+    const { view, parent, cleanup } = createView("Hello ");
+
+    view.dispatch({
+      effects: showSlashAIInlinePreview.of({
+        id: "preview-running",
+        status: "running",
+        anchor: 6,
+        commandLabel: "AI Continue",
+        labels: {
+          previewTitle: "Preview to insert",
+          generating: "Generating",
+          insert: "Insert",
+          cancel: "Cancel",
+          regenerate: "Regenerate",
+          stages: {
+            understanding: "Understanding request",
+            "reading-context": "Reading nearby note context",
+            "preparing-context": "Preparing related context",
+            generating: "Generating candidate",
+            ready: "Ready to insert",
+          },
+        },
+        stageStatuses: {
+          understanding: "done",
+          "reading-context": "active",
+          "preparing-context": "pending",
+          generating: "pending",
+          ready: "pending",
+        },
+      }),
+    });
+
+    const preview = parent.querySelector(".cm-slash-ai-inline-preview");
+    expect(preview?.textContent).toContain("Generating");
+    expect(preview?.querySelector('button[data-action="accept"]')).toBeNull();
+    expect(preview?.querySelector('button[data-action="cancel"]')).not.toBeNull();
+    expect(view.state.doc.toString()).toBe("Hello ");
     cleanup();
   });
 });
