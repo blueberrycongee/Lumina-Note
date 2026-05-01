@@ -246,6 +246,7 @@ export function VscodeAiExtensionsSection() {
       <div className="space-y-3">
         {items.map((item) => {
           const missing = item.hostCapabilities?.missingCapabilities ?? [];
+          const latestInstalled = item.installed[0] ?? null;
           const isReady =
             item.compatibility?.status === "stable" &&
             item.hostCapabilities?.canRunWithoutMissingCapabilities === true;
@@ -271,6 +272,12 @@ export function VscodeAiExtensionsSection() {
                     Active: {item.active?.version ?? "none"} · Compatibility:{" "}
                     {item.compatibility?.status ?? "none"}
                     {isReady ? " · stable" : ""}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Installed: {item.installed.length}
+                    {latestInstalled
+                      ? ` · Latest installed: ${latestInstalled.version} (${latestInstalled.compatibility.status}, ${latestInstalled.smokeTestPassed ? "smoke passed" : "smoke pending"})`
+                      : ""}
                   </p>
                   {missing.length > 0 ? (
                     <p className="mt-1 text-xs text-amber-600">

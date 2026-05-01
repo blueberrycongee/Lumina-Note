@@ -68,8 +68,34 @@ describe("VscodeAiExtensionsSection", () => {
           },
         },
         installed: [
-          { version: "2.1.0" },
-          { version: "2.0.0" },
+          {
+            extensionId: "anthropic.claude-code",
+            version: "2.1.0",
+            extensionPath: "/tmp/claude",
+            source: "manual-vsix",
+            installedAt: "2026-05-01T00:00:00.000Z",
+            smokeTestPassed: true,
+            compatibility: {
+              status: "preview",
+              reason: "manual opt-in required",
+              autoUpdateEligible: false,
+              profileVersionRange: "*",
+            },
+          },
+          {
+            extensionId: "anthropic.claude-code",
+            version: "2.0.0",
+            extensionPath: "/tmp/claude-old",
+            source: "manual-vsix",
+            installedAt: "2026-04-30T00:00:00.000Z",
+            smokeTestPassed: false,
+            compatibility: {
+              status: "unknown-version",
+              reason: "unverified",
+              autoUpdateEligible: false,
+              profileVersionRange: null,
+            },
+          },
         ],
         compatibility: {
           status: "preview",
@@ -98,6 +124,9 @@ describe("VscodeAiExtensionsSection", () => {
     expect(await screen.findByText("Codex")).toBeInTheDocument();
     expect(screen.getByText("Claude Code")).toBeInTheDocument();
     expect(screen.getByText(/authentication.getSession/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Latest installed: 2.1.0 \(preview, smoke passed\)/),
+    ).toBeInTheDocument();
   });
 
   it("checks and installs latest extension from Open VSX", async () => {
