@@ -837,6 +837,22 @@ body {
   return `${style}\n${html}`;
 }
 
+function normalizeTheme(value, fallback = "dark") {
+  if (value === "light") return "light";
+  if (value === "dark") return "dark";
+  return fallback === "light" ? "light" : "dark";
+}
+
+function applyThemeState(state, theme) {
+  const next = normalizeTheme(theme, state.theme);
+  if (state._lumina?.setTheme) {
+    state._lumina.setTheme(next);
+  } else {
+    state.theme = next;
+  }
+  return next;
+}
+
 function ensureDirectiveSources(policy, directiveName, nextSources) {
   const directives = String(policy ?? "")
     .split(";")
@@ -1152,13 +1168,13 @@ async function main() {
       if (u.pathname.startsWith("/view/")) {
         const viewType = decodeURIComponent(u.pathname.slice("/view/".length));
         const token = u.searchParams.get("token") ?? "";
+        const theme = applyThemeState(state, u.searchParams.get("theme"));
         const entry = await ensureView({ state, viewType, token, origin: `http://127.0.0.1:${server.address().port}` });
         if (!entry) {
           res.statusCode = 404;
           return res.end("unknown viewType");
         }
 
-        const theme = u.searchParams.get("theme") || state.theme;
         const raw = entry.webview.html;
         const withCsp = injectCspFontDataCompatibility(raw, `http://127.0.0.1:${server.address().port}`);
         const withApi = injectAcquireVsCodeApi(withCsp, { origin: `http://127.0.0.1:${server.address().port}`, viewType, token });
@@ -1173,6 +1189,7 @@ async function main() {
       if (u.pathname.startsWith("/panel/")) {
         const panelId = decodeURIComponent(u.pathname.slice("/panel/".length));
         const token = u.searchParams.get("token") ?? "";
+        const theme = applyThemeState(state, u.searchParams.get("theme"));
         const entry = state.panels.get(panelId);
         if (!entry) {
           res.statusCode = 404;
@@ -1181,7 +1198,6 @@ async function main() {
         if (entry.token !== token) return json(res, 403, { ok: false, error: "bad token" });
 
         const channel = `panel:${panelId}`;
-        const theme = u.searchParams.get("theme") || state.theme;
         const raw = entry.webview.html;
         const origin = `http://127.0.0.1:${server.address().port}`;
         const withCsp = injectCspFontDataCompatibility(raw, origin);

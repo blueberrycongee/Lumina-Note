@@ -24,6 +24,7 @@ import {
 } from "@/lib/host";
 import { reportOperationError } from "@/lib/reportError";
 import { cn } from "@/lib/utils";
+import { useUIStore } from "@/stores/useUIStore";
 
 const EXTENSIONS: Array<{ id: VscodeAiExtensionId; label: string }> = [
   { id: "openai.chatgpt", label: "Codex" },
@@ -36,6 +37,7 @@ type ActionState = {
 };
 
 export function VscodeAiExtensionSidebarPanel() {
+  const isDarkMode = useUIStore((state) => state.isDarkMode);
   const [items, setItems] = useState<VscodeAiExtensionDiagnosticsItem[]>([]);
   const [selectedId, setSelectedId] =
     useState<VscodeAiExtensionId>("openai.chatgpt");
@@ -56,6 +58,9 @@ export function VscodeAiExtensionSidebarPanel() {
   );
   const activeHostSession =
     hostSession?.extensionId === selectedId ? hostSession : null;
+  const activeViewUrl = activeHostSession?.viewUrl
+    ? withThemeParam(activeHostSession.viewUrl, isDarkMode ? "dark" : "light")
+    : null;
   const missingCapabilities =
     selected?.hostCapabilities?.missingCapabilities ?? [];
   const latestInstalled = selected?.installed[0] ?? null;
@@ -303,10 +308,10 @@ export function VscodeAiExtensionSidebarPanel() {
       ) : null}
 
       {activeHostSession ? (
-        activeHostSession.viewUrl ? (
+        activeViewUrl ? (
           <iframe
             title={`${activeHostSession.extensionId} sidebar`}
-            src={activeHostSession.viewUrl}
+            src={activeViewUrl}
             className="min-h-0 flex-1 border-0 bg-background"
             sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-downloads"
             data-codex-iframe="true"
@@ -398,4 +403,10 @@ function IconButton({
 
 function normalizeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
+}
+
+function withThemeParam(url: string, theme: "dark" | "light"): string {
+  const parsed = new URL(url);
+  parsed.searchParams.set("theme", theme);
+  return parsed.toString();
 }

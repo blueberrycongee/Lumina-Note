@@ -138,6 +138,44 @@ describe("codex-vscode-host", () => {
     expect(htmlLight).toContain("vscode-light");
   });
 
+  it("applies the view theme query before resolving the webview", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-theme-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({
+        name: "theme-ext",
+        version: "0.0.0",
+        main: "./extension.js",
+      }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.window.registerWebviewViewProvider("theme.view", {
+    resolveWebviewView(view) {
+      view.webview.html = "<!doctype html><html><body>theme:" + vscode.window.activeColorTheme.kind + "</body></html>";
+    },
+  });
+};`,
+      "utf8",
+    );
+    const host = startHost(extensionPath);
+    running.push(host);
+
+    const { origin } = await host.ready;
+    const html = await fetch(`${origin}/view/${encodeURIComponent("theme.view")}?token=t&theme=light`).then((r) =>
+      r.text(),
+    );
+    const health = await fetch(`${origin}/health`).then((r) => r.json());
+
+    expect(html).toContain("theme:1");
+    expect(html).toContain("vscode-light");
+    expect(health.theme).toBe("light");
+  });
+
   it("injects base layout styles for webview rendering", async () => {
     const extensionPath = path.resolve("scripts/codex-vscode-host/fixtures/hello-ext");
     const host = startHost(extensionPath);
