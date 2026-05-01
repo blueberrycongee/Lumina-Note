@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { EditorView } from "@codemirror/view";
 import { Check, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   applySlashAIResult,
   getDefaultCommands,
@@ -77,6 +78,14 @@ export function SlashMenu({ view }: SlashMenuProps) {
   const aiAbortControllerRef = useRef<AbortController | null>(null);
   const commands = useMemo(() => getDefaultCommands(t), [t]);
   const inlineAI = t.editor.slashMenu.inlineAI;
+  const aiStatusLabel =
+    aiStatus === "running"
+      ? inlineAI.generating
+      : aiStatus === "preview"
+        ? inlineAI.previewTitle
+        : aiStatus === "error"
+          ? inlineAI.errorTitle
+          : inlineAI.generate;
 
   const closeMenu = useCallback(() => {
     aiAbortControllerRef.current?.abort();
@@ -418,7 +427,12 @@ export function SlashMenu({ view }: SlashMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-popover border border-border rounded-lg shadow-elev-2 overflow-hidden"
+      className={cn(
+        "fixed z-50 overflow-hidden border bg-popover text-popover-foreground",
+        aiPromptOpen
+          ? "rounded-ui-xl border-border/70 bg-popover/95 shadow-elev-3 backdrop-blur"
+          : "rounded-lg border-border shadow-elev-2",
+      )}
       style={{
         left: clampedPosition.left,
         top: clampedPosition.top,
@@ -427,118 +441,135 @@ export function SlashMenu({ view }: SlashMenuProps) {
       }}
     >
       {aiPromptOpen ? (
-        <div className="max-h-[inherit] overflow-y-auto p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-                <span className="truncate">
-                  {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
+        <div className="max-h-[inherit] overflow-y-auto">
+          <div className="border-b border-border/60 bg-muted/20 px-3.5 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-md border border-primary/15 bg-primary/10 text-primary">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
                 </span>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium leading-5">
+                    {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
+                  </div>
+                  <div className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                    {inlineAI.panelHint}
+                  </div>
+                </div>
               </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {inlineAI.panelHint}
+              <div className="flex shrink-0 items-center gap-1.5">
+                <span className="hidden rounded-full border border-border/60 bg-background/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground sm:inline-flex">
+                  {aiStatusLabel}
+                </span>
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-ui-md text-muted-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
+                  onClick={closeMenu}
+                  aria-label={t.common.close}
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
             </div>
-            <button
-              type="button"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-              onClick={closeMenu}
-              aria-label={t.common.close}
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
           </div>
 
-          <textarea
-            ref={aiPromptRef}
-            value={aiPromptText}
-            onChange={(e) => {
-              setAiPromptText(e.target.value);
-              if (aiStatus === "error") {
-                setAiError("");
-                setAiStatus("prompt");
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && aiStatus !== "preview") {
-                e.preventDefault();
-                void startAIGeneration();
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                closeMenu();
-              }
-            }}
-            disabled={aiSubmitting || aiStatus === "preview"}
-            placeholder={aiPromptAction === "chat-insert"
-              ? t.editor.slashMenu.commands.aiChatPrompt
-              : inlineAI.optionalGuidance}
-            className="mt-3 max-h-28 min-h-16 w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none transition-shadow focus:ring-2 focus:ring-primary/30 disabled:opacity-70"
-          />
+          <div className="p-3.5">
+            <div className="rounded-ui-lg border border-border/70 bg-background/70 shadow-inner transition-colors focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/10">
+              <textarea
+                ref={aiPromptRef}
+                value={aiPromptText}
+                onChange={(e) => {
+                  setAiPromptText(e.target.value);
+                  if (aiStatus === "error") {
+                    setAiError("");
+                    setAiStatus("prompt");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && aiStatus !== "preview") {
+                    e.preventDefault();
+                    void startAIGeneration();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    closeMenu();
+                  }
+                }}
+                disabled={aiSubmitting || aiStatus === "preview"}
+                placeholder={aiPromptAction === "chat-insert"
+                  ? t.editor.slashMenu.commands.aiChatPrompt
+                  : inlineAI.optionalGuidance}
+                className="max-h-28 min-h-16 w-full resize-none bg-transparent px-3 py-2.5 text-sm leading-relaxed outline-none placeholder:text-muted-foreground/65 disabled:opacity-70"
+              />
+            </div>
 
-          {(aiStatus === "running" || aiStatus === "preview") && (
-            <div className="mt-3 rounded-md border border-border/70 bg-muted/25 p-2">
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                {inlineAI.progressTitle}
-              </div>
-              <div className="space-y-1">
-                {aiStageOrder.map((stage) => {
-                  const status = aiStages[stage];
-                  return (
-                    <div
-                      key={stage}
-                      className={`flex items-center gap-2 text-xs ${
-                        status === "pending" ? "text-muted-foreground/55" : "text-foreground"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-4 w-4 items-center justify-center rounded-full border ${
-                          status === "done"
-                            ? "border-primary/50 bg-primary/10 text-primary"
-                            : status === "active"
-                              ? "border-primary/40 text-primary"
-                              : "border-border text-muted-foreground"
-                        }`}
-                      >
-                        {status === "done" ? (
-                          <Check className="h-3 w-3" aria-hidden="true" />
-                        ) : status === "active" ? (
-                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-45" />
+            {(aiStatus === "running" || aiStatus === "preview") && (
+              <div className="mt-3 rounded-ui-lg border border-border/60 bg-muted/15 px-3 py-2.5">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  {inlineAI.progressTitle}
+                </div>
+                <div className="space-y-1.5">
+                  {aiStageOrder.map((stage) => {
+                    const status = aiStages[stage];
+                    return (
+                      <div
+                        key={stage}
+                        className={cn(
+                          "flex items-center gap-2 text-xs leading-5 transition-colors",
+                          status === "pending" ? "text-muted-foreground/55" : "text-foreground",
                         )}
-                      </span>
-                      <span>{inlineAI.stages[stage]}</span>
-                    </div>
-                  );
-                })}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded-full border",
+                            status === "done" && "border-primary/50 bg-primary/10 text-primary",
+                            status === "active" && "border-primary/40 bg-background text-primary",
+                            status === "error" && "border-destructive/50 bg-destructive/10 text-destructive",
+                            status === "pending" && "border-border/70 bg-background/50 text-muted-foreground",
+                          )}
+                        >
+                          {status === "done" ? (
+                            <Check className="h-3 w-3" aria-hidden="true" />
+                          ) : status === "active" ? (
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-45" />
+                          )}
+                        </span>
+                        <span>{inlineAI.stages[stage]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {aiStatus === "preview" && aiResult && (
-            <div className="mt-3">
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                {inlineAI.previewTitle}
+            {aiStatus === "preview" && aiResult && (
+              <div className="mt-3 overflow-hidden rounded-ui-lg border border-border/70 bg-background/80">
+                <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-3 py-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {inlineAI.previewTitle}
+                  </div>
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60" aria-hidden="true" />
+                </div>
+                <pre className="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-sm leading-relaxed text-foreground">
+                  {aiResult.text}
+                </pre>
               </div>
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background/80 p-3 text-sm leading-relaxed text-foreground">
-                {aiResult.text}
-              </pre>
-            </div>
-          )}
+            )}
 
-          {aiStatus === "error" && aiError && (
-            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <div className="font-medium">{inlineAI.errorTitle}</div>
-              <div className="mt-0.5 text-xs opacity-90">{aiError}</div>
-            </div>
-          )}
+            {aiStatus === "error" && aiError && (
+              <div className="mt-3 rounded-ui-lg border border-destructive/25 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                <div className="font-medium">{inlineAI.errorTitle}</div>
+                <div className="mt-0.5 text-xs opacity-90">{aiError}</div>
+              </div>
+            )}
+          </div>
 
-          <div className="mt-3 flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2 border-t border-border/60 bg-muted/10 px-3.5 py-3">
             <button
               type="button"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs hover:bg-accent/60"
+              className="inline-flex h-8 items-center gap-1.5 rounded-ui-md border border-border/70 bg-background/60 px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
               onClick={closeMenu}
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -548,7 +579,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
               {(aiStatus === "preview" || aiStatus === "error") && (
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs hover:bg-accent/60 disabled:opacity-60"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-ui-md border border-border/70 bg-background/60 px-2.5 text-xs transition-colors hover:bg-accent/70 disabled:opacity-60"
                   disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
                   onClick={() => void startAIGeneration()}
                 >
@@ -559,7 +590,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
               {aiStatus === "preview" ? (
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-ui-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-elev-1 transition-opacity disabled:opacity-60"
                   disabled={!aiResult}
                   onClick={acceptAIResult}
                 >
@@ -569,7 +600,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
               ) : (
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs text-primary-foreground disabled:opacity-60"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-ui-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-elev-1 transition-opacity disabled:opacity-60"
                   disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
                   onClick={() => void startAIGeneration()}
                 >
