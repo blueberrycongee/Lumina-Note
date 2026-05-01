@@ -74,6 +74,36 @@ describe('vscode extension handlers', () => {
     expect(rolledBack).toMatchObject({ extensionId: 'openai.chatgpt', version: '6.0.0' })
   })
 
+  it('returns diagnostics for supported AI extensions', async () => {
+    const handlers = createHandlers()
+    await seedInstall(handlers, '6.1.0')
+    await handlers.vscode_extensions_activate_installed({
+      extensionId: 'openai.chatgpt',
+      version: '6.1.0',
+    })
+
+    const diagnostics = await handlers.vscode_extensions_get_diagnostics({})
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          extensionId: 'openai.chatgpt',
+          displayName: 'Codex',
+          active: expect.objectContaining({ version: '6.1.0' }),
+          compatibility: expect.objectContaining({ status: 'preview' }),
+          hostCapabilities: expect.objectContaining({
+            missingCapabilities: expect.arrayContaining(['diff-viewer']),
+          }),
+        }),
+        expect.objectContaining({
+          extensionId: 'anthropic.claude-code',
+          displayName: 'Claude Code',
+          active: null,
+        }),
+      ]),
+    )
+  })
+
   it('installs latest through the full update pipeline', async () => {
     const vsixBytes = createZip({
       'extension/package.json': JSON.stringify({

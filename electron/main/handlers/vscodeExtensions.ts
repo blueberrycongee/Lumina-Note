@@ -2,9 +2,12 @@ import path from 'node:path'
 
 import {
   BUILTIN_VSCODE_AI_COMPAT_PROFILES,
+  TARGET_VSCODE_AI_EXTENSIONS,
   isSupportedVscodeAiExtensionId,
+  resolveCompatibilityProfile,
   type SupportedVscodeAiExtensionId,
 } from '../vscode-extensions/profiles.js'
+import { diagnoseHostCapabilities } from '../vscode-extensions/diagnostics.js'
 import { loadExternalCompatProfiles } from '../vscode-extensions/profileLoader.js'
 import { VscodeExtensionStore } from '../vscode-extensions/store.js'
 import { VscodeExtensionManager } from '../vscode-extensions/manager.js'
@@ -49,6 +52,35 @@ export function createVscodeExtensionHandlers(
   return {
     async vscode_extensions_get_state() {
       return store.getState()
+    },
+
+    async vscode_extensions_get_diagnostics() {
+      return Object.keys(TARGET_VSCODE_AI_EXTENSIONS).map((extensionId) => {
+        const id = extensionId as SupportedVscodeAiExtensionId
+        const active = store.getActive(id)
+        const installed = store.listInstalled(id)
+        const compatibility = active
+          ? resolveCompatibilityProfile(
+              {
+                publisher: active.extensionId.split('.')[0],
+                name: active.extensionId.split('.')[1],
+                version: active.version,
+              },
+              profiles,
+            )
+          : null
+        const hostCapabilities = compatibility?.profile
+          ? diagnoseHostCapabilities(compatibility.profile)
+          : null
+        return {
+          extensionId: id,
+          displayName: TARGET_VSCODE_AI_EXTENSIONS[id].displayName,
+          active,
+          installed,
+          compatibility,
+          hostCapabilities,
+        }
+      })
     },
 
     async vscode_extensions_check_latest(args) {
