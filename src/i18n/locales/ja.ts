@@ -199,7 +199,8 @@ export default {
         regenerate: "再生成",
         errorTitle: "生成できませんでした",
         promptRequired: "ここに何を書きたいか AI に伝えてください。",
-        emptyTarget: "カーソルをブロック内に置くか、テキストを選択してください。",
+        emptyTarget:
+          "カーソルをブロック内に置くか、テキストを選択してください。",
         genericError: "AI から応答がありませんでした。もう一度お試しください。",
         stages: {
           understanding: "依頼を理解",
@@ -1218,26 +1219,6 @@ export default {
       account: "アカウント",
       system: "システム",
     },
-    diagnosticsTitle: "診断",
-    diagnosticsCollectLogs: "診断ログを収集",
-    diagnosticsCollectLogsDesc:
-      "有効にすると、Lumina はコンソールログとクラッシュイベントをローカルファイルに書き込み、デバッグに役立てます。",
-    diagnosticsLogFolder: "ログフォルダ",
-    diagnosticsLoading: "読み込み中...",
-    diagnosticsOn: "オン",
-    diagnosticsOff: "オフ",
-    diagnosticsRecording: "録画中",
-    diagnosticsEditorTrace: "エディタ操作トレースを記録",
-    diagnosticsEditorTraceDesc:
-      "有効にすると、Lumina はモード切替、スクロール、フォーカス変更、クリック、選択同期などのエディタ操作をメモリ内に記録し、JSON として書き出せます。",
-    diagnosticsExport: "診断ログを書き出す",
-    diagnosticsExporting: "書き出し中...",
-    diagnosticsClearTrace: "操作トレースをクリア",
-    diagnosticsExportTrace: "操作トレースを書き出す",
-    diagnosticsExportDialogTitle: "診断ログを書き出す",
-    diagnosticsExportTraceDialogTitle: "操作トレースを書き出す",
-    diagnosticsTraceUnavailable:
-      "操作トレースが利用できません。ノートエディタを開いて問題を再現してください。",
     cloudSyncTitle: "クラウド同期",
     cloudSyncDesc:
       "一度ログインしてワークスペースを選び、派生した WebDAV エンドポイント経由で同期します。",
@@ -1564,7 +1545,7 @@ export default {
         "session.delete": "セッション削除",
         "render.boundary": "パネル描画",
         "session.list": "セッション一覧",
-        "unknown": "不明なエラー",
+        unknown: "不明なエラー",
       },
     },
   },
@@ -1679,7 +1660,8 @@ export default {
     apiKeyOptional: "オプション",
     localModelNoKey: "ローカルモデルは API Key 不要",
     mimoEndpoint: "MiMo エンドポイント",
-    mimoEndpointHint: "公式 API または Token Plan の地域エンドポイントを選択します。",
+    mimoEndpointHint:
+      "公式 API または Token Plan の地域エンドポイントを選択します。",
     model: "モデル",
     customModelId: "カスタムモデル ID",
     customModelHint:

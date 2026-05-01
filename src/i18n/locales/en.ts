@@ -117,7 +117,7 @@ export default {
 
   // Wiki-link hover preview
   wikiPreview: {
-    notFound: "No note named \"{name}\"",
+    notFound: 'No note named "{name}"',
   },
 
   // Editor
@@ -339,14 +339,18 @@ export default {
       editorTitleNew: "New skill",
       editorTitleEdit: "Edit skill",
       nameLabel: "Name (id)",
-      nameHint: "Lowercase a-z, digits, hyphens. Used as the skill's stable id.",
+      nameHint:
+        "Lowercase a-z, digits, hyphens. Used as the skill's stable id.",
       descriptionLabel: "Description",
-      descriptionHint: "One sentence the agent reads to decide whether to invoke this skill. Make it specific.",
+      descriptionHint:
+        "One sentence the agent reads to decide whether to invoke this skill. Make it specific.",
       bodyLabel: "Body (Markdown)",
-      bodyHint: "The playbook the agent loads when invoking this skill — triggers, steps, pitfalls.",
+      bodyHint:
+        "The playbook the agent loads when invoking this skill — triggers, steps, pitfalls.",
       saveButton: "Save",
       cancelButton: "Cancel",
-      nameInvalid: "Name must be lowercase letters, digits, and hyphens (1–64 chars).",
+      nameInvalid:
+        "Name must be lowercase letters, digits, and hyphens (1–64 chars).",
       descriptionRequired: "Description is required.",
       bodyRequired: "Body is required.",
       nameDuplicate: "A skill with this name already exists.",
@@ -413,7 +417,8 @@ export default {
     ],
     welcomeStarters: {
       helpWithNote: "Help me with this note",
-      helpWithNotePrompt: "Help me with {name} — start wherever you think the most value is.",
+      helpWithNotePrompt:
+        "Help me with {name} — start wherever you think the most value is.",
       generateImage: "Generate an image",
       generateImagePrompt: "Generate an image of ",
       findNotes: "Find something in my vault",
@@ -421,14 +426,16 @@ export default {
       brainstorm: "Help me think through something",
       brainstormPrompt: "I want to think through ",
       imageModeChip: "Image mode",
-      imageModeChipHint: "Your next message will be sent as an image generation request",
+      imageModeChipHint:
+        "Your next message will be sent as an image generation request",
       imageModeChipRemove: "Exit image mode",
     },
     imageDirect: {
       noImageProvider:
         "No image provider configured. Open AI Settings → Image Models to add a key.",
       noVault: "Open a vault first — images need somewhere to land.",
-      generating: "Generating directly with {provider} (skipping the chat agent)…",
+      generating:
+        "Generating directly with {provider} (skipping the chat agent)…",
       successTitle: "Generated with {provider}",
       failureTitle: "{provider} generation failed",
       failureGeneric: "Image generation failed",
@@ -653,7 +660,8 @@ export default {
 
   // Ribbon tooltips
   ribbon: {
-    commandPaletteTrigger: "Command Palette (Ctrl+P) — every action, one tap away",
+    commandPaletteTrigger:
+      "Command Palette (Ctrl+P) — every action, one tap away",
     commandPaletteNewBadge: "features you haven't tried yet",
     globalSearch: "Global Search (Ctrl+Shift+F)",
     aiChatMain: "AI Chat (Main View)",
@@ -677,8 +685,7 @@ export default {
     modalTitle: "Plugins",
     pluginSettingsTitle: "Plugin Settings",
     title: "Plugins",
-    intro:
-      "Manage installed plugins, appearance plugins, and system plugins.",
+    intro: "Manage installed plugins, appearance plugins, and system plugins.",
     filterAll: "All",
     filterIssues: "Issues",
     searchPlugins: "Search plugins...",
@@ -1328,26 +1335,6 @@ export default {
       account: "Account",
       system: "System",
     },
-    diagnosticsTitle: "Diagnostics",
-    diagnosticsCollectLogs: "Collect diagnostics logs",
-    diagnosticsCollectLogsDesc:
-      "When enabled, Lumina writes console logs and crash events to a local file to help debugging.",
-    diagnosticsLogFolder: "Log folder",
-    diagnosticsLoading: "loading...",
-    diagnosticsOn: "On",
-    diagnosticsOff: "Off",
-    diagnosticsRecording: "Recording",
-    diagnosticsEditorTrace: "Record editor interaction trace",
-    diagnosticsEditorTraceDesc:
-      "When enabled, Lumina starts a fresh in-memory trace for editor mode switches, scroll moves, focus changes, clicks, and selection sync so you can export one repro as JSON.",
-    diagnosticsExport: "Export Diagnostics",
-    diagnosticsExporting: "Exporting...",
-    diagnosticsClearTrace: "Clear Interaction Trace",
-    diagnosticsExportTrace: "Export Interaction Trace",
-    diagnosticsExportDialogTitle: "Export Diagnostics",
-    diagnosticsExportTraceDialogTitle: "Export Interaction Trace",
-    diagnosticsTraceUnavailable:
-      "Interaction trace is unavailable. Open a note editor and reproduce the issue first.",
     cloudSyncTitle: "Cloud Sync",
     cloudSyncDesc:
       "Sign in once, pick a workspace, then sync through the derived WebDAV endpoint.",
@@ -1530,7 +1517,8 @@ export default {
     imageGeneratedTitle: "Image generated",
     imageGeneratedPath: "Path",
     imageGeneratedModel: "Model",
-    imageGeneratedReuseHint: "Click the image to use it as a reference for the next generation.",
+    imageGeneratedReuseHint:
+      "Click the image to use it as a reference for the next generation.",
     imageGeneratedMissingPath: "Generated image path is missing",
     errors: {
       generic: "Something went wrong. Please try again.",
@@ -1545,7 +1533,8 @@ export default {
       sendNetwork: "Connection failed. Check your network and try again.",
       sendAuth: "Your API key is invalid or expired. Check Settings.",
       sendGeneric: "Couldn't send your message. Please try again.",
-      providerThinkingNotSupported: "This model doesn't support extended thinking. Switch model or disable thinking in Settings.",
+      providerThinkingNotSupported:
+        "This model doesn't support extended thinking. Switch model or disable thinking in Settings.",
       providerStreamLost: "Connection lost. Refresh or resend your message.",
       providerGeneric: "The AI didn't respond. Please try again.",
       permissionFailed: "Couldn't approve the tool. The agent has stopped.",
@@ -1564,7 +1553,7 @@ export default {
         "session.delete": "Delete Session",
         "render.boundary": "Panel Render",
         "session.list": "Session List",
-        "unknown": "Unknown Error",
+        unknown: "Unknown Error",
       },
     },
   },
@@ -1589,10 +1578,13 @@ export default {
       flashcardsDesc: "Turn this into Q/A memory cards",
     },
     askPrompts: {
-      discuss: "I'd like to discuss this passage with you. First call out the key ideas, then suggest questions worth pushing further on:\n\n{text}",
-      explain: "Please explain the following passage in plain, direct language. Use a concrete example if it helps:\n\n{text}",
+      discuss:
+        "I'd like to discuss this passage with you. First call out the key ideas, then suggest questions worth pushing further on:\n\n{text}",
+      explain:
+        "Please explain the following passage in plain, direct language. Use a concrete example if it helps:\n\n{text}",
       quiz: "Generate 3 comprehension questions (with short answers) based on the passage below to help me check my understanding:\n\n{text}",
-      flashcards: "Turn the passage below into 4–6 Q/A flashcards. Each card should focus on a single core point:\n\n{text}",
+      flashcards:
+        "Turn the passage below into 4–6 Q/A flashcards. Each card should focus on a single core point:\n\n{text}",
     },
     videoNote: "Video Note",
     summaryTitle: "Summary",
@@ -1676,7 +1668,8 @@ export default {
     apiKeyOptional: "optional",
     localModelNoKey: "Local models don't need API Key",
     mimoEndpoint: "MiMo Endpoint",
-    mimoEndpointHint: "Choose the official API or a Token Plan regional endpoint.",
+    mimoEndpointHint:
+      "Choose the official API or a Token Plan regional endpoint.",
     model: "Model",
     customModelId: "Custom Model ID",
     customModelHint: "e.g. deepseek-ai/DeepSeek-V3 or Pro/ERNIE-4.0-Turbo-8K",
@@ -1709,7 +1702,8 @@ export default {
       configuredModels: "Configured",
       manageModels: "Manage models",
       manageModelsHint: "Add or edit providers in AI Settings",
-      noConfiguredModels: "No usable model yet. Configure a provider in AI Settings first.",
+      noConfiguredModels:
+        "No usable model yet. Configure a provider in AI Settings first.",
       appliesToNextMessage: "Applies to the next message",
       contextContinues:
         "This keeps the conversation context. Some history details may be compacted for model compatibility.",
@@ -1782,7 +1776,8 @@ export default {
       modelLabel: "Model",
       modelHint: "Leave blank to use the provider default",
       baseUrlLabel: "Base URL",
-      baseUrlHint: "For proxies or regional endpoints. Leave blank for default.",
+      baseUrlHint:
+        "For proxies or regional endpoints. Leave blank for default.",
       saveButton: "Save",
       resetButton: "Reset",
       saved: "Saved",
