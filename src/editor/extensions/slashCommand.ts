@@ -46,6 +46,14 @@ export type SlashAIStageId =
   | "generating"
   | "ready";
 
+const slashAIStageOrder: SlashAIStageId[] = [
+  "understanding",
+  "reading-context",
+  "preparing-context",
+  "generating",
+  "ready",
+];
+
 export interface SlashAIProgress {
   stage: SlashAIStageId;
   status: "active" | "done" | "error";
@@ -60,6 +68,27 @@ export interface SlashAIResult {
   text: string;
   from: number;
   to: number;
+}
+
+export interface SlashAIInlinePreviewLabels {
+  previewTitle: string;
+  generating: string;
+  insert: string;
+  cancel: string;
+  regenerate: string;
+  stages: Record<SlashAIStageId, string>;
+}
+
+export type SlashAIInlinePreviewStageStatus = "pending" | SlashAIProgress["status"];
+
+export interface SlashAIInlinePreview {
+  id: string;
+  status: "running" | "preview";
+  anchor: number;
+  result?: SlashAIResult;
+  commandLabel: string;
+  labels: SlashAIInlinePreviewLabels;
+  stageStatuses: Record<SlashAIStageId, SlashAIInlinePreviewStageStatus>;
 }
 
 export class SlashAIAbortError extends Error {
@@ -430,6 +459,7 @@ export function applySlashAIResult(view: EditorView, result: SlashAIResult): voi
   view.dispatch({
     changes: { from, to, insert: result.text },
     selection: { anchor: from + result.text.length },
+    effects: clearSlashAIInlinePreview.of(),
   });
   view.focus();
 }
@@ -825,6 +855,8 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
 export const showSlashMenu = StateEffect.define<{ pos: number; filter: string }>();
 export const hideSlashMenu = StateEffect.define<void>();
 export const updateSlashFilter = StateEffect.define<string>();
+export const showSlashAIInlinePreview = StateEffect.define<SlashAIInlinePreview>();
+export const clearSlashAIInlinePreview = StateEffect.define<void>();
 
 interface SlashMenuState {
   active: boolean;
@@ -864,6 +896,280 @@ export const slashMenuField = StateField.define<SlashMenuState>({
     
     return state;
   },
+});
+
+class SlashAIInlinePreviewWidget extends WidgetType {
+  constructor(readonly preview: SlashAIInlinePreview) {
+    super();
+  }
+
+  eq(other: SlashAIInlinePreviewWidget) {
+    return (
+      other.preview.id === this.preview.id &&
+      other.preview.status === this.preview.status &&
+      other.preview.anchor === this.preview.anchor &&
+      other.preview.result?.text === this.preview.result?.text &&
+      other.preview.result?.from === this.preview.result?.from &&
+      other.preview.result?.to === this.preview.result?.to &&
+      JSON.stringify(other.preview.stageStatuses) === JSON.stringify(this.preview.stageStatuses)
+    );
+  }
+
+  toDOM() {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cm-slash-ai-inline-preview";
+    wrapper.style.cssText = `
+      box-sizing: border-box;
+      margin: 10px 0 12px;
+      display: grid;
+      grid-template-columns: minmax(112px, 0.28fr) minmax(0, 1fr);
+      gap: 12px;
+      color: hsl(var(--foreground));
+    `;
+
+    const rail = document.createElement("aside");
+    rail.style.cssText = `
+      border-right: 1px solid hsl(var(--border) / 0.65);
+      padding: 8px 12px 8px 0;
+      color: hsl(var(--muted-foreground));
+      font-size: 11px;
+      line-height: 1.45;
+    `;
+
+    const railTitle = document.createElement("div");
+    railTitle.textContent = "AI";
+    railTitle.style.cssText = `
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 7px;
+      border-radius: 999px;
+      border: 1px solid hsl(var(--primary) / 0.18);
+      background: hsl(var(--primary) / 0.08);
+      color: hsl(var(--primary));
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 7px;
+    `;
+    rail.appendChild(railTitle);
+
+    const stageList = document.createElement("div");
+    stageList.style.cssText = "display: grid; gap: 5px;";
+    for (const stage of slashAIStageOrder) {
+      const status = this.preview.stageStatuses[stage];
+      const item = document.createElement("div");
+      item.style.cssText = "display: flex; align-items: center; gap: 6px;";
+      const dot = document.createElement("span");
+      dot.style.cssText = `
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: ${
+          status === "done"
+            ? "hsl(var(--primary) / 0.55)"
+            : status === "active"
+              ? "hsl(var(--primary))"
+              : status === "error"
+                ? "hsl(var(--destructive))"
+                : "hsl(var(--muted-foreground) / 0.35)"
+        };
+        flex: 0 0 auto;
+      `;
+      const label = document.createElement("span");
+      label.textContent = this.preview.labels.stages[stage];
+      label.style.cssText = "min-width: 0; overflow: hidden; text-overflow: ellipsis;";
+      item.append(dot, label);
+      stageList.appendChild(item);
+    }
+    rail.appendChild(stageList);
+
+    const body = document.createElement("section");
+    body.style.cssText = `
+      overflow: hidden;
+      border: 1px solid hsl(var(--border) / 0.72);
+      border-radius: 10px;
+      background: hsl(var(--background) / 0.74);
+      box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.025);
+    `;
+
+    const header = document.createElement("div");
+    header.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 10px;
+      border-bottom: 1px solid hsl(var(--border) / 0.6);
+      background: hsl(var(--muted) / 0.16);
+      color: hsl(var(--muted-foreground));
+      font-size: 11px;
+      font-weight: 600;
+    `;
+    const title = document.createElement("span");
+    title.textContent = this.preview.commandLabel;
+    title.style.cssText = "min-width: 0; overflow: hidden; text-overflow: ellipsis;";
+    const unsaved = document.createElement("span");
+    unsaved.textContent =
+      this.preview.status === "running"
+        ? this.preview.labels.generating
+        : this.preview.labels.previewTitle;
+    unsaved.style.cssText = `
+      flex: 0 0 auto;
+      border: 1px solid hsl(var(--border) / 0.65);
+      border-radius: 999px;
+      padding: 1px 7px;
+      background: hsl(var(--background) / 0.72);
+      color: hsl(var(--muted-foreground));
+      font-size: 10px;
+      font-weight: 500;
+    `;
+    header.append(title, unsaved);
+
+    const text = document.createElement("pre");
+    text.textContent =
+      this.preview.status === "running"
+        ? this.preview.labels.generating
+        : this.preview.result?.text ?? "";
+    text.style.cssText = `
+      margin: 0;
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre-wrap;
+      padding: 10px 12px 11px;
+      color: hsl(var(--foreground) / 0.82);
+      font-family: inherit;
+      font-size: 0.95em;
+      line-height: 1.7;
+      background:
+        linear-gradient(90deg, hsl(var(--primary) / 0.10), transparent 5px)
+        hsl(var(--background) / 0.46);
+    `;
+
+    const footer = document.createElement("div");
+    footer.style.cssText = `
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 7px;
+      padding: 8px 10px;
+      border-top: 1px solid hsl(var(--border) / 0.58);
+      background: hsl(var(--muted) / 0.10);
+    `;
+
+    const makeButton = (label: string, action: "accept" | "cancel" | "regenerate", primary = false) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = label;
+      button.dataset.action = action;
+      button.style.cssText = primary
+        ? `
+          height: 28px;
+          padding: 0 11px;
+          border: 1px solid hsl(var(--primary));
+          border-radius: 7px;
+          background: hsl(var(--primary));
+          color: hsl(var(--primary-foreground));
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        `
+        : `
+          height: 28px;
+          padding: 0 10px;
+          border: 1px solid hsl(var(--border) / 0.72);
+          border-radius: 7px;
+          background: hsl(var(--background) / 0.74);
+          color: hsl(var(--foreground) / 0.78);
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+        `;
+      button.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+      });
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("slash-ai-inline-preview-action", {
+            detail: { id: this.preview.id, action },
+          }),
+        );
+      });
+      return button;
+    };
+
+    if (this.preview.status === "running") {
+      footer.append(makeButton(this.preview.labels.cancel, "cancel"));
+    } else {
+      footer.append(
+        makeButton(this.preview.labels.cancel, "cancel"),
+        makeButton(this.preview.labels.regenerate, "regenerate"),
+        makeButton(this.preview.labels.insert, "accept", true),
+      );
+    }
+    body.append(header, text, footer);
+    wrapper.append(rail, body);
+    return wrapper;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
+export const slashAIInlinePreviewField = StateField.define<SlashAIInlinePreview | null>({
+  create: () => null,
+  update(preview, tr) {
+    let next = preview;
+    if (next && tr.docChanged) {
+      const mappedAnchor = tr.changes.mapPos(next.anchor);
+      next = {
+        ...next,
+        anchor: mappedAnchor,
+        result: next.result
+          ? {
+              ...next.result,
+              from: tr.changes.mapPos(next.result.from),
+              to: tr.changes.mapPos(next.result.to),
+            }
+          : undefined,
+      };
+    }
+    for (const effect of tr.effects) {
+      if (effect.is(showSlashAIInlinePreview)) {
+        next = effect.value;
+      }
+      if (effect.is(clearSlashAIInlinePreview)) {
+        next = null;
+      }
+    }
+    return next;
+  },
+  provide: (field) =>
+    EditorView.decorations.from(field, (preview) => {
+      if (!preview) return Decoration.none;
+      const result = preview.result;
+      const safeFrom = result ? Math.max(0, Math.min(result.from, result.to)) : preview.anchor;
+      const safeTo = result ? Math.max(result.from, result.to) : preview.anchor;
+      const decorations = [
+        Decoration.widget({
+          widget: new SlashAIInlinePreviewWidget(preview),
+          block: true,
+          side: 1,
+        }).range(preview.anchor),
+      ];
+      if (result && safeTo > safeFrom) {
+        decorations.push(
+          Decoration.mark({
+            attributes: {
+              style:
+                "background: hsl(var(--primary) / 0.055); text-decoration: underline; text-decoration-style: dashed; text-decoration-color: hsl(var(--primary) / 0.35); text-underline-offset: 3px;",
+            },
+          }).range(safeFrom, safeTo),
+        );
+      }
+      return Decoration.set(decorations, true);
+    }),
 });
 
 // ============ 输入处理 ============
@@ -1024,5 +1330,6 @@ export function placeholderExtension(text: string) {
 
 export const slashCommandExtensions = [
   slashMenuField,
+  slashAIInlinePreviewField,
   slashCommandPlugin,
 ];

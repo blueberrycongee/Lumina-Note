@@ -9,10 +9,12 @@ import { Check, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   applySlashAIResult,
+  clearSlashAIInlinePreview,
   getDefaultCommands,
   getSlashAIActionForCommandId,
   hideSlashMenu,
   runSlashAIAction,
+  showSlashAIInlinePreview,
   SlashCommand,
   SlashAIAction,
   SlashAIAbortError,
@@ -69,6 +71,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     () => createInitialAIStages(),
   );
   const [aiResult, setAiResult] = useState<SlashAIResult | null>(null);
+  const [aiPreviewId, setAiPreviewId] = useState<string | null>(null);
   const [aiError, setAiError] = useState("");
   const [aiSlashRange, setAiSlashRange] = useState<{ from: number; to: number } | null>(null);
   const [aiPromptAction, setAiPromptAction] = useState<SlashAIAction | null>(null);
@@ -87,11 +90,43 @@ export function SlashMenu({ view }: SlashMenuProps) {
           ? inlineAI.errorTitle
           : inlineAI.generate;
 
+  const buildInlinePreview = useCallback((
+    id: string,
+    status: "running" | "preview",
+    anchor: number,
+    stageStatuses: Record<SlashAIStageId, AIPanelStageStatus>,
+    result?: SlashAIResult,
+  ) => ({
+    id,
+    status,
+    anchor,
+    result,
+    commandLabel: aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat,
+    labels: {
+      previewTitle: inlineAI.previewTitle,
+      generating: inlineAI.generating,
+      insert: inlineAI.insert,
+      cancel: t.common.cancel,
+      regenerate: inlineAI.regenerate,
+      stages: inlineAI.stages,
+    },
+    stageStatuses,
+  }), [
+    aiPromptCommand?.label,
+    t.editor.slashMenu.commands.aiChat,
+    t.common.cancel,
+    inlineAI.previewTitle,
+    inlineAI.generating,
+    inlineAI.insert,
+    inlineAI.regenerate,
+    inlineAI.stages,
+  ]);
+
   const closeMenu = useCallback(() => {
     aiAbortControllerRef.current?.abort();
     aiAbortControllerRef.current = null;
     if (view) {
-      view.dispatch({ effects: hideSlashMenu.of() });
+      view.dispatch({ effects: [hideSlashMenu.of(), clearSlashAIInlinePreview.of()] });
       view.focus();
     }
     setAiPromptOpen(false);
@@ -100,6 +135,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     setAiSubmitting(false);
     setAiStages(createInitialAIStages());
     setAiResult(null);
+    setAiPreviewId(null);
     setAiError("");
     setAiSlashRange(null);
     setAiPromptAction(null);
@@ -164,6 +200,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
       setAiSubmitting(false);
       setAiStages(createInitialAIStages());
       setAiResult(null);
+      setAiPreviewId(null);
       setAiError("");
       setAiPromptAction(aiAction);
       setAiPromptCommand(cmd);
@@ -186,11 +223,24 @@ export function SlashMenu({ view }: SlashMenuProps) {
     }
     const range = aiSlashRange;
     setAiSlashRange({ from: range.from, to: range.from });
+    const previewId = `slash-ai-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let inlineStageStatuses = createInitialAIStages();
     setAiResult(null);
+    setAiPreviewId(previewId);
     setAiError("");
-    setAiStages(createInitialAIStages());
+    setAiStages(inlineStageStatuses);
     setAiStatus("running");
     setAiSubmitting(true);
+    view.dispatch({
+      effects: [
+        hideSlashMenu.of(),
+        showSlashAIInlinePreview.of(
+          buildInlinePreview(previewId, "running", range.from, inlineStageStatuses),
+        ),
+      ],
+    });
+    setVisible(false);
+    setAiPromptOpen(false);
     const abortController = new AbortController();
     aiAbortControllerRef.current = abortController;
     try {
@@ -203,25 +253,41 @@ export function SlashMenu({ view }: SlashMenuProps) {
         {
           signal: abortController.signal,
           onProgress: (progress) => {
-            setAiStages((current) => ({
-              ...current,
+            inlineStageStatuses = {
+              ...inlineStageStatuses,
               [progress.stage]: progress.status,
-            }));
+            };
+            setAiStages(inlineStageStatuses);
+            view.dispatch({
+              effects: showSlashAIInlinePreview.of(
+                buildInlinePreview(previewId, "running", range.from, inlineStageStatuses),
+              ),
+            });
           },
         },
       );
       if (!result || abortController.signal.aborted) return;
       setAiResult(result);
+      setAiPreviewId(previewId);
       setAiStatus("preview");
-      setAiStages((current) => ({
-        ...current,
-        generating: current.generating === "error" ? "error" : "done",
+      inlineStageStatuses = {
+        ...inlineStageStatuses,
+        generating: inlineStageStatuses.generating === "error" ? "error" : "done",
         ready: "done",
-      }));
+      };
+      setAiStages(inlineStageStatuses);
+      view.dispatch({
+        effects: showSlashAIInlinePreview.of(
+          buildInlinePreview(previewId, "preview", result.from, inlineStageStatuses, result),
+        ),
+      });
     } catch (error) {
       if (error instanceof SlashAIAbortError || abortController.signal.aborted) {
         return;
       }
+      view.dispatch({ effects: clearSlashAIInlinePreview.of() });
+      setVisible(true);
+      setAiPromptOpen(true);
       setAiStatus("error");
       setAiError(error instanceof Error ? error.message : inlineAI.genericError);
     } finally {
@@ -236,6 +302,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
     aiPromptAction,
     aiSubmitting,
     aiPromptText,
+    buildInlinePreview,
     inlineAI.promptRequired,
     inlineAI.genericError,
   ]);
@@ -245,6 +312,39 @@ export function SlashMenu({ view }: SlashMenuProps) {
     applySlashAIResult(view, aiResult);
     closeMenu();
   }, [view, aiResult, closeMenu]);
+
+  useEffect(() => {
+    const handlePreviewAction = (
+      e: CustomEvent<{ id: string; action: "accept" | "cancel" | "regenerate" }>,
+    ) => {
+      if (!view || e.detail.id !== aiPreviewId) return;
+      if (e.detail.action === "accept") {
+        if (!aiResult) return;
+        applySlashAIResult(view, aiResult);
+        closeMenu();
+        return;
+      }
+      view.dispatch({ effects: clearSlashAIInlinePreview.of() });
+      if (e.detail.action === "cancel") {
+        closeMenu();
+        return;
+      }
+      if (e.detail.action === "regenerate") {
+        setVisible(true);
+        setAiPromptOpen(true);
+        setAiStatus("prompt");
+        setAiResult(null);
+        setAiPreviewId(null);
+        window.setTimeout(() => {
+          void startAIGeneration();
+        }, 0);
+      }
+    };
+
+    window.addEventListener("slash-ai-inline-preview-action", handlePreviewAction as EventListener);
+    return () =>
+      window.removeEventListener("slash-ai-inline-preview-action", handlePreviewAction as EventListener);
+  }, [view, aiResult, aiPreviewId, closeMenu, startAIGeneration]);
 
   // 监听菜单显示事件
   useEffect(() => {
@@ -259,6 +359,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
       setAiSubmitting(false);
       setAiStages(createInitialAIStages());
       setAiResult(null);
+      setAiPreviewId(null);
       setAiError("");
       setAiSlashRange(null);
       setAiPromptAction(null);
@@ -284,6 +385,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
         setAiSubmitting(false);
         setAiStages(createInitialAIStages());
         setAiResult(null);
+        setAiPreviewId(null);
         setAiError("");
         setAiSlashRange(null);
         setAiPromptAction(null);
