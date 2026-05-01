@@ -173,18 +173,18 @@ export function VscodeAiExtensionSidebarPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border/60 bg-muted/15 px-1.5">
-        <div className="flex min-w-0 flex-1 rounded-ui-sm border border-border/50 bg-muted/25 p-0.5">
+      <div className="flex h-9 shrink-0 items-stretch gap-1 border-b border-border/60 bg-background px-2">
+        <div className="flex min-w-0 flex-1">
           {EXTENSIONS.map((extension) => (
             <button
               key={extension.id}
               type="button"
               onClick={() => setSelectedId(extension.id)}
               className={cn(
-                "min-w-0 flex-1 rounded-ui-sm px-2 py-1 text-xs font-medium transition-colors",
+                "min-w-0 flex-1 border-b-2 px-2 text-xs font-medium transition-colors",
                 selectedId === extension.id
-                  ? "bg-background text-foreground shadow-ui-card"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
               )}
             >
               <span className="truncate">{extension.label}</span>
@@ -221,13 +221,13 @@ export function VscodeAiExtensionSidebarPanel() {
       </div>
 
       {action.message ? (
-        <div className="shrink-0 border-b border-border/60 bg-muted/20 px-2 py-1.5 text-xs text-muted-foreground">
+        <div className="shrink-0 border-b border-border/60 bg-muted/10 px-2 py-1.5 text-xs text-muted-foreground">
           {action.message}
         </div>
       ) : null}
 
       {showManage || !activeHostSession ? (
-        <div className="shrink-0 border-b border-border/60 bg-background/95 p-2">
+        <div className="shrink-0 border-b border-border/60 bg-background p-2">
           <div className="flex items-start gap-2">
             {missingCapabilities.length === 0 ? (
               <CheckCircle2 size={15} className="mt-0.5 text-emerald-500" />
@@ -268,7 +268,7 @@ export function VscodeAiExtensionSidebarPanel() {
               onChange={(event) =>
                 setSource(event.target.value as VscodeAiExtensionSource)
               }
-              className="h-8 min-w-0 flex-1 rounded-ui-md border border-border bg-background px-2 text-xs"
+              className="h-8 min-w-0 flex-1 border border-border/70 bg-background px-2 text-xs"
             >
               <option value="marketplace">Marketplace</option>
               <option value="open-vsx">Open VSX</option>
@@ -406,7 +406,7 @@ function IconButton({
       title={label}
       onClick={onClick}
       disabled={disabled || busy}
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
     >
       {busy ? <RefreshCw size={14} className="animate-spin" /> : icon}
     </button>
