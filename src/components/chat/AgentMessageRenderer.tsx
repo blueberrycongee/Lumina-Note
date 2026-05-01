@@ -13,6 +13,7 @@ import {
   useCallback,
   useEffect,
   memo,
+  useRef,
   type MouseEvent,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,7 +33,7 @@ import { DiffView } from "@/components/effects/DiffView";
 import { useAIStore, type PendingDiff } from "@/stores/useAIStore";
 import { useFileStore } from "@/stores/useFileStore";
 import { readBinaryFileBase64, saveFile } from "@/lib/host";
-import { join } from "@/lib/path";
+import { dirname, isAbsolute, join, normalize } from "@/lib/path";
 import { getImageMimeType } from "@/services/assets/editorImages";
 import {
   getImagesFromContent,
@@ -685,6 +686,168 @@ const ATTACHABLE_MIME = new Set([
   "image/gif",
   "image/webp",
 ]);
+
+const EXTERNAL_IMAGE_SRC_RE = /^(https?:|data:|blob:|asset:)/i;
+
+function splitImageSrcSuffix(src: string): { path: string; suffix: string } {
+  const hashIndex = src.indexOf("#");
+  const beforeHash = hashIndex >= 0 ? src.slice(0, hashIndex) : src;
+  const hash = hashIndex >= 0 ? src.slice(hashIndex) : "";
+  const queryIndex = beforeHash.indexOf("?");
+  const path = queryIndex >= 0 ? beforeHash.slice(0, queryIndex) : beforeHash;
+  const query = queryIndex >= 0 ? beforeHash.slice(queryIndex) : "";
+  return { path, suffix: `${query}${hash}` };
+}
+
+function decodeImagePath(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
+function imageSrcToLocalPath(src: string): string | null {
+  if (/^file:/i.test(src)) {
+    try {
+      return new URL(src).pathname;
+    } catch {
+      return null;
+    }
+  }
+  return splitImageSrcSuffix(src).path;
+}
+
+function normalizeAbsolutePath(path: string): string {
+  const normalizedInput = path.replace(/\\/g, "/");
+  const normalized = normalize(normalizedInput);
+  const withRoot =
+    normalizedInput.startsWith("/") && !normalized.startsWith("/")
+      ? `/${normalized}`
+      : normalized;
+  return withRoot.replace(/\/+$/, "");
+}
+
+function isPathInsideVault(path: string, vaultPath: string): boolean {
+  const candidate = normalizeAbsolutePath(path);
+  const vault = normalizeAbsolutePath(vaultPath);
+  return candidate === vault || candidate.startsWith(`${vault}/`);
+}
+
+export function resolveChatMarkdownImageCandidates({
+  src,
+  vaultPath,
+  currentFile,
+}: {
+  src: string;
+  vaultPath: string | null;
+  currentFile: string | null;
+}): string[] {
+  const rawSrc = src.trim();
+  if (!rawSrc || !vaultPath) return [];
+  if (rawSrc.startsWith("//") || EXTERNAL_IMAGE_SRC_RE.test(rawSrc)) return [];
+
+  const rawPath = imageSrcToLocalPath(rawSrc);
+  const imagePath = rawPath ? decodeImagePath(rawPath.trim()) : "";
+  if (!imagePath) return [];
+
+  const candidates = isAbsolute(imagePath)
+    ? [imagePath]
+    : [
+        currentFile ? join(dirname(currentFile), imagePath) : null,
+        join(vaultPath, imagePath),
+      ];
+
+  const seen = new Set<string>();
+  const safeCandidates: string[] = [];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const normalized = normalizeAbsolutePath(candidate);
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    if (isPathInsideVault(normalized, vaultPath)) {
+      safeCandidates.push(normalized);
+    }
+  }
+  return safeCandidates;
+}
+
+async function loadFirstChatMarkdownImageDataUrl(
+  candidates: string[],
+): Promise<string | null> {
+  for (const candidate of candidates) {
+    try {
+      const base64 = await readBinaryFileBase64(candidate);
+      return `data:${getImageMimeType(candidate)};base64,${base64}`;
+    } catch {
+      // Try the next safe candidate. Relative paths may be note-relative or
+      // vault-relative depending on what the agent produced.
+    }
+  }
+  return null;
+}
+
+const ChatMarkdownContent = memo(function ChatMarkdownContent({
+  content,
+  className,
+  vaultPath,
+  currentFile,
+}: {
+  content: string;
+  className: string;
+  vaultPath: string | null;
+  currentFile: string | null;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const html = useMemo(
+    () => parseMarkdown(formatMarkdownContent(content)),
+    [content],
+  );
+
+  useEffect(() => {
+    const root = ref.current;
+    if (!root || !vaultPath) return;
+    let cancelled = false;
+    const images: HTMLImageElement[] = Array.from(
+      root.querySelectorAll("img.markdown-image[src]"),
+    ).filter((node): node is HTMLImageElement => node instanceof HTMLImageElement);
+
+    for (const image of images) {
+      const originalSrc = image.getAttribute("src") ?? "";
+      const candidates = resolveChatMarkdownImageCandidates({
+        src: originalSrc,
+        vaultPath,
+        currentFile,
+      });
+      if (candidates.length === 0) continue;
+
+      image.dataset.luminaOriginalSrc = originalSrc;
+      image.dataset.luminaLocalImage = "loading";
+      void loadFirstChatMarkdownImageDataUrl(candidates).then((dataUrl) => {
+        if (cancelled) return;
+        if (dataUrl) {
+          image.src = dataUrl;
+          image.dataset.luminaLocalImage = "loaded";
+          return;
+        }
+        image.dataset.luminaLocalImage = "error";
+      });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [html, vaultPath, currentFile]);
+
+  return (
+    <div
+      ref={ref}
+      onClick={handleAssistantContentClick}
+      className={className}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+});
 
 function inferImageMime(
   src: string,
@@ -1714,6 +1877,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
     useAIStore();
   const openFile = useFileStore((state) => state.openFile);
   const vaultPath = useFileStore((state) => state.vaultPath);
+  const currentFile = useFileStore((state) => state.currentFile);
   const { t } = useLocaleStore();
 
   const handleAcceptDiff = useCallback(async () => {
@@ -2018,20 +2182,17 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                         }
                         const isFinalText = partIndex === lastTextIndex;
                         return (
-                          <div
+                          <ChatMarkdownContent
                             key={key}
-                            onClick={handleAssistantContentClick}
+                            content={part.content}
+                            vaultPath={vaultPath}
+                            currentFile={currentFile}
                             className={[
                               "chat-attach-images",
                               isFinalText
                                 ? "prose dark:prose-invert max-w-none leading-relaxed text-base font-medium"
                                 : "prose prose-sm dark:prose-invert max-w-none leading-relaxed",
                             ].join(" ")}
-                            dangerouslySetInnerHTML={{
-                              __html: parseMarkdown(
-                                formatMarkdownContent(part.content),
-                              ),
-                            }}
                           />
                         );
                       }

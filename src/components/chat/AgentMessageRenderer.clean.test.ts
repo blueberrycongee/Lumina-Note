@@ -2,6 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { invoke } from "@/lib/hostBridge";
+import { useFileStore } from "@/stores/useFileStore";
 import {
   AgentMessageRenderer,
   cleanUserMessage,
@@ -11,17 +13,21 @@ import {
   makeImageGeneratingMarker,
   parseGeneratedImageMarker,
   parseImageGeneratingMarker,
+  resolveChatMarkdownImageCandidates,
 } from "./AgentMessageRenderer";
 
 describe("AgentMessageRenderer", () => {
   const writeText = vi.fn<(text: string) => Promise<void>>();
+  const invokeMock = vi.mocked(invoke);
 
   beforeEach(() => {
     writeText.mockResolvedValue(undefined);
+    invokeMock.mockClear();
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText },
     });
+    useFileStore.setState({ vaultPath: null, currentFile: null });
   });
 
   it("hides the image-mode agent wrapper from user-facing chat bubbles", () => {
@@ -173,5 +179,110 @@ describe("AgentMessageRenderer", () => {
 
     fireEvent.click(copyButtons[1]);
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("Assistant reply"));
+  });
+
+  it("resolves only vault-local chat markdown image paths", () => {
+    expect(
+      resolveChatMarkdownImageCandidates({
+        src: "assets/hero%20image.png?raw=1#preview",
+        vaultPath: "/vault",
+        currentFile: "/vault/notes/current.md",
+      }),
+    ).toEqual([
+      "/vault/notes/assets/hero image.png",
+      "/vault/assets/hero image.png",
+    ]);
+
+    expect(
+      resolveChatMarkdownImageCandidates({
+        src: "/vault/assets/hero.png",
+        vaultPath: "/vault",
+        currentFile: "/vault/notes/current.md",
+      }),
+    ).toEqual(["/vault/assets/hero.png"]);
+    expect(
+      resolveChatMarkdownImageCandidates({
+        src: "file:///vault/assets/hero%20image.png",
+        vaultPath: "/vault",
+        currentFile: "/vault/notes/current.md",
+      }),
+    ).toEqual(["/vault/assets/hero image.png"]);
+
+    expect(
+      resolveChatMarkdownImageCandidates({
+        src: "/Users/other/secret.png",
+        vaultPath: "/vault",
+        currentFile: "/vault/notes/current.md",
+      }),
+    ).toEqual([]);
+    expect(
+      resolveChatMarkdownImageCandidates({
+        src: "../../../secret.png",
+        vaultPath: "/vault",
+        currentFile: "/vault/notes/current.md",
+      }),
+    ).toEqual([]);
+    expect(
+      resolveChatMarkdownImageCandidates({
+        src: "https://example.com/hero.png",
+        vaultPath: "/vault",
+        currentFile: "/vault/notes/current.md",
+      }),
+    ).toEqual([]);
+  });
+
+  it("loads vault-local assistant markdown images as data URLs", async () => {
+    useFileStore.setState({
+      vaultPath: "/vault",
+      currentFile: "/vault/notes/current.md",
+    });
+    invokeMock.mockImplementation((cmd: string, args?: unknown) => {
+      if (cmd === "read_binary_file_base64") {
+        const path = (args as { path?: string } | undefined)?.path;
+        if (path === "/vault/notes/assets/hero.png") {
+          return Promise.resolve("aGVybw==");
+        }
+        return Promise.reject(new Error("missing"));
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const { container } = render(
+      createElement(AgentMessageRenderer, {
+        isRunning: false,
+        messages: [
+          {
+            id: "msg-user",
+            role: "user",
+            content: "Show image",
+            rawParts: [],
+          },
+          {
+            id: "msg-assistant",
+            role: "assistant",
+            content: "![Hero](assets/hero.png)",
+            rawParts: [
+              {
+                id: "part-text",
+                sessionID: "test-session",
+                messageID: "msg-assistant",
+                type: "text",
+                text: "![Hero](assets/hero.png)",
+              } as never,
+            ],
+          },
+        ],
+      }),
+    );
+
+    const image = container.querySelector<HTMLImageElement>("img.markdown-image");
+    expect(image).not.toBeNull();
+    expect(image?.getAttribute("src")).toBe("assets/hero.png");
+
+    await waitFor(() => {
+      expect(image?.getAttribute("src")).toBe("data:image/png;base64,aGVybw==");
+    });
+    expect(image?.dataset.luminaOriginalSrc).toBe("assets/hero.png");
+    expect(image?.dataset.luminaLocalImage).toBe("loaded");
   });
 });
