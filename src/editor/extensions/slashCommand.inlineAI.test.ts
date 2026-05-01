@@ -224,56 +224,6 @@ async function* streamEvents() {
   };
 }
 
-async function* streamEventsWithoutIdle() {
-  await Promise.resolve();
-  yield {
-    type: "message.updated",
-    properties: {
-      sessionID: "session-1",
-      info: { id: "assistant-1", role: "assistant", sessionID: "session-1" },
-    },
-  };
-  yield {
-    type: "message.part.delta",
-    properties: {
-      sessionID: "session-1",
-      messageID: "assistant-1",
-      partID: "draft-1",
-      field: "text",
-      delta: "Streaming draft before final fetch",
-    },
-  };
-  yield {
-    type: "server.heartbeat",
-    properties: {},
-  };
-}
-
-async function* streamEventsWithoutPartMetadata() {
-  await Promise.resolve();
-  yield {
-    type: "message.updated",
-    properties: {
-      sessionID: "session-1",
-      info: { id: "assistant-1", role: "assistant", sessionID: "session-1" },
-    },
-  };
-  yield {
-    type: "message.part.delta",
-    properties: {
-      sessionID: "session-1",
-      messageID: "assistant-1",
-      partID: "draft-1",
-      field: "text",
-      delta: "Fallback Markdown from pending delta",
-    },
-  };
-  yield {
-    type: "server.heartbeat",
-    properties: {},
-  };
-}
-
 describe("slash inline AI", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -376,43 +326,44 @@ describe("slash inline AI", () => {
     cleanup();
   });
 
-  it("finishes when opencode sends heartbeat after text deltas without idle", async () => {
-    mocks.client.event.subscribe.mockResolvedValue({ stream: streamEventsWithoutIdle() });
-    mocks.client.session.message.mockResolvedValue({
-      data: {
-        parts: [
-          {
-            id: "draft-1",
-            messageID: "assistant-1",
-            type: "text",
-            text: "Final Markdown after heartbeat",
-          },
-        ],
-      },
-    });
-    const { view, cleanup } = createView("Hello /ai");
-
-    const result = await runSlashAIAction(
-      view,
-      6,
-      9,
-      "chat-insert",
-      "write a crisp sentence",
-    );
-
-    expect(result).toEqual({
-      text: "Final Markdown after heartbeat",
-      from: 6,
-      to: 6,
-    });
-    cleanup();
-  });
-
-  it("uses pending text deltas when opencode omits part metadata for simple text", async () => {
+  it("keeps listening through long-running tool work until opencode reports idle", async () => {
+    let now = 1_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
     mocks.client.event.subscribe.mockResolvedValue({
-      stream: streamEventsWithoutPartMetadata(),
+      stream: (async function* () {
+        yield {
+          type: "message.updated",
+          properties: {
+            sessionID: "session-1",
+            info: { id: "assistant-1", role: "assistant", sessionID: "session-1" },
+          },
+        };
+        yield {
+          type: "message.part.updated",
+          properties: {
+            sessionID: "session-1",
+            part: {
+              id: "draft-1",
+              messageID: "assistant-1",
+              type: "text",
+              text: "Long running draft",
+            },
+          },
+        };
+        now = 123_000;
+        yield {
+          type: "server.heartbeat",
+          properties: {},
+        };
+        yield {
+          type: "session.idle",
+          properties: {
+            sessionID: "session-1",
+          },
+        };
+      })(),
     });
-    mocks.client.session.message.mockResolvedValue({ data: { parts: [] } });
+
     const { view, cleanup } = createView("Hello /ai");
 
     const result = await runSlashAIAction(
@@ -420,14 +371,15 @@ describe("slash inline AI", () => {
       6,
       9,
       "chat-insert",
-      "write a crisp sentence",
+      "insert images from the workspace",
     );
 
-    expect(result).toEqual({
-      text: "Fallback Markdown from pending delta",
-      from: 6,
-      to: 6,
-    });
+    expect(result?.text).toBe("Final Markdown to insert");
+    expect(mocks.client.session.message).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: { id: "session-1", messageID: "assistant-1" },
+      }),
+    );
     cleanup();
   });
 

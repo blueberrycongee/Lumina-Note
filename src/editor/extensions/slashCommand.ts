@@ -406,8 +406,8 @@ async function generateInlineAIMarkdown(
     "Your job is to produce new Markdown text that can be inserted at [INSERT_HERE].",
     "Use the surrounding note as context. If the user explicitly asks about workspace files, images, or paths, use the available tools to inspect the workspace before producing the insertable Markdown.",
     "Do not repeat, summarize, rewrite, or return the whole note unless the user explicitly asks for that.",
-    "You may briefly describe work while you inspect context or use tools, but your final assistant text must be only the Markdown that should be inserted into the note.",
-    "Do not put progress narration, apologies, or tool explanations in the final insertable Markdown.",
+    "Assistant text parts are treated as insertable Markdown. Do not put progress narration, apologies, or tool explanations in assistant text parts.",
+    "Use reasoning and tool events for work process. The final assistant text must be only the Markdown that should be inserted into the note.",
     "If inserting workspace images, use Markdown image references that are valid from the current note location.",
     currentFilePath ? `Current note path: ${currentFilePath}` : "",
     "",
@@ -470,10 +470,6 @@ async function generateInlineAIMarkdown(
       const pendingParts = new Map<string, Part[]>();
       const pendingTextDeltas = new Map<string, string>();
       const activities = new Map<string, SlashAIActivity>();
-      const startedAt = Date.now();
-      const timeoutMs = 120_000;
-      const wait = (ms: number) =>
-        new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
       const acceptAssistantMessageId = (messageId: string) => {
         if (!assistantMessageId) {
@@ -504,40 +500,28 @@ async function generateInlineAIMarkdown(
           activities,
         );
       };
-      const hasAssistantOutputSignal = () =>
-        assistantMessageId !== null &&
-        (latestTextPart.trim().length > 0 ||
-          pendingTextDeltas.size > 0 ||
-          assistantParts.some(
-            (part) => part.type === "text" && part.text.trim().length > 0,
-          ));
       const readFinalAssistantText = async () => {
         if (!assistantMessageId) return "";
-        for (let attempt = 0; attempt < 10; attempt += 1) {
-          const msg = await client.session.message({
-            path: { id: sessionId, messageID: assistantMessageId },
-            query,
-            throwOnError: true,
-          });
-          const msgParts =
-            ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
-          assistantParts.splice(0, assistantParts.length, ...msgParts);
-          let changed = false;
-          for (const part of msgParts) {
-            changed = updateSlashAIActivityFromPart(part, activities) || changed;
-          }
-          if (changed) {
-            emitSlashAIActivities(callbacks, activities);
-          }
-          const text = extractInlineAIInsertTextFromParts(msgParts);
-          if (text.trim()) {
-            syncAssistantParts();
-            return text;
-          }
-          if (pendingTextDeltas.size === 0) break;
-          await wait(250);
+        const msg = await client.session.message({
+          path: { id: sessionId, messageID: assistantMessageId },
+          query,
+          throwOnError: true,
+        });
+        const msgParts =
+          ((msg.data as { parts?: Part[] } | undefined)?.parts ?? []) as Part[];
+        assistantParts.splice(0, assistantParts.length, ...msgParts);
+        let changed = false;
+        for (const part of msgParts) {
+          changed = updateSlashAIActivityFromPart(part, activities) || changed;
         }
-        return "";
+        if (changed) {
+          emitSlashAIActivities(callbacks, activities);
+        }
+        const text = extractInlineAIInsertTextFromParts(msgParts);
+        if (text.trim()) {
+          syncAssistantParts();
+        }
+        return text;
       };
 
       const promptReq = client.session
@@ -676,16 +660,8 @@ async function generateInlineAIMarkdown(
             (event.type === "session.status" &&
               eventSessionId === sessionId &&
               (props.status as { type?: string } | undefined)?.type === "idle");
-          const isCompletionHeartbeat =
-            event.type === "server.heartbeat" &&
-            promptAccepted &&
-            hasAssistantOutputSignal();
-          if ((isIdle && promptAccepted) || isCompletionHeartbeat) {
+          if (isIdle && (promptAccepted || assistantMessageId || assistantParts.length > 0)) {
             break;
-          }
-
-          if (Date.now() - startedAt > timeoutMs) {
-            throw new Error("Inline AI streaming timeout");
           }
         }
       } finally {
@@ -705,11 +681,7 @@ async function generateInlineAIMarkdown(
         }
       }
 
-      const pendingFallback =
-        activities.size === 0
-          ? Array.from(pendingTextDeltas.values()).join("").trim()
-          : "";
-      const insertText = stripMarkdownFence(rawText || pendingFallback).trim();
+      const insertText = stripMarkdownFence(rawText).trim();
       if (!insertText) {
         throw new Error("AI did not return insertable Markdown");
       }
