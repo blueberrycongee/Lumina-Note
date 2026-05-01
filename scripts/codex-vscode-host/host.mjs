@@ -845,6 +845,11 @@ function themeVariablesCss(mode) {
     "--vscode-editorWidget-background": "#ffffff",
     "--vscode-editorWidget-border": "#d0d7de",
     "--vscode-editorWidget-foreground": "#1f2328",
+    "--vscode-editorHoverWidget-background": "#ffffff",
+    "--vscode-editorHoverWidget-foreground": "#1f2328",
+    "--vscode-editorHoverWidget-border": "#d0d7de",
+    "--vscode-editorHoverWidget-highlightForeground": "#0969da",
+    "--vscode-editorHoverWidget-statusBarBackground": "#f6f8fa",
     "--vscode-activityBar-background": "#f6f8fa",
     "--vscode-activityBar-foreground": "#24292f",
     "--vscode-activityBar-inactiveForeground": "#6e7781",
@@ -983,6 +988,11 @@ function themeVariablesCss(mode) {
     "--vscode-editorWidget-background": "#252526",
     "--vscode-editorWidget-border": "#454545",
     "--vscode-editorWidget-foreground": "#cccccc",
+    "--vscode-editorHoverWidget-background": "#252526",
+    "--vscode-editorHoverWidget-foreground": "#cccccc",
+    "--vscode-editorHoverWidget-border": "#454545",
+    "--vscode-editorHoverWidget-highlightForeground": "#2aaaff",
+    "--vscode-editorHoverWidget-statusBarBackground": "#2a2d2e",
     "--vscode-activityBar-background": "#181818",
     "--vscode-activityBar-foreground": "#ffffff",
     "--vscode-activityBar-inactiveForeground": "#9d9d9d",
@@ -1104,6 +1114,18 @@ function themeVariablesCss(mode) {
 
 function injectBaseLayout(html) {
   const style = `<style data-lumina-webview-base>
+:root {
+  --lumina-webview-float-background: #252526;
+  --lumina-webview-float-foreground: #cccccc;
+  --lumina-webview-float-border: #454545;
+  --lumina-webview-float-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+:root.vscode-light {
+  --lumina-webview-float-background: #ffffff;
+  --lumina-webview-float-foreground: #1f2328;
+  --lumina-webview-float-border: #d0d7de;
+  --lumina-webview-float-shadow: 0 8px 24px rgba(140, 149, 159, 0.24);
+}
 html, body {
   height: 100%;
   width: 100%;
@@ -1126,6 +1148,37 @@ body {
 [data-radix-popper-content-wrapper] > [role="menu"],
 [data-radix-popper-content-wrapper] [role="menu"] {
   max-width: calc(100vw - 16px) !important;
+}
+[data-radix-popper-content-wrapper]:has([data-thread-title]) {
+  background-color: var(--lumina-webview-float-background) !important;
+  color: var(--lumina-webview-float-foreground) !important;
+  border: 1px solid var(--lumina-webview-float-border) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--lumina-webview-float-shadow) !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+}
+[data-radix-popper-content-wrapper] > :where([role="tooltip"], [data-side][data-align]) {
+  background-color: var(--lumina-webview-float-background) !important;
+  color: var(--lumina-webview-float-foreground) !important;
+  border: 1px solid var(--lumina-webview-float-border) !important;
+  box-shadow: var(--lumina-webview-float-shadow) !important;
+  opacity: 1 !important;
+}
+[data-radix-popper-content-wrapper]:has([data-thread-title]) > :where([role="tooltip"], [data-side][data-align]) {
+  border: 0 !important;
+  box-shadow: none !important;
+}
+[data-thread-title-trigger],
+[data-thread-title-trigger] [data-thread-title] {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+[data-thread-title] {
+  display: block !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
 }
 [data-radix-popper-content-wrapper][data-lumina-overlay-adjusted="true"] {
   translate: var(--lumina-overlay-shift-x, 0px) 0 !important;

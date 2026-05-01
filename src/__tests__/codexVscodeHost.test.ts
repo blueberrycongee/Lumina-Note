@@ -192,6 +192,11 @@ exports.activate = async function activate() {
     expect(html).toContain("data-lumina-webview-base");
     expect(html).toContain("data-lumina-webview-overlay-bounds");
     expect(html).toContain("data-radix-popper-content-wrapper");
+    expect(html).toContain("editorHoverWidget-background");
+    expect(html).toContain("lumina-webview-float-background");
+    expect(html).toContain(":has([data-thread-title])");
+    expect(html).toContain("data-thread-title-trigger");
+    expect(html).toContain("text-overflow: ellipsis");
   });
 
   it("adds compatibility sources to extension CSP without broadening unrelated directives", async () => {
