@@ -160,7 +160,7 @@ export default {
         aiContinue: "AI 续写",
         aiContinueDesc: "让 AI 继续写作",
         aiContinuePrompt:
-          "请基于《{name}》当前内容继续写作。先给出可直接粘贴到文档末尾的续写内容，再给出 2-3 个后续延展方向。",
+          "请基于《{name}》当前内容，从当前插入位置自然续写。只输出要插入在这里的正文，不要给后续方向建议。",
         aiRewrite: "AI 改写当前块",
         aiRewriteDesc: "改写当前块，保持原意",
         aiRewritePrompt: "请改写当前块，提升清晰度与可读性，保持原意和语气。",

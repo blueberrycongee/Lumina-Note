@@ -7,9 +7,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { EditorView } from "@codemirror/view";
 import {
   getDefaultCommands,
+  getSlashAIActionForCommandId,
   hideSlashMenu,
   runSlashAIAction,
   SlashCommand,
+  SlashAIAction,
   slashMenuField,
 } from "../extensions/slashCommand";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -33,6 +35,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
   const [aiPromptText, setAiPromptText] = useState("");
   const [aiSubmitting, setAiSubmitting] = useState(false);
   const [aiSlashRange, setAiSlashRange] = useState<{ from: number; to: number } | null>(null);
+  const [aiPromptAction, setAiPromptAction] = useState<SlashAIAction | null>(null);
+  const [aiPromptCommand, setAiPromptCommand] = useState<SlashCommand | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const aiPromptRef = useRef<HTMLInputElement>(null);
   const commands = useMemo(() => getDefaultCommands(t), [t]);
@@ -46,6 +50,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
     setAiPromptText("");
     setAiSubmitting(false);
     setAiSlashRange(null);
+    setAiPromptAction(null);
+    setAiPromptCommand(null);
     setVisible(false);
   }, [view]);
 
@@ -82,6 +88,13 @@ export function SlashMenu({ view }: SlashMenuProps) {
     return result;
   }, [groupedCommands]);
 
+  useEffect(() => {
+    setSelectedIndex((index) => {
+      if (flatCommands.length === 0) return 0;
+      return Math.min(index, flatCommands.length - 1);
+    });
+  }, [flatCommands.length]);
+
   // 执行命令
   const executeCommand = useCallback((cmd: SlashCommand) => {
     if (!view) return;
@@ -91,9 +104,12 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const from = state.pos;
     const to = view.state.selection.main.head;
 
-    if (cmd.id === "ai-chat") {
+    const aiAction = getSlashAIActionForCommandId(cmd.id);
+    if (aiAction) {
       setAiPromptOpen(true);
       setAiPromptText("");
+      setAiPromptAction(aiAction);
+      setAiPromptCommand(cmd);
       setAiSlashRange({ from, to });
       return;
     }
@@ -104,9 +120,9 @@ export function SlashMenu({ view }: SlashMenuProps) {
   }, [view, closeMenu]);
 
   const submitAIPrompt = useCallback(async () => {
-    if (!view || !aiSlashRange || aiSubmitting) return;
+    if (!view || !aiSlashRange || !aiPromptAction || aiSubmitting) return;
     const request = aiPromptText.trim();
-    if (!request) {
+    if (aiPromptAction === "chat-insert" && !request) {
       closeMenu();
       return;
     }
@@ -115,11 +131,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
       view,
       aiSlashRange.from,
       aiSlashRange.to,
-      "chat-insert",
+      aiPromptAction,
       request,
     );
     closeMenu();
-  }, [view, aiSlashRange, aiSubmitting, aiPromptText, closeMenu]);
+  }, [view, aiSlashRange, aiPromptAction, aiSubmitting, aiPromptText, closeMenu]);
 
   // 监听菜单显示事件
   useEffect(() => {
@@ -132,6 +148,8 @@ export function SlashMenu({ view }: SlashMenuProps) {
       setAiPromptText("");
       setAiSubmitting(false);
       setAiSlashRange(null);
+      setAiPromptAction(null);
+      setAiPromptCommand(null);
       setVisible(true);
     };
 
@@ -143,8 +161,19 @@ export function SlashMenu({ view }: SlashMenuProps) {
   useEffect(() => {
     const handleState = (e: CustomEvent<{ active: boolean; filter: string }>) => {
       if (!e.detail.active) {
+        if (aiPromptOpen) {
+          return;
+        }
         setVisible(false);
         setAiPromptOpen(false);
+        setAiPromptText("");
+        setAiSubmitting(false);
+        setAiSlashRange(null);
+        setAiPromptAction(null);
+        setAiPromptCommand(null);
+        return;
+      }
+      if (aiPromptOpen) {
         return;
       }
       setFilter(e.detail.filter);
@@ -152,7 +181,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
 
     window.addEventListener("slash-menu-state", handleState as EventListener);
     return () => window.removeEventListener("slash-menu-state", handleState as EventListener);
-  }, []);
+  }, [aiPromptOpen]);
 
   // 键盘导航
   useEffect(() => {
@@ -160,8 +189,9 @@ export function SlashMenu({ view }: SlashMenuProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (aiPromptOpen) {
-        if (e.key === "Escape") {
+        if (e.key === "Escape" && !aiSubmitting) {
           e.preventDefault();
+          e.stopPropagation();
           closeMenu();
         }
         return;
@@ -169,32 +199,36 @@ export function SlashMenu({ view }: SlashMenuProps) {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
+          e.stopPropagation();
           if (flatCommands.length > 0) {
             setSelectedIndex(i => (i + 1) % flatCommands.length);
           }
           break;
         case "ArrowUp":
           e.preventDefault();
+          e.stopPropagation();
           if (flatCommands.length > 0) {
             setSelectedIndex(i => (i - 1 + flatCommands.length) % flatCommands.length);
           }
           break;
         case "Enter":
           e.preventDefault();
+          e.stopPropagation();
           if (flatCommands[selectedIndex]) {
             executeCommand(flatCommands[selectedIndex]);
           }
           break;
         case "Escape":
           e.preventDefault();
+          e.stopPropagation();
           closeMenu();
           break;
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [visible, view, flatCommands, selectedIndex, executeCommand, aiPromptOpen, closeMenu]);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [visible, view, flatCommands, selectedIndex, executeCommand, aiPromptOpen, aiSubmitting, closeMenu]);
 
   // 点击外部关闭
   useEffect(() => {
@@ -265,7 +299,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
       {aiPromptOpen ? (
         <div className="p-3 space-y-2">
           <div className="text-xs font-medium text-muted-foreground">
-            {t.editor.slashMenu.commands.aiChat}
+            {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
           </div>
           <input
             ref={aiPromptRef}
@@ -276,18 +310,22 @@ export function SlashMenu({ view }: SlashMenuProps) {
                 e.preventDefault();
                 void submitAIPrompt();
               }
-              if (e.key === "Escape") {
+              if (e.key === "Escape" && !aiSubmitting) {
                 e.preventDefault();
                 closeMenu();
               }
             }}
-            placeholder={t.editor.slashMenu.commands.aiChatPrompt}
-            className="w-full h-9 px-2 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            disabled={aiSubmitting}
+            placeholder={aiPromptAction === "chat-insert"
+              ? t.editor.slashMenu.commands.aiChatPrompt
+              : aiPromptCommand?.description}
+            className="w-full h-9 px-2 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
           />
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              className="h-8 px-2 rounded-md text-xs border border-border hover:bg-accent/60"
+              className="h-8 px-2 rounded-md text-xs border border-border hover:bg-accent/60 disabled:opacity-60"
+              disabled={aiSubmitting}
               onClick={closeMenu}
             >
               {t.common.cancel}
@@ -295,7 +333,7 @@ export function SlashMenu({ view }: SlashMenuProps) {
             <button
               type="button"
               className="h-8 px-2 rounded-md text-xs bg-primary text-primary-foreground disabled:opacity-60"
-              disabled={aiSubmitting || !aiPromptText.trim()}
+              disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
               onClick={() => void submitAIPrompt()}
             >
               {aiSubmitting ? t.common.loading : t.common.confirm}

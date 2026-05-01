@@ -160,7 +160,7 @@ export default {
         aiContinue: "AI 續寫",
         aiContinueDesc: "讓 AI 繼續寫作",
         aiContinuePrompt:
-          "請基於《{name}》目前內容繼續寫作。先給出可直接貼到文件末尾的續寫內容，再給出 2-3 個後續延展方向。",
+          "請基於《{name}》目前內容，從目前插入位置自然續寫。只輸出要插入在這裡的正文，不要給後續方向建議。",
         aiRewrite: "AI 改寫目前區塊",
         aiRewriteDesc: "改寫目前區塊並保留原意",
         aiRewritePrompt: "請改寫目前區塊，提升清晰度與可讀性，保持原意與語氣。",

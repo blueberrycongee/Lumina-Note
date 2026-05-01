@@ -160,7 +160,7 @@ export default {
         aiContinue: "AI 続きを書く",
         aiContinueDesc: "AI で続きを書く",
         aiContinuePrompt:
-          "「{name}」の現在の内容をもとに続きを書いてください。まずノート末尾にそのまま貼れる本文を示し、その後に 2〜3 個の展開案を提案してください。",
+          "「{name}」の現在の内容をもとに、現在の挿入位置から自然に続きを書いてください。ここに挿入する本文だけを出力し、今後の方向性は提案しないでください。",
         aiRewrite: "AI で現在ブロックを書き直す",
         aiRewriteDesc: "意味を保って現在ブロックを改善",
         aiRewritePrompt:

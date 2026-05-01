@@ -160,7 +160,7 @@ export default {
         aiContinue: "AI Continue",
         aiContinueDesc: "Continue writing with AI",
         aiContinuePrompt:
-          "Continue writing based on the current content of \"{name}\". First provide a continuation I can paste at the end of the note, then suggest 2-3 possible directions.",
+          "Continue writing naturally from the current insertion point in \"{name}\". Output only the prose to insert here; do not suggest future directions.",
         aiRewrite: "AI Rewrite Block",
         aiRewriteDesc: "Rewrite current block in place",
         aiRewritePrompt:

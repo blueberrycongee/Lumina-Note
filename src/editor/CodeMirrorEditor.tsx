@@ -4941,6 +4941,7 @@ export const CodeMirrorEditor = forwardRef<
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const [editorView, setEditorView] = useState<EditorView | null>(null);
   const [blockMenu, setBlockMenu] = useState<{
     mode: "combined" | "insert";
     position: { x: number; y: number };
@@ -5298,6 +5299,7 @@ export const CodeMirrorEditor = forwardRef<
 
     const view = new EditorView({ state, parent: containerRef.current });
     viewRef.current = view;
+    setEditorView(view);
     view.scrollDOM.classList.add("editor-scroll-shell");
     const ownerDoc = view.dom.ownerDocument;
     const selectionTrace = createSelectionTraceControl(view, {
@@ -5878,6 +5880,7 @@ export const CodeMirrorEditor = forwardRef<
       _cachedDoc = null;
       _cachedDocString = "";
       viewRef.current = null;
+      setEditorView(null);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -6354,7 +6357,7 @@ export const CodeMirrorEditor = forwardRef<
         ref={containerRef}
         className={`codemirror-wrapper h-full ${className}`}
       />
-      {slashCommandsEnabled && <SlashMenu view={viewRef.current} />}
+      {slashCommandsEnabled && <SlashMenu view={editorView} />}
       {blockMenu && viewRef.current && (
         <BlockMenu
           key={`block-menu-${blockMenu.blockFrom}-${blockMenu.blockTo}`}

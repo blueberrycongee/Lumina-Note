@@ -39,6 +39,23 @@ export type SlashAIAction =
   | "expand-block"
   | "summarize-block";
 
+export function getSlashAIActionForCommandId(commandId: string): SlashAIAction | null {
+  switch (commandId) {
+    case "ai-chat":
+      return "chat-insert";
+    case "ai-continue":
+      return "continue";
+    case "ai-rewrite-block":
+      return "rewrite-block";
+    case "ai-expand-block":
+      return "expand-block";
+    case "ai-summarize-block":
+      return "summarize-block";
+    default:
+      return null;
+  }
+}
+
 function extractTextFromParts(parts: Part[]): string {
   const out: string[] = [];
   for (const part of parts) {
@@ -57,6 +74,30 @@ function stripMarkdownFence(text: string): string {
 
 function clampPos(view: EditorView, pos: number): number {
   return Math.max(0, Math.min(pos, view.state.doc.length));
+}
+
+function buildInlineContext(view: EditorView, insertPos: number): string {
+  const doc = view.state.doc.toString();
+  const safePos = clampPos(view, insertPos);
+  const beforeLimit = 8000;
+  const afterLimit = 4000;
+  const beforeStart = Math.max(0, safePos - beforeLimit);
+  const afterEnd = Math.min(doc.length, safePos + afterLimit);
+  const before = doc.slice(beforeStart, safePos);
+  const after = doc.slice(safePos, afterEnd);
+  return [
+    beforeStart > 0 ? "[Earlier note content omitted]" : "",
+    "[Context before insertion]",
+    before || "(empty)",
+    "",
+    "[INSERT_HERE]",
+    "",
+    "[Context after insertion]",
+    after || "(empty)",
+    afterEnd < doc.length ? "[Later note content omitted]" : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function resolveTargetRange(view: EditorView, pivotPos: number): { from: number; to: number } {
@@ -90,6 +131,7 @@ async function generateInlineAIMarkdown(
   view: EditorView,
   request: string,
   t: Translations,
+  insertPos: number,
   onUpdate?: (text: string) => void,
 ): Promise<string | null> {
   const genericErrorMessage =
@@ -98,25 +140,21 @@ async function generateInlineAIMarkdown(
   const fileState = useFileStore.getState();
   const vaultPath = fileState.vaultPath || undefined;
   const currentFilePath = fileState.currentFile || undefined;
-  const currentDoc = view.state.doc.toString();
   const trimmedRequest = request.trim();
   if (!trimmedRequest) return null;
 
-  const cappedDoc = currentDoc.length > 24000
-    ? `${currentDoc.slice(0, 24000)}\n\n[Document snapshot truncated]`
-    : currentDoc;
-
   const prompt = [
-    "You are an inline writing assistant for a Markdown editor.",
-    "Write content to insert at the current cursor location.",
+    "You are an inline Markdown writing assistant.",
+    "Generate only the new Markdown text that should be inserted at [INSERT_HERE].",
+    "Use the surrounding note as context only.",
+    "Do not repeat, summarize, rewrite, or return the whole note unless the user explicitly asks for that.",
     "Return only the Markdown text to insert. Do not include explanations or code fences.",
     currentFilePath ? `Current note path: ${currentFilePath}` : "",
     "",
     "[User request]",
     trimmedRequest,
     "",
-    "[Current note content]",
-    cappedDoc,
+    buildInlineContext(view, insertPos),
   ]
     .filter(Boolean)
     .join("\n");
@@ -317,7 +355,7 @@ async function runInlineAIMarkdownInsert(
     });
     inserted = next;
   };
-  const insertText = await generateInlineAIMarkdown(view, request, t, applyText);
+  const insertText = await generateInlineAIMarkdown(view, request, t, safePos, applyText);
   if (!insertText) return;
   if (inserted !== insertText) {
     applyText(insertText);
@@ -359,7 +397,12 @@ export async function runSlashAIAction(
     const continuePromptTemplate =
       labels?.aiContinuePrompt ||
       "Continue writing naturally from this point in the current note.";
-    const continuePrompt = continuePromptTemplate.replace("{name}", noteName);
+    const continuePrompt = [
+      continuePromptTemplate.replace("{name}", noteName),
+      instruction?.trim() ? "" : null,
+      instruction?.trim() ? "[User guidance]" : null,
+      instruction?.trim() || null,
+    ].filter(Boolean).join("\n");
     await runInlineAIMarkdownInsert(view, safeFrom, continuePrompt, t);
     return;
   }
@@ -375,11 +418,14 @@ export async function runSlashAIAction(
       "Rewrite the current block for clarity while preserving meaning.";
     const rewritePrompt = [
       rewritePromptTemplate.replace("{name}", noteName),
+      instruction?.trim() ? "" : null,
+      instruction?.trim() ? "[User guidance]" : null,
+      instruction?.trim() || null,
       "",
       "[Block to rewrite]",
       targetText,
-    ].join("\n");
-    const rewritten = await generateInlineAIMarkdown(view, rewritePrompt, t);
+    ].filter((part): part is string => part !== null).join("\n");
+    const rewritten = await generateInlineAIMarkdown(view, rewritePrompt, t, targetRange.from);
     if (!rewritten) return;
     view.dispatch({
       changes: { from: targetRange.from, to: targetRange.to, insert: rewritten },
@@ -395,11 +441,14 @@ export async function runSlashAIAction(
       "Expand the current block with more detail while keeping the style consistent.";
     const expandPrompt = [
       expandPromptTemplate.replace("{name}", noteName),
+      instruction?.trim() ? "" : null,
+      instruction?.trim() ? "[User guidance]" : null,
+      instruction?.trim() || null,
       "",
       "[Block to expand]",
       targetText,
-    ].join("\n");
-    const expanded = await generateInlineAIMarkdown(view, expandPrompt, t);
+    ].filter((part): part is string => part !== null).join("\n");
+    const expanded = await generateInlineAIMarkdown(view, expandPrompt, t, targetRange.from);
     if (!expanded) return;
     view.dispatch({
       changes: { from: targetRange.from, to: targetRange.to, insert: expanded },
@@ -414,11 +463,14 @@ export async function runSlashAIAction(
     "Summarize the current block into concise bullet points.";
   const summaryInstruction = [
     summarizePromptTemplate.replace("{name}", noteName),
+    instruction?.trim() ? "" : null,
+    instruction?.trim() ? "[User guidance]" : null,
+    instruction?.trim() || null,
     "",
     "[Block to summarize]",
     targetText,
-  ].join("\n");
-  const summary = await generateInlineAIMarkdown(view, summaryInstruction, t);
+  ].filter((part): part is string => part !== null).join("\n");
+  const summary = await generateInlineAIMarkdown(view, summaryInstruction, t, targetRange.to);
   if (!summary) return;
   const prefix = targetRange.to > 0 ? "\n\n" : "";
   const inserted = `${prefix}${summary}`;
@@ -474,8 +526,8 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "🪄",
     description: labels?.aiContinueDesc || "Continue writing with AI",
     category: "ai",
-    action: (view, from, to) => {
-      void runSlashAIAction(view, from, to, "continue");
+    action: () => {
+      // SlashMenu handles this command with an inline input field.
     },
   },
   {
@@ -484,8 +536,8 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "✍️",
     description: labels?.aiRewriteDesc || "Rewrite current block in place",
     category: "ai",
-    action: (view, from, to) => {
-      void runSlashAIAction(view, from, to, "rewrite-block");
+    action: () => {
+      // SlashMenu handles this command with an inline input field.
     },
   },
   {
@@ -494,8 +546,8 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "➕",
     description: labels?.aiExpandDesc || "Expand current block",
     category: "ai",
-    action: (view, from, to) => {
-      void runSlashAIAction(view, from, to, "expand-block");
+    action: () => {
+      // SlashMenu handles this command with an inline input field.
     },
   },
   {
@@ -504,8 +556,8 @@ export function getDefaultCommands(translations?: Translations): SlashCommand[] 
     icon: "📝",
     description: labels?.aiSummarizeDesc || "Summarize current block",
     category: "ai",
-    action: (view, from, to) => {
-      void runSlashAIAction(view, from, to, "summarize-block");
+    action: () => {
+      // SlashMenu handles this command with an inline input field.
     },
   },
   
