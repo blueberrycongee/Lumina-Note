@@ -365,6 +365,53 @@ exports.activate = async function activate() {
     expect(health.activateError).toBeNull();
   });
 
+  it("supports createFileSystemWatcher compatibility API", async () => {
+    const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-watcher-ext-"));
+    fs.writeFileSync(
+      path.join(extensionPath, "package.json"),
+      JSON.stringify({ name: "watcher-ext", version: "0.0.0", main: "./extension.js" }),
+      "utf8",
+    );
+    fs.writeFileSync(
+      path.join(extensionPath, "extension.js"),
+      `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  const watcher = vscode.workspace.createFileSystemWatcher("**/*.ts");
+  watcher.onDidCreate(() => undefined);
+  watcher.onDidChange(() => undefined);
+  watcher.onDidDelete(() => undefined);
+  watcher.dispose();
+};`,
+      "utf8",
+    );
+
+    const host = startHost(extensionPath, extensionPath);
+    running.push(host);
+    const { origin } = await host.ready;
+
+    const traffic = await eventually(
+      () => fetch(`${origin}/debug/traffic`).then((r) => r.json()),
+      (value) =>
+        value.events.some(
+          (event: { category?: string; summary?: Record<string, unknown> }) =>
+            event.category === "fileSystemWatcher" && event.summary?.event === "dispose",
+        ),
+    );
+    expect(traffic.events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          category: "fileSystemWatcher",
+          summary: expect.objectContaining({ event: "create" }),
+        }),
+        expect.objectContaining({
+          category: "fileSystemWatcher",
+          summary: expect.objectContaining({ event: "dispose" }),
+        }),
+      ]),
+    );
+  });
+
   it("supports panel, terminal, showTextDocument, and vscode.diff compatibility APIs", async () => {
     const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), "lumina-vscode-api-ext-"));
     fs.writeFileSync(

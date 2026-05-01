@@ -1636,6 +1636,41 @@ function createVscodeApi(state, originForApi) {
         };
       },
       onDidChangeConfiguration: onDidChangeConfigurationEmitter.event,
+      createFileSystemWatcher(pattern, ignoreCreateEvents = false, ignoreChangeEvents = false, ignoreDeleteEvents = false) {
+        const createEmitter = new EventEmitter();
+        const changeEmitter = new EventEmitter();
+        const deleteEmitter = new EventEmitter();
+        recordDebugEvent(state, {
+          category: "fileSystemWatcher",
+          summary: {
+            event: "create",
+            pattern: summarizeDebugValue(pattern),
+            ignoreCreateEvents,
+            ignoreChangeEvents,
+            ignoreDeleteEvents,
+          },
+        });
+        return {
+          ignoreCreateEvents,
+          ignoreChangeEvents,
+          ignoreDeleteEvents,
+          onDidCreate: createEmitter.event,
+          onDidChange: changeEmitter.event,
+          onDidDelete: deleteEmitter.event,
+          dispose() {
+            createEmitter.dispose();
+            changeEmitter.dispose();
+            deleteEmitter.dispose();
+            recordDebugEvent(state, {
+              category: "fileSystemWatcher",
+              summary: {
+                event: "dispose",
+                pattern: summarizeDebugValue(pattern),
+              },
+            });
+          },
+        };
+      },
       get workspaceFolders() {
         return getWorkspaceFolders();
       },
