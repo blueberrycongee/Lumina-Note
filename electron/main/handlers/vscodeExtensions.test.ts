@@ -230,6 +230,70 @@ exports.activate = async function activate() {
     })
   })
 
+  it('installs remote compatibility profiles before resolving update eligibility', async () => {
+    const vsixBytes = createZip({
+      'extension/package.json': JSON.stringify({
+        publisher: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.1.0',
+        main: './extension.js',
+      }),
+      'extension/extension.js': `"use strict";
+exports.activate = async function activate() {
+  const vscode = require("vscode");
+  vscode.window.registerWebviewViewProvider("chatgpt.sidebarView", {
+    resolveWebviewView(view) {
+      view.webview.html = "<!doctype html><html><body>Codex</body></html>";
+    },
+  });
+};`,
+    })
+    const metadataFetch = vi.fn(async (input) => {
+      if (input === 'https://updates.example.com/lumina-vscode-compat/index.json') {
+        return jsonResponse({
+          schemaVersion: 1,
+          profiles: [stableCodexProfile()],
+        })
+      }
+      return jsonResponse({
+        namespace: 'OpenAI',
+        name: 'chatgpt',
+        version: '6.1.0',
+        files: { download: 'https://example.com/openai.chatgpt-6.1.0.vsix' },
+      })
+    }) satisfies FetchLike
+    const binaryFetch = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      async arrayBuffer() {
+        return toArrayBuffer(vsixBytes)
+      },
+    })) satisfies BinaryFetchLike
+    const handlers = createHandlers({ metadataFetch, binaryFetch })
+
+    const compat = await handlers.vscode_extensions_install_compat_profiles({
+      indexUrl: 'https://updates.example.com/lumina-vscode-compat/index.json',
+    })
+    const result = await handlers.vscode_extensions_install_latest({
+      extensionId: 'openai.chatgpt',
+      source: 'open-vsx',
+    })
+
+    expect(compat).toMatchObject({
+      profiles: [
+        {
+          extensionId: 'openai.chatgpt',
+          channel: 'stable',
+          versionRange: '6.x',
+        },
+      ],
+    })
+    expect(result).toMatchObject({
+      smoke: { ok: true },
+      outcome: { decision: 'auto-activated' },
+    })
+  })
+
   it('imports a local VSIX through the manual install handler', async () => {
     const vsixPath = path.join(tmpDir, 'openai.chatgpt.vsix')
     fs.writeFileSync(
@@ -289,37 +353,41 @@ function writeStableCodexProfile(root: string) {
   fs.mkdirSync(dir, { recursive: true })
   fs.writeFileSync(
     path.join(dir, '6.x.json'),
-    JSON.stringify({
-      extensionId: 'openai.chatgpt',
-      channel: 'stable',
-      versionRange: '6.x',
-      hostApiVersion: 1,
-      entryViewTypes: ['chatgpt.sidebarView'],
-      requiredCapabilities: [
-        'commands',
-        'diff-viewer',
-        'env-open-external',
-        'memento',
-        'secret-storage',
-        'webview-view',
-        'window-notifications',
-        'workspace-documents',
-        'workspace-fs',
-        'workspace-selection',
-      ],
-      commandMappings: { 'vscode.diff': 'lumina.diff' },
-      cspSourceDirectives: {
-        'connect-src': ['self'],
-        'font-src': ['self', 'data:'],
-        'script-src': ['self', "'unsafe-eval'"],
-      },
-      needsTerminal: false,
-      needsDiffViewer: true,
-      needsIdeBridge: false,
-      disabledFeatures: [],
-    }),
+    JSON.stringify(stableCodexProfile()),
     'utf-8',
   )
+}
+
+function stableCodexProfile() {
+  return {
+    extensionId: 'openai.chatgpt',
+    channel: 'stable',
+    versionRange: '6.x',
+    hostApiVersion: 1,
+    entryViewTypes: ['chatgpt.sidebarView'],
+    requiredCapabilities: [
+      'commands',
+      'diff-viewer',
+      'env-open-external',
+      'memento',
+      'secret-storage',
+      'webview-view',
+      'window-notifications',
+      'workspace-documents',
+      'workspace-fs',
+      'workspace-selection',
+    ],
+    commandMappings: { 'vscode.diff': 'lumina.diff' },
+    cspSourceDirectives: {
+      'connect-src': ['self'],
+      'font-src': ['self', 'data:'],
+      'script-src': ['self', "'unsafe-eval'"],
+    },
+    needsTerminal: false,
+    needsDiffViewer: true,
+    needsIdeBridge: false,
+    disabledFeatures: [],
+  }
 }
 
 async function seedInstall(handlers: VscodeExtensionHandlerMap, version: string) {

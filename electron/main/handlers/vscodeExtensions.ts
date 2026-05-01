@@ -21,6 +21,7 @@ import {
   installLatestVscodeExtensionUpdate,
   type VscodeExtensionUpdateResult,
 } from '../vscode-extensions/update.js'
+import { installCompatProfilesFromIndex } from '../vscode-extensions/compatUpdate.js'
 import type { BinaryFetchLike } from '../vscode-extensions/download.js'
 import { installLocalVsixFile } from '../vscode-extensions/install.js'
 import { runVscodeHostSmokeTest } from '../vscode-extensions/smoke.js'
@@ -42,14 +43,14 @@ export function createVscodeExtensionHandlers(
   options: CreateVscodeExtensionHandlersOptions,
 ): VscodeExtensionHandlerMap {
   const store = new VscodeExtensionStore({ baseDir: options.baseDir })
-  const profiles = [
+  const compatProfilesDir =
+    options.compatProfilesDir ??
+    path.join(options.baseDir, 'vscode-extension-compat')
+  const loadProfiles = () => [
     ...BUILTIN_VSCODE_AI_COMPAT_PROFILES,
-    ...loadExternalCompatProfiles(
-      options.compatProfilesDir ??
-        path.join(options.baseDir, 'vscode-extension-compat'),
-    ),
+    ...loadExternalCompatProfiles(compatProfilesDir),
   ]
-  const manager = new VscodeExtensionManager(store, { profiles })
+  const createManager = () => new VscodeExtensionManager(store, { profiles: loadProfiles() })
   const cacheDir = path.join(options.baseDir, 'vscode-extension-cache')
   const installRoot = path.join(options.baseDir, 'vscode-extensions')
 
@@ -59,6 +60,7 @@ export function createVscodeExtensionHandlers(
     },
 
     async vscode_extensions_get_diagnostics() {
+      const profiles = loadProfiles()
       return Object.keys(TARGET_VSCODE_AI_EXTENSIONS).map((extensionId) => {
         const id = extensionId as SupportedVscodeAiExtensionId
         const active = store.getActive(id)
@@ -101,8 +103,9 @@ export function createVscodeExtensionHandlers(
     async vscode_extensions_install_latest(args) {
       const extensionId = parseExtensionId(args.extensionId)
       const source = parseRemoteSource(args.source)
+      const profiles = loadProfiles()
       return sanitizeUpdateResult(
-        await installLatestVscodeExtensionUpdate(manager, {
+        await installLatestVscodeExtensionUpdate(createManager(), {
           extensionId,
           source,
           marketplaceTermsAccepted: args.marketplaceTermsAccepted === true,
@@ -127,6 +130,7 @@ export function createVscodeExtensionHandlers(
         installRoot,
         expectedExtensionId,
       })
+      const profiles = loadProfiles()
       const compatibility = resolveCompatibilityProfile(installed.packageJson, profiles)
       const smoke =
         compatibility.profile && compatibility.profile.entryViewTypes.length > 0
@@ -137,7 +141,7 @@ export function createVscodeExtensionHandlers(
             })
           : null
       const packageBytes = fs.readFileSync(vsixPath)
-      const outcome = manager.registerCandidateInstall({
+      const outcome = createManager().registerCandidateInstall({
         packageJson: installed.packageJson,
         extensionPath: installed.extensionPath,
         source: 'manual-vsix',
@@ -149,6 +153,15 @@ export function createVscodeExtensionHandlers(
         smoke,
         outcome,
       }
+    },
+
+    async vscode_extensions_install_compat_profiles(args) {
+      const indexUrl = parseNonEmptyString(args.indexUrl, 'indexUrl')
+      return installCompatProfilesFromIndex({
+        indexUrl,
+        profilesRoot: compatProfilesDir,
+        fetch: options.metadataFetch,
+      })
     },
 
     async vscode_extensions_activate_installed(args) {

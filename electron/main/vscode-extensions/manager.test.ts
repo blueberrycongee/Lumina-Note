@@ -25,6 +25,7 @@ describe('VscodeExtensionManager', () => {
     const store = new VscodeExtensionStore({ baseDir: tmpDir })
     const manager = new VscodeExtensionManager(store, {
       implementedCapabilities: new Set<VscodeHostCapability>([
+        'authentication.getSession',
         'commands',
         'diagnostics-read',
         'diff-viewer',

@@ -417,6 +417,17 @@ export interface VscodeAiExtensionInstallOutcome {
   reason: string;
 }
 
+export interface VscodeAiCompatProfileInstallResult {
+  sourceUrl: string;
+  installedAt: string;
+  profiles: Array<{
+    extensionId: VscodeAiExtensionId;
+    channel: "stable" | "preview";
+    versionRange: string;
+    filePath: string;
+  }>;
+}
+
 export async function getVscodeAiExtensionState(): Promise<VscodeAiExtensionState> {
   return invoke("vscode_extensions_get_state");
 }
@@ -467,6 +478,12 @@ export async function rollbackVscodeAiExtension(input: {
   extensionId: VscodeAiExtensionId;
 }): Promise<VscodeAiExtensionInstallRecord> {
   return invoke("vscode_extensions_rollback", input);
+}
+
+export async function installVscodeAiCompatProfiles(input: {
+  indexUrl: string;
+}): Promise<VscodeAiCompatProfileInstallResult> {
+  return invoke("vscode_extensions_install_compat_profiles", input);
 }
 
 // ── Misc ──────────────────────────────────────────────────────────────────

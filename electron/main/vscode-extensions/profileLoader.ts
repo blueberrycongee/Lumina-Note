@@ -34,47 +34,58 @@ export function loadExternalCompatProfiles(root: string): VscodeExtensionCompatP
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       if (!entry.isFile() || !entry.name.endsWith('.json')) continue
       const filePath = path.join(dir, entry.name)
-      profiles.push(parseCompatProfile(filePath))
+      profiles.push(parseCompatProfileFile(filePath))
     }
   }
   return profiles
 }
 
-function parseCompatProfile(filePath: string): VscodeExtensionCompatProfile {
+function parseCompatProfileFile(filePath: string): VscodeExtensionCompatProfile {
   const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Partial<VscodeExtensionCompatProfile>
-  if (!raw.extensionId || !isSupportedVscodeAiExtensionId(raw.extensionId)) {
-    throw new Error(`Invalid compat profile ${filePath}: unsupported extensionId`)
+  return parseCompatProfileObject(raw, filePath)
+}
+
+export function parseCompatProfileObject(
+  raw: unknown,
+  context: string,
+): VscodeExtensionCompatProfile {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error(`Invalid compat profile ${context}: expected object`)
   }
-  if (raw.channel !== 'stable' && raw.channel !== 'preview') {
-    throw new Error(`Invalid compat profile ${filePath}: channel must be stable or preview`)
+  const profile = raw as Partial<VscodeExtensionCompatProfile>
+  if (!profile.extensionId || !isSupportedVscodeAiExtensionId(profile.extensionId)) {
+    throw new Error(`Invalid compat profile ${context}: unsupported extensionId`)
   }
-  if (raw.hostApiVersion !== 1) {
-    throw new Error(`Invalid compat profile ${filePath}: hostApiVersion must be 1`)
+  if (profile.channel !== 'stable' && profile.channel !== 'preview') {
+    throw new Error(`Invalid compat profile ${context}: channel must be stable or preview`)
   }
-  if (typeof raw.versionRange !== 'string' || raw.versionRange.trim().length === 0) {
-    throw new Error(`Invalid compat profile ${filePath}: versionRange is required`)
+  if (profile.hostApiVersion !== 1) {
+    throw new Error(`Invalid compat profile ${context}: hostApiVersion must be 1`)
   }
-  const requiredCapabilities = requireStringArray(raw.requiredCapabilities, filePath, 'requiredCapabilities')
+  if (typeof profile.versionRange !== 'string' || profile.versionRange.trim().length === 0) {
+    throw new Error(`Invalid compat profile ${context}: versionRange is required`)
+  }
+  const requiredCapabilities = requireStringArray(profile.requiredCapabilities, context, 'requiredCapabilities')
   for (const capability of requiredCapabilities) {
     if (!KNOWN_CAPABILITIES.has(capability as VscodeHostCapability)) {
-      throw new Error(`Invalid compat profile ${filePath}: unknown capability ${capability}`)
+      throw new Error(`Invalid compat profile ${context}: unknown capability ${capability}`)
     }
   }
 
   return {
-    extensionId: raw.extensionId,
-    channel: raw.channel,
-    versionRange: raw.versionRange,
+    extensionId: profile.extensionId,
+    channel: profile.channel,
+    versionRange: profile.versionRange,
     hostApiVersion: 1,
-    entryViewTypes: requireStringArray(raw.entryViewTypes, filePath, 'entryViewTypes'),
+    entryViewTypes: requireStringArray(profile.entryViewTypes, context, 'entryViewTypes'),
     requiredCapabilities: requiredCapabilities as VscodeHostCapability[],
-    commandMappings: requireStringRecord(raw.commandMappings, filePath, 'commandMappings'),
-    cspSourceDirectives: requireStringArrayRecord(raw.cspSourceDirectives, filePath, 'cspSourceDirectives'),
-    needsTerminal: raw.needsTerminal === true,
-    needsDiffViewer: raw.needsDiffViewer === true,
-    needsIdeBridge: raw.needsIdeBridge === true,
-    disabledFeatures: requireStringArray(raw.disabledFeatures, filePath, 'disabledFeatures'),
-    notes: typeof raw.notes === 'string' ? raw.notes : undefined,
+    commandMappings: requireStringRecord(profile.commandMappings, context, 'commandMappings'),
+    cspSourceDirectives: requireStringArrayRecord(profile.cspSourceDirectives, context, 'cspSourceDirectives'),
+    needsTerminal: profile.needsTerminal === true,
+    needsDiffViewer: profile.needsDiffViewer === true,
+    needsIdeBridge: profile.needsIdeBridge === true,
+    disabledFeatures: requireStringArray(profile.disabledFeatures, context, 'disabledFeatures'),
+    notes: typeof profile.notes === 'string' ? profile.notes : undefined,
   }
 }
 
