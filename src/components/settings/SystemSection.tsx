@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getVersion } from "@/lib/host";
 import { useLocaleStore } from "@/stores/useLocaleStore";
-import { DiagnosticsSection } from "./DiagnosticsSection";
+import { VscodeAiExtensionsSection } from "./VscodeAiExtensionsSection";
 
 interface SystemSectionProps {
   onOpenUpdateModal: () => void;
@@ -12,7 +12,9 @@ export function SystemSection({ onOpenUpdateModal }: SystemSectionProps) {
   const [appVersion, setAppVersion] = useState<string>("");
 
   useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => setAppVersion("dev"));
+    getVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion("dev"));
   }, []);
 
   return (
@@ -26,9 +28,14 @@ export function SystemSection({ onOpenUpdateModal }: SystemSectionProps) {
         <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-background/60 p-4">
           <div className="space-y-1">
             <p className="font-medium">
-              {t.updateChecker.versionLabel.replace("{version}", appVersion || "...")}
+              {t.updateChecker.versionLabel.replace(
+                "{version}",
+                appVersion || "...",
+              )}
             </p>
-            <p className="text-sm text-muted-foreground">{t.settingsModal.softwareUpdateDescription}</p>
+            <p className="text-sm text-muted-foreground">
+              {t.settingsModal.softwareUpdateDescription}
+            </p>
           </div>
           <button
             type="button"
@@ -42,7 +49,7 @@ export function SystemSection({ onOpenUpdateModal }: SystemSectionProps) {
         </div>
       </section>
 
-      <DiagnosticsSection />
+      <VscodeAiExtensionsSection />
 
       {/* 关于 */}
       <section className="space-y-4">
@@ -53,7 +60,9 @@ export function SystemSection({ onOpenUpdateModal }: SystemSectionProps) {
         <div className="flex items-center justify-between py-2">
           <div>
             <p className="font-medium">Lumina Note</p>
-            <p className="text-sm text-muted-foreground">{t.settingsModal.appDescription}</p>
+            <p className="text-sm text-muted-foreground">
+              {t.settingsModal.appDescription}
+            </p>
           </div>
           <span className="text-sm text-muted-foreground">
             v{appVersion || "..."}

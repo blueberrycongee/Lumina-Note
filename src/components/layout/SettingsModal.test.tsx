@@ -184,8 +184,8 @@ vi.mock("../settings/MobileOptionsSection", () => ({
   MobileOptionsSection: () => <div>MobileOptions</div>,
 }));
 
-vi.mock("../settings/DiagnosticsSection", () => ({
-  DiagnosticsSection: () => <div>Diagnostics</div>,
+vi.mock("../settings/VscodeAiExtensionsSection", () => ({
+  VscodeAiExtensionsSection: () => <div>VSCodeAIExtensions</div>,
 }));
 
 vi.mock("../settings/ProxySection", () => ({
@@ -273,6 +273,7 @@ describe("SettingsModal", () => {
     await waitFor(() => {
       expect(updateSection).toHaveTextContent("Version 1.2.3");
     });
+    expect(screen.getByText("VSCodeAIExtensions")).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("settings-open-update-modal"));
     expect(onOpenUpdateModal).toHaveBeenCalledTimes(1);
