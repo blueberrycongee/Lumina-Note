@@ -181,6 +181,47 @@ describe("AgentMessageRenderer", () => {
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("Assistant reply"));
   });
 
+  it("deduplicates overlapping streamed text parts before the final refresh", () => {
+    const { container } = render(
+      createElement(AgentMessageRenderer, {
+        isRunning: true,
+        messages: [
+          {
+            id: "msg-user",
+            role: "user",
+            content: "Explain this",
+            rawParts: [],
+          },
+          {
+            id: "msg-assistant",
+            role: "assistant",
+            content: "",
+            rawParts: [
+              {
+                id: "part-text-prefix",
+                sessionID: "test-session",
+                messageID: "msg-assistant",
+                type: "text",
+                text: "好一个双谜题！让我来拆解：",
+              } as never,
+              {
+                id: "part-text-full",
+                sessionID: "test-session",
+                messageID: "msg-assistant",
+                type: "text",
+                text: "好一个双谜题！让我来拆解：\n\n## 第一个：百香果",
+              } as never,
+            ],
+          },
+        ],
+      }),
+    );
+
+    const text = container.textContent ?? "";
+    expect(text.match(/好一个双谜题！让我来拆解：/g)).toHaveLength(1);
+    expect(text).toContain("第一个：百香果");
+  });
+
   it("resolves only vault-local chat markdown image paths", () => {
     expect(
       resolveChatMarkdownImageCandidates({

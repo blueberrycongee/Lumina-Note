@@ -1030,6 +1030,21 @@ function decodeHtmlEntities(str: string): string {
   return str.replace(/&quot;/g, '"').replace(/&amp;/g, "&");
 }
 
+function pushOpencodeTextPart(out: TimelinePart[], text: string) {
+  if (text.trim().length === 0) return;
+  const last = out[out.length - 1];
+  if (last?.type === "text") {
+    if (text.startsWith(last.content)) {
+      last.content = text;
+      return;
+    }
+    if (last.content.startsWith(text)) {
+      return;
+    }
+  }
+  out.push({ type: "text", content: text });
+}
+
 /**
  * Map opencode's structured Part[] onto the TimelinePart[] we already render.
  * Boundary-only parts (step-start / step-finish / snapshot) are dropped —
@@ -1042,8 +1057,7 @@ function timelineFromOpencodeParts(rawParts: OpencodePart[]): TimelinePart[] {
     switch (part.type) {
       case "text": {
         const text = (part as { text?: string }).text ?? "";
-        if (text.trim().length === 0) continue;
-        out.push({ type: "text", content: text });
+        pushOpencodeTextPart(out, text);
         break;
       }
       case "reasoning": {

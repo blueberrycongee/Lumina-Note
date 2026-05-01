@@ -462,6 +462,49 @@ function isVisibleAgentSession(info: { title?: string | null }): boolean {
 // ── Store ───────────────────────────────────────────────────────────────────
 
 export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
+  const refreshingSessions = new Set<string>();
+
+  const refreshSessionMessages = async (sessionId: string) => {
+    if (refreshingSessions.has(sessionId)) return;
+    refreshingSessions.add(sessionId);
+    try {
+      const client = await getOpencodeClient();
+      const res = await client.session.messages({
+        path: { id: sessionId },
+        throwOnError: true,
+      });
+      const raw = (res.data ?? []) as Array<{ info: Message; parts: Part[] }>;
+      const messages: AgentMessage[] = raw.map((entry) =>
+        makeAgentMessage(entry.info, entry.parts),
+      );
+      set((state) => {
+        if (state.currentSessionId !== sessionId) return state;
+        const existingById = new Map(state.messages.map((message) => [message.id, message]));
+        const nextMessages = messages.map((message) => {
+          const existing = existingById.get(message.id);
+          if (message.role !== "user" || !existing) return message;
+          return {
+            ...message,
+            content: existing.content,
+            attachments: existing.attachments,
+          };
+        });
+        return { messages: nextMessages };
+      });
+    } catch (err) {
+      reportError({
+        kind: "session.switch",
+        severity: "background",
+        message: `Couldn't refresh session messages: ${String(err)}`,
+        cause: err,
+        retryable: true,
+        sessionId,
+      });
+    } finally {
+      refreshingSessions.delete(sessionId);
+    }
+  };
+
   // Internal: mutate `messages` by message ID. Used by SSE handlers so we
   // don't have to rebuild the whole array for every delta.
   const upsertMessage = (info: Message, parts: Part[]) => {
@@ -704,6 +747,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           // back-to-back; let the error stay sticky so the red banner
           // actually renders. Cleared on the next startTask/switchSession.
           if (get().status !== "error") set({ status: "idle", llmRetryState: null });
+          void refreshSessionMessages(event.properties.sessionID);
         } else if (status.type === "retry") {
           set({
             status: "running",
@@ -720,6 +764,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       case "session.idle": {
         if (event.properties.sessionID === get().currentSessionId) {
           if (get().status !== "error") set({ status: "idle", llmRetryState: null });
+          void refreshSessionMessages(event.properties.sessionID);
         }
         return;
       }

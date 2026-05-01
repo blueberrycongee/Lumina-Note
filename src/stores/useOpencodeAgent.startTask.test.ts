@@ -66,6 +66,7 @@ describe("useOpencodeAgent.startTask", () => {
       session: {
         create: vi.fn(async () => ({ data: { id: "session-1" } })),
         list: vi.fn(async () => ({ data: [] })),
+        messages: vi.fn(async () => ({ data: [] })),
         promptAsync: vi.fn(async () => ({ data: {} })),
       },
     });
@@ -297,6 +298,99 @@ describe("useOpencodeAgent.startTask", () => {
 
     await waitFor(() => {
       expect(useOpencodeAgent.getState().status).toBe("idle");
+    });
+  });
+
+  it("refreshes the active session from opencode when streaming reports idle", async () => {
+    let resolveEventHandled = () => {};
+    const eventHandled = new Promise<void>((resolve) => {
+      resolveEventHandled = resolve;
+    });
+    const messages = vi.fn(async () => ({
+      data: [
+        {
+          info: {
+            id: "user-1",
+            sessionID: "session-1",
+            role: "user",
+            time: { created: 1 },
+          },
+          parts: [{ id: "user-part", type: "text", text: "question" }],
+        },
+        {
+          info: {
+            id: "assistant-1",
+            sessionID: "session-1",
+            role: "assistant",
+            time: { created: 2 },
+          },
+          parts: [
+            {
+              id: "text-1",
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              type: "text",
+              text: "partial answer with complete tail",
+            },
+          ],
+        },
+      ],
+    }));
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({
+          stream: singleEventStream(
+            {
+              type: "session.idle",
+              properties: { sessionID: "session-1" },
+            },
+            resolveEventHandled,
+          ),
+        })),
+      },
+      session: {
+        list: vi.fn(async () => ({ data: [] })),
+        messages,
+      },
+    });
+    useOpencodeAgent.setState({
+      currentSessionId: "session-1",
+      status: "running",
+      messages: [
+        {
+          id: "user-1",
+          role: "user",
+          content: "question",
+          rawParts: [],
+        },
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "partial answer",
+          rawParts: [
+            {
+              id: "text-1",
+              sessionID: "session-1",
+              messageID: "assistant-1",
+              type: "text",
+              text: "partial answer",
+            } as never,
+          ],
+        },
+      ],
+    });
+
+    await useOpencodeAgent.getState().subscribe();
+    await eventHandled;
+
+    await waitFor(() => {
+      expect(messages).toHaveBeenCalledWith({
+        path: { id: "session-1" },
+        throwOnError: true,
+      });
+      expect(useOpencodeAgent.getState().messages.at(-1)?.content).toBe(
+        "partial answer with complete tail",
+      );
     });
   });
 
