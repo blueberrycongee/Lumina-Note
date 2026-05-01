@@ -145,6 +145,22 @@ describe("MainAIChatShell", () => {
     expect(modelChip?.textContent ?? "").toContain("GPT-5.5");
   });
 
+  it("keeps the slash skill menu at menu width", async () => {
+    render(<MainAIChatShell />);
+
+    const input = screen.getByRole("textbox") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "/" } });
+
+    await waitFor(() => {
+      const menu = document.querySelector(
+        "[data-skill-menu]",
+      ) as HTMLElement | null;
+      expect(menu).toBeTruthy();
+      expect(menu?.style.width).toBe("360px");
+      expect(menu?.className).toContain("max-w-[calc(100vw-16px)]");
+    });
+  });
+
   it("renders assistant thinking as collapsed block and expands on click", () => {
     // Main chat runs on opencode now. Messages carry structured rawParts
     // (text / reasoning / tool), so feed those directly — the renderer maps

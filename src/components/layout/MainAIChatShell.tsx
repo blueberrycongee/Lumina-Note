@@ -1836,6 +1836,8 @@ export function MainAIChatShell() {
                 >
                   <PopoverContent
                     placement="top-start"
+                    width={360}
+                    className="max-w-[calc(100vw-16px)]"
                     data-skill-menu
                     ref={mentionRef as unknown as React.Ref<HTMLDivElement>}
                   >
