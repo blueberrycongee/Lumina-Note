@@ -472,12 +472,14 @@ export function TabBar() {
   const tabNodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const previousTabIdsRef = useRef<Set<string>>(new Set(tabs.map((tab) => tab.id)));
   const timeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  const closeGhostTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const releaseFrozenWidthsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       for (const t of timeouts.current) clearTimeout(t);
       timeouts.current.clear();
+      closeGhostTimeouts.current.clear();
       // 卸载兜底：万一拖拽中组件被销毁，确保 body class 被清掉
       document.body.classList.remove("lumina-tab-dragging");
     };
@@ -634,6 +636,22 @@ export function TabBar() {
     [closingIds, reorderTabs, tabLayouts, tabs],
   );
 
+  const finishClosingGhost = useCallback((tabId: string) => {
+    const timeout = closeGhostTimeouts.current.get(tabId);
+    if (timeout) {
+      clearTimeout(timeout);
+      timeouts.current.delete(timeout);
+      closeGhostTimeouts.current.delete(tabId);
+    }
+
+    setClosingGhosts((prev) => {
+      if (!prev.has(tabId)) return prev;
+      const next = new Map(prev);
+      next.delete(tabId);
+      return next;
+    });
+  }, []);
+
   const animateClose = useCallback((tabId: string) => {
     freezeTabWidthsForCloseBatch();
     const closeIndex = tabsRef.current.findIndex((tab) => tab.id === tabId);
@@ -655,26 +673,16 @@ export function TabBar() {
           error,
           context: { tabId },
         });
-        setClosingGhosts((prev) => {
-          if (!prev.has(tabId)) return prev;
-          const next = new Map(prev);
-          next.delete(tabId);
-          return next;
-        });
+        finishClosingGhost(tabId);
       });
     }
 
     const timeout = setTimeout(() => {
-      timeouts.current.delete(timeout);
-      setClosingGhosts((prev) => {
-        if (!prev.has(tabId)) return prev;
-        const next = new Map(prev);
-        next.delete(tabId);
-        return next;
-      });
+      finishClosingGhost(tabId);
     }, TAB_BOUNDS_ANIMATION_MS + 80);
+    closeGhostTimeouts.current.set(tabId, timeout);
     timeouts.current.add(timeout);
-  }, [closeTab, freezeTabWidthsForCloseBatch]);
+  }, [closeTab, finishClosingGhost, freezeTabWidthsForCloseBatch]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
     e.preventDefault();
@@ -832,6 +840,9 @@ export function TabBar() {
                     transition={{
                       duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
                       ease: [0.2, 0, 0, 1],
+                    }}
+                    onAnimationComplete={() => {
+                      if (isClosing) finishClosingGhost(tab.id);
                     }}
                     style={tabStyle}
                     className={cn(
