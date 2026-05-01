@@ -43,8 +43,8 @@ interface SlashMenuProps {
 const categoryOrder = ["ai", "heading", "list", "block", "insert"];
 const MENU_WIDTH = 320;
 const MENU_MAX_HEIGHT = 320;
-const AI_PANEL_WIDTH = 380;
-const AI_PANEL_MAX_HEIGHT = 520;
+const AI_PANEL_WIDTH = 360;
+const AI_PANEL_MAX_HEIGHT = 420;
 
 type AIPanelStatus = "prompt" | "running" | "preview" | "error";
 type AIPanelStageStatus = "pending" | SlashAIProgress["status"];
@@ -129,7 +129,6 @@ export function SlashMenu({ view }: SlashMenuProps) {
   const aiAbortControllerRef = useRef<AbortController | null>(null);
   const commands = useMemo(() => getDefaultCommands(t), [t]);
   const inlineAI = t.editor.slashMenu.inlineAI;
-
   const buildInlinePreview = useCallback((
     id: string,
     status: "running" | "preview",
@@ -569,7 +568,12 @@ export function SlashMenu({ view }: SlashMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-popover border border-border rounded-lg shadow-elev-2 overflow-hidden"
+      className={cn(
+        "fixed z-50 overflow-hidden border bg-popover text-popover-foreground",
+        aiPromptOpen
+          ? "rounded-lg border-border/70 bg-popover shadow-elev-2"
+          : "rounded-lg border-border shadow-elev-2",
+      )}
       style={{
         left: clampedPosition.left,
         top: clampedPosition.top,
@@ -578,22 +582,23 @@ export function SlashMenu({ view }: SlashMenuProps) {
       }}
     >
       {aiPromptOpen ? (
-        <div className="max-h-[inherit] overflow-y-auto p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-                <span className="truncate">
-                  {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
-                </span>
-              </div>
-              <div className="mt-0.5 text-xs text-muted-foreground">
-                {inlineAI.panelHint}
+        <div className="max-h-[inherit] overflow-y-auto p-2">
+          <div className="flex items-center justify-between gap-3 px-1.5 pb-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground">
+                {aiSubmitting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                )}
+              </span>
+              <div className="truncate text-sm font-medium leading-5">
+                {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
               </div>
             </div>
             <button
               type="button"
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
               onClick={closeMenu}
               aria-label={t.common.close}
             >
@@ -601,139 +606,138 @@ export function SlashMenu({ view }: SlashMenuProps) {
             </button>
           </div>
 
-          <textarea
-            ref={aiPromptRef}
-            value={aiPromptText}
-            onChange={(e) => {
-              setAiPromptText(e.target.value);
-              if (aiStatus === "error") {
-                setAiError("");
-                setAiStatus("prompt");
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && aiStatus !== "preview") {
-                e.preventDefault();
-                void startAIGeneration();
-              }
-              if (e.key === "Escape") {
-                e.preventDefault();
-                closeMenu();
-              }
-            }}
-            disabled={aiSubmitting || aiStatus === "preview"}
-            placeholder={aiPromptAction === "chat-insert"
-              ? t.editor.slashMenu.commands.aiChatPrompt
-              : inlineAI.optionalGuidance}
-            className="mt-3 max-h-28 min-h-16 w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none transition-shadow focus:ring-2 focus:ring-primary/30 disabled:opacity-70"
-          />
+          <div className="rounded-lg border border-border/70 bg-background transition-colors focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/10">
+            <div className="px-2.5 pt-2.5">
+              <textarea
+                ref={aiPromptRef}
+                value={aiPromptText}
+                onChange={(e) => {
+                  setAiPromptText(e.target.value);
+                  if (aiStatus === "error") {
+                    setAiError("");
+                    setAiStatus("prompt");
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && aiStatus !== "preview") {
+                    e.preventDefault();
+                    void startAIGeneration();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    closeMenu();
+                  }
+                }}
+                disabled={aiSubmitting || aiStatus === "preview"}
+                placeholder={aiPromptAction === "chat-insert"
+                  ? t.editor.slashMenu.commands.aiChatPrompt
+                  : inlineAI.optionalGuidance}
+                className="max-h-32 min-h-20 w-full resize-none bg-transparent text-sm leading-relaxed outline-none placeholder:text-muted-foreground/55 disabled:opacity-70"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border/50 bg-muted/10 px-2 py-2">
+              <div className="flex items-center gap-2">
+                {(aiStatus === "preview" || aiStatus === "error") && (
+                  <button
+                    type="button"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-accent/70 hover:text-foreground disabled:opacity-60"
+                    disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
+                    onClick={() => void startAIGeneration()}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                    {aiStatus === "error" ? inlineAI.retry : inlineAI.regenerate}
+                  </button>
+                )}
+                {aiStatus === "preview" ? (
+                  <button
+                    type="button"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-60"
+                    disabled={!aiResult}
+                    onClick={acceptAIResult}
+                  >
+                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    {inlineAI.insert}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-opacity disabled:opacity-60"
+                    disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
+                    onClick={() => void startAIGeneration()}
+                  >
+                    {aiSubmitting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    {aiSubmitting ? inlineAI.generating : inlineAI.generate}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {(aiStatus === "running" || aiStatus === "preview") && (
-            <div className="mt-3 rounded-md border border-border/70 bg-muted/25 p-2">
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                {inlineAI.progressTitle}
-              </div>
-              <div className="space-y-1">
-                {aiStageOrder.map((stage) => {
-                  const status = aiStages[stage];
-                  return (
-                    <div
-                      key={stage}
-                      className={`flex items-center gap-2 text-xs ${
-                        status === "pending" ? "text-muted-foreground/55" : "text-foreground"
-                      }`}
-                    >
-                      <span
-                        className={`flex h-4 w-4 items-center justify-center rounded-full border ${
-                          status === "done"
-                            ? "border-primary/50 bg-primary/10 text-primary"
-                            : status === "active"
-                              ? "border-primary/40 text-primary"
-                              : "border-border text-muted-foreground"
-                        }`}
-                      >
-                        {status === "done" ? (
-                          <Check className="h-3 w-3" aria-hidden="true" />
-                        ) : status === "active" ? (
-                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-45" />
+            <div className="mt-2 rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  {inlineAI.progressTitle}
+                </div>
+                <div className="space-y-1.5">
+                  {aiStageOrder.map((stage) => {
+                    const status = aiStages[stage];
+                    return (
+                      <div
+                        key={stage}
+                        className={cn(
+                          "flex items-center gap-2 text-xs leading-5 transition-colors",
+                          status === "pending" ? "text-muted-foreground/55" : "text-foreground",
                         )}
-                      </span>
-                      <span>{inlineAI.stages[stage]}</span>
-                    </div>
-                  );
-                })}
-              </div>
+                      >
+                        <span
+                          className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded-full border",
+                            status === "done" && "border-primary/50 bg-primary/10 text-primary",
+                            status === "active" && "border-primary/40 bg-background text-primary",
+                            status === "error" && "border-destructive/50 bg-destructive/10 text-destructive",
+                            status === "pending" && "border-border/70 bg-background/50 text-muted-foreground",
+                          )}
+                        >
+                          {status === "done" ? (
+                            <Check className="h-3 w-3" aria-hidden="true" />
+                          ) : status === "active" ? (
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-current opacity-45" />
+                          )}
+                        </span>
+                        <span>{inlineAI.stages[stage]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
             </div>
           )}
 
           {aiStatus === "preview" && aiResult && (
-            <div className="mt-3">
-              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
-                {inlineAI.previewTitle}
-              </div>
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background/80 p-3 text-sm leading-relaxed text-foreground">
-                {aiResult.text}
-              </pre>
+            <div className="mt-2 overflow-hidden rounded-lg border border-border/70 bg-background/80">
+                <div className="flex items-center justify-between border-b border-border/60 bg-muted/20 px-3 py-2">
+                  <div className="text-xs font-medium text-muted-foreground">
+                    {inlineAI.previewTitle}
+                  </div>
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary/60" aria-hidden="true" />
+                </div>
+                <pre className="max-h-56 overflow-auto whitespace-pre-wrap px-3 py-3 text-sm leading-relaxed text-foreground">
+                  {aiResult.text}
+                </pre>
             </div>
           )}
 
           {aiStatus === "error" && aiError && (
-            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-              <div className="font-medium">{inlineAI.errorTitle}</div>
-              <div className="mt-0.5 text-xs opacity-90">{aiError}</div>
+            <div className="mt-2 rounded-lg border border-destructive/25 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                <div className="font-medium">{inlineAI.errorTitle}</div>
+                <div className="mt-0.5 text-xs opacity-90">{aiError}</div>
             </div>
           )}
-
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <button
-              type="button"
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs hover:bg-accent/60"
-              onClick={closeMenu}
-            >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-              {t.common.cancel}
-            </button>
-            <div className="flex items-center gap-2">
-              {(aiStatus === "preview" || aiStatus === "error") && (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs hover:bg-accent/60 disabled:opacity-60"
-                  disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
-                  onClick={() => void startAIGeneration()}
-                >
-                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                  {aiStatus === "error" ? inlineAI.retry : inlineAI.regenerate}
-                </button>
-              )}
-              {aiStatus === "preview" ? (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs text-primary-foreground disabled:opacity-60"
-                  disabled={!aiResult}
-                  onClick={acceptAIResult}
-                >
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                  {inlineAI.insert}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs text-primary-foreground disabled:opacity-60"
-                  disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
-                  onClick={() => void startAIGeneration()}
-                >
-                  {aiSubmitting ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                  )}
-                  {aiSubmitting ? inlineAI.generating : inlineAI.generate}
-                </button>
-              )}
-            </div>
-          </div>
         </div>
       ) : (
         <div className="overflow-y-auto max-h-[300px] p-1">
