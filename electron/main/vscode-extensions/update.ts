@@ -17,6 +17,7 @@ import {
 import {
   queryLatestRemoteVersion,
   type FetchLike,
+  type GithubReleaseSourceOptions,
   type VscodeExtensionRemoteVersion,
 } from './sources.js'
 import type { VscodeExtensionInstallSource } from './store.js'
@@ -27,8 +28,9 @@ import {
 
 export interface VscodeExtensionUpdateOptions {
   extensionId: SupportedVscodeAiExtensionId
-  source: Extract<VscodeExtensionInstallSource, 'marketplace' | 'open-vsx'>
+  source: Extract<VscodeExtensionInstallSource, 'marketplace' | 'open-vsx' | 'github-release'>
   marketplaceTermsAccepted?: boolean
+  github?: GithubReleaseSourceOptions
   cacheDir: string
   installRoot: string
   hostScriptPath: string
@@ -54,6 +56,7 @@ export async function installLatestVscodeExtensionUpdate(
   const remote = await queryLatestRemoteVersion(options.extensionId, {
     source: options.source,
     marketplaceTermsAccepted: options.marketplaceTermsAccepted,
+    github: options.github,
     fetch: options.metadataFetch,
   })
   const download = await downloadVsixToCache(remote, {

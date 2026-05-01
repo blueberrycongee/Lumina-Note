@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  queryLatestGithubReleaseVersion,
   queryLatestMarketplaceVersion,
   queryLatestOpenVsxVersion,
   queryLatestRemoteVersion,
@@ -52,6 +53,54 @@ describe('vscode extension remote sources', () => {
         fetch: vi.fn() as unknown as FetchLike,
       }),
     ).rejects.toThrow(/requires explicit terms acceptance/)
+  })
+
+  it('queries GitHub latest release metadata when configured', async () => {
+    const fetcher = vi.fn(async () =>
+      jsonResponse({
+        tag_name: 'v2.1.81',
+        html_url: 'https://github.com/anthropics/claude-code/releases/tag/v2.1.81',
+        assets: [
+          {
+            name: 'claude-code-2.1.81.vsix',
+            browser_download_url: 'https://github.example/claude-code-2.1.81.vsix',
+          },
+        ],
+      }),
+    ) satisfies FetchLike
+
+    const latest = await queryLatestGithubReleaseVersion(
+      'anthropic.claude-code',
+      {
+        owner: 'anthropics',
+        repo: 'claude-code',
+        assetPattern: 'claude-code',
+      },
+      fetcher,
+    )
+
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://api.github.com/repos/anthropics/claude-code/releases/latest',
+      expect.objectContaining({
+        headers: { Accept: 'application/vnd.github+json' },
+      }),
+    )
+    expect(latest).toEqual({
+      extensionId: 'anthropic.claude-code',
+      source: 'github-release',
+      version: '2.1.81',
+      downloadUrl: 'https://github.example/claude-code-2.1.81.vsix',
+      itemUrl: 'https://github.com/anthropics/claude-code/releases/tag/v2.1.81',
+    })
+  })
+
+  it('requires GitHub source owner/repo configuration', async () => {
+    await expect(
+      queryLatestRemoteVersion('openai.chatgpt', {
+        source: 'github-release',
+        fetch: vi.fn() as unknown as FetchLike,
+      }),
+    ).rejects.toThrow(/owner\/repo/)
   })
 
   it('queries Marketplace latest metadata after terms acceptance', async () => {

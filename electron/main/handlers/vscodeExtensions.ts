@@ -15,6 +15,7 @@ import { VscodeExtensionManager } from '../vscode-extensions/manager.js'
 import {
   queryLatestRemoteVersion,
   type FetchLike,
+  type GithubReleaseSourceOptions,
 } from '../vscode-extensions/sources.js'
 import {
   installLatestVscodeExtensionUpdate,
@@ -92,6 +93,7 @@ export function createVscodeExtensionHandlers(
       return queryLatestRemoteVersion(extensionId, {
         source,
         marketplaceTermsAccepted: args.marketplaceTermsAccepted === true,
+        github: parseGithubReleaseSource(args),
         fetch: options.metadataFetch,
       })
     },
@@ -104,6 +106,7 @@ export function createVscodeExtensionHandlers(
           extensionId,
           source,
           marketplaceTermsAccepted: args.marketplaceTermsAccepted === true,
+          github: parseGithubReleaseSource(args),
           cacheDir,
           installRoot,
           hostScriptPath: options.hostScriptPath,
@@ -169,21 +172,31 @@ function parseExtensionId(value: unknown): SupportedVscodeAiExtensionId {
   return value.toLowerCase() as SupportedVscodeAiExtensionId
 }
 
-function parseRemoteSource(value: unknown): 'marketplace' | 'open-vsx' {
-  if (value === 'marketplace' || value === 'open-vsx') return value
+function parseRemoteSource(value: unknown): 'marketplace' | 'open-vsx' | 'github-release' {
+  if (value === 'marketplace' || value === 'open-vsx' || value === 'github-release') return value
   throw new Error(`Unsupported VS Code extension source: ${String(value)}`)
 }
 
-function parseVersion(value: unknown): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error('version is required')
+function parseGithubReleaseSource(args: Record<string, unknown>): GithubReleaseSourceOptions | undefined {
+  if (args.source !== 'github-release') return undefined
+  return {
+    owner: parseNonEmptyString(args.githubOwner, 'githubOwner'),
+    repo: parseNonEmptyString(args.githubRepo, 'githubRepo'),
+    assetPattern: typeof args.githubAssetPattern === 'string' ? args.githubAssetPattern : undefined,
   }
-  return value.trim()
+}
+
+function parseVersion(value: unknown): string {
+  return parseNonEmptyString(value, 'version')
 }
 
 function parseVsixPath(value: unknown): string {
+  return parseNonEmptyString(value, 'vsixPath')
+}
+
+function parseNonEmptyString(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error('vsixPath is required')
+    throw new Error(`${field} is required`)
   }
   return value.trim()
 }

@@ -42,6 +42,35 @@ describe('vscode extension handlers', () => {
     })
   })
 
+  it('checks latest GitHub release metadata when configured', async () => {
+    const metadataFetch = vi.fn(async () => jsonResponse({
+      tag_name: 'v6.1.0',
+      html_url: 'https://github.com/openai/codex/releases/tag/v6.1.0',
+      assets: [
+        {
+          name: 'openai.chatgpt-6.1.0.vsix',
+          browser_download_url: 'https://github.example/openai.chatgpt-6.1.0.vsix',
+        },
+      ],
+    })) satisfies FetchLike
+    const handlers = createHandlers({ metadataFetch })
+
+    const latest = await handlers.vscode_extensions_check_latest({
+      extensionId: 'openai.chatgpt',
+      source: 'github-release',
+      githubOwner: 'openai',
+      githubRepo: 'codex',
+      githubAssetPattern: 'chatgpt',
+    })
+
+    expect(latest).toMatchObject({
+      extensionId: 'openai.chatgpt',
+      version: '6.1.0',
+      source: 'github-release',
+      downloadUrl: 'https://github.example/openai.chatgpt-6.1.0.vsix',
+    })
+  })
+
   it('rejects Marketplace checks without explicit terms acceptance', async () => {
     const handlers = createHandlers()
 

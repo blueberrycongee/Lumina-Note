@@ -348,7 +348,7 @@ export async function scaffoldWorkspaceUiOverhaulPlugin(): Promise<string> {
 // ── VS Code AI extension compatibility ───────────────────────────────────
 
 export type VscodeAiExtensionId = "openai.chatgpt" | "anthropic.claude-code";
-export type VscodeAiExtensionSource = "open-vsx" | "marketplace";
+export type VscodeAiExtensionSource = "open-vsx" | "marketplace" | "github-release";
 export type VscodeAiExtensionDecision =
   | "auto-activated"
   | "pending-smoke-test"
@@ -431,6 +431,9 @@ export async function checkLatestVscodeAiExtension(input: {
   extensionId: VscodeAiExtensionId;
   source: VscodeAiExtensionSource;
   marketplaceTermsAccepted?: boolean;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubAssetPattern?: string;
 }): Promise<VscodeAiExtensionRemoteVersion> {
   return invoke("vscode_extensions_check_latest", input);
 }
@@ -439,6 +442,9 @@ export async function installLatestVscodeAiExtension(input: {
   extensionId: VscodeAiExtensionId;
   source: VscodeAiExtensionSource;
   marketplaceTermsAccepted?: boolean;
+  githubOwner?: string;
+  githubRepo?: string;
+  githubAssetPattern?: string;
 }): Promise<{ outcome: VscodeAiExtensionInstallOutcome }> {
   return invoke("vscode_extensions_install_latest", input);
 }

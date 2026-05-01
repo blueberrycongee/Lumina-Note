@@ -7,7 +7,7 @@ import type { VscodeExtensionInstallSource } from './store.js'
 
 export interface VscodeExtensionRemoteVersion {
   extensionId: SupportedVscodeAiExtensionId
-  source: Extract<VscodeExtensionInstallSource, 'marketplace' | 'open-vsx'>
+  source: Extract<VscodeExtensionInstallSource, 'marketplace' | 'open-vsx' | 'github-release'>
   version: string
   downloadUrl: string
   itemUrl: string
@@ -30,8 +30,9 @@ export type FetchLike = (
 export async function queryLatestRemoteVersion(
   extensionId: SupportedVscodeAiExtensionId,
   options: {
-    source: Extract<VscodeExtensionInstallSource, 'marketplace' | 'open-vsx'>
+    source: Extract<VscodeExtensionInstallSource, 'marketplace' | 'open-vsx' | 'github-release'>
     marketplaceTermsAccepted?: boolean
+    github?: GithubReleaseSourceOptions
     fetch?: FetchLike
   },
 ): Promise<VscodeExtensionRemoteVersion> {
@@ -44,7 +45,69 @@ export async function queryLatestRemoteVersion(
     }
     return queryLatestMarketplaceVersion(extensionId, fetcher)
   }
+  if (options.source === 'github-release') {
+    if (!options.github) {
+      throw new Error('GitHub release source requires owner/repo configuration')
+    }
+    return queryLatestGithubReleaseVersion(extensionId, options.github, fetcher)
+  }
   return queryLatestOpenVsxVersion(extensionId, fetcher)
+}
+
+export interface GithubReleaseSourceOptions {
+  owner: string
+  repo: string
+  assetPattern?: string
+}
+
+export async function queryLatestGithubReleaseVersion(
+  extensionId: SupportedVscodeAiExtensionId,
+  options: GithubReleaseSourceOptions,
+  fetcher: FetchLike = fetch,
+): Promise<VscodeExtensionRemoteVersion> {
+  const owner = options.owner.trim()
+  const repo = options.repo.trim()
+  if (!owner || !repo) {
+    throw new Error('GitHub release source requires owner and repo')
+  }
+  const res = await fetcher(
+    `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases/latest`,
+    {
+      headers: {
+        Accept: 'application/vnd.github+json',
+      },
+    },
+  )
+  if (!res.ok) {
+    throw new Error(`GitHub release query failed for ${extensionId}: HTTP ${res.status}`)
+  }
+  const body = (await res.json()) as {
+    tag_name?: string
+    html_url?: string
+    assets?: Array<{
+      name?: string
+      browser_download_url?: string
+    }>
+  }
+  const assetPattern = options.assetPattern?.trim()
+  const asset = (body.assets ?? []).find((item) => {
+    const name = item.name ?? ''
+    if (!name.endsWith('.vsix')) return false
+    if (!assetPattern) return true
+    return new RegExp(assetPattern, 'i').test(name)
+  })
+  const downloadUrl = asset?.browser_download_url?.trim()
+  const version = normalizeReleaseVersion(body.tag_name)
+  if (!version || !downloadUrl) {
+    throw new Error(`GitHub release response missing version/download for ${extensionId}`)
+  }
+  return {
+    extensionId,
+    source: 'github-release',
+    version,
+    downloadUrl,
+    itemUrl: body.html_url ?? `https://github.com/${owner}/${repo}/releases/latest`,
+  }
 }
 
 export async function queryLatestOpenVsxVersion(
@@ -143,4 +206,10 @@ interface MarketplaceQueryResponse {
       }>
     }>
   }>
+}
+
+function normalizeReleaseVersion(tagName: string | undefined): string | null {
+  const raw = tagName?.trim()
+  if (!raw) return null
+  return raw.replace(/^[vV]/, '')
 }
