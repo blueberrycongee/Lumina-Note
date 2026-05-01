@@ -195,7 +195,7 @@ export default {
         mathBlockDesc: "LaTeX ブロック",
         table: "テーブル",
         tableDesc: "Markdown テーブル",
-        tableTemplate: "| 列1 | 列2 | 列3 |\\n| --- | --- | --- |\\n|  |  |  |",
+        tableTemplate: "| 列1 | 列2 | 列3 |\n| --- | --- | --- |\n|  |  |  |",
         divider: "区切り線",
         dividerDesc: "水平区切り線",
         image: "画像",
