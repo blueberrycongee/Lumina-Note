@@ -39,6 +39,36 @@ export type SlashAIAction =
   | "expand-block"
   | "summarize-block";
 
+export type SlashAIStageId =
+  | "understanding"
+  | "reading-context"
+  | "preparing-context"
+  | "generating"
+  | "ready";
+
+export interface SlashAIProgress {
+  stage: SlashAIStageId;
+  status: "active" | "done" | "error";
+}
+
+export interface SlashAIGenerationCallbacks {
+  onProgress?: (progress: SlashAIProgress) => void;
+  signal?: AbortSignal;
+}
+
+export interface SlashAIResult {
+  text: string;
+  from: number;
+  to: number;
+}
+
+export class SlashAIAbortError extends Error {
+  constructor() {
+    super("Inline AI generation aborted");
+    this.name = "SlashAIAbortError";
+  }
+}
+
 export function getSlashAIActionForCommandId(commandId: string): SlashAIAction | null {
   switch (commandId) {
     case "ai-chat":
@@ -70,6 +100,19 @@ function stripMarkdownFence(text: string): string {
   const fenced = text.match(/^```(?:[a-zA-Z0-9_-]+)?\n([\s\S]*?)\n```$/);
   if (fenced) return fenced[1].trim();
   return text;
+}
+
+function emitSlashAIProgress(
+  callbacks: SlashAIGenerationCallbacks | undefined,
+  progress: SlashAIProgress,
+) {
+  callbacks?.onProgress?.(progress);
+}
+
+function throwIfSlashAIAborted(signal?: AbortSignal) {
+  if (signal?.aborted) {
+    throw new SlashAIAbortError();
+  }
 }
 
 function clampPos(view: EditorView, pos: number): number {
@@ -132,6 +175,7 @@ async function generateInlineAIMarkdown(
   request: string,
   t: Translations,
   insertPos: number,
+  callbacks?: SlashAIGenerationCallbacks,
 ): Promise<string | null> {
   const genericErrorMessage =
     (t.ai as { errors?: { sendGeneric?: string } })?.errors?.sendGeneric ||
@@ -141,6 +185,8 @@ async function generateInlineAIMarkdown(
   const currentFilePath = fileState.currentFile || undefined;
   const trimmedRequest = request.trim();
   if (!trimmedRequest) return null;
+  throwIfSlashAIAborted(callbacks?.signal);
+  emitSlashAIProgress(callbacks, { stage: "understanding", status: "active" });
 
   const prompt = [
     "You are an inline Markdown writing assistant.",
@@ -159,7 +205,12 @@ async function generateInlineAIMarkdown(
     .join("\n");
 
   try {
+    emitSlashAIProgress(callbacks, { stage: "understanding", status: "done" });
+    emitSlashAIProgress(callbacks, { stage: "reading-context", status: "active" });
     await waitForAIConfigSync();
+    throwIfSlashAIAborted(callbacks?.signal);
+    emitSlashAIProgress(callbacks, { stage: "reading-context", status: "done" });
+    emitSlashAIProgress(callbacks, { stage: "preparing-context", status: "active" });
     const cfg = getAIConfig();
     const selection = useAIStore.getState().runtimeModelSelection ?? {
       provider: cfg.provider,
@@ -171,6 +222,7 @@ async function generateInlineAIMarkdown(
     const query = vaultPath ? { directory: vaultPath } : undefined;
     setDefaultDirectory(vaultPath ?? null);
     const client = await getOpencodeClient();
+    throwIfSlashAIAborted(callbacks?.signal);
 
     const createRes = await client.session.create({
       body: { title: "Inline Insert" },
@@ -183,10 +235,14 @@ async function generateInlineAIMarkdown(
     }
 
     try {
+      emitSlashAIProgress(callbacks, { stage: "preparing-context", status: "done" });
+      emitSlashAIProgress(callbacks, { stage: "generating", status: "active" });
       const parts: Array<FilePartInput | { type: "text"; text: string }> = [
         { type: "text", text: prompt },
       ];
       const streamController = new AbortController();
+      const abortStream = () => streamController.abort();
+      callbacks?.signal?.addEventListener("abort", abortStream, { once: true });
       const stream = await client.event.subscribe({
         signal: streamController.signal,
       });
@@ -222,94 +278,100 @@ async function generateInlineAIMarkdown(
           promptAccepted = true;
         });
 
-      for await (const evt of stream.stream) {
-        const event = evt as unknown as {
-          type: string;
-          properties?: Record<string, unknown>;
-        };
-        const props = event.properties ?? {};
-        const eventSessionId = props.sessionID as string | undefined;
-        if (eventSessionId && eventSessionId !== sessionId) {
-          continue;
-        }
+      try {
+        for await (const evt of stream.stream) {
+          throwIfSlashAIAborted(callbacks?.signal);
+          const event = evt as unknown as {
+            type: string;
+            properties?: Record<string, unknown>;
+          };
+          const props = event.properties ?? {};
+          const eventSessionId = props.sessionID as string | undefined;
+          if (eventSessionId && eventSessionId !== sessionId) {
+            continue;
+          }
 
-        if (event.type === "message.updated") {
-          const info = props.info as
-            | { id?: string; role?: string; sessionID?: string }
-            | undefined;
-          if (info?.sessionID === sessionId && info.id && info.role) {
-            messageRoles.set(info.id, info.role);
-            if (info.role === "assistant") {
-              acceptAssistantMessageId(info.id);
-              pendingTextDeltas.delete(info.id);
-            } else {
-              pendingTextDeltas.delete(info.id);
+          if (event.type === "message.updated") {
+            const info = props.info as
+              | { id?: string; role?: string; sessionID?: string }
+              | undefined;
+            if (info?.sessionID === sessionId && info.id && info.role) {
+              messageRoles.set(info.id, info.role);
+              if (info.role === "assistant") {
+                acceptAssistantMessageId(info.id);
+                pendingTextDeltas.delete(info.id);
+              } else {
+                pendingTextDeltas.delete(info.id);
+              }
             }
+            continue;
           }
-          continue;
-        }
 
-        if (event.type === "message.part.delta") {
-          const messageId = props.messageID as string | undefined;
-          const field = props.field as string | undefined;
-          const delta = props.delta as string | undefined;
-          if (!messageId || field !== "text" || !delta) {
+          if (event.type === "message.part.delta") {
+            const messageId = props.messageID as string | undefined;
+            const field = props.field as string | undefined;
+            const delta = props.delta as string | undefined;
+            if (!messageId || field !== "text" || !delta) {
+              continue;
+            }
+            const role = messageRoles.get(messageId);
+            if (!role) {
+              pendingTextDeltas.set(
+                messageId,
+                `${pendingTextDeltas.get(messageId) ?? ""}${delta}`,
+              );
+              continue;
+            }
+            if (role !== "assistant") {
+              continue;
+            }
+            if (acceptAssistantMessageId(messageId)) {
+              sawDelta = true;
+            }
             continue;
           }
-          const role = messageRoles.get(messageId);
-          if (!role) {
-            pendingTextDeltas.set(
-              messageId,
-              `${pendingTextDeltas.get(messageId) ?? ""}${delta}`,
-            );
-            continue;
-          }
-          if (role !== "assistant") {
-            continue;
-          }
-          if (acceptAssistantMessageId(messageId)) {
-            sawDelta = true;
-          }
-          continue;
-        }
 
-        if (event.type === "message.part.updated" && !sawDelta) {
-          const part = props.part as
-            | { messageID?: string; type?: string; text?: string }
-            | undefined;
-          if (!part || part.type !== "text" || !part.messageID) {
+          if (event.type === "message.part.updated" && !sawDelta) {
+            const part = props.part as
+              | { messageID?: string; type?: string; text?: string }
+              | undefined;
+            if (!part || part.type !== "text" || !part.messageID) {
+              continue;
+            }
+            const role = messageRoles.get(part.messageID);
+            if (role !== "assistant") {
+              continue;
+            }
+            if (!assistantMessageId) {
+              assistantMessageId = part.messageID;
+            }
+            if (assistantMessageId !== part.messageID) {
+              continue;
+            }
+            latestTextPart = part.text ?? "";
             continue;
           }
-          const role = messageRoles.get(part.messageID);
-          if (role !== "assistant") {
-            continue;
-          }
-          if (!assistantMessageId) {
-            assistantMessageId = part.messageID;
-          }
-          if (assistantMessageId !== part.messageID) {
-            continue;
-          }
-          latestTextPart = part.text ?? "";
-          continue;
-        }
 
-        const isIdle =
-          (event.type === "session.idle" && eventSessionId === sessionId) ||
-          (event.type === "session.status" &&
-            eventSessionId === sessionId &&
-            (props.status as { type?: string } | undefined)?.type === "idle");
-        if (isIdle && promptAccepted) {
-          break;
-        }
+          const isIdle =
+            (event.type === "session.idle" && eventSessionId === sessionId) ||
+            (event.type === "session.status" &&
+              eventSessionId === sessionId &&
+              (props.status as { type?: string } | undefined)?.type === "idle");
+          if (isIdle && promptAccepted) {
+            break;
+          }
 
-        if (Date.now() - startedAt > timeoutMs) {
-          throw new Error("Inline AI streaming timeout");
+          if (Date.now() - startedAt > timeoutMs) {
+            throw new Error("Inline AI streaming timeout");
+          }
         }
+      } finally {
+        callbacks?.signal?.removeEventListener("abort", abortStream);
       }
 
       streamController.abort();
       await promptReq;
+      throwIfSlashAIAborted(callbacks?.signal);
 
       let rawText = latestTextPart;
       if (assistantMessageId) {
@@ -334,6 +396,8 @@ async function generateInlineAIMarkdown(
       if (!insertText) {
         throw new Error("AI returned empty content");
       }
+      emitSlashAIProgress(callbacks, { stage: "generating", status: "done" });
+      emitSlashAIProgress(callbacks, { stage: "ready", status: "done" });
       return insertText;
     } finally {
       await client.session.delete({
@@ -342,8 +406,12 @@ async function generateInlineAIMarkdown(
       }).catch(() => undefined);
     }
   } catch (error) {
+    if (error instanceof SlashAIAbortError || callbacks?.signal?.aborted) {
+      throw new SlashAIAbortError();
+    }
+    emitSlashAIProgress(callbacks, { stage: "generating", status: "error" });
     reportOperationError({
-      source: "slashCommand.runInlineAIMarkdownInsert",
+      source: "slashCommand.generateInlineAIMarkdown",
       action: "Generate inline markdown with slash command",
       error,
       userMessage: genericErrorMessage,
@@ -352,35 +420,17 @@ async function generateInlineAIMarkdown(
         currentFilePath,
       },
     });
-    window.alert(genericErrorMessage);
-    return null;
+    throw new Error(genericErrorMessage);
   }
 }
 
-async function runInlineAIMarkdownInsert(
-  view: EditorView,
-  insertPos: number,
-  request: string,
-  t: Translations,
-): Promise<void> {
-  const safePos = clampPos(view, insertPos);
-  let inserted = "";
-  const applyText = (next: string) => {
-    view.dispatch({
-      changes: {
-        from: safePos,
-        to: safePos + inserted.length,
-        insert: next,
-      },
-      selection: { anchor: safePos + next.length },
-    });
-    inserted = next;
-  };
-  const insertText = await generateInlineAIMarkdown(view, request, t, safePos);
-  if (!insertText) return;
-  if (inserted !== insertText) {
-    applyText(insertText);
-  }
+export function applySlashAIResult(view: EditorView, result: SlashAIResult): void {
+  const from = clampPos(view, result.from);
+  const to = clampPos(view, Math.max(result.from, result.to));
+  view.dispatch({
+    changes: { from, to, insert: result.text },
+    selection: { anchor: from + result.text.length },
+  });
   view.focus();
 }
 
@@ -390,28 +440,47 @@ export async function runSlashAIAction(
   to: number,
   action: SlashAIAction,
   instruction?: string,
-): Promise<void> {
+  callbacks?: SlashAIGenerationCallbacks,
+): Promise<SlashAIResult | null> {
   const t = getCurrentTranslations();
   const labels = t.editor?.slashMenu?.commands;
+  const inlineAI = t.editor?.slashMenu?.inlineAI;
   const safeFrom = clampPos(view, from);
   const safeTo = clampPos(view, to);
+  const originalSelection = view.state.selection.main;
+  const originalSelectionRange =
+    originalSelection.from !== originalSelection.to
+      ? { from: originalSelection.from, to: originalSelection.to }
+      : null;
 
-  view.dispatch({
+  const removeSlashTransaction = view.state.update({
     changes: { from: safeFrom, to: safeTo, insert: "" },
     selection: { anchor: safeFrom },
   });
+  const selectedRange = originalSelectionRange
+    ? {
+        from: removeSlashTransaction.changes.mapPos(originalSelectionRange.from),
+        to: removeSlashTransaction.changes.mapPos(originalSelectionRange.to),
+      }
+    : null;
+  view.dispatch(removeSlashTransaction);
 
   const notePath = useFileStore.getState().currentFile || undefined;
   const noteName =
     notePath?.split(/[/\\]/).pop()?.replace(/\.md$/i, "") || t.common.untitled;
-  const targetRange = resolveTargetRange(view, safeFrom);
+  const targetRange =
+    selectedRange &&
+    selectedRange.from !== selectedRange.to &&
+    view.state.doc.sliceString(selectedRange.from, selectedRange.to).trim()
+      ? selectedRange
+      : resolveTargetRange(view, safeFrom);
   const targetText = view.state.doc.sliceString(targetRange.from, targetRange.to).trim();
 
   if (action === "chat-insert") {
     const req = instruction?.trim();
-    if (!req) return;
-    await runInlineAIMarkdownInsert(view, safeFrom, req, t);
-    return;
+    if (!req) return null;
+    const text = await generateInlineAIMarkdown(view, req, t, safeFrom, callbacks);
+    return text ? { text, from: safeFrom, to: safeFrom } : null;
   }
 
   if (action === "continue") {
@@ -424,13 +493,18 @@ export async function runSlashAIAction(
       instruction?.trim() ? "[User guidance]" : null,
       instruction?.trim() || null,
     ].filter(Boolean).join("\n");
-    await runInlineAIMarkdownInsert(view, safeFrom, continuePrompt, t);
-    return;
+    const text = await generateInlineAIMarkdown(
+      view,
+      continuePrompt,
+      t,
+      safeFrom,
+      callbacks,
+    );
+    return text ? { text, from: safeFrom, to: safeFrom } : null;
   }
 
   if (!targetText) {
-    window.alert(t.common.empty);
-    return;
+    throw new Error(inlineAI?.emptyTarget || t.common.empty);
   }
 
   if (action === "rewrite-block") {
@@ -446,14 +520,14 @@ export async function runSlashAIAction(
       "[Block to rewrite]",
       targetText,
     ].filter((part): part is string => part !== null).join("\n");
-    const rewritten = await generateInlineAIMarkdown(view, rewritePrompt, t, targetRange.from);
-    if (!rewritten) return;
-    view.dispatch({
-      changes: { from: targetRange.from, to: targetRange.to, insert: rewritten },
-      selection: { anchor: targetRange.from + rewritten.length },
-    });
-    view.focus();
-    return;
+    const text = await generateInlineAIMarkdown(
+      view,
+      rewritePrompt,
+      t,
+      targetRange.from,
+      callbacks,
+    );
+    return text ? { text, from: targetRange.from, to: targetRange.to } : null;
   }
 
   if (action === "expand-block") {
@@ -469,14 +543,14 @@ export async function runSlashAIAction(
       "[Block to expand]",
       targetText,
     ].filter((part): part is string => part !== null).join("\n");
-    const expanded = await generateInlineAIMarkdown(view, expandPrompt, t, targetRange.from);
-    if (!expanded) return;
-    view.dispatch({
-      changes: { from: targetRange.from, to: targetRange.to, insert: expanded },
-      selection: { anchor: targetRange.from + expanded.length },
-    });
-    view.focus();
-    return;
+    const text = await generateInlineAIMarkdown(
+      view,
+      expandPrompt,
+      t,
+      targetRange.from,
+      callbacks,
+    );
+    return text ? { text, from: targetRange.from, to: targetRange.to } : null;
   }
 
   const summarizePromptTemplate =
@@ -491,15 +565,17 @@ export async function runSlashAIAction(
     "[Block to summarize]",
     targetText,
   ].filter((part): part is string => part !== null).join("\n");
-  const summary = await generateInlineAIMarkdown(view, summaryInstruction, t, targetRange.to);
-  if (!summary) return;
+  const summary = await generateInlineAIMarkdown(
+    view,
+    summaryInstruction,
+    t,
+    targetRange.to,
+    callbacks,
+  );
+  if (!summary) return null;
   const prefix = targetRange.to > 0 ? "\n\n" : "";
   const inserted = `${prefix}${summary}`;
-  view.dispatch({
-    changes: { from: targetRange.to, to: targetRange.to, insert: inserted },
-    selection: { anchor: targetRange.to + inserted.length },
-  });
-  view.focus();
+  return { text: inserted, from: targetRange.to, to: targetRange.to };
 }
 
 // ============ 命令注册 ============

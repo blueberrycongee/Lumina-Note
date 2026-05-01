@@ -203,6 +203,28 @@ export default {
         link: "リンク",
         linkDesc: "リンクを挿入",
       },
+      inlineAI: {
+        panelHint: "プレビューは挿入するまでノートに書き込まれません。",
+        optionalGuidance: "任意: AI への追加指示",
+        progressTitle: "文脈を確認中",
+        previewTitle: "挿入予定の内容",
+        generate: "生成",
+        generating: "生成中",
+        insert: "挿入",
+        retry: "再試行",
+        regenerate: "再生成",
+        errorTitle: "生成できませんでした",
+        promptRequired: "ここに何を書きたいか AI に伝えてください。",
+        emptyTarget: "カーソルをブロック内に置くか、テキストを選択してください。",
+        genericError: "AI から応答がありませんでした。もう一度お試しください。",
+        stages: {
+          understanding: "依頼を理解",
+          "reading-context": "近くのノート文脈を確認",
+          "preparing-context": "関連文脈を準備",
+          generating: "候補を生成",
+          ready: "挿入できます",
+        },
+      },
     },
     blockMenu: {
       groups: {

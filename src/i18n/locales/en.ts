@@ -204,6 +204,28 @@ export default {
         link: "Link",
         linkDesc: "Insert link",
       },
+      inlineAI: {
+        panelHint: "Preview stays out of the note until you insert it.",
+        optionalGuidance: "Optional guidance for the AI",
+        progressTitle: "Working in context",
+        previewTitle: "Preview to insert",
+        generate: "Generate",
+        generating: "Generating",
+        insert: "Insert",
+        retry: "Retry",
+        regenerate: "Regenerate",
+        errorTitle: "Couldn't generate",
+        promptRequired: "Tell AI what you want to write here.",
+        emptyTarget: "Place the cursor in a block or select text first.",
+        genericError: "The AI didn't respond. Please try again.",
+        stages: {
+          understanding: "Understanding request",
+          "reading-context": "Reading nearby note context",
+          "preparing-context": "Preparing related context",
+          generating: "Generating candidate",
+          ready: "Ready to insert",
+        },
+      },
     },
     blockMenu: {
       groups: {

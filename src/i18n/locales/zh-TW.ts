@@ -200,6 +200,28 @@ export default {
         link: "連結",
         linkDesc: "插入連結",
       },
+      inlineAI: {
+        panelHint: "預覽在確認插入前不會寫入筆記。",
+        optionalGuidance: "可選：補充你想讓 AI 注意的要求",
+        progressTitle: "正在結合上下文",
+        previewTitle: "將要插入的內容",
+        generate: "生成",
+        generating: "生成中",
+        insert: "插入",
+        retry: "重試",
+        regenerate: "重新生成",
+        errorTitle: "生成失敗",
+        promptRequired: "告訴 AI 你想在這裡寫什麼。",
+        emptyTarget: "請先把游標放在一個區塊內，或選取一段文字。",
+        genericError: "AI 沒有返回結果，請重試。",
+        stages: {
+          understanding: "理解需求",
+          "reading-context": "讀取附近筆記上下文",
+          "preparing-context": "準備相關上下文",
+          generating: "生成候選內容",
+          ready: "可以插入",
+        },
+      },
     },
     blockMenu: {
       groups: {

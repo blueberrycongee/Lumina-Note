@@ -200,6 +200,28 @@ export default {
         link: "链接",
         linkDesc: "插入链接",
       },
+      inlineAI: {
+        panelHint: "预览在确认插入前不会写入笔记。",
+        optionalGuidance: "可选：补充你想让 AI 注意的要求",
+        progressTitle: "正在结合上下文",
+        previewTitle: "将要插入的内容",
+        generate: "生成",
+        generating: "生成中",
+        insert: "插入",
+        retry: "重试",
+        regenerate: "重新生成",
+        errorTitle: "生成失败",
+        promptRequired: "告诉 AI 你想在这里写什么。",
+        emptyTarget: "请先把光标放在一个块内，或选中一段文本。",
+        genericError: "AI 没有返回结果，请重试。",
+        stages: {
+          understanding: "理解需求",
+          "reading-context": "读取附近笔记上下文",
+          "preparing-context": "准备相关上下文",
+          generating: "生成候选内容",
+          ready: "可以插入",
+        },
+      },
     },
     blockMenu: {
       groups: {

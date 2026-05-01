@@ -5,13 +5,19 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { EditorView } from "@codemirror/view";
+import { Check, Loader2, RotateCcw, Sparkles, X } from "lucide-react";
 import {
+  applySlashAIResult,
   getDefaultCommands,
   getSlashAIActionForCommandId,
   hideSlashMenu,
   runSlashAIAction,
   SlashCommand,
   SlashAIAction,
+  SlashAIAbortError,
+  SlashAIResult,
+  SlashAIStageId,
+  SlashAIProgress,
   slashMenuField,
 } from "../extensions/slashCommand";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -23,6 +29,29 @@ interface SlashMenuProps {
 const categoryOrder = ["ai", "heading", "list", "block", "insert"];
 const MENU_WIDTH = 320;
 const MENU_MAX_HEIGHT = 320;
+const AI_PANEL_WIDTH = 380;
+const AI_PANEL_MAX_HEIGHT = 520;
+
+type AIPanelStatus = "prompt" | "running" | "preview" | "error";
+type AIPanelStageStatus = "pending" | SlashAIProgress["status"];
+
+const aiStageOrder: SlashAIStageId[] = [
+  "understanding",
+  "reading-context",
+  "preparing-context",
+  "generating",
+  "ready",
+];
+
+function createInitialAIStages(): Record<SlashAIStageId, AIPanelStageStatus> {
+  return {
+    understanding: "active",
+    "reading-context": "pending",
+    "preparing-context": "pending",
+    generating: "pending",
+    ready: "pending",
+  };
+}
 
 export function SlashMenu({ view }: SlashMenuProps) {
   const { t } = useLocaleStore();
@@ -33,22 +62,36 @@ export function SlashMenu({ view }: SlashMenuProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [aiPromptOpen, setAiPromptOpen] = useState(false);
   const [aiPromptText, setAiPromptText] = useState("");
+  const [aiStatus, setAiStatus] = useState<AIPanelStatus>("prompt");
   const [aiSubmitting, setAiSubmitting] = useState(false);
+  const [aiStages, setAiStages] = useState<Record<SlashAIStageId, AIPanelStageStatus>>(
+    () => createInitialAIStages(),
+  );
+  const [aiResult, setAiResult] = useState<SlashAIResult | null>(null);
+  const [aiError, setAiError] = useState("");
   const [aiSlashRange, setAiSlashRange] = useState<{ from: number; to: number } | null>(null);
   const [aiPromptAction, setAiPromptAction] = useState<SlashAIAction | null>(null);
   const [aiPromptCommand, setAiPromptCommand] = useState<SlashCommand | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const aiPromptRef = useRef<HTMLInputElement>(null);
+  const aiPromptRef = useRef<HTMLTextAreaElement>(null);
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
   const commands = useMemo(() => getDefaultCommands(t), [t]);
+  const inlineAI = t.editor.slashMenu.inlineAI;
 
   const closeMenu = useCallback(() => {
+    aiAbortControllerRef.current?.abort();
+    aiAbortControllerRef.current = null;
     if (view) {
       view.dispatch({ effects: hideSlashMenu.of() });
       view.focus();
     }
     setAiPromptOpen(false);
     setAiPromptText("");
+    setAiStatus("prompt");
     setAiSubmitting(false);
+    setAiStages(createInitialAIStages());
+    setAiResult(null);
+    setAiError("");
     setAiSlashRange(null);
     setAiPromptAction(null);
     setAiPromptCommand(null);
@@ -108,6 +151,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
     if (aiAction) {
       setAiPromptOpen(true);
       setAiPromptText("");
+      setAiStatus("prompt");
+      setAiSubmitting(false);
+      setAiStages(createInitialAIStages());
+      setAiResult(null);
+      setAiError("");
       setAiPromptAction(aiAction);
       setAiPromptCommand(cmd);
       setAiSlashRange({ from, to });
@@ -119,23 +167,75 @@ export function SlashMenu({ view }: SlashMenuProps) {
     closeMenu();
   }, [view, closeMenu]);
 
-  const submitAIPrompt = useCallback(async () => {
+  const startAIGeneration = useCallback(async () => {
     if (!view || !aiSlashRange || !aiPromptAction || aiSubmitting) return;
     const request = aiPromptText.trim();
     if (aiPromptAction === "chat-insert" && !request) {
-      closeMenu();
+      setAiStatus("error");
+      setAiError(inlineAI.promptRequired);
       return;
     }
+    const range = aiSlashRange;
+    setAiSlashRange({ from: range.from, to: range.from });
+    setAiResult(null);
+    setAiError("");
+    setAiStages(createInitialAIStages());
+    setAiStatus("running");
     setAiSubmitting(true);
-    await runSlashAIAction(
-      view,
-      aiSlashRange.from,
-      aiSlashRange.to,
-      aiPromptAction,
-      request,
-    );
+    const abortController = new AbortController();
+    aiAbortControllerRef.current = abortController;
+    try {
+      const result = await runSlashAIAction(
+        view,
+        range.from,
+        range.to,
+        aiPromptAction,
+        request,
+        {
+          signal: abortController.signal,
+          onProgress: (progress) => {
+            setAiStages((current) => ({
+              ...current,
+              [progress.stage]: progress.status,
+            }));
+          },
+        },
+      );
+      if (!result || abortController.signal.aborted) return;
+      setAiResult(result);
+      setAiStatus("preview");
+      setAiStages((current) => ({
+        ...current,
+        generating: current.generating === "error" ? "error" : "done",
+        ready: "done",
+      }));
+    } catch (error) {
+      if (error instanceof SlashAIAbortError || abortController.signal.aborted) {
+        return;
+      }
+      setAiStatus("error");
+      setAiError(error instanceof Error ? error.message : inlineAI.genericError);
+    } finally {
+      if (aiAbortControllerRef.current === abortController) {
+        aiAbortControllerRef.current = null;
+      }
+      setAiSubmitting(false);
+    }
+  }, [
+    view,
+    aiSlashRange,
+    aiPromptAction,
+    aiSubmitting,
+    aiPromptText,
+    inlineAI.promptRequired,
+    inlineAI.genericError,
+  ]);
+
+  const acceptAIResult = useCallback(() => {
+    if (!view || !aiResult) return;
+    applySlashAIResult(view, aiResult);
     closeMenu();
-  }, [view, aiSlashRange, aiPromptAction, aiSubmitting, aiPromptText, closeMenu]);
+  }, [view, aiResult, closeMenu]);
 
   // 监听菜单显示事件
   useEffect(() => {
@@ -146,7 +246,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
       setSelectedIndex(0);
       setAiPromptOpen(false);
       setAiPromptText("");
+      setAiStatus("prompt");
       setAiSubmitting(false);
+      setAiStages(createInitialAIStages());
+      setAiResult(null);
+      setAiError("");
       setAiSlashRange(null);
       setAiPromptAction(null);
       setAiPromptCommand(null);
@@ -167,7 +271,11 @@ export function SlashMenu({ view }: SlashMenuProps) {
         setVisible(false);
         setAiPromptOpen(false);
         setAiPromptText("");
+        setAiStatus("prompt");
         setAiSubmitting(false);
+        setAiStages(createInitialAIStages());
+        setAiResult(null);
+        setAiError("");
         setAiSlashRange(null);
         setAiPromptAction(null);
         setAiPromptCommand(null);
@@ -189,10 +297,15 @@ export function SlashMenu({ view }: SlashMenuProps) {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (aiPromptOpen) {
-        if (e.key === "Escape" && !aiSubmitting) {
+        if (e.key === "Escape") {
           e.preventDefault();
           e.stopPropagation();
           closeMenu();
+        }
+        if (e.key === "Enter" && aiStatus === "preview" && !e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          acceptAIResult();
         }
         return;
       }
@@ -228,7 +341,17 @@ export function SlashMenu({ view }: SlashMenuProps) {
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [visible, view, flatCommands, selectedIndex, executeCommand, aiPromptOpen, aiSubmitting, closeMenu]);
+  }, [
+    visible,
+    view,
+    flatCommands,
+    selectedIndex,
+    executeCommand,
+    aiPromptOpen,
+    aiStatus,
+    acceptAIResult,
+    closeMenu,
+  ]);
 
   // 点击外部关闭
   useEffect(() => {
@@ -257,11 +380,14 @@ export function SlashMenu({ view }: SlashMenuProps) {
   }, [selectedIndex, visible]);
 
   const clampedPosition = useMemo(() => {
+    const desiredWidth = aiPromptOpen ? AI_PANEL_WIDTH : MENU_WIDTH;
+    const desiredMaxHeight = aiPromptOpen ? AI_PANEL_MAX_HEIGHT : MENU_MAX_HEIGHT;
     if (typeof window === "undefined") {
       return {
         left: position.x,
         top: position.y,
-        width: MENU_WIDTH,
+        width: desiredWidth,
+        maxHeight: desiredMaxHeight,
       };
     }
 
@@ -269,19 +395,23 @@ export function SlashMenu({ view }: SlashMenuProps) {
     const viewportHeight = Math.max(1, window.innerHeight);
     const width = Math.max(
       1,
-      Math.min(MENU_WIDTH, viewportWidth - 16),
+      Math.min(desiredWidth, viewportWidth - 16),
+    );
+    const maxHeight = Math.max(
+      180,
+      Math.min(desiredMaxHeight, viewportHeight - 16),
     );
     const safeTop = Math.min(
       position.y,
-      Math.max(8, viewportHeight - MENU_MAX_HEIGHT - 8),
+      Math.max(8, viewportHeight - maxHeight - 8),
     );
     const left = Math.min(
       position.x,
       Math.max(8, viewportWidth - width - 8),
     );
 
-    return { left, top: Math.max(8, safeTop), width };
-  }, [position.x, position.y]);
+    return { left, top: Math.max(8, safeTop), width, maxHeight };
+  }, [aiPromptOpen, position.x, position.y]);
 
   if (!visible || flatCommands.length === 0) return null;
 
@@ -293,51 +423,165 @@ export function SlashMenu({ view }: SlashMenuProps) {
         left: clampedPosition.left,
         top: clampedPosition.top,
         width: clampedPosition.width,
-        maxHeight: MENU_MAX_HEIGHT,
+        maxHeight: clampedPosition.maxHeight,
       }}
     >
       {aiPromptOpen ? (
-        <div className="p-3 space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">
-            {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
+        <div className="max-h-[inherit] overflow-y-auto p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
+                <span className="truncate">
+                  {aiPromptCommand?.label ?? t.editor.slashMenu.commands.aiChat}
+                </span>
+              </div>
+              <div className="mt-0.5 text-xs text-muted-foreground">
+                {inlineAI.panelHint}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+              onClick={closeMenu}
+              aria-label={t.common.close}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
-          <input
+
+          <textarea
             ref={aiPromptRef}
             value={aiPromptText}
-            onChange={(e) => setAiPromptText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void submitAIPrompt();
+            onChange={(e) => {
+              setAiPromptText(e.target.value);
+              if (aiStatus === "error") {
+                setAiError("");
+                setAiStatus("prompt");
               }
-              if (e.key === "Escape" && !aiSubmitting) {
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey && aiStatus !== "preview") {
+                e.preventDefault();
+                void startAIGeneration();
+              }
+              if (e.key === "Escape") {
                 e.preventDefault();
                 closeMenu();
               }
             }}
-            disabled={aiSubmitting}
+            disabled={aiSubmitting || aiStatus === "preview"}
             placeholder={aiPromptAction === "chat-insert"
               ? t.editor.slashMenu.commands.aiChatPrompt
-              : aiPromptCommand?.description}
-            className="w-full h-9 px-2 rounded-md border border-border bg-background text-sm outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+              : inlineAI.optionalGuidance}
+            className="mt-3 max-h-28 min-h-16 w-full resize-none rounded-md border border-border bg-background px-2.5 py-2 text-sm outline-none transition-shadow focus:ring-2 focus:ring-primary/30 disabled:opacity-70"
           />
-          <div className="flex items-center justify-end gap-2">
+
+          {(aiStatus === "running" || aiStatus === "preview") && (
+            <div className="mt-3 rounded-md border border-border/70 bg-muted/25 p-2">
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+                {inlineAI.progressTitle}
+              </div>
+              <div className="space-y-1">
+                {aiStageOrder.map((stage) => {
+                  const status = aiStages[stage];
+                  return (
+                    <div
+                      key={stage}
+                      className={`flex items-center gap-2 text-xs ${
+                        status === "pending" ? "text-muted-foreground/55" : "text-foreground"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                          status === "done"
+                            ? "border-primary/50 bg-primary/10 text-primary"
+                            : status === "active"
+                              ? "border-primary/40 text-primary"
+                              : "border-border text-muted-foreground"
+                        }`}
+                      >
+                        {status === "done" ? (
+                          <Check className="h-3 w-3" aria-hidden="true" />
+                        ) : status === "active" ? (
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <span className="h-1.5 w-1.5 rounded-full bg-current opacity-45" />
+                        )}
+                      </span>
+                      <span>{inlineAI.stages[stage]}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {aiStatus === "preview" && aiResult && (
+            <div className="mt-3">
+              <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+                {inlineAI.previewTitle}
+              </div>
+              <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background/80 p-3 text-sm leading-relaxed text-foreground">
+                {aiResult.text}
+              </pre>
+            </div>
+          )}
+
+          {aiStatus === "error" && aiError && (
+            <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <div className="font-medium">{inlineAI.errorTitle}</div>
+              <div className="mt-0.5 text-xs opacity-90">{aiError}</div>
+            </div>
+          )}
+
+          <div className="mt-3 flex items-center justify-between gap-2">
             <button
               type="button"
-              className="h-8 px-2 rounded-md text-xs border border-border hover:bg-accent/60 disabled:opacity-60"
-              disabled={aiSubmitting}
+              className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs hover:bg-accent/60"
               onClick={closeMenu}
             >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
               {t.common.cancel}
             </button>
-            <button
-              type="button"
-              className="h-8 px-2 rounded-md text-xs bg-primary text-primary-foreground disabled:opacity-60"
-              disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
-              onClick={() => void submitAIPrompt()}
-            >
-              {aiSubmitting ? t.common.loading : t.common.confirm}
-            </button>
+            <div className="flex items-center gap-2">
+              {(aiStatus === "preview" || aiStatus === "error") && (
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-2.5 text-xs hover:bg-accent/60 disabled:opacity-60"
+                  disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
+                  onClick={() => void startAIGeneration()}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  {aiStatus === "error" ? inlineAI.retry : inlineAI.regenerate}
+                </button>
+              )}
+              {aiStatus === "preview" ? (
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs text-primary-foreground disabled:opacity-60"
+                  disabled={!aiResult}
+                  onClick={acceptAIResult}
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  {inlineAI.insert}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs text-primary-foreground disabled:opacity-60"
+                  disabled={aiSubmitting || (aiPromptAction === "chat-insert" && !aiPromptText.trim())}
+                  onClick={() => void startAIGeneration()}
+                >
+                  {aiSubmitting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                  {aiSubmitting ? inlineAI.generating : inlineAI.generate}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ) : (
