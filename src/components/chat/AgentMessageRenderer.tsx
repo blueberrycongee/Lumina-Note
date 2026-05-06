@@ -97,6 +97,12 @@ type AgentMessage = {
    * to timeline entries.
    */
   rawParts?: OpencodePart[];
+  /**
+   * Mirror of AssistantMessage.time.completed propagated from the store.
+   * Undefined until opencode finalizes the assistant turn — used to gate
+   * "done-state" UI like the copy button per round.
+   */
+  completedAt?: number;
 };
 
 interface ThinkingItem {
@@ -1935,6 +1941,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       assistantCopyText: string;
       roundKey: string;
       hasAIContent: boolean;
+      isStreaming: boolean;
     }> = [];
     let pendingDiffInserted = false;
 
@@ -2051,6 +2058,35 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
       // 判断是否有 AI 回复内容
       const hasAIContent = collapsedParts.length > 0;
 
+      // Per-round streaming flag. Source of truth: the last assistant
+      // message's `completedAt` (mirror of opencode AssistantMessage.
+      // time.completed). Only the *last* round can be streaming — older
+      // rounds always show their copy button regardless of session
+      // state, otherwise re-sending a new prompt would flicker history.
+      // Fallback: if completedAt is missing but the session is no
+      // longer running, treat the round as done so the button is never
+      // permanently hidden after a crash/restart.
+      const isLastRound = roundIndex === userMessageIndices.length - 1;
+      let isStreaming = false;
+      if (isLastRound) {
+        let lastAssistantCompletedAt: number | undefined;
+        let sawAssistant = false;
+        for (let i = nextUserIdx - 1; i > userIdx; i--) {
+          if (messages[i]?.role === "assistant") {
+            lastAssistantCompletedAt = messages[i].completedAt;
+            sawAssistant = true;
+            break;
+          }
+        }
+        if (sawAssistant) {
+          isStreaming = lastAssistantCompletedAt == null && isRunning;
+        } else {
+          // No assistant message yet (waiting for first token) — treat
+          // as streaming whenever the session is running.
+          isStreaming = isRunning;
+        }
+      }
+
       result.push({
         userIdx,
         userContent: displayContent,
@@ -2063,11 +2099,12 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
         assistantCopyText: getAssistantCopyText(collapsedParts),
         roundKey,
         hasAIContent,
+        isStreaming,
       });
     });
 
     return result;
-  }, [messages, pendingDiff]);
+  }, [messages, pendingDiff, isRunning]);
 
   return (
     <div className={className} onClick={handlePromptLinkClick}>
@@ -2213,7 +2250,7 @@ export const AgentMessageRenderer = memo(function AgentMessageRenderer({
                       return null;
                     });
                   })()}
-                  {round.assistantCopyText.trim().length > 0 && (
+                  {!round.isStreaming && round.assistantCopyText.trim().length > 0 && (
                     <div className="flex items-center">
                       <CopyButton
                         text={round.assistantCopyText}

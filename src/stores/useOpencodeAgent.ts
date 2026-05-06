@@ -68,6 +68,12 @@ export type AgentMessage = {
   // prompt in `content` directly, so this stays undefined; callers
   // already use `rawContent ?? content`.
   rawContent?: string;
+  // Mirrors AssistantMessage.time.completed from opencode. Undefined
+  // while the message is still streaming; set to the completion epoch
+  // (ms) once opencode finalizes the assistant turn. Renderers use
+  // this as the per-message "done" signal — session-level isRunning
+  // can't distinguish historical rounds from the live one.
+  completedAt?: number;
 };
 
 export type AgentSessionSummary = {
@@ -371,6 +377,8 @@ function makeAgentMessage(info: Message, parts: Part[]): AgentMessage {
     role,
     content: messageContentFromParts(parts, role),
     rawParts: parts,
+    completedAt:
+      info.role === "assistant" ? info.time?.completed : undefined,
   };
 }
 
