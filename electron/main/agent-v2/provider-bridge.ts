@@ -124,6 +124,29 @@ const MIMO_TOKEN_PLAN_OPENCODE_IDS: Record<string, string> = {
   "https://token-plan-ams.xiaomimimo.com/v1": "xiaomi-token-plan-ams",
 };
 
+const MIMO_MODEL_LIMITS: Record<string, { context: number; output: number }> = {
+  "mimo-v2.5-pro": {
+    context: 1_048_576,
+    output: 131_072,
+  },
+  "mimo-v2.5": {
+    context: 1_048_576,
+    output: 131_072,
+  },
+  "mimo-v2-pro": {
+    context: 1_000_000,
+    output: 128_000,
+  },
+  "mimo-v2-omni": {
+    context: 256_000,
+    output: 128_000,
+  },
+  "mimo-v2-flash": {
+    context: 256_000,
+    output: 64_000,
+  },
+};
+
 function normalizeBaseUrl(baseUrl?: string): string {
   return (baseUrl ?? "").trim().replace(/\/+$/, "").toLowerCase();
 }
@@ -275,13 +298,12 @@ function fallbackLimitForModel(
   }
 
   if (luminaId === "mimo") {
-    return {
-      context:
-        modelId === "mimo-v2-omni" || modelId === "mimo-v2-flash"
-          ? 262_144
-          : 1_000_000,
-      output: 4_096,
-    };
+    return (
+      MIMO_MODEL_LIMITS[modelId] ?? {
+        context: 1_000_000,
+        output: 4_096,
+      }
+    );
   }
 
   if (luminaId === "ollama") {

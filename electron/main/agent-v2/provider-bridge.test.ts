@@ -118,14 +118,26 @@ describe("buildOpencodeBridge", () => {
     expect(config.provider["xiaomi-token-plan-sgp"].models).toMatchObject({
       "mimo-v2.5-pro": {
         limit: {
-          context: 1_000_000,
-          output: 4_096,
+          context: 1_048_576,
+          output: 131_072,
         },
       },
       "mimo-v2.5": {
         limit: {
+          context: 1_048_576,
+          output: 131_072,
+        },
+      },
+      "mimo-v2-pro": {
+        limit: {
           context: 1_000_000,
-          output: 4_096,
+          output: 128_000,
+        },
+      },
+      "mimo-v2-omni": {
+        limit: {
+          context: 256_000,
+          output: 128_000,
         },
       },
     });
@@ -183,6 +195,25 @@ describe("buildOpencodeBridge", () => {
     expect(config.provider["lumina-compat"].models["mimo-v2.5-pro"].limit).toEqual({
       context: 1_000_000,
       output: 16_384,
+    });
+  });
+
+  it("uses MiMo's long-output limits for official endpoint models", async () => {
+    const bridge = await buildOpencodeBridge(
+      makeProviderSettings({
+        provider: "mimo",
+        modelId: "mimo-v2.5-pro",
+      }),
+    );
+
+    const config = JSON.parse(bridge?.config ?? "{}");
+    expect(config.provider.xiaomi.models["mimo-v2.5-pro"].limit).toEqual({
+      context: 1_048_576,
+      output: 131_072,
+    });
+    expect(config.provider.xiaomi.models["mimo-v2-flash"].limit).toEqual({
+      context: 256_000,
+      output: 64_000,
     });
   });
 });
