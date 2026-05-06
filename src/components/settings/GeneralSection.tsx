@@ -296,10 +296,13 @@ export function GeneralSection({ isOpen }: GeneralSectionProps) {
 
           <div
             className="p-3 rounded-lg border border-border/60 bg-background/60"
-            style={{ fontSize: `${editorFontSize}px` }}
+            style={{
+              fontSize: `${editorFontSize}px`,
+              lineHeight: "var(--lumina-editor-line-height)",
+            }}
           >
-            <p className="leading-relaxed">The quick brown fox</p>
-            <p className="leading-relaxed">敏捷的棕色狐狸 123</p>
+            <p>The quick brown fox</p>
+            <p>敏捷的棕色狐狸 123</p>
           </div>
         </div>
       </section>

@@ -49,6 +49,8 @@ body.resizing iframe[data-codex-iframe="true"] {
 }
 
 :root {
+  --lumina-editor-line-height: 1.55;
+
   /* ── Neutral spine (near-monochrome, cool-tinted) ─────────────────────── */
   --background: 220 16% 99%;          /* off-white, glare-reduced */
   --foreground: 222 16% 11%;          /* near-black, cool */
@@ -1744,6 +1746,7 @@ mark {
 /* Reading view - 移除动画 */
 .reading-view {
   /* animation removed for smooth mode switching */
+  line-height: var(--lumina-editor-line-height);
 
   /* Match CodeMirrorEditor's actual rendered geometry. CM stacks three
      padded layers in globals.css + the editor theme:

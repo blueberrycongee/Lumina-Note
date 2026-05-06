@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
-import { CodeMirrorEditor } from "./CodeMirrorEditor";
+import { CodeMirrorEditor, EDITOR_TEXT_LINE_HEIGHT } from "./CodeMirrorEditor";
 import { useFileStore } from "@/stores/useFileStore";
 
 vi.mock("mermaid", () => ({
@@ -48,6 +48,29 @@ describe("CodeMirror live markdown rendering polish", () => {
   afterEach(() => {
     cleanup();
     useFileStore.setState({ vaultPath: null, currentFile: null });
+  });
+
+  it("uses a compact note line height in the editor surface", () => {
+    const { container } = setupEditor(
+      [
+        "四个核心设计：",
+        "",
+        "1. **result.json 是 slim 的**，内容全在 report.md 里",
+        "最早做过一版“什么都塞 result.json”——report 内容、tool calls、token usage 都在里面。",
+      ].join("\n"),
+      "live",
+    );
+    const editor = container.querySelector<HTMLElement>(".cm-editor");
+    const line = container.querySelector<HTMLElement>(".cm-line");
+
+    expect(editor).not.toBeNull();
+    expect(line).not.toBeNull();
+    expect(
+      getComputedStyle(editor!)
+        .getPropertyValue("--lumina-editor-line-height")
+        .trim(),
+    ).toBe(String(EDITOR_TEXT_LINE_HEIGHT));
+    expect(getComputedStyle(line!).lineHeight).not.toBe("1.75");
   });
 
   it("hides link destination markers until the link source is active", () => {

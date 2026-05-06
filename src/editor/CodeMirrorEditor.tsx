@@ -94,6 +94,7 @@ const themeCompartment = new Compartment();
 const pluginExtensionsCompartment = new Compartment();
 const fontSizeCompartment = new Compartment();
 const EXTERNAL_JUMP_Y_MARGIN_PX = 24;
+export const EDITOR_TEXT_LINE_HEIGHT = 1.55;
 
 // ============ 2. 全局状态 ============
 // mouseSelectingField 和 setMouseSelecting 从 codemirror-live-markdown 导入
@@ -141,6 +142,7 @@ const createEditorTheme = (fontSize: number) =>
       "--lumina-codeblock-bg": "hsl(var(--muted) / 0.5)",
       "--lumina-codeblock-bg-hover": "hsl(var(--muted) / 0.6)",
       "--lumina-codeblock-bg-source": "hsl(var(--muted) / 0.54)",
+      "--lumina-editor-line-height": String(EDITOR_TEXT_LINE_HEIGHT),
     },
     ".cm-codeblock-widget pre": { fontSize: `${Math.max(10, fontSize - 2)}px` },
 
@@ -172,7 +174,7 @@ const createEditorTheme = (fontSize: number) =>
     ".cm-line": {
       padding: "0 var(--lumina-line-pad-right)",
       paddingLeft: "var(--lumina-line-pad-left)",
-      lineHeight: "1.75",
+      lineHeight: "var(--lumina-editor-line-height)",
       position: "relative",
     },
 
@@ -700,7 +702,7 @@ const createEditorTheme = (fontSize: number) =>
       display: "block",
       padding:
         "0 var(--lumina-block-text-right) 0 var(--lumina-block-text-left)",
-      lineHeight: "1.75",
+      lineHeight: "var(--lumina-editor-line-height)",
       minHeight: "28px",
     },
     ".cm-codeblock-fence": {
