@@ -849,7 +849,6 @@ const createEditorTheme = (fontSize: number) =>
       fontWeight: "700",
       lineHeight: "1.3",
       letterSpacing: "-0.02em",
-      marginLeft: "-0.04em",
       color: "hsl(var(--md-heading, var(--foreground)))",
     },
     ".cm-header-2": {
@@ -857,7 +856,6 @@ const createEditorTheme = (fontSize: number) =>
       fontWeight: "600",
       lineHeight: "1.4",
       letterSpacing: "-0.015em",
-      marginLeft: "-0.04em",
       color: "hsl(var(--md-heading, var(--foreground)))",
     },
     ".cm-header-3": {
@@ -865,7 +863,6 @@ const createEditorTheme = (fontSize: number) =>
       fontWeight: "600",
       lineHeight: "1.5",
       letterSpacing: "-0.01em",
-      marginLeft: "-0.04em",
       color: "hsl(var(--md-heading, var(--foreground)))",
     },
     ".cm-header-4, .cm-header-5": {
@@ -2078,8 +2075,10 @@ function buildLivePreviewDecorations(view: EditorView): DecorationSet {
         const cls = isActiveLine
           ? "cm-formatting-block cm-formatting-block-visible"
           : "cm-formatting-block";
+        let to = node.to;
+        if (state.doc.sliceString(to, to + 1) === " ") to++;
         decorations.push(
-          Decoration.mark({ class: cls }).range(node.from, node.to),
+          Decoration.mark({ class: cls }).range(node.from, to),
         );
         return;
       }
@@ -4955,7 +4954,9 @@ const readingModePlugin = ViewPlugin.fromClass(
               "CodeMark",
             ].includes(node.name)
           ) {
-            this.hide(state, node.from, node.to, d);
+            let to = node.to;
+            if (node.name === "HeaderMark" && state.doc.sliceString(to, to + 1) === " ") to++;
+            this.hide(state, node.from, to, d);
           } else if (LIVE_LINK_SOURCE_TYPES.has(node.name)) {
             const parent = node.node.parent;
             if (parent?.name === "Link") this.hide(state, node.from, node.to, d);
