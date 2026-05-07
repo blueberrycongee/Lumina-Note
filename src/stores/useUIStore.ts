@@ -239,7 +239,7 @@ export const useUIStore = create<UIState>()(
         set({ editorInteractionTraceEnabled: enabled }),
 
       // Editor font size (10-32px)
-      editorFontSize: 16,
+      editorFontSize: 13,
       setEditorFontSize: (size) =>
         set({ editorFontSize: Math.max(10, Math.min(32, size)) }),
 
