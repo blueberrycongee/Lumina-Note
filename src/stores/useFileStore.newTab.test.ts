@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/host", () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
+  listDirShallow: vi.fn(() => Promise.resolve([])),
   readFile: vi.fn(),
   saveFile: vi.fn(() => Promise.resolve()),
   createFile: vi.fn(() => Promise.resolve()),
@@ -79,6 +80,18 @@ describe("useFileStore new tabs", () => {
     expect(state.activeTabIndex).toBe(1);
   });
 
+  it("initializes an empty tab model idempotently", () => {
+    const store = useFileStore.getState();
+
+    store.ensureOpenTab();
+    store.ensureOpenTab();
+
+    const state = useFileStore.getState();
+    expect(state.tabs).toHaveLength(1);
+    expect(state.tabs[0].type).toBe("new-tab");
+    expect(state.activeTabIndex).toBe(0);
+  });
+
   it("replenishes a new tab when the last tab is closed", async () => {
     resetStore([newTab()], 0);
 
@@ -117,5 +130,24 @@ describe("useFileStore new tabs", () => {
     });
     expect(state.activeTabIndex).toBe(0);
     expect(state.currentFile).toBe("/vault/Open.md");
+  });
+
+  it("repairs current file state when switching to the already active file tab", () => {
+    resetStore([fileTab("/vault/Open.md")], 0);
+    useFileStore.setState({
+      currentFile: null,
+      currentContent: "",
+      isDirty: false,
+      undoStack: [],
+      redoStack: [],
+      lastSavedContent: "",
+    });
+
+    useFileStore.getState().switchTab(0);
+
+    const state = useFileStore.getState();
+    expect(state.currentFile).toBe("/vault/Open.md");
+    expect(state.currentContent).toBe("A");
+    expect(state.lastSavedContent).toBe("A");
   });
 });

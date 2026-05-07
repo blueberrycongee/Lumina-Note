@@ -132,6 +132,7 @@ interface FileState {
   closeFile: () => void;
 
   // Tab actions
+  ensureOpenTab: () => void;
   openNewTab: () => void;
   switchTab: (index: number) => void;
   closeTab: (index: number) => Promise<void>;
@@ -818,6 +819,12 @@ export const useFileStore = create<FileState>()(
         }
       },
 
+      ensureOpenTab: () => {
+        if (get().tabs.length === 0) {
+          get().openNewTab();
+        }
+      },
+
       openNewTab: () => {
         const {
           tabs,
@@ -866,8 +873,30 @@ export const useFileStore = create<FileState>()(
           redoStack,
           lastSavedContent,
         } = get();
-        if (index < 0 || index >= tabs.length || index === activeTabIndex)
+        if (index < 0 || index >= tabs.length) {
           return;
+        }
+
+        if (index === activeTabIndex) {
+          const activeTab = tabs[index];
+          const activeFile = getCurrentFileForTab(activeTab);
+          const state = get();
+          if (
+            state.currentFile !== activeFile ||
+            state.currentContent !== activeTab.content ||
+            state.isDirty !== activeTab.isDirty
+          ) {
+            set({
+              currentFile: activeFile,
+              currentContent: activeTab.content,
+              isDirty: activeTab.isDirty,
+              undoStack: activeTab.undoStack,
+              redoStack: activeTab.redoStack,
+              lastSavedContent: getTabLastSavedContent(activeTab),
+            });
+          }
+          return;
+        }
 
         // 保存当前标签页的状态
         if (activeTabIndex >= 0 && tabs[activeTabIndex]) {

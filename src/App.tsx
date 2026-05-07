@@ -305,7 +305,7 @@ function App() {
     activeTabIndex,
     fileTree,
     refreshFileTree,
-    openNewTab,
+    ensureOpenTab,
   } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
@@ -317,7 +317,7 @@ function App() {
       activeTabIndex: state.activeTabIndex,
       fileTree: state.fileTree,
       refreshFileTree: state.refreshFileTree,
-      openNewTab: state.openNewTab,
+      ensureOpenTab: state.ensureOpenTab,
     })),
   );
   const pendingDiff = useAIStore((state) => state.pendingDiff);
@@ -355,10 +355,8 @@ function App() {
 
   // Keep the tab model concrete even when no persisted tab state exists.
   useEffect(() => {
-    if (tabs.length === 0) {
-      openNewTab();
-    }
-  }, []);
+    ensureOpenTab();
+  }, [ensureOpenTab]);
 
   // Start the opencode event stream + session list at app boot so the UI
   // is warm before MainAIChatShell mounts. Idempotent.
@@ -1226,7 +1224,7 @@ function App() {
                     onCreateNewFile={handleCreateFileFromNewTab}
                     onQuickOpen={handleQuickOpenFromNewTab}
                   />
-                ) : currentFile ? (
+                ) : activeTab?.type === "file" ? (
                   // 文件编辑
                   <Editor />
                 ) : (
