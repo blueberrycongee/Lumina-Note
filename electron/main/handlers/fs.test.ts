@@ -3,7 +3,13 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { fsHandlers, type FileEntry, type WorkspaceListing } from "./fs.js";
+import {
+  fsHandlers,
+  walkWorkspace,
+  WORKSPACE_TOO_LARGE_PREFIX,
+  type FileEntry,
+  type WorkspaceListing,
+} from "./fs.js";
 
 async function mkRoot(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), "lumina-fs-test-"));
@@ -102,10 +108,7 @@ describe("fs handler — workspace listing", () => {
     expect(names).not.toContain("noisy.log");
   });
 
-  it("returns truncated=true and stops walking once the cap is hit (via list_workspace)", async () => {
-    // Build a directory with more than the test cap to exercise the path.
-    // We patch via low-level walker by going through list_workspace which
-    // exposes the truncated flag.
+  it("returns a complete listing under the entry/time budgets (truncated stays false)", async () => {
     for (let i = 0; i < 30; i++) {
       await fs.writeFile(path.join(root, `f${i}.md`), "");
     }
@@ -114,6 +117,68 @@ describe("fs handler — workspace listing", () => {
     })) as WorkspaceListing;
     expect(result.totalEntries).toBe(30);
     expect(result.truncated).toBe(false);
+  });
+
+  it("throws WORKSPACE_TOO_LARGE:count when entries exceed the cap (no partial tree)", async () => {
+    // Build 25 files, then call walkWorkspace with maxEntries=10 to
+    // trigger the count ceiling. The bug we're guarding against: pre-fix,
+    // the walker would stop mid-flight and return a tree where an
+    // already-emitted-but-not-yet-descended directory looked empty,
+    // indistinguishable from a real empty dir.
+    for (let i = 0; i < 25; i++) {
+      await fs.writeFile(path.join(root, `f${i}.md`), "");
+    }
+
+    let caught: Error | null = null;
+    try {
+      await walkWorkspace(root, {
+        maxEntries: 10,
+        deadlineMs: 5_000,
+        ignoreMatcher: null,
+      });
+    } catch (e) {
+      caught = e as Error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught!.message).toMatch(
+      new RegExp(`^${WORKSPACE_TOO_LARGE_PREFIX}:count:\\d+:`),
+    );
+    // Critically: caller does NOT receive entries — no partial tree leaks
+    // through the throw path. (No assertion on entries because the throw
+    // means there's no return value to inspect.)
+  });
+
+  it("throws WORKSPACE_TOO_LARGE:timeout when the wall-clock deadline is exceeded", async () => {
+    for (let i = 0; i < 5; i++) {
+      await fs.writeFile(path.join(root, `f${i}.md`), "");
+    }
+
+    // Inject a clock that jumps past the deadline on the second call:
+    // first call records start time, second call (top of the next loop
+    // iteration) sees > deadline.
+    let nowCalls = 0;
+    const fakeNow = () => {
+      nowCalls += 1;
+      return nowCalls === 1 ? 0 : 999_999;
+    };
+
+    let caught: Error | null = null;
+    try {
+      await walkWorkspace(root, {
+        maxEntries: 1_000,
+        deadlineMs: 100,
+        ignoreMatcher: null,
+        now: fakeNow,
+      });
+    } catch (e) {
+      caught = e as Error;
+    }
+
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught!.message).toMatch(
+      new RegExp(`^${WORKSPACE_TOO_LARGE_PREFIX}:timeout:\\d+:`),
+    );
   });
 
   it("does not throw when a subdirectory is unreadable", async () => {

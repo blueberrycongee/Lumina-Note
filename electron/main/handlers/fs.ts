@@ -24,12 +24,54 @@ export interface WorkspaceListing {
   unreadableDirCount: number;
 }
 
-// Hard cap on how many entries (files + dirs combined) a workspace listing
-// will return. Beyond this, the walker stops and reports `truncated: true`
-// so the renderer can warn instead of OOM-ing on serialisation. 50k is well
-// past any reasonable note vault but small enough to keep the IPC payload
-// under ~5MB without per-file stat data.
-const MAX_WORKSPACE_ENTRIES = 50_000;
+// Workspace listing has two hard ceilings that both produce the same
+// typed error. The contract is "complete or fail" — never a partially
+// populated tree, because consumers (sidebar, graph, indexer) cannot
+// distinguish "loaded but empty dir" from "we ran out of budget before
+// descending here", and silent partial data corrupts every feature
+// downstream.
+//
+// MAX_WORKSPACE_ENTRIES is a high-watermark safety belt: at this size
+// the renderer's structured-clone + Zustand state would itself become
+// the problem. 500k entries = roughly 100-150MB resident across main
+// and renderer post-clone, which is the genuinely-too-much zone.
+//
+// WORKSPACE_DEADLINE_MS catches the other failure mode: many files
+// reachable in time, but some pathological I/O (network FS, antivirus
+// hooks) drags us out. Failing fast at 10s gives the user actionable
+// signal instead of an apparently-frozen vault open.
+const MAX_WORKSPACE_ENTRIES = 500_000;
+const WORKSPACE_DEADLINE_MS = 10_000;
+
+// Indexer's separate cap (used by walkPaths). Smaller because the
+// indexer goes on to read each file's contents — that cost dominates
+// and deserves a tighter bound than enumeration.
+const MAX_WALK_PATHS = 50_000;
+
+/**
+ * Stable prefix on the Error.message for "workspace too large" failures.
+ * The renderer matches on this to convert the cross-IPC plain Error into
+ * a typed UI affordance — Electron's structured clone strips custom
+ * Error fields, so the message itself has to carry the discriminator.
+ *
+ * Format: `WORKSPACE_TOO_LARGE:<reason>:<entriesScanned>: <human msg>`
+ */
+export const WORKSPACE_TOO_LARGE_PREFIX = "WORKSPACE_TOO_LARGE";
+
+export type WorkspaceTooLargeReason = "count" | "timeout";
+
+function workspaceTooLargeError(
+  reason: WorkspaceTooLargeReason,
+  entriesScanned: number,
+): Error {
+  const human =
+    reason === "count"
+      ? `Workspace exceeds the supported ${MAX_WORKSPACE_ENTRIES.toLocaleString()}-entry ceiling. Open a subdirectory instead, or add ignore rules (.gitignore) to scope what's loaded.`
+      : `Workspace took longer than ${WORKSPACE_DEADLINE_MS / 1000}s to enumerate (scanned ${entriesScanned.toLocaleString()} entries). Open a subdirectory instead, or add ignore rules (.gitignore) to scope what's loaded.`;
+  return new Error(
+    `${WORKSPACE_TOO_LARGE_PREFIX}:${reason}:${entriesScanned}: ${human}`,
+  );
+}
 
 // Directories that are almost never useful to surface in a notes/editor
 // workspace. Hard-coded for the common cases; .gitignore (when present) is
@@ -82,10 +124,18 @@ async function loadGitignore(rootPath: string): Promise<Ignore | null> {
 }
 
 interface WalkOptions {
-  /** Cap on number of entries to collect. */
+  /**
+   * Hard ceiling on entries — the walker throws WorkspaceTooLargeError
+   * when this is exceeded. Never returns a partial tree; the contract
+   * is "complete or fail".
+   */
   maxEntries: number;
+  /** Wall-clock deadline in milliseconds; same throw semantics. */
+  deadlineMs: number;
   /** Optional .gitignore-style matcher (paths checked relative to root). */
   ignoreMatcher: Ignore | null;
+  /** Test seam — defaults to Date.now. */
+  now?: () => number;
 }
 
 /**
@@ -93,8 +143,12 @@ interface WalkOptions {
  * pathological trees can't blow the call stack. Symlinks are not followed —
  * `Dirent.isDirectory()` only returns true for real directories, so symlink
  * loops are impossible by construction.
+ *
+ * Throws WorkspaceTooLargeError when either the entry cap or the wall-clock
+ * deadline is exceeded. Does not return a partially-populated tree — see the
+ * MAX_WORKSPACE_ENTRIES comment above.
  */
-async function walkWorkspace(
+export async function walkWorkspace(
   rootPath: string,
   opts: WalkOptions,
 ): Promise<WorkspaceListing> {
@@ -117,9 +171,18 @@ async function walkWorkspace(
 
   let totalEntries = 0;
   let unreadableDirCount = 0;
-  let truncated = false;
+  const now = opts.now ?? Date.now;
+  const startedAt = now();
 
-  while (stack.length > 0 && !truncated) {
+  while (stack.length > 0) {
+    // Wall-clock deadline check. We check at the top of each readdir
+    // boundary rather than per-entry — readdir is the only thing that
+    // does real I/O, and per-entry checks would add nontrivial overhead
+    // without catching anything that the per-readdir check wouldn't.
+    if (now() - startedAt > opts.deadlineMs) {
+      throw workspaceTooLargeError("timeout", totalEntries);
+    }
+
     const { dirPath, parent } = stack.pop()!;
 
     let dirents: fs.Dirent[];
@@ -160,8 +223,7 @@ async function walkWorkspace(
       }
 
       if (totalEntries >= opts.maxEntries) {
-        truncated = true;
-        break;
+        throw workspaceTooLargeError("count", totalEntries);
       }
       totalEntries++;
 
@@ -198,7 +260,9 @@ async function walkWorkspace(
   return {
     entries: root.children!,
     totalEntries,
-    truncated,
+    // Always false now — kept for API compat with the WorkspaceListing
+    // type; remove once renderer call sites stop checking.
+    truncated: false,
     unreadableDirCount,
   };
 }
@@ -232,7 +296,7 @@ async function walkPaths(
   const exts = (opts.extensions ?? []).map((e) => e.toLowerCase());
   const matchExt = (name: string) =>
     exts.length === 0 || exts.some((e) => name.toLowerCase().endsWith(e));
-  const maxPaths = opts.maxPaths ?? MAX_WORKSPACE_ENTRIES;
+  const maxPaths = opts.maxPaths ?? MAX_WALK_PATHS;
   const maxSize = opts.maxFileSizeBytes ?? 0;
 
   const ignoreMatcher = await loadGitignore(rootPath);
@@ -316,6 +380,7 @@ export const fsHandlers: Record<
     const ignoreMatcher = await loadGitignore(rootPath);
     const result = await walkWorkspace(rootPath, {
       maxEntries: MAX_WORKSPACE_ENTRIES,
+      deadlineMs: WORKSPACE_DEADLINE_MS,
       ignoreMatcher,
     });
     return result.entries;
@@ -326,6 +391,7 @@ export const fsHandlers: Record<
     const ignoreMatcher = await loadGitignore(rootPath);
     return walkWorkspace(rootPath, {
       maxEntries: MAX_WORKSPACE_ENTRIES,
+      deadlineMs: WORKSPACE_DEADLINE_MS,
       ignoreMatcher,
     });
   },

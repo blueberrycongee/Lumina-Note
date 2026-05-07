@@ -76,12 +76,59 @@ export async function listDirectory(path: string): Promise<FileEntry[]> {
 export interface WorkspaceListing {
   entries: FileEntry[];
   totalEntries: number;
+  /**
+   * @deprecated The workspace walker no longer returns partial trees —
+   * it throws a typed WorkspaceTooLargeError instead (see
+   * `parseWorkspaceTooLargeError`). This field is always `false` and
+   * exists only until all renderer call sites stop checking it.
+   */
   truncated: boolean;
   unreadableDirCount: number;
 }
 
 export async function listWorkspace(path: string): Promise<WorkspaceListing> {
   return invoke<WorkspaceListing>("list_workspace", { path });
+}
+
+/**
+ * Discriminator for the cross-IPC "workspace too large" failure. Mirrors
+ * the constant in `electron/main/handlers/fs.ts`; the prefix is encoded
+ * into Error.message because Electron's structured clone strips custom
+ * Error fields. Keep in sync with the main-side definition.
+ */
+const WORKSPACE_TOO_LARGE_PREFIX = "WORKSPACE_TOO_LARGE";
+
+export type WorkspaceTooLargeReason = "count" | "timeout";
+
+export interface WorkspaceTooLargeInfo {
+  reason: WorkspaceTooLargeReason;
+  /** Entries scanned before the limit was hit; useful for diagnostics. */
+  entriesScanned: number;
+  /** Human-readable suffix from the main-side message. */
+  message: string;
+}
+
+/**
+ * Try to parse a thrown error as a "workspace too large" signal from
+ * the main process. Returns null when the error is something else
+ * (regular IO error, permission, network, etc.) so the caller can fall
+ * through to its generic error path.
+ */
+export function parseWorkspaceTooLargeError(
+  err: unknown,
+): WorkspaceTooLargeInfo | null {
+  if (!err || typeof err !== "object") return null;
+  const raw = (err as { message?: unknown }).message;
+  if (typeof raw !== "string") return null;
+  const match = raw.match(
+    new RegExp(`(?:^|: )${WORKSPACE_TOO_LARGE_PREFIX}:(count|timeout):(\\d+):\\s*(.*)$`),
+  );
+  if (!match) return null;
+  return {
+    reason: match[1] as WorkspaceTooLargeReason,
+    entriesScanned: Number(match[2]),
+    message: match[3],
+  };
 }
 
 export interface WalkPathsOptions {
