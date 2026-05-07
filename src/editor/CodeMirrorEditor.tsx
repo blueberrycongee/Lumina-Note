@@ -1711,6 +1711,7 @@ class ListMarkerWidget extends WidgetType {
     readonly marker: string,
     readonly kind: "unordered" | "ordered" | "task",
     readonly checked: boolean = false,
+    readonly depth: number = 0,
   ) {
     super();
   }
@@ -1718,7 +1719,8 @@ class ListMarkerWidget extends WidgetType {
     return (
       other.marker === this.marker &&
       other.kind === this.kind &&
-      other.checked === this.checked
+      other.checked === this.checked &&
+      other.depth === this.depth
     );
   }
   toDOM() {
@@ -1731,7 +1733,12 @@ class ListMarkerWidget extends WidgetType {
       return marker;
     }
     marker.className = `cm-rendered-list-marker cm-rendered-list-marker-${this.kind}`;
-    marker.textContent = this.kind === "unordered" ? "•" : this.marker;
+    if (this.kind === "unordered") {
+      const bullets = ["•", "◦", "▪"];
+      marker.textContent = bullets[Math.min(this.depth, bullets.length - 1)];
+    } else {
+      marker.textContent = this.marker;
+    }
     return marker;
   }
   ignoreEvent() {
@@ -2138,9 +2145,14 @@ function buildListAndQuoteDecorations(state: EditorState): DecorationSet {
         }
 
         const kind = /^\d/.test(marker) ? "ordered" : "unordered";
+        let depth = 0;
+        for (let n = node.node.parent; n; n = n.parent) {
+          if (n.type.name === "BulletList" || n.type.name === "OrderedList") depth++;
+        }
+        depth = Math.max(0, depth - 1);
         decorations.push(
           Decoration.replace({
-            widget: new ListMarkerWidget(marker, kind),
+            widget: new ListMarkerWidget(marker, kind, false, depth),
           }).range(node.from, node.to),
         );
         return;

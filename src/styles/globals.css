@@ -1331,14 +1331,39 @@ html {
 /* 列表样式 */
 .prose ul,
 .prose ol {
-  padding-left: 1.5rem;
+  padding-left: 1.625rem;
   margin: 0.75rem 0;
 }
 .prose li {
+  margin: 0.375rem 0;
+  line-height: 1.65;
+}
+.prose li > ul,
+.prose li > ol {
   margin: 0.25rem 0;
 }
 .prose li::marker {
   color: hsl(var(--md-list-marker, var(--primary)));
+}
+
+/* Nested unordered list markers */
+.prose ul { list-style-type: disc; }
+.prose ul ul { list-style-type: circle; }
+.prose ul ul ul { list-style-type: square; }
+
+/* Nested ordered list markers */
+.prose ol { list-style-type: decimal; }
+.prose ol ol { list-style-type: lower-alpha; }
+.prose ol ol ol { list-style-type: lower-roman; }
+
+/* Task list items: hide bullet, style checked state */
+.prose li:has(> input[type="checkbox"]) {
+  list-style: none;
+}
+.prose li:has(> input[type="checkbox"]:checked) {
+  color: hsl(var(--muted-foreground) / 0.65);
+  text-decoration: line-through;
+  text-decoration-color: hsl(var(--muted-foreground) / 0.35);
 }
 
 /* Shared Markdown block surface used by reading HTML and CodeMirror widgets. */
