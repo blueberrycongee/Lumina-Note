@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import {
   FileEntry,
   listWorkspace,
+  parseWorkspaceTooLargeError,
   readFile,
   saveFile,
   createFile,
@@ -456,20 +457,36 @@ export const useFileStore = create<FileState>()(
             });
           }
           const listing = await listWorkspace(path);
+          // listing.truncated is always false post-walker-rewrite — the
+          // walker now throws WorkspaceTooLargeError instead. The catch
+          // below recognizes that error and surfaces an actionable banner.
           set({ fileTree: listing.entries, isLoadingTree: false });
-          if (listing.truncated) {
-            reportOperationError({
-              source: "FileStore.setVaultPath",
-              action: "Open workspace",
-              error: new Error(
-                `Workspace has more than ${listing.totalEntries} entries; some paths were not loaded. Add ignore rules (.gitignore) to scope the vault.`,
-              ),
-              level: "warning",
-              context: { path, totalEntries: listing.totalEntries },
-            });
-          }
           await get().syncMobileWorkspace({ path, force: true });
         } catch (error) {
+          const tooLarge = parseWorkspaceTooLargeError(error);
+          if (tooLarge) {
+            // Don't replace any previously-loaded fileTree on this kind
+            // of failure — the user is mid-vault-switch and seeing the
+            // old tree briefly is better than a flash of empty state.
+            // setVaultPath is the one entry point where there's no
+            // previous tree to preserve, so we still clear loading.
+            set({ vaultPath: null, isLoadingTree: false });
+            reportOperationError({
+              source: "FileStore.setVaultPath",
+              action:
+                tooLarge.reason === "count"
+                  ? "Workspace exceeds size ceiling"
+                  : "Workspace enumeration timed out",
+              error: new Error(tooLarge.message),
+              level: "warning",
+              context: {
+                path,
+                reason: tooLarge.reason,
+                entriesScanned: tooLarge.entriesScanned,
+              },
+            });
+            return;
+          }
           reportOperationError({
             source: "FileStore.setVaultPath",
             action: "Open workspace",
@@ -492,6 +509,29 @@ export const useFileStore = create<FileState>()(
           useFavoriteStore.getState().pruneMissing(listing.entries);
           void get().syncMobileWorkspace();
         } catch (error) {
+          const tooLarge = parseWorkspaceTooLargeError(error);
+          if (tooLarge) {
+            // Refresh path: keep the prior fileTree on screen so the user
+            // doesn't lose their working context just because something
+            // got too big to re-enumerate (e.g., a build dir suddenly
+            // filled with artifacts).
+            set({ isLoadingTree: false });
+            reportOperationError({
+              source: "FileStore.refreshFileTree",
+              action:
+                tooLarge.reason === "count"
+                  ? "Workspace exceeds size ceiling"
+                  : "Workspace enumeration timed out",
+              error: new Error(tooLarge.message),
+              level: "warning",
+              context: {
+                vaultPath,
+                reason: tooLarge.reason,
+                entriesScanned: tooLarge.entriesScanned,
+              },
+            });
+            return;
+          }
           reportOperationError({
             source: "FileStore.refreshFileTree",
             action: "Refresh file tree",
