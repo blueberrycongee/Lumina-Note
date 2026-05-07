@@ -144,11 +144,41 @@ describe('plugin:updater|check', () => {
     expect(result).toBeNull()
   })
 
-  it('returns null when checkForUpdates throws (feed not configured)', async () => {
+  it('returns null in dev when the app is not packaged', async () => {
     const autoUpdater = buildFakeUpdater({
       checkForUpdates: vi.fn(async () => {
-        throw new Error('no feed configured')
+        throw new Error(
+          'Skip checkForUpdates because application is not packed and dev update config is not forced',
+        )
       }),
+    })
+    const { handlers } = build({ autoUpdater })
+    const result = await handlers['plugin:updater|check']({})
+    expect(result).toBeNull()
+  })
+
+  it('propagates real failures so the renderer can surface them', async () => {
+    const autoUpdater = buildFakeUpdater({
+      checkForUpdates: vi.fn(async () => {
+        throw new Error('HttpError: 404 Not Found')
+      }),
+    })
+    const { handlers } = build({ autoUpdater })
+    await expect(handlers['plugin:updater|check']({})).rejects.toThrow(
+      /404 Not Found/,
+    )
+  })
+
+  it('returns null when isUpdateAvailable is false even though updateInfo is present', async () => {
+    const autoUpdater = buildFakeUpdater({
+      checkForUpdates: vi.fn(async () => ({
+        isUpdateAvailable: false,
+        updateInfo: {
+          version: '1.4.0',
+          releaseNotes: 'same version',
+          releaseDate: '2026-05-01',
+        },
+      })),
     })
     const { handlers } = build({ autoUpdater })
     const result = await handlers['plugin:updater|check']({})
@@ -158,6 +188,7 @@ describe('plugin:updater|check', () => {
   it('maps updateInfo to the Tauri-shape result when an update is available', async () => {
     const autoUpdater = buildFakeUpdater({
       checkForUpdates: vi.fn(async () => ({
+        isUpdateAvailable: true,
         updateInfo: {
           version: '2.1.0',
           releaseNotes: 'changelog',
@@ -173,5 +204,26 @@ describe('plugin:updater|check', () => {
       body: 'changelog',
       date: '2026-05-01',
     })
+  })
+})
+
+describe('update_quit_and_install', () => {
+  it('invokes autoUpdater.quitAndInstall(true, true) to install + relaunch', async () => {
+    const quitAndInstall = vi.fn()
+    const autoUpdater = buildFakeUpdater({ quitAndInstall })
+    const { handlers } = build({ autoUpdater })
+    await handlers.update_quit_and_install({})
+    expect(quitAndInstall).toHaveBeenCalledWith(true, true)
+  })
+
+  it('throws when the underlying updater does not implement quitAndInstall', async () => {
+    const autoUpdater = buildFakeUpdater()
+    // Simulate an environment where electron-updater hasn't been initialized
+    // with an installer (e.g. dev mode).
+    delete (autoUpdater as { quitAndInstall?: unknown }).quitAndInstall
+    const { handlers } = build({ autoUpdater })
+    await expect(handlers.update_quit_and_install({})).rejects.toThrow(
+      /not supported/,
+    )
   })
 })

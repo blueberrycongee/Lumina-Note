@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { relaunch } from "@/lib/host";
+import { quitAndInstallUpdate, relaunch } from "@/lib/host";
 import { Loader2, RefreshCw, Download, RotateCcw, CheckCircle2, AlertCircle, SkipForward } from "lucide-react";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import {
@@ -202,6 +202,8 @@ export function UpdateChecker() {
 
     const handleRelaunch = async () => {
         const previousTelemetry = installTelemetry;
+        // Capture phase before the optimistic update flips it to idle.
+        const wasReady = previousTelemetry.phase === "ready";
         try {
             useUpdateStore.setState({
                 installTelemetry: {
@@ -211,12 +213,19 @@ export function UpdateChecker() {
                     errorCode: null,
                 },
             });
-            await relaunch();
+            if (wasReady) {
+                // Real install path: hand control to electron-updater so
+                // the cached installer is actually applied. Plain relaunch()
+                // would skip the install and leave the app on the old version.
+                await quitAndInstallUpdate();
+            } else {
+                await relaunch();
+            }
         } catch (err) {
             useUpdateStore.setState({ installTelemetry: previousTelemetry });
             reportOperationError({
                 source: "UpdateChecker.handleRelaunch",
-                action: "Relaunch app after update",
+                action: wasReady ? "Install update and relaunch" : "Relaunch app",
                 error: err,
             });
             setCheckError(err instanceof Error ? err.message : String(err));

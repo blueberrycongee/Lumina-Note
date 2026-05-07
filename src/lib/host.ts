@@ -401,6 +401,15 @@ export async function check(_options?: {
   };
 }
 
+/**
+ * Apply a downloaded update and relaunch. This is the only path that
+ * actually installs the new version — `relaunch()` alone just restarts
+ * the current binary and leaves the cached installer untouched.
+ */
+export async function quitAndInstallUpdate(): Promise<void> {
+  await invoke("update_quit_and_install");
+}
+
 export async function moveFile(
   sourcePath: string,
   targetFolder: string,

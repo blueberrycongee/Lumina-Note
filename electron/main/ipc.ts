@@ -28,6 +28,14 @@ import { setDirtyFileCount } from "../main/index.js";
 
 const { autoUpdater } = electronUpdater;
 
+// Don't auto-download on `checkForUpdates`. The renderer drives the
+// download via `update_start_resumable_install` so the user has explicit
+// control, and so progress events aren't lost before the resumable
+// session has been initialized. autoInstallOnAppQuit stays at its
+// default (true) — once an update is downloaded, a normal app quit will
+// install it as a safety net even if the user never clicks "重启".
+autoUpdater.autoDownload = false;
+
 // Stub response for unimplemented commands
 function notImplemented(cmd: string) {
   console.warn(`[ipc] unimplemented command: ${cmd}`);

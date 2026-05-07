@@ -1,12 +1,14 @@
 /**
- * Updater handlers — wrap electron-updater for the four `update_*` IPC
+ * Updater handlers — wrap electron-updater for the five `update_*` IPC
  * endpoints the renderer calls, plus `plugin:updater|check` for the legacy
  * @tauri-apps/plugin-updater `check()` path.
  *
- * The feed URL itself is configured via electron-builder publish settings,
- * which Phase 8.2 will wire up. Until then, `checkForUpdates` throws a clean
- * "not configured" error that the renderer's retry wrapper reports as a
- * warning, and the install commands return idle status.
+ * The feed URL is wired via electron-builder's `publish` config (see
+ * `electron-builder.yml`); electron-builder bakes an `app-update.yml` into
+ * the packaged app and electron-updater reads it at runtime. In dev (the
+ * app is not packaged) `checkForUpdates` rejects with "application is not
+ * packed" — that one error is treated as benign no-op; every other error
+ * is propagated so the renderer can surface it.
  */
 
 import { EventEmitter } from 'node:events'
@@ -51,7 +53,10 @@ export interface TauriUpdateCheckResult {
 }
 
 export interface AutoUpdaterLike extends EventEmitter {
-  checkForUpdates(): Promise<{ updateInfo: { version: string; releaseNotes?: string | null; releaseDate?: string | null } } | null>
+  checkForUpdates(): Promise<{
+    isUpdateAvailable?: boolean
+    updateInfo: { version: string; releaseNotes?: string | null; releaseDate?: string | null }
+  } | null>
   downloadUpdate(): Promise<string[]>
   quitAndInstall?(isSilent?: boolean, isForceRunAfter?: boolean): void
 }
@@ -204,10 +209,27 @@ export function createUpdaterHandlers(
       return current
     },
 
+    async update_quit_and_install() {
+      if (typeof autoUpdater.quitAndInstall !== 'function') {
+        throw new Error('quitAndInstall is not supported by this updater')
+      }
+      // (isSilent, isForceRunAfter). isSilent is honored only by Squirrel.Windows
+      // one-click installers (we use NSIS oneClick:false, where it's ignored);
+      // isForceRunAfter ensures the app auto-relaunches after the install
+      // process replaces the binary. electron-updater schedules the actual
+      // quit on a microtask, so the IPC return resolves before the app exits.
+      autoUpdater.quitAndInstall(true, true)
+      return null
+    },
+
     async 'plugin:updater|check'(): Promise<TauriUpdateCheckResult | null> {
       try {
         const result = await autoUpdater.checkForUpdates()
         if (!result || !result.updateInfo) return null
+        // electron-updater always populates `updateInfo` with the latest
+        // version on the feed, even when it equals the installed version.
+        // Trust `isUpdateAvailable` — it's the library's own comparison.
+        if (result.isUpdateAvailable === false) return null
         return {
           available: true,
           version: result.updateInfo.version,
@@ -217,10 +239,15 @@ export function createUpdaterHandlers(
           date: result.updateInfo.releaseDate ?? null,
         }
       } catch (err) {
-        // Feed not configured yet (Phase 8.2) or network error — surface as
-        // "no update" to match the legacy Tauri stub behavior.
-        console.warn('[updater] check failed:', err instanceof Error ? err.message : err)
-        return null
+        const message = err instanceof Error ? err.message : String(err)
+        // Dev mode: there's no packaged app or dev-update.yml. Treat as
+        // benign "no update" so the dev console isn't noisy on every check.
+        if (/application is not packed/i.test(message)) {
+          return null
+        }
+        // Real failures (network, missing latest.yml, signature mismatch, …)
+        // must propagate so the renderer's retry/report path can show them.
+        throw err
       }
     },
   }
