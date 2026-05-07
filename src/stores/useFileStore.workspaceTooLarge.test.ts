@@ -1,6 +1,6 @@
 /**
  * Verify that useFileStore handles WorkspaceTooLargeError from
- * listWorkspace by surfacing a typed warning and not leaving the store
+ * directory loading by surfacing a typed warning and not leaving the store
  * in a half-loaded state.
  *
  * The walker invariant (electron/main/handlers/fs.ts) is that on a too-
@@ -14,11 +14,12 @@ vi.mock("@/lib/host", async () => {
   // Keep parseWorkspaceTooLargeError live (it's pure) — only the IO
   // surface gets stubbed, so the store's parser-based discrimination
   // exercises the real regex.
-  const actual = await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
+  const actual =
+    await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
   return {
     invoke: vi.fn(async () => undefined),
     listDirectory: vi.fn(),
-    listWorkspace: vi.fn(),
+    listDirShallow: vi.fn(),
     parseWorkspaceTooLargeError: actual.parseWorkspaceTooLargeError,
     readFile: vi.fn(),
     saveFile: vi.fn(),
@@ -40,7 +41,7 @@ vi.mock("@/stores/useErrorStore", () => ({
   },
 }));
 
-import { listWorkspace } from "@/lib/host";
+import { listDirShallow } from "@/lib/host";
 import { useFileStore } from "@/stores/useFileStore";
 import { useErrorStore } from "@/stores/useErrorStore";
 
@@ -65,7 +66,7 @@ describe("useFileStore — WorkspaceTooLargeError handling", () => {
   });
 
   it("setVaultPath surfaces a count-mode warning and clears loading state", async () => {
-    vi.mocked(listWorkspace).mockRejectedValueOnce(
+    vi.mocked(listDirShallow).mockRejectedValueOnce(
       new Error(
         "WORKSPACE_TOO_LARGE:count:500001: Workspace exceeds the supported 500,000-entry ceiling.",
       ),
@@ -87,7 +88,7 @@ describe("useFileStore — WorkspaceTooLargeError handling", () => {
   });
 
   it("setVaultPath surfaces a timeout-mode warning with the actionable text", async () => {
-    vi.mocked(listWorkspace).mockRejectedValueOnce(
+    vi.mocked(listDirShallow).mockRejectedValueOnce(
       new Error(
         "WORKSPACE_TOO_LARGE:timeout:42000: Workspace took longer than 10s to enumerate.",
       ),
@@ -124,7 +125,7 @@ describe("useFileStore — WorkspaceTooLargeError handling", () => {
       isLoadingTree: false,
     });
 
-    vi.mocked(listWorkspace).mockRejectedValueOnce(
+    vi.mocked(listDirShallow).mockRejectedValueOnce(
       new Error("WORKSPACE_TOO_LARGE:count:500001: ..."),
     );
 
@@ -137,7 +138,7 @@ describe("useFileStore — WorkspaceTooLargeError handling", () => {
   });
 
   it("non-workspace-too-large errors fall through to the generic error path", async () => {
-    vi.mocked(listWorkspace).mockRejectedValueOnce(
+    vi.mocked(listDirShallow).mockRejectedValueOnce(
       new Error("EACCES: permission denied"),
     );
 

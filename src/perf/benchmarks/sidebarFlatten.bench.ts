@@ -109,7 +109,14 @@ describe("flattenFileTree (all folders expanded — worst case)", () => {
     bench(
       `${size.toLocaleString()} files`,
       () => {
-        flattenFileTree(trees.get(size)!, allExpanded.get(size)!, null, 0, []);
+        flattenFileTree(
+          trees.get(size)!,
+          allExpanded.get(size)!,
+          null,
+          new Set(),
+          0,
+          [],
+        );
       },
       { iterations: 100 },
     );
@@ -121,7 +128,7 @@ describe("flattenFileTree (all folders collapsed — typical case)", () => {
     bench(
       `${size.toLocaleString()} files`,
       () => {
-        flattenFileTree(trees.get(size)!, noneExpanded, null, 0, []);
+        flattenFileTree(trees.get(size)!, noneExpanded, null, new Set(), 0, []);
       },
       { iterations: 100 },
     );

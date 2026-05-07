@@ -3,10 +3,9 @@
  * Uses chokidar for cross-platform reliable watching.
  *
  * Defaults:
- *   - Recursive (no depth cap; chokidar uses native FSEvents on macOS and
- *     ReadDirectoryChangesW on Windows, both of which are O(1) per root).
- *   - On Linux this means inotify watches per directory; we degrade to
- *     polling on EMFILE/ENOSPC instead of going silent.
+ *   - Shallow by default. The sidebar now loads directories lazily, so
+ *     recursively watching a whole workspace can exhaust file descriptors
+ *     before the user has interacted with most of it.
  *   - Default-deny list aligns with the workspace listing handler so the
  *     watcher and the file tree see the same set of files.
  *   - .gitignore at the watch root is honored so checked-in repositories
@@ -126,9 +125,7 @@ async function startWatcher(
     ignored: buildIgnorePredicate(watchPath),
     persistent: true,
     ignoreInitial: true,
-    // depth removed — chokidar's native-watcher path on macOS/Windows is
-    // O(1) per root regardless of depth, and Linux now degrades cleanly
-    // to polling instead of capping arbitrary depth.
+    depth: 0,
     awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     usePolling: opts.usePolling ?? false,
     interval: opts.usePolling ? 1500 : undefined,

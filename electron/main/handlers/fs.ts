@@ -8,6 +8,7 @@ export interface FileEntry {
   path: string;
   is_dir: boolean;
   isDirectory: boolean;
+  childrenLoaded?: boolean;
   size: number | null;
   modified_at: number | null;
   created_at: number | null;
@@ -106,6 +107,15 @@ function shouldSkipByName(name: string): boolean {
   return false;
 }
 
+function toIgnoreCandidate(
+  rootPath: string,
+  fullPath: string,
+  isDirectory: boolean,
+): string {
+  const rel = path.relative(rootPath, fullPath).split(path.sep).join("/");
+  return isDirectory ? rel + "/" : rel;
+}
+
 /**
  * Build an ignore matcher seeded with .gitignore at the given root, if it
  * exists. Returns null when no .gitignore is present so callers can skip
@@ -121,6 +131,51 @@ async function loadGitignore(rootPath: string): Promise<Ignore | null> {
   } catch {
     return null;
   }
+}
+
+async function listDirShallow(
+  rootPath: string,
+  dirPath: string,
+): Promise<FileEntry[]> {
+  const ignoreMatcher = await loadGitignore(rootPath);
+  const dirents = await fs.promises.readdir(dirPath, { withFileTypes: true });
+  const entries: FileEntry[] = [];
+
+  for (const dirent of dirents) {
+    if (shouldSkipByName(dirent.name)) continue;
+
+    const fullPath = path.join(dirPath, dirent.name);
+    if (ignoreMatcher) {
+      const rel = path.relative(rootPath, fullPath).split(path.sep).join("/");
+      if (
+        rel &&
+        ignoreMatcher.ignores(
+          toIgnoreCandidate(rootPath, fullPath, dirent.isDirectory()),
+        )
+      ) {
+        continue;
+      }
+    }
+
+    entries.push({
+      name: dirent.name,
+      path: fullPath,
+      is_dir: dirent.isDirectory(),
+      isDirectory: dirent.isDirectory(),
+      childrenLoaded: !dirent.isDirectory(),
+      size: null,
+      modified_at: null,
+      created_at: null,
+      children: dirent.isDirectory() ? [] : null,
+    });
+  }
+
+  entries.sort((a, b) => {
+    if (a.is_dir !== b.is_dir) return a.is_dir ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  return entries;
 }
 
 interface WalkOptions {
@@ -214,10 +269,7 @@ export async function walkWorkspace(
         // ignore matches against POSIX-style relative paths; trailing
         // slash signals "this is a directory" so dir-only patterns
         // (e.g. "foo/") match.
-        const rel = path
-          .relative(rootPath, fullPath)
-          .split(path.sep)
-          .join("/");
+        const rel = path.relative(rootPath, fullPath).split(path.sep).join("/");
         const candidate = dirent.isDirectory() ? rel + "/" : rel;
         if (rel && opts.ignoreMatcher.ignores(candidate)) continue;
       }
@@ -232,6 +284,7 @@ export async function walkWorkspace(
         path: fullPath,
         is_dir: dirent.isDirectory(),
         isDirectory: dirent.isDirectory(),
+        childrenLoaded: true,
         size: null,
         modified_at: null,
         created_at: null,
@@ -319,10 +372,7 @@ async function walkPaths(
       const fullPath = path.join(dirPath, dirent.name);
 
       if (ignoreMatcher) {
-        const rel = path
-          .relative(rootPath, fullPath)
-          .split(path.sep)
-          .join("/");
+        const rel = path.relative(rootPath, fullPath).split(path.sep).join("/");
         const candidate = dirent.isDirectory() ? rel + "/" : rel;
         if (rel && ignoreMatcher.ignores(candidate)) continue;
       }
@@ -384,6 +434,10 @@ export const fsHandlers: Record<
       ignoreMatcher,
     });
     return result.entries;
+  },
+
+  async list_dir_shallow({ rootPath, dirPath }) {
+    return listDirShallow(rootPath as string, dirPath as string);
   },
 
   async list_workspace({ path: p }) {

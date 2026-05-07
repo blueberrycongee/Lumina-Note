@@ -50,9 +50,11 @@ export function useSidebarFileOperations() {
   const {
     vaultPath,
     fileTree,
+    loadingDirectoryPaths,
     currentFile,
     openFile,
     refreshFileTree,
+    expandDirectory,
     closeFile,
     openPDFTab,
     openDiagramTab,
@@ -64,9 +66,11 @@ export function useSidebarFileOperations() {
     useShallow((state) => ({
       vaultPath: state.vaultPath,
       fileTree: state.fileTree,
+      loadingDirectoryPaths: state.loadingDirectoryPaths,
       currentFile: state.currentFile,
       openFile: state.openFile,
       refreshFileTree: state.refreshFileTree,
+      expandDirectory: state.expandDirectory,
       closeFile: state.closeFile,
       openPDFTab: state.openPDFTab,
       openDiagramTab: state.openDiagramTab,
@@ -92,7 +96,9 @@ export function useSidebarFileOperations() {
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [expandedMountedPaths, setExpandedMountedPaths] = useState<Set<string>>(new Set());
+  const [expandedMountedPaths, setExpandedMountedPaths] = useState<Set<string>>(
+    new Set(),
+  );
 
   // ── Quick note ────────────────────────────────────────────────────────
   const handleQuickNote = useCallback(async () => {
@@ -131,7 +137,14 @@ export function useSidebarFileOperations() {
         context: { filePath },
       });
     }
-  }, [locale, openFile, refreshFileTree, t.file.createQuickNoteFailed, t.file.quickNotePrefix, vaultPath]);
+  }, [
+    locale,
+    openFile,
+    refreshFileTree,
+    t.file.createQuickNoteFailed,
+    t.file.quickNotePrefix,
+    vaultPath,
+  ]);
 
   // ── Open folder / New window ──────────────────────────────────────────
   const handleOpenFolder = useCallback(async () => {
@@ -181,27 +194,32 @@ export function useSidebarFileOperations() {
   }, [handleOpenFolder, handleNewWindow, t.file.openFolder, t.file.newWindow]);
 
   // ── Delete ────────────────────────────────────────────────────────────
-  const handleDelete = useCallback(async (entry: FileEntry) => {
-    try {
-      await deleteFile(entry.path);
-      if (currentFile === entry.path) {
-        closeFile();
+  const handleDelete = useCallback(
+    async (entry: FileEntry) => {
+      try {
+        await deleteFile(entry.path);
+        if (currentFile === entry.path) {
+          closeFile();
+        }
+        refreshFileTree();
+      } catch (error) {
+        reportOperationError({
+          source: "Sidebar.handleDelete",
+          action: entry.is_dir ? "Delete folder" : "Delete file",
+          error,
+          context: { path: entry.path },
+        });
       }
-      refreshFileTree();
-    } catch (error) {
-      reportOperationError({
-        source: "Sidebar.handleDelete",
-        action: entry.is_dir ? "Delete folder" : "Delete file",
-        error,
-        context: { path: entry.path },
-      });
-    }
-  }, [currentFile, closeFile, refreshFileTree]);
+    },
+    [currentFile, closeFile, refreshFileTree],
+  );
 
   // ── Rename ────────────────────────────────────────────────────────────
   const handleStartRename = useCallback((entry: FileEntry) => {
     setRenamingPath(entry.path);
-    const baseName = entry.is_dir ? entry.name : entry.name.replace(/\.md$/, "");
+    const baseName = entry.is_dir
+      ? entry.name
+      : entry.name.replace(/\.md$/, "");
     setRenameValue(baseName);
   }, []);
 
@@ -220,9 +238,15 @@ export function useSidebarFileOperations() {
 
     const trimmed = renameValue.trim();
     const separator = renamingPath.includes("\\") ? "\\" : "/";
-    const parentDir = renamingPath.substring(0, renamingPath.lastIndexOf(separator));
+    const parentDir = renamingPath.substring(
+      0,
+      renamingPath.lastIndexOf(separator),
+    );
     const isRootRename = renamingPath === vaultPath;
-    const findEntryByPath = (entries: FileEntry[], targetPath: string): FileEntry | null => {
+    const findEntryByPath = (
+      entries: FileEntry[],
+      targetPath: string,
+    ): FileEntry | null => {
       for (const entry of entries) {
         if (entry.path === targetPath) return entry;
         if (entry.is_dir && entry.children) {
@@ -232,7 +256,9 @@ export function useSidebarFileOperations() {
       }
       return null;
     };
-    const targetEntry = renamingPath ? findEntryByPath(fileTree, renamingPath) : null;
+    const targetEntry = renamingPath
+      ? findEntryByPath(fileTree, renamingPath)
+      : null;
     const isDir = isRootRename || Boolean(targetEntry?.is_dir);
     const isMarkdownFile = renamingPath.toLowerCase().endsWith(".md");
     const newPath = isRootRename
@@ -251,8 +277,13 @@ export function useSidebarFileOperations() {
     try {
       const { isImagePath } = await import("@/services/assets/imageManager");
       if (!isRootRename && isImagePath(renamingPath)) {
-        const { executeImageRename } = await import("@/services/assets/imageOperations");
-        const preview = await executeImageRename(fileTree, renamingPath, trimmed);
+        const { executeImageRename } =
+          await import("@/services/assets/imageOperations");
+        const preview = await executeImageRename(
+          fileTree,
+          renamingPath,
+          trimmed,
+        );
         const finalPath = preview.changes[0]?.to ?? newPath;
         useFileStore.getState().updateTabPath(renamingPath, finalPath);
         setSelectedPath(finalPath);
@@ -267,8 +298,13 @@ export function useSidebarFileOperations() {
           const normalizedPath = normalize(path);
           const normalizedSource = normalize(renamingPath);
           const normalizedTarget = normalize(newPath);
-          if (normalizedPath === normalizedSource || normalizedPath.startsWith(normalizedSource + "/")) {
-            return normalizedTarget + normalizedPath.slice(normalizedSource.length);
+          if (
+            normalizedPath === normalizedSource ||
+            normalizedPath.startsWith(normalizedSource + "/")
+          ) {
+            return (
+              normalizedTarget + normalizedPath.slice(normalizedSource.length)
+            );
           }
           return path;
         };
@@ -285,7 +321,10 @@ export function useSidebarFileOperations() {
             if (nextPath !== tab.path) {
               const nextName =
                 tab.type === "file"
-                  ? nextPath.split(/[/\\]/).pop()?.replace(/\.(md|docx)$/i, "") || tab.name
+                  ? nextPath
+                      .split(/[/\\]/)
+                      .pop()
+                      ?.replace(/\.(md|docx)$/i, "") || tab.name
                   : tab.type === "image"
                     ? nextPath.split(/[/\\]/).pop() || tab.name
                     : tab.name;
@@ -310,9 +349,13 @@ export function useSidebarFileOperations() {
 
         useFileStore.setState({
           tabs: updatedTabs,
-          currentFile: currentFile ? replaceFolderPrefix(currentFile) : currentFile,
+          currentFile: currentFile
+            ? replaceFolderPrefix(currentFile)
+            : currentFile,
         });
-        useFavoriteStore.getState().updatePathsForFolderMove(renamingPath, newPath);
+        useFavoriteStore
+          .getState()
+          .updatePathsForFolderMove(renamingPath, newPath);
         await setVaultPath(newPath);
         setSelectedPath((currentSelectedPath) => {
           if (!currentSelectedPath) return newPath;
@@ -333,7 +376,14 @@ export function useSidebarFileOperations() {
       });
     }
     setRenamingPath(null);
-  }, [fileTree, renamingPath, renameValue, refreshFileTree, t.file.renameFailed, vaultPath]);
+  }, [
+    fileTree,
+    renamingPath,
+    renameValue,
+    refreshFileTree,
+    t.file.renameFailed,
+    vaultPath,
+  ]);
 
   // ── Copy path / Show in explorer ──────────────────────────────────────
   const handleCopyPath = useCallback(async (path: string) => {
@@ -386,7 +436,10 @@ export function useSidebarFileOperations() {
         const lastIndex = p.lastIndexOf(sep);
         return lastIndex > 0 ? p.substring(0, lastIndex) : null;
       };
-      const findEntryByPath = (entries: FileEntry[], targetPath: string): FileEntry | null => {
+      const findEntryByPath = (
+        entries: FileEntry[],
+        targetPath: string,
+      ): FileEntry | null => {
         for (const entry of entries) {
           if (entry.path === targetPath) return entry;
           if (entry.is_dir && entry.children?.length) {
@@ -400,7 +453,9 @@ export function useSidebarFileOperations() {
       if (selectedPath) {
         const selectedEntry = findEntryByPath(fileTree, selectedPath);
         if (selectedEntry) {
-          return selectedEntry.is_dir ? selectedPath : getParentDir(selectedPath);
+          return selectedEntry.is_dir
+            ? selectedPath
+            : getParentDir(selectedPath);
         }
         if (/\.[^/\\]+$/.test(selectedPath)) {
           return getParentDir(selectedPath);
@@ -502,7 +557,12 @@ export function useSidebarFileOperations() {
       if (await exists(fullPath)) {
         reportOperationError({
           source: "Sidebar.handleCreateSubmit",
-          action: creating.type === "folder" ? "Create folder" : creating.type === "diagram" ? "Create diagram" : "Create note",
+          action:
+            creating.type === "folder"
+              ? "Create folder"
+              : creating.type === "diagram"
+                ? "Create diagram"
+                : "Create note",
           error: `${creating.type === "folder" ? t.file.folderExists : t.file.fileExists}: ${trimmed}`,
           level: "warning",
           context: { path: fullPath },
@@ -549,7 +609,19 @@ export function useSidebarFileOperations() {
     }
 
     setCreating(null);
-  }, [creating, createValue, openDiagramTab, openFile, refreshFileTree, t.file.createFailed, t.file.fileExists, t.file.folderExists, t.sidebar.newDiagram, t.sidebar.newFolder, t.sidebar.newNote]);
+  }, [
+    creating,
+    createValue,
+    openDiagramTab,
+    openFile,
+    refreshFileTree,
+    t.file.createFailed,
+    t.file.fileExists,
+    t.file.folderExists,
+    t.sidebar.newDiagram,
+    t.sidebar.newFolder,
+    t.sidebar.newNote,
+  ]);
 
   const handleCreateCancel = useCallback(() => {
     setCreating(null);
@@ -581,27 +653,46 @@ export function useSidebarFileOperations() {
       }
 
       items.push(menuItems.copyPath(() => handleCopyPath(entry.path)));
-      items.push(menuItems.showInExplorer(() => handleShowInExplorer(entry.path)));
+      items.push(
+        menuItems.showInExplorer(() => handleShowInExplorer(entry.path)),
+      );
       items.push(menuItems.rename(() => handleStartRename(entry)));
       items.push(menuItems.delete(() => handleDelete(entry)));
 
       return items;
     },
-    [handleCopyPath, handleDelete, handleNewDiagram, handleNewFile, handleNewFolder, handleShowInExplorer, handleStartRename, isFavorite, t.favorites.add, t.favorites.remove, t.sidebar.newDiagram, toggleFavorite],
+    [
+      handleCopyPath,
+      handleDelete,
+      handleNewDiagram,
+      handleNewFile,
+      handleNewFolder,
+      handleShowInExplorer,
+      handleStartRename,
+      isFavorite,
+      t.favorites.add,
+      t.favorites.remove,
+      t.sidebar.newDiagram,
+      toggleFavorite,
+    ],
   );
 
   // ── Toggle expanded ───────────────────────────────────────────────────
-  const toggleExpanded = useCallback((path: string) => {
-    setExpandedPaths((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
+  const toggleExpanded = useCallback(
+    (path: string) => {
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        if (next.has(path)) {
+          next.delete(path);
+        } else {
+          next.add(path);
+          void expandDirectory(path);
+        }
+        return next;
+      });
+    },
+    [expandDirectory],
+  );
 
   const toggleMountedExpanded = useCallback((path: string) => {
     setExpandedMountedPaths((prev) => {
@@ -627,7 +718,11 @@ export function useSidebarFileOperations() {
       setSelectedPath(entry.path);
       if (!entry.is_dir) {
         const name = entry.name.toLowerCase();
-        if (name.endsWith(".excalidraw.json") || name.endsWith(".diagram.json") || name.endsWith(".drawio.json")) {
+        if (
+          name.endsWith(".excalidraw.json") ||
+          name.endsWith(".diagram.json") ||
+          name.endsWith(".drawio.json")
+        ) {
           openDiagramTab(entry.path);
         } else if (name.endsWith(".pdf")) {
           if (splitView && activePane === "secondary") {
@@ -646,7 +741,16 @@ export function useSidebarFileOperations() {
         }
       }
     },
-    [openFile, openPDFTab, openDiagramTab, openImageTab, splitView, activePane, openSecondaryFile, openSecondaryPdf],
+    [
+      openFile,
+      openPDFTab,
+      openDiagramTab,
+      openImageTab,
+      splitView,
+      activePane,
+      openSecondaryFile,
+      openSecondaryPdf,
+    ],
   );
 
   const handlePermanentOpen = useCallback(
@@ -710,9 +814,11 @@ export function useSidebarFileOperations() {
     // store values needed by Sidebar JSX
     vaultPath,
     fileTree,
+    loadingDirectoryPaths,
     currentFile,
     openFile,
     refreshFileTree,
+    expandDirectory,
     moveFileToFolder,
     moveFolderToFolder,
     // handlers

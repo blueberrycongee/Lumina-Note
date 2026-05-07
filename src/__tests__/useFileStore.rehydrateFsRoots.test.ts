@@ -23,7 +23,10 @@ describe("useFileStore rehydrate runtime fs roots", () => {
     vi.resetModules();
     vi.clearAllMocks();
     localStorage.clear();
-    localStorage.setItem("lumina-locale", JSON.stringify({ state: { locale: "zh-CN" } }));
+    localStorage.setItem(
+      "lumina-locale",
+      JSON.stringify({ state: { locale: "zh-CN" } }),
+    );
   });
 
   afterEach(() => {
@@ -49,49 +52,49 @@ describe("useFileStore rehydrate runtime fs roots", () => {
             vaultPath: workspacePath,
             recentFiles: [],
           },
-        })
+        }),
       );
       localStorage.setItem(
         "lumina-workspaces",
         JSON.stringify({
           state: {
-            workspaces: [{ id: workspaceId, name: "vault", path: workspacePath }],
+            workspaces: [
+              { id: workspaceId, name: "vault", path: workspacePath },
+            ],
             currentWorkspaceId: workspaceId,
           },
-        })
+        }),
       );
 
       const callOrder: string[] = [];
       let rootsSynced = false;
 
       const { invoke } = await import("@/lib/hostBridge");
-      vi.mocked(invoke).mockImplementation(async (cmd: string, args?: unknown) => {
-        callOrder.push(cmd);
+      vi.mocked(invoke).mockImplementation(
+        async (cmd: string, args?: unknown) => {
+          callOrder.push(cmd);
 
-        if (cmd === "fs_set_allowed_roots") {
-          const roots = (args as { roots?: string[] } | undefined)?.roots ?? [];
-          rootsSynced = roots.includes(workspacePath);
-          return undefined;
-        }
-
-        if (cmd === "list_workspace") {
-          if (!rootsSynced) {
-            throw new Error(`Path not permitted: ${workspacePath}`);
+          if (cmd === "fs_set_allowed_roots") {
+            const roots =
+              (args as { roots?: string[] } | undefined)?.roots ?? [];
+            rootsSynced = roots.includes(workspacePath);
+            return undefined;
           }
-          return {
-            entries: tree,
-            totalEntries: tree.length,
-            truncated: false,
-            unreadableDirCount: 0,
-          };
-        }
 
-        if (cmd === "mobile_set_workspace") {
+          if (cmd === "list_dir_shallow") {
+            if (!rootsSynced) {
+              throw new Error(`Path not permitted: ${workspacePath}`);
+            }
+            return tree;
+          }
+
+          if (cmd === "mobile_set_workspace") {
+            return undefined;
+          }
+
           return undefined;
-        }
-
-        return undefined;
-      });
+        },
+      );
 
       const { useFileStore } = await import("@/stores/useFileStore");
 
@@ -99,9 +102,11 @@ describe("useFileStore rehydrate runtime fs roots", () => {
       await flushAsyncWork();
 
       expect(callOrder).toContain("fs_set_allowed_roots");
-      expect(callOrder.indexOf("fs_set_allowed_roots")).toBeLessThan(callOrder.indexOf("list_workspace"));
+      expect(callOrder.indexOf("fs_set_allowed_roots")).toBeLessThan(
+        callOrder.indexOf("list_dir_shallow"),
+      );
       expect(useFileStore.getState().vaultPath).toBe(workspacePath);
       expect(useFileStore.getState().fileTree).toEqual(tree);
-    }
+    },
   );
 });

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   FileEntry,
-  listWorkspace,
+  listDirShallow,
   parseWorkspaceTooLargeError,
   readFile,
   saveFile,
@@ -78,6 +78,7 @@ interface FileState {
   // Vault
   vaultPath: string | null;
   fileTree: FileEntry[];
+  loadingDirectoryPaths: string[];
 
   // Tabs
   tabs: Tab[];
@@ -112,6 +113,7 @@ interface FileState {
   // Actions
   setVaultPath: (path: string) => Promise<void>;
   refreshFileTree: () => Promise<void>;
+  expandDirectory: (path: string) => Promise<void>;
   openFile: (
     path: string,
     options?: {
@@ -296,6 +298,47 @@ function createNewTab(): Tab {
   };
 }
 
+function replaceDirectoryChildren(
+  entries: FileEntry[],
+  targetPath: string,
+  children: FileEntry[],
+): FileEntry[] {
+  return entries.map((entry) => {
+    if (entry.path === targetPath && entry.is_dir) {
+      return {
+        ...entry,
+        children,
+        childrenLoaded: true,
+      };
+    }
+    if (entry.is_dir && entry.children) {
+      const nextChildren = replaceDirectoryChildren(
+        entry.children,
+        targetPath,
+        children,
+      );
+      if (nextChildren !== entry.children) {
+        return { ...entry, children: nextChildren };
+      }
+    }
+    return entry;
+  });
+}
+
+function findTreeEntry(
+  entries: FileEntry[],
+  targetPath: string,
+): FileEntry | null {
+  for (const entry of entries) {
+    if (entry.path === targetPath) return entry;
+    if (entry.is_dir && entry.children) {
+      const nested = findTreeEntry(entry.children, targetPath);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
 function getCurrentFileForTab(tab: Tab): string | null {
   return tab.path || null;
 }
@@ -340,6 +383,7 @@ export const useFileStore = create<FileState>()(
       // Initial state
       vaultPath: null,
       fileTree: [],
+      loadingDirectoryPaths: [],
 
       // Tabs
       tabs: [],
@@ -456,11 +500,12 @@ export const useFileStore = create<FileState>()(
               context: { path },
             });
           }
-          const listing = await listWorkspace(path);
-          // listing.truncated is always false post-walker-rewrite — the
-          // walker now throws WorkspaceTooLargeError instead. The catch
-          // below recognizes that error and surfaces an actionable banner.
-          set({ fileTree: listing.entries, isLoadingTree: false });
+          const entries = await listDirShallow(path, path);
+          set({
+            fileTree: entries,
+            loadingDirectoryPaths: [],
+            isLoadingTree: false,
+          });
           await get().syncMobileWorkspace({ path, force: true });
         } catch (error) {
           const tooLarge = parseWorkspaceTooLargeError(error);
@@ -504,9 +549,12 @@ export const useFileStore = create<FileState>()(
 
         set({ isLoadingTree: true });
         try {
-          const listing = await listWorkspace(vaultPath);
-          set({ fileTree: listing.entries, isLoadingTree: false });
-          useFavoriteStore.getState().pruneMissing(listing.entries);
+          const entries = await listDirShallow(vaultPath, vaultPath);
+          set({
+            fileTree: entries,
+            loadingDirectoryPaths: [],
+            isLoadingTree: false,
+          });
           void get().syncMobileWorkspace();
         } catch (error) {
           const tooLarge = parseWorkspaceTooLargeError(error);
@@ -539,6 +587,41 @@ export const useFileStore = create<FileState>()(
             context: { vaultPath },
           });
           set({ isLoadingTree: false });
+        }
+      },
+
+      expandDirectory: async (path: string) => {
+        const { vaultPath, fileTree, loadingDirectoryPaths } = get();
+        if (!vaultPath) return;
+
+        const entry = findTreeEntry(fileTree, path);
+        if (!entry?.is_dir || entry.childrenLoaded) return;
+        if (loadingDirectoryPaths.includes(path)) return;
+
+        set({
+          loadingDirectoryPaths: [...loadingDirectoryPaths, path],
+        });
+
+        try {
+          const children = await listDirShallow(vaultPath, path);
+          set((state) => ({
+            fileTree: replaceDirectoryChildren(state.fileTree, path, children),
+            loadingDirectoryPaths: state.loadingDirectoryPaths.filter(
+              (p) => p !== path,
+            ),
+          }));
+        } catch (error) {
+          set((state) => ({
+            loadingDirectoryPaths: state.loadingDirectoryPaths.filter(
+              (p) => p !== path,
+            ),
+          }));
+          reportOperationError({
+            source: "FileStore.expandDirectory",
+            action: "Load folder contents",
+            error,
+            context: { path, vaultPath },
+          });
         }
       },
 
@@ -2088,6 +2171,7 @@ export const useFileStore = create<FileState>()(
         set({
           vaultPath: null,
           fileTree: [],
+          loadingDirectoryPaths: [],
           tabs: [],
           activeTabIndex: -1,
           currentFile: null,

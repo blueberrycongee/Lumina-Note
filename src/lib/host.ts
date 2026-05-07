@@ -31,6 +31,7 @@ export interface FileEntry {
   path: string;
   is_dir: boolean;
   isDirectory?: boolean;
+  childrenLoaded?: boolean;
   size?: number | null;
   modified_at?: number | null;
   created_at?: number | null;
@@ -71,6 +72,13 @@ export async function readBinaryFileBase64(path: string): Promise<string> {
 
 export async function listDirectory(path: string): Promise<FileEntry[]> {
   return invoke<FileEntry[]>("list_directory", { path });
+}
+
+export async function listDirShallow(
+  rootPath: string,
+  dirPath: string,
+): Promise<FileEntry[]> {
+  return invoke<FileEntry[]>("list_dir_shallow", { rootPath, dirPath });
 }
 
 export interface WorkspaceListing {
@@ -121,7 +129,9 @@ export function parseWorkspaceTooLargeError(
   const raw = (err as { message?: unknown }).message;
   if (typeof raw !== "string") return null;
   const match = raw.match(
-    new RegExp(`(?:^|: )${WORKSPACE_TOO_LARGE_PREFIX}:(count|timeout):(\\d+):\\s*(.*)$`),
+    new RegExp(
+      `(?:^|: )${WORKSPACE_TOO_LARGE_PREFIX}:(count|timeout):(\\d+):\\s*(.*)$`,
+    ),
   );
   if (!match) return null;
   return {
@@ -236,7 +246,9 @@ export interface FileStat {
 }
 
 export async function readBinaryFile(path: string): Promise<Uint8Array> {
-  const raw = await invoke<number[] | Uint8Array>("plugin:fs|read_file", { path });
+  const raw = await invoke<number[] | Uint8Array>("plugin:fs|read_file", {
+    path,
+  });
   return raw instanceof Uint8Array ? raw : new Uint8Array(raw);
 }
 
@@ -346,22 +358,36 @@ export type Window = HostWindow;
 
 export function getCurrentWindow(): HostWindow {
   return {
-    async isMaximized() { return false; },
-    async onResized() { return () => {}; },
-    async startDragging() { /* no-op */ },
-    async minimize() { /* no-op */ },
-    async toggleMaximize() { /* no-op */ },
-    async close() { /* no-op */ },
+    async isMaximized() {
+      return false;
+    },
+    async onResized() {
+      return () => {};
+    },
+    async startDragging() {
+      /* no-op */
+    },
+    async minimize() {
+      /* no-op */
+    },
+    async toggleMaximize() {
+      /* no-op */
+    },
+    async close() {
+      /* no-op */
+    },
   };
 }
 
-export async function check(
-  _options?: { timeout?: number },
-): Promise<Update | null> {
-  const result = await invoke<
-    | { available: boolean; version: string; body: string | null; date: string | null }
-    | null
-  >("plugin:updater|check");
+export async function check(_options?: {
+  timeout?: number;
+}): Promise<Update | null> {
+  const result = await invoke<{
+    available: boolean;
+    version: string;
+    body: string | null;
+    date: string | null;
+  } | null>("plugin:updater|check");
   if (!result) return null;
   return {
     ...result,
@@ -431,7 +457,10 @@ export async function scaffoldWorkspaceUiOverhaulPlugin(): Promise<string> {
 // ── VS Code AI extension compatibility ───────────────────────────────────
 
 export type VscodeAiExtensionId = "openai.chatgpt" | "anthropic.claude-code";
-export type VscodeAiExtensionSource = "open-vsx" | "marketplace" | "github-release";
+export type VscodeAiExtensionSource =
+  | "open-vsx"
+  | "marketplace"
+  | "github-release";
 export type VscodeAiExtensionDecision =
   | "auto-activated"
   | "pending-smoke-test"

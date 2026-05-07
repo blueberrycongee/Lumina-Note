@@ -46,8 +46,9 @@ describe("fs handler — workspace listing", () => {
     await fs.mkdir(path.join(root, "sub"));
     await fs.writeFile(path.join(root, "sub", "b.md"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
 
     expect(entries).toHaveLength(2);
     // Sorted: dirs first, then files
@@ -70,8 +71,9 @@ describe("fs handler — workspace listing", () => {
     await fs.mkdir(path.join(root, "dist"));
     await fs.writeFile(path.join(root, "kept.md"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
 
     expect(entries).toHaveLength(1);
     expect(entries[0].name).toBe("kept.md");
@@ -83,8 +85,9 @@ describe("fs handler — workspace listing", () => {
     await fs.writeFile(path.join(root, ".env"), "secret");
     await fs.writeFile(path.join(root, "note.md"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
 
     const names = entries.map((e) => e.name);
     expect(names).toContain(".lumina");
@@ -99,13 +102,46 @@ describe("fs handler — workspace listing", () => {
     await fs.writeFile(path.join(root, "kept.md"), "");
     await fs.writeFile(path.join(root, "noisy.log"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
 
     const names = entries.map((e) => e.name);
     expect(names).toContain("kept.md");
     expect(names).not.toContain("secret");
     expect(names).not.toContain("noisy.log");
+  });
+
+  it("lists only immediate children for lazy sidebar expansion", async () => {
+    await fs.mkdir(path.join(root, "folder"));
+    await fs.mkdir(path.join(root, "folder", "nested"));
+    await fs.writeFile(path.join(root, "folder", "note.md"), "");
+    await fs.writeFile(path.join(root, "folder", "nested", "deep.md"), "");
+
+    const entries = (await fsHandlers.list_dir_shallow({
+      rootPath: root,
+      dirPath: path.join(root, "folder"),
+    })) as FileEntry[];
+
+    expect(entries.map((e) => e.name)).toEqual(["nested", "note.md"]);
+    expect(entries[0].children).toEqual([]);
+    expect(entries[0].childrenLoaded).toBe(false);
+    expect(entries[1].children).toBeNull();
+    expect(entries[1].childrenLoaded).toBe(true);
+  });
+
+  it("uses root .gitignore when lazily listing a child directory", async () => {
+    await fs.writeFile(path.join(root, ".gitignore"), "folder/secret.md\n");
+    await fs.mkdir(path.join(root, "folder"));
+    await fs.writeFile(path.join(root, "folder", "secret.md"), "");
+    await fs.writeFile(path.join(root, "folder", "visible.md"), "");
+
+    const entries = (await fsHandlers.list_dir_shallow({
+      rootPath: root,
+      dirPath: path.join(root, "folder"),
+    })) as FileEntry[];
+
+    expect(entries.map((e) => e.name)).toEqual(["visible.md"]);
   });
 
   it("returns a complete listing under the entry/time budgets (truncated stays false)", async () => {
@@ -192,8 +228,9 @@ describe("fs handler — workspace listing", () => {
     );
     await fs.writeFile(path.join(root, "real.md"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
     // dangling is a symlink (not a dir per Dirent.isDirectory()), so it
     // shows up as a file entry. real.md must still be present.
     const names = entries.map((e) => e.name);
@@ -235,8 +272,9 @@ describe("fs handler — workspace listing", () => {
     await fs.writeFile(path.join(root, ".DS_Store"), "");
     await fs.writeFile(path.join(root, "note.md"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
     expect(entries.map((e) => e.name)).toEqual(["note.md"]);
   });
 
@@ -251,8 +289,9 @@ describe("fs handler — workspace listing", () => {
     }
     await fs.writeFile(path.join(cursor, "leaf.md"), "");
 
-    const entries = (await fsHandlers.list_directory({ path: root })) as
-      | FileEntry[];
+    const entries = (await fsHandlers.list_directory({
+      path: root,
+    })) as FileEntry[];
     expect(findEntry(entries, "leaf.md")?.name).toBe("leaf.md");
   });
 });

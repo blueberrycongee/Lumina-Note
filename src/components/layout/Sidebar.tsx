@@ -24,6 +24,7 @@ import {
   ArrowLeftRight,
   MoreHorizontal,
   Check,
+  Loader2,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverList, Row } from "@/components/ui";
 import {
@@ -66,8 +67,7 @@ const FILE_TREE_FILE_ROW_CLASS =
 const FILE_TREE_ICON_CLASS = "ui-tree-icon text-muted-foreground shrink-0";
 const FILE_TREE_ICON_PASSIVE_CLASS =
   "ui-tree-icon text-muted-foreground shrink-0 pointer-events-none";
-const FILE_TREE_LABEL_CLASS =
-  "ui-tree-label truncate pointer-events-none";
+const FILE_TREE_LABEL_CLASS = "ui-tree-label truncate pointer-events-none";
 
 // Pixel height per row in the virtualized tree. Rows have py-1.5 padding
 // plus icon (~16px), so ~28-30px in practice. We err toward the upper
@@ -76,6 +76,7 @@ const FILE_TREE_ROW_HEIGHT = 30;
 
 export type FileTreeRow =
   | { kind: "entry"; entry: FileEntry; level: number; key: string }
+  | { kind: "loading"; parentPath: string; level: number; key: string }
   | {
       kind: "creating";
       parentPath: string;
@@ -94,6 +95,7 @@ export function flattenFileTree(
   tree: FileEntry[],
   expanded: Set<string>,
   creating: CreatingState | null,
+  loadingPaths: Set<string>,
   level: number,
   out: FileTreeRow[],
 ): FileTreeRow[] {
@@ -109,8 +111,24 @@ export function flattenFileTree(
           key: `__creating__:${entry.path}`,
         });
       }
+      if (loadingPaths.has(entry.path)) {
+        out.push({
+          kind: "loading",
+          parentPath: entry.path,
+          level: level + 1,
+          key: `__loading__:${entry.path}`,
+        });
+        continue;
+      }
       if (entry.children && entry.children.length > 0) {
-        flattenFileTree(entry.children, expanded, creating, level + 1, out);
+        flattenFileTree(
+          entry.children,
+          expanded,
+          creating,
+          loadingPaths,
+          level + 1,
+          out,
+        );
       }
     }
   }
@@ -194,6 +212,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
     handleCreateSubmit,
     handleCreateCancel,
     focusTreePath,
+    loadingDirectoryPaths,
   } = ops;
 
   // Context menu state
@@ -220,9 +239,16 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
         key: `__creating__:root`,
       });
     }
-    flattenFileTree(fileTree, expandedPaths, creating, 0, rows);
+    flattenFileTree(
+      fileTree,
+      expandedPaths,
+      creating,
+      new Set(loadingDirectoryPaths),
+      0,
+      rows,
+    );
     return rows;
-  }, [fileTree, expandedPaths, creating, vaultPath]);
+  }, [fileTree, expandedPaths, creating, vaultPath, loadingDirectoryPaths]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent, entry: FileEntry) => {
@@ -507,6 +533,8 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
         rows={fileTreeRows}
         empty={fileTree.length === 0 && !creating}
         emptyLabel={t.file.emptyFolder}
+        loading={isLoadingTree}
+        loadingLabel={t.common.loading}
         scrollClass={cn(
           "sidebar-file-tree-scroll flex-1 overflow-auto py-2 px-2",
           "transition-[box-shadow,background-color] duration-fast ease-out-subtle",
@@ -802,7 +830,9 @@ function CreateInputRow({
         <span className="ui-tree-label text-muted-foreground">.md</span>
       )}
       {type === "diagram" && (
-        <span className="ui-tree-label text-muted-foreground">.diagram.json</span>
+        <span className="ui-tree-label text-muted-foreground">
+          .diagram.json
+        </span>
       )}
     </div>
   );
@@ -840,6 +870,8 @@ interface FileTreeVirtualizedProps {
   rows: FileTreeRow[];
   empty: boolean;
   emptyLabel: string;
+  loading: boolean;
+  loadingLabel: string;
   scrollClass: string;
   onScroll: () => void;
   onClick: (e: React.MouseEvent) => void;
@@ -854,6 +886,8 @@ function FileTreeVirtualized({
   rows,
   empty,
   emptyLabel,
+  loading,
+  loadingLabel,
   scrollClass,
   onScroll,
   onClick,
@@ -880,7 +914,12 @@ function FileTreeVirtualized({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      {empty ? (
+      {loading && rows.length === 0 ? (
+        <div className="flex items-center justify-center gap-2 px-4 py-8 text-muted-foreground ui-tree-label">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>{loadingLabel}</span>
+        </div>
+      ) : empty ? (
         <div className="px-4 py-8 text-center text-muted-foreground ui-tree-label">
           {emptyLabel}
         </div>
@@ -913,7 +952,7 @@ function FileTreeVirtualized({
                     level={row.level}
                     {...rowProps}
                   />
-                ) : (
+                ) : row.kind === "creating" ? (
                   <CreateInputRow
                     type={rowProps.creating!.type}
                     value={rowProps.createValue}
@@ -922,12 +961,28 @@ function FileTreeVirtualized({
                     onCancel={rowProps.onCreateCancel}
                     level={row.level}
                   />
+                ) : (
+                  <LoadingFolderRow level={row.level} label={loadingLabel} />
                 )}
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function LoadingFolderRow({ level, label }: { level: number; label: string }) {
+  const paddingLeft = 12 + level * 16 + 20;
+  return (
+    <div
+      data-file-tree-item="true"
+      className="ui-tree-row flex items-center gap-1.5 py-1.5 pr-2 text-muted-foreground"
+      style={{ paddingLeft }}
+    >
+      <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+      <span className="ui-tree-label truncate">{label}</span>
     </div>
   );
 }
@@ -1207,9 +1262,7 @@ function FileTreeItem({
       style={{ paddingLeft: paddingLeft + 20 }}
     >
       <span className="pointer-events-none">{getFileIcon()}</span>
-      <span className={FILE_TREE_LABEL_CLASS}>
-        {getFileName(entry.name)}
-      </span>
+      <span className={FILE_TREE_LABEL_CLASS}>{getFileName(entry.name)}</span>
     </div>
   );
 }
