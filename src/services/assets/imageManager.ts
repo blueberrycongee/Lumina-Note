@@ -66,6 +66,21 @@ export interface NoteContentSource {
   content: string;
 }
 
+/**
+ * Per-image stat result. The walker no longer fills size/mtime/ctime
+ * (it would cost an fs.stat() per file across the whole vault), so
+ * imageManager fetches them lazily for just the image paths it needs.
+ * Returning null lets the caller report an unreadable file without
+ * blowing up the whole index.
+ */
+export interface ImageStat {
+  sizeBytes: number;
+  modifiedAt: number | null;
+  createdAt: number | null;
+}
+
+export type ImageStatFetcher = (path: string) => Promise<ImageStat | null>;
+
 export interface AssetPathChange {
   from: string;
   to: string;
@@ -137,12 +152,54 @@ const buildImageReferenceMap = (
   return references;
 };
 
+/**
+ * Resolve image stats with bounded concurrency. We don't add a hard
+ * dep on p-limit for one use site — a fixed-size worker pool over a
+ * queue is enough.
+ */
+async function fetchImageStats(
+  paths: string[],
+  fetcher: ImageStatFetcher,
+  concurrency = 16,
+): Promise<Map<string, ImageStat | null>> {
+  const result = new Map<string, ImageStat | null>();
+  const queue = paths.slice();
+
+  const runWorker = async () => {
+    while (queue.length > 0) {
+      const p = queue.shift();
+      if (p === undefined) break;
+      try {
+        result.set(p, await fetcher(p));
+      } catch {
+        result.set(p, null);
+      }
+    }
+  };
+
+  const workers: Promise<void>[] = [];
+  for (let i = 0; i < concurrency; i++) workers.push(runWorker());
+  await Promise.all(workers);
+  return result;
+}
+
 export const buildImageLibraryIndex = async (
   fileTree: FileEntry[],
   vaultPath: string,
   readNote: (path: string) => Promise<string>,
-  now: number = Date.now(),
+  options: {
+    now?: number;
+    /**
+     * Optional per-image stat fetcher. The default walker fills
+     * size/mtime/ctime as null; pass a fetcher (typically backed by
+     * fsStat()) to populate the size/recent/large fields. Tests that
+     * stub stats directly on FileEntry can omit this and the function
+     * falls back to entry.size / modified_at / created_at.
+     */
+    statImage?: ImageStatFetcher;
+  } = {},
 ): Promise<ImageLibraryIndex> => {
+  const now = options.now ?? Date.now();
   const allFiles = flattenFileTree(fileTree);
   const imageFiles = allFiles
     .filter((entry) => isImagePath(entry.path))
@@ -162,6 +219,16 @@ export const buildImageLibraryIndex = async (
   const imagePaths = new Set(imageFiles.map((entry) => entry.path));
   const referenceMap = buildImageReferenceMap(noteSources, imagePaths);
 
+  // Fetch stats for the image set in parallel. Skipped entirely when
+  // no fetcher is provided so existing tests (which seed stat fields
+  // on FileEntry directly) keep working.
+  const statMap = options.statImage
+    ? await fetchImageStats(
+        imageFiles.map((entry) => entry.path),
+        options.statImage,
+      )
+    : null;
+
   const images = imageFiles
     .map<ImageAssetRecord>((entry) => {
       const path = entry.path;
@@ -175,9 +242,10 @@ export const buildImageLibraryIndex = async (
         }))
         .sort((a, b) => a.noteRelativePath.localeCompare(b.noteRelativePath));
       const referenceCount = noteRefs.reduce((total, ref) => total + ref.occurrenceCount, 0);
-      const modifiedAt = entry.modified_at ?? null;
-      const createdAt = entry.created_at ?? null;
-      const sizeBytes = entry.size ?? null;
+      const stat = statMap?.get(path) ?? null;
+      const modifiedAt = stat?.modifiedAt ?? entry.modified_at ?? null;
+      const createdAt = stat?.createdAt ?? entry.created_at ?? null;
+      const sizeBytes = stat?.sizeBytes ?? entry.size ?? null;
       return {
         path,
         name: basename(path),

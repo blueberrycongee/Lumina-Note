@@ -19,7 +19,10 @@ export default defineConfig({
       'electron/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts}',
     ],
     benchmark: {
-      include: ['src/**/*.bench.{ts,tsx}'],
+      include: [
+        'src/**/*.bench.{ts,tsx}',
+        'electron/**/*.bench.ts',
+      ],
     },
     coverage: {
       provider: 'v8',

@@ -79,7 +79,7 @@ describe("buildImageLibraryIndex", () => {
       fileTree,
       "/vault",
       async (path) => contents.get(path) ?? "",
-      now,
+      { now },
     );
 
     expect(index.summary).toEqual({
@@ -119,6 +119,90 @@ describe("buildImageLibraryIndex", () => {
       recent: false,
       large: true,
     });
+  });
+
+  it("populates size/mtime/ctime from statImage when entry fields are null (post-walker-rewrite path)", async () => {
+    const now = new Date("2026-03-11T09:00:00.000Z").getTime();
+    // Mirrors what the new walker actually produces: stat fields all null.
+    const fileTree = [
+      makeDir("/vault/assets", [
+        makeFile("/vault/assets/recent.png"), // size/mtime/ctime null
+        makeFile("/vault/assets/big.png"), // size/mtime/ctime null
+      ]),
+    ];
+
+    const stats = new Map<string, { sizeBytes: number; modifiedAt: number; createdAt: number }>([
+      [
+        "/vault/assets/recent.png",
+        { sizeBytes: 8000, modifiedAt: now - 1000, createdAt: now - 2000 },
+      ],
+      [
+        "/vault/assets/big.png",
+        {
+          sizeBytes: LARGE_IMAGE_THRESHOLD_BYTES + 1,
+          modifiedAt: now - 30 * 24 * 60 * 60 * 1000,
+          createdAt: now - 31 * 24 * 60 * 60 * 1000,
+        },
+      ],
+    ]);
+
+    const statCalls: string[] = [];
+    const index = await buildImageLibraryIndex(
+      fileTree,
+      "/vault",
+      async () => "",
+      {
+        now,
+        statImage: async (path) => {
+          statCalls.push(path);
+          return stats.get(path) ?? null;
+        },
+      },
+    );
+
+    // statImage should be called once per image, not once per file
+    expect(statCalls.sort()).toEqual([
+      "/vault/assets/big.png",
+      "/vault/assets/recent.png",
+    ]);
+
+    const recent = index.images.find((i) => i.path === "/vault/assets/recent.png");
+    expect(recent?.sizeBytes).toBe(8000);
+    expect(recent?.modifiedAt).toBe(now - 1000);
+    expect(recent?.recent).toBe(true);
+    expect(recent?.large).toBe(false);
+
+    const big = index.images.find((i) => i.path === "/vault/assets/big.png");
+    expect(big?.large).toBe(true);
+    expect(big?.recent).toBe(false);
+
+    expect(index.summary.totalBytes).toBe(8000 + LARGE_IMAGE_THRESHOLD_BYTES + 1);
+    expect(index.summary.recentImages).toBe(1);
+    expect(index.summary.largeImages).toBe(1);
+  });
+
+  it("falls back to entry stat fields when no statImage fetcher is provided", async () => {
+    // This is what the existing tests pre-rewrite implicitly relied on;
+    // keep it green so any caller that already had stat-bearing entries
+    // (eg. mocked tests) doesn't break.
+    const now = new Date("2026-03-11T09:00:00.000Z").getTime();
+    const fileTree = [
+      makeDir("/vault/assets", [
+        makeFile("/vault/assets/x.png", {
+          size: 500,
+          modified_at: now - 1000,
+          created_at: now - 2000,
+        }),
+      ]),
+    ];
+    const index = await buildImageLibraryIndex(
+      fileTree,
+      "/vault",
+      async () => "",
+      { now },
+    );
+    expect(index.images[0].sizeBytes).toBe(500);
+    expect(index.images[0].modifiedAt).toBe(now - 1000);
   });
 });
 

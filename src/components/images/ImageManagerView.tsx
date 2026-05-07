@@ -34,7 +34,7 @@ import {
   previewImageMove,
   previewImageRename,
 } from "@/services/assets/imageOperations";
-import { readFile } from "@/lib/host";
+import { fsStat, readFile } from "@/lib/host";
 import {
   type ImageManagerSortBy,
   type ImageManagerStatusFilter,
@@ -239,12 +239,34 @@ export function ImageManagerView() {
     }
 
     setLoading(true);
-    buildImageLibraryIndex(fileTree, vaultPath, async (path) => {
-      const active = useFileStore.getState();
-      if (active.currentFile === path) return active.currentContent;
-      const openTab = active.tabs.find((tab) => tab.type === "file" && tab.path === path);
-      return openTab?.content ?? readFile(path);
-    })
+    buildImageLibraryIndex(
+      fileTree,
+      vaultPath,
+      async (path) => {
+        const active = useFileStore.getState();
+        if (active.currentFile === path) return active.currentContent;
+        const openTab = active.tabs.find((tab) => tab.type === "file" && tab.path === path);
+        return openTab?.content ?? readFile(path);
+      },
+      {
+        // The workspace walker no longer fills size/mtime/ctime, so we
+        // stat each image lazily here. Bounded concurrency lives inside
+        // buildImageLibraryIndex; we just wrap fsStat into the shape it
+        // expects.
+        statImage: async (imagePath) => {
+          try {
+            const stat = await fsStat(imagePath);
+            return {
+              sizeBytes: stat.size,
+              modifiedAt: stat.mtime ? stat.mtime.getTime() : null,
+              createdAt: stat.birthtime ? stat.birthtime.getTime() : null,
+            };
+          } catch {
+            return null;
+          }
+        },
+      },
+    )
       .then((index) => {
         if (cancelled) return;
         setImages(index.images);
