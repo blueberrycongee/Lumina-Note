@@ -680,18 +680,21 @@ export function useSidebarFileOperations() {
   // ── Toggle expanded ───────────────────────────────────────────────────
   const toggleExpanded = useCallback(
     (path: string) => {
+      const shouldLoadChildren = !expandedPaths.has(path);
       setExpandedPaths((prev) => {
         const next = new Set(prev);
         if (next.has(path)) {
           next.delete(path);
         } else {
           next.add(path);
-          void expandDirectory(path);
         }
         return next;
       });
+      if (shouldLoadChildren) {
+        void expandDirectory(path);
+      }
     },
-    [expandDirectory],
+    [expandedPaths, expandDirectory],
   );
 
   const toggleMountedExpanded = useCallback((path: string) => {
