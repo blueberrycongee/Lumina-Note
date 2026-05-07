@@ -74,6 +74,7 @@ import {
 } from "codemirror-live-markdown";
 import { resolveCalloutType, matchCalloutHeader } from "@/editor/calloutConfig";
 import { parseMarkdown } from "@/services/markdown/markdown";
+import { tableInlineMarkdownPlugin } from "@/editor/tableInlineMarkdownPlugin";
 
 // Initialize mermaid
 mermaid.initialize({
@@ -148,16 +149,18 @@ const createEditorTheme = (fontSize: number) =>
 
     // Keep the text column at a stable, readable width no matter what the
     // main-area width is. When a sidebar collapses the editor's main pane
-    // jumps in width, but the column stays a fixed 42rem and floats into
+    // jumps in width, but the column stays a fixed 48rem and floats into
     // the middle of whatever pane it's in, so line wrapping and selection
     // shape stay identical across the three common layouts (both panes
     // open / left collapsed / right collapsed). Only the empty space to
     // either side of the text changes.
     //
-    // The 42rem cap actually lives in globals.css under
+    // The 48rem cap actually lives in globals.css under
     // `.codemirror-wrapper .cm-sizer / .cm-content / .cm-line`, so the
-    // reading-mode `.reading-view` rule there can stay in lock-step. 42rem
-    // ≈ 672px ≈ 60–75 characters at 14px — typographic comfort zone.
+    // reading-mode `.reading-view` rule there can stay in lock-step. Note
+    // the root font-size is 13px (see globals.css `html`), so 48rem = 624px
+    // outer / ~520px text column — ~37 CJK chars or ~70 latin chars at
+    // 14px, the typographic comfort zone.
     //
     // margin: 0 auto (instead of justify-content on the scroller) means
     // if gutters get added later, they still sit at the left edge and the
@@ -5118,6 +5121,7 @@ export const CodeMirrorEditor = forwardRef<
             collapseOnSelectionFacet.of(false),
             readingModePlugin,
             tableField,
+            tableInlineMarkdownPlugin,
             tableRowSelectionPlugin,
             editableCodeBlockField,
             ...widgets,

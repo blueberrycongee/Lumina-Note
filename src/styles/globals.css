@@ -1751,17 +1751,20 @@ mark {
   /* Match CodeMirrorEditor's actual rendered geometry. CM stacks three
      padded layers in globals.css + the editor theme:
 
-       .cm-sizer   max-width: 42rem; padding: 1rem 2rem  (16/32 vertical/horizontal)
+       .cm-sizer   max-width: 48rem; padding: 1rem 2rem  (16/32 vertical/horizontal)
        .cm-content padding: 16px 0                       (vertical only, from JS theme)
        .cm-line    padding-left: 24; padding-right: 16   (horizontal only, from JS theme)
 
-     Combined that's a 42rem outer footprint with 32px top/bottom padding
+     Combined that's a 48rem outer footprint with 32px top/bottom padding
      (16+16) and 56px/48px left/right padding (32+24 / 32+16), producing a
-     568px text column. Mirror those totals on this single element so the
-     reading text lands at the same screen position as live/source mode.
-     box-sizing: border-box (Tailwind preflight) keeps max-width inclusive
-     of padding so the outer footprint is also 42rem. */
-  max-width: 42rem;
+     ~520px text column (root font-size is 13px, so 48rem = 624px outer).
+     Mirror those totals on this single element so the reading text lands
+     at the same screen position as live/source mode. box-sizing:
+     border-box (Tailwind preflight) keeps max-width inclusive of padding
+     so the outer footprint is also 48rem. The four max-widths in this
+     file (this rule + the three .codemirror-wrapper rules below) must
+     stay equal — they're what keeps mode switches jump-free. */
+  max-width: 48rem;
   padding: 32px 48px 32px 56px;
 }
 
@@ -2111,15 +2114,15 @@ mark {
    of .cm-content), not on .cm-content itself. This prevents ::selection
    from painting in padding zones since .cm-content has no extra padding. */
 .codemirror-wrapper .cm-sizer {
-  max-width: 42rem;
+  max-width: 48rem;
   margin: 0 auto;
   padding: 1rem 2rem;
 }
 .codemirror-wrapper .cm-content {
-  max-width: 42rem;
+  max-width: 48rem;
 }
 .codemirror-wrapper .cm-line {
-  max-width: 42rem;
+  max-width: 48rem;
 }
 
 /* 暗色模式适配 */
