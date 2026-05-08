@@ -130,14 +130,14 @@ describe("buildOpencodeBridge", () => {
       },
       "mimo-v2-pro": {
         limit: {
-          context: 1_000_000,
-          output: 128_000,
+          context: 1_048_576,
+          output: 131_072,
         },
       },
       "mimo-v2-omni": {
         limit: {
-          context: 256_000,
-          output: 128_000,
+          context: 262_144,
+          output: 65_536,
         },
       },
     });
@@ -212,8 +212,8 @@ describe("buildOpencodeBridge", () => {
       output: 131_072,
     });
     expect(config.provider.xiaomi.models["mimo-v2-flash"].limit).toEqual({
-      context: 256_000,
-      output: 64_000,
+      context: 262_144,
+      output: 65_536,
     });
   });
 });

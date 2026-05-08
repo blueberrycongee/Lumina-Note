@@ -162,14 +162,14 @@ const MIMO_OFFICIAL_MODELS: ModelMeta[] = [
   {
     id: 'mimo-v2.5-pro',
     name: 'MiMo V2.5 Pro',
-    contextWindow: 1000000,
+    contextWindow: 1048576,
     supportsThinking: true,
     reasoning: mimoReasoning(),
   },
   {
     id: 'mimo-v2-pro',
     name: 'MiMo V2 Pro',
-    contextWindow: 1000000,
+    contextWindow: 1048576,
     supportsThinking: true,
     reasoning: mimoReasoning(),
   },
@@ -192,14 +192,14 @@ const MIMO_TOKEN_PLAN_MODELS: ModelMeta[] = [
   {
     id: 'mimo-v2.5-pro',
     name: 'MiMo V2.5 Pro',
-    contextWindow: 1000000,
+    contextWindow: 1048576,
     supportsThinking: true,
     reasoning: mimoReasoning(),
   },
   {
     id: 'mimo-v2.5',
     name: 'MiMo V2.5',
-    contextWindow: 1000000,
+    contextWindow: 1048576,
     supportsVision: true,
     supportsThinking: true,
     reasoning: mimoReasoning(),
@@ -207,7 +207,7 @@ const MIMO_TOKEN_PLAN_MODELS: ModelMeta[] = [
   {
     id: 'mimo-v2-pro',
     name: 'MiMo V2 Pro',
-    contextWindow: 1000000,
+    contextWindow: 1048576,
     supportsThinking: true,
     reasoning: mimoReasoning(),
   },

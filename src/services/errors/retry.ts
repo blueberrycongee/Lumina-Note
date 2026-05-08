@@ -23,6 +23,17 @@ export function classifyHttpError(err: unknown): RetryClassification {
     if (name === "AbortError") return { retryable: false, reason: "abort" };
   }
 
+  // JS-native errors are application bugs, not transient network issues.
+  if (
+    err instanceof TypeError ||
+    err instanceof SyntaxError ||
+    err instanceof RangeError ||
+    err instanceof ReferenceError ||
+    err instanceof URIError
+  ) {
+    return { retryable: false, reason: "bug" };
+  }
+
   // ResponseError shape from @opencode-ai/sdk's openapi-fetch wrapper.
   // Both raw fetch + opencode SDK surface .response.status when the call
   // got far enough to receive a status.

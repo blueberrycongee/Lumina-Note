@@ -485,6 +485,7 @@ async function generateInlineAIMarkdown(
         return text;
       };
 
+      let promptRejection: unknown;
       const promptReq = client.session
         .promptAsync({
           path: { id: sessionId },
@@ -498,7 +499,8 @@ async function generateInlineAIMarkdown(
         })
         .then(() => {
           promptAccepted = true;
-        });
+        })
+        .catch((err: unknown) => { promptRejection = err; });
 
       try {
         for await (const evt of stream.stream) {
@@ -631,6 +633,7 @@ async function generateInlineAIMarkdown(
 
       streamController.abort();
       await promptReq;
+      if (promptRejection) throw promptRejection;
       throwIfSlashAIAborted(callbacks?.signal);
 
       let rawText = latestTextPart;
@@ -947,19 +950,18 @@ export const slashMenuField = StateField.define<SlashMenuState>({
       }
     }
     
-    // 文档变化时，检查是否应该关闭菜单
+    // 文档变化时，重映射位置并检查是否应该关闭菜单
     if (state.active && tr.docChanged) {
+      const mappedPos = tr.changes.mapPos(state.pos);
       const head = tr.state.selection.main.head;
-      // 如果光标不再在 "/" 之后，关闭菜单
-      if (head <= state.pos) {
+      if (head <= mappedPos) {
         return { active: false, pos: 0, filter: "" };
       }
-      // 更新 filter
-      const text = tr.state.doc.sliceString(state.pos, head);
+      const text = tr.state.doc.sliceString(mappedPos, head);
       if (!text.startsWith("/")) {
         return { active: false, pos: 0, filter: "" };
       }
-      return { ...state, filter: text.slice(1) };
+      return { ...state, pos: mappedPos, filter: text.slice(1) };
     }
     
     return state;

@@ -134,16 +134,16 @@ const MIMO_MODEL_LIMITS: Record<string, { context: number; output: number }> = {
     output: 131_072,
   },
   "mimo-v2-pro": {
-    context: 1_000_000,
-    output: 128_000,
+    context: 1_048_576,
+    output: 131_072,
   },
   "mimo-v2-omni": {
-    context: 256_000,
-    output: 128_000,
+    context: 262_144,
+    output: 65_536,
   },
   "mimo-v2-flash": {
-    context: 256_000,
-    output: 64_000,
+    context: 262_144,
+    output: 65_536,
   },
 };
 
@@ -257,7 +257,11 @@ function modelConfigForOpencode(
   const limit = fallbackLimitForModel(luminaId, modelId);
   const config: Record<string, unknown> = limit ? { limit } : {};
 
-  if (luminaId !== "deepseek" || !modelId.startsWith("deepseek-v4-")) {
+  const isDeepSeekReasoner =
+    luminaId === "deepseek" &&
+    (modelId.startsWith("deepseek-v4-") || modelId === "deepseek-reasoner");
+
+  if (!isDeepSeekReasoner) {
     return config;
   }
 
@@ -277,10 +281,13 @@ function fallbackLimitForModel(
   modelId: string,
 ): { context: number; output: number } | undefined {
   if (luminaId === "deepseek") {
-    return {
-      context: modelId.startsWith("deepseek-v4-") ? 1_000_000 : 128_000,
-      output: 8_192,
-    };
+    if (modelId.startsWith("deepseek-v4-")) {
+      // V4 models: 1M context, 384K max output (official docs)
+      return { context: 1_000_000, output: 384_000 };
+    }
+    // Legacy deepseek-chat / deepseek-reasoner: 128K context (V3.1+),
+    // 8K max_tokens ceiling. Deprecated 2026-07-24.
+    return { context: 128_000, output: 8_192 };
   }
 
   if (luminaId === "moonshot") {
