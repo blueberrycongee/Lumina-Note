@@ -141,9 +141,12 @@ describe('processMessageWithFiles', () => {
     
     const result = await processMessageWithFiles('Test', files);
     
-    // Should still work, just without file content
+    // Should still work and preserve a visible path/error fallback for the model.
     expect(result.displayMessage).toBe('Test');
-    expect(result.fileContext).toBe('');
+    expect(result.fileContext).toContain('Path: /invalid.md');
+    expect(result.fileContext).toContain('Content could not be read');
+    expect(result.fileContext).toContain('File not found');
+    expect(result.fullMessage).toContain('Path: /invalid.md');
     expect(result.attachments).toEqual([
       { type: 'file', name: 'invalid.md', path: '/invalid.md' },
     ]);

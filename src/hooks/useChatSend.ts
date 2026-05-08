@@ -82,6 +82,25 @@ function buildPathOnlyFileContext(fileHeader: string, file: ReferencedFile): str
   ].join("\n");
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  return String(error);
+}
+
+function buildUnreadableFileContext(
+  fileHeader: string,
+  file: ReferencedFile,
+  error: unknown,
+): string {
+  return [
+    `--- ${fileHeader} ---`,
+    `Path: ${file.path}`,
+    `Content could not be read before sending. Read error: ${errorMessage(error)}`,
+    "The file is still attached by path; use available tools to inspect it if needed.",
+  ].join("\n");
+}
+
 function truncateInlineContent(content: string, remainingBudget: number): {
   content: string;
   truncated: boolean;
@@ -208,6 +227,7 @@ export async function processMessageWithFiles(
           ].join("\n"),
         );
       } catch (e) {
+        fileContextEntries.push(buildUnreadableFileContext(fileHeader, file, e));
         reportOperationError({
           source: "useChatSend.processMessageWithFiles",
           action: "Read referenced file for chat",
