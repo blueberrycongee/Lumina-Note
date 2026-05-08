@@ -63,6 +63,37 @@ function fileTab(path = "/vault/A.md"): Tab {
   };
 }
 
+function previewFileTab(path = "/vault/A.md"): Tab {
+  return {
+    ...fileTab(path),
+    isPreview: true,
+  };
+}
+
+function previewPdfTab(path = "/vault/A.pdf"): Tab {
+  return {
+    id: `__pdf_${path}__`,
+    type: "pdf",
+    path,
+    name: "A.pdf",
+    content: "",
+    isDirty: false,
+    isPreview: true,
+    undoStack: [],
+    redoStack: [],
+  };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
 describe("useFileStore new tabs", () => {
   beforeEach(() => {
     resetStore();
@@ -149,5 +180,85 @@ describe("useFileStore new tabs", () => {
     expect(state.currentFile).toBe("/vault/Open.md");
     expect(state.currentContent).toBe("A");
     expect(state.lastSavedContent).toBe("A");
+  });
+
+  it("promotes an existing preview tab when the same file is explicitly opened", async () => {
+    resetStore([previewFileTab("/vault/Open.md")], 0);
+
+    await useFileStore.getState().openFile("/vault/Open.md");
+
+    const state = useFileStore.getState();
+    expect(state.tabs).toHaveLength(1);
+    expect(state.tabs[0].isPreview).toBeUndefined();
+    expect(state.activeTabIndex).toBe(0);
+  });
+
+  it("reuses one preview slot across file types", async () => {
+    vi.mocked(readFile).mockResolvedValue("Opened content");
+    resetStore([previewPdfTab("/vault/A.pdf")], 0);
+
+    await useFileStore.getState().openFile("/vault/B.md", { preview: true });
+
+    const state = useFileStore.getState();
+    expect(state.tabs).toHaveLength(1);
+    expect(state.tabs[0]).toMatchObject({
+      type: "file",
+      path: "/vault/B.md",
+      isPreview: true,
+    });
+  });
+
+  it("opens diagram, pdf, and image files as preview tabs when requested", async () => {
+    resetStore([fileTab("/vault/A.md")], 0);
+
+    await useFileStore.getState().openFile("/vault/Sketch.drawio.json", { preview: true });
+    expect(useFileStore.getState().tabs.at(-1)).toMatchObject({
+      type: "diagram",
+      isPreview: true,
+    });
+
+    useFileStore.getState().openPDFTab("/vault/Guide.pdf", { preview: true });
+    expect(useFileStore.getState().tabs.at(-1)).toMatchObject({
+      type: "pdf",
+      path: "/vault/Guide.pdf",
+      isPreview: true,
+    });
+
+    useFileStore.getState().openImageTab("/vault/Image.png", { preview: true });
+    expect(useFileStore.getState().tabs.at(-1)).toMatchObject({
+      type: "image",
+      path: "/vault/Image.png",
+      isPreview: true,
+    });
+  });
+
+  it("ignores a stale preview open when a later permanent open wins the race", async () => {
+    resetStore([newTab()], 0);
+
+    const first = createDeferred<string>();
+    const second = createDeferred<string>();
+    vi.mocked(readFile)
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise);
+
+    const firstOpen = useFileStore.getState().openFile("/vault/Race.md", { preview: true });
+    const secondOpen = useFileStore.getState().openFile("/vault/Race.md");
+
+    second.resolve("# Race\n\nlatest");
+    await secondOpen;
+
+    first.resolve("# Race\n\nstale");
+    await firstOpen;
+
+    const state = useFileStore.getState();
+    expect(state.tabs).toHaveLength(1);
+    expect(state.tabs[0]).toMatchObject({
+      type: "file",
+      path: "/vault/Race.md",
+      content: "# Race\n\nlatest",
+    });
+    expect(state.tabs[0].isPreview).toBeUndefined();
+    expect(state.currentContent).toBe("# Race\n\nlatest");
+    expect(state.isLoadingFile).toBe(false);
   });
 });

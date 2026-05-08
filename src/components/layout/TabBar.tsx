@@ -47,8 +47,12 @@ const TAB_SHAPE_DEFAULT_WIDTH = 200;
 // collapse the strip. 22px gives a ~7px tighter gap than the geometric
 // interlock without making the active tab "bite" into neighbors too far.
 const TAB_OVERLAP_PX = 22;
-const TAB_MIN_WIDTH_PX = 72;
+const TAB_MIN_WIDTH_PX = 56;
 const TAB_MAX_WIDTH_PX = 240;
+const TAB_COMPACT_WIDTH_PX = 92;
+const TAB_MINI_WIDTH_PX = 68;
+const TAB_NEW_BUTTON_WIDTH_PX = 40;
+const TAB_END_PADDING_PX = 6;
 const TABBAR_EDGE_SLOT_CLASS =
   "flex w-10 shrink-0 items-center justify-center pt-1.5";
 const TABBAR_ICON_BUTTON_CLASS =
@@ -87,10 +91,11 @@ function buildTabShapeStrokePath(width: number, height: number): string {
 
 interface TabShapeProps {
   isActive: boolean;
+  isDragging: boolean;
   isDropTarget: boolean;
 }
 
-function TabShape({ isActive, isDropTarget }: TabShapeProps) {
+function TabShape({ isActive, isDragging, isDropTarget }: TabShapeProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: TAB_SHAPE_DEFAULT_WIDTH, height: TAB_SHAPE_HEIGHT });
 
@@ -147,7 +152,7 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
           stroke="none"
           className={cn(
             "transition-[fill] duration-150",
-            isActive ? "fill-[var(--tab-active-fill)]" : "fill-transparent"
+            isActive || isDragging ? "fill-[var(--tab-active-fill)]" : "fill-transparent"
           )}
         />
         <path
@@ -158,7 +163,7 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
             "transition-[stroke,stroke-width] duration-150",
             isDropTarget
               ? "stroke-[hsl(var(--primary))] [stroke-width:2]"
-              : isActive
+              : isActive || isDragging
                 ? "stroke-[hsl(var(--border))] [stroke-width:1]"
                 : "[stroke-width:0]"
           )}
@@ -171,9 +176,17 @@ function TabShape({ isActive, isDropTarget }: TabShapeProps) {
 interface TabItemProps {
   tab: Tab;
   isActive: boolean;
+  isDragging: boolean;
   displayName: string;
+  width: number;
+  onMouseDown: (e: React.MouseEvent) => void;
+  onPointerDown: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (e: React.PointerEvent<HTMLDivElement>) => void;
+  onPointerCancel: (e: React.PointerEvent<HTMLDivElement>) => void;
   onSelect: () => void;
   onDoubleClick: () => void;
+  onAuxClick: (e: React.MouseEvent) => void;
   onClose: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }
@@ -181,26 +194,50 @@ interface TabItemProps {
 function TabItem({
   tab,
   isActive,
+  isDragging,
   displayName,
+  width,
+  onMouseDown,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
   onSelect,
   onDoubleClick,
+  onAuxClick,
   onClose,
   onContextMenu,
 }: TabItemProps) {
   const { t } = useLocaleStore();
+  const hasLeadingIcon = tab.type !== "new-tab";
+  const isCompact = width < TAB_COMPACT_WIDTH_PX;
+  const isMini = width < TAB_MINI_WIDTH_PX;
+  const showLabel = !isMini || !hasLeadingIcon;
+  const showClose = !tab.isPinned && (!isCompact || isActive);
+
   return (
     <div
+      role="tab"
+      aria-selected={isActive}
+      title={displayName}
       data-tauri-drag-region="false"
-      className="group relative h-full w-full cursor-grab select-none"
+      className="group relative h-full w-full cursor-default select-none"
+      onMouseDown={onMouseDown}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onClick={onSelect}
       onDoubleClick={onDoubleClick}
+      onAuxClick={onAuxClick}
       onContextMenu={onContextMenu}
     >
-      <TabShape isActive={isActive} isDropTarget={false} />
+      <TabShape isActive={isActive} isDragging={isDragging} isDropTarget={false} />
       <div
         className={cn(
-          "relative flex h-full items-center gap-2 pl-7 pr-5 text-ui-control transition-colors duration-150",
-          isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+          "relative flex h-full items-center text-ui-control transition-colors duration-150",
+          isMini ? "justify-center px-[18px]" : isCompact ? "gap-1.5 pl-6 pr-4" : "gap-2 pl-7 pr-5",
+          isActive || isDragging ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
         )}
       >
         {tab.type === "new-tab" ? null : tab.type === "graph" || tab.type === "isolated-graph" ? (
@@ -216,7 +253,9 @@ function TabItem({
         ) : (
           <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         )}
-        <span className={cn("flex-1 truncate min-w-0", tab.isPreview && "italic")}>{displayName}</span>
+        {showLabel && (
+          <span className={cn("flex-1 truncate min-w-0", tab.isPreview && "italic")}>{displayName}</span>
+        )}
         <AnimatePresence initial={false}>
           {tab.isPinned && (
             <motion.span
@@ -234,11 +273,12 @@ function TabItem({
         {tab.isDirty && (
           <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0 animate-pulse" />
         )}
-        {!tab.isPinned && (
+        {showClose && (
           <button
             data-tauri-drag-region="false"
             onClick={onClose}
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             aria-label={t.tabBar.close}
             className={cn(
               "mr-1 shrink-0 p-0.5 rounded-ui-sm",
@@ -259,7 +299,7 @@ function TabItem({
 interface ContextMenuState {
   x: number;
   y: number;
-  tabIndex: number;
+  tabId: string;
 }
 
 interface ClosingGhost {
@@ -272,15 +312,74 @@ interface TabBounds {
   width: number;
 }
 
+type ProjectableTab = Pick<Tab, "id" | "isPinned">;
+
+interface DragState {
+  tabId: string;
+  pointerId: number;
+  startClientX: number;
+  offsetX: number;
+  hasMoved: boolean;
+  isDragging: boolean;
+}
+
+function areTabIdArraysEqual(a: string[] | null, b: string[] | null): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((id, index) => id === b[index]);
+}
+
+function closestIndex(value: number, values: number[]): number {
+  let closestDistance = Infinity;
+  let closest = -1;
+  values.forEach((candidate, index) => {
+    const distance = Math.abs(value - candidate);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closest = index;
+    }
+  });
+  return closest;
+}
+
+export function projectDraggedTabOrder(
+  tabId: string,
+  offsetX: number,
+  orderedOpenTabs: ProjectableTab[],
+  tabLayouts: Map<string, TabBounds>,
+): string[] | null {
+  const movedTab = orderedOpenTabs.find((tab) => tab.id === tabId);
+  const draggedBounds = tabLayouts.get(tabId);
+  if (!movedTab || !draggedBounds) return null;
+
+  const sameGroupTabs = orderedOpenTabs.filter((tab) => tab.isPinned === movedTab.isPinned);
+  const sameGroupPositions: number[] = [];
+  for (const tab of sameGroupTabs) {
+    const bounds = tabLayouts.get(tab.id);
+    if (!bounds) return null;
+    sameGroupPositions.push(bounds.x);
+  }
+
+  const draggedX = draggedBounds.x + offsetX;
+  const destinationIndex = closestIndex(draggedX, sameGroupPositions as number[]);
+  if (destinationIndex === -1) return null;
+
+  const sameGroupWithoutDragged = sameGroupTabs.filter((tab) => tab.id !== tabId);
+  const projectedGroupIds = sameGroupWithoutDragged.map((tab) => tab.id);
+  projectedGroupIds.splice(destinationIndex, 0, tabId);
+
+  let groupCursor = 0;
+  return orderedOpenTabs.map((tab) => {
+    if (tab.isPinned !== movedTab.isPinned) return tab.id;
+    const nextId = projectedGroupIds[groupCursor];
+    groupCursor += 1;
+    return nextId;
+  });
+}
+
 function clampTabWidth(width: number): number {
   return Math.max(TAB_MIN_WIDTH_PX, Math.min(TAB_MAX_WIDTH_PX, width));
 }
-
-const DEFERRED_SWITCH_TAB_TYPES = new Set<Tab["type"]>([
-  "diagram",
-  "image",
-  "pdf",
-]);
 
 async function preloadTabBeforeSwitch(tab: Tab): Promise<void> {
   if (!tab.path) return;
@@ -313,11 +412,10 @@ export function TabBar() {
       })),
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const tabListRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef(tabs);
   const [tabListWidth, setTabListWidth] = useState(0);
-  const pendingSwitchSeqRef = useRef(0);
   // 1×1 invisible div positioned at the right-click coordinates so the
   // Popover has a real DOM element to anchor against. Without it the menu
   // would have no stable position to recompute against on resize / scroll.
@@ -349,7 +447,7 @@ export function TabBar() {
   }, [tabs]);
 
   useLayoutEffect(() => {
-    const node = tabListRef.current;
+    const node = scrollViewportRef.current;
     if (!node || typeof ResizeObserver === "undefined") return;
 
     const updateWidth = () => {
@@ -367,13 +465,7 @@ export function TabBar() {
 
   const handleSelectTab = useCallback(
     (tab: Tab, index: number) => {
-      if (!DEFERRED_SWITCH_TAB_TYPES.has(tab.type)) {
-        switchTab(index);
-        return;
-      }
-
-      const seq = pendingSwitchSeqRef.current + 1;
-      pendingSwitchSeqRef.current = seq;
+      switchTab(index);
       void (async () => {
         try {
           await preloadTabBeforeSwitch(tab);
@@ -386,12 +478,6 @@ export function TabBar() {
             context: { tabId: tab.id, type: tab.type, path: tab.path },
           });
         }
-
-        if (pendingSwitchSeqRef.current !== seq) return;
-        const currentIndex = tabsRef.current.findIndex((item) => item.id === tab.id);
-        if (currentIndex >= 0) {
-          switchTab(currentIndex);
-        }
       })();
     },
     [switchTab],
@@ -403,16 +489,32 @@ export function TabBar() {
   const [closingGhosts, setClosingGhosts] = useState<Map<string, ClosingGhost>>(() => new Map());
   const [enteringIds, setEnteringIds] = useState<Set<string>>(() => new Set());
   const [frozenWidths, setFrozenWidths] = useState<Map<string, number> | null>(null);
+  const [draggingTabId, setDraggingTabId] = useState<string | null>(null);
+  const [projectedTabIds, setProjectedTabIds] = useState<string[] | null>(null);
+  const [dragOffsetX, setDragOffsetX] = useState(0);
   const tabNodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const dragStateRef = useRef<DragState | null>(null);
+  const dragClickSuppressionRef = useRef<string | null>(null);
+  const dragClickSuppressionTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragStartLayoutsRef = useRef<Map<string, TabBounds> | null>(null);
+  const dragStartOpenTabsRef = useRef<Tab[] | null>(null);
   const previousTabIdsRef = useRef<Set<string>>(new Set(tabs.map((tab) => tab.id)));
   const timeouts = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const releaseFrozenWidthsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearDragProjectionFrame = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
       for (const t of timeouts.current) clearTimeout(t);
       timeouts.current.clear();
+      if (clearDragProjectionFrame.current !== null) {
+        cancelAnimationFrame(clearDragProjectionFrame.current);
+      }
+      if (dragClickSuppressionTimeout.current !== null) {
+        clearTimeout(dragClickSuppressionTimeout.current);
+      }
       // 卸载兜底：万一拖拽中组件被销毁，确保 body class 被清掉
+      dragStateRef.current = null;
       document.body.classList.remove("lumina-tab-dragging");
     };
   }, []);
@@ -483,16 +585,30 @@ export function TabBar() {
     [closingIds, tabs],
   );
 
+  const orderedOpenTabsForLayout = useMemo(() => {
+    if (!projectedTabIds) return openTabsForLayout;
+
+    const tabById = new Map(openTabsForLayout.map((tab) => [tab.id, tab]));
+    const projectedTabs = projectedTabIds
+      .map((id) => tabById.get(id))
+      .filter((tab): tab is Tab => Boolean(tab));
+    const projectedIdSet = new Set(projectedTabs.map((tab) => tab.id));
+    const missingTabs = openTabsForLayout.filter((tab) => !projectedIdSet.has(tab.id));
+
+    return [...projectedTabs, ...missingTabs];
+  }, [openTabsForLayout, projectedTabIds]);
+
   const tabLayouts = useMemo(() => {
     const layouts = new Map<string, TabBounds>();
-    const openCount = openTabsForLayout.length;
+    const openCount = orderedOpenTabsForLayout.length;
+    const availableWidth = Math.max(0, tabListWidth - TAB_NEW_BUTTON_WIDTH_PX - TAB_END_PADDING_PX);
     const defaultWidth =
       openCount > 0
-        ? clampTabWidth((tabListWidth + TAB_OVERLAP_PX * (openCount - 1)) / openCount)
+        ? clampTabWidth((availableWidth + TAB_OVERLAP_PX * Math.max(0, openCount - 1)) / openCount)
         : TAB_MAX_WIDTH_PX;
 
     let x = 0;
-    for (const tab of openTabsForLayout) {
+    for (const tab of orderedOpenTabsForLayout) {
       const width = frozenWidths?.get(tab.id) ?? defaultWidth;
       layouts.set(tab.id, { x, width });
       x += width - TAB_OVERLAP_PX;
@@ -518,7 +634,21 @@ export function TabBar() {
     }
 
     return layouts;
-  }, [closingGhosts, closingIds, frozenWidths, openTabsForLayout, tabListWidth, tabs]);
+  }, [closingGhosts, closingIds, frozenWidths, orderedOpenTabsForLayout, tabListWidth, tabs]);
+
+  const openTabsContentWidth = useMemo(() => {
+    if (openTabsForLayout.length === 0) return 0;
+    return openTabsForLayout.reduce((rightEdge, tab) => {
+      const bounds = tabLayouts.get(tab.id);
+      return bounds ? Math.max(rightEdge, bounds.x + bounds.width) : rightEdge;
+    }, 0);
+  }, [openTabsForLayout, tabLayouts]);
+
+  const tabListContentWidth = Math.max(
+    tabListWidth,
+    openTabsContentWidth + TAB_NEW_BUTTON_WIDTH_PX + TAB_END_PADDING_PX,
+  );
+  const newTabButtonX = openTabsContentWidth;
 
   const visualTabs = useMemo(() => {
     const ghosts = [...closingGhosts.values()].map((ghost) => ({
@@ -537,36 +667,145 @@ export function TabBar() {
     return [...ghosts, ...open];
   }, [closingGhosts, closingIds, tabs]);
 
+  const handleTabDragMove = useCallback((tabId: string, offsetX: number) => {
+    const startOpenTabs = dragStartOpenTabsRef.current;
+    const startLayouts = dragStartLayoutsRef.current;
+    if (!startOpenTabs || !startLayouts) return;
+
+    setDragOffsetX(offsetX);
+    const projectedIds = projectDraggedTabOrder(tabId, offsetX, startOpenTabs, startLayouts);
+    setProjectedTabIds((prev) => areTabIdArraysEqual(prev, projectedIds) ? prev : projectedIds);
+  }, []);
+
   const handleTabDragEnd = useCallback(
-    (tabId: string, offsetX: number) => {
-      if (closingIds.has(tabId)) return;
+    (tabId: string, offsetX: number): boolean => {
+      if (closingIds.has(tabId)) return false;
 
+      const startOpenTabs = dragStartOpenTabsRef.current ?? tabs.filter((tab) => !closingIds.has(tab.id));
+      const startLayouts = dragStartLayoutsRef.current ?? tabLayouts;
       const fromIndex = tabs.findIndex((tab) => tab.id === tabId);
-      const draggedBounds = tabLayouts.get(tabId);
-      if (fromIndex === -1 || !draggedBounds) return;
+      if (fromIndex === -1) return false;
 
-      const draggedCenter = draggedBounds.x + offsetX + draggedBounds.width / 2;
-      const orderedOpenTabs = tabs.filter((tab) => !closingIds.has(tab.id));
-      const withoutDragged = orderedOpenTabs.filter((tab) => tab.id !== tabId);
-      const nextOrder = withoutDragged.map((tab) => tab.id);
-      const insertAt = withoutDragged.findIndex((tab) => {
-        const bounds = tabLayouts.get(tab.id);
-        return bounds ? draggedCenter < bounds.x + bounds.width / 2 : false;
-      });
+      const nextOrder = projectDraggedTabOrder(tabId, offsetX, startOpenTabs, startLayouts);
+      if (!nextOrder) return false;
 
-      nextOrder.splice(insertAt === -1 ? nextOrder.length : insertAt, 0, tabId);
       const finalOpenIndex = nextOrder.findIndex((id) => id === tabId);
-      const openStoreIndexes = orderedOpenTabs.map((tab) =>
+      const openStoreIndexes = startOpenTabs.map((tab) =>
         tabs.findIndex((item) => item.id === tab.id),
       );
       const targetStoreIndex = openStoreIndexes[finalOpenIndex] ?? fromIndex;
 
       if (targetStoreIndex !== fromIndex) {
         reorderTabs(fromIndex, targetStoreIndex);
+        return true;
       }
+      return false;
     },
     [closingIds, reorderTabs, tabLayouts, tabs],
   );
+
+  const clearDragProjectionAfterCommit = useCallback(() => {
+    if (clearDragProjectionFrame.current !== null) {
+      cancelAnimationFrame(clearDragProjectionFrame.current);
+    }
+    clearDragProjectionFrame.current = requestAnimationFrame(() => {
+      clearDragProjectionFrame.current = null;
+      setProjectedTabIds(null);
+    });
+  }, []);
+
+  const clearDragState = useCallback(() => {
+    dragStateRef.current = null;
+    setDraggingTabId(null);
+    setDragOffsetX(0);
+    document.body.classList.remove("lumina-tab-dragging");
+  }, []);
+
+  const suppressNextTabClick = useCallback((tabId: string) => {
+    dragClickSuppressionRef.current = tabId;
+    if (dragClickSuppressionTimeout.current !== null) {
+      clearTimeout(dragClickSuppressionTimeout.current);
+    }
+    dragClickSuppressionTimeout.current = setTimeout(() => {
+      if (dragClickSuppressionRef.current === tabId) {
+        dragClickSuppressionRef.current = null;
+      }
+      dragClickSuppressionTimeout.current = null;
+    }, 0);
+  }, []);
+
+  const beginTabDrag = useCallback((tabId: string, pointerId: number, startClientX: number) => {
+    if (clearDragProjectionFrame.current !== null) {
+      cancelAnimationFrame(clearDragProjectionFrame.current);
+      clearDragProjectionFrame.current = null;
+    }
+    dragStateRef.current = {
+      tabId,
+      pointerId,
+      startClientX,
+      offsetX: 0,
+      hasMoved: false,
+      isDragging: false,
+    };
+    setDragOffsetX(0);
+  }, []);
+
+  const updateTabDrag = useCallback((pointerId: number, clientX: number) => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== pointerId) return;
+
+    const offsetX = clientX - dragState.startClientX;
+    dragState.offsetX = offsetX;
+    if (!dragState.isDragging && Math.abs(offsetX) > 3) {
+      dragState.hasMoved = true;
+      dragState.isDragging = true;
+      setDraggingTabId(dragState.tabId);
+      dragStartLayoutsRef.current = new Map(tabLayouts);
+      dragStartOpenTabsRef.current = openTabsForLayout;
+      setProjectedTabIds(openTabsForLayout.map((item) => item.id));
+      document.body.classList.add("lumina-tab-dragging");
+    }
+
+    if (dragState.isDragging) {
+      dragState.hasMoved = true;
+      handleTabDragMove(dragState.tabId, offsetX);
+    }
+  }, [handleTabDragMove, openTabsForLayout, tabLayouts]);
+
+  const finishTabDrag = useCallback((pointerId: number): boolean => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== pointerId) return false;
+
+    const { tabId, offsetX, hasMoved, isDragging } = dragState;
+    const didReorder = isDragging ? handleTabDragEnd(tabId, offsetX) : false;
+    dragStartLayoutsRef.current = null;
+    dragStartOpenTabsRef.current = null;
+    clearDragState();
+    if (didReorder) {
+      clearDragProjectionAfterCommit();
+    } else {
+      setProjectedTabIds(null);
+    }
+    if (hasMoved) {
+      suppressNextTabClick(tabId);
+    }
+    return hasMoved;
+  }, [clearDragProjectionAfterCommit, handleTabDragEnd, suppressNextTabClick]);
+
+  const suppressClickAfterDrag = useCallback((tabId: string): boolean => (
+    draggingTabId === tabId
+      || dragStateRef.current?.tabId === tabId
+      || dragClickSuppressionRef.current === tabId
+  ), [draggingTabId]);
+
+  const cancelTabDrag = useCallback((pointerId: number) => {
+    const dragState = dragStateRef.current;
+    if (!dragState || dragState.pointerId !== pointerId) return;
+    dragStartLayoutsRef.current = null;
+    dragStartOpenTabsRef.current = null;
+    clearDragState();
+    setProjectedTabIds(null);
+  }, [clearDragState]);
 
   const animateClose = useCallback((tabId: string) => {
     freezeTabWidthsForCloseBatch();
@@ -610,9 +849,9 @@ export function TabBar() {
     timeouts.current.add(timeout);
   }, [closeTab, freezeTabWidthsForCloseBatch]);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, index: number) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, tabId: string) => {
     e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, tabIndex: index });
+    setContextMenu({ x: e.clientX, y: e.clientY, tabId });
   }, []);
 
   const handleClose = useCallback(
@@ -627,6 +866,58 @@ export function TabBar() {
   const handleOpenNewTab = useCallback(() => {
     openNewTab();
   }, [openNewTab]);
+
+  const scrollActiveTabIntoView = useCallback((tabId: string) => {
+    const viewport = scrollViewportRef.current;
+    const bounds = tabLayouts.get(tabId);
+    if (!viewport || !bounds) return;
+
+    const left = bounds.x;
+    const right = bounds.x + bounds.width;
+    const viewportLeft = viewport.scrollLeft;
+    const viewportRight = viewportLeft + viewport.clientWidth;
+    const padding = 8;
+
+    const scrollToLeft = (nextLeft: number) => {
+      if (typeof viewport.scrollTo === "function") {
+        viewport.scrollTo({ left: nextLeft, behavior: "auto" });
+      } else {
+        viewport.scrollLeft = nextLeft;
+      }
+    };
+
+    if (left < viewportLeft + padding) {
+      scrollToLeft(Math.max(0, left - padding));
+    } else if (right > viewportRight - padding) {
+      scrollToLeft(Math.max(0, right - viewport.clientWidth + padding));
+    }
+  }, [tabLayouts]);
+
+  useEffect(() => {
+    if (draggingTabId) return;
+    const activeId = activeTabIndex >= 0 ? tabs[activeTabIndex]?.id : null;
+    if (!activeId) return;
+    scrollActiveTabIntoView(activeId);
+  }, [activeTabIndex, draggingTabId, scrollActiveTabIntoView, tabs]);
+
+  const handleTabWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const viewport = scrollViewportRef.current;
+    if (!viewport) return;
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (delta === 0) return;
+    const maxScrollLeft = viewport.scrollWidth - viewport.clientWidth;
+    if (maxScrollLeft <= 0) return;
+    e.preventDefault();
+    viewport.scrollLeft = Math.max(0, Math.min(maxScrollLeft, viewport.scrollLeft + delta));
+  }, []);
+
+  const contextTab = contextMenu
+    ? tabs.find((tab) => tab.id === contextMenu.tabId) ?? null
+    : null;
+  const contextTabIndex = contextMenu
+    ? tabs.findIndex((tab) => tab.id === contextMenu.tabId)
+    : -1;
+
   const leftSidebarToggleLabel = leftSidebarOpen
     ? t.sidebar.collapseLeftSidebar
     : t.sidebar.expandLeftSidebar;
@@ -675,7 +966,6 @@ export function TabBar() {
           </button>
         </div>
         <div
-          ref={containerRef}
           className="relative z-10 flex min-w-0 flex-1 items-stretch overflow-hidden px-1 pt-1.5"
           data-tauri-drag-region={showMacTopActions ? true : undefined}
           data-testid="mac-tabbar-tabstrip"
@@ -688,147 +978,187 @@ export function TabBar() {
             />
           ) : null}
           <div
-            ref={tabListRef}
-            className="relative h-full min-w-0 flex-1 overflow-hidden"
+            ref={scrollViewportRef}
+            className="relative h-full min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             data-testid="mac-tabbar-tabs"
+            onWheel={handleTabWheel}
           >
-            <AnimatePresence initial={false}>
-              {visualTabs.map(({ tab, storeIndex, isClosing }) => {
-                const bounds = tabLayouts.get(tab.id) ?? { x: 0, width: TAB_MIN_WIDTH_PX };
-                const isEntering = enteringIds.has(tab.id);
-                const activeTabId = activeTabIndex >= 0 ? tabs[activeTabIndex]?.id : null;
-                const isActive = !isClosing && tab.id === activeTabId;
-                const initialWidth = isEntering ? TAB_OVERLAP_PX : bounds.width;
-                const tabStyle = {
-                  width: bounds.width,
-                  flexBasis: bounds.width,
-                  minWidth: bounds.width,
-                  maxWidth: bounds.width,
-                  pointerEvents: isClosing ? "none" as const : undefined,
-                };
-                return (
-                  <motion.div
-                    key={tab.id}
-                    ref={(node: HTMLDivElement | null) => {
-                      if (node) {
-                        tabNodeRefs.current.set(tab.id, node);
-                      } else {
-                        tabNodeRefs.current.delete(tab.id);
-                      }
-                    }}
-                    data-testid={`mac-tabbar-tab-${tab.id}`}
-                    drag={isClosing ? false : "x"}
-                    dragElastic={0.05}
-                    dragMomentum={false}
-                    onDragStart={() => document.body.classList.add("lumina-tab-dragging")}
-                    onDragEnd={(_, info) => {
-                      document.body.classList.remove("lumina-tab-dragging");
-                      handleTabDragEnd(tab.id, info.offset.x);
-                    }}
-                    whileDrag={
-                      reduceMotion
-                        ? undefined
-                        : {
-                            // Lift + brighten so the dragged tab clearly leads.
-                            // zIndex must clear the active tab's z-10 so a
-                            // dragged inactive tab doesn't slip under it.
-                            scale: 1.02,
-                            y: -2,
-                            zIndex: 30,
-                            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                          }
-                    }
-                    initial={
-                      reduceMotion
-                        ? false
-                        : {
-                            x: bounds.x,
-                            width: initialWidth,
-                            opacity: 0.45,
-                            y: 7,
-                          }
-                    }
-                    animate={{
-                      x: bounds.x,
-                      width: bounds.width,
-                      opacity: isClosing ? 0 : 1,
-                      y: 0,
-                    }}
-                    exit={
-                      reduceMotion
-                        ? { opacity: 0 }
-                        : {
-                            width: TAB_OVERLAP_PX,
-                            opacity: 0,
-                            y: 0,
-                          }
-                    }
-                    transition={{
-                      duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
-                      ease: [0.2, 0, 0, 1],
-                    }}
-                    style={tabStyle}
-                    className={cn(
-                      "absolute bottom-0 top-0 overflow-hidden",
-                      isClosing && "pointer-events-none",
-                      // Active tab sits above its neighbors so its silhouette
-                      // outline (and white fill) cleanly overlays the overlapping
-                      // ears of the inactive tabs on either side.
-                      isActive ? "z-10" : "z-0 hover:z-[5]"
-                    )}
-                  >
+            <div
+              ref={tabListRef}
+              role="tablist"
+              aria-orientation="horizontal"
+              className="relative h-full"
+              style={{ width: tabListContentWidth }}
+            >
+              <AnimatePresence initial={false}>
+                {visualTabs.map(({ tab, storeIndex, isClosing }) => {
+                  const bounds = tabLayouts.get(tab.id) ?? { x: 0, width: TAB_MIN_WIDTH_PX };
+                  const isEntering = enteringIds.has(tab.id);
+                  const activeTabId = activeTabIndex >= 0 ? tabs[activeTabIndex]?.id : null;
+                  const isActive = !isClosing && tab.id === activeTabId;
+                  const isDragging = !isClosing && draggingTabId === tab.id;
+                  const initialWidth = isEntering ? TAB_OVERLAP_PX : bounds.width;
+                  const tabX = dragStartLayoutsRef.current?.get(tab.id)?.x ?? bounds.x;
+                  const innerDragX = isDragging ? dragOffsetX : 0;
+                  const tabStyle = {
+                    width: bounds.width,
+                    flexBasis: bounds.width,
+                    minWidth: bounds.width,
+                    maxWidth: bounds.width,
+                    pointerEvents: isClosing ? "none" as const : undefined,
+                  };
+                  const displayName =
+                    tab.type === "ai-chat"
+                      ? t.common.aiChatTab
+                      : tab.type === "graph"
+                        ? t.graph.title
+                        : tab.name;
+                  return (
                     <motion.div
-                      className="h-full w-full"
-                      initial={reduceMotion ? false : { opacity: 0, y: 3, scale: 0.985 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      transition={{ duration: 0.16, ease: [0.2, 0.9, 0.1, 1] }}
-                    >
-                      <TabItem
-                        tab={tab}
-                        isActive={isActive}
-                        displayName={
-                          tab.type === "ai-chat"
-                            ? t.common.aiChatTab
-                            : tab.type === "graph"
-                              ? t.graph.title
-                              : tab.name
+                      key={tab.id}
+                      ref={(node: HTMLDivElement | null) => {
+                        if (node) {
+                          tabNodeRefs.current.set(tab.id, node);
+                        } else {
+                          tabNodeRefs.current.delete(tab.id);
                         }
-                        onSelect={() => {
-                          if (!isClosing) handleSelectTab(tab, storeIndex);
+                      }}
+                      data-testid={`mac-tabbar-tab-${tab.id}`}
+                      initial={
+                        reduceMotion
+                          ? false
+                          : {
+                              x: tabX,
+                              width: initialWidth,
+                              opacity: 0.45,
+                              y: 7,
+                            }
+                      }
+                      animate={{
+                        x: isDragging ? tabX : bounds.x,
+                        width: bounds.width,
+                        opacity: isClosing ? 0 : 1,
+                        y: 0,
+                      }}
+                      exit={
+                        reduceMotion
+                          ? { opacity: 0 }
+                          : {
+                              width: TAB_OVERLAP_PX,
+                              opacity: 0,
+                              y: 0,
+                            }
+                      }
+                      transition={{
+                        duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
+                        ease: [0.2, 0, 0, 1],
+                      }}
+                      style={tabStyle}
+                      className={cn(
+                        "absolute bottom-0 top-0 overflow-hidden",
+                        isClosing && "pointer-events-none",
+                        // Active tab sits above its neighbors so its silhouette
+                        // outline (and white fill) cleanly overlays the overlapping
+                        // ears of the inactive tabs on either side.
+                        isDragging ? "z-30" : isActive ? "z-10" : "z-0 hover:z-[5]"
+                      )}
+                    >
+                      <motion.div
+                        className="h-full w-full"
+                        initial={reduceMotion ? false : { opacity: 0, y: 3, scale: 0.985 }}
+                        animate={{ opacity: 1, x: innerDragX, y: isDragging ? -1 : 0, scale: 1 }}
+                        transition={{
+                          opacity: { duration: 0.16, ease: [0.2, 0.9, 0.1, 1] },
+                          x: {
+                            duration: isDragging || reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
+                            ease: [0.2, 0, 0, 1],
+                          },
+                          y: { duration: isDragging || reduceMotion ? 0 : 0.16, ease: [0.2, 0.9, 0.1, 1] },
+                          scale: { duration: 0.16, ease: [0.2, 0.9, 0.1, 1] },
                         }}
-                        onDoubleClick={() => {
-                          if (isClosing) return;
-                          if (tab.isPreview) {
-                            promotePreviewTab(tab.id);
-                          } else if (!tab.isPinned) {
+                      >
+                        <TabItem
+                          tab={tab}
+                          isActive={isActive}
+                          isDragging={isDragging}
+                          displayName={displayName}
+                          width={bounds.width}
+                          onMouseDown={(e) => {
+                            if (e.button === 1) e.preventDefault();
+                          }}
+                          onPointerDown={(e) => {
+                            if (isClosing || e.button !== 0) return;
+                            (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
+                            beginTabDrag(tab.id, e.pointerId, e.clientX);
+                          }}
+                          onPointerMove={(e) => {
+                            updateTabDrag(e.pointerId, e.clientX);
+                          }}
+                          onPointerUp={(e) => {
+                            if (isClosing) return;
+                            const hadDragMovement = finishTabDrag(e.pointerId);
+                            if (hadDragMovement) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }
+                            if ((e.currentTarget as HTMLDivElement).hasPointerCapture(e.pointerId)) {
+                              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+                            }
+                          }}
+                          onPointerCancel={(e) => {
+                            cancelTabDrag(e.pointerId);
+                            if ((e.currentTarget as HTMLDivElement).hasPointerCapture(e.pointerId)) {
+                              (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+                            }
+                          }}
+                          onSelect={() => {
+                            if (!isClosing && !suppressClickAfterDrag(tab.id)) {
+                              handleSelectTab(tab, storeIndex);
+                            }
+                          }}
+                          onDoubleClick={() => {
+                            if (!isClosing && tab.isPreview) {
+                              promotePreviewTab(tab.id);
+                            }
+                          }}
+                          onAuxClick={(e) => {
+                            if (e.button !== 1 || isClosing || tab.isPinned) return;
+                            e.preventDefault();
                             animateClose(tab.id);
-                          }
-                        }}
-                        onClose={(e) => handleClose(e, storeIndex)}
-                        onContextMenu={(e) => handleContextMenu(e, storeIndex)}
-                      />
+                          }}
+                          onClose={(e) => handleClose(e, storeIndex)}
+                          onContextMenu={(e) => handleContextMenu(e, tab.id)}
+                        />
+                      </motion.div>
                     </motion.div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
+                  );
+                })}
+              </AnimatePresence>
+              <motion.div
+                className="absolute bottom-0 top-0 z-20 flex w-10 items-center justify-center pt-0.5"
+                data-testid="mac-tabbar-new-tab-slot"
+                data-tauri-drag-region="false"
+                initial={false}
+                animate={{ x: newTabButtonX }}
+                transition={{
+                  duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
+                  ease: [0.2, 0, 0, 1],
+                }}
+              >
+                <button
+                  type="button"
+                  data-testid="mac-tabbar-new-tab"
+                  data-tauri-drag-region="false"
+                  onClick={handleOpenNewTab}
+                  aria-label={t.tabBar.newTab}
+                  title={t.tabBar.newTab}
+                  className={TABBAR_ICON_BUTTON_CLASS}
+                >
+                  <Plus size={16} />
+                </button>
+              </motion.div>
+            </div>
           </div>
-        </div>
-        <div
-          className={cn(TABBAR_EDGE_SLOT_CLASS, "relative z-10")}
-          data-testid="mac-tabbar-new-tab-slot"
-          data-tauri-drag-region="false"
-        >
-          <button
-            type="button"
-            data-testid="mac-tabbar-new-tab"
-            data-tauri-drag-region="false"
-            onClick={handleOpenNewTab}
-            aria-label={t.tabBar.newTab}
-            className={TABBAR_ICON_BUTTON_CLASS}
-          >
-            <Plus size={16} />
-          </button>
         </div>
         <div
           className={cn(TABBAR_EDGE_SLOT_CLASS, "relative z-10")}
@@ -884,7 +1214,7 @@ export function TabBar() {
       >
         <PopoverContent placement="bottom-start" width={180}>
           <PopoverList>
-            {contextMenu && (
+            {contextMenu && contextTab && contextTabIndex >= 0 && (
               <>
                 <Row
                   density="compact"
@@ -892,18 +1222,18 @@ export function TabBar() {
                     <Pin
                       size={12}
                       className={
-                        tabs[contextMenu.tabIndex]?.isPinned ? "" : "rotate-45"
+                        contextTab.isPinned ? "" : "rotate-45"
                       }
                     />
                   }
                   title={
-                    tabs[contextMenu.tabIndex]?.isPinned
+                    contextTab.isPinned
                       ? t.tabBar.unpin
                       : t.tabBar.pin
                   }
                   role="menuitem"
                   onSelect={() => {
-                    togglePinTab(contextMenu.tabIndex);
+                    togglePinTab(contextTabIndex);
                     setContextMenu(null);
                   }}
                 />
@@ -915,10 +1245,9 @@ export function TabBar() {
                   density="compact"
                   title={t.tabBar.close}
                   role="menuitem"
-                  disabled={tabs[contextMenu.tabIndex]?.isPinned}
+                  disabled={contextTab.isPinned}
                   onSelect={() => {
-                    const tab = tabs[contextMenu.tabIndex];
-                    if (tab) animateClose(tab.id);
+                    animateClose(contextTab.id);
                     setContextMenu(null);
                   }}
                 />
@@ -927,7 +1256,7 @@ export function TabBar() {
                   title={t.tabBar.closeOthers}
                   role="menuitem"
                   onSelect={() => {
-                    closeOtherTabs(contextMenu.tabIndex);
+                    closeOtherTabs(contextTabIndex);
                     setContextMenu(null);
                   }}
                 />

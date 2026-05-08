@@ -59,7 +59,6 @@ export function useSidebarFileOperations() {
     openPDFTab,
     openDiagramTab,
     openImageTab,
-    promotePreviewTab,
     moveFileToFolder,
     moveFolderToFolder,
   } = useFileStore(
@@ -75,7 +74,6 @@ export function useSidebarFileOperations() {
       openPDFTab: state.openPDFTab,
       openDiagramTab: state.openDiagramTab,
       openImageTab: state.openImageTab,
-      promotePreviewTab: state.promotePreviewTab,
       moveFileToFolder: state.moveFileToFolder,
       moveFolderToFolder: state.moveFolderToFolder,
     })),
@@ -726,15 +724,15 @@ export function useSidebarFileOperations() {
           name.endsWith(".diagram.json") ||
           name.endsWith(".drawio.json")
         ) {
-          openDiagramTab(entry.path);
+          openDiagramTab(entry.path, { preview: true });
         } else if (name.endsWith(".pdf")) {
           if (splitView && activePane === "secondary") {
             openSecondaryPdf(entry.path);
           } else {
-            openPDFTab(entry.path);
+            openPDFTab(entry.path, { preview: true });
           }
         } else if (isImageEntryName(name)) {
-          openImageTab(entry.path);
+          openImageTab(entry.path, { preview: true });
         } else {
           if (splitView && activePane === "secondary") {
             openSecondaryFile(entry.path);
@@ -763,16 +761,31 @@ export function useSidebarFileOperations() {
       if (
         name.endsWith(".excalidraw.json") ||
         name.endsWith(".diagram.json") ||
-        name.endsWith(".drawio.json") ||
-        name.endsWith(".pdf") ||
-        isImageEntryName(name)
+        name.endsWith(".drawio.json")
       ) {
+        openDiagramTab(entry.path);
+        return;
+      }
+      if (name.endsWith(".pdf")) {
+        if (splitView && activePane === "secondary") return;
+        openPDFTab(entry.path);
+        return;
+      }
+      if (isImageEntryName(name)) {
+        openImageTab(entry.path);
         return;
       }
       if (splitView && activePane === "secondary") return;
-      promotePreviewTab();
+      void openFile(entry.path);
     },
-    [splitView, activePane, promotePreviewTab],
+    [
+      splitView,
+      activePane,
+      openFile,
+      openDiagramTab,
+      openPDFTab,
+      openImageTab,
+    ],
   );
 
   // ── Background / root ─────────────────────────────────────────────────

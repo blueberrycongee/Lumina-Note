@@ -1,7 +1,8 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TabBar } from "./TabBar";
+import { TabBar, projectDraggedTabOrder } from "./TabBar";
+import type { Tab } from "@/stores/useFileStore";
 
 const macTopChromeEnabled = vi.hoisted(() => ({ value: false }));
 const leftSidebarOpenState = vi.hoisted(() => ({ value: true }));
@@ -9,21 +10,34 @@ const rightSidebarOpenState = vi.hoisted(() => ({ value: true }));
 const openNewTab = vi.hoisted(() => vi.fn());
 const toggleLeftSidebar = vi.hoisted(() => vi.fn());
 const toggleRightSidebar = vi.hoisted(() => vi.fn());
-const switchTab = () => undefined;
-const closeTab = async () => undefined;
-const closeOtherTabs = () => undefined;
-const closeAllTabs = () => undefined;
-const reorderTabs = () => undefined;
-const togglePinTab = () => undefined;
+const switchTab = vi.hoisted(() => vi.fn());
+const closeTab = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+const closeOtherTabs = vi.hoisted(() => vi.fn());
+const closeAllTabs = vi.hoisted(() => vi.fn());
+const reorderTabs = vi.hoisted(() => vi.fn());
+const togglePinTab = vi.hoisted(() => vi.fn());
+const promotePreviewTab = vi.hoisted(() => vi.fn());
+const activeTabIndexState = vi.hoisted(() => ({ value: 0 }));
+const tab = vi.hoisted(() =>
+  (overrides: Partial<Tab> & Pick<Tab, "id" | "name" | "type">): Tab => ({
+    path: overrides.path ?? (overrides.type === "new-tab" ? "" : `/vault/${overrides.name}`),
+    content: overrides.content ?? "",
+    isDirty: overrides.isDirty ?? false,
+    isPinned: overrides.isPinned,
+    undoStack: overrides.undoStack ?? [],
+    redoStack: overrides.redoStack ?? [],
+    ...overrides,
+  }),
+);
 const fileStoreState = vi.hoisted(() => ({
-  tabs: [{ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false }],
+  tabs: [tab({ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false })],
 }));
 
 vi.mock("@/stores/useFileStore", () => ({
   useFileStore: (selector: (state: unknown) => unknown) =>
     selector({
       tabs: fileStoreState.tabs,
-      activeTabIndex: 0,
+      activeTabIndex: activeTabIndexState.value,
       openNewTab,
       switchTab,
       closeTab,
@@ -31,6 +45,7 @@ vi.mock("@/stores/useFileStore", () => ({
       closeAllTabs,
       reorderTabs,
       togglePinTab,
+      promotePreviewTab,
     }),
 }));
 
@@ -89,8 +104,16 @@ describe("TabBar", () => {
     macTopChromeEnabled.value = false;
     leftSidebarOpenState.value = true;
     rightSidebarOpenState.value = true;
-    fileStoreState.tabs = [{ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false }];
+    activeTabIndexState.value = 0;
+    fileStoreState.tabs = [tab({ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false })];
     openNewTab.mockClear();
+    switchTab.mockClear();
+    closeTab.mockClear();
+    closeOtherTabs.mockClear();
+    closeAllTabs.mockClear();
+    reorderTabs.mockClear();
+    togglePinTab.mockClear();
+    promotePreviewTab.mockClear();
     toggleLeftSidebar.mockClear();
     toggleRightSidebar.mockClear();
   });
@@ -157,13 +180,16 @@ describe("TabBar", () => {
 
   it("shows the dedicated image manager tab icon", () => {
     fileStoreState.tabs = [
-      { id: "tab-2", name: "Image Manager", type: "image-manager", isPinned: false, isDirty: false },
+      tab({ id: "tab-2", name: "Image Manager", type: "image-manager", isPinned: false }),
     ];
 
     const { container } = render(<TabBar />);
 
     expect(container.querySelector("svg.lucide-images")).toBeTruthy();
-    expect(screen.getByText("Image Manager")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Image Manager" })).toHaveAttribute(
+      "title",
+      "Image Manager",
+    );
   });
 
   it("uses the primary file icon color for the active file tab", () => {
@@ -286,12 +312,12 @@ describe("TabBar", () => {
     );
   });
 
-  it("keeps the new-tab button outside the shrinking tab list", () => {
+  it("keeps the new-tab button inside the scrollable tab track", () => {
     render(<TabBar />);
 
-    expect(screen.getByTestId("mac-tabbar-tabs")).toHaveClass("flex-1", "overflow-hidden");
+    expect(screen.getByTestId("mac-tabbar-tabs")).toHaveClass("flex-1", "overflow-x-auto");
     expect(screen.getByTestId("mac-tabbar-new-tab")).toHaveClass("shrink-0");
-    expect(screen.getByTestId("mac-tabbar-tabstrip")).not.toContainElement(
+    expect(screen.getByTestId("mac-tabbar-tabs")).toContainElement(
       screen.getByTestId("mac-tabbar-new-tab"),
     );
   });
@@ -311,8 +337,8 @@ describe("TabBar", () => {
         toJSON: () => ({}),
       });
     fileStoreState.tabs = [
-      { id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false },
-      { id: "tab-2", name: "Project.md", type: "file", isPinned: false, isDirty: false },
+      tab({ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false }),
+      tab({ id: "tab-2", name: "Project.md", type: "file", isPinned: false }),
     ];
 
     render(<TabBar />);
@@ -336,6 +362,57 @@ describe("TabBar", () => {
     expect(openNewTab).toHaveBeenCalledTimes(1);
   });
 
+  it("does not close a permanent tab on double-click", () => {
+    render(<TabBar />);
+
+    fireEvent.doubleClick(screen.getByRole("tab"));
+
+    expect(closeTab).not.toHaveBeenCalled();
+    expect(promotePreviewTab).not.toHaveBeenCalled();
+  });
+
+  it("promotes a preview tab on double-click", () => {
+    fileStoreState.tabs = [
+      tab({ id: "tab-1", name: "Draft.md", type: "file", isPreview: true, isPinned: false }),
+    ];
+
+    render(<TabBar />);
+
+    fireEvent.doubleClick(screen.getByRole("tab"));
+
+    expect(promotePreviewTab).toHaveBeenCalledWith("tab-1");
+    expect(closeTab).not.toHaveBeenCalled();
+  });
+
+  it("closes an unpinned tab with middle click", () => {
+    render(<TabBar />);
+
+    fireEvent(
+      screen.getByRole("tab"),
+      new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+    );
+
+    expect(closeTab).toHaveBeenCalledWith(0);
+  });
+
+  it("uses the right-clicked tab id when the menu action runs after reordering", () => {
+    fileStoreState.tabs = [
+      tab({ id: "tab-1", name: "A.md", type: "file", isPinned: false }),
+      tab({ id: "tab-2", name: "B.md", type: "file", isPinned: false }),
+    ];
+    const { rerender } = render(<TabBar />);
+
+    fireEvent.contextMenu(screen.getByRole("tab", { name: "B.md" }));
+    fileStoreState.tabs = [
+      tab({ id: "tab-2", name: "B.md", type: "file", isPinned: false }),
+      tab({ id: "tab-1", name: "A.md", type: "file", isPinned: false }),
+    ];
+    rerender(<TabBar />);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Pin" }));
+
+    expect(togglePinTab).toHaveBeenCalledWith(0);
+  });
+
   it("does not render a fake new-tab when there are no store tabs", () => {
     fileStoreState.tabs = [];
 
@@ -347,12 +424,82 @@ describe("TabBar", () => {
 
   it("renders store-backed new tabs as closeable tab items", () => {
     fileStoreState.tabs = [
-      { id: "new-tab-1", name: "New Tab", type: "new-tab", isPinned: false, isDirty: false },
+      tab({ id: "new-tab-1", name: "New Tab", type: "new-tab", isPinned: false }),
     ];
 
     render(<TabBar />);
 
     expect(screen.getByText("New Tab")).toBeInTheDocument();
     expect(screen.getByLabelText("Close")).toBeInTheDocument();
+  });
+
+  it("keeps drag lift styling off the rectangular tab layout box and snaps back to layout", () => {
+    fileStoreState.tabs = [
+      tab({ id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false }),
+      tab({ id: "tab-2", name: "Project.md", type: "file", isPinned: false }),
+    ];
+
+    const { container } = render(<TabBar />);
+    const tabBox = screen.getByTestId("mac-tabbar-tab-tab-1");
+
+    expect(tabBox).not.toHaveStyle({ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" });
+    expect(container.querySelector("svg path[style*='drop-shadow']")).toBeNull();
+    expect(tabBox).not.toHaveAttribute("draggable", "true");
+  });
+
+  it("projects tab order from drag position within the same pin group", () => {
+    const tabs = [
+      { id: "pinned", name: "Pinned.md", type: "file", isPinned: true, isDirty: false },
+      { id: "tab-1", name: "Daily Note.md", type: "file", isPinned: false, isDirty: false },
+      { id: "tab-2", name: "Project.md", type: "file", isPinned: false, isDirty: false },
+      { id: "tab-3", name: "Archive.md", type: "file", isPinned: false, isDirty: false },
+    ];
+    const layouts = new Map([
+      ["pinned", { x: 0, width: 120 }],
+      ["tab-1", { x: 100, width: 120 }],
+      ["tab-2", { x: 200, width: 120 }],
+      ["tab-3", { x: 300, width: 120 }],
+    ]);
+
+    expect(projectDraggedTabOrder("tab-1", 240, tabs, layouts)).toEqual([
+      "pinned",
+      "tab-2",
+      "tab-3",
+      "tab-1",
+    ]);
+    expect(projectDraggedTabOrder("tab-1", -180, tabs, layouts)).toEqual([
+      "pinned",
+      "tab-1",
+      "tab-2",
+      "tab-3",
+    ]);
+  });
+
+  it("projects to the nearest original slot instead of waiting for the dragged center to cross", () => {
+    const tabs = [
+      { id: "pinned", isPinned: true },
+      { id: "tab-1", isPinned: false },
+      { id: "tab-2", isPinned: false },
+      { id: "tab-3", isPinned: false },
+    ];
+    const layouts = new Map([
+      ["pinned", { x: 0, width: 120 }],
+      ["tab-1", { x: 100, width: 120 }],
+      ["tab-2", { x: 200, width: 120 }],
+      ["tab-3", { x: 300, width: 120 }],
+    ]);
+
+    expect(projectDraggedTabOrder("tab-1", 40, tabs, layouts)).toEqual([
+      "pinned",
+      "tab-1",
+      "tab-2",
+      "tab-3",
+    ]);
+    expect(projectDraggedTabOrder("tab-1", 60, tabs, layouts)).toEqual([
+      "pinned",
+      "tab-2",
+      "tab-1",
+      "tab-3",
+    ]);
   });
 });

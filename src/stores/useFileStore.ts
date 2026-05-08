@@ -140,7 +140,10 @@ interface FileState {
   closeAllTabs: () => Promise<void>;
   reorderTabs: (fromIndex: number, toIndex: number) => void;
   togglePinTab: (index: number) => void;
-  promotePreviewTab: (tabId?: string) => void;
+  promotePreviewTab: (
+    tabId?: string,
+    options?: { invalidateRequest?: boolean },
+  ) => void;
   updateTabPath: (oldPath: string, newPath: string) => void;
 
   // Create new file
@@ -149,9 +152,9 @@ interface FileState {
   // Open special tabs
   openGraphTab: () => void;
   openIsolatedGraphTab: (node: IsolatedNodeInfo) => void;
-  openPDFTab: (pdfPath: string) => void;
-  openDiagramTab: (diagramPath: string) => void;
-  openImageTab: (imagePath: string) => void;
+  openPDFTab: (pdfPath: string, options?: { preview?: boolean }) => void;
+  openDiagramTab: (diagramPath: string, options?: { preview?: boolean }) => void;
+  openImageTab: (imagePath: string, options?: { preview?: boolean }) => void;
   openAIMainTab: () => void;
   openImageManagerTab: () => void;
   openPluginViewTab: (viewType: string, title: string, html: string) => void;
@@ -193,6 +196,36 @@ interface FileState {
 // 用户编辑的 debounce 时间（毫秒）
 const USER_EDIT_DEBOUNCE = 1000;
 let lastUserEditTime = 0;
+let tabOpenRequestSeq = 0;
+let activeTabOpenLoadingSeq: number | null = null;
+
+function beginTabOpenRequest(): number {
+  tabOpenRequestSeq += 1;
+  return tabOpenRequestSeq;
+}
+
+function isLatestTabOpenRequest(seq: number): boolean {
+  return seq === tabOpenRequestSeq;
+}
+
+function invalidatePendingTabOpenRequests(): void {
+  tabOpenRequestSeq += 1;
+  activeTabOpenLoadingSeq = null;
+}
+
+function markTabOpenLoading(seq: number): void {
+  activeTabOpenLoadingSeq = seq;
+}
+
+function releaseTabOpenLoading(seq: number): boolean {
+  if (activeTabOpenLoadingSeq !== seq) return false;
+  activeTabOpenLoadingSeq = null;
+  return true;
+}
+
+function clearLoadingFilePatch(): Partial<FileState> {
+  return { isLoadingFile: false };
+}
 
 // 撤销历史最大条数（防止内存泄漏）
 const MAX_UNDO_HISTORY = 50;
@@ -356,6 +389,36 @@ function addOrReplaceActiveNewTab(
   }
 
   return { tabs: [...tabs, tab], activeTabIndex: tabs.length };
+}
+
+function placeNewTab(
+  tabs: Tab[],
+  activeTabIndex: number,
+  tab: Tab,
+  preview: boolean,
+): { tabs: Tab[]; activeTabIndex: number } {
+  if (!preview) {
+    return addOrReplaceActiveNewTab(tabs, activeTabIndex, tab);
+  }
+
+  const existingPreviewIndex = tabs.findIndex((item) => item.isPreview);
+  if (existingPreviewIndex === -1) {
+    return { tabs: [...tabs, tab], activeTabIndex: tabs.length };
+  }
+
+  const existingPreview = tabs[existingPreviewIndex];
+  if (existingPreview.isDirty) {
+    const nextTabs = [...tabs];
+    nextTabs[existingPreviewIndex] = {
+      ...existingPreview,
+      isPreview: undefined,
+    };
+    return { tabs: [...nextTabs, tab], activeTabIndex: nextTabs.length };
+  }
+
+  const nextTabs = [...tabs];
+  nextTabs[existingPreviewIndex] = tab;
+  return { tabs: nextTabs, activeTabIndex: existingPreviewIndex };
 }
 
 function patchTabState(
@@ -638,6 +701,7 @@ export const useFileStore = create<FileState>()(
         const addToHistory = options?.addToHistory ?? true;
         const forceReload = options?.forceReload ?? false;
         const preview = options?.preview ?? false;
+        const requestSeq = beginTabOpenRequest();
 
         const t = getCurrentTranslations();
         const { tabs, activeTabIndex, navigationHistory, navigationIndex } =
@@ -657,22 +721,30 @@ export const useFileStore = create<FileState>()(
             // 强制重新加载内容（Agent 编辑后使用）
             try {
               const newContent = await readFile(path);
-              const updatedTabs = [...tabs];
-              updatedTabs[existingTabIndex] = {
-                ...updatedTabs[existingTabIndex],
+              if (!isLatestTabOpenRequest(requestSeq)) return;
+              const freshTabs = get().tabs;
+              const freshIndex = freshTabs.findIndex(
+                (tab) => normalize(tab.path) === targetPath,
+              );
+              if (freshIndex === -1) return;
+              const updatedTabs = [...freshTabs];
+              updatedTabs[freshIndex] = {
+                ...updatedTabs[freshIndex],
                 content: newContent,
                 isDirty: false,
                 lastSavedContent: newContent,
               };
               set({
                 tabs: updatedTabs,
-                activeTabIndex: existingTabIndex,
+                activeTabIndex: freshIndex,
                 currentFile: path,
                 currentContent: newContent,
                 isDirty: false,
                 lastSavedContent: newContent,
+                ...clearLoadingFilePatch(),
               });
             } catch (error) {
+              if (!isLatestTabOpenRequest(requestSeq)) return;
               reportOperationError({
                 source: "FileStore.openFile",
                 action: "Reload file",
@@ -683,8 +755,35 @@ export const useFileStore = create<FileState>()(
               get().switchTab(existingTabIndex);
             }
           } else {
-            // 直接切换到已有标签页（preview 请求被忽略，因为文件已经打开了）
-            get().switchTab(existingTabIndex);
+            const updatedTabs = [...tabs];
+            if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+              updatedTabs[activeTabIndex] = {
+                ...updatedTabs[activeTabIndex],
+                content: get().currentContent,
+                isDirty: get().isDirty,
+                undoStack: get().undoStack,
+                redoStack: get().redoStack,
+                lastSavedContent: get().lastSavedContent,
+              };
+            }
+            if (!preview && updatedTabs[existingTabIndex].isPreview) {
+              updatedTabs[existingTabIndex] = {
+                ...updatedTabs[existingTabIndex],
+                isPreview: undefined,
+              };
+            }
+            const targetTab = updatedTabs[existingTabIndex];
+            set({
+              tabs: updatedTabs,
+              activeTabIndex: existingTabIndex,
+              currentFile: getCurrentFileForTab(targetTab),
+              currentContent: targetTab.content,
+              isDirty: targetTab.isDirty,
+              undoStack: targetTab.undoStack,
+              redoStack: targetTab.redoStack,
+              lastSavedContent: getTabLastSavedContent(targetTab),
+              ...clearLoadingFilePatch(),
+            });
           }
           return;
         }
@@ -694,22 +793,32 @@ export const useFileStore = create<FileState>()(
           const currentTab = tabs[activeTabIndex];
           if (currentTab.isDirty) {
             await get().save();
+            if (!isLatestTabOpenRequest(requestSeq)) return;
           }
         }
 
         if (isDiagramPath(path)) {
-          get().openDiagramTab(path);
+          invalidatePendingTabOpenRequests();
+          get().openDiagramTab(path, { preview });
           return;
         }
 
         if (isImageTabPath(path)) {
-          get().openImageTab(path);
+          invalidatePendingTabOpenRequests();
+          get().openImageTab(path, { preview });
           return;
         }
 
+        markTabOpenLoading(requestSeq);
         set({ isLoadingFile: true });
         try {
           const content = await readFile(path);
+          if (!isLatestTabOpenRequest(requestSeq)) {
+            if (releaseTabOpenLoading(requestSeq)) {
+              set({ isLoadingFile: false });
+            }
+            return;
+          }
           const fileName =
             path
               .split(/[/\\]/)
@@ -736,39 +845,14 @@ export const useFileStore = create<FileState>()(
           let newTabs: Tab[];
           let newTabIndex: number;
 
-          if (preview) {
-            // 查找已有的 preview tab
-            const existingPreviewIndex = currentTabs.findIndex(
-              (tab) => tab.isPreview,
-            );
-            if (existingPreviewIndex !== -1) {
-              const existingPreview = currentTabs[existingPreviewIndex];
-              // 防御性检查：如果 preview tab 有未保存更改，先提升它
-              if (existingPreview.isDirty) {
-                get().promotePreviewTab(existingPreview.id);
-                // 重新读取 tabs（promotePreviewTab 已更新 store）
-                const freshTabs = get().tabs;
-                newTabs = [...freshTabs, newTab];
-                newTabIndex = newTabs.length - 1;
-              } else {
-                // 替换现有 preview tab
-                newTabs = [...currentTabs];
-                newTabs[existingPreviewIndex] = newTab;
-                newTabIndex = existingPreviewIndex;
-              }
-            } else {
-              newTabs = [...currentTabs, newTab];
-              newTabIndex = newTabs.length - 1;
-            }
-          } else {
-            const placement = addOrReplaceActiveNewTab(
-              currentTabs,
-              get().activeTabIndex,
-              newTab,
-            );
-            newTabs = placement.tabs;
-            newTabIndex = placement.activeTabIndex;
-          }
+          const placement = placeNewTab(
+            currentTabs,
+            get().activeTabIndex,
+            newTab,
+            preview,
+          );
+          newTabs = placement.tabs;
+          newTabIndex = placement.activeTabIndex;
 
           // 更新导航历史
           let newHistory = get().navigationHistory;
@@ -807,15 +891,24 @@ export const useFileStore = create<FileState>()(
             navigationIndex: newNavIndex,
             recentFiles: newRecentFiles,
           });
+          releaseTabOpenLoading(requestSeq);
           useFavoriteStore.getState().markOpened(path);
         } catch (error) {
+          if (!isLatestTabOpenRequest(requestSeq)) {
+            if (releaseTabOpenLoading(requestSeq)) {
+              set({ isLoadingFile: false });
+            }
+            return;
+          }
           reportOperationError({
             source: "FileStore.openFile",
             action: "Open file",
             error,
             context: { path },
           });
-          set({ isLoadingFile: false });
+          if (releaseTabOpenLoading(requestSeq)) {
+            set({ isLoadingFile: false });
+          }
         }
       },
 
@@ -826,6 +919,7 @@ export const useFileStore = create<FileState>()(
       },
 
       openNewTab: () => {
+        invalidatePendingTabOpenRequests();
         const {
           tabs,
           activeTabIndex,
@@ -859,11 +953,13 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       // 切换标签页
       switchTab: (index: number) => {
+        invalidatePendingTabOpenRequests();
         const {
           tabs,
           activeTabIndex,
@@ -881,6 +977,9 @@ export const useFileStore = create<FileState>()(
           const activeTab = tabs[index];
           const activeFile = getCurrentFileForTab(activeTab);
           const state = get();
+          if (state.isLoadingFile) {
+            set(clearLoadingFilePatch());
+          }
           if (
             state.currentFile !== activeFile ||
             state.currentContent !== activeTab.content ||
@@ -921,6 +1020,7 @@ export const useFileStore = create<FileState>()(
             undoStack: targetTab.undoStack,
             redoStack: targetTab.redoStack,
             lastSavedContent: getTabLastSavedContent(targetTab),
+            ...clearLoadingFilePatch(),
           });
         } else {
           // 没有当前标签页，直接切换
@@ -933,12 +1033,15 @@ export const useFileStore = create<FileState>()(
             undoStack: targetTab.undoStack,
             redoStack: targetTab.redoStack,
             lastSavedContent: getTabLastSavedContent(targetTab),
+            ...clearLoadingFilePatch(),
           });
         }
       },
 
       // 关闭标签页
       closeTab: async (index: number) => {
+        invalidatePendingTabOpenRequests();
+        const loadingPatch = clearLoadingFilePatch();
         const {
           tabs,
           activeTabIndex,
@@ -976,14 +1079,20 @@ export const useFileStore = create<FileState>()(
             undoStack: [],
             redoStack: [],
             lastSavedContent: "",
+            ...loadingPatch,
           });
         } else {
           // 还有其他标签页
           let newActiveIndex = activeTabIndex;
 
           if (index === activeTabIndex) {
-            // 关闭的是当前标签页
-            newActiveIndex = Math.min(index, newTabs.length - 1);
+            // Chrome-style neighbor activation: prefer the tab on the right,
+            // otherwise fall back to the tab on the left.
+            if (index < newTabs.length) {
+              newActiveIndex = index;
+            } else {
+              newActiveIndex = newTabs.length - 1;
+            }
           } else if (index < activeTabIndex) {
             // 关闭的是当前标签页前面的
             newActiveIndex = activeTabIndex - 1;
@@ -1019,6 +1128,7 @@ export const useFileStore = create<FileState>()(
             undoStack: targetTab.undoStack,
             redoStack: targetTab.redoStack,
             lastSavedContent: getTabLastSavedContent(targetTab),
+            ...loadingPatch,
           });
         }
       },
@@ -1027,6 +1137,8 @@ export const useFileStore = create<FileState>()(
 
       // Close other tabs (keep pinned + target)
       closeOtherTabs: async (index: number) => {
+        invalidatePendingTabOpenRequests();
+        const loadingPatch = clearLoadingFilePatch();
         const { tabs } = get();
         if (index < 0 || index >= tabs.length) return;
 
@@ -1063,11 +1175,14 @@ export const useFileStore = create<FileState>()(
           undoStack: targetTab.undoStack,
           redoStack: targetTab.redoStack,
           lastSavedContent: getTabLastSavedContent(targetTab),
+          ...loadingPatch,
         });
       },
 
       // Close all tabs (keep pinned)
       closeAllTabs: async () => {
+        invalidatePendingTabOpenRequests();
+        const loadingPatch = clearLoadingFilePatch();
         const { tabs } = get();
         cancelSlashAIInlineTasksForTabIds(
           tabs.filter((tab) => !tab.isPinned).map((tab) => tab.id),
@@ -1096,6 +1211,7 @@ export const useFileStore = create<FileState>()(
             undoStack: [],
             redoStack: [],
             lastSavedContent: "",
+            ...loadingPatch,
           });
         } else {
           const firstPinned = pinnedTabs[0];
@@ -1108,6 +1224,7 @@ export const useFileStore = create<FileState>()(
             undoStack: firstPinned.undoStack,
             redoStack: firstPinned.redoStack,
             lastSavedContent: getTabLastSavedContent(firstPinned),
+            ...loadingPatch,
           });
         }
       },
@@ -1158,6 +1275,7 @@ export const useFileStore = create<FileState>()(
 
       // 重新排序标签页
       reorderTabs: (fromIndex: number, toIndex: number) => {
+        invalidatePendingTabOpenRequests();
         const { tabs, activeTabIndex } = get();
         if (fromIndex === toIndex) return;
         if (fromIndex < 0 || fromIndex >= tabs.length) return;
@@ -1189,11 +1307,16 @@ export const useFileStore = create<FileState>()(
           newActiveIndex = activeTabIndex + 1;
         }
 
-        set({ tabs: newTabs, activeTabIndex: newActiveIndex });
+        set({
+          tabs: newTabs,
+          activeTabIndex: newActiveIndex,
+          ...clearLoadingFilePatch(),
+        });
       },
 
       // 固定/取消固定标签页
       togglePinTab: (index: number) => {
+        invalidatePendingTabOpenRequests();
         const { tabs, activeTabIndex } = get();
         if (index < 0 || index >= tabs.length) return;
 
@@ -1222,10 +1345,15 @@ export const useFileStore = create<FileState>()(
         set({
           tabs: sortedTabs,
           activeTabIndex: newActiveIndex >= 0 ? newActiveIndex : 0,
+          ...clearLoadingFilePatch(),
         });
       },
 
-      promotePreviewTab: (tabId?: string) => {
+      promotePreviewTab: (tabId?: string, options?: { invalidateRequest?: boolean }) => {
+        const invalidateRequest = options?.invalidateRequest ?? true;
+        if (invalidateRequest) {
+          invalidatePendingTabOpenRequests();
+        }
         const { tabs } = get();
         const targetIndex = tabId
           ? tabs.findIndex((t) => t.id === tabId)
@@ -1236,11 +1364,12 @@ export const useFileStore = create<FileState>()(
 
         const newTabs = [...tabs];
         newTabs[targetIndex] = { ...tab, isPreview: undefined };
-        set({ tabs: newTabs });
+        set({ tabs: newTabs, ...clearLoadingFilePatch() });
       },
 
       // 打开图谱标签页
       openGraphTab: () => {
+        invalidatePendingTabOpenRequests();
         const {
           tabs,
           activeTabIndex,
@@ -1293,10 +1422,12 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       openAIMainTab: () => {
+        invalidatePendingTabOpenRequests();
         const t = getCurrentTranslations();
         const {
           tabs,
@@ -1349,11 +1480,13 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       // 打开孤立图谱标签页
       openIsolatedGraphTab: (node: IsolatedNodeInfo) => {
+        invalidatePendingTabOpenRequests();
         const t = getCurrentTranslations();
         const {
           tabs,
@@ -1403,11 +1536,14 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       // 打开 PDF 标签页
-      openPDFTab: (pdfPath: string) => {
+      openPDFTab: (pdfPath: string, options?: { preview?: boolean }) => {
+        invalidatePendingTabOpenRequests();
+        const preview = options?.preview ?? false;
         const {
           tabs,
           activeTabIndex,
@@ -1436,6 +1572,12 @@ export const useFileStore = create<FileState>()(
               redoStack,
             };
           }
+          if (!preview && updatedTabs[existingPdfIndex].isPreview) {
+            updatedTabs[existingPdfIndex] = {
+              ...updatedTabs[existingPdfIndex],
+              isPreview: undefined,
+            };
+          }
 
           set({
             tabs: updatedTabs,
@@ -1446,6 +1588,7 @@ export const useFileStore = create<FileState>()(
             undoStack: [],
             redoStack: [],
             lastSavedContent: "",
+            ...clearLoadingFilePatch(),
           });
           return;
         }
@@ -1474,14 +1617,16 @@ export const useFileStore = create<FileState>()(
           name: pdfName,
           content: "",
           isDirty: false,
+          isPreview: preview || undefined,
           undoStack: [],
           redoStack: [],
         };
 
-        const placement = addOrReplaceActiveNewTab(
+        const placement = placeNewTab(
           updatedTabs,
           activeTabIndex,
           pdfTab,
+          preview,
         );
 
         set({
@@ -1493,11 +1638,14 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       // 打开 Diagram 标签页
-      openDiagramTab: (diagramPath: string) => {
+      openDiagramTab: (diagramPath: string, options?: { preview?: boolean }) => {
+        invalidatePendingTabOpenRequests();
+        const preview = options?.preview ?? false;
         const {
           tabs,
           activeTabIndex,
@@ -1522,6 +1670,12 @@ export const useFileStore = create<FileState>()(
               redoStack,
             };
           }
+          if (!preview && updatedTabs[existingDiagramIndex].isPreview) {
+            updatedTabs[existingDiagramIndex] = {
+              ...updatedTabs[existingDiagramIndex],
+              isPreview: undefined,
+            };
+          }
 
           set({
             tabs: updatedTabs,
@@ -1532,6 +1686,7 @@ export const useFileStore = create<FileState>()(
             undoStack: [],
             redoStack: [],
             lastSavedContent: "",
+            ...clearLoadingFilePatch(),
           });
           return;
         }
@@ -1557,15 +1712,17 @@ export const useFileStore = create<FileState>()(
           name: diagramName,
           content: "",
           isDirty: false,
+          isPreview: preview || undefined,
           lastSavedContent: "",
           undoStack: [],
           redoStack: [],
         };
 
-        const placement = addOrReplaceActiveNewTab(
+        const placement = placeNewTab(
           updatedTabs,
           activeTabIndex,
           diagramTab,
+          preview,
         );
 
         set({
@@ -1577,10 +1734,13 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
-      openImageTab: (imagePath: string) => {
+      openImageTab: (imagePath: string, options?: { preview?: boolean }) => {
+        invalidatePendingTabOpenRequests();
+        const preview = options?.preview ?? false;
         const {
           tabs,
           activeTabIndex,
@@ -1605,6 +1765,12 @@ export const useFileStore = create<FileState>()(
               redoStack,
             };
           }
+          if (!preview && updatedTabs[existingIndex].isPreview) {
+            updatedTabs[existingIndex] = {
+              ...updatedTabs[existingIndex],
+              isPreview: undefined,
+            };
+          }
           set({
             tabs: updatedTabs,
             activeTabIndex: existingIndex,
@@ -1614,6 +1780,7 @@ export const useFileStore = create<FileState>()(
             undoStack: [],
             redoStack: [],
             lastSavedContent: "",
+            ...clearLoadingFilePatch(),
           });
           return;
         }
@@ -1638,14 +1805,16 @@ export const useFileStore = create<FileState>()(
           name: imageName,
           content: "",
           isDirty: false,
+          isPreview: preview || undefined,
           undoStack: [],
           redoStack: [],
         };
 
-        const placement = addOrReplaceActiveNewTab(
+        const placement = placeNewTab(
           updatedTabs,
           activeTabIndex,
           imageTab,
+          preview,
         );
 
         set({
@@ -1657,10 +1826,12 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       openImageManagerTab: () => {
+        invalidatePendingTabOpenRequests();
         const t = getCurrentTranslations();
         const {
           tabs,
@@ -1715,10 +1886,12 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
       openPluginViewTab: (viewType: string, title: string, html: string) => {
+        invalidatePendingTabOpenRequests();
         const {
           tabs,
           activeTabIndex,
@@ -1748,7 +1921,7 @@ export const useFileStore = create<FileState>()(
             name: title || updatedTabs[existingIndex].name,
             pluginViewHtml: html,
           };
-          set({ tabs: updatedTabs });
+          set({ tabs: updatedTabs, ...clearLoadingFilePatch() });
           switchTab(existingIndex);
           return;
         }
@@ -1788,6 +1961,7 @@ export const useFileStore = create<FileState>()(
           undoStack: [],
           redoStack: [],
           lastSavedContent: "",
+          ...clearLoadingFilePatch(),
         });
       },
 
@@ -1900,6 +2074,8 @@ export const useFileStore = create<FileState>()(
 
         // 如果内容没变，不做任何处理
         if (content === currentContent) return;
+        invalidatePendingTabOpenRequests();
+        const loadingPatch = clearLoadingFilePatch();
 
         // Auto-promote preview tab on first edit
         let nextTabs = tabs;
@@ -1934,6 +2110,7 @@ export const useFileStore = create<FileState>()(
             isDirty: nextDirty,
             undoStack: newUndoStack,
             redoStack: [],
+            ...loadingPatch,
           });
         } else {
           // 用户编辑：合并短时间内的编辑
@@ -1963,6 +2140,7 @@ export const useFileStore = create<FileState>()(
               isDirty: nextDirty,
               undoStack: newUndoStack,
               redoStack: [],
+              ...loadingPatch,
             });
           } else {
             // 在 debounce 时间内，只更新内容不创建新撤销点
@@ -1979,6 +2157,7 @@ export const useFileStore = create<FileState>()(
               currentContent: content,
               isDirty: nextDirty,
               redoStack: [],
+              ...loadingPatch,
             });
           }
           lastUserEditTime = now;
@@ -1987,6 +2166,8 @@ export const useFileStore = create<FileState>()(
 
       // 撤销
       undo: () => {
+        invalidatePendingTabOpenRequests();
+        const loadingPatch = clearLoadingFilePatch();
         const t = getCurrentTranslations();
         const {
           undoStack,
@@ -2027,6 +2208,7 @@ export const useFileStore = create<FileState>()(
           undoStack: newUndoStack,
           redoStack: [...redoStack, redoEntry],
           isDirty: nextDirty,
+          ...loadingPatch,
         });
 
         // Dispatch selection restore event
@@ -2051,6 +2233,8 @@ export const useFileStore = create<FileState>()(
 
       // 重做
       redo: () => {
+        invalidatePendingTabOpenRequests();
+        const loadingPatch = clearLoadingFilePatch();
         const {
           redoStack,
           currentContent,
@@ -2090,6 +2274,7 @@ export const useFileStore = create<FileState>()(
           redoStack: newRedoStack,
           undoStack: [...undoStack, undoEntry],
           isDirty: nextDirty,
+          ...loadingPatch,
         });
 
         // Dispatch selection restore event
@@ -2126,7 +2311,7 @@ export const useFileStore = create<FileState>()(
 
         // Manual save promotes preview tab
         if (activeTab?.isPreview) {
-          get().promotePreviewTab(activeTab.id);
+          get().promotePreviewTab(activeTab.id, { invalidateRequest: false });
         }
 
         if (!currentFile || !isDirty) return;
@@ -2134,6 +2319,10 @@ export const useFileStore = create<FileState>()(
         set({ isSaving: true });
         try {
           await saveFile(currentFile, currentContent);
+          if (get().currentFile !== currentFile) {
+            set({ isSaving: false });
+            return;
+          }
           const nextTabs = patchTabState(get().tabs, get().activeTabIndex, {
             content: currentContent,
             isDirty: false,
