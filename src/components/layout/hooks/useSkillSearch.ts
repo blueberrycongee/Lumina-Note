@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 
 import { listOpencodeSkills } from "@/services/opencode/skills";
 import type { OpencodeSkillInfo } from "@/services/opencode/skills";
@@ -19,28 +19,45 @@ export function useSkillSearch() {
   const [skillQuery, setSkillQuery] = useState("");
   const [showSkillMenu, setShowSkillMenu] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(false);
+  const loadGenerationRef = useRef(0);
+  const retriedForOpenMenuRef = useRef(false);
+
+  const loadSkills = useCallback(async () => {
+    const generation = ++loadGenerationRef.current;
+    setSkillsLoading(true);
+    try {
+      const items = await listOpencodeSkills();
+      if (generation !== loadGenerationRef.current) return;
+      setSkills(items);
+    } catch (err) {
+      if (generation !== loadGenerationRef.current) return;
+      console.warn("[Skills] Failed to load skills:", err);
+      setSkills([]);
+    } finally {
+      if (generation === loadGenerationRef.current) {
+        setSkillsLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
-    let active = true;
-    setSkillsLoading(true);
-    listOpencodeSkills()
-      .then((items) => {
-        if (!active) return;
-        setSkills(items);
-      })
-      .catch((err) => {
-        if (!active) return;
-        console.warn("[Skills] Failed to load skills:", err);
-        setSkills([]);
-      })
-      .finally(() => {
-        if (!active) return;
-        setSkillsLoading(false);
-      });
+    void loadSkills();
     return () => {
-      active = false;
+      loadGenerationRef.current += 1;
     };
-  }, []);
+  }, [loadSkills]);
+
+  useEffect(() => {
+    if (!showSkillMenu) {
+      retriedForOpenMenuRef.current = false;
+      return;
+    }
+    if (retriedForOpenMenuRef.current || skillsLoading || skills.length > 0) {
+      return;
+    }
+    retriedForOpenMenuRef.current = true;
+    void loadSkills();
+  }, [loadSkills, showSkillMenu, skills.length, skillsLoading]);
 
   const filteredSkills = useMemo(() => {
     if (!skills?.length) return [];
@@ -85,6 +102,7 @@ export function useSkillSearch() {
     showSkillMenu,
     setShowSkillMenu,
     skillsLoading,
+    reloadSkills: loadSkills,
     handleSelectSkill,
   };
 }

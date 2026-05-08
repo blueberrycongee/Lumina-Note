@@ -97,6 +97,13 @@ export function getCachedServerInfo(): ServerInfo | null {
   return cachedInfo;
 }
 
+export async function getOpencodeServerInfo(): Promise<ServerInfo> {
+  if (cachedInfo) return cachedInfo;
+  const info = await resolveServerInfo();
+  cachedInfo = info;
+  return info;
+}
+
 /**
  * Pin every subsequent opencode request to `directory`. Call this once
  * the vault path is known so session/message routes all land in the same

@@ -14,7 +14,7 @@
  */
 
 import { invoke } from "@/lib/host";
-import { getCachedServerInfo } from "./client";
+import { getDefaultDirectory, getOpencodeServerInfo } from "./client";
 
 export interface OpencodeSkillInfo {
   name: string;
@@ -44,8 +44,11 @@ async function getServerInfoOrThrow(): Promise<{
   // The opencode server may still be starting up the first time the
   // skill manager opens. Poll briefly to give it a chance.
   for (let i = 0; i < FALLBACK_AUTH_RETRIES; i++) {
-    const info = getCachedServerInfo();
-    if (info) return info;
+    try {
+      return await getOpencodeServerInfo();
+    } catch {
+      // Keep polling until the startup window closes.
+    }
     await new Promise((r) => setTimeout(r, FALLBACK_AUTH_DELAY_MS));
   }
   throw new Error("opencode server not ready");
@@ -62,8 +65,12 @@ function authHeader(info: { username: string; password: string }): string {
  */
 export async function listOpencodeSkills(): Promise<OpencodeSkillInfo[]> {
   const info = await getServerInfoOrThrow();
+  const directory = getDefaultDirectory();
   const res = await fetch(`${info.url}/skill`, {
-    headers: { authorization: authHeader(info) },
+    headers: {
+      authorization: authHeader(info),
+      ...(directory ? { "x-opencode-directory": directory } : {}),
+    },
   });
   if (!res.ok) {
     throw new Error(`/skill returned HTTP ${res.status}`);
