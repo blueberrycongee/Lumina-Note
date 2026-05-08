@@ -1257,13 +1257,15 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         return;
       }
 
+      let optimisticId: string | null = null;
       try {
         useErrorBanner.getState().clearBanner();
         // Update visible UI before any opencode startup/session work. Server
         // bootstrap can legitimately take seconds on cold start; the user
         // still needs immediate confirmation that their send was accepted.
         const requestStartedAt = Date.now();
-        const optimisticId = `optimistic-user-${requestStartedAt}-${Math.random().toString(36).slice(2, 7)}`;
+        const nextOptimisticId = `optimistic-user-${requestStartedAt}-${Math.random().toString(36).slice(2, 7)}`;
+        optimisticId = nextOptimisticId;
         const fileParts = ctx?.fileParts ?? [];
         const displayText = ctx?.display_message || task;
         set((state) => ({
@@ -1274,7 +1276,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           messages: [
             ...state.messages,
             {
-              id: optimisticId,
+              id: nextOptimisticId,
               role: "user" as const,
               content: userContentFromTextAndFileParts(displayText, fileParts),
               rawParts: [],
@@ -1375,7 +1377,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         set((state) => ({
           status: "idle",
           llmRequestStartTime: null,
-          messages: state.messages.filter((m) => m.id !== optimisticId),
+          messages: optimisticId
+            ? state.messages.filter((m) => m.id !== optimisticId)
+            : state.messages,
         }));
       } finally {
         releaseLock!();

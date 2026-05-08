@@ -378,7 +378,10 @@ describe("MainAIChatShell", () => {
     fireEvent.click(await screen.findByText(t.agentMessage.errors.retry));
 
     await waitFor(() => expect(startTask).toHaveBeenCalledTimes(2));
-    expect(startTask.mock.calls[1][0]).toBe("failed prompt");
+    const retryCalls = startTask.mock.calls as unknown as Parameters<
+      typeof originalStartTask
+    >[];
+    expect(retryCalls[1]?.[0]).toBe("failed prompt");
   });
 
   it("queues sends while the agent is running and dispatches them after idle", async () => {
@@ -418,7 +421,10 @@ describe("MainAIChatShell", () => {
     });
 
     await waitFor(() => expect(startTask).toHaveBeenCalledTimes(1));
-    expect(startTask.mock.calls[0][0]).toBe("queued prompt");
+    const queuedCalls = startTask.mock.calls as unknown as Parameters<
+      typeof originalStartTask
+    >[];
+    expect(queuedCalls[0]?.[0]).toBe("queued prompt");
     await waitFor(() =>
       expect(
         screen.queryByText((content) =>
