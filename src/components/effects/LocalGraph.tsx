@@ -1,31 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useFileStore } from "@/stores/useFileStore";
-import { extractWikiLinks } from "./KnowledgeGraph";
-import { readFile } from "@/lib/host";
+import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useShallow } from "zustand/react/shallow";
-
-interface LocalNode {
-  id: string;
-  label: string;
-  path: string;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  isCurrent: boolean;  // 是否是当前笔记
-  isBacklink: boolean; // 是否是反向链接
-}
-
-interface LocalEdge {
-  source: string;
-  target: string;
-}
+import {
+  buildLocalGraphData,
+  type LocalEdge,
+  type LocalGraphStatus,
+  type LocalNode,
+} from "./localGraphData";
 
 interface LocalGraphProps {
   className?: string;
 }
-
-const MAX_BACKLINK_CACHE_ENTRIES = 40;
 
 export function LocalGraph({ className = "" }: LocalGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,66 +19,36 @@ export function LocalGraph({ className = "" }: LocalGraphProps) {
   const animationRef = useRef<number | null>(null);
   const nodesRef = useRef<LocalNode[]>([]);
   const edgesRef = useRef<LocalEdge[]>([]);
-  const backlinksCache = useRef<Map<string, LocalNode[]>>(new Map()); // 缓存每个文件的反向链接节点
-  const lastScannedFile = useRef<string | null>(null); // 上次完整扫描的文件
-  const buildTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { fileTree, currentFile, openFile, currentContent } = useFileStore(
+  const { currentFile, openFile, currentContent } = useFileStore(
     useShallow((state) => ({
-      fileTree: state.fileTree,
       currentFile: state.currentFile,
       openFile: state.openFile,
       currentContent: state.currentContent,
     }))
   );
+  const {
+    noteIndex,
+    getBacklinks,
+    isIndexing,
+    truncated: indexTruncated,
+  } = useNoteIndexStore(
+    useShallow((state) => ({
+      noteIndex: state.noteIndex,
+      getBacklinks: state.getBacklinks,
+      isIndexing: state.isIndexing,
+      truncated: state.truncated,
+    })),
+  );
 
   const [dimensions, setDimensions] = useState({ width: 200, height: 150 });
   const [hoverNode, setHoverNode] = useState<string | null>(null);
-
-  const getCachedBacklinks = useCallback((path: string): LocalNode[] => {
-    const cache = backlinksCache.current;
-    const cached = cache.get(path);
-    if (!cached) return [];
-    // Refresh key order to keep hot entries in cache.
-    cache.delete(path);
-    cache.set(path, cached);
-    return cached;
-  }, []);
-
-  const setCachedBacklinks = useCallback((path: string, nodes: LocalNode[]) => {
-    const cache = backlinksCache.current;
-    if (cache.has(path)) {
-      cache.delete(path);
-    }
-    cache.set(path, nodes);
-    while (cache.size > MAX_BACKLINK_CACHE_ENTRIES) {
-      const oldest = cache.keys().next().value as string | undefined;
-      if (!oldest) break;
-      cache.delete(oldest);
-    }
-  }, []);
-
-  // 从文件树中查找文件路径
-  const findFilePath = useCallback((name: string): string | null => {
-    const searchName = name.toLowerCase();
-
-    const search = (entries: typeof fileTree): string | null => {
-      for (const entry of entries) {
-        if (entry.is_dir && entry.children) {
-          const found = search(entry.children);
-          if (found) return found;
-        } else if (!entry.is_dir && entry.name.endsWith('.md')) {
-          const entryName = entry.name.replace('.md', '').toLowerCase();
-          if (entryName === searchName) {
-            return entry.path;
-          }
-        }
-      }
-      return null;
-    };
-
-    return search(fileTree);
-  }, [fileTree]);
+  const [graphStatus, setGraphStatus] = useState<LocalGraphStatus>({
+    totalRelated: 0,
+    displayedRelated: 0,
+    hiddenRelated: 0,
+    cappedByDisplayLimit: false,
+  });
 
   // 获取当前文件名（不含扩展名）
   const getCurrentFileName = useCallback((): string | null => {
@@ -102,124 +58,45 @@ export function LocalGraph({ className = "" }: LocalGraphProps) {
     return fileName.replace('.md', '');
   }, [currentFile]);
 
-  // 构建局部图谱
-  const buildLocalGraph = useCallback(async (forceScanBacklinks: boolean = false) => {
-    if (!currentFile || !currentFile.endsWith('.md')) {
+  const currentName = getCurrentFileName();
+  const localGraphData = useMemo(() => {
+    if (!currentFile || !currentFile.endsWith(".md") || !currentName) {
+      return null;
+    }
+
+    return buildLocalGraphData({
+      currentFile,
+      currentContent,
+      notes: Array.from(noteIndex.values()),
+      backlinks: getBacklinks(currentName),
+    });
+  }, [currentFile, currentContent, currentName, noteIndex, getBacklinks]);
+
+  // 当前文件、内容或全局索引变化时重建局部图谱
+  useEffect(() => {
+    if (!localGraphData) {
       nodesRef.current = [];
       edgesRef.current = [];
+      setGraphStatus({
+        totalRelated: 0,
+        displayedRelated: 0,
+        hiddenRelated: 0,
+        cappedByDisplayLimit: false,
+      });
       return;
     }
 
-    const currentName = getCurrentFileName();
-    if (!currentName) return;
-
-    const nodes: LocalNode[] = [];
-    const edges: LocalEdge[] = [];
-    const nodeMap = new Map<string, LocalNode>();
-
-    // 1. 创建当前笔记节点（中心）
     const width = containerRef.current?.offsetWidth || 200;
     const height = containerRef.current?.offsetHeight || 150;
+    const nodes = localGraphData.nodes.map((node) => ({ ...node }));
 
-    const currentNode: LocalNode = {
-      id: currentName,
-      label: currentName,
-      path: currentFile,
-      x: width / 2,
-      y: height / 2,
-      vx: 0,
-      vy: 0,
-      isCurrent: true,
-      isBacklink: false,
-    };
-    nodes.push(currentNode);
-    nodeMap.set(currentName.toLowerCase(), currentNode);
-
-    // 2. 提取出链（当前笔记中的 [[links]]）
-    const content = currentContent || '';
-    const outLinks = extractWikiLinks(content);
-
-    for (const linkName of outLinks) {
-      const linkPath = findFilePath(linkName);
-      if (linkPath && linkName.toLowerCase() !== currentName.toLowerCase()) {
-        if (!nodeMap.has(linkName.toLowerCase())) {
-          const node: LocalNode = {
-            id: linkName,
-            label: linkName,
-            path: linkPath,
-            x: 0,
-            y: 0,
-            vx: 0,
-            vy: 0,
-            isCurrent: false,
-            isBacklink: false,
-          };
-          nodes.push(node);
-          nodeMap.set(linkName.toLowerCase(), node);
-        }
-        edges.push({ source: currentName, target: linkName });
-      }
+    const currentNode = nodes.find((node) => node.isCurrent);
+    if (currentNode) {
+      currentNode.x = width / 2;
+      currentNode.y = height / 2;
     }
 
-    // 3. 处理反向链接
-    // 只有当文件改变或强制要求时才重新扫描磁盘
-    if (forceScanBacklinks || lastScannedFile.current !== currentFile) {
-      const backlinkNodes: LocalNode[] = [];
-
-      const scanBacklinks = async (entries: typeof fileTree) => {
-        for (const entry of entries) {
-          if (entry.is_dir && entry.children) {
-            await scanBacklinks(entry.children);
-          } else if (!entry.is_dir && entry.name.endsWith('.md') && entry.path !== currentFile) {
-            try {
-              const fileContent = await readFile(entry.path);
-              const links = extractWikiLinks(fileContent);
-
-              if (links.some(l => l.toLowerCase() === currentName.toLowerCase())) {
-                const backLinkName = entry.name.replace('.md', '');
-                const node: LocalNode = {
-                  id: backLinkName,
-                  label: backLinkName,
-                  path: entry.path,
-                  x: 0,
-                  y: 0,
-                  vx: 0,
-                  vy: 0,
-                  isCurrent: false,
-                  isBacklink: true,
-                };
-                backlinkNodes.push(node);
-              }
-            } catch {
-              // 忽略读取失败的文件
-            }
-          }
-        }
-      };
-
-      await scanBacklinks(fileTree);
-      setCachedBacklinks(currentFile, backlinkNodes);
-      lastScannedFile.current = currentFile;
-    }
-
-    // 从缓存中应用反向链接
-    const cachedBacklinks = getCachedBacklinks(currentFile);
-    for (const backNode of cachedBacklinks) {
-      if (!nodeMap.has(backNode.id.toLowerCase())) {
-        nodes.push({ ...backNode });
-        nodeMap.set(backNode.id.toLowerCase(), backNode);
-      } else {
-        const existingNode = nodeMap.get(backNode.id.toLowerCase());
-        if (existingNode) existingNode.isBacklink = true;
-      }
-
-      if (!edges.some(e => e.source === backNode.id && e.target === currentName)) {
-        edges.push({ source: backNode.id, target: currentName });
-      }
-    }
-
-    // 4. 初始化节点位置（环形分布）
-    const otherNodes = nodes.filter(n => !n.isCurrent);
+    const otherNodes = nodes.filter((node) => !node.isCurrent);
     const angleStep = (2 * Math.PI) / Math.max(otherNodes.length, 1);
     const radius = Math.min(width, height) * 0.35;
 
@@ -230,24 +107,9 @@ export function LocalGraph({ className = "" }: LocalGraphProps) {
     });
 
     nodesRef.current = nodes;
-    edgesRef.current = edges;
-  }, [currentFile, currentContent, fileTree, findFilePath, getCachedBacklinks, getCurrentFileName, setCachedBacklinks]);
-
-  // 当前文件或内容变化时重建图谱（带防抖）
-  useEffect(() => {
-    if (buildTimeoutRef.current) clearTimeout(buildTimeoutRef.current);
-
-    // 内容变化时，如果不涉及文件切换，不强制扫描磁盘
-    const isFileChange = lastScannedFile.current !== currentFile;
-
-    buildTimeoutRef.current = setTimeout(() => {
-      buildLocalGraph(isFileChange);
-    }, isFileChange ? 50 : 300); // 切换文件快一点，打字慢一点
-
-    return () => {
-      if (buildTimeoutRef.current) clearTimeout(buildTimeoutRef.current);
-    };
-  }, [currentFile, currentContent, buildLocalGraph]);
+    edgesRef.current = localGraphData.edges;
+    setGraphStatus(localGraphData.status);
+  }, [localGraphData, dimensions]);
 
   // 监听容器尺寸
   useEffect(() => {
@@ -511,6 +373,13 @@ export function LocalGraph({ className = "" }: LocalGraphProps) {
             <span className="inline-block w-2 h-2 rounded-full ml-2 mr-1" style={{ background: '#22c55e' }} />入链({backLinkCount})
           </>
         )}
+        {isIndexing && <span className="ml-2">索引中</span>}
+        {graphStatus.cappedByDisplayLimit && (
+          <span className="ml-2">
+            显示 {graphStatus.displayedRelated}/{graphStatus.totalRelated}，隐藏 {graphStatus.hiddenRelated}
+          </span>
+        )}
+        {indexTruncated && <span className="ml-2">索引已截断</span>}
       </div>
     </div>
   );
