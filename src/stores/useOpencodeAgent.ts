@@ -472,6 +472,9 @@ function isVisibleAgentSession(info: { title?: string | null }): boolean {
 export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
   const refreshingSessions = new Set<string>();
   let subscriptionGeneration = 0;
+  // Guard against concurrent startTask calls (e.g. double-click send)
+  // both seeing currentSessionId === null and each creating a session.
+  let startTaskLock: Promise<void> | null = null;
 
   const refreshSessionMessages = async (sessionId: string) => {
     if (refreshingSessions.has(sessionId)) return;
@@ -533,20 +536,6 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     }
   };
 
-  // Internal: mutate `messages` by message ID. Used by SSE handlers so we
-  // don't have to rebuild the whole array for every delta.
-  const upsertMessage = (info: Message, parts: Part[]) => {
-    set((state) => {
-      if (!state.currentSessionId || info.sessionID !== state.currentSessionId) return state;
-      const next = state.messages.slice();
-      const idx = next.findIndex((m) => m.id === info.id);
-      const merged = makeAgentMessage(info, parts);
-      if (idx === -1) next.push(merged);
-      else next[idx] = merged;
-      return { messages: next };
-    });
-  };
-
   const applyPartUpdate = (part: Part) => {
     set((state) => {
       if (!state.currentSessionId || part.sessionID !== state.currentSessionId) return state;
@@ -593,20 +582,39 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
   ) => {
     set((state) => {
       if (!state.currentSessionId || sessionID !== state.currentSessionId) return state;
-      const msgIdx = state.messages.findIndex((m) => m.id === messageID);
-      if (msgIdx === -1) return state;
-      const msg = state.messages[msgIdx];
-      const partIdx = msg.rawParts.findIndex((p) => p.id === partID);
-      if (partIdx === -1) return state;
-
-      const oldPart = msg.rawParts[partIdx] as unknown as Record<string, unknown>;
-      const oldValue = typeof oldPart[field] === "string" ? (oldPart[field] as string) : "";
-      const newPart = { ...oldPart, [field]: oldValue + delta } as unknown as Part;
-
-      const nextParts = msg.rawParts.slice();
-      nextParts[partIdx] = newPart;
-
+      let msgIdx = state.messages.findIndex((m) => m.id === messageID);
       const nextMessages = state.messages.slice();
+
+      if (msgIdx === -1) {
+        // Delta arrived before message.updated — create a stub like
+        // applyPartUpdate does so the first tokens aren't lost.
+        const stubPart = { id: partID, type: "text", [field]: delta } as unknown as Part;
+        const stub: AgentMessage = {
+          id: messageID,
+          role: "assistant",
+          content: messageContentFromParts([stubPart], "assistant"),
+          rawParts: [stubPart],
+        };
+        nextMessages.push(stub);
+        return { messages: nextMessages };
+      }
+
+      const msg = nextMessages[msgIdx];
+      let partIdx = msg.rawParts.findIndex((p) => p.id === partID);
+      let nextParts: Part[];
+
+      if (partIdx === -1) {
+        // Part not yet seen — create a stub part so tokens aren't dropped.
+        const stubPart = { id: partID, type: "text", [field]: delta } as unknown as Part;
+        nextParts = [...msg.rawParts, stubPart];
+      } else {
+        const oldPart = msg.rawParts[partIdx] as unknown as Record<string, unknown>;
+        const oldValue = typeof oldPart[field] === "string" ? (oldPart[field] as string) : "";
+        const newPart = { ...oldPart, [field]: oldValue + delta } as unknown as Part;
+        nextParts = msg.rawParts.slice();
+        nextParts[partIdx] = newPart;
+      }
+
       nextMessages[msgIdx] = {
         ...msg,
         content: messageContentFromParts(nextParts, msg.role),
@@ -855,8 +863,16 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           });
           return;
         }
-        const existing = get().messages.find((m) => m.id === info.id);
-        upsertMessage(info, existing?.rawParts ?? []);
+        set((state) => {
+          if (!state.currentSessionId || info.sessionID !== state.currentSessionId) return state;
+          const existing = state.messages.find((m) => m.id === info.id);
+          const next = state.messages.slice();
+          const merged = makeAgentMessage(info, existing?.rawParts ?? []);
+          const idx = next.findIndex((m) => m.id === info.id);
+          if (idx === -1) next.push(merged);
+          else next[idx] = merged;
+          return { messages: next };
+        });
         return;
       }
       case "message.removed": {
@@ -912,7 +928,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         if (props.requestID && state.pendingTool?.requestId !== props.requestID) {
           return state;
         }
-        return { pendingTool: null };
+        return {
+          pendingTool: null,
+          // Restore running status so the UI doesn't stay stuck on the
+          // approval card when the permission was resolved server-side
+          // (auto-approve rule, "always" choice, or another client).
+          ...(state.status === "waiting_approval" ? { status: "running" as const } : {}),
+        };
       });
       return;
     }
@@ -1155,6 +1177,11 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
     },
 
     async startTask(task: string, ctx?: StartTaskContext) {
+      // Serialize concurrent calls so double-click doesn't create two sessions.
+      if (startTaskLock) await startTaskLock.catch(() => {});
+      let releaseLock: () => void;
+      startTaskLock = new Promise<void>((resolve) => { releaseLock = resolve; });
+
       // One trace id per user-initiated send; correlates the optimistic
       // message, the HTTP request retries, and any SSE/error envelopes
       // that fire downstream of this flow.
@@ -1308,6 +1335,9 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           status: "idle",
           messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
         }));
+      } finally {
+        releaseLock!();
+        startTaskLock = null;
       }
     },
 
@@ -1345,6 +1375,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
 
     async clearChat() {
       if (get().currentSessionId && get().messages.length === 0) return;
+      // Abort any in-flight task so the new session starts clean and the
+      // UI doesn't carry over a stale "running" status.
+      const runningStatus = get().status;
+      if (runningStatus === "running" || runningStatus === "waiting_approval") {
+        await get().abort();
+      }
+      set({ status: "idle", error: null, pendingTool: null, llmRetryState: null });
       await get().newSession();
     },
 
@@ -1409,7 +1446,12 @@ export function initOpencodeAgentListeners(): void {
     vaultUnsubscribe = useFileStore.subscribe((state, prev) => {
       if (state.vaultPath !== prev.vaultPath) {
         applyVault(state.vaultPath);
-        // Previously cached sessions belong to a different Instance now.
+        // SSE stream holds a reference to the old client whose
+        // x-opencode-directory header points at the previous vault.
+        // Unsubscribe + resubscribe so the new stream routes to the
+        // correct Instance.
+        useOpencodeAgent.getState().unsubscribe();
+        resetOpencodeClient();
         useOpencodeAgent.setState({
           currentSessionId: null,
           messages: [],
@@ -1418,6 +1460,7 @@ export function initOpencodeAgentListeners(): void {
           status: "idle",
           error: null,
         });
+        useOpencodeAgent.getState().subscribe().catch(silenceInit);
         useOpencodeAgent.getState().loadSessions().catch(silenceInit);
       }
     });
