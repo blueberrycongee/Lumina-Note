@@ -1377,6 +1377,9 @@ export default {
   knowledgeGraph: {
     settings: "圖譜設定",
     loadingPreview: "正在載入內容預覽…",
+    indexingStatus: "正在索引 {indexed}/{total}",
+    cappedStatus: "顯示 {shown}/{total} 篇筆記；因效能隱藏 {hidden} 篇",
+    truncatedStatus: "索引限制在 {total} 篇筆記；圖譜可能不完整",
     physics: "物理引擎",
     nodeRepulsion: "節點斥力",
     linkLength: "鏈接長度",

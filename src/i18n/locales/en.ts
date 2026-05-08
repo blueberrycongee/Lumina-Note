@@ -1415,6 +1415,9 @@ export default {
   knowledgeGraph: {
     settings: "Graph Settings",
     loadingPreview: "Loading preview…",
+    indexingStatus: "Indexing {indexed}/{total}",
+    cappedStatus: "Showing {shown}/{total} notes; {hidden} hidden for performance",
+    truncatedStatus: "Index limited at {total} notes; graph may be incomplete",
     physics: "Physics Engine",
     nodeRepulsion: "Node Repulsion",
     linkLength: "Link Length",

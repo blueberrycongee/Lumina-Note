@@ -1404,6 +1404,9 @@ export default {
   knowledgeGraph: {
     settings: "グラフ設定",
     loadingPreview: "プレビューを読み込み中…",
+    indexingStatus: "インデックス作成中 {indexed}/{total}",
+    cappedStatus: "{shown}/{total} 件のノートを表示中。パフォーマンスのため {hidden} 件を非表示",
+    truncatedStatus: "インデックスは {total} 件で制限されています。グラフは不完全な可能性があります",
     physics: "物理エンジン",
     nodeRepulsion: "ノード反発力",
     linkLength: "リンク長",

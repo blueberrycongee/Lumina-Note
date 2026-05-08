@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
+import { useNoteIndexStore } from "@/stores/useNoteIndexStore";
 import { useShallow } from "zustand/react/shallow";
 import {
   ZoomIn,
@@ -15,60 +16,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getWikiPreview } from "@/lib/wikiLinks";
+import {
+  buildKnowledgeGraphData,
+  type GraphEdge,
+  type GraphNode,
+  type KnowledgeGraphStatus,
+} from "./knowledgeGraphData";
 
 const KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS =
   "flex h-7 w-7 shrink-0 items-center justify-center rounded-ui-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
-
-// Types
-interface GraphNode {
-  id: string;
-  label: string;
-  path: string;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  connections: number;
-  isDragging?: boolean;
-  isFolder?: boolean;        // 是否是文件夹
-  parentId?: string;         // 父节点 ID
-  color?: string;            // 节点颜色（来自所属文件夹）
-  depth?: number;            // 层级深度
-}
-
-interface GraphEdge {
-  source: string;
-  target: string;
-  type: 'link' | 'hierarchy'; // link = 双链, hierarchy = 父子关系
-}
-
-// 预定义的文件夹颜色调色板（饱和度较高，用于文件夹刺球）
-const FOLDER_COLORS = [
-  'hsl(210, 65%, 50%)',  // 灰蓝
-  'hsl(350, 60%, 55%)',  // 玫瑰粉
-  'hsl(160, 55%, 42%)',  // 薄荷绿
-  'hsl(270, 55%, 55%)',  // 淡紫
-  'hsl(30, 70%, 50%)',   // 暖橙
-  'hsl(185, 55%, 45%)',  // 青蓝
-  'hsl(50, 65%, 48%)',   // 暖黄
-  'hsl(320, 55%, 52%)',  // 淡洋红
-  'hsl(95, 50%, 45%)',   // 橄榄绿
-  'hsl(225, 60%, 55%)',  // 靛蓝
-];
-
-// 文件节点颜色（基于文件夹颜色，但更柔和/更浅）
-const FILE_COLORS = [
-  'hsl(210, 40%, 70%)',  // 灰蓝（浅）
-  'hsl(350, 35%, 72%)',  // 玫瑰粉（浅）
-  'hsl(160, 30%, 62%)',  // 薄荷绿（浅）
-  'hsl(270, 30%, 70%)',  // 淡紫（浅）
-  'hsl(30, 45%, 68%)',   // 暖橙（浅）
-  'hsl(185, 30%, 62%)',  // 青蓝（浅）
-  'hsl(50, 40%, 65%)',   // 暖黄（浅）
-  'hsl(320, 30%, 68%)',  // 淡洋红（浅）
-  'hsl(95, 25%, 62%)',   // 橄榄绿（浅）
-  'hsl(225, 35%, 72%)',  // 靛蓝（浅）
-];
 
 // Extract [[wikilinks]] from content
 export function extractWikiLinks(content: string): string[] {
@@ -216,22 +172,6 @@ interface HoverPreviewState {
   nodeId: string;
 }
 
-// ==================== 全局图数据缓存 ====================
-// 避免每个 KnowledgeGraph 实例重复读取文件
-interface GraphCache {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  fileTreeHash: string; // 用于检测文件树是否变化
-  timestamp: number;
-}
-
-let graphCache: GraphCache | null = null;
-
-// 计算文件树的简单哈希（用于检测变化）
-function computeFileTreeHash(fileTree: any[]): string {
-  return JSON.stringify(fileTree.map(f => f.path)).slice(0, 100);
-}
-
 export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -242,13 +182,28 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
   const emphasisRef = useRef<Map<string, number>>(new Map());
   const focusBlendRef = useRef(0);
 
-  const { fileTree, currentFile, openFile, openIsolatedGraphTab } = useFileStore(
+  const { vaultPath, currentFile, openFile, openIsolatedGraphTab } = useFileStore(
     useShallow((state) => ({
-      fileTree: state.fileTree,
+      vaultPath: state.vaultPath,
       currentFile: state.currentFile,
       openFile: state.openFile,
       openIsolatedGraphTab: state.openIsolatedGraphTab,
     }))
+  );
+  const {
+    noteIndex,
+    isIndexing,
+    totalNotes,
+    indexedCount,
+    truncated: indexTruncated,
+  } = useNoteIndexStore(
+    useShallow((state) => ({
+      noteIndex: state.noteIndex,
+      isIndexing: state.isIndexing,
+      totalNotes: state.totalNotes,
+      indexedCount: state.indexedCount,
+      truncated: state.truncated,
+    })),
   );
   const { t } = useLocaleStore();
 
@@ -259,6 +214,13 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
   const [dimensions, setDimensions] = useState({ width: 400, height: 400 });
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreviewState | null>(null);
+  const [displayCounts, setDisplayCounts] = useState({ nodes: 0, edges: 0 });
+  const [graphStatus, setGraphStatus] = useState<KnowledgeGraphStatus>({
+    totalNotes: 0,
+    displayedNotes: 0,
+    hiddenNotes: 0,
+    cappedByDisplayLimit: false,
+  });
 
   const isDraggingCanvas = useRef(false);
   const isDraggingNode = useRef(false);
@@ -288,6 +250,15 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
       : Math.max(4, 5 + Math.log(node.connections + 1) * 4);
     return Math.min(baseRadius * nodeSize, node.isFolder ? 30 : 25);
   }, [nodeSize]);
+
+  const graphData = useMemo(
+    () =>
+      buildKnowledgeGraphData(Array.from(noteIndex.values()), {
+        vaultPath,
+        currentFile,
+      }),
+    [noteIndex, vaultPath, currentFile],
+  );
 
   // 应用图数据（支持孤立视图过滤和文件夹过滤）- 必须在 buildGraph 之前定义
   const applyGraphData = useCallback((nodes: GraphNode[], edges: GraphEdge[], includeFolders: boolean) => {
@@ -327,180 +298,19 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
     edgesRef.current = displayEdges;
 
     setDimensions({ width, height });
+    setDisplayCounts({ nodes: displayNodes.length, edges: displayEdges.length });
   }, [isolatedNode]);
 
-  // Build graph from file tree
-  const buildGraph = useCallback(async () => {
-    const nodes: GraphNode[] = [];
-    const edges: GraphEdge[] = [];
-    const nodeMap = new Map<string, GraphNode>();
-    const linkEdgeSet = new Set<string>();
-    const folderColorMap = new Map<string, { folderColor: string; fileColor: string }>(); // 文件夹路径 -> 颜色对
-    let colorIndex = 0;
-
-    // 递归处理文件树，同时创建文件夹节点和父子关系
-    const processEntries = (entries: typeof fileTree, parentPath: string | null, depth: number) => {
-      for (const entry of entries) {
-        if (entry.is_dir && entry.children) {
-          // 为文件夹分配颜色（文件夹用饱和色，文件用柔和色）
-          const idx = colorIndex % FOLDER_COLORS.length;
-          const folderColor = FOLDER_COLORS[idx];
-          const fileColor = FILE_COLORS[idx];
-          folderColorMap.set(entry.path, { folderColor, fileColor });
-          colorIndex++;
-
-          // 创建文件夹节点
-          const folderId = `folder:${entry.path}`;
-          const folderNode: GraphNode = {
-            id: folderId,
-            label: entry.name,
-            path: entry.path,
-            x: 0,
-            y: 0,
-            vx: 0,
-            vy: 0,
-            connections: 0,
-            isFolder: true,
-            parentId: parentPath ? `folder:${parentPath}` : undefined,
-            color: folderColor, // 文件夹使用饱和色
-            depth,
-          };
-          nodes.push(folderNode);
-          nodeMap.set(folderId, folderNode);
-
-          // 创建父子关系边（如果有父文件夹）
-          if (parentPath) {
-            edges.push({
-              source: `folder:${parentPath}`,
-              target: folderId,
-              type: 'hierarchy',
-            });
-          }
-
-          // 递归处理子项
-          processEntries(entry.children, entry.path, depth + 1);
-        } else if (!entry.is_dir && entry.name.endsWith(".md")) {
-          // 文件节点
-          const nodeName = entry.name.replace(".md", "");
-
-          // 获取文件所在文件夹的颜色（子层覆盖父层）
-          let nodeColor = 'hsl(var(--muted-foreground))';
-
-          // 查找最近的父文件夹颜色，文件使用柔和色
-          for (const [folderPath, colors] of folderColorMap.entries()) {
-            if (entry.path.startsWith(folderPath)) {
-              nodeColor = colors.fileColor; // 文件使用柔和色
-            }
-          }
-
-          const fileNode: GraphNode = {
-            id: entry.path,
-            label: nodeName,
-            path: entry.path,
-            x: 0,
-            y: 0,
-            vx: 0,
-            vy: 0,
-            connections: 0,
-            isFolder: false,
-            parentId: parentPath ? `folder:${parentPath}` : undefined,
-            color: nodeColor,
-            depth,
-          };
-          nodes.push(fileNode);
-          if (!nodeMap.has(nodeName.toLowerCase())) {
-            nodeMap.set(nodeName.toLowerCase(), fileNode);
-          }
-
-          // 创建文件到父文件夹的父子关系边
-          if (parentPath) {
-            edges.push({
-              source: `folder:${parentPath}`,
-              target: entry.path,
-              type: 'hierarchy',
-            });
-          }
-        }
-      }
-    };
-
-    processEntries(fileTree, null, 0);
-
-    // 读取文件内容，提取双链
-    const { readFile } = await import("@/lib/host");
-
-    // 限制并发读取数量，避免阻塞 RPC 通道
-    const BATCH_SIZE = 10;
-    for (let i = 0; i < nodes.length; i += BATCH_SIZE) {
-      const batch = nodes.slice(i, i + BATCH_SIZE);
-      await Promise.all(batch.map(async (node) => {
-        if (node.isFolder) return;
-        try {
-          const content = await readFile(node.path);
-          const links = extractWikiLinks(content);
-
-          for (const linkName of links) {
-            const targetNode = nodeMap.get(linkName.toLowerCase());
-            if (targetNode && targetNode.id !== node.id && !targetNode.isFolder) {
-              const sourceId = node.id;
-              const targetId = targetNode.id;
-              const edgeKey =
-                sourceId < targetId ? `${sourceId}\u0000${targetId}` : `${targetId}\u0000${sourceId}`;
-              if (!linkEdgeSet.has(edgeKey)) {
-                linkEdgeSet.add(edgeKey);
-                edges.push({ source: node.id, target: targetNode.id, type: 'link' });
-                node.connections++;
-                targetNode.connections++;
-              }
-            }
-          }
-        } catch (error) {
-          // Skip files that can't be read
-        }
-      }));
-    }
-
-    // 保存到全局缓存
-    graphCache = {
-      nodes,
-      edges,
-      fileTreeHash: computeFileTreeHash(fileTree),
-      timestamp: Date.now(),
-    };
-
-    applyGraphData(nodes, edges, showFolders);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileTree, applyGraphData]); // showFolders 变化时不需要重建，只需要 loadGraph 重新应用缓存
-
-  // 使用缓存或构建新图
-  const loadGraph = useCallback(async () => {
-    const currentHash = computeFileTreeHash(fileTree);
-
-    // 如果有缓存且文件树没变，直接使用缓存
-    if (graphCache && graphCache.fileTreeHash === currentHash) {
-      applyGraphData(graphCache.nodes, graphCache.edges, showFolders);
-      return;
-    }
-
-    // 否则重新构建
-    await buildGraph();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fileTree, buildGraph, applyGraphData]); // showFolders 由专门的 effect 处理
-
-  // Build graph on mount and when file tree changes
+  // Build graph from the vault note index, not the lazy sidebar tree.
   useEffect(() => {
-    if (fileTree.length > 0) {
-      loadGraph();
-    }
-  }, [fileTree, loadGraph]);
+    applyGraphData(graphData.nodes, graphData.edges, showFolders);
+    setGraphStatus(graphData.status);
+  }, [graphData, showFolders, applyGraphData]);
 
-  // 当 showFolders 切换时，直接从缓存重新应用（无需重建）
-  useEffect(() => {
-    if (graphCache) {
-      applyGraphData(graphCache.nodes, graphCache.edges, showFolders);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showFolders]);
+  const rebuildGraph = useCallback(() => {
+    applyGraphData(graphData.nodes, graphData.edges, showFolders);
+    setGraphStatus(graphData.status);
+  }, [applyGraphData, graphData, showFolders]);
 
   // Handle resize
   useEffect(() => {
@@ -1187,9 +997,34 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
             >
               <Settings size={16} />
             </button>
-            <span className="text-xs text-muted-foreground">
-              {nodesRef.current.length} {t.graph.nodes} · {edgesRef.current.length} {t.graph.edges}
-            </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              <span>
+                {displayCounts.nodes} {t.graph.nodes} · {displayCounts.edges} {t.graph.edges}
+              </span>
+              {isIndexing && (
+                <span>
+                  {t.knowledgeGraph.indexingStatus
+                    .replace("{indexed}", String(indexedCount))
+                    .replace("{total}", String(totalNotes))}
+                </span>
+              )}
+              {graphStatus.cappedByDisplayLimit && (
+                <span>
+                  {t.knowledgeGraph.cappedStatus
+                    .replace("{shown}", String(graphStatus.displayedNotes))
+                    .replace("{total}", String(graphStatus.totalNotes))
+                    .replace("{hidden}", String(graphStatus.hiddenNotes))}
+                </span>
+              )}
+              {indexTruncated && (
+                <span>
+                  {t.knowledgeGraph.truncatedStatus.replace(
+                    "{total}",
+                    String(graphStatus.totalNotes),
+                  )}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -1208,7 +1043,7 @@ export function KnowledgeGraph({ className = "", isolatedNode }: KnowledgeGraphP
               <ZoomOut size={14} />
             </button>
             <button
-              onClick={buildGraph}
+              onClick={rebuildGraph}
               className={cn(KNOWLEDGE_GRAPH_ICON_BUTTON_CLASS, "ml-2")}
               title={t.sidebar.refresh}
             >
