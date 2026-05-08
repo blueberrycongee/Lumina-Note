@@ -272,12 +272,15 @@ describe("useOpencodeAgent.startTask", () => {
   });
 
   it("shows the optimistic user message before waiting for opencode startup", async () => {
+    const before = Date.now();
     const promise = useOpencodeAgent
       .getState()
       .startTask("hello", { workspace_path: "/tmp/vault" });
 
     const immediate = useOpencodeAgent.getState();
     expect(immediate.status).toBe("running");
+    expect(immediate.llmRequestStartTime).toBeGreaterThanOrEqual(before);
+    expect(immediate.llmRequestStartTime).toBeLessThanOrEqual(Date.now());
     expect(immediate.messages).toEqual([
       expect.objectContaining({
         role: "user",
@@ -307,6 +310,7 @@ describe("useOpencodeAgent.startTask", () => {
     await waitFor(() => {
       expect(useOpencodeAgent.getState().status).toBe("idle");
     });
+    expect(useOpencodeAgent.getState().llmRequestStartTime).toBeNull();
   });
 
   it("refreshes the active session from opencode when streaming reports idle", async () => {

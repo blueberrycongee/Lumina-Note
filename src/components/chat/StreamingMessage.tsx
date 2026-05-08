@@ -8,7 +8,7 @@
  *
  */
 
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { parseMarkdown } from "@/services/markdown/markdown";
 import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -132,6 +132,13 @@ interface TypingIndicatorProps {
   diagramPaths?: string[];
 }
 
+function formatElapsed(seconds: number): string {
+  const safe = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 /**
  * 打字指示器组件
  *
@@ -151,6 +158,10 @@ export const TypingIndicator = memo(function TypingIndicator({
   const agentReasoningStatus = useOpencodeAgent(
     (state) => state.streamingReasoningStatus,
   );
+  const llmRequestStartTime = useOpencodeAgent(
+    (state) => state.llmRequestStartTime,
+  );
+  const { t } = useLocaleStore();
   const agentMessages = useOpencodeAgent((state) => state.messages);
   // Hide the standalone typing indicator as soon as the current assistant
   // turn has any renderable opencode part (text / reasoning / tool). After
@@ -179,6 +190,14 @@ export const TypingIndicator = memo(function TypingIndicator({
     agentReasoningStatus === "idle" &&
     !latestAssistantHasContent;
   const isWaiting = isAgentWaiting;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isWaiting || llmRequestStartTime == null) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [isWaiting, llmRequestStartTime]);
   const resolvedDiagramPaths = useMemo(() => {
     if (diagramPaths && diagramPaths.length > 0) {
       return diagramPaths;
@@ -202,6 +221,11 @@ export const TypingIndicator = memo(function TypingIndicator({
     return null;
   }
 
+  const elapsed =
+    llmRequestStartTime == null
+      ? null
+      : Math.max(0, Math.floor((now - llmRequestStartTime) / 1000));
+
   return (
     <div className={`flex gap-3 mb-6 ${className}`}>
       <div className="max-w-[80%] text-foreground">
@@ -213,11 +237,17 @@ export const TypingIndicator = memo(function TypingIndicator({
         )}
         <div
           className="streaming-content-enter flex h-8 items-center gap-1.5"
-          aria-hidden
+          role="status"
+          aria-live="polite"
         >
           <span className="streaming-dot" style={{ animationDelay: "0ms" }} />
           <span className="streaming-dot" style={{ animationDelay: "140ms" }} />
           <span className="streaming-dot" style={{ animationDelay: "280ms" }} />
+          {elapsed !== null && (
+            <span className="ml-1 text-ui-caption text-muted-foreground">
+              {t.agentMessage.working} · {formatElapsed(elapsed)}
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -735,7 +735,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           retryable: true,
           sessionId: sessionId ?? undefined,
         });
-        set({ status: "idle", error: message, llmRetryState: null });
+        set({
+          status: "idle",
+          error: message,
+          llmRetryState: null,
+          llmRequestStartTime: null,
+        });
       }
       return;
     }
@@ -777,12 +782,22 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           message?: string;
           next?: number;
         };
-        if (status.type === "busy") set({ status: "running", llmRetryState: null });
+        if (status.type === "busy")
+          set((state) => ({
+            status: "running",
+            llmRetryState: null,
+            llmRequestStartTime: state.llmRequestStartTime ?? Date.now(),
+          }));
         else if (status.type === "idle") {
           // session.error and the trailing session.status:idle arrive
           // back-to-back; let the error stay sticky so the red banner
           // actually renders. Cleared on the next startTask/switchSession.
-          if (get().status !== "error") set({ status: "idle", llmRetryState: null });
+          if (get().status !== "error")
+            set({
+              status: "idle",
+              llmRetryState: null,
+              llmRequestStartTime: null,
+            });
           void refreshSessionMessages(event.properties.sessionID);
         } else if (status.type === "retry") {
           set({
@@ -799,7 +814,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       }
       case "session.idle": {
         if (event.properties.sessionID === get().currentSessionId) {
-          if (get().status !== "error") set({ status: "idle", llmRetryState: null });
+          if (get().status !== "error")
+            set({
+              status: "idle",
+              llmRetryState: null,
+              llmRequestStartTime: null,
+            });
           void refreshSessionMessages(event.properties.sessionID);
         }
         return;
@@ -832,7 +852,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           retryable: false,
           sessionId: event.properties.sessionID ?? undefined,
         });
-        set({ status: "error", error: message, llmRetryState: null });
+        set({
+          status: "error",
+          error: message,
+          llmRetryState: null,
+          llmRequestStartTime: null,
+        });
         return;
       }
       case "message.updated": {
@@ -1109,6 +1134,8 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             messages: [],
             error: null,
             status: state.status === "running" ? state.status : "idle",
+            llmRequestStartTime:
+              state.status === "running" ? state.llmRequestStartTime : null,
           }));
         }
         await get().loadSessions();
@@ -1143,6 +1170,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           status: "idle",
           error: null,
           pendingTool: null,
+          llmRequestStartTime: null,
         });
       } catch (err) {
         reportError({
@@ -1161,7 +1189,12 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         const client = await getOpencodeClient();
         await client.session.delete({ path: { id }, throwOnError: true });
         if (get().currentSessionId === id) {
-          set({ currentSessionId: null, messages: [], pendingTool: null });
+          set({
+            currentSessionId: null,
+            messages: [],
+            pendingTool: null,
+            llmRequestStartTime: null,
+          });
         }
         await get().loadSessions();
       } catch (err) {
@@ -1224,12 +1257,14 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // Update visible UI before any opencode startup/session work. Server
         // bootstrap can legitimately take seconds on cold start; the user
         // still needs immediate confirmation that their send was accepted.
-        const optimisticId = `optimistic-user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const requestStartedAt = Date.now();
+        const optimisticId = `optimistic-user-${requestStartedAt}-${Math.random().toString(36).slice(2, 7)}`;
         const fileParts = ctx?.fileParts ?? [];
         const displayText = ctx?.display_message || task;
         set((state) => ({
           status: "running",
           error: null,
+          llmRequestStartTime: requestStartedAt,
           llmRetryState: null,
           messages: [
             ...state.messages,
@@ -1264,6 +1299,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           set((state) => ({
             status: "idle",
             error: t.ai.apiKeyRequired,
+            llmRequestStartTime: null,
             messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
           }));
           return;
@@ -1333,6 +1369,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         });
         set((state) => ({
           status: "idle",
+          llmRequestStartTime: null,
           messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
         }));
       } finally {
@@ -1347,7 +1384,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       try {
         const client = await getOpencodeClient();
         await client.session.abort({ path: { id: sessionId } });
-        set({ status: "aborted" });
+        set({ status: "aborted", llmRequestStartTime: null });
       } catch (err) {
         reportError({
           kind: "session.abort",
@@ -1381,7 +1418,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
       if (runningStatus === "running" || runningStatus === "waiting_approval") {
         await get().abort();
       }
-      set({ status: "idle", error: null, pendingTool: null, llmRetryState: null });
+      set({
+        status: "idle",
+        error: null,
+        pendingTool: null,
+        llmRetryState: null,
+        llmRequestStartTime: null,
+      });
       await get().newSession();
     },
 
@@ -1423,6 +1466,7 @@ export function handleOpencodeServerChanged(info: OpencodeServerInfo): void {
   useOpencodeAgent.setState({
     pendingTool: null,
     llmRetryState: null,
+    llmRequestStartTime: null,
     status: "idle",
     error: null,
   });
