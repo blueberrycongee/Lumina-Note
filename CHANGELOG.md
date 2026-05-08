@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-05-08
+
+本次发版集中修复 v1.4.0 之后发现的聊天、技能发现、工作区和图谱问题，并补上应用更新安装链路。
+
+### 新功能
+- **更新下载后可直接安装**：设置页的更新流程现在会调用 quit-and-install，下载完成后可以真正进入安装。
+- **阅读模式表格内联 Markdown**：表格单元格里的内联 Markdown 现在可以正确渲染。
+
+### 修复
+- **主聊天计时器修复**：`Working · mm:ss` 从用户发送被接受时开始计时，覆盖等待首 token、思考和工具调用，不再只像是在计算思考阶段。
+- **斜杠技能加载修复**：`/` 技能菜单会从当前 opencode vault instance 加载技能，并在启动 race 后重试，避免 Electron dev 下显示“没有可用技能”。
+- **Agent 发送链路修复**：修复忙碌时连续发送、乐观用户消息替换、重试最后发送意图、图片附件发送和若干 opencode SSE/session pipeline 问题。
+- **AI 模型限制修复**：根据官方模型文档调整模型限制，并修复相关中等优先级问题。
+- **图谱数据修复**：本地图谱和全局图谱改为从 note index 派生，避免图谱数据不完整或不同步。
+- **工作区过大处理修复**：文件遍历超过限制时抛出并展示 typed workspace-too-large warning，不再静默截断。
+- **图片管理器元数据修复**：恢复图片 size、mtime、ctime 的懒加载统计。
+- **编辑器显示修复**：修复标题与正文对齐、列表排版、默认字号、阅读宽度、slash AI IME 处理和复制按钮流式状态。
+- **启动与标签修复**：修复 active tab 初始化和懒加载文件夹展开更新时机。
+
+### 改进
+- **工作区性能**：限制 workspace listing，虚拟化侧栏，并降低 note indexer 对大工作区的影响。
+- **聊天滚动稳定性**：使用 ResizeObserver 处理自动滚动，减少状态驱动滚动带来的跳动。
+- **Markdown 可读性**：改善 live / reading 模式下的正文、列表和紧凑上下文内联 Markdown 可读性。
+
 ## [1.4.0] - 2026-05-02
 
 本次发版把 VS Code AI 插件兼容层从实验设置项推进到可用的侧栏入口，同时继续收口斜杠 AI 的 inline 生成体验。
