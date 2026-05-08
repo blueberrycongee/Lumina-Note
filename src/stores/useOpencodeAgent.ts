@@ -868,12 +868,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
           set((state) => {
             if (!state.currentSessionId || info.sessionID !== state.currentSessionId)
               return state;
-            const optimistic = state.messages.find((m) => m.id.startsWith("optimistic-"));
-            const cleaned = state.messages.filter(
-              (m) => !m.id.startsWith("optimistic-"),
+            const optimisticIdx = state.messages.findIndex((m) =>
+              m.id.startsWith("optimistic-"),
             );
-            const idx = cleaned.findIndex((m) => m.id === info.id);
-            const existingParts = idx >= 0 ? cleaned[idx].rawParts : [];
+            const optimistic =
+              optimisticIdx >= 0 ? state.messages[optimisticIdx] : undefined;
+            const idx = state.messages.findIndex((m) => m.id === info.id);
+            const existingParts = idx >= 0 ? state.messages[idx].rawParts : [];
             const merged = makeAgentMessage(info, existingParts);
             if (optimistic?.content) {
               merged.content = optimistic.content;
@@ -881,9 +882,13 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             if (optimistic?.attachments?.length) {
               merged.attachments = optimistic.attachments;
             }
-            const next = cleaned.slice();
-            if (idx === -1) next.push(merged);
+            const next = state.messages.slice();
+            if (idx === -1 && optimisticIdx >= 0) next[optimisticIdx] = merged;
+            else if (idx === -1) next.push(merged);
             else next[idx] = merged;
+            if (idx >= 0 && optimisticIdx >= 0 && optimisticIdx !== idx) {
+              next.splice(optimisticIdx, 1);
+            }
             return { messages: next };
           });
           return;
@@ -1300,7 +1305,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
             status: "idle",
             error: t.ai.apiKeyRequired,
             llmRequestStartTime: null,
-            messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
+            messages: state.messages.filter((m) => m.id !== optimisticId),
           }));
           return;
         }
@@ -1370,7 +1375,7 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         set((state) => ({
           status: "idle",
           llmRequestStartTime: null,
-          messages: state.messages.filter((m) => !m.id.startsWith("optimistic-")),
+          messages: state.messages.filter((m) => m.id !== optimisticId),
         }));
       } finally {
         releaseLock!();

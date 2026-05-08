@@ -271,6 +271,69 @@ describe("useOpencodeAgent.startTask", () => {
     expect(useOpencodeAgent.getState().messages).toEqual([]);
   });
 
+  it("replaces only one optimistic user message when a server user message arrives", async () => {
+    let resolveEventHandled = () => {};
+    const eventHandled = new Promise<void>((resolve) => {
+      resolveEventHandled = resolve;
+    });
+    mocks.getOpencodeClient.mockResolvedValue({
+      event: {
+        subscribe: vi.fn(async () => ({
+          stream: singleEventStream(
+            {
+              type: "message.updated",
+              properties: {
+                info: {
+                  id: "server-user-1",
+                  sessionID: "session-1",
+                  role: "user",
+                  time: { created: 1 },
+                },
+              },
+            },
+            resolveEventHandled,
+          ),
+        })),
+      },
+      session: {
+        list: vi.fn(async () => ({ data: [] })),
+      },
+    });
+    useOpencodeAgent.setState({
+      currentSessionId: "session-1",
+      messages: [
+        {
+          id: "optimistic-user-1",
+          role: "user",
+          content: "first prompt",
+          rawParts: [],
+        },
+        {
+          id: "optimistic-user-2",
+          role: "user",
+          content: "second prompt",
+          rawParts: [],
+        },
+      ],
+    });
+
+    await useOpencodeAgent.getState().subscribe();
+    await eventHandled;
+
+    expect(useOpencodeAgent.getState().messages).toEqual([
+      expect.objectContaining({
+        id: "server-user-1",
+        role: "user",
+        content: "first prompt",
+      }),
+      expect.objectContaining({
+        id: "optimistic-user-2",
+        role: "user",
+        content: "second prompt",
+      }),
+    ]);
+  });
+
   it("shows the optimistic user message before waiting for opencode startup", async () => {
     const before = Date.now();
     const promise = useOpencodeAgent
