@@ -58,7 +58,7 @@ import { StreamingOutput } from "../chat/StreamingMessage";
 import { SelectableConversationList } from "../chat/SelectableConversationList";
 import { getTextFromContent } from "../chat/messageContentUtils";
 import {
-  scrollStickyContainerToBottom,
+  observeContentResize,
   updateStickyScrollState,
 } from "../chat/stickyScroll";
 import {
@@ -247,6 +247,7 @@ export function MainAIChatShell() {
   const [isExportingConversation, setIsExportingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContentRef = useRef<HTMLDivElement>(null);
   const isNearBottom = useRef(true);
   const lastScrollTopRef = useRef(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -628,25 +629,20 @@ export function MainAIChatShell() {
     openFile,
   ]);
 
-  // 自动滚动到底部
+  // 自动滚动到底部 — 用 ResizeObserver 监听内容高度变化，
+  // 不再依赖特定 state 字段，任何子组件（消息、typing dots、
+  // tool approval、error banner）引起的高度增长都会触发。
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer || !isNearBottom.current) {
-      return;
-    }
-    if (import.meta.env.DEV && typeof performance !== "undefined") {
-      performance.mark("lumina:scroll:before");
-    }
-    scrollStickyContainerToBottom(scrollContainer, lastScrollTopRef);
-    if (import.meta.env.DEV && typeof performance !== "undefined") {
-      performance.mark("lumina:scroll:after");
-      performance.measure(
-        "lumina:scroll",
-        "lumina:scroll:before",
-        "lumina:scroll:after",
-      );
-    }
-  }, [messages, isLoading]);
+    const contentEl = scrollContentRef.current;
+    if (!scrollContainer || !contentEl) return;
+    return observeContentResize(
+      scrollContainer,
+      contentEl,
+      lastScrollTopRef,
+      isNearBottom,
+    );
+  }, []);
 
   useEffect(() => {
     if (!import.meta.env.DEV || typeof performance === "undefined") {
@@ -1416,6 +1412,7 @@ export function MainAIChatShell() {
             }}
           >
             <motion.div
+              ref={scrollContentRef}
               className="max-w-3xl mx-auto px-4 pt-8"
               initial={false}
               animate={

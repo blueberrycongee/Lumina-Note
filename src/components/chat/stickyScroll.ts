@@ -28,3 +28,28 @@ export function scrollStickyContainerToBottom(
   element.scrollTop = maxScrollTop;
   lastScrollTopRef.current = maxScrollTop;
 }
+
+/**
+ * Observe the content element inside a scroll container. Whenever
+ * content height grows and the user was already near the bottom,
+ * auto-scroll to keep the latest content visible.
+ *
+ * Returns a cleanup function for useEffect.
+ */
+export function observeContentResize(
+  scrollContainer: HTMLElement,
+  contentElement: HTMLElement,
+  lastScrollTopRef: { current: number },
+  isNearBottomRef: { current: boolean },
+): () => void {
+  let prevHeight = contentElement.offsetHeight;
+  const ro = new ResizeObserver(() => {
+    const newHeight = contentElement.offsetHeight;
+    if (newHeight > prevHeight && isNearBottomRef.current) {
+      scrollStickyContainerToBottom(scrollContainer, lastScrollTopRef);
+    }
+    prevHeight = newHeight;
+  });
+  ro.observe(contentElement);
+  return () => ro.disconnect();
+}
