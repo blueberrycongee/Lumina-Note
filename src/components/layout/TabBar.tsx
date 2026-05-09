@@ -1012,7 +1012,6 @@ export function TabBar() {
                   const isDragging = !isClosing && draggingTabId === tab.id;
                   const initialWidth = isEntering ? TAB_OVERLAP_PX : bounds.width;
                   const tabX = dragStartLayoutsRef.current?.get(tab.id)?.x ?? bounds.x;
-                  const innerDragX = isDragging ? dragOffsetX : 0;
                   const tabStyle = {
                     width: bounds.width,
                     flexBasis: bounds.width,
@@ -1048,10 +1047,16 @@ export function TabBar() {
                             }
                       }
                       animate={{
-                        x: isDragging ? tabX : bounds.x,
+                        // Drag offset lives on the outer (layout) box rather
+                        // than an inner translateX. The outer carries
+                        // overflow-hidden for the close/resize animations, so
+                        // a translated inner gets clipped at the outer's
+                        // right edge — making the dragged tab look "covered
+                        // by a rectangle with a straight left edge".
+                        x: isDragging ? tabX + dragOffsetX : bounds.x,
                         width: bounds.width,
                         opacity: isClosing ? 0 : 1,
-                        y: 0,
+                        y: isDragging ? -1 : 0,
                       }}
                       exit={
                         reduceMotion
@@ -1063,7 +1068,7 @@ export function TabBar() {
                             }
                       }
                       transition={{
-                        duration: reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
+                        duration: isDragging || reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
                         ease: [0.2, 0, 0, 1],
                       }}
                       style={tabStyle}
@@ -1078,15 +1083,10 @@ export function TabBar() {
                     >
                       <motion.div
                         className="h-full w-full"
-                        initial={reduceMotion ? false : { opacity: 0, y: 3, scale: 0.985 }}
-                        animate={{ opacity: 1, x: innerDragX, y: isDragging ? -1 : 0, scale: 1 }}
+                        initial={reduceMotion ? false : { opacity: 0, scale: 0.985 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         transition={{
                           opacity: { duration: 0.16, ease: [0.2, 0.9, 0.1, 1] },
-                          x: {
-                            duration: isDragging || reduceMotion ? 0 : TAB_BOUNDS_ANIMATION_MS / 1000,
-                            ease: [0.2, 0, 0, 1],
-                          },
-                          y: { duration: isDragging || reduceMotion ? 0 : 0.16, ease: [0.2, 0.9, 0.1, 1] },
                           scale: { duration: 0.16, ease: [0.2, 0.9, 0.1, 1] },
                         }}
                       >
