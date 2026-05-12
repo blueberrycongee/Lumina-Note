@@ -12,7 +12,10 @@
  */
 
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
-import { classifyProviderRuntimeError } from "@/services/ai/provider-runtime-error";
+import {
+  classifyProviderRuntimeError,
+  formatClassifiedProviderRuntimeError,
+} from "@/services/ai/provider-runtime-error";
 
 import { classifyHttpError } from "./retry";
 import type { ErrorEnvelope } from "./types";
@@ -48,38 +51,31 @@ export function formatEnvelope(env: ErrorEnvelope): FormattedError {
       const classified = classifyProviderRuntimeError(
         env.cause ?? env.message,
       );
+      const text =
+        formatClassifiedProviderRuntimeError(classified, e) ??
+        e.providerGeneric;
       switch (classified.type) {
+        case "api_key_missing":
+          return { text };
         case "auth_failed":
-          return { text: e.providerAuthFailed };
         case "quota_exhausted":
-          return { text: e.providerQuotaExhausted };
+        case "model_not_found":
+        case "model_access_denied":
+        case "context_too_large":
+        case "thinking_not_supported":
+          return { text };
         case "rate_limited":
           return {
-            text:
-              classified.retryAfterSeconds !== undefined
-                ? e.providerRateLimitedWithDelay.replace(
-                    "{seconds}",
-                    String(classified.retryAfterSeconds),
-                  )
-                : e.providerRateLimited,
+            text,
             action: "retry",
           };
-        case "model_not_found":
-          return { text: e.providerModelNotFound };
-        case "model_access_denied":
-          return { text: e.providerModelAccessDenied };
-        case "context_too_large":
-          return { text: e.providerContextTooLarge };
-        case "thinking_not_supported":
-          return { text: e.providerThinkingNotSupported };
         case "stream_lost":
-          return { text: e.providerStreamLost, action: "reload" };
+          return { text, action: "reload" };
         case "network_unreachable":
-          return { text: e.providerNetwork, action: "retry" };
         case "provider_overloaded":
-          return { text: e.providerOverloaded, action: "retry" };
+          return { text, action: "retry" };
         case "unknown":
-          return { text: e.providerGeneric, action: "retry" };
+          return { text, action: "retry" };
       }
     }
 

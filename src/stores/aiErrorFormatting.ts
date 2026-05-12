@@ -1,3 +1,4 @@
+import { formatProviderRuntimeErrorMessage } from "@/services/ai/provider-runtime-error";
 import { getCurrentTranslations } from "@/stores/useLocaleStore";
 
 function extractProviderErrorMessage(error: unknown): string {
@@ -18,27 +19,13 @@ function extractProviderErrorMessage(error: unknown): string {
   return errorStr;
 }
 
-function isMissingApiKeyError(message: string): boolean {
-  const lower = message.toLowerCase();
-  if (!lower.includes("api key")) {
-    return false;
-  }
-
-  return [
-    "not provide",
-    "did not provide",
-    "missing",
-    "required",
-    "not set",
-    "no api key",
-    "without an api key",
-  ].some((pattern) => lower.includes(pattern));
-}
-
 export function formatUserFriendlyError(error: unknown): string {
-  const message = extractProviderErrorMessage(error);
-  if (isMissingApiKeyError(message)) {
-    return getCurrentTranslations().ai.apiKeyRequired;
+  const messages = getCurrentTranslations().agentMessage.errors;
+  const providerMessage = formatProviderRuntimeErrorMessage(error, messages);
+  if (providerMessage) {
+    return providerMessage;
   }
+
+  const message = extractProviderErrorMessage(error);
   return message;
 }

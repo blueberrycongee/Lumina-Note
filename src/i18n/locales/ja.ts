@@ -1528,6 +1528,8 @@ export default {
         "ネットワーク接続に失敗しました。接続を確認してから再試行してください。",
       sendAuth: "API キーが無効か期限切れです。設定を確認してください。",
       sendGeneric: "メッセージを送信できませんでした。もう一度お試しください。",
+      providerApiKeyMissing:
+        "API Key がまだ設定されていません。AI 設定で追加してください。",
       providerAuthFailed:
         "API Key が無効または期限切れです。AI 設定を確認してください。",
       providerQuotaExhausted:

@@ -15,6 +15,10 @@ import {
   generateImageDirect,
   pickConfiguredImageProvider,
 } from "@/services/imageGen/direct";
+import {
+  formatProviderRuntimeErrorMessage,
+  type ProviderRuntimeErrorMessages,
+} from "@/services/ai/provider-runtime-error";
 import { findModelInCatalog } from "@/services/llm/providers/models";
 import { toast } from "sonner";
 import { useOpencodeAgent } from "@/stores/useOpencodeAgent";
@@ -149,6 +153,19 @@ function imageMimeExtension(mime: ChatImageAttachment["mime"]): string {
   if (mime === "image/webp") return "webp";
   if (mime === "image/gif") return "gif";
   return "png";
+}
+
+function formatDirectImageError(
+  error: unknown,
+  messages: ProviderRuntimeErrorMessages,
+  fallback: string,
+): string {
+  const providerMessage = formatProviderRuntimeErrorMessage(error, messages);
+  if (providerMessage) {
+    return providerMessage;
+  }
+  const raw = error instanceof Error ? error.message : String(error ?? "");
+  return raw.trim() || fallback;
 }
 
 function compactTaskPreview(text: string): string {
@@ -1145,13 +1162,18 @@ export function MainAIChatShell() {
             // sidebar without the user having to manually refresh.
             void refreshFileTree();
           } else {
+            const failureMessage = formatDirectImageError(
+              result.error,
+              t.agentMessage.errors,
+              t.ai.imageDirect.failureGeneric,
+            );
             useOpencodeAgent.setState((state) => ({
               status: "error",
               messages: state.messages.map((msg) =>
                 msg.id === assistantMessageId
                   ? {
                       ...msg,
-                      content: `${t.ai.imageDirect.failureGeneric}: ${result.error}`,
+                      content: `${t.ai.imageDirect.failureGeneric}: ${failureMessage}`,
                     }
                   : msg,
               ),
@@ -1161,25 +1183,29 @@ export function MainAIChatShell() {
                 "{provider}",
                 provider.marketingName,
               ),
-              { id: toastId, description: result.error },
+              { id: toastId, description: failureMessage },
             );
           }
         } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
+          const failureMessage = formatDirectImageError(
+            err,
+            t.agentMessage.errors,
+            t.ai.imageDirect.failureGeneric,
+          );
           useOpencodeAgent.setState((state) => ({
             status: "error",
             messages: state.messages.map((msg) =>
               msg.id === assistantMessageId
                 ? {
                     ...msg,
-                    content: `${t.ai.imageDirect.failureGeneric}: ${message}`,
+                    content: `${t.ai.imageDirect.failureGeneric}: ${failureMessage}`,
                   }
                 : msg,
             ),
           }));
           toast.error(t.ai.imageDirect.failureGeneric, {
             id: toastId,
-            description: message,
+            description: failureMessage,
           });
         }
         finalizePerf();

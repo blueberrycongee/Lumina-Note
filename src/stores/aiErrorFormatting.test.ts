@@ -1,29 +1,55 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from "vitest";
 
-vi.mock('@/stores/useLocaleStore', () => ({
+vi.mock("@/stores/useLocaleStore", () => ({
   getCurrentTranslations: () => ({
-    ai: {
-      apiKeyRequired: 'Please configure your API key in AI settings',
+    agentMessage: {
+      errors: {
+        providerApiKeyMissing: "provider key missing",
+        providerAuthFailed: "provider auth",
+        providerQuotaExhausted: "provider quota",
+        providerRateLimited: "provider rate",
+        providerRateLimitedWithDelay: "provider rate {seconds}",
+        providerModelNotFound: "provider model missing",
+        providerModelAccessDenied: "provider model denied",
+        providerContextTooLarge: "provider context",
+        providerThinkingNotSupported: "provider thinking",
+        providerStreamLost: "provider stream",
+        providerNetwork: "provider network",
+        providerOverloaded: "provider overloaded",
+        providerGeneric: "provider generic",
+      },
     },
   }),
 }));
 
-import { formatUserFriendlyError } from './aiErrorFormatting';
+import { formatUserFriendlyError } from "./aiErrorFormatting";
 
-describe('formatUserFriendlyError', () => {
-  it('preserves provider model-not-found messages instead of returning hardcoded Chinese', () => {
+describe("formatUserFriendlyError", () => {
+  it("uses the shared model-not-found message", () => {
     expect(
-      formatUserFriendlyError('HTTP 404 error: {"error":{"message":"model \'gpt-4.1\' does not exist"}}')
-    ).toBe("model 'gpt-4.1' does not exist");
+      formatUserFriendlyError(
+        'HTTP 404 error: {"error":{"message":"model \'gpt-4.1\' does not exist"}}',
+      ),
+    ).toBe("provider model missing");
   });
 
-  it('translates missing API key errors via i18n', () => {
+  it("uses the shared missing API key message", () => {
     expect(
-      formatUserFriendlyError('HTTP 401 error: {"error":{"message":"You did not provide an API key."}}')
-    ).toBe('Please configure your API key in AI settings');
+      formatUserFriendlyError(
+        'HTTP 401 error: {"error":{"message":"You did not provide an API key."}}',
+      ),
+    ).toBe("provider key missing");
   });
 
-  it('preserves generic network errors instead of returning hardcoded Chinese', () => {
-    expect(formatUserFriendlyError('Network connection failed')).toBe('Network connection failed');
+  it("uses the shared network error message", () => {
+    expect(formatUserFriendlyError("Network connection failed")).toBe(
+      "provider network",
+    );
+  });
+
+  it("preserves unknown provider messages for diagnostics", () => {
+    expect(formatUserFriendlyError("Provider returned a custom failure")).toBe(
+      "Provider returned a custom failure",
+    );
   });
 });

@@ -7,6 +7,7 @@ vi.mock("@/stores/useLocaleStore", () => ({
         sendNetwork: "send network",
         sendAuth: "send auth",
         sendGeneric: "send generic",
+        providerApiKeyMissing: "provider key missing",
         providerAuthFailed: "provider auth",
         providerQuotaExhausted: "provider quota",
         providerRateLimited: "provider rate",
@@ -53,6 +54,12 @@ describe("formatEnvelope", () => {
     ).toEqual({ text: "provider auth" });
   });
 
+  it("shows missing-key provider errors separately from invalid keys", () => {
+    expect(
+      formatEnvelope(providerEnvelope("You did not provide an API key.")),
+    ).toEqual({ text: "provider key missing" });
+  });
+
   it("does not offer retry for quota exhaustion", () => {
     expect(
       formatEnvelope(providerEnvelope("insufficient_quota")),
@@ -78,4 +85,3 @@ describe("formatEnvelope", () => {
     ).toEqual({ text: "provider context" });
   });
 });
-

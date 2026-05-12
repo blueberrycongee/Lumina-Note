@@ -1499,6 +1499,8 @@ export default {
       sendNetwork: "網路連線失敗，請檢查網路後重試",
       sendAuth: "API 金鑰無效或已過期，請至設定檢查",
       sendGeneric: "傳送訊息失敗，請重試",
+      providerApiKeyMissing:
+        "尚未設定 API Key，請開啟 AI 設定新增。",
       providerAuthFailed:
         "API Key 無效或已過期，請檢查 AI 設定。",
       providerQuotaExhausted:

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useAIStore } from "@/stores/useAIStore";
 import { useAgentPrefs } from "@/stores/useAgentPrefs";
 import type { AIConfig } from "@/services/ai/ai";
+import { formatProviderRuntimeErrorMessage } from "@/services/ai/provider-runtime-error";
 import {
   MIMO_ENDPOINTS,
   PROVIDER_MODELS,
@@ -254,9 +255,18 @@ export function AISettingsContent() {
 
   // 测试连接状态
   const [testResult, setTestResult] = useState<TestResult>({ status: "idle" });
+  const providerErrorMessages = t.agentMessage.errors;
 
   // 解析错误信息
   const parseError = useCallback((error: unknown): string => {
+    const providerMessage = formatProviderRuntimeErrorMessage(
+      error,
+      providerErrorMessages,
+    );
+    if (providerMessage) {
+      return providerMessage;
+    }
+
     const errorStr = String(error);
     const errorLower = errorStr.toLowerCase();
 
@@ -285,7 +295,7 @@ export function AISettingsContent() {
 
     // 返回原始错误（截断过长的）
     return errorStr.length > 100 ? errorStr.slice(0, 100) + "..." : errorStr;
-  }, [errorMessages]);
+  }, [errorMessages, providerErrorMessages]);
 
   // 测试 API 连接
   const testConnection = useCallback(async () => {

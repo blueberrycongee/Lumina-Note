@@ -1538,6 +1538,8 @@ export default {
       sendNetwork: "Connection failed. Check your network and try again.",
       sendAuth: "Your API key is invalid or expired. Check Settings.",
       sendGeneric: "Couldn't send your message. Please try again.",
+      providerApiKeyMissing:
+        "No API key is configured yet. Open AI Settings to add one.",
       providerAuthFailed:
         "The API key is invalid or expired. Check AI Settings.",
       providerQuotaExhausted:

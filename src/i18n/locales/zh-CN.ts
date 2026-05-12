@@ -1500,6 +1500,8 @@ export default {
       sendAuth: "API 密钥无效或已过期，请到设置中检查",
       sendGeneric: "发送消息失败，请重试",
       // AI 服务返回的错误
+      providerApiKeyMissing:
+        "还没有配置 API Key，请打开 AI 设置添加。",
       providerAuthFailed:
         "API Key 无效或已过期，请检查 AI 设置。",
       providerQuotaExhausted:

@@ -1,4 +1,5 @@
 export type ProviderRuntimeError =
+  | { type: "api_key_missing" }
   | { type: "auth_failed" }
   | { type: "quota_exhausted" }
   | { type: "rate_limited"; retryAfterSeconds?: number }
@@ -10,6 +11,22 @@ export type ProviderRuntimeError =
   | { type: "network_unreachable" }
   | { type: "provider_overloaded" }
   | { type: "unknown" };
+
+export type ProviderRuntimeErrorMessages = {
+  providerApiKeyMissing: string;
+  providerAuthFailed: string;
+  providerQuotaExhausted: string;
+  providerRateLimited: string;
+  providerRateLimitedWithDelay: string;
+  providerModelNotFound: string;
+  providerModelAccessDenied: string;
+  providerContextTooLarge: string;
+  providerThinkingNotSupported: string;
+  providerStreamLost: string;
+  providerNetwork: string;
+  providerOverloaded: string;
+  providerGeneric: string;
+};
 
 export function classifyProviderRuntimeError(
   error: unknown,
@@ -28,10 +45,23 @@ export function classifyProviderRuntimeError(
 
   if (
     text.includes("event stream") ||
-    text.includes("connection failed") ||
-    text.includes("stream disconnected")
+    text.includes("stream disconnected") ||
+    (text.includes("stream") && text.includes("connection failed"))
   ) {
     return { type: "stream_lost" };
+  }
+
+  if (includesAny(text, [
+    "api key not set",
+    "api key is required",
+    "did not provide an api key",
+    "missing api key",
+    "no api key",
+    "no api key configured",
+    "not provide an api key",
+    "without an api key",
+  ])) {
+    return { type: "api_key_missing" };
   }
 
   if (status === 401 || status === 403 || includesAny(text, [
@@ -105,6 +135,7 @@ export function classifyProviderRuntimeError(
 
   if (includesAny(text, [
     "network error",
+    "connection failed",
     "failed to fetch",
     "econnrefused",
     "enotfound",
@@ -116,6 +147,53 @@ export function classifyProviderRuntimeError(
   }
 
   return { type: "unknown" };
+}
+
+export function formatClassifiedProviderRuntimeError(
+  error: ProviderRuntimeError,
+  messages: ProviderRuntimeErrorMessages,
+): string | undefined {
+  switch (error.type) {
+    case "api_key_missing":
+      return messages.providerApiKeyMissing;
+    case "auth_failed":
+      return messages.providerAuthFailed;
+    case "quota_exhausted":
+      return messages.providerQuotaExhausted;
+    case "rate_limited":
+      return error.retryAfterSeconds !== undefined
+        ? messages.providerRateLimitedWithDelay.replace(
+            "{seconds}",
+            String(error.retryAfterSeconds),
+          )
+        : messages.providerRateLimited;
+    case "model_not_found":
+      return messages.providerModelNotFound;
+    case "model_access_denied":
+      return messages.providerModelAccessDenied;
+    case "context_too_large":
+      return messages.providerContextTooLarge;
+    case "thinking_not_supported":
+      return messages.providerThinkingNotSupported;
+    case "stream_lost":
+      return messages.providerStreamLost;
+    case "network_unreachable":
+      return messages.providerNetwork;
+    case "provider_overloaded":
+      return messages.providerOverloaded;
+    case "unknown":
+      return undefined;
+  }
+}
+
+export function formatProviderRuntimeErrorMessage(
+  error: unknown,
+  messages: ProviderRuntimeErrorMessages,
+): string | undefined {
+  return formatClassifiedProviderRuntimeError(
+    classifyProviderRuntimeError(error),
+    messages,
+  );
 }
 
 function includesAny(text: string, patterns: string[]): boolean {
@@ -188,4 +266,3 @@ function appendString(parts: string[], value: unknown): void {
     }
   }
 }
-
