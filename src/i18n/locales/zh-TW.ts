@@ -1471,6 +1471,7 @@ export default {
     thinkingGroup: "思考過程",
     working: "正在工作中",
     workCompleted: "已完成",
+    workDuration: "步驟耗時 {duration}",
     imageGeneratingTitle: "正在生成圖片",
     imageGeneratingDescription:
       "正在把提示詞、比例和參考圖交給圖像模型，完成後會自動儲存到 vault。",

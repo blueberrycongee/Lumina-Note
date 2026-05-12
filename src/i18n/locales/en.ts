@@ -1509,6 +1509,7 @@ export default {
     thinkingGroup: "Thinking",
     working: "Working",
     workCompleted: "Completed",
+    workDuration: "Step time {duration}",
     imageGeneratingTitle: "Generating image",
     imageGeneratingDescription:
       "Sending the refined prompt, aspect ratio, and references to the image model. The result will be saved to the vault.",

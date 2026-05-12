@@ -186,10 +186,10 @@ describe("AgentMessageRenderer", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: /正在工作中 · 0:30/ }),
+      screen.getByRole("button", { name: /正在工作中.*0:30/ }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /正在工作中 · 0:02/ }),
+      screen.queryByRole("button", { name: /正在工作中.*0:02/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -230,14 +230,14 @@ describe("AgentMessageRenderer", () => {
       }),
     );
 
-    const summary = screen.getByRole("button", { name: "已完成" });
+    const summary = screen.getByRole("button", { name: /已完成.*1 个步骤/ });
     expect(summary).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /0:28 · 1 个步骤/ }),
+      screen.queryByRole("button", { name: /0:28/ }),
     ).not.toBeInTheDocument();
 
     fireEvent.click(summary);
-    expect(screen.getByText("0:28 · 1 个步骤")).toBeInTheDocument();
+    expect(screen.getByText("步骤耗时 0:28")).toBeInTheDocument();
   });
 
   it("copies visible user prompt and assistant reply text", async () => {

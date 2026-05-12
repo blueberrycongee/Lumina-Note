@@ -1498,6 +1498,7 @@ export default {
     thinkingGroup: "思考プロセス",
     working: "実行中",
     workCompleted: "完了",
+    workDuration: "ステップ所要時間 {duration}",
     imageGeneratingTitle: "画像を生成中",
     imageGeneratingDescription:
       "整えたプロンプト、比率、参照画像を画像モデルに送信しています。完了すると vault に保存されます。",

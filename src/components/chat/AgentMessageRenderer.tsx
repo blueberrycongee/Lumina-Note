@@ -1700,16 +1700,15 @@ const GeneratedImageCard = memo(function GeneratedImageCard({
 /**
  * WorkSession：每轮里所有非文本/非 diff 的中间步骤的统一外壳。
  *
- * 设计要点：
- * - 默认折叠。用户只看到一行：呼吸点 + "Working · 0:42"（进行中）
- *   或 check + "Completed"（已完成）。
- * - 进行中的时间永远使用整轮请求开始时间，避免内部 thinking/tool
- *   步骤切换时把用户看到的等待时间重置。
- * - 点开后展示组内的 ThinkingCollapsible / ToolCallCollapsible /
- *   分组折叠 —— 那些原本就独立可折叠的卡片留在原位，只是被一层
- *   外壳收起来不再明晃晃地堆在主流中。
- * - "进行中" 推断自里面的条目：任一思考还在 streaming 或工具还没
- *   出 result，整段就视为进行中。
+ * Design notes:
+ * - Collapsed by default. Running rows show "Working" plus the live turn
+ *   timer; completed rows show "Completed" plus the step count.
+ * - The running timer always uses the full turn start time, so internal
+ *   thinking/tool transitions do not reset the user-facing wait time.
+ * - Expanded content keeps ThinkingCollapsible / ToolCallCollapsible and
+ *   grouped collapsibles in place behind one quiet outer shell.
+ * - "In progress" is inferred from child items: streaming thinking or any
+ *   tool without a result keeps the whole session active.
  */
 const WorkSession = memo(function WorkSession({
   items,
@@ -1758,32 +1757,70 @@ const WorkSession = memo(function WorkSession({
     String(stepCount),
   );
 
-  let headerLabel: string;
+  const isComplete = !inProgress;
+  let statusLabel: string;
+  let metaLabel: string | null = null;
+  const metaIsDuration = showLive;
+
   if (showLive) {
-    headerLabel = `${t.agentMessage.working} · ${formatElapsed(elapsed)}`;
+    statusLabel = t.agentMessage.working;
+    metaLabel = formatElapsed(elapsed);
   } else if (inProgress && isRunning) {
-    headerLabel = t.agentMessage.working;
-  } else if (finalDurationSec !== null) {
-    headerLabel = t.agentMessage.workCompleted;
+    statusLabel = t.agentMessage.working;
+  } else if (isComplete) {
+    statusLabel = t.agentMessage.workCompleted;
+    metaLabel = stepsLabel;
   } else {
-    headerLabel = inProgress ? stepsLabel : t.agentMessage.workCompleted;
+    statusLabel = t.agentMessage.working;
+    metaLabel = stepsLabel;
   }
 
+  const workDurationTemplate =
+    typeof t.agentMessage.workDuration === "string"
+      ? t.agentMessage.workDuration
+      : "{duration}";
+  const finalDurationLabel =
+    finalDurationSec !== null
+      ? workDurationTemplate.replace(
+          "{duration}",
+          formatElapsed(finalDurationSec),
+        )
+      : null;
+
   return (
-    <div className="text-xs text-muted-foreground">
+    <div className="text-ui-control text-muted-foreground">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 hover:text-foreground transition-colors py-0.5 w-full text-left"
+        aria-label={
+          metaLabel ? `${statusLabel} · ${metaLabel}` : statusLabel
+        }
+        className="group -ml-1 flex min-h-6 w-full items-center gap-1.5 rounded-ui-sm px-1 py-0.5 text-left transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       >
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {showLive ? (
-          <span className="streaming-dot" aria-hidden />
-        ) : inProgress ? (
-          <Loader2 size={12} className="animate-spin" />
+        {expanded ? (
+          <ChevronDown size={12} className="shrink-0" />
         ) : (
-          <Check size={12} className="text-success" />
+          <ChevronRight size={12} className="shrink-0" />
         )}
-        <span>{headerLabel}</span>
+        {showLive ? (
+          <span className="streaming-dot shrink-0" aria-hidden />
+        ) : inProgress ? (
+          <Loader2 size={12} className="shrink-0 animate-spin" />
+        ) : (
+          <Check size={12} className="shrink-0 text-success" />
+        )}
+        <span className="font-medium">{statusLabel}</span>
+        {metaLabel && (
+          <span className="inline-flex min-w-0 items-center gap-1 text-ui-meta text-muted-foreground/70">
+            <span className="text-muted-foreground/45">·</span>
+            <span
+              className={
+                metaIsDuration ? "font-mono tabular-nums leading-none" : ""
+              }
+            >
+              {metaLabel}
+            </span>
+          </span>
+        )}
       </button>
       <AnimatePresence>
         {expanded && (
@@ -1794,9 +1831,9 @@ const WorkSession = memo(function WorkSession({
             className="overflow-hidden"
           >
             <div className="pl-5 py-1 space-y-1 border-l border-border ml-1.5">
-              {!inProgress && finalDurationSec !== null && (
-                <div className="text-xs text-muted-foreground/70">
-                  {formatElapsed(finalDurationSec)} · {stepsLabel}
+              {!inProgress && finalDurationLabel && (
+                <div className="text-ui-meta text-muted-foreground/70">
+                  {finalDurationLabel}
                 </div>
               )}
               {items.map((item, i) => {
