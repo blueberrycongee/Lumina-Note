@@ -337,6 +337,41 @@ describe("CodeMirror live markdown rendering polish", () => {
     ).toBe(false);
   });
 
+  it("does not convert a normal table drag into row selection", () => {
+    const content =
+      "Intro\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |\n\nOutro";
+    const { container, view } = setupEditor(content, "live");
+    const table = container.querySelector<HTMLElement>(".cm-table-editor");
+    const cell = table?.querySelector<HTMLElement>("td");
+    const editor = container.querySelector<HTMLElement>(".cm-editor");
+
+    expect(table).not.toBeNull();
+    expect(cell).not.toBeNull();
+    expect(editor).not.toBeNull();
+
+    const before = view.state.selection.main;
+
+    fireEvent.mouseDown(cell!, { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.mouseMove(view.dom.ownerDocument, {
+      buttons: 1,
+      clientX: 10,
+      clientY: 80,
+    });
+    fireEvent.mouseUp(view.dom.ownerDocument, {
+      button: 0,
+      clientX: 10,
+      clientY: 80,
+    });
+
+    const after = view.state.selection.main;
+    expect(after.anchor).toBe(before.anchor);
+    expect(after.head).toBe(before.head);
+    expect(editor!.classList.contains("cm-table-row-drag-selecting")).toBe(
+      false,
+    );
+    expect(container.querySelector(".cm-table-row-selected")).toBeNull();
+  });
+
   it.each(["live", "reading"] as const)(
     "uses default nested callout titles in %s mode without duplicating body text",
     (mode) => {

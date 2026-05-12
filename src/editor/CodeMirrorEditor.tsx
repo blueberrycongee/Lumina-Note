@@ -366,12 +366,12 @@ const createEditorTheme = (fontSize: number) =>
         userSelect: "none !important",
         WebkitUserSelect: "none !important",
       },
-    "&.cm-table-row-drag-selecting .cm-table-editor *::selection, &.cm-table-row-drag-selecting .cm-table-widget *::selection, &.cm-table-row-selection-active .cm-table-editor *::selection, &.cm-table-row-selection-active .cm-table-widget *::selection":
+    "&.cm-table-row-selection-active .cm-table-editor *::selection, &.cm-table-row-selection-active .cm-table-widget *::selection":
       {
         backgroundColor: "transparent !important",
         color: "inherit !important",
       },
-    "&.cm-table-row-drag-selecting .cm-table-editor, &.cm-table-row-drag-selecting .cm-table-editor *, &.cm-table-row-drag-selecting .cm-table-widget, &.cm-table-row-drag-selecting .cm-table-widget *, &.cm-table-row-selection-active .cm-table-editor, &.cm-table-row-selection-active .cm-table-editor *, &.cm-table-row-selection-active .cm-table-widget, &.cm-table-row-selection-active .cm-table-widget *":
+    "&.cm-table-row-selection-active .cm-table-editor, &.cm-table-row-selection-active .cm-table-editor *, &.cm-table-row-selection-active .cm-table-widget, &.cm-table-row-selection-active .cm-table-widget *":
       {
         userSelect: "none !important",
         WebkitUserSelect: "none !important",
@@ -4018,14 +4018,6 @@ type TableSourceRange = {
   rows: TableRowSourceRange[];
 };
 
-type TableRowHit = {
-  table: TableSourceRange;
-  row: TableRowSourceRange;
-  tableRect: DOMRect;
-};
-
-type TableDragAnchorSide = "above" | "below" | "inside";
-
 function collectTableSourceRanges(state: EditorState): TableSourceRange[] {
   const tables: TableSourceRange[] = [];
 
@@ -4112,116 +4104,9 @@ function syncRenderedTableRowSelection(view: EditorView): void {
   );
 }
 
-function findRenderedTableRowAtPoint(
-  view: EditorView,
-  clientX: number,
-  clientY: number,
-): TableRowHit | null {
-  const tables = collectTableSourceRanges(view.state);
-  const renderedTables = Array.from(
-    view.contentDOM.querySelectorAll<HTMLElement>(
-      ".cm-table-editor, .cm-table-widget",
-    ),
-  );
-
-  for (let tableIndex = 0; tableIndex < renderedTables.length; tableIndex += 1) {
-    const tableEl = renderedTables[tableIndex];
-    const table = tables[tableIndex];
-    if (!table) continue;
-
-    const rect = tableEl.getBoundingClientRect();
-    if (
-      clientX < rect.left ||
-      clientX > rect.right ||
-      clientY < rect.top ||
-      clientY >= rect.bottom
-    ) {
-      continue;
-    }
-
-    const rows = getTableRows(tableEl);
-    for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-      const row = table.rows[rowIndex];
-      if (!row) continue;
-
-      const rowRect = rows[rowIndex].getBoundingClientRect();
-      if (clientY >= rowRect.top && clientY < rowRect.bottom) {
-        return { table, row, tableRect: rect };
-      }
-    }
-  }
-
-  return null;
-}
-
-function tableRowSelectionForDrag(
-  anchorPos: number,
-  anchorRow: TableRowSourceRange | null,
-  anchorSide: TableDragAnchorSide,
-  targetRow: TableRowSourceRange,
-): { anchor: number; head: number } {
-  if (anchorRow) {
-    if (targetRow.from < anchorRow.from) {
-      return { anchor: anchorRow.to, head: targetRow.from };
-    }
-    return { anchor: anchorRow.from, head: targetRow.to };
-  }
-
-  if (anchorSide === "below") {
-    return { anchor: anchorPos, head: targetRow.from };
-  }
-
-  return { anchor: anchorPos, head: targetRow.to };
-}
-
-function tableDragAnchorSide(
-  anchorY: number,
-  hit: TableRowHit,
-): TableDragAnchorSide {
-  if (anchorY < hit.tableRect.top) return "above";
-  if (anchorY >= hit.tableRect.bottom) return "below";
-  return "inside";
-}
-
-function dispatchTableRowSelection(
-  view: EditorView,
-  selection: { anchor: number; head: number },
-): void {
-  const current = view.state.selection.main;
-  if (current.anchor === selection.anchor && current.head === selection.head)
-    return;
-
-  view.dispatch({
-    selection,
-    userEvent: "select.pointer",
-  });
-}
-
 const tableRowSelectionPlugin = ViewPlugin.fromClass(
   class {
-    private mouseDown:
-      | {
-          x: number;
-          y: number;
-          anchorPos: number;
-          anchorRow: TableRowSourceRange | null;
-        }
-      | null = null;
-
-    private dragging = false;
-
     constructor(private readonly view: EditorView) {
-      this.view.contentDOM.addEventListener("mousedown", this.onMouseDown, true);
-      this.view.dom.ownerDocument.addEventListener(
-        "mousemove",
-        this.onMouseMove,
-        true,
-      );
-      this.view.dom.ownerDocument.addEventListener(
-        "mouseup",
-        this.onMouseUp,
-        true,
-      );
       syncRenderedTableRowSelection(this.view);
     }
 
@@ -4233,118 +4118,6 @@ const tableRowSelectionPlugin = ViewPlugin.fromClass(
 
     destroy() {
       clearRenderedTableRowSelection(this.view);
-      this.view.contentDOM.removeEventListener(
-        "mousedown",
-        this.onMouseDown,
-        true,
-      );
-      this.view.dom.ownerDocument.removeEventListener(
-        "mousemove",
-        this.onMouseMove,
-        true,
-      );
-      this.view.dom.ownerDocument.removeEventListener(
-        "mouseup",
-        this.onMouseUp,
-        true,
-      );
-      this.view.dom.classList.remove("cm-table-row-drag-selecting");
-    }
-
-    private onMouseDown = (event: MouseEvent) => {
-      if (event.button !== 0) return;
-
-      const hit = findRenderedTableRowAtPoint(
-        this.view,
-        event.clientX,
-        event.clientY,
-      );
-      const coordsPos = this.view.posAtCoords({
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      this.mouseDown = {
-        x: event.clientX,
-        y: event.clientY,
-        anchorPos: coordsPos ?? this.view.state.selection.main.head,
-        anchorRow: hit?.row ?? null,
-      };
-      this.dragging = false;
-    };
-
-    private onMouseMove = (event: MouseEvent) => {
-      if (!this.mouseDown || (event.buttons & 1) === 0) return;
-
-      const dx = Math.abs(event.clientX - this.mouseDown.x);
-      const dy = Math.abs(event.clientY - this.mouseDown.y);
-      if (!this.dragging && dx < 4 && dy < 4) return;
-
-      const hit = findRenderedTableRowAtPoint(
-        this.view,
-        event.clientX,
-        event.clientY,
-      );
-      if (!hit && !this.mouseDown.anchorRow && !this.dragging) return;
-
-      this.dragging = true;
-      this.setRowDragActive(true);
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (hit) {
-        dispatchTableRowSelection(
-          this.view,
-          tableRowSelectionForDrag(
-            this.mouseDown.anchorPos,
-            this.mouseDown.anchorRow,
-            tableDragAnchorSide(this.mouseDown.y, hit),
-            hit.row,
-          ),
-        );
-        return;
-      }
-
-      const coordsPos = this.view.posAtCoords({
-        x: event.clientX,
-        y: event.clientY,
-      });
-      if (coordsPos === null) return;
-
-      if (!this.mouseDown.anchorRow) {
-        dispatchTableRowSelection(this.view, {
-          anchor: this.mouseDown.anchorPos,
-          head: coordsPos,
-        });
-        return;
-      }
-
-      const anchor =
-        coordsPos < this.mouseDown.anchorRow.from
-          ? this.mouseDown.anchorRow.to
-          : this.mouseDown.anchorRow.from;
-      dispatchTableRowSelection(this.view, { anchor, head: coordsPos });
-    };
-
-    private onMouseUp = (event: MouseEvent) => {
-      if (this.dragging) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
-      this.mouseDown = null;
-      this.dragging = false;
-      this.setRowDragActive(false);
-      syncRenderedTableRowSelection(this.view);
-    };
-
-    private setRowDragActive(active: boolean) {
-      this.view.dom.classList.toggle("cm-table-row-drag-selecting", active);
-      const isMouseSelecting = this.view.state.field(mouseSelectingField, false);
-      if (active && !isMouseSelecting) {
-        this.view.dispatch({ effects: setMouseSelecting.of(true) });
-      } else if (!active && isMouseSelecting) {
-        this.view.dispatch({ effects: setMouseSelecting.of(false) });
-      }
     }
   },
 );
