@@ -1508,6 +1508,7 @@ export default {
     toolGroup: "Tool calls",
     thinkingGroup: "Thinking",
     working: "Working",
+    workCompleted: "Completed",
     imageGeneratingTitle: "Generating image",
     imageGeneratingDescription:
       "Sending the refined prompt, aspect ratio, and references to the image model. The result will be saved to the vault.",

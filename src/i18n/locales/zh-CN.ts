@@ -1469,6 +1469,7 @@ export default {
     toolGroup: "工具调用",
     thinkingGroup: "思考过程",
     working: "正在工作中",
+    workCompleted: "已完成",
     imageGeneratingTitle: "正在生成图片",
     imageGeneratingDescription:
       "正在把提示词、比例和参考图交给图像模型，完成后会自动保存到 vault。",

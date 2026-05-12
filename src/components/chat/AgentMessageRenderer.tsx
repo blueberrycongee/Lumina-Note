@@ -1545,9 +1545,7 @@ const ImageGenerationToolProgress = memo(function ImageGenerationToolProgress({
   llmRequestStartTime?: number | null;
   isRunning?: boolean;
 }) {
-  const start =
-    tool.time?.start ??
-    (llmRequestStartTime != null ? llmRequestStartTime : null);
+  const start = llmRequestStartTime != null ? llmRequestStartTime : null;
   const showLive = !!isRunning && start != null;
   const [elapsed, setElapsed] = useState(() =>
     showLive
@@ -1704,7 +1702,9 @@ const GeneratedImageCard = memo(function GeneratedImageCard({
  *
  * 设计要点：
  * - 默认折叠。用户只看到一行：呼吸点 + "Working · 0:42"（进行中）
- *   或 check + "5 步骤"（已完成）。
+ *   或 check + "Completed"（已完成）。
+ * - 进行中的时间永远使用整轮请求开始时间，避免内部 thinking/tool
+ *   步骤切换时把用户看到的等待时间重置。
  * - 点开后展示组内的 ThinkingCollapsible / ToolCallCollapsible /
  *   分组折叠 —— 那些原本就独立可折叠的卡片留在原位，只是被一层
  *   外壳收起来不再明晃晃地堆在主流中。
@@ -1727,12 +1727,7 @@ const WorkSession = memo(function WorkSession({
   const inProgress = isWorkSessionInProgress(items);
   const timeRange = getSessionTimeRange(items);
 
-  // For the live tick, prefer the earliest item's start (more accurate than
-  // llmRequestStartTime, which represents the whole turn) and fall back to
-  // llmRequestStartTime if no item carries timing data yet.
-  const liveStart =
-    timeRange.start ??
-    (llmRequestStartTime != null ? llmRequestStartTime : null);
+  const liveStart = llmRequestStartTime != null ? llmRequestStartTime : null;
   const showLive = inProgress && !!isRunning && liveStart != null;
 
   const [elapsed, setElapsed] = useState(() =>
@@ -1766,10 +1761,12 @@ const WorkSession = memo(function WorkSession({
   let headerLabel: string;
   if (showLive) {
     headerLabel = `${t.agentMessage.working} · ${formatElapsed(elapsed)}`;
+  } else if (inProgress && isRunning) {
+    headerLabel = t.agentMessage.working;
   } else if (finalDurationSec !== null) {
-    headerLabel = `${formatElapsed(finalDurationSec)} · ${stepsLabel}`;
+    headerLabel = t.agentMessage.workCompleted;
   } else {
-    headerLabel = stepsLabel;
+    headerLabel = inProgress ? stepsLabel : t.agentMessage.workCompleted;
   }
 
   return (
@@ -1797,6 +1794,11 @@ const WorkSession = memo(function WorkSession({
             className="overflow-hidden"
           >
             <div className="pl-5 py-1 space-y-1 border-l border-border ml-1.5">
+              {!inProgress && finalDurationSec !== null && (
+                <div className="text-xs text-muted-foreground/70">
+                  {formatElapsed(finalDurationSec)} · {stepsLabel}
+                </div>
+              )}
               {items.map((item, i) => {
                 const key = `work-${i}`;
                 if (item.type === "thinking") {

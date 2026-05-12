@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createElement } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { invoke } from "@/lib/hostBridge";
 import { useFileStore } from "@/stores/useFileStore";
@@ -28,6 +28,10 @@ describe("AgentMessageRenderer", () => {
       value: { writeText },
     });
     useFileStore.setState({ vaultPath: null, currentFile: null });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("hides the image-mode agent wrapper from user-facing chat bubbles", () => {
@@ -140,6 +144,100 @@ describe("AgentMessageRenderer", () => {
       workSummary.compareDocumentPosition(progress as Element) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("uses the turn start time for the running work summary", () => {
+    const now = new Date("2026-05-12T00:00:30.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    render(
+      createElement(AgentMessageRenderer, {
+        isRunning: true,
+        llmRequestStartTime: now.getTime() - 30_000,
+        messages: [
+          {
+            id: "msg-user",
+            role: "user",
+            content: "Read the current note",
+            rawParts: [],
+          },
+          {
+            id: "msg-assistant",
+            role: "assistant",
+            content: "",
+            rawParts: [
+              {
+                id: "part-tool",
+                sessionID: "test-session",
+                messageID: "msg-assistant",
+                type: "tool",
+                tool: "read",
+                state: {
+                  status: "running",
+                  input: { file: "note.md" },
+                  time: { start: now.getTime() - 2_000 },
+                },
+              } as never,
+            ],
+          },
+        ],
+      }),
+    );
+
+    expect(
+      screen.getByRole("button", { name: /正在工作中 · 0:30/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /正在工作中 · 0:02/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps internal work duration out of the completed summary", () => {
+    const now = new Date("2026-05-12T00:00:30.000Z").getTime();
+
+    render(
+      createElement(AgentMessageRenderer, {
+        isRunning: false,
+        messages: [
+          {
+            id: "msg-user",
+            role: "user",
+            content: "Read the current note",
+            rawParts: [],
+          },
+          {
+            id: "msg-assistant",
+            role: "assistant",
+            content: "",
+            rawParts: [
+              {
+                id: "part-tool",
+                sessionID: "test-session",
+                messageID: "msg-assistant",
+                type: "tool",
+                tool: "read",
+                state: {
+                  status: "completed",
+                  input: { file: "note.md" },
+                  output: "done",
+                  time: { start: now - 28_000, end: now },
+                },
+              } as never,
+            ],
+          },
+        ],
+      }),
+    );
+
+    const summary = screen.getByRole("button", { name: "已完成" });
+    expect(summary).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /0:28 · 1 个步骤/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(summary);
+    expect(screen.getByText("0:28 · 1 个步骤")).toBeInTheDocument();
   });
 
   it("copies visible user prompt and assistant reply text", async () => {
