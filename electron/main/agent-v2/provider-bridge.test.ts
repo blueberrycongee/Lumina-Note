@@ -216,4 +216,38 @@ describe("buildOpencodeBridge", () => {
       output: 65_536,
     });
   });
+
+  it("uses intent classification before reading ambient vault files", async () => {
+    const bridge = await buildOpencodeBridge(
+      makeProviderSettings({
+        provider: "mimo",
+        modelId: "mimo-v2.5-pro",
+      }),
+    );
+
+    const config = JSON.parse(bridge?.config ?? "{}");
+    const prompt = config.agent.build.prompt as string;
+    expect(prompt).toContain("Before using tools, classify the current turn");
+    expect(prompt).toContain("Direct conversation");
+    expect(prompt).toContain("Vault-grounded answer");
+    expect(prompt).toContain("Ambient app state is not consent");
+    expect(prompt).toContain("stay in Direct conversation and ask whether the user wants existing files used");
+    expect(prompt).toContain("gather evidence before the final user-facing answer");
+    expect(prompt).toContain("If your answer already asks clarifying questions, omit follow-up prompt links");
+  });
+
+  it("sets a plain professional tone without stripping source emojis", async () => {
+    const bridge = await buildOpencodeBridge(
+      makeProviderSettings({
+        provider: "mimo",
+        modelId: "mimo-v2.5-pro",
+      }),
+    );
+
+    const config = JSON.parse(bridge?.config ?? "{}");
+    const prompt = config.agent.build.prompt as string;
+    expect(prompt).toContain("use plain, professional Markdown");
+    expect(prompt).toContain("Avoid emojis and decorative symbols in normal chat");
+    expect(prompt).toContain("Preserve emojis only when they are part of user-provided text");
+  });
 });
