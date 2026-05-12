@@ -390,6 +390,75 @@ describe("MainAIChatShell", () => {
     }
   });
 
+  it("scrolls to the bottom when switching sessions after the user scrolled up", async () => {
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        callback(performance.now());
+        return 1;
+      });
+    const cancelAnimationFrameSpy = vi
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation(() => undefined);
+
+    try {
+      useOpencodeAgent.setState({
+        currentSessionId: "session-a",
+        status: "idle",
+        messages: [
+          {
+            id: "session-a-user",
+            role: "user",
+            content: "old session",
+            rawParts: [],
+          },
+        ],
+      });
+
+      render(<MainAIChatShell />);
+
+      const scrollContainer = document.querySelector(
+        ".scrollbar-thin",
+      ) as HTMLElement | null;
+      expect(scrollContainer).toBeTruthy();
+
+      let scrollHeight = 1000;
+      Object.defineProperty(scrollContainer, "scrollHeight", {
+        configurable: true,
+        get: () => scrollHeight,
+      });
+      Object.defineProperty(scrollContainer, "clientHeight", {
+        configurable: true,
+        get: () => 500,
+      });
+
+      scrollContainer!.scrollTop = 500;
+      fireEvent.scroll(scrollContainer!);
+      scrollContainer!.scrollTop = 300;
+      fireEvent.scroll(scrollContainer!);
+
+      scrollHeight = 1400;
+      act(() => {
+        useOpencodeAgent.setState({
+          currentSessionId: "session-b",
+          messages: [
+            {
+              id: "session-b-user",
+              role: "user",
+              content: "new session",
+              rawParts: [],
+            },
+          ],
+        });
+      });
+
+      await waitFor(() => expect(scrollContainer!.scrollTop).toBe(900));
+    } finally {
+      requestAnimationFrameSpy.mockRestore();
+      cancelAnimationFrameSpy.mockRestore();
+    }
+  });
+
   it("sends a lumina prompt link through opencode when input is empty", async () => {
     const startTask = vi.fn(async () => undefined);
     useOpencodeAgent.setState({

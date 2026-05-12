@@ -772,6 +772,18 @@ export function MainAIChatShell() {
   }, []);
 
   useEffect(() => {
+    isNearBottom.current = true;
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+    const rafId = requestAnimationFrame(() => {
+      const current = scrollContainerRef.current;
+      if (!current) return;
+      scrollStickyContainerToBottom(current, lastScrollTopRef);
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [agentSessionId]);
+
+  useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer || !isNearBottom.current) return;
     const rafId = requestAnimationFrame(() => {
