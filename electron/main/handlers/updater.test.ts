@@ -51,6 +51,8 @@ describe('update_start_resumable_install', () => {
     const autoUpdater = buildFakeUpdater({
       downloadUpdate: vi.fn(async () => {
         autoUpdater.emit('download-progress', { transferred: 50, total: 100, percent: 50 })
+        autoUpdater.emit('update-verifying', {})
+        autoUpdater.emit('update-installing', {})
         autoUpdater.emit('update-downloaded', {})
         return ['installer.exe']
       }),
@@ -59,20 +61,23 @@ describe('update_start_resumable_install', () => {
     const taskId = await handlers.update_start_resumable_install({ expectedVersion: '2.0.0' })
     expect(typeof taskId).toBe('string')
     const types = events.map((e) => (e.payload as { type: string }).type)
-    expect(types).toEqual(['started', 'progress', 'ready'])
+    expect(types).toEqual(['started', 'progress', 'verifying', 'installing', 'ready'])
   })
 
   it('emits error when downloadUpdate throws', async () => {
+    const error = new Error('network down') as NodeJS.ErrnoException
+    error.code = 'ECONNRESET'
     const autoUpdater = buildFakeUpdater({
       downloadUpdate: vi.fn(async () => {
-        throw new Error('network down')
+        throw error
       }),
     })
     const { handlers, events } = build({ autoUpdater })
     await handlers.update_start_resumable_install({ expectedVersion: '2.0.0' })
-    const last = events[events.length - 1]?.payload as { type: string; errorMessage: string }
+    const last = events[events.length - 1]?.payload as { type: string; errorMessage: string; errorCode: string }
     expect(last.type).toBe('error')
     expect(last.errorMessage).toMatch(/network down/)
+    expect(last.errorCode).toBe('ECONNRESET')
   })
 })
 

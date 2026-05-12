@@ -83,7 +83,7 @@ describe("UpdateChecker", () => {
 
     const view = render(<UpdateChecker />);
 
-    fireEvent.click(screen.getByRole("button", { name: /下载并安装/i }));
+    fireEvent.click(screen.getByRole("button", { name: /下载更新/i }));
 
     await waitFor(() => {
       expect(downloadAndInstall).toHaveBeenCalledTimes(1);
@@ -132,8 +132,48 @@ describe("UpdateChecker", () => {
 
     render(<UpdateChecker />);
 
-    expect(screen.getByRole("button", { name: "重启应用" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "重启并更新" })).toBeInTheDocument();
+    expect(screen.queryByText("Update telemetry")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "显示诊断详情" }));
+
     expect(screen.getByText("Update telemetry")).toBeInTheDocument();
+  });
+
+  it("maps macOS location errors to user-facing guidance", () => {
+    useUpdateStore.setState({
+      availableUpdate: {
+        version: "9.9.9",
+        body: "test notes",
+        date: "2026-03-05",
+      },
+      installTelemetry: {
+        sessionId: 3,
+        taskId: "task-error",
+        version: "9.9.9",
+        phase: "error",
+        attempt: 1,
+        progress: 0,
+        downloadedBytes: 0,
+        contentLength: 0,
+        startedAt: 1,
+        updatedAt: 1,
+        finishedAt: 1,
+        error: "Cannot install updates from this app location. Move Lumina Note to /Applications and try again.",
+        errorCode: "UPDATE_LOCATION_NOT_WRITABLE",
+        resumable: true,
+        retryDelayMs: null,
+        lastHttpStatus: null,
+        canResumeAfterRestart: true,
+        capability: "supported",
+      },
+    });
+
+    render(<UpdateChecker />);
+
+    expect(
+      screen.getByText("无法在当前位置自动更新。请先将 Lumina Note 拖到「应用程序」文件夹后再更新。"),
+    ).toBeInTheDocument();
   });
 
   it("shows unsupported instead of up-to-date outside Tauri", async () => {

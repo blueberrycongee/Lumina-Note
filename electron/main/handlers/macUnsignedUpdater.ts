@@ -25,6 +25,7 @@ const GITHUB_REPO = "Lumina-Note";
 const MAX_DOWNLOAD_ATTEMPTS = 3;
 const INITIAL_RETRY_DELAY_MS = 1_500;
 const INSTALL_WAIT_TIMEOUT_S = 30;
+const LOCATION_NOT_WRITABLE = "UPDATE_LOCATION_NOT_WRITABLE";
 
 export interface MacReleaseFile {
   url: string;
@@ -147,9 +148,11 @@ function assertInstallLocationWritable(): void {
   try {
     accessSync(dirname(getAppBundlePath()), constants.W_OK);
   } catch {
-    throw new Error(
+    const error = new Error(
       "Cannot install updates from this app location. Move Lumina Note to /Applications and try again.",
-    );
+    ) as NodeJS.ErrnoException;
+    error.code = LOCATION_NOT_WRITABLE;
+    throw error;
   }
 }
 
@@ -370,11 +373,13 @@ export class MacUnsignedUpdater
         });
       });
 
+      this.emit("update-verifying");
       const hash = await computeSha512(zipPath);
       if (hash !== zipFile.sha512) {
         throw new Error("SHA-512 verification failed for the downloaded update");
       }
 
+      this.emit("update-installing");
       await extractZip(zipPath, extractDir);
       const appName = readdirSync(extractDir).find((entry) =>
         entry.endsWith(".app"),

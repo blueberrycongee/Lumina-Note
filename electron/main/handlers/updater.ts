@@ -126,6 +126,18 @@ export function createUpdaterHandlers(
     emit('progress', next)
   })
 
+  autoUpdater.on('update-verifying', () => {
+    if (!current) return
+    const next = update({ stage: 'verifying', status: 'verifying' })
+    emit('verifying', next)
+  })
+
+  autoUpdater.on('update-installing', () => {
+    if (!current) return
+    const next = update({ stage: 'installing', status: 'installing' })
+    emit('installing', next)
+  })
+
   autoUpdater.on('update-downloaded', () => {
     if (!current) return
     const next = update({ stage: 'ready', status: 'ready' })
@@ -169,6 +181,10 @@ export function createUpdaterHandlers(
             stage: 'error',
             status: 'error',
             errorMessage: err instanceof Error ? err.message : String(err),
+            errorCode:
+              err instanceof Error
+                ? (err as NodeJS.ErrnoException).code ?? null
+                : null,
           })
           emit('error', next)
         }

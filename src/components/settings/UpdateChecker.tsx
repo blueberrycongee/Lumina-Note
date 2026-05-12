@@ -26,6 +26,7 @@ const UPDATE_DOWNLOAD_TIMEOUT_MS = 120_000;
 const UPDATE_DOWNLOAD_MAX_ATTEMPTS = 3;
 const UPDATE_DOWNLOAD_BASE_DELAY_MS = 1_500;
 const UPDATE_DOWNLOAD_MAX_DELAY_MS = 12_000;
+const LOCATION_NOT_WRITABLE = "UPDATE_LOCATION_NOT_WRITABLE";
 
 export function UpdateChecker() {
     const { t } = useLocaleStore();
@@ -50,6 +51,7 @@ export function UpdateChecker() {
 
     const [checkStatus, setCheckStatus] = useState<"idle" | "up-to-date" | "error" | "unsupported">("idle");
     const [checkError, setCheckError] = useState<string | null>(null);
+    const [showDiagnostics, setShowDiagnostics] = useState(false);
 
     const hasUpdate = availableUpdate !== null;
     const hasActiveInstallPhase =
@@ -63,7 +65,11 @@ export function UpdateChecker() {
     const effectiveInstallPhase =
         hasActiveInstallPhase || hasActionableTerminalPhase ? installTelemetry.phase : "idle";
     const status = effectiveInstallPhase !== "idle" ? effectiveInstallPhase : checkStatus;
-    const error = status === "error" ? installTelemetry.error || checkError : checkError;
+    const rawError = status === "error" ? installTelemetry.error || checkError : checkError;
+    const isLocationError =
+        installTelemetry.errorCode === LOCATION_NOT_WRITABLE ||
+        /Cannot install updates from this app location/i.test(rawError ?? "");
+    const error = isLocationError ? t.updateChecker.locationNotWritable : rawError;
     const progress = installTelemetry.progress;
     const downloadedSize =
         installTelemetry.downloadedBytes > 0
@@ -214,9 +220,9 @@ export function UpdateChecker() {
                 },
             });
             if (wasReady) {
-                // Real install path: hand control to electron-updater so
-                // the cached installer is actually applied. Plain relaunch()
-                // would skip the install and leave the app on the old version.
+                // Real install path: hand control to the platform updater so
+                // the prepared update is applied. Plain relaunch() would skip
+                // the install and leave the app on the old version.
                 await quitAndInstallUpdate();
             } else {
                 await relaunch();
@@ -334,6 +340,13 @@ export function UpdateChecker() {
                 </div>
             )}
 
+            {(status === "verifying" || status === "installing") && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-background/50 p-3 rounded-lg border border-border/50">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>{t.updateChecker.preparing}</span>
+                </div>
+            )}
+
             {/* 就绪提示 */}
             {status === "ready" && (
                 <div className="flex items-center gap-2 text-sm text-success bg-success/10 p-3 rounded-lg">
@@ -344,21 +357,32 @@ export function UpdateChecker() {
 
             {/* 观测信息（用于排查设置页关闭后的下载状态） */}
             {effectiveInstallPhase !== "idle" && (
-                <div className="text-xs text-muted-foreground bg-background/50 p-3 rounded-lg border border-border/50 space-y-1">
-                    <p className="font-medium text-foreground/80">Update telemetry</p>
-                    <p>
-                        session #{installTelemetry.sessionId} · phase {installTelemetry.phase} · attempt {installTelemetry.attempt}
-                    </p>
-                    {installTelemetry.taskId && <p>task: {installTelemetry.taskId}</p>}
-                    {installTelemetry.startedAt && <p>started: {new Date(installTelemetry.startedAt).toLocaleString()}</p>}
-                    {installTelemetry.updatedAt && <p>last event: {new Date(installTelemetry.updatedAt).toLocaleString()}</p>}
-                    {installTelemetry.finishedAt && <p>finished: {new Date(installTelemetry.finishedAt).toLocaleString()}</p>}
-                    {downloadedSize && <p>bytes: {downloadedSize}</p>}
-                    <p>resumable: {installTelemetry.resumable ? "yes" : "no"}</p>
-                    <p>server range: {installTelemetry.capability}</p>
-                    {installTelemetry.retryDelayMs !== null && <p>retry delay: {installTelemetry.retryDelayMs} ms</p>}
-                    {installTelemetry.lastHttpStatus !== null && <p>http status: {installTelemetry.lastHttpStatus}</p>}
-                    {installTelemetry.errorCode && <p>error code: {installTelemetry.errorCode}</p>}
+                <div className="text-xs text-muted-foreground pt-2 border-t border-border/50">
+                    <button
+                        type="button"
+                        onClick={() => setShowDiagnostics((value) => !value)}
+                        className="text-primary hover:underline"
+                    >
+                        {showDiagnostics ? t.updateChecker.hideDiagnostics : t.updateChecker.showDiagnostics}
+                    </button>
+                    {showDiagnostics && (
+                        <div className="mt-2 bg-background/50 p-3 rounded-lg border border-border/50 space-y-1">
+                            <p className="font-medium text-foreground/80">Update telemetry</p>
+                            <p>
+                                session #{installTelemetry.sessionId} · phase {installTelemetry.phase} · attempt {installTelemetry.attempt}
+                            </p>
+                            {installTelemetry.taskId && <p>task: {installTelemetry.taskId}</p>}
+                            {installTelemetry.startedAt && <p>started: {new Date(installTelemetry.startedAt).toLocaleString()}</p>}
+                            {installTelemetry.updatedAt && <p>last event: {new Date(installTelemetry.updatedAt).toLocaleString()}</p>}
+                            {installTelemetry.finishedAt && <p>finished: {new Date(installTelemetry.finishedAt).toLocaleString()}</p>}
+                            {downloadedSize && <p>bytes: {downloadedSize}</p>}
+                            <p>resumable: {installTelemetry.resumable ? "yes" : "no"}</p>
+                            <p>server range: {installTelemetry.capability}</p>
+                            {installTelemetry.retryDelayMs !== null && <p>retry delay: {installTelemetry.retryDelayMs} ms</p>}
+                            {installTelemetry.lastHttpStatus !== null && <p>http status: {installTelemetry.lastHttpStatus}</p>}
+                            {installTelemetry.errorCode && <p>error code: {installTelemetry.errorCode}</p>}
+                        </div>
+                    )}
                 </div>
             )}
 
