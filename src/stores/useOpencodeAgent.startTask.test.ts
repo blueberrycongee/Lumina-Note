@@ -138,7 +138,7 @@ describe("useOpencodeAgent.startTask", () => {
     ]);
   });
 
-  it("creates opencode sessions with Lumina's localized default title", async () => {
+  it("creates opencode sessions without overriding the runtime default title", async () => {
     const create = vi.fn(async () => ({ data: { id: "session-1" } }));
     mocks.getOpencodeClient.mockResolvedValue({
       session: {
@@ -150,10 +150,43 @@ describe("useOpencodeAgent.startTask", () => {
     await useOpencodeAgent.getState().newSession("/tmp/vault");
 
     expect(create).toHaveBeenCalledWith({
-      body: { title: getCurrentTranslations().common.newConversation },
       query: { directory: "/tmp/vault" },
       throwOnError: true,
     });
+  });
+
+  it("displays opencode default timestamp titles as localized placeholders", async () => {
+    mocks.getOpencodeClient.mockResolvedValue({
+      session: {
+        list: vi.fn(async () => ({
+          data: [
+            {
+              id: "default-title-session",
+              title: "New session - 2026-05-12T10:20:30.123Z",
+              time: { created: 1, updated: 3 },
+            },
+            {
+              id: "generated-title-session",
+              title: "Prepare AI agent interview notes",
+              time: { created: 2, updated: 4 },
+            },
+          ],
+        })),
+      },
+    });
+
+    await useOpencodeAgent.getState().loadSessions();
+
+    expect(useOpencodeAgent.getState().sessions).toEqual([
+      expect.objectContaining({
+        id: "default-title-session",
+        title: getCurrentTranslations().common.newConversation,
+      }),
+      expect.objectContaining({
+        id: "generated-title-session",
+        title: "Prepare AI agent interview notes",
+      }),
+    ]);
   });
 
   it("hides inline slash AI sessions from main AI history loading", async () => {

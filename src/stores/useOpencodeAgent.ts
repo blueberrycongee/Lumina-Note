@@ -527,15 +527,25 @@ async function replyPermission(
   }
 }
 
+const OPENCODE_DEFAULT_SESSION_TITLE_RE =
+  /^(?:New session|Child session) - \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+function getSessionDisplayTitle(title?: string | null): string {
+  const trimmed = (title ?? "").trim();
+  if (!trimmed || OPENCODE_DEFAULT_SESSION_TITLE_RE.test(trimmed)) {
+    return getCurrentTranslations().common.newConversation;
+  }
+  return trimmed;
+}
+
 function sessionSummary(info: {
   id: string;
-  title: string;
+  title?: string | null;
   time: { created: number; updated: number };
 }): AgentSessionSummary {
-  const fallbackTitle = getCurrentTranslations().common.newConversation;
   return {
     id: info.id,
-    title: (info.title ?? "").trim() || fallbackTitle,
+    title: getSessionDisplayTitle(info.title),
     createdAt: info.time.created,
     updatedAt: info.time.updated,
   };
@@ -1200,7 +1210,6 @@ export const useOpencodeAgent = create<OpencodeAgentStore>((set, get) => {
         // Tie both calls to the same directory.
         const query = directory ? { directory } : undefined;
         const res = await client.session.create({
-          body: { title: getCurrentTranslations().common.newConversation },
           query,
           throwOnError: true,
         });
