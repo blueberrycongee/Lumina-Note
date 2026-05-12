@@ -164,7 +164,23 @@ jobs:
       # ourselves below via `gh release upload`, which sidesteps electron-
       # builder's GitHub publisher entirely (the source of the 422 race).
       - name: Package via electron-builder (no publish)
-        run: npm run ${{ matrix.script }} -- --publish never
+        shell: bash
+        run: |
+          set -euo pipefail
+          # GitHub exposes missing secrets as empty strings. electron-builder
+          # still treats an empty CSC_LINK as an explicit certificate path on
+          # macOS, which breaks ad-hoc signing. Drop empty signing variables
+          # before invoking the packager while preserving real secrets.
+          for key in \
+            APPLE_ID APPLE_ID_PASSWORD APPLE_TEAM_ID \
+            CSC_LINK CSC_KEY_PASSWORD \
+            WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+          do
+            if [ -z "${!key:-}" ]; then
+              unset "$key"
+            fi
+          done
+          npm run ${{ matrix.script }} -- --publish never
         env:
           # macOS uses ad-hoc signing (electron-builder identity "-"), not an
           # Apple Developer ID cert. Disable identity auto-discovery so empty
