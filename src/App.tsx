@@ -353,10 +353,11 @@ function App() {
     setPaletteOpen(true);
   }, []);
 
-  // Keep the tab model concrete even when no persisted tab state exists.
+  // Keep the workspace home concrete even when no persisted tab state exists.
   useEffect(() => {
+    if (!vaultPath) return;
     ensureOpenTab();
-  }, [ensureOpenTab]);
+  }, [ensureOpenTab, vaultPath]);
 
   // Start the opencode event stream + session list at app boot so the UI
   // is warm before MainAIChatShell mounts. Idempotent.

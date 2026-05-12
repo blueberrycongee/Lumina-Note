@@ -914,7 +914,7 @@ export const useFileStore = create<FileState>()(
 
       ensureOpenTab: () => {
         if (get().tabs.length === 0) {
-          get().openNewTab();
+          get().openAIMainTab();
         }
       },
 

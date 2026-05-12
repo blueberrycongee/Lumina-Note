@@ -111,7 +111,7 @@ describe("useFileStore new tabs", () => {
     expect(state.activeTabIndex).toBe(1);
   });
 
-  it("initializes an empty tab model idempotently", () => {
+  it("initializes the workspace home tab idempotently", () => {
     const store = useFileStore.getState();
 
     store.ensureOpenTab();
@@ -119,7 +119,7 @@ describe("useFileStore new tabs", () => {
 
     const state = useFileStore.getState();
     expect(state.tabs).toHaveLength(1);
-    expect(state.tabs[0].type).toBe("new-tab");
+    expect(state.tabs[0].type).toBe("ai-chat");
     expect(state.activeTabIndex).toBe(0);
   });
 
