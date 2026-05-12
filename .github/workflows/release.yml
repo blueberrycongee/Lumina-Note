@@ -166,8 +166,9 @@ jobs:
       - name: Package via electron-builder (no publish)
         run: npm run ${{ matrix.script }} -- --publish never
         env:
-          # Code signing is currently unsigned. Disable identity auto-discovery
-          # so electron-builder doesn't try to load empty CSC_LINK as a file.
+          # macOS uses ad-hoc signing (electron-builder identity "-"), not an
+          # Apple Developer ID cert. Disable identity auto-discovery so empty
+          # CSC_LINK values are not treated as certificate files.
           CSC_IDENTITY_AUTO_DISCOVERY: false
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}

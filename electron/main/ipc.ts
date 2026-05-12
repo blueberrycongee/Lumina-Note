@@ -13,6 +13,7 @@ import { startFileWatcher } from "./handlers/watcher.js";
 import { createWebDAVHandlers } from "./handlers/webdav.js";
 import { createProxyHandlers } from "./handlers/proxy.js";
 import { createUpdaterHandlers } from "./handlers/updater.js";
+import { MacUnsignedUpdater } from "./handlers/macUnsignedUpdater.js";
 import { createDiagnosticsHandlers } from "./handlers/diagnostics.js";
 import { createPluginsHandlers } from "./handlers/plugins.js";
 import { createVscodeExtensionHandlers } from "./handlers/vscodeExtensions.js";
@@ -31,9 +32,10 @@ const { autoUpdater } = electronUpdater;
 // Don't auto-download on `checkForUpdates`. The renderer drives the
 // download via `update_start_resumable_install` so the user has explicit
 // control, and so progress events aren't lost before the resumable
-// session has been initialized. autoInstallOnAppQuit stays at its
-// default (true) — once an update is downloaded, a normal app quit will
-// install it as a safety net even if the user never clicks "重启".
+// session has been initialized. On non-macOS, autoInstallOnAppQuit stays at
+// its default (true). macOS uses MacUnsignedUpdater, which registers its own
+// quit-time install hook because unsigned apps cannot use Squirrel.Mac's
+// signature-gated install path.
 autoUpdater.autoDownload = false;
 
 // Stub response for unimplemented commands
@@ -146,8 +148,13 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
     }),
   });
 
+  const platformUpdater =
+    process.platform === "darwin" && app.isPackaged
+      ? new MacUnsignedUpdater()
+      : autoUpdater;
+
   const updaterHandlers = createUpdaterHandlers({
-    autoUpdater: autoUpdater as unknown as Parameters<
+    autoUpdater: platformUpdater as unknown as Parameters<
       typeof createUpdaterHandlers
     >[0]["autoUpdater"],
     sendEvent: (eventName, payload) => {
