@@ -69,7 +69,7 @@
     "lowlight": "^3.1.0",
     "lucide-react": "^0.460.0",
     "marked": "^15.0.0",
-    "mermaid": "^11.14.0",
+    "mermaid": "^11.15.0",
     "ollama-ai-provider-v2": "^3.5.0",
     "pdfjs-dist": "^5.4.296",
     "qrcode.react": "^4.2.0",
@@ -79,7 +79,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.5.4",
     "turndown": "^7.2.0",
-    "webdav": "^5.9.0",
+    "webdav": "^5.10.0",
     "yaml": "^2.8.2",
     "zod": "^4.1.13",
     "zustand": "^5.0.0"
