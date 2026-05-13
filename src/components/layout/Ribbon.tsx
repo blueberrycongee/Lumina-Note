@@ -38,7 +38,6 @@ import {
   type PluginRibbonItem,
   usePluginUiStore,
 } from "@/stores/usePluginUiStore";
-import { ExtensionsCenterModal } from "@/components/extensions/ExtensionsCenterModal";
 import { useUpdateStore } from "@/stores/useUpdateStore";
 import { getRibbonUpdateState } from "./ribbonUpdateState";
 
@@ -54,10 +53,8 @@ export function Ribbon({
   const REPO_URL = "https://github.com/blueberrycongee/Lumina-Note";
   const [showSettings, setShowSettings] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [showPlugins, setShowPlugins] = useState(false);
   const closeSettings = useCallback(() => setShowSettings(false), []);
   const closeUpdateModal = useCallback(() => setShowUpdateModal(false), []);
-  const closePlugins = useCallback(() => setShowPlugins(false), []);
   const { t } = useLocaleStore();
   const {
     isDarkMode,
@@ -82,6 +79,7 @@ export function Ribbon({
     openAIMainTab,
     currentFile,
     openImageManagerTab,
+    openExtensionsCenterTab,
   } = useFileStore();
   const ribbonItems = usePluginUiStore((state) => state.ribbonItems);
   const {
@@ -126,7 +124,13 @@ export function Ribbon({
   const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
   // 归一化当前主视图所属的功能区，方便扩展
-  type RibbonSection = "ai" | "file" | "graph" | "image-manager" | "none";
+  type RibbonSection =
+    | "ai"
+    | "file"
+    | "graph"
+    | "image-manager"
+    | "extensions"
+    | "none";
 
   let activeSection: RibbonSection = "none";
   if (activeTab?.type === "ai-chat") {
@@ -138,6 +142,8 @@ export function Ribbon({
     activeSection = "graph";
   } else if (activeTab?.type === "image-manager") {
     activeSection = "image-manager";
+  } else if (activeTab?.type === "extensions-center") {
+    activeSection = "extensions";
   } else if (activeTab?.type === "file" || currentFile) {
     // 没有特殊类型时，只要在编辑文件，就认为是文件编辑区
     activeSection = "file";
@@ -431,8 +437,13 @@ export function Ribbon({
 
           {/* Plugins */}
           <button
-            onClick={() => setShowPlugins(true)}
-            className="w-9 h-9 ui-icon-btn"
+            onClick={() => openExtensionsCenterTab("plugins")}
+            className={cn(
+              "w-9 h-9 ui-icon-btn",
+              activeSection === "extensions"
+                ? "bg-primary/10 text-primary hover:!bg-primary/15 hover:!text-primary"
+                : "",
+            )}
             title={t.ribbon.plugins}
           >
             <Puzzle size={20} />
@@ -533,7 +544,6 @@ export function Ribbon({
         onOpenUpdateModal={handleOpenUpdateFromSettings}
       />
       <UpdateModal isOpen={showUpdateModal} onClose={closeUpdateModal} />
-      <ExtensionsCenterModal isOpen={showPlugins} onClose={closePlugins} />
     </div>
   );
 }

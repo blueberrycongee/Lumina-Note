@@ -20,18 +20,15 @@ interface ExtensionsCenterModalProps {
   initialTab?: ExtensionsCenterTab;
 }
 
+interface ExtensionsCenterViewProps {
+  initialTab?: ExtensionsCenterTab;
+}
+
 export function ExtensionsCenterModal({
   isOpen,
   onClose,
   initialTab = "plugins",
 }: ExtensionsCenterModalProps) {
-  const { t } = useLocaleStore();
-  const [activeTab, setActiveTab] = useState<ExtensionsCenterTab>(initialTab);
-
-  useEffect(() => {
-    if (isOpen) setActiveTab(initialTab);
-  }, [initialTab, isOpen]);
-
   return (
     <Dialog
       open={isOpen}
@@ -39,6 +36,23 @@ export function ExtensionsCenterModal({
       width={920}
       className="min-h-[min(760px,calc(100vh-4rem))]"
     >
+      <ExtensionsCenterView initialTab={initialTab} />
+    </Dialog>
+  );
+}
+
+export function ExtensionsCenterView({
+  initialTab = "plugins",
+}: ExtensionsCenterViewProps) {
+  const { t } = useLocaleStore();
+  const [activeTab, setActiveTab] = useState<ExtensionsCenterTab>(initialTab);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  return (
+    <div className="flex h-full min-h-0 flex-col bg-background">
       <DialogHeader
         title={
           <span className="flex items-center gap-2">
@@ -75,9 +89,9 @@ export function ExtensionsCenterModal({
       {activeTab === "plugins" ? (
         <PluginsTab />
       ) : (
-        <SkillManagerContent active={isOpen && activeTab === "skills"} />
+        <SkillManagerContent active={activeTab === "skills"} />
       )}
-    </Dialog>
+    </div>
   );
 }
 

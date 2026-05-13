@@ -28,7 +28,7 @@ import {
 } from "@/components/search/CommandPalette";
 import { TabBar } from "@/components/layout/TabBar";
 import { DiffView } from "@/components/effects/DiffView";
-import { ExtensionsCenterModal } from "@/components/extensions/ExtensionsCenterModal";
+import { ExtensionsCenterView } from "@/components/extensions/ExtensionsCenterModal";
 import { CommandMenu, CommandMenuProvider } from "@/components/ui";
 import { PDFViewer } from "@/components/pdf";
 import { ImageManagerView } from "@/components/images/ImageManagerView";
@@ -306,6 +306,7 @@ function App() {
     fileTree,
     refreshFileTree,
     ensureOpenTab,
+    openExtensionsCenterTab,
   } = useFileStore(
     useShallow((state) => ({
       vaultPath: state.vaultPath,
@@ -318,6 +319,7 @@ function App() {
       fileTree: state.fileTree,
       refreshFileTree: state.refreshFileTree,
       ensureOpenTab: state.ensureOpenTab,
+      openExtensionsCenterTab: state.openExtensionsCenterTab,
     })),
   );
   const pendingDiff = useAIStore((state) => state.pendingDiff);
@@ -598,6 +600,12 @@ function App() {
   const rightSidebarToggleLabel = rightSidebarOpen
     ? t.sidebar.collapseRightPanel
     : t.sidebar.expandRightPanel;
+
+  useEffect(() => {
+    if (!isSkillManagerOpen) return;
+    openExtensionsCenterTab("skills");
+    setSkillManagerOpen(false);
+  }, [isSkillManagerOpen, openExtensionsCenterTab, setSkillManagerOpen]);
   const showMacLeftPaneTopBar = showMacTopChrome && leftSidebarOpen;
   const showMacRibbonTrafficLightSafeArea =
     showMacTopChrome && !showMacLeftPaneTopBar;
@@ -1191,6 +1199,12 @@ function App() {
                   <div className={MAIN_CONTENT_PANE_CLASS}>
                     <ImageManagerView />
                   </div>
+                ) : activeTab?.type === "extensions-center" ? (
+                  <div className={MAIN_CONTENT_PANE_CLASS}>
+                    <ExtensionsCenterView
+                      initialTab={activeTab.extensionsCenterTab ?? "plugins"}
+                    />
+                  </div>
                 ) : activeTab?.type === "plugin-view" ? (
                   <div className={MAIN_CONTENT_PANE_CLASS}>
                     <PluginViewPane
@@ -1298,13 +1312,6 @@ function App() {
         mode={paletteMode}
         onClose={() => setPaletteOpen(false)}
         onModeChange={setPaletteMode}
-      />
-
-      {/* Extensions Center (opens on Skills tab from skill-specific commands) */}
-      <ExtensionsCenterModal
-        isOpen={isSkillManagerOpen}
-        onClose={() => setSkillManagerOpen(false)}
-        initialTab="skills"
       />
 
       {/* Cmd+K command palette */}

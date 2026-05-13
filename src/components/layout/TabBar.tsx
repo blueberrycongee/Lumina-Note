@@ -246,7 +246,7 @@ function TabItem({
           <FileText size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "diagram" ? (
           <Shapes size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-        ) : tab.type === "plugin-view" ? (
+        ) : tab.type === "plugin-view" || tab.type === "extensions-center" ? (
           <Puzzle size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
         ) : tab.type === "image-manager" || tab.type === "image" ? (
           <Images size={14} className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
@@ -1024,6 +1024,8 @@ export function TabBar() {
                       ? t.common.aiChatTab
                       : tab.type === "graph"
                         ? t.graph.title
+                        : tab.type === "extensions-center"
+                          ? t.plugins.modalTitle
                         : tab.name;
                   return (
                     <motion.div

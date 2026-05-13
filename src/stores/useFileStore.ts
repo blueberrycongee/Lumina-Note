@@ -37,6 +37,7 @@ export type TabType =
   | "image"
   | "ai-chat"
   | "image-manager"
+  | "extensions-center"
   | "plugin-view";
 
 // 孤立视图节点信息
@@ -63,6 +64,7 @@ export interface Tab {
   isolatedNode?: IsolatedNodeInfo; // 孤立视图的目标节点
   pluginViewType?: string; // 插件视图类型
   pluginViewHtml?: string; // 插件视图 HTML
+  extensionsCenterTab?: "plugins" | "skills";
 }
 
 type MobileWorkspaceSyncStatus = {
@@ -157,6 +159,7 @@ interface FileState {
   openImageTab: (imagePath: string, options?: { preview?: boolean }) => void;
   openAIMainTab: () => void;
   openImageManagerTab: () => void;
+  openExtensionsCenterTab: (initialTab?: "plugins" | "skills") => void;
   openPluginViewTab: (viewType: string, title: string, html: string) => void;
 
   // Undo/Redo actions
@@ -1876,6 +1879,91 @@ export const useFileStore = create<FileState>()(
         };
 
         updatedTabs.push(imageManagerTab);
+
+        set({
+          tabs: updatedTabs,
+          activeTabIndex: updatedTabs.length - 1,
+          currentFile: null,
+          currentContent: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          lastSavedContent: "",
+          ...clearLoadingFilePatch(),
+        });
+      },
+
+      openExtensionsCenterTab: (initialTab = "plugins") => {
+        invalidatePendingTabOpenRequests();
+        const t = getCurrentTranslations();
+        const {
+          tabs,
+          activeTabIndex,
+          currentContent,
+          isDirty,
+          undoStack,
+          redoStack,
+        } = get();
+        const title =
+          (t.plugins as typeof t.plugins & { modalTitle?: string }).modalTitle ??
+          "Plugins";
+
+        const existingIndex = tabs.findIndex(
+          (tab) => tab.type === "extensions-center",
+        );
+        if (existingIndex !== -1) {
+          const updatedTabs = [...tabs];
+          if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+            updatedTabs[activeTabIndex] = {
+              ...updatedTabs[activeTabIndex],
+              content: currentContent,
+              isDirty,
+              undoStack,
+              redoStack,
+            };
+          }
+          updatedTabs[existingIndex] = {
+            ...updatedTabs[existingIndex],
+            extensionsCenterTab: initialTab,
+          };
+          set({
+            tabs: updatedTabs,
+            activeTabIndex: existingIndex,
+            currentFile: null,
+            currentContent: "",
+            isDirty: false,
+            undoStack: [],
+            redoStack: [],
+            lastSavedContent: "",
+            ...clearLoadingFilePatch(),
+          });
+          return;
+        }
+
+        let updatedTabs = [...tabs];
+        if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
+          updatedTabs[activeTabIndex] = {
+            ...updatedTabs[activeTabIndex],
+            content: currentContent,
+            isDirty,
+            undoStack,
+            redoStack,
+          };
+        }
+
+        const extensionsTab: Tab = {
+          id: "__extensions_center__",
+          type: "extensions-center",
+          path: "",
+          name: title,
+          content: "",
+          isDirty: false,
+          undoStack: [],
+          redoStack: [],
+          extensionsCenterTab: initialTab,
+        };
+
+        updatedTabs.push(extensionsTab);
 
         set({
           tabs: updatedTabs,
