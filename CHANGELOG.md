@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.5] - 2026-05-28
+
+本次小版本聚焦 TabBar 拖拽视觉修复，并修复 CI 中 Electron main handler 测试对真实 Electron binary 的依赖，确保后续发版链路稳定。
+
+### 修复
+- **Tab 拖拽横线消失修复**：拖动 tab 时不再把 tab 在 Y 轴上抬起，避免 TabBar 的横线在拖动过程中被视觉上遮挡或错位。
+- **生产依赖安全更新**：更新生产依赖以解决 audit 报告中的漏洞。
+
+### 内部
+- **Electron main handler 测试稳定性修复**：`fs` 和 `platform` handler 测试改为 mock `electron`，避免 CI runner 缺少 Electron binary 时全量测试失败。
+
 ## [1.4.4] - 2026-05-13
 
 本次小版本聚焦工作区打开后的最近记录一致性，以及侧栏新建输入体验的细节打磨。
