@@ -1,8 +1,12 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TabBar, projectDraggedTabOrder } from "./TabBar";
 import type { Tab } from "@/stores/useFileStore";
+
+const tabBarSource = readFileSync(path.resolve(__dirname, "TabBar.tsx"), "utf8");
 
 const macTopChromeEnabled = vi.hoisted(() => ({ value: false }));
 const leftSidebarOpenState = vi.hoisted(() => ({ value: true }));
@@ -445,6 +449,11 @@ describe("TabBar", () => {
     expect(tabBox).not.toHaveStyle({ boxShadow: "0 8px 24px rgba(0,0,0,0.18)" });
     expect(container.querySelector("svg path[style*='drop-shadow']")).toBeNull();
     expect(tabBox).not.toHaveAttribute("draggable", "true");
+  });
+
+  it("does not vertically lift a tab while dragging", () => {
+    expect(tabBarSource).toContain("y: 0");
+    expect(tabBarSource).not.toContain("y: isDragging ? -");
   });
 
   it("projects tab order from drag position within the same pin group", () => {

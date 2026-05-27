@@ -1058,7 +1058,7 @@ export function TabBar() {
                         x: isDragging ? tabX + dragOffsetX : bounds.x,
                         width: bounds.width,
                         opacity: isClosing ? 0 : 1,
-                        y: isDragging ? -1 : 0,
+                        y: 0,
                       }}
                       exit={
                         reduceMotion
