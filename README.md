@@ -72,7 +72,7 @@ Get the latest build from [Releases](https://github.com/blueberrycongee/Lumina-N
 
 - Agent mode for editing, planning, and task automation
 - Multi-provider: OpenAI, Anthropic (Claude), Google (Gemini), DeepSeek, Moonshot (Kimi), Zhipu (GLM), MiMo, Qwen, Groq, OpenRouter, Ollama, plus any OpenAI-compatible endpoint
-- Orchestrated agent runtime for heavier tasks, with a fast path for simpler requests
+- opencode-backed agent runtime for heavier tasks, with a fast path for simpler requests
 
 <h3 align="center">Editor and knowledge graph</h3>
 
@@ -158,7 +158,7 @@ npm run dist:mac     # sign + package a dmg/zip (also dist:win, dist:linux)
 - Frontend: React 18, TypeScript, Tailwind CSS
 - Editor: CodeMirror 6
 - State: Zustand
-- Agent runtime: Vercel AI SDK (`ai`)
+- Agent runtime: embedded opencode server + `@opencode-ai/sdk` client
 - Mobile: SwiftUI (iOS), Kotlin + Jetpack Compose (Android) — `mobile/`
 - Self-host relay (optional): Rust + axum + sqlx + Yjs CRDT — `server/`
 

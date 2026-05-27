@@ -73,7 +73,7 @@
 - Agent 模式：支持编辑、规划与任务自动化
 - 支持多模型服务商：OpenAI / Anthropic (Claude) / DeepSeek / Gemini / Moonshot / Groq / OpenRouter / Ollama
 - 主模型可自由配置
-- 复杂任务会进入编排式 Agent 运行时，简单任务保持轻量快速路径
+- 复杂任务会进入基于 opencode 的 Agent 运行时，简单任务保持轻量快速路径
 
 <h3 align="center">编辑器与知识图谱</h3>
 
@@ -154,6 +154,7 @@ npm run dev
 - 前端：React 18、TypeScript、Tailwind CSS
 - 编辑器：CodeMirror 6
 - 状态管理：Zustand
+- Agent 运行时：内置 opencode server + `@opencode-ai/sdk` client
 
 ---
 
