@@ -2,8 +2,15 @@ import { useUIStore } from "@/stores/useUIStore";
 import type { AppBackgroundPreset } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n";
-import { openDialog, readBinaryFileBase64 } from "@/lib/host";
-import { basename } from "@/lib/path";
+import {
+  copyFile,
+  createDir,
+  getAppDataDir,
+  joinPath,
+  openDialog,
+  readBinaryFileBase64,
+} from "@/lib/host";
+import { basename, extname } from "@/lib/path";
 import { extractPreferredImageSkinModeFromSource } from "@/lib/imageSkinPalette";
 import { Check, ImagePlus, RotateCcw, X } from "lucide-react";
 import { Select } from "@/components/ui";
@@ -12,6 +19,30 @@ import {
   APP_BACKGROUND_PRESET_STYLES,
 } from "@/config/appBackgrounds";
 import { getImageMimeType } from "@/services/assets/editorImages";
+
+const BACKGROUND_WALLPAPER_DIR = "background-wallpapers";
+
+const createWallpaperFileName = (sourcePath: string): string => {
+  const extension = extname(sourcePath).toLowerCase();
+  const safeExtension = /^\.[a-z0-9]+$/.test(extension) ? extension : ".png";
+  const randomId =
+    globalThis.crypto?.randomUUID?.() ??
+    Math.random().toString(36).slice(2, 12);
+  return `wallpaper-${Date.now()}-${randomId}${safeExtension}`;
+};
+
+const importBackgroundImage = async (sourcePath: string): Promise<string> => {
+  const appDataDir = await getAppDataDir();
+  const wallpaperDir = await joinPath(appDataDir, BACKGROUND_WALLPAPER_DIR);
+  await createDir(wallpaperDir, { recursive: true });
+
+  const targetPath = await joinPath(
+    wallpaperDir,
+    createWallpaperFileName(sourcePath),
+  );
+  await copyFile(sourcePath, targetPath);
+  return targetPath;
+};
 
 export function GeneralSection() {
   const { t, locale, setLocale } = useLocaleStore();
@@ -48,10 +79,20 @@ export function GeneralSection() {
     });
 
     if (typeof selected === "string") {
-      setAppBackground({ kind: "image", imagePath: selected });
+      let backgroundPath = selected;
       try {
-        const base64 = await readBinaryFileBase64(selected);
-        const mimeType = getImageMimeType(selected);
+        backgroundPath = await importBackgroundImage(selected);
+      } catch (error) {
+        console.warn(
+          "[GeneralSection] Failed to import background image:",
+          error,
+        );
+      }
+
+      setAppBackground({ kind: "image", imagePath: backgroundPath });
+      try {
+        const base64 = await readBinaryFileBase64(backgroundPath);
+        const mimeType = getImageMimeType(backgroundPath);
         const preferredMode = await extractPreferredImageSkinModeFromSource(
           `data:${mimeType};base64,${base64}`,
         );

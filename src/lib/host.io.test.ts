@@ -7,9 +7,12 @@ vi.mock('./hostBridge', async () => {
 });
 
 import {
+  copyFile,
   createFile,
   deleteFile,
   exists,
+  getAppDataDir,
+  joinPath,
   listDirectory,
   moveFile,
   moveFolder,
@@ -67,6 +70,28 @@ describe('host IO wrappers', () => {
       data: [1, 2, 3],
     });
     expect(invoke).toHaveBeenNthCalledWith(2, 'read_binary_file_base64', { path: '/vault/img.png' });
+  });
+
+  it('routes app data path helpers through invoke', async () => {
+    vi.mocked(invoke)
+      .mockResolvedValueOnce('/app-data')
+      .mockResolvedValueOnce('/app-data/background-wallpapers')
+      .mockResolvedValueOnce(undefined);
+
+    await expect(getAppDataDir()).resolves.toBe('/app-data');
+    await expect(joinPath('/app-data', 'background-wallpapers')).resolves.toBe(
+      '/app-data/background-wallpapers',
+    );
+    await copyFile('/source/bg.png', '/app-data/background-wallpapers/bg.png');
+
+    expect(invoke).toHaveBeenNthCalledWith(1, 'plugin:path|app_data_dir');
+    expect(invoke).toHaveBeenNthCalledWith(2, 'plugin:path|join', {
+      parts: ['/app-data', 'background-wallpapers'],
+    });
+    expect(invoke).toHaveBeenNthCalledWith(3, 'plugin:fs|copy_file', {
+      from: '/source/bg.png',
+      to: '/app-data/background-wallpapers/bg.png',
+    });
   });
 
   it('routes listDirectory, createFile, deleteFile, renameFile, exists, moveFile, and moveFolder through invoke', async () => {

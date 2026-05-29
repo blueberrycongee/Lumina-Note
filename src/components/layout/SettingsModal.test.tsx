@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SettingsModal } from "./SettingsModal";
 
 const {
+  copyFileMock,
+  createDirMock,
+  getAppDataDirMock,
   getVersionMock,
+  joinPathMock,
   openDialogMock,
   readBinaryFileBase64Mock,
   resetAppBackgroundMock,
@@ -12,7 +16,11 @@ const {
   setDarkModeMock,
   extractPreferredImageSkinModeFromSourceMock,
 } = vi.hoisted(() => ({
+  copyFileMock: vi.fn(async () => undefined),
+  createDirMock: vi.fn(async () => undefined),
+  getAppDataDirMock: vi.fn(async () => "/app-data"),
   getVersionMock: vi.fn(async () => "1.2.3"),
+  joinPathMock: vi.fn(async (...parts: string[]) => parts.join("/")),
   openDialogMock: vi.fn(),
   readBinaryFileBase64Mock: vi.fn(async () => "base64-image"),
   resetAppBackgroundMock: vi.fn(),
@@ -27,7 +35,11 @@ vi.mock("@/lib/host", async () => {
     await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
   return {
     ...actual,
+    copyFile: copyFileMock,
+    createDir: createDirMock,
+    getAppDataDir: getAppDataDirMock,
     getVersion: getVersionMock,
+    joinPath: joinPathMock,
     openDialog: openDialogMock,
     readBinaryFileBase64: readBinaryFileBase64Mock,
   };
@@ -258,7 +270,17 @@ describe("SettingsModal", () => {
   });
 
   beforeEach(() => {
+    copyFileMock.mockReset();
+    copyFileMock.mockResolvedValue(undefined);
+    createDirMock.mockReset();
+    createDirMock.mockResolvedValue(undefined);
+    getAppDataDirMock.mockReset();
+    getAppDataDirMock.mockResolvedValue("/app-data");
     getVersionMock.mockClear();
+    joinPathMock.mockReset();
+    joinPathMock.mockImplementation(async (...parts: string[]) =>
+      parts.join("/"),
+    );
     openDialogMock.mockReset();
     readBinaryFileBase64Mock.mockReset();
     readBinaryFileBase64Mock.mockResolvedValue("base64-image");
@@ -330,14 +352,28 @@ describe("SettingsModal", () => {
     fireEvent.click(screen.getByText("Local Image"));
 
     await waitFor(() => {
+      expect(createDirMock).toHaveBeenCalledWith(
+        "/app-data/background-wallpapers",
+        { recursive: true },
+      );
+      expect(copyFileMock).toHaveBeenCalledWith(
+        "/vault/assets/bg.png",
+        expect.stringMatching(
+          /^\/app-data\/background-wallpapers\/wallpaper-\d+-.+\.png$/,
+        ),
+      );
       expect(setAppBackgroundMock).toHaveBeenCalledWith({
         kind: "image",
-        imagePath: "/vault/assets/bg.png",
+        imagePath: expect.stringMatching(
+          /^\/app-data\/background-wallpapers\/wallpaper-\d+-.+\.png$/,
+        ),
       });
     });
     await waitFor(() => {
       expect(readBinaryFileBase64Mock).toHaveBeenCalledWith(
-        "/vault/assets/bg.png",
+        expect.stringMatching(
+          /^\/app-data\/background-wallpapers\/wallpaper-\d+-.+\.png$/,
+        ),
       );
       expect(extractPreferredImageSkinModeFromSourceMock).toHaveBeenCalledWith(
         "data:image/png;base64,base64-image",

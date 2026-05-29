@@ -100,6 +100,14 @@ export async function readBinaryFileBase64(path: string): Promise<string> {
   return invoke<string>("read_binary_file_base64", { path });
 }
 
+export async function getAppDataDir(): Promise<string> {
+  return invoke<string>("plugin:path|app_data_dir");
+}
+
+export async function joinPath(...parts: string[]): Promise<string> {
+  return invoke<string>("plugin:path|join", { parts });
+}
+
 export async function listDirectory(path: string): Promise<FileEntry[]> {
   return invoke<FileEntry[]>("list_directory", { path });
 }
@@ -262,6 +270,10 @@ export async function readDir(
 
 export async function rename(oldPath: string, newPath: string): Promise<void> {
   return invoke("plugin:fs|rename", { from: oldPath, to: newPath });
+}
+
+export async function copyFile(from: string, to: string): Promise<void> {
+  return invoke("plugin:fs|copy_file", { from, to });
 }
 
 // ── plugin-fs-compatible helpers (binary/text IO + stat) ──────────────────
