@@ -58,8 +58,58 @@ const MAX_WALK_PATHS = 50_000;
  * Format: `WORKSPACE_TOO_LARGE:<reason>:<entriesScanned>: <human msg>`
  */
 export const WORKSPACE_TOO_LARGE_PREFIX = "WORKSPACE_TOO_LARGE";
+export const FILE_MODIFIED_SINCE_PREFIX = "FILE_MODIFIED_SINCE";
 
 export type WorkspaceTooLargeReason = "count" | "timeout";
+
+interface FileVersion {
+  size: number;
+  mtimeMs: number;
+}
+
+function isFileVersion(value: unknown): value is FileVersion {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<FileVersion>;
+  return (
+    typeof candidate.size === "number" &&
+    Number.isFinite(candidate.size) &&
+    typeof candidate.mtimeMs === "number" &&
+    Number.isFinite(candidate.mtimeMs)
+  );
+}
+
+function fileModifiedSinceError(
+  path: string,
+  reason: "changed" | "deleted",
+): Error {
+  return new Error(
+    `${FILE_MODIFIED_SINCE_PREFIX}:${reason}: File changed on disk before save: ${path}`,
+  );
+}
+
+async function assertUnchangedSince(
+  filePath: string,
+  expectedVersion: FileVersion | null,
+): Promise<void> {
+  if (!expectedVersion) return;
+
+  let stat: fs.Stats;
+  try {
+    stat = await fs.promises.stat(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      throw fileModifiedSinceError(filePath, "deleted");
+    }
+    throw error;
+  }
+
+  if (
+    stat.size !== expectedVersion.size ||
+    stat.mtimeMs !== expectedVersion.mtimeMs
+  ) {
+    throw fileModifiedSinceError(filePath, "changed");
+  }
+}
 
 function workspaceTooLargeError(
   reason: WorkspaceTooLargeReason,
@@ -411,8 +461,12 @@ export const fsHandlers: Record<
     return fs.promises.readFile(p as string, "utf-8");
   },
 
-  async save_file({ path: p, content }) {
-    await fs.promises.writeFile(p as string, content as string, "utf-8");
+  async save_file({ path: p, content, expectedVersion, overwrite }) {
+    const filePath = p as string;
+    if (!overwrite && isFileVersion(expectedVersion)) {
+      await assertUnchangedSince(filePath, expectedVersion);
+    }
+    await fs.promises.writeFile(filePath, content as string, "utf-8");
   },
 
   async write_binary_file({ path: p, data }) {

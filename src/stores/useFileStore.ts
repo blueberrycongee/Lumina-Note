@@ -6,10 +6,14 @@ import {
   parseWorkspaceTooLargeError,
   readFile,
   saveFile,
+  getFileVersion,
+  isFileModifiedSinceError,
   createFile,
   createDir,
   estimateDirSize,
+  type FileVersion,
 } from "@/lib/host";
+import type { NormalizedFsChangeKind } from "@/lib/fsChange";
 import { invoke } from "@/lib/host";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { useRecentVaultStore } from "@/stores/useRecentVaultStore";
@@ -58,6 +62,8 @@ export interface Tab {
   content: string;
   isDirty: boolean;
   lastSavedContent?: string;
+  diskStatus?: "clean" | "modified" | "deleted" | "conflict";
+  diskVersion?: FileVersion | null;
   isPinned?: boolean; // 是否固定
   isPreview?: boolean;
   undoStack: HistoryEntry[];
@@ -116,6 +122,8 @@ interface FileState {
   // Actions
   setVaultPath: (path: string) => Promise<boolean>;
   refreshFileTree: () => Promise<void>;
+  refreshDirectoryChildren: (path: string) => Promise<void>;
+  refreshDirectories: (paths: string[]) => Promise<void>;
   expandDirectory: (path: string) => Promise<void>;
   openFile: (
     path: string,
@@ -131,7 +139,7 @@ interface FileState {
     description?: string,
     selection?: { anchor: number; head: number },
   ) => void;
-  save: () => Promise<void>;
+  save: (options?: { overwrite?: boolean }) => Promise<boolean>;
   closeFile: () => void;
 
   // Tab actions
@@ -147,7 +155,11 @@ interface FileState {
     tabId?: string,
     options?: { invalidateRequest?: boolean },
   ) => void;
-  updateTabPath: (oldPath: string, newPath: string) => void;
+  updateTabPath: (
+    oldPath: string,
+    newPath: string,
+    options?: { isDirectory?: boolean },
+  ) => void;
 
   // Create new file
   createNewFile: (fileName?: string) => Promise<void>;
@@ -179,7 +191,7 @@ interface FileState {
   // File sync actions
   reloadFileIfOpen: (
     path: string,
-    options?: { skipIfDirty?: boolean },
+    options?: { skipIfDirty?: boolean; changeKind?: NormalizedFsChangeKind },
   ) => Promise<void>;
 
   // Move file/folder actions
@@ -331,6 +343,8 @@ function createNewTab(): Tab {
     content: "",
     isDirty: false,
     lastSavedContent: "",
+    diskStatus: "clean",
+    diskVersion: null,
     undoStack: [],
     redoStack: [],
   };
@@ -342,7 +356,7 @@ function replaceDirectoryChildren(
   children: FileEntry[],
 ): FileEntry[] {
   return entries.map((entry) => {
-    if (entry.path === targetPath && entry.is_dir) {
+    if (pathsEqual(entry.path, targetPath) && entry.is_dir) {
       return {
         ...entry,
         children,
@@ -368,13 +382,48 @@ function findTreeEntry(
   targetPath: string,
 ): FileEntry | null {
   for (const entry of entries) {
-    if (entry.path === targetPath) return entry;
+    if (pathsEqual(entry.path, targetPath)) return entry;
     if (entry.is_dir && entry.children) {
       const nested = findTreeEntry(entry.children, targetPath);
       if (nested) return nested;
     }
   }
   return null;
+}
+
+function collectLoadedDirectoryEntries(
+  entries: FileEntry[],
+  loadedByPath: Map<string, FileEntry>,
+) {
+  for (const entry of entries) {
+    if (entry.is_dir) {
+      if (entry.childrenLoaded) {
+        loadedByPath.set(normalizePathKey(entry.path), entry);
+      }
+      if (entry.children) {
+        collectLoadedDirectoryEntries(entry.children, loadedByPath);
+      }
+    }
+  }
+}
+
+function preserveLoadedDirectoryState(
+  entries: FileEntry[],
+  previousEntries: FileEntry[],
+): FileEntry[] {
+  const loadedByPath = new Map<string, FileEntry>();
+  collectLoadedDirectoryEntries(previousEntries, loadedByPath);
+
+  return entries.map((entry) => {
+    if (!entry.is_dir) return entry;
+    const previous = loadedByPath.get(normalizePathKey(entry.path));
+    if (!previous?.childrenLoaded) return entry;
+    return {
+      ...entry,
+      children: previous.children,
+      childrenLoaded: true,
+    };
+  });
 }
 
 function getCurrentFileForTab(tab: Tab): string | null {
@@ -428,9 +477,17 @@ function placeNewTab(
 function patchTabState(
   tabs: Tab[],
   index: number,
-  patch: Pick<
-    Tab,
-    "content" | "isDirty" | "undoStack" | "redoStack" | "lastSavedContent"
+  patch: Partial<
+    Pick<
+      Tab,
+      | "content"
+      | "isDirty"
+      | "undoStack"
+      | "redoStack"
+      | "lastSavedContent"
+      | "diskStatus"
+      | "diskVersion"
+    >
   >,
 ): Tab[] {
   if (index < 0 || index >= tabs.length) {
@@ -443,6 +500,80 @@ function patchTabState(
     ...patch,
   };
   return nextTabs;
+}
+
+function normalizePathForCompare(path: string): string {
+  return path.replace(/\\/g, "/");
+}
+
+function normalizePathKey(path: string): string {
+  return normalizePathForCompare(path).replace(/\/+$/, "");
+}
+
+function pathsEqual(a: string, b: string): boolean {
+  return normalizePathKey(a) === normalizePathKey(b);
+}
+
+function remapPathPrefix(
+  path: string,
+  oldPath: string,
+  newPath: string,
+): string | null {
+  const normalizedPath = normalizePathKey(path);
+  const normalizedOldPath = normalizePathKey(oldPath);
+  if (normalizedPath === normalizedOldPath) {
+    return newPath;
+  }
+  if (!normalizedPath.startsWith(`${normalizedOldPath}/`)) {
+    return null;
+  }
+  const suffix = normalizedPath.slice(normalizedOldPath.length);
+  return `${newPath.replace(/[\\/]+$/, "")}${suffix}`;
+}
+
+function getTabPathMetadata(tab: Tab, path: string) {
+  const t = getCurrentTranslations();
+  switch (tab.type) {
+    case "file":
+      return {
+        id: path,
+        name:
+          path
+            .split(/[/\\]/)
+            .pop()
+            ?.replace(/\.(md|docx)$/i, "") || t.common.untitled,
+      };
+    case "diagram":
+      return {
+        id: `__diagram_${path}__`,
+        name: getDiagramDisplayName(path),
+      };
+    case "pdf":
+      return {
+        id: `__pdf_${path}__`,
+        name: path.split(/[/\\]/).pop() || "PDF",
+      };
+    case "image":
+      return {
+        id: `__image_${path}__`,
+        name: path.split(/[/\\]/).pop() || tab.name,
+      };
+    default:
+      return {
+        id: tab.id,
+        name: tab.name,
+      };
+  }
+}
+
+async function readFileSnapshot(
+  path: string,
+): Promise<{ content: string; diskVersion: FileVersion | null }> {
+  const content = await readFile(path);
+  return {
+    content,
+    diskVersion: await getFileVersion(path),
+  };
 }
 
 export const useFileStore = create<FileState>()(
@@ -613,14 +744,15 @@ export const useFileStore = create<FileState>()(
 
       // Refresh file tree
       refreshFileTree: async () => {
-        const { vaultPath } = get();
+        const { vaultPath, fileTree } = get();
         if (!vaultPath) return;
 
         set({ isLoadingTree: true });
         try {
           const entries = await listDirShallow(vaultPath, vaultPath);
+          const nextFileTree = preserveLoadedDirectoryState(entries, fileTree);
           set({
-            fileTree: entries,
+            fileTree: nextFileTree,
             loadingDirectoryPaths: [],
             isLoadingTree: false,
           });
@@ -659,13 +791,80 @@ export const useFileStore = create<FileState>()(
         }
       },
 
+      refreshDirectoryChildren: async (path: string) => {
+        const { vaultPath, fileTree, loadingDirectoryPaths } = get();
+        if (!vaultPath) return;
+
+        if (pathsEqual(path, vaultPath)) {
+          await get().refreshFileTree();
+          return;
+        }
+
+        const entry = findTreeEntry(fileTree, path);
+        if (!entry?.is_dir || !entry.childrenLoaded) return;
+        if (loadingDirectoryPaths.some((p) => pathsEqual(p, path))) return;
+
+        set({
+          loadingDirectoryPaths: [...loadingDirectoryPaths, path],
+        });
+
+        try {
+          const children = await listDirShallow(vaultPath, path);
+          set((state) => ({
+            fileTree: replaceDirectoryChildren(
+              state.fileTree,
+              path,
+              preserveLoadedDirectoryState(
+                children,
+                findTreeEntry(state.fileTree, path)?.children ?? [],
+              ),
+            ),
+            loadingDirectoryPaths: state.loadingDirectoryPaths.filter(
+              (p) => !pathsEqual(p, path),
+            ),
+          }));
+        } catch (error) {
+          set((state) => ({
+            loadingDirectoryPaths: state.loadingDirectoryPaths.filter(
+              (p) => !pathsEqual(p, path),
+            ),
+          }));
+          reportOperationError({
+            source: "FileStore.refreshDirectoryChildren",
+            action: "Refresh folder contents",
+            error,
+            context: { path, vaultPath },
+          });
+        }
+      },
+
+      refreshDirectories: async (paths: string[]) => {
+        const { vaultPath } = get();
+        if (!vaultPath) return;
+
+        const uniquePaths = paths.reduce<string[]>((acc, path) => {
+          if (!acc.some((existing) => pathsEqual(existing, path))) {
+            acc.push(path);
+          }
+          return acc;
+        }, []);
+        if (uniquePaths.some((path) => pathsEqual(path, vaultPath))) {
+          await get().refreshFileTree();
+        }
+
+        for (const path of uniquePaths) {
+          if (pathsEqual(path, vaultPath)) continue;
+          await get().refreshDirectoryChildren(path);
+        }
+      },
+
       expandDirectory: async (path: string) => {
         const { vaultPath, fileTree, loadingDirectoryPaths } = get();
         if (!vaultPath) return;
 
         const entry = findTreeEntry(fileTree, path);
         if (!entry?.is_dir || entry.childrenLoaded) return;
-        if (loadingDirectoryPaths.includes(path)) return;
+        if (loadingDirectoryPaths.some((p) => pathsEqual(p, path))) return;
 
         set({
           loadingDirectoryPaths: [...loadingDirectoryPaths, path],
@@ -676,13 +875,13 @@ export const useFileStore = create<FileState>()(
           set((state) => ({
             fileTree: replaceDirectoryChildren(state.fileTree, path, children),
             loadingDirectoryPaths: state.loadingDirectoryPaths.filter(
-              (p) => p !== path,
+              (p) => !pathsEqual(p, path),
             ),
           }));
         } catch (error) {
           set((state) => ({
             loadingDirectoryPaths: state.loadingDirectoryPaths.filter(
-              (p) => p !== path,
+              (p) => !pathsEqual(p, path),
             ),
           }));
           reportOperationError({
@@ -725,7 +924,8 @@ export const useFileStore = create<FileState>()(
           if (forceReload) {
             // 强制重新加载内容（Agent 编辑后使用）
             try {
-              const newContent = await readFile(path);
+              const snapshot = await readFileSnapshot(path);
+              const newContent = snapshot.content;
               if (!isLatestTabOpenRequest(requestSeq)) return;
               const freshTabs = get().tabs;
               const freshIndex = freshTabs.findIndex(
@@ -738,6 +938,8 @@ export const useFileStore = create<FileState>()(
                 content: newContent,
                 isDirty: false,
                 lastSavedContent: newContent,
+                diskStatus: "clean",
+                diskVersion: snapshot.diskVersion,
               };
               set({
                 tabs: updatedTabs,
@@ -797,7 +999,8 @@ export const useFileStore = create<FileState>()(
         if (activeTabIndex >= 0 && tabs[activeTabIndex]) {
           const currentTab = tabs[activeTabIndex];
           if (currentTab.isDirty) {
-            await get().save();
+            const saved = await get().save();
+            if (!saved) return;
             if (!isLatestTabOpenRequest(requestSeq)) return;
           }
         }
@@ -817,7 +1020,8 @@ export const useFileStore = create<FileState>()(
         markTabOpenLoading(requestSeq);
         set({ isLoadingFile: true });
         try {
-          const content = await readFile(path);
+          const snapshot = await readFileSnapshot(path);
+          const content = snapshot.content;
           if (!isLatestTabOpenRequest(requestSeq)) {
             if (releaseTabOpenLoading(requestSeq)) {
               set({ isLoadingFile: false });
@@ -839,6 +1043,8 @@ export const useFileStore = create<FileState>()(
             content,
             isDirty: false,
             lastSavedContent: content,
+            diskStatus: "clean",
+            diskVersion: snapshot.diskVersion,
             isPreview: preview || undefined,
             undoStack: [],
             redoStack: [],
@@ -1065,10 +1271,26 @@ export const useFileStore = create<FileState>()(
 
         // 如果要关闭的是当前标签页且有未保存的更改，先保存
         if (index === activeTabIndex && isDirty) {
-          await get().save();
+          const saved = await get().save();
+          if (!saved) return;
         } else if (tabs[index].isDirty) {
           // 非当前标签页但有未保存更改，也保存
-          await saveFile(tabs[index].path, tabs[index].content);
+          try {
+            await saveFile(tabs[index].path, tabs[index].content, {
+              expectedVersion: tabs[index].diskVersion,
+            });
+          } catch (error) {
+            reportOperationError({
+              source: "FileStore.closeTab",
+              action: isFileModifiedSinceError(error)
+                ? "Save conflict"
+                : "Save file before close",
+              error,
+              level: isFileModifiedSinceError(error) ? "warning" : undefined,
+              context: { path: tabs[index].path },
+            });
+            return;
+          }
         }
 
         const newTabs = tabs.filter((_, i) => i !== index);
@@ -1160,7 +1382,24 @@ export const useFileStore = create<FileState>()(
             continue;
           }
           if (tab.isDirty) {
-            await saveFile(tab.path, tab.content);
+            try {
+              await saveFile(tab.path, tab.content, {
+                expectedVersion: tab.diskVersion,
+              });
+            } catch (error) {
+              reportOperationError({
+                source: "FileStore.closeOtherTabs",
+                action: isFileModifiedSinceError(error)
+                  ? "Save conflict"
+                  : "Save file before close",
+                error,
+                level: isFileModifiedSinceError(error)
+                  ? "warning"
+                  : undefined,
+                context: { path: tab.path },
+              });
+              return;
+            }
           }
         }
 
@@ -1199,7 +1438,24 @@ export const useFileStore = create<FileState>()(
             continue;
           }
           if (tab.isDirty) {
-            await saveFile(tab.path, tab.content);
+            try {
+              await saveFile(tab.path, tab.content, {
+                expectedVersion: tab.diskVersion,
+              });
+            } catch (error) {
+              reportOperationError({
+                source: "FileStore.closeAllTabs",
+                action: isFileModifiedSinceError(error)
+                  ? "Save conflict"
+                  : "Save file before close",
+                error,
+                level: isFileModifiedSinceError(error)
+                  ? "warning"
+                  : undefined,
+                context: { path: tab.path },
+              });
+              return;
+            }
           }
         }
 
@@ -1235,47 +1491,53 @@ export const useFileStore = create<FileState>()(
       },
 
       // Update tab path (for rename)
-      updateTabPath: (oldPath: string, newPath: string) => {
-        const t = getCurrentTranslations();
-        const { tabs, currentFile } = get();
+      updateTabPath: (
+        oldPath: string,
+        newPath: string,
+        options?: { isDirectory?: boolean },
+      ) => {
+        const { tabs, currentFile, navigationHistory, recentFiles } = get();
+        const isPathBackedTab = (tab: Tab) =>
+          tab.type === "file" ||
+          tab.type === "diagram" ||
+          tab.type === "pdf" ||
+          tab.type === "image";
 
-        // 查找并更新所有匹配的标签页
         const updatedTabs = tabs.map((tab) => {
-          if (
-            (tab.type === "file" ||
-              tab.type === "diagram" ||
-              tab.type === "image") &&
-            tab.path === oldPath
-          ) {
-            const nextName =
-              tab.type === "diagram"
-                ? getDiagramDisplayName(newPath)
-                : tab.type === "image"
-                  ? newPath.split(/[/\\]/).pop() || tab.name
-                  : newPath
-                      .split(/[/\\]/)
-                      .pop()
-                      ?.replace(/\.(md|docx)$/i, "") || t.common.untitled;
-            const nextId =
-              tab.type === "image" ? `__image_${newPath}__` : newPath;
+          if (isPathBackedTab(tab)) {
+            const nextPath = remapPathPrefix(tab.path, oldPath, newPath);
+            if (!nextPath) return tab;
+            const { id, name } = getTabPathMetadata(tab, nextPath);
             return {
               ...tab,
-              path: newPath,
-              name: nextName,
-              id: nextId,
+              path: nextPath,
+              name,
+              id,
             };
           }
           return tab;
         });
 
-        // 如果当前打开的是被重命名的文件，更新 currentFile
         const newState: Partial<FileState> = { tabs: updatedTabs };
-        if (currentFile === oldPath) {
-          newState.currentFile = newPath;
+        if (currentFile) {
+          newState.currentFile =
+            remapPathPrefix(currentFile, oldPath, newPath) ?? currentFile;
         }
+        newState.navigationHistory = navigationHistory.map(
+          (path) => remapPathPrefix(path, oldPath, newPath) ?? path,
+        );
+        newState.recentFiles = recentFiles.map(
+          (path) => remapPathPrefix(path, oldPath, newPath) ?? path,
+        );
 
         set(newState);
-        useFavoriteStore.getState().updatePath(oldPath, newPath);
+        if (options?.isDirectory) {
+          useFavoriteStore
+            .getState()
+            .updatePathsForFolderMove(oldPath, newPath);
+        } else {
+          useFavoriteStore.getState().updatePath(oldPath, newPath);
+        }
       },
 
       // 重新排序标签页
@@ -2385,7 +2647,7 @@ export const useFileStore = create<FileState>()(
       canRedo: () => get().redoStack.length > 0,
 
       // Save current file
-      save: async () => {
+      save: async (options?: { overwrite?: boolean }) => {
         const {
           currentFile,
           currentContent,
@@ -2395,7 +2657,7 @@ export const useFileStore = create<FileState>()(
           activeTabIndex,
         } = get();
 
-        if (isSaving) return;
+        if (isSaving) return false;
 
         const activeTab = activeTabIndex >= 0 ? tabs[activeTabIndex] : null;
 
@@ -2404,21 +2666,60 @@ export const useFileStore = create<FileState>()(
           get().promotePreviewTab(activeTab.id, { invalidateRequest: false });
         }
 
-        if (!currentFile || !isDirty) return;
+        if (!currentFile || (!isDirty && !options?.overwrite)) return false;
+
+        const overwrite = options?.overwrite ?? false;
+        if (
+          !overwrite &&
+          activeTab?.diskStatus &&
+          activeTab.diskStatus !== "clean"
+        ) {
+          const nextTabs = patchTabState(tabs, activeTabIndex, {
+            content: currentContent,
+            isDirty: true,
+            undoStack: get().undoStack,
+            redoStack: get().redoStack,
+            lastSavedContent: get().lastSavedContent,
+            diskStatus:
+              activeTab.diskStatus === "deleted" ? "deleted" : "conflict",
+          });
+          set({
+            tabs: nextTabs,
+            isDirty: true,
+          });
+          reportOperationError({
+            source: "FileStore.save",
+            action: "Save conflict",
+            error: new Error(
+              activeTab.diskStatus === "deleted"
+                ? "File was deleted on disk before save"
+                : "File changed on disk before save",
+            ),
+            level: "warning",
+            context: { path: currentFile, diskStatus: activeTab.diskStatus },
+          });
+          return false;
+        }
 
         set({ isSaving: true });
         try {
-          await saveFile(currentFile, currentContent);
+          await saveFile(currentFile, currentContent, {
+            expectedVersion: overwrite ? null : activeTab?.diskVersion,
+            overwrite,
+          });
           if (get().currentFile !== currentFile) {
             set({ isSaving: false });
-            return;
+            return false;
           }
+          const diskVersion = await getFileVersion(currentFile);
           const nextTabs = patchTabState(get().tabs, get().activeTabIndex, {
             content: currentContent,
             isDirty: false,
             undoStack: get().undoStack,
             redoStack: get().redoStack,
             lastSavedContent: currentContent,
+            diskStatus: "clean",
+            diskVersion,
           });
           set({
             tabs: nextTabs,
@@ -2426,7 +2727,31 @@ export const useFileStore = create<FileState>()(
             isSaving: false,
             lastSavedContent: currentContent,
           });
+          return true;
         } catch (error) {
+          if (isFileModifiedSinceError(error)) {
+            const nextTabs = patchTabState(get().tabs, get().activeTabIndex, {
+              content: currentContent,
+              isDirty: true,
+              undoStack: get().undoStack,
+              redoStack: get().redoStack,
+              lastSavedContent: get().lastSavedContent,
+              diskStatus: "conflict",
+            });
+            set({
+              tabs: nextTabs,
+              isDirty: true,
+              isSaving: false,
+            });
+            reportOperationError({
+              source: "FileStore.save",
+              action: "Save conflict",
+              error,
+              level: "warning",
+              context: { path: currentFile },
+            });
+            return false;
+          }
           reportOperationError({
             source: "FileStore.save",
             action: "Save file",
@@ -2434,6 +2759,7 @@ export const useFileStore = create<FileState>()(
             context: { path: currentFile },
           });
           set({ isSaving: false });
+          return false;
         }
       },
 
@@ -2540,32 +2866,74 @@ export const useFileStore = create<FileState>()(
       // Reload file if it's currently open (for external updates like database edits)
       reloadFileIfOpen: async (
         path: string,
-        options?: { skipIfDirty?: boolean },
+        options?: { skipIfDirty?: boolean; changeKind?: NormalizedFsChangeKind },
       ) => {
         const { tabs, activeTabIndex, currentFile, currentContent, isDirty } =
           get();
 
         // 查找该文件是否在标签页中打开
         const tabIndex = tabs.findIndex(
-          (t) => (t.type === "file" || t.type === "diagram") && t.path === path,
+          (t) =>
+            (t.type === "file" || t.type === "diagram") &&
+            pathsEqual(t.path, path),
         );
         if (tabIndex === -1) return;
 
         try {
           const skipIfDirty = options?.skipIfDirty ?? false;
+          const changeKind = options?.changeKind;
           const targetTab = tabs[tabIndex];
           const isActivePath =
-            currentFile === path && tabIndex === activeTabIndex;
+            Boolean(currentFile && pathsEqual(currentFile, path)) &&
+            tabIndex === activeTabIndex;
           const isTargetDirty = isActivePath ? isDirty : targetTab?.isDirty;
-          if (skipIfDirty && isTargetDirty) {
+
+          if (changeKind === "deleted") {
+            const updatedTabs = tabs.map((tab, i) =>
+              i === tabIndex
+                ? {
+                    ...tab,
+                    diskStatus: "deleted" as const,
+                    diskVersion: null,
+                  }
+                : tab,
+            );
+            set({ tabs: updatedTabs });
             return;
           }
 
-          const newContent = await readFile(path);
+          if (skipIfDirty && isTargetDirty) {
+            const updatedTabs = tabs.map((tab, i) =>
+              i === tabIndex
+                ? {
+                    ...tab,
+                    diskStatus:
+                      tab.diskStatus === "deleted"
+                        ? ("deleted" as const)
+                        : ("modified" as const),
+                  }
+                : tab,
+            );
+            set({ tabs: updatedTabs });
+            return;
+          }
+
+          const snapshot = await readFileSnapshot(path);
+          const newContent = snapshot.content;
           const currentTabContent = isActivePath
             ? currentContent
             : targetTab.content;
           if (newContent === currentTabContent) {
+            const updatedTabs = tabs.map((tab, i) =>
+              i === tabIndex
+                ? {
+                    ...tab,
+                    diskStatus: "clean" as const,
+                    diskVersion: snapshot.diskVersion,
+                  }
+                : tab,
+            );
+            set({ tabs: updatedTabs });
             return;
           }
 
@@ -2576,12 +2944,18 @@ export const useFileStore = create<FileState>()(
                   content: newContent,
                   isDirty: false,
                   lastSavedContent: newContent,
+                  diskStatus: "clean" as const,
+                  diskVersion: snapshot.diskVersion,
                 }
               : tab,
           );
 
           // 如果是当前激活的标签页，同时更新 currentContent
-          if (tabIndex === activeTabIndex && currentFile === path) {
+          if (
+            tabIndex === activeTabIndex &&
+            currentFile &&
+            pathsEqual(currentFile, path)
+          ) {
             set({
               tabs: updatedTabs,
               currentContent: newContent,

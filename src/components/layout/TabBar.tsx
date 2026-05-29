@@ -11,6 +11,8 @@ import {
   Puzzle,
   Shapes,
   Images,
+  AlertTriangle,
+  FileX,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -214,12 +216,24 @@ function TabItem({
   const isMini = width < TAB_MINI_WIDTH_PX;
   const showLabel = !isMini || !hasLeadingIcon;
   const showClose = !tab.isPinned && (!isCompact || isActive);
+  const diskStatus =
+    tab.diskStatus && tab.diskStatus !== "clean" ? tab.diskStatus : null;
+  const diskStatusLabel =
+    diskStatus === "deleted"
+      ? t.tabBar.deletedOnDisk
+      : diskStatus === "conflict"
+        ? t.tabBar.saveConflict
+        : diskStatus === "modified"
+          ? t.tabBar.modifiedOnDisk
+          : null;
 
   return (
     <div
       role="tab"
       aria-selected={isActive}
-      title={displayName}
+      title={
+        diskStatusLabel ? `${displayName} - ${diskStatusLabel}` : displayName
+      }
       data-tauri-drag-region="false"
       className="group relative h-full w-full cursor-default select-none"
       onMouseDown={onMouseDown}
@@ -273,6 +287,22 @@ function TabItem({
         {tab.isDirty && (
           <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0 animate-pulse" />
         )}
+        {diskStatus === "deleted" ? (
+          <FileX
+            size={12}
+            className="shrink-0 text-destructive"
+            aria-label={diskStatusLabel ?? undefined}
+          />
+        ) : diskStatus ? (
+          <AlertTriangle
+            size={12}
+            className={cn(
+              "shrink-0",
+              diskStatus === "conflict" ? "text-destructive" : "text-warning",
+            )}
+            aria-label={diskStatusLabel ?? undefined}
+          />
+        ) : null}
         {showClose && (
           <button
             data-tauri-drag-region="false"
@@ -397,7 +427,7 @@ async function preloadTabBeforeSwitch(tab: Tab): Promise<void> {
 
 export function TabBar() {
   const { t } = useLocaleStore();
-  const { tabs, activeTabIndex, openNewTab, switchTab, closeTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab } =
+  const { tabs, activeTabIndex, openNewTab, switchTab, closeTab, closeOtherTabs, closeAllTabs, togglePinTab, promotePreviewTab, save } =
     useFileStore(
       useShallow((state) => ({
         tabs: state.tabs,
@@ -409,6 +439,7 @@ export function TabBar() {
         closeAllTabs: state.closeAllTabs,
         togglePinTab: state.togglePinTab,
         promotePreviewTab: state.promotePreviewTab,
+        save: state.save,
       })),
     );
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -1251,6 +1282,20 @@ export function TabBar() {
                     setContextMenu(null);
                   }}
                 />
+                {contextTab.diskStatus &&
+                  contextTab.diskStatus !== "clean" && (
+                    <Row
+                      density="compact"
+                      icon={<AlertTriangle size={12} />}
+                      title={t.tabBar.overwriteDiskFile}
+                      role="menuitem"
+                      onSelect={() => {
+                        switchTab(contextTabIndex);
+                        void save({ overwrite: true });
+                        setContextMenu(null);
+                      }}
+                    />
+                  )}
                 <div
                   role="separator"
                   className="my-1 h-px bg-border/60"

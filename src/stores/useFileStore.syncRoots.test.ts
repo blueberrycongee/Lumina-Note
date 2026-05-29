@@ -19,6 +19,8 @@ vi.mock("@/lib/host", async () => {
     parseWorkspaceTooLargeError: actual.parseWorkspaceTooLargeError,
     readFile: vi.fn(),
     saveFile: vi.fn(),
+    getFileVersion: vi.fn(async () => null),
+    isFileModifiedSinceError: actual.isFileModifiedSinceError,
     createFile: vi.fn(),
     createDir: vi.fn(),
     estimateDirSize: vi.fn(),

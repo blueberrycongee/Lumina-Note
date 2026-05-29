@@ -1125,6 +1125,10 @@ export default {
     pin: "固定标签页",
     unpin: "取消固定",
     newTab: "新建标签页",
+    modifiedOnDisk: "磁盘文件已变更",
+    deletedOnDisk: "磁盘文件已删除",
+    saveConflict: "保存冲突",
+    overwriteDiskFile: "覆盖磁盘文件",
   },
 
   // 对话列表

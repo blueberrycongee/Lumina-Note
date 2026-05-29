@@ -4,6 +4,10 @@ vi.mock("@/lib/host", () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
   readFile: vi.fn(),
   saveFile: vi.fn(() => Promise.resolve()),
+  getFileVersion: vi.fn(() => Promise.resolve({ size: 1, mtimeMs: 1 })),
+  isFileModifiedSinceError: vi.fn((error: unknown) =>
+    error instanceof Error && error.message.includes("FILE_MODIFIED_SINCE"),
+  ),
   createFile: vi.fn(() => Promise.resolve()),
   createDir: vi.fn(() => Promise.resolve()),
   estimateDirSize: vi.fn(() => Promise.resolve(0)),

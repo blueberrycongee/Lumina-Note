@@ -40,8 +40,18 @@ describe('host IO wrappers', () => {
     await saveFile('/vault/note.md', 'body');
     await writeFile('/vault/other.md', 'text');
 
-    expect(invoke).toHaveBeenNthCalledWith(1, 'save_file', { path: '/vault/note.md', content: 'body' });
-    expect(invoke).toHaveBeenNthCalledWith(2, 'save_file', { path: '/vault/other.md', content: 'text' });
+    expect(invoke).toHaveBeenNthCalledWith(1, 'save_file', {
+      path: '/vault/note.md',
+      content: 'body',
+      expectedVersion: null,
+      overwrite: false,
+    });
+    expect(invoke).toHaveBeenNthCalledWith(2, 'save_file', {
+      path: '/vault/other.md',
+      content: 'text',
+      expectedVersion: null,
+      overwrite: false,
+    });
   });
 
   it('routes binary read and write wrappers through invoke', async () => {

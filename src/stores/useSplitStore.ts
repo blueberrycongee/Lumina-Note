@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { readFile, saveFile } from "@/lib/host";
+import type { NormalizedFsChangeKind } from "@/lib/fsChange";
 import { useFavoriteStore } from "@/stores/useFavoriteStore";
 import { reportOperationError } from "@/lib/reportError";
 
@@ -39,7 +40,7 @@ interface SplitState {
     annotationId: string | null;
   } | null>;
   swapPanels: () => void;
-  reloadSecondaryIfOpen: (path: string, options?: { skipIfDirty?: boolean }) => Promise<void>;
+  reloadSecondaryIfOpen: (path: string, options?: { skipIfDirty?: boolean; changeKind?: NormalizedFsChangeKind }) => Promise<void>;
 }
 
 export const useSplitStore = create<SplitState>((set, get) => ({
@@ -165,9 +166,10 @@ export const useSplitStore = create<SplitState>((set, get) => ({
   },
   
   // Reload secondary file if it's currently open (for external updates)
-  reloadSecondaryIfOpen: async (path: string, options?: { skipIfDirty?: boolean }) => {
+  reloadSecondaryIfOpen: async (path: string, options?: { skipIfDirty?: boolean; changeKind?: NormalizedFsChangeKind }) => {
     const { secondaryFile, secondaryIsDirty } = get();
     if (secondaryFile !== path) return;
+    if (options?.changeKind === "deleted") return;
     if (options?.skipIfDirty && secondaryIsDirty) return;
     
     try {

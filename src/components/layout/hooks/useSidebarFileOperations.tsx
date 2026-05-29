@@ -362,7 +362,7 @@ export function useSidebarFileOperations() {
       } else {
         await refreshFileTree();
         const { updateTabPath } = useFileStore.getState();
-        updateTabPath(renamingPath, newPath);
+        updateTabPath(renamingPath, newPath, { isDirectory: isDir });
       }
     } catch (error) {
       reportOperationError({

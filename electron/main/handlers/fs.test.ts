@@ -12,6 +12,7 @@ vi.mock("electron", () => ({
 import {
   fsHandlers,
   walkWorkspace,
+  FILE_MODIFIED_SINCE_PREFIX,
   WORKSPACE_TOO_LARGE_PREFIX,
   type FileEntry,
   type WorkspaceListing,
@@ -299,5 +300,44 @@ describe("fs handler — workspace listing", () => {
       path: root,
     })) as FileEntry[];
     expect(findEntry(entries, "leaf.md")?.name).toBe("leaf.md");
+  });
+
+  it("refuses save_file when expected version is stale", async () => {
+    const file = path.join(root, "note.md");
+    await fs.writeFile(file, "old");
+    const stat = await fs.stat(file);
+    await fs.writeFile(file, "external");
+
+    await expect(
+      fsHandlers.save_file({
+        path: file,
+        content: "mine",
+        expectedVersion: {
+          size: stat.size,
+          mtimeMs: stat.mtimeMs,
+        },
+      }),
+    ).rejects.toThrow(FILE_MODIFIED_SINCE_PREFIX);
+
+    await expect(fs.readFile(file, "utf-8")).resolves.toBe("external");
+  });
+
+  it("allows save_file overwrite to bypass stale expected version", async () => {
+    const file = path.join(root, "note.md");
+    await fs.writeFile(file, "old");
+    const stat = await fs.stat(file);
+    await fs.writeFile(file, "external");
+
+    await fsHandlers.save_file({
+      path: file,
+      content: "mine",
+      expectedVersion: {
+        size: stat.size,
+        mtimeMs: stat.mtimeMs,
+      },
+      overwrite: true,
+    });
+
+    await expect(fs.readFile(file, "utf-8")).resolves.toBe("mine");
   });
 });

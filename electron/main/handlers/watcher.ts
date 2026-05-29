@@ -3,9 +3,9 @@
  * Uses chokidar for cross-platform reliable watching.
  *
  * Defaults:
- *   - Shallow by default. The sidebar now loads directories lazily, so
- *     recursively watching a whole workspace can exhaust file descriptors
- *     before the user has interacted with most of it.
+ *   - Recursive by default. External agents commonly modify nested notes, and
+ *     users expect those updates to appear without manually expanding or
+ *     refreshing parent folders.
  *   - Default-deny list aligns with the workspace listing handler so the
  *     watcher and the file tree see the same set of files.
  *   - .gitignore at the watch root is honored so checked-in repositories
@@ -114,6 +114,19 @@ interface StartOptions {
   usePolling?: boolean;
 }
 
+type FsChangeKind = "created" | "modified" | "deleted";
+
+function legacyTypeForKind(kind: FsChangeKind): string {
+  switch (kind) {
+    case "created":
+      return "Created";
+    case "modified":
+      return "Modified";
+    case "deleted":
+      return "Deleted";
+  }
+}
+
 async function startWatcher(
   watchPath: string,
   win: BrowserWindow,
@@ -125,25 +138,29 @@ async function startWatcher(
     ignored: buildIgnorePredicate(watchPath),
     persistent: true,
     ignoreInitial: true,
-    depth: 0,
     awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     usePolling: opts.usePolling ?? false,
     interval: opts.usePolling ? 1500 : undefined,
     binaryInterval: opts.usePolling ? 3000 : undefined,
   });
 
-  const emit = (type: string, p: string) => {
+  const emit = (kind: FsChangeKind, p: string, isDirectory: boolean) => {
     if (!win.isDestroyed()) {
-      win.webContents.send("__tauri_event__", "fs:change", { type, path: p });
+      win.webContents.send("__tauri_event__", "fs:change", {
+        kind,
+        type: legacyTypeForKind(kind),
+        path: p,
+        isDirectory,
+      });
     }
   };
 
   watcher
-    .on("add", (p) => emit("create", p))
-    .on("change", (p) => emit("modify", p))
-    .on("unlink", (p) => emit("remove", p))
-    .on("addDir", (p) => emit("create", p))
-    .on("unlinkDir", (p) => emit("remove", p))
+    .on("add", (p) => emit("created", p, false))
+    .on("change", (p) => emit("modified", p, false))
+    .on("unlink", (p) => emit("deleted", p, false))
+    .on("addDir", (p) => emit("created", p, true))
+    .on("unlinkDir", (p) => emit("deleted", p, true))
     .on("error", (err) => {
       const code =
         typeof err === "object" && err !== null && "code" in err

@@ -9,7 +9,7 @@ import path from "node:path";
 import { fsHandlers } from "./handlers/fs.js";
 import { platformHandlers } from "./handlers/platform.js";
 import { storeHandlers } from "./handlers/store.js";
-import { startFileWatcher } from "./handlers/watcher.js";
+import { startFileWatcher, stopFileWatcher } from "./handlers/watcher.js";
 import { createWebDAVHandlers } from "./handlers/webdav.js";
 import { createProxyHandlers } from "./handlers/proxy.js";
 import { createUpdaterHandlers } from "./handlers/updater.js";
@@ -176,6 +176,10 @@ export function registerIpcHandlers(options: IpcHandlersOptions): void {
       // ── File watcher ────────────────────────────────────────────────────
       if (cmd === "start_file_watcher") {
         if (win) await startFileWatcher(args.watchPath as string, win);
+        return null;
+      }
+      if (cmd === "stop_file_watcher") {
+        stopFileWatcher(args.watchPath as string);
         return null;
       }
 

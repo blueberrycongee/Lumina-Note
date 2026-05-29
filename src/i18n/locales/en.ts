@@ -1150,6 +1150,10 @@ export default {
     pin: "Pin Tab",
     unpin: "Unpin Tab",
     newTab: "New tab",
+    modifiedOnDisk: "Changed on disk",
+    deletedOnDisk: "Deleted on disk",
+    saveConflict: "Save conflict",
+    overwriteDiskFile: "Overwrite Disk File",
   },
 
   // Conversation List

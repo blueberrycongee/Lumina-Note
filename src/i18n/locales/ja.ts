@@ -1377,6 +1377,10 @@ export default {
     pin: "タブを固定",
     unpin: "固定を解除",
     newTab: "新しいタブ",
+    modifiedOnDisk: "ディスク上で変更済み",
+    deletedOnDisk: "ディスク上で削除済み",
+    saveConflict: "保存の競合",
+    overwriteDiskFile: "ディスクのファイルを上書き",
   },
 
   // 会話リスト

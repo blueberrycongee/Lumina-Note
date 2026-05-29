@@ -55,8 +55,38 @@ export async function readFile(path: string): Promise<string> {
   return invoke<string>("read_file", { path });
 }
 
-export async function saveFile(path: string, content: string): Promise<void> {
-  return invoke("save_file", { path, content });
+export interface FileVersion {
+  size: number;
+  mtimeMs: number;
+}
+
+export interface SaveFileOptions {
+  expectedVersion?: FileVersion | null;
+  overwrite?: boolean;
+}
+
+export const FILE_MODIFIED_SINCE_PREFIX = "FILE_MODIFIED_SINCE";
+
+export function isFileModifiedSinceError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = (error as { message?: unknown }).message;
+  return (
+    typeof message === "string" &&
+    message.includes(FILE_MODIFIED_SINCE_PREFIX)
+  );
+}
+
+export async function saveFile(
+  path: string,
+  content: string,
+  options: SaveFileOptions = {},
+): Promise<void> {
+  return invoke("save_file", {
+    path,
+    content,
+    expectedVersion: options.expectedVersion ?? null,
+    overwrite: options.overwrite ?? false,
+  });
 }
 
 export async function writeBinaryFile(
@@ -283,6 +313,19 @@ export async function fsStat(path: string): Promise<FileStat> {
     isDirectory: raw.isDirectory,
     isSymlink: raw.isSymlink,
   };
+}
+
+export async function getFileVersion(path: string): Promise<FileVersion | null> {
+  try {
+    const stat = await fsStat(path);
+    if (!stat.isFile || !stat.mtime) return null;
+    return {
+      size: stat.size,
+      mtimeMs: stat.mtime.getTime(),
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ── plugin-dialog save ────────────────────────────────────────────────────
@@ -642,6 +685,10 @@ export async function stopVscodeAiExtensionHost(): Promise<void> {
 
 export async function startFileWatcher(watchPath: string): Promise<void> {
   return invoke("start_file_watcher", { watchPath });
+}
+
+export async function stopFileWatcher(watchPath: string): Promise<void> {
+  return invoke("stop_file_watcher", { watchPath });
 }
 
 // ── plugin:path helpers (formerly @tauri-apps/api/path) ────────────────────

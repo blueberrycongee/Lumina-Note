@@ -45,6 +45,7 @@ import {
   saveFile,
   setWindowSize,
   startFileWatcher,
+  stopFileWatcher,
   homeDir,
   join,
   exists,
@@ -57,7 +58,7 @@ import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
 import { OverviewDashboard } from "@/components/overview/OverviewDashboard";
 import { AutoTooltipHost } from "@/components/ui/tooltip";
 import { DevProfiler } from "@/perf/DevProfiler";
-import type { FsChangePayload } from "@/lib/fsChange";
+import type { FsChangePayload, NormalizedFsChange } from "@/lib/fsChange";
 import { usePluginStore } from "@/stores/usePluginStore";
 import { pluginRuntime } from "@/services/plugins/runtime";
 import { applyTheme, getThemeById } from "@/config/themePlugin";
@@ -462,12 +463,18 @@ function App() {
 
     let unlisten: (() => void) | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingChanges: NormalizedFsChange[] = [];
 
     const setupWatcher = async () => {
       try {
-        const { getFsChangePath, handleFsChangeEvent } =
-          await import("@/lib/fsChange");
-        const { reloadFileIfOpen } = useFileStore.getState();
+        const {
+          getFsChangeAffectedDirectoryPaths,
+          getFsChangeAffectedPaths,
+          handleNormalizedFsChangeEvent,
+          isFsChangeInsideRoot,
+        } = await import("@/lib/fsChange");
+        const { reloadFileIfOpen, refreshDirectories } =
+          useFileStore.getState();
         const { reloadSecondaryIfOpen } = (
           await import("@/stores/useSplitStore")
         ).useSplitStore.getState();
@@ -484,34 +491,58 @@ function App() {
               console.log("[FileWatcher] File changed:", event.payload);
             }
 
+            handleNormalizedFsChangeEvent(event.payload, (change) => {
+              pendingChanges.push(change);
+            });
+
             // 防抖：500ms 内多次变化只刷新一次
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-              const changedPath = getFsChangePath(event.payload);
-              if (changedPath) {
-                const fileStore = useFileStore.getState();
-                const dirtyPaths = fileStore.tabs
-                  .filter((tab) => tab.type === "file" && tab.isDirty)
-                  .map((tab) => tab.path);
-                if (fileStore.currentFile && fileStore.isDirty) {
-                  dirtyPaths.push(fileStore.currentFile);
+              const changes = pendingChanges;
+              pendingChanges = [];
+              if (changes.length === 0) {
+                return;
+              }
+
+              const changesInVault = changes.filter((change) =>
+                isFsChangeInsideRoot(change, vaultPath),
+              );
+              if (changesInVault.length > 0) {
+                const affectedDirectoryPaths = new Set<string>();
+                for (const change of changesInVault) {
+                  for (const path of getFsChangeAffectedDirectoryPaths(
+                    change,
+                    vaultPath,
+                  )) {
+                    affectedDirectoryPaths.add(path);
+                  }
                 }
-                const normalize = (path: string) => path.replace(/\\/g, "/");
-                const vaultPrefix = `${normalize(vaultPath).replace(/\/+$/, "")}/`;
-                const normalizedChangedPath = normalize(changedPath);
-                if (!normalizedChangedPath.startsWith(vaultPrefix)) {
-                  handleFsChangeEvent(event.payload, (path) => {
-                    reloadFileIfOpen(path, { skipIfDirty: true });
-                    reloadSecondaryIfOpen(path, { skipIfDirty: true });
-                  });
-                  return;
+                if (affectedDirectoryPaths.size > 0) {
+                  void refreshDirectories([...affectedDirectoryPaths]);
                 }
               }
-              refreshFileTree();
-              handleFsChangeEvent(event.payload, (path) => {
-                reloadFileIfOpen(path, { skipIfDirty: true });
-                reloadSecondaryIfOpen(path, { skipIfDirty: true });
-              });
+
+              for (const change of changes) {
+                if (change.kind === "renamed" && change.oldPath) {
+                  useFileStore
+                    .getState()
+                    .updateTabPath(change.oldPath, change.path, {
+                      isDirectory: change.isDirectory,
+                    });
+                  continue;
+                }
+
+                for (const path of getFsChangeAffectedPaths(change)) {
+                  reloadFileIfOpen(path, {
+                    skipIfDirty: true,
+                    changeKind: change.kind,
+                  });
+                  reloadSecondaryIfOpen(path, {
+                    skipIfDirty: true,
+                    changeKind: change.kind,
+                  });
+                }
+              }
             }, 500);
           },
         );
@@ -528,7 +559,7 @@ function App() {
           );
           reportOperationError({
             source: "App.setupWatcher",
-            action: "File watcher degraded — auto-refresh disabled",
+            action: "File watcher degraded — polling fallback enabled",
             error: new Error(`Watcher stopped: ${event.payload.reason}`),
             level: "warning",
             context: { path: event.payload.path },
@@ -556,8 +587,9 @@ function App() {
     return () => {
       if (unlisten) unlisten();
       if (debounceTimer) clearTimeout(debounceTimer);
+      void stopFileWatcher(vaultPath);
     };
-  }, [vaultPath, refreshFileTree]);
+  }, [vaultPath]);
   const {
     leftSidebarOpen,
     rightSidebarOpen,

@@ -7,6 +7,10 @@ vi.mock("@/lib/host", () => ({
   listDirectory: vi.fn(() => Promise.resolve([])),
   readFile: vi.fn((path: string) => Promise.resolve(path)),
   saveFile: vi.fn((path: string, content: string) => Promise.resolve({ path, content })),
+  getFileVersion: vi.fn(() => Promise.resolve({ size: 1, mtimeMs: 1 })),
+  isFileModifiedSinceError: vi.fn((error: unknown) =>
+    error instanceof Error && error.message.includes("FILE_MODIFIED_SINCE"),
+  ),
   createFile: vi.fn((path: string) => Promise.resolve(path)),
   createDir: vi.fn((path: string, options?: { recursive?: boolean }) => Promise.resolve({ path, options })),
   moveFile,

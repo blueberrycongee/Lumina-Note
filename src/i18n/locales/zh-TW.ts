@@ -1349,6 +1349,10 @@ export default {
     pin: "固定標籤頁",
     unpin: "取消固定",
     newTab: "新建標籤頁",
+    modifiedOnDisk: "磁碟檔案已變更",
+    deletedOnDisk: "磁碟檔案已刪除",
+    saveConflict: "儲存衝突",
+    overwriteDiskFile: "覆蓋磁碟檔案",
   },
 
   // 對話列表
