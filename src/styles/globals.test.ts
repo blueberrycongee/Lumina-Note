@@ -76,10 +76,25 @@ describe("App background skin", () => {
       "--md-table-border: var(--lumina-skin-border) !important;",
     );
     expect(globalsCss).toContain(
-      "--lumina-floating-overlay: hsl(0 0% 0% / 0.46);",
+      "--lumina-floating-overlay: hsl(0 0% 0% / 0.5);",
+    );
+    expect(globalsCss).toContain(
+      "--foreground: var(--lumina-skin-floating-foreground);",
+    );
+    expect(globalsCss).toContain(
+      "--popover: var(--lumina-skin-floating-background);",
+    );
+    expect(globalsCss).toContain(
+      "--primary: var(--lumina-skin-floating-primary);",
     );
     expect(globalsCss).toContain(
       'html[data-lumina-skin="image"] .lumina-floating-surface',
+    );
+    expect(globalsCss).toContain(
+      'html[data-lumina-skin="image"] .lumina-floating-surface [class*="bg-background/"]',
+    );
+    expect(globalsCss).toContain(
+      'html[data-lumina-skin="image"] .lumina-floating-surface [class*="bg-popover/"]',
     );
     expect(globalsCss).toContain("background-image: none !important;");
     expect(globalsCss).toContain(

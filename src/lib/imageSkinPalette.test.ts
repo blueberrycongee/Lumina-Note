@@ -79,6 +79,9 @@ describe("image skin palette", () => {
     expect(contrastRatio(tokens.foreground, tokens.background)).toBeGreaterThan(14);
     expect(contrastRatio(tokens.mutedForeground, tokens.muted)).toBeGreaterThan(6);
     expect(tokens.primaryForeground).toBe("0 0% 100%");
+    expect(tokens.floatingForeground).toBe("220 10% 96%");
+    expect(contrastRatio(tokens.floatingForeground, tokens.floatingBackground)).toBeGreaterThan(10);
+    expect(contrastRatio(tokens.floatingMutedForeground, tokens.floatingMuted)).toBeGreaterThan(5);
   });
 
   it("keeps dark-mode text readable while tinting controls toward the image", () => {
@@ -98,6 +101,8 @@ describe("image skin palette", () => {
     expect(contrastRatio(tokens.foreground, tokens.background)).toBeGreaterThan(14);
     expect(contrastRatio(tokens.mutedForeground, tokens.muted)).toBeGreaterThan(6);
     expect(lightnessOf(tokens.border)).toBeGreaterThan(25);
+    expect(tokens.floatingForeground).toBe("220 8% 96%");
+    expect(contrastRatio(tokens.floatingForeground, tokens.floatingBackground)).toBeGreaterThan(10);
   });
 
   it("falls back to stable readable tokens when the image has no visible pixels", () => {

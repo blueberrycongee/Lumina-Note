@@ -27,6 +27,14 @@ const SKIN_CUSTOM_PROPERTIES = [
   "--lumina-skin-border",
   "--lumina-skin-ribbon",
   "--lumina-skin-md-heading",
+  "--lumina-skin-floating-background",
+  "--lumina-skin-floating-foreground",
+  "--lumina-skin-floating-muted",
+  "--lumina-skin-floating-muted-foreground",
+  "--lumina-skin-floating-accent",
+  "--lumina-skin-floating-primary",
+  "--lumina-skin-floating-primary-foreground",
+  "--lumina-skin-floating-border",
   "--lumina-skin-image",
 ] as const;
 
@@ -46,6 +54,14 @@ const IMAGE_SKIN_TOKEN_PROPERTIES: Array<
   ["border", "--lumina-skin-border"],
   ["ribbon", "--lumina-skin-ribbon"],
   ["mdHeading", "--lumina-skin-md-heading"],
+  ["floatingBackground", "--lumina-skin-floating-background"],
+  ["floatingForeground", "--lumina-skin-floating-foreground"],
+  ["floatingMuted", "--lumina-skin-floating-muted"],
+  ["floatingMutedForeground", "--lumina-skin-floating-muted-foreground"],
+  ["floatingAccent", "--lumina-skin-floating-accent"],
+  ["floatingPrimary", "--lumina-skin-floating-primary"],
+  ["floatingPrimaryForeground", "--lumina-skin-floating-primary-foreground"],
+  ["floatingBorder", "--lumina-skin-floating-border"],
 ];
 
 const clearSkinCustomProperties = (root: HTMLElement) => {

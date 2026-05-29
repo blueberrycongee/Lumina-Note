@@ -19,6 +19,14 @@ export interface ImageSkinColorTokens {
   border: string;
   ribbon: string;
   mdHeading: string;
+  floatingBackground: string;
+  floatingForeground: string;
+  floatingMuted: string;
+  floatingMutedForeground: string;
+  floatingAccent: string;
+  floatingPrimary: string;
+  floatingPrimaryForeground: string;
+  floatingBorder: string;
 }
 
 interface HslColor {
@@ -205,6 +213,14 @@ export function getFallbackImageSkinTokens(
         border: "222 8% 38%",
         ribbon: "222 10% 8%",
         mdHeading: "220 8% 96%",
+        floatingBackground: "222 10% 13%",
+        floatingForeground: "220 8% 96%",
+        floatingMuted: "222 10% 20%",
+        floatingMutedForeground: "220 7% 76%",
+        floatingAccent: "222 12% 25%",
+        floatingPrimary: "220 36% 78%",
+        floatingPrimaryForeground: "222 18% 12%",
+        floatingBorder: "222 8% 42%",
       }
     : {
         background: "220 14% 97%",
@@ -220,6 +236,14 @@ export function getFallbackImageSkinTokens(
         border: "220 12% 68%",
         ribbon: "220 12% 89%",
         mdHeading: "222 20% 7%",
+        floatingBackground: "222 14% 16%",
+        floatingForeground: "220 10% 96%",
+        floatingMuted: "222 12% 24%",
+        floatingMutedForeground: "220 8% 76%",
+        floatingAccent: "222 14% 30%",
+        floatingPrimary: "220 46% 76%",
+        floatingPrimaryForeground: "222 18% 10%",
+        floatingBorder: "222 10% 48%",
       };
 }
 
@@ -258,6 +282,14 @@ export function deriveImageSkinTokens(
       border: hslToken(hue, borderSaturation, 38 + lift),
       ribbon: hslToken(hue, surfaceSaturation, 7 + lift),
       mdHeading: "220 8% 98%",
+      floatingBackground: hslToken(hue, surfaceSaturation, 13 + lift),
+      floatingForeground: "220 8% 96%",
+      floatingMuted: hslToken(hue, surfaceSaturation, 21 + lift),
+      floatingMutedForeground: "220 7% 76%",
+      floatingAccent: hslToken(hue, controlSaturation, 27 + lift),
+      floatingPrimary: hslToken(hue, accentSaturation, 76),
+      floatingPrimaryForeground: "222 18% 10%",
+      floatingBorder: hslToken(hue, borderSaturation, 42 + lift),
     };
   }
 
@@ -276,6 +308,14 @@ export function deriveImageSkinTokens(
     border: hslToken(hue, borderSaturation, 68 - shadow),
     ribbon: hslToken(hue, surfaceSaturation, 89 - shadow),
     mdHeading: "222 20% 7%",
+    floatingBackground: hslToken(hue, surfaceSaturation, 16),
+    floatingForeground: "220 10% 96%",
+    floatingMuted: hslToken(hue, surfaceSaturation, 24),
+    floatingMutedForeground: "220 8% 76%",
+    floatingAccent: hslToken(hue, controlSaturation, 30),
+    floatingPrimary: hslToken(hue, accentSaturation, 76),
+    floatingPrimaryForeground: "222 18% 10%",
+    floatingBorder: hslToken(hue, borderSaturation, 48),
   };
 }
 

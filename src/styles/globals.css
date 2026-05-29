@@ -255,12 +255,12 @@ body.resizing iframe[data-codex-iframe="true"] {
     --md-blockquote-border: var(--lumina-skin-primary) !important;
     --md-hr: var(--lumina-skin-border) !important;
     --md-table-border: var(--lumina-skin-border) !important;
-    --lumina-floating-surface: hsl(var(--popover) / 0.96);
-    --lumina-floating-surface-strong: hsl(var(--popover) / 0.985);
-    --lumina-floating-hover: hsl(var(--primary) / 0.09);
-    --lumina-floating-selected: hsl(var(--primary) / 0.14);
-    --lumina-floating-border: hsl(var(--border) / 0.9);
-    --lumina-floating-overlay: hsl(0 0% 0% / 0.46);
+    --lumina-floating-surface: hsl(var(--lumina-skin-floating-background) / 0.78);
+    --lumina-floating-surface-strong: hsl(var(--lumina-skin-floating-background) / 0.9);
+    --lumina-floating-hover: hsl(var(--lumina-skin-floating-accent) / 0.76);
+    --lumina-floating-selected: hsl(var(--lumina-skin-floating-accent) / 0.92);
+    --lumina-floating-border: hsl(var(--lumina-skin-floating-border) / 0.7);
+    --lumina-floating-overlay: hsl(0 0% 0% / 0.5);
   }
 
   html[data-lumina-skin="image"] .lumina-floating-overlay {
@@ -269,6 +269,17 @@ body.resizing iframe[data-codex-iframe="true"] {
   }
 
   html[data-lumina-skin="image"] .lumina-floating-surface {
+    --background: var(--lumina-skin-floating-background);
+    --foreground: var(--lumina-skin-floating-foreground);
+    --muted: var(--lumina-skin-floating-muted);
+    --muted-foreground: var(--lumina-skin-floating-muted-foreground);
+    --accent: var(--lumina-skin-floating-accent);
+    --accent-foreground: var(--lumina-skin-floating-foreground);
+    --popover: var(--lumina-skin-floating-background);
+    --popover-foreground: var(--lumina-skin-floating-foreground);
+    --primary: var(--lumina-skin-floating-primary);
+    --primary-foreground: var(--lumina-skin-floating-primary-foreground);
+    --border: var(--lumina-skin-floating-border);
     color: hsl(var(--foreground)) !important;
     border-color: var(--lumina-floating-border) !important;
     background-color: var(--lumina-floating-surface) !important;
@@ -277,6 +288,14 @@ body.resizing iframe[data-codex-iframe="true"] {
       0 18px 48px hsl(0 0% 0% / 0.24),
       0 2px 10px hsl(0 0% 0% / 0.12) !important;
     backdrop-filter: blur(22px) saturate(1.04);
+  }
+
+  html[data-lumina-skin="image"] .lumina-floating-surface .bg-background,
+  html[data-lumina-skin="image"] .lumina-floating-surface .bg-popover,
+  html[data-lumina-skin="image"] .lumina-floating-surface [class*="bg-background/"],
+  html[data-lumina-skin="image"] .lumina-floating-surface [class*="bg-popover/"] {
+    background-color: var(--lumina-floating-surface-strong) !important;
+    background-image: none !important;
   }
 
   html[data-lumina-skin="image"] .lumina-floating-surface .bg-muted,
