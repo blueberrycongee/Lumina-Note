@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   deriveImageSkinTokens,
   getFallbackImageSkinTokens,
+  getPreferredImageSkinMode,
   RgbSample,
 } from "./imageSkinPalette";
 
@@ -62,6 +63,43 @@ const contrastRatio = (first: string, second: string) => {
 };
 
 describe("image skin palette", () => {
+  it("prefers dark mode for dark or visually heavy images", () => {
+    expect(
+      getPreferredImageSkinMode(
+        Array.from({ length: 20 }, () => ({
+          r: 30,
+          g: 36,
+          b: 48,
+          a: 255,
+        })),
+      ),
+    ).toBe("dark");
+
+    expect(
+      getPreferredImageSkinMode(
+        Array.from({ length: 20 }, () => ({
+          r: 190,
+          g: 42,
+          b: 132,
+          a: 255,
+        })),
+      ),
+    ).toBe("dark");
+  });
+
+  it("prefers light mode for bright low-weight images", () => {
+    expect(
+      getPreferredImageSkinMode(
+        Array.from({ length: 20 }, () => ({
+          r: 236,
+          g: 242,
+          b: 250,
+          a: 255,
+        })),
+      ),
+    ).toBe("light");
+  });
+
   it("derives coordinated light-mode UI tokens from a blue image", () => {
     const samples: RgbSample[] = Array.from({ length: 20 }, () => ({
       r: 64,

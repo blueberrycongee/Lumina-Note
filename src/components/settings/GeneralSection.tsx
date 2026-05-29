@@ -2,14 +2,16 @@ import { useUIStore } from "@/stores/useUIStore";
 import type { AppBackgroundPreset } from "@/stores/useUIStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
 import { SUPPORTED_LOCALES, type Locale } from "@/i18n";
-import { openDialog } from "@/lib/host";
+import { openDialog, readBinaryFileBase64 } from "@/lib/host";
 import { basename } from "@/lib/path";
+import { extractPreferredImageSkinModeFromSource } from "@/lib/imageSkinPalette";
 import { Check, ImagePlus, RotateCcw, X } from "lucide-react";
 import { Select } from "@/components/ui";
 import {
   APP_BACKGROUND_PRESETS,
   APP_BACKGROUND_PRESET_STYLES,
 } from "@/config/appBackgrounds";
+import { getImageMimeType } from "@/services/assets/editorImages";
 
 export function GeneralSection() {
   const { t, locale, setLocale } = useLocaleStore();
@@ -17,6 +19,7 @@ export function GeneralSection() {
     appBackground,
     setAppBackground,
     resetAppBackground,
+    setDarkMode,
     editorMode,
     setEditorMode,
     editorFontSize,
@@ -46,6 +49,19 @@ export function GeneralSection() {
 
     if (typeof selected === "string") {
       setAppBackground({ kind: "image", imagePath: selected });
+      try {
+        const base64 = await readBinaryFileBase64(selected);
+        const mimeType = getImageMimeType(selected);
+        const preferredMode = await extractPreferredImageSkinModeFromSource(
+          `data:${mimeType};base64,${base64}`,
+        );
+        setDarkMode(preferredMode === "dark");
+      } catch (error) {
+        console.warn(
+          "[GeneralSection] Failed to infer background color mode:",
+          error,
+        );
+      }
     }
   };
 

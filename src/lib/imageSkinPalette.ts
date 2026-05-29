@@ -29,6 +29,8 @@ export interface ImageSkinColorTokens {
   floatingBorder: string;
 }
 
+export type ImageSkinModePreference = "light" | "dark";
+
 interface HslColor {
   hue: number;
   saturation: number;
@@ -319,6 +321,45 @@ export function deriveImageSkinTokens(
   };
 }
 
+export function getPreferredImageSkinMode(
+  samples: RgbSample[],
+): ImageSkinModePreference {
+  const visibleSamples = samples.filter((sample) => normalizeAlpha(sample.a) >= 0.12);
+  if (visibleSamples.length === 0) return "light";
+
+  let totalWeight = 0;
+  let luminanceSum = 0;
+  let darkWeight = 0;
+  let heavyColorWeight = 0;
+
+  for (const sample of visibleSamples) {
+    const weight = normalizeAlpha(sample.a);
+    const luminance = relativeLuminance(sample);
+    const hsl = rgbToHsl(sample);
+
+    totalWeight += weight;
+    luminanceSum += luminance * weight;
+    if (luminance < 0.42) {
+      darkWeight += weight;
+    }
+    if (hsl.saturation > 0.42 && luminance < 0.72) {
+      heavyColorWeight += weight;
+    }
+  }
+
+  if (totalWeight === 0) return "light";
+
+  const averageLuminance = luminanceSum / totalWeight;
+  const darkShare = darkWeight / totalWeight;
+  const heavyColorShare = heavyColorWeight / totalWeight;
+
+  return averageLuminance < 0.52 ||
+    darkShare > 0.38 ||
+    heavyColorShare > 0.52
+    ? "dark"
+    : "light";
+}
+
 const loadImage = (source: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -327,19 +368,16 @@ const loadImage = (source: string) =>
     image.src = source;
   });
 
-export async function extractImageSkinTokensFromSource(
-  source: string,
-  isDarkMode: boolean,
-): Promise<ImageSkinColorTokens> {
+async function extractImageSamplesFromSource(source: string): Promise<RgbSample[] | null> {
   if (typeof document === "undefined" || typeof Image === "undefined") {
-    return getFallbackImageSkinTokens(isDarkMode);
+    return null;
   }
 
   const image = await loadImage(source);
   const sourceWidth = image.naturalWidth || image.width;
   const sourceHeight = image.naturalHeight || image.height;
   if (sourceWidth <= 0 || sourceHeight <= 0) {
-    return getFallbackImageSkinTokens(isDarkMode);
+    return null;
   }
 
   const scale = Math.min(
@@ -353,7 +391,7 @@ export async function extractImageSkinTokensFromSource(
   canvas.width = width;
   canvas.height = height;
   const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) return getFallbackImageSkinTokens(isDarkMode);
+  if (!context) return null;
 
   context.drawImage(image, 0, 0, width, height);
   const imageData = context.getImageData(0, 0, width, height);
@@ -368,5 +406,22 @@ export async function extractImageSkinTokensFromSource(
     });
   }
 
-  return deriveImageSkinTokens(samples, isDarkMode);
+  return samples;
+}
+
+export async function extractPreferredImageSkinModeFromSource(
+  source: string,
+): Promise<ImageSkinModePreference> {
+  const samples = await extractImageSamplesFromSource(source);
+  return samples ? getPreferredImageSkinMode(samples) : "light";
+}
+
+export async function extractImageSkinTokensFromSource(
+  source: string,
+  isDarkMode: boolean,
+): Promise<ImageSkinColorTokens> {
+  const samples = await extractImageSamplesFromSource(source);
+  return samples
+    ? deriveImageSkinTokens(samples, isDarkMode)
+    : getFallbackImageSkinTokens(isDarkMode);
 }

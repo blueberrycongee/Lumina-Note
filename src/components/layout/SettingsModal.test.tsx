@@ -5,22 +5,38 @@ import { SettingsModal } from "./SettingsModal";
 const {
   getVersionMock,
   openDialogMock,
+  readBinaryFileBase64Mock,
   resetAppBackgroundMock,
   setAppBackgroundMock,
   setBlockEditorEnabledMock,
+  setDarkModeMock,
+  extractPreferredImageSkinModeFromSourceMock,
 } = vi.hoisted(() => ({
   getVersionMock: vi.fn(async () => "1.2.3"),
   openDialogMock: vi.fn(),
+  readBinaryFileBase64Mock: vi.fn(async () => "base64-image"),
   resetAppBackgroundMock: vi.fn(),
   setAppBackgroundMock: vi.fn(),
   setBlockEditorEnabledMock: vi.fn(),
+  setDarkModeMock: vi.fn(),
+  extractPreferredImageSkinModeFromSourceMock: vi.fn(async () => "dark"),
 }));
 
 vi.mock("@/lib/host", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/host")>("@/lib/host");
-  return { ...actual, getVersion: getVersionMock, openDialog: openDialogMock };
+  return {
+    ...actual,
+    getVersion: getVersionMock,
+    openDialog: openDialogMock,
+    readBinaryFileBase64: readBinaryFileBase64Mock,
+  };
 });
+
+vi.mock("@/lib/imageSkinPalette", () => ({
+  extractPreferredImageSkinModeFromSource:
+    extractPreferredImageSkinModeFromSourceMock,
+}));
 
 vi.mock("@/config/themes", () => ({
   OFFICIAL_THEMES: [],
@@ -46,6 +62,7 @@ vi.mock("@/stores/useUIStore", () => ({
     },
     setAppBackground: setAppBackgroundMock,
     resetAppBackground: resetAppBackgroundMock,
+    setDarkMode: setDarkModeMock,
     editorMode: "live",
     setEditorMode: () => undefined,
     editorFontSize: 16,
@@ -243,8 +260,13 @@ describe("SettingsModal", () => {
   beforeEach(() => {
     getVersionMock.mockClear();
     openDialogMock.mockReset();
+    readBinaryFileBase64Mock.mockReset();
+    readBinaryFileBase64Mock.mockResolvedValue("base64-image");
     resetAppBackgroundMock.mockClear();
     setAppBackgroundMock.mockClear();
+    setDarkModeMock.mockClear();
+    extractPreferredImageSkinModeFromSourceMock.mockReset();
+    extractPreferredImageSkinModeFromSourceMock.mockResolvedValue("dark");
     onOpenUpdateModal.mockClear();
   });
 
@@ -312,6 +334,15 @@ describe("SettingsModal", () => {
         kind: "image",
         imagePath: "/vault/assets/bg.png",
       });
+    });
+    await waitFor(() => {
+      expect(readBinaryFileBase64Mock).toHaveBeenCalledWith(
+        "/vault/assets/bg.png",
+      );
+      expect(extractPreferredImageSkinModeFromSourceMock).toHaveBeenCalledWith(
+        "data:image/png;base64,base64-image",
+      );
+      expect(setDarkModeMock).toHaveBeenCalledWith(true);
     });
   });
 

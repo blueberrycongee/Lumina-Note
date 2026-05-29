@@ -51,6 +51,23 @@ describe("useUIStore", () => {
     expect(reapplyMock).toHaveBeenCalled();
   });
 
+  it("sets a specific dark mode value without double toggling", async () => {
+    const { useUIStore } = await loadStore();
+    vi.clearAllMocks();
+
+    useUIStore.getState().setDarkMode(true);
+    useUIStore.getState().setDarkMode(true);
+
+    expect(useUIStore.getState().isDarkMode).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    expect(applyThemeMock).toHaveBeenCalledTimes(1);
+    expect(applyThemeMock).toHaveBeenCalledWith(
+      { id: "default", name: "default" },
+      true,
+    );
+    expect(reapplyMock).toHaveBeenCalledTimes(1);
+  });
+
   it("applies the selected theme immediately", async () => {
     const { useUIStore } = await loadStore();
     useUIStore.setState({ isDarkMode: true, themeId: "default" });

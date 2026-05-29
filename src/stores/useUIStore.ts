@@ -27,6 +27,7 @@ interface UIState {
   isDarkMode: boolean;
   themeId: string;
   toggleTheme: () => void;
+  setDarkMode: (enabled: boolean) => void;
   setThemeId: (id: string) => void;
 
   // App background skin
@@ -165,6 +166,20 @@ const partializeUIState = (state: UIState) => ({
   proxyEnabled: state.proxyEnabled,
 });
 
+const applyColorMode = (themeId: string, isDarkMode: boolean) => {
+  if (isDarkMode) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+
+  const theme = getThemeById(themeId);
+  if (theme) {
+    applyTheme(theme, isDarkMode);
+    pluginThemeRuntime.reapply();
+  }
+};
+
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
@@ -175,19 +190,14 @@ export const useUIStore = create<UIState>()(
       toggleTheme: () =>
         set((state) => {
           const newMode = !state.isDarkMode;
-          // Update document class for Tailwind dark mode
-          if (newMode) {
-            document.documentElement.classList.add("dark");
-          } else {
-            document.documentElement.classList.remove("dark");
-          }
-          // Apply theme colors
-          const theme = getThemeById(state.themeId);
-          if (theme) {
-            applyTheme(theme, newMode);
-            pluginThemeRuntime.reapply();
-          }
+          applyColorMode(state.themeId, newMode);
           return { isDarkMode: newMode };
+        }),
+      setDarkMode: (enabled) =>
+        set((state) => {
+          if (state.isDarkMode === enabled) return {};
+          applyColorMode(state.themeId, enabled);
+          return { isDarkMode: enabled };
         }),
       setThemeId: (id: string) =>
         set((state) => {
