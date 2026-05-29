@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.7] - 2026-05-30
+
+本次补丁版本修复 1.4.6 外部文件变更保护引入的保存冲突误报，并恢复 Electron 窗口在存在未保存内容时的可关闭性。
+
+### 修复
+- **自保存事件不再误报保存冲突**：Lumina Note 自己保存文件后，文件监听器延迟到达的 `modified` 事件不再被误判为外部修改，避免继续编辑时弹出 Save conflict。
+- **未保存确认后可以关闭窗口**：选择 “Close Without Saving” 后主进程会正确关闭 Electron 窗口，不再被 renderer 的 `beforeunload` 二次拦截。
+- **未保存文件数量不再重复计算**：关闭确认弹窗中的未保存文件数量按实际文件去重，避免当前编辑文件被重复计数。
+
 ## [1.4.6] - 2026-05-29
 
 本次小版本聚焦背景壁纸皮肤体验、壁纸导入持久化，以及外部文件变更与侧栏选择状态的稳定性。
