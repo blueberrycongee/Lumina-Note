@@ -650,6 +650,12 @@ body.resizing iframe[data-codex-iframe="true"] {
   .transition-smooth,
   .app-sidebar-shell,
   .app-sidebar-inner,
+  .file-tree-hover-highlight,
+  .file-tree-motion-row[data-motion-active="true"],
+  .file-tree-motion-row[data-motion-active="true"][data-shifted="true"]
+    .file-tree-motion-content,
+  .file-tree-motion-row[data-motion-active="true"][data-entering="true"]
+    .file-tree-motion-content,
   .sidebar-file-tree-scroll::-webkit-scrollbar-thumb,
   .editor-scroll-shell::-webkit-scrollbar-thumb,
   ::-webkit-scrollbar-thumb {
@@ -680,6 +686,58 @@ body.resizing iframe[data-codex-iframe="true"] {
   .ui-tree-icon {
     width: 14px;
     height: 14px;
+  }
+
+  .file-tree-hover-highlight {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100%;
+    pointer-events: none;
+    border-radius: var(--ui-radius-sm);
+    background: hsl(var(--accent));
+    opacity: 0.72;
+    transition:
+      transform 130ms var(--motion-ease-spring),
+      height 130ms var(--motion-ease-spring),
+      opacity 80ms ease-out;
+    will-change: transform, height;
+  }
+
+  .file-tree-motion-row {
+    z-index: 1;
+  }
+
+  .file-tree-motion-row[data-motion-active="true"][data-entering="true"]
+    .file-tree-motion-content {
+    animation: file-tree-row-enter 140ms var(--motion-ease-spring) both;
+  }
+
+  .file-tree-motion-row[data-motion-active="true"][data-shifted="true"]
+    .file-tree-motion-content {
+    animation: file-tree-row-shift 170ms var(--motion-ease-spring) both;
+    will-change: transform;
+  }
+
+  @keyframes file-tree-row-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes file-tree-row-shift {
+    from {
+      transform: translateY(var(--file-tree-motion-delta-y));
+    }
+    to {
+      transform: translateY(0);
+    }
   }
 
   .ui-compact-row {
@@ -764,6 +822,8 @@ body.resizing iframe[data-codex-iframe="true"] {
   .sidebar-file-tree-scroll {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
+    overflow-anchor: none;
+    scrollbar-gutter: stable;
   }
 
   .editor-scroll-shell {

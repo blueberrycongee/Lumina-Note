@@ -7,6 +7,10 @@ const globalsSource = readFileSync(
   path.resolve(__dirname, "styles/globals.css"),
   "utf8",
 );
+const sidebarSource = readFileSync(
+  path.resolve(__dirname, "components/layout/Sidebar.tsx"),
+  "utf8",
+);
 
 describe("App sidebar motion", () => {
   it("keeps specialized tab panes stretched across the main content area", () => {
@@ -87,5 +91,38 @@ describe("App sidebar motion", () => {
     );
     expect(globalsSource).toContain("transform: translateX(calc(var(--ui-sidebar-nudge) * -1));");
     expect(globalsSource).toContain("transform: translateX(var(--ui-sidebar-nudge));");
+  });
+
+  it("animates file-tree expansion without transitioning virtualizer positioning", () => {
+    expect(sidebarSource).toContain("const FILE_TREE_MOTION_MS = 180;");
+    expect(sidebarSource).toContain("const [fileTreeMotionActive, setFileTreeMotionActive]");
+    expect(sidebarSource).toContain("const previousRowStartsRef");
+    expect(sidebarSource).toContain("markFileTreeMotionActive();");
+    expect(sidebarSource).toContain("toggleExpanded: handleToggleExpanded");
+    expect(sidebarSource).toContain('className="file-tree-motion-row"');
+    expect(sidebarSource).toContain('data-motion-active={motionActive ? "true" : undefined}');
+    expect(sidebarSource).toContain('data-entering={isEntering ? "true" : undefined}');
+    expect(sidebarSource).toContain('data-shifted={isShifted ? "true" : undefined}');
+    expect(sidebarSource).toContain('"--file-tree-motion-delta-y"');
+    expect(globalsSource).toContain("@keyframes file-tree-row-enter");
+    expect(globalsSource).toContain("@keyframes file-tree-row-shift");
+    expect(globalsSource).not.toContain(
+      '.file-tree-motion-row[data-motion-active="true"] {\n    transition: transform',
+    );
+    expect(globalsSource).toContain("overflow-anchor: none;");
+    expect(globalsSource).toContain("scrollbar-gutter: stable;");
+  });
+
+  it("uses a shared moving hover highlight for file-tree rows", () => {
+    expect(sidebarSource).toContain("const [hoveredRowKey, setHoveredRowKey]");
+    expect(sidebarSource).toContain("const hoveredVirtualItem = hoveredRowKey");
+    expect(sidebarSource).toContain('className="file-tree-hover-highlight"');
+    expect(sidebarSource).toContain("setHoveredRowKey(row.key)");
+    expect(sidebarSource).toContain("entry.path !== rowProps.selectedPath");
+    expect(sidebarSource).toContain("entry.path !== rowProps.currentFile");
+    expect(sidebarSource).toContain('isSelected ? "bg-primary/10 text-primary" : "hover:text-foreground"');
+    expect(sidebarSource).toContain(': "text-muted-foreground hover:text-foreground"');
+    expect(globalsSource).toContain(".file-tree-hover-highlight");
+    expect(globalsSource).toContain("transition:\n      transform 130ms");
   });
 });

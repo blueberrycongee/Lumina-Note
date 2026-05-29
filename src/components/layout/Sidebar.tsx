@@ -1,4 +1,13 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type CSSProperties,
+  type Key,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useFileStore } from "@/stores/useFileStore";
 import { useLocaleStore } from "@/stores/useLocaleStore";
@@ -73,6 +82,7 @@ const FILE_TREE_LABEL_CLASS = "ui-tree-label truncate pointer-events-none";
 // plus icon (~16px), so ~28-30px in practice. We err toward the upper
 // bound so the virtualizer never undersizes (avoids visible jumps).
 const FILE_TREE_ROW_HEIGHT = 30;
+const FILE_TREE_MOTION_MS = 180;
 
 export type FileTreeRow =
   | { kind: "entry"; entry: FileEntry; level: number; key: string }
@@ -222,7 +232,9 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
   const [isRootDragOver, setIsRootDragOver] = useState(false);
   const [isExternalDragOver, setIsExternalDragOver] = useState(false);
   const [isFileTreeScrollActive, setIsFileTreeScrollActive] = useState(false);
+  const [fileTreeMotionActive, setFileTreeMotionActive] = useState(false);
   const fileTreeScrollFadeTimerRef = useRef<number | null>(null);
+  const fileTreeMotionTimerRef = useRef<number | null>(null);
   const fileTreeScrollRef = useRef<HTMLDivElement | null>(null);
 
   // Flatten the (eagerly-loaded, ignore-filtered) tree into the visible
@@ -377,10 +389,32 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
     }, 720);
   }, []);
 
+  const markFileTreeMotionActive = useCallback(() => {
+    setFileTreeMotionActive(true);
+    if (fileTreeMotionTimerRef.current !== null) {
+      window.clearTimeout(fileTreeMotionTimerRef.current);
+    }
+    fileTreeMotionTimerRef.current = window.setTimeout(() => {
+      setFileTreeMotionActive(false);
+      fileTreeMotionTimerRef.current = null;
+    }, FILE_TREE_MOTION_MS);
+  }, []);
+
+  const handleToggleExpanded = useCallback(
+    (path: string) => {
+      markFileTreeMotionActive();
+      toggleExpanded(path);
+    },
+    [markFileTreeMotionActive, toggleExpanded],
+  );
+
   useEffect(() => {
     return () => {
       if (fileTreeScrollFadeTimerRef.current !== null) {
         window.clearTimeout(fileTreeScrollFadeTimerRef.current);
+      }
+      if (fileTreeMotionTimerRef.current !== null) {
+        window.clearTimeout(fileTreeMotionTimerRef.current);
       }
     };
   }, []);
@@ -547,6 +581,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
         onDragOver={handleExternalDragOver}
         onDragLeave={handleExternalDragLeave}
         onDrop={handleExternalDrop}
+        motionActive={fileTreeMotionActive}
         rowProps={{
           currentFile,
           selectedPath,
@@ -559,7 +594,7 @@ export function Sidebar({ onSwitchVault }: SidebarProps) {
           onRenameSubmit: handleRename,
           onRenameCancel: () => setRenamingPath(null),
           expandedPaths,
-          toggleExpanded,
+          toggleExpanded: handleToggleExpanded,
           creating,
           createValue,
           setCreateValue,
@@ -882,6 +917,7 @@ interface FileTreeVirtualizedProps {
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  motionActive: boolean;
   rowProps: FileTreeRowProps;
 }
 
@@ -898,8 +934,12 @@ function FileTreeVirtualized({
   onDragOver,
   onDragLeave,
   onDrop,
+  motionActive,
   rowProps,
 }: FileTreeVirtualizedProps) {
+  const previousRowKeysRef = useRef<Set<string>>(new Set());
+  const previousRowStartsRef = useRef<Map<Key, number>>(new Map());
+  const [hoveredRowKey, setHoveredRowKey] = useState<string | null>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
@@ -907,16 +947,48 @@ function FileTreeVirtualized({
     overscan: 12,
     getItemKey: (index) => rows[index]?.key ?? index,
   });
+  const virtualItems = virtualizer.getVirtualItems();
+
+  useLayoutEffect(() => {
+    previousRowKeysRef.current = new Set(rows.map((row) => row.key));
+    previousRowStartsRef.current = new Map(
+      virtualItems.map((item) => [item.key, item.start]),
+    );
+  }, [rows, virtualItems]);
+
+  useEffect(() => {
+    if (hoveredRowKey && !rows.some((row) => row.key === hoveredRowKey)) {
+      setHoveredRowKey(null);
+    }
+  }, [hoveredRowKey, rows]);
+
+  const hoveredVirtualItem = hoveredRowKey
+    ? virtualItems.find((vi) => {
+        const row = rows[vi.index];
+        if (!row || row.key !== hoveredRowKey || row.kind !== "entry") {
+          return false;
+        }
+        const { entry } = row;
+        return (
+          entry.path !== rowProps.selectedPath &&
+          entry.path !== rowProps.currentFile
+        );
+      })
+    : undefined;
 
   return (
     <div
       ref={scrollRef}
       className={scrollClass}
-      onScroll={onScroll}
+      onScroll={() => {
+        setHoveredRowKey(null);
+        onScroll();
+      }}
       onClick={onClick}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
+      onMouseLeave={() => setHoveredRowKey(null)}
     >
       {loading && rows.length === 0 ? (
         <div className="flex items-center justify-center gap-2 px-4 py-8 text-muted-foreground ui-tree-label">
@@ -935,13 +1007,44 @@ function FileTreeVirtualized({
             width: "100%",
           }}
         >
-          {virtualizer.getVirtualItems().map((vi) => {
+          {hoveredVirtualItem ? (
+            <div
+              aria-hidden="true"
+              className="file-tree-hover-highlight"
+              style={{
+                height: hoveredVirtualItem.size,
+                transform: `translateY(${hoveredVirtualItem.start}px)`,
+              }}
+            />
+          ) : null}
+          {virtualItems.map((vi) => {
             const row = rows[vi.index];
+            const hoverable = row.kind === "entry";
+            const isEntering =
+              motionActive && !previousRowKeysRef.current.has(row.key);
+            const previousStart = previousRowStartsRef.current.get(vi.key);
+            const motionDelta =
+              motionActive && previousStart !== undefined && !isEntering
+                ? previousStart - vi.start
+                : 0;
+            const isShifted = Math.abs(motionDelta) > 0.5;
+            const contentStyle = isShifted
+              ? ({
+                  "--file-tree-motion-delta-y": `${motionDelta}px`,
+                } as CSSProperties)
+              : undefined;
             return (
               <div
                 key={vi.key}
                 ref={virtualizer.measureElement}
                 data-index={vi.index}
+                data-motion-active={motionActive ? "true" : undefined}
+                data-entering={isEntering ? "true" : undefined}
+                data-shifted={isShifted ? "true" : undefined}
+                className="file-tree-motion-row"
+                onMouseEnter={
+                  hoverable ? () => setHoveredRowKey(row.key) : undefined
+                }
                 style={{
                   position: "absolute",
                   top: 0,
@@ -950,24 +1053,29 @@ function FileTreeVirtualized({
                   transform: `translateY(${vi.start}px)`,
                 }}
               >
-                {row.kind === "entry" ? (
-                  <FileTreeItem
-                    entry={row.entry}
-                    level={row.level}
-                    {...rowProps}
-                  />
-                ) : row.kind === "creating" ? (
-                  <CreateInputRow
-                    type={rowProps.creating!.type}
-                    value={rowProps.createValue}
-                    onChange={rowProps.setCreateValue}
-                    onSubmit={rowProps.onCreateSubmit}
-                    onCancel={rowProps.onCreateCancel}
-                    level={row.level}
-                  />
-                ) : (
-                  <LoadingFolderRow level={row.level} label={loadingLabel} />
-                )}
+                <div
+                  className="file-tree-motion-content"
+                  style={contentStyle}
+                >
+                  {row.kind === "entry" ? (
+                    <FileTreeItem
+                      entry={row.entry}
+                      level={row.level}
+                      {...rowProps}
+                    />
+                  ) : row.kind === "creating" ? (
+                    <CreateInputRow
+                      type={rowProps.creating!.type}
+                      value={rowProps.createValue}
+                      onChange={rowProps.setCreateValue}
+                      onSubmit={rowProps.onCreateSubmit}
+                      onCancel={rowProps.onCreateCancel}
+                      level={row.level}
+                    />
+                  ) : (
+                    <LoadingFolderRow level={row.level} label={loadingLabel} />
+                  )}
+                </div>
               </div>
             );
           })}
@@ -1164,7 +1272,7 @@ function FileTreeItem({
         onMouseLeave={handleMouseLeave}
         className={cn(
           FILE_TREE_ROW_CLASS,
-          isSelected ? "bg-primary/10 text-primary" : "hover:bg-accent",
+          isSelected ? "bg-primary/10 text-primary" : "hover:text-foreground",
           isDragOver && "bg-primary/10",
         )}
         style={{ paddingLeft }}
@@ -1261,7 +1369,7 @@ function FileTreeItem({
         FILE_TREE_FILE_ROW_CLASS,
         showActive
           ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          : "text-muted-foreground hover:text-foreground",
       )}
       style={{ paddingLeft: paddingLeft + 20 }}
     >
