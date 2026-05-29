@@ -43,12 +43,20 @@ describe("MacLeftPaneTopBar", () => {
     const { container } = render(<MacLeftPaneTopBar />);
 
     expect(container.firstElementChild).toHaveClass("h-11");
+    expect(container.firstElementChild).toHaveClass("relative");
     expect(container.firstElementChild).toHaveClass("items-stretch");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("h-full");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("items-center");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("justify-center");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("gap-4");
     expect(screen.getByTestId("mac-left-pane-controls")).toHaveClass("px-2");
+    expect(screen.getByTestId("mac-left-pane-bottom-rule")).toHaveClass(
+      "absolute",
+      "bottom-0",
+      "z-0",
+      "h-px",
+      "bg-border/60",
+    );
   });
 
   it("renders file operation buttons in the top bar", () => {

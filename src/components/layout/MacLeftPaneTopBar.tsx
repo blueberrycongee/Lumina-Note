@@ -15,9 +15,14 @@ export function MacLeftPaneTopBar() {
   const refreshFileTree = useFileStore((state) => state.refreshFileTree);
 
   return (
-    <div className="flex h-11 items-stretch bg-background">
+    <div className="relative flex h-11 items-stretch bg-background">
       <div
-        className="h-full w-16 shrink-0 flex items-center justify-center bg-ribbon border-r border-border/30"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-px bg-border/60"
+        data-testid="mac-left-pane-bottom-rule"
+      />
+      <div
+        className="relative z-10 flex h-full w-16 shrink-0 items-center justify-center border-r border-border/30 bg-ribbon"
         data-tauri-drag-region
         data-testid="mac-left-pane-traffic-lights-safe-area"
       >
@@ -25,7 +30,7 @@ export function MacLeftPaneTopBar() {
       </div>
 
       <div
-        className="flex h-full min-w-0 flex-1 items-center justify-center gap-4 px-2 border-b border-border/40"
+        className="relative z-10 flex h-full min-w-0 flex-1 items-center justify-center gap-4 px-2"
         data-tauri-drag-region
         data-testid="mac-left-pane-controls"
       >
