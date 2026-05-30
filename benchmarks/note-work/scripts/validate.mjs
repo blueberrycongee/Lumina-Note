@@ -328,6 +328,12 @@ async function main() {
         fail(`${task.id}: expected source must also be allowed: ${sourcePath}`);
       }
     }
+    if (task.source_scope === "no_vault_scan" && (task.allowed_sources.length > 0 || task.expected_sources.length > 0)) {
+      fail(`${task.id}: no_vault_scan tasks must not define allowed or expected sources`);
+    }
+    if (task.source_scope === "specific_sources_only" && task.allowed_sources.length === 0) {
+      fail(`${task.id}: specific_sources_only tasks must define allowed_sources`);
+    }
     for (const forbiddenPath of task.forbidden_sources) {
       if (task.allowed_sources.includes(forbiddenPath) || task.expected_sources.includes(forbiddenPath)) {
         fail(`${task.id}: forbidden source overlaps allowed/expected: ${forbiddenPath}`);
@@ -416,6 +422,10 @@ async function main() {
     }
     for (const task of tasks) {
       if (!runtimeById.has(task.id)) fail(`${taskSet.runtime_path}: missing runtime task for ${task.id}`);
+      const runtimeTask = runtimeById.get(task.id);
+      if (runtimeTask && runtimeTask.source_scope !== task.source_scope) {
+        fail(`${runtimeTask.id}: runtime source_scope must match gold task source_scope`);
+      }
     }
   } else {
     fail(`${taskSet.id}: runtime_path is required to prevent gold-label leakage`);
@@ -471,6 +481,12 @@ async function main() {
     errors.push(...validateSchema(scoreReport, scoreSchema, manifest.default_score_report_json));
     if (!scoreReport.family_scores || !scoreReport.high_risk_scores || !scoreReport.dimension_scores) {
       fail(`${manifest.default_score_report_json}: missing diagnostic score sections`);
+    }
+    if (scoreReport.summary?.scoring_model !== "endpoint-primary-hard-gated-v0.2") {
+      fail(`${manifest.default_score_report_json}: score report must use endpoint-primary-hard-gated-v0.2`);
+    }
+    if (scoreReport.summary?.trajectory_metrics_are_diagnostics !== true || scoreReport.summary?.hard_gates_enforced !== true) {
+      fail(`${manifest.default_score_report_json}: score report must mark trajectory metrics as diagnostics and enforce hard gates`);
     }
   } else {
     warn(`default score report not found yet: ${manifest.default_score_report_json}`);

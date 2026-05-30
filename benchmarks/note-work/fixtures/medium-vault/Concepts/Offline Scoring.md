@@ -11,9 +11,9 @@ tags:
 ---
 # Offline Scoring
 
-Anchor: Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics.
+Anchor: Offline scoring uses endpoint results as the primary score and keeps trajectory as diagnostics.
 
-Summary: The scorer should make failures diagnosable. It must not collapse everything into a single aggregate score.
+Summary: The scorer should make failures diagnosable. It must not collapse everything into a single aggregate score or hide hard-gate failures.
 
 Related links: [[Lexical Baseline]], [[Score Report Fields]], [[Benchmark Scoring Review]]
 

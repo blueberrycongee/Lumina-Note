@@ -12,7 +12,7 @@ tags:
 
 Anchor: A long-context task can hinge on one short note that changes the answer.
 
-Summary: The benchmark includes small notes whose details outweigh larger summaries. Missing the needle should be visible as a source miss.
+Summary: The benchmark includes small notes whose details outweigh larger summaries. Missing the needle should be visible in the final answer.
 
 Related links: [[Long Context Failure Modes]], [[Graph-Assisted Retrieval]]
 

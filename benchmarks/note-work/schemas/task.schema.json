@@ -17,6 +17,7 @@
     "source_profile_id",
     "synthetic_generation",
     "prompt",
+    "source_scope",
     "allowed_sources",
     "expected_sources",
     "expected_evidence",
@@ -90,6 +91,13 @@
     },
     "prompt": { "type": "string", "minLength": 1 },
     "current_file": { "type": "string" },
+    "source_scope": {
+      "enum": [
+        "full_vault_except_forbidden",
+        "specific_sources_only",
+        "no_vault_scan"
+      ]
+    },
     "allowed_sources": {
       "type": "array",
       "items": { "type": "string" }

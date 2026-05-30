@@ -19,6 +19,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the note that defines the source_paths contract for generated benchmark notes.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Source Paths Contract.md",
       "wiki/Source Provenance Summary.md",
@@ -49,15 +50,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -83,6 +82,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the source notes for the rule that PDF highlights should be converted before synthesis.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/PDF Highlight Pipeline.md",
       "PDF/PDF Annotation Export.md",
@@ -113,15 +113,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -147,6 +145,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Which note mentions the launch checklist and source audit work but lacks the strongest provenance link?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Daily/2026-05-15.md",
       "Projects/Atlas Launch Plan.md",
@@ -171,15 +170,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -205,6 +202,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the note that mentions the source paths contract in prose but omits the WikiLink.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Daily/2026-05-16.md",
       "Concepts/Source Paths Contract.md",
@@ -229,15 +227,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -263,6 +259,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the isolated note that should connect to backlink gaps and wiki cleanup.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Isolated/Card Sorting Observation.md",
       "Concepts/Backlink Gap.md",
@@ -287,15 +284,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -321,6 +316,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the current notes that define boundary consent behavior.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Boundary Consent.md",
       "Research/Boundary Consent Patterns.md",
@@ -351,15 +347,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -385,6 +379,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find where the lexical baseline is defined and how to run it.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Lexical Baseline.md",
       "Tutorials/Run Lexical Baseline.md",
@@ -414,15 +409,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -448,6 +441,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the notes that require allowed edits and expected diff checks for mutation tasks.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Mutation Audit Trail.md",
       "Concepts/Mutation Safety.md",
@@ -477,15 +471,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -511,6 +503,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the contract a future graph-assisted agent must follow for task input and run output.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Agent Runner Contract.md",
       "Reference/Runner Output Fields.md",
@@ -527,7 +520,7 @@
       },
       {
         "path": "Reference/Runner Output Fields.md",
-        "snippet": "Anchor: Run output records sources_read, candidate_paths_scanned, files_edited, links_suggested, cost, and latency."
+        "snippet": "Anchor: Run output records the final answer, suggested links, mutation checks, trajectory evidence, cost, and latency."
       }
     ],
     "forbidden_sources": [
@@ -540,15 +533,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -574,6 +565,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find the short note that says one small note can change a long-context answer.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Long Context Needle.md",
       "PDF/Long Context Failure Modes.md",
@@ -603,15 +595,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -637,6 +627,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the old and current assumptions about graph-assisted retrieval.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Research/Graph Retrieval Current Assumptions.md",
       "Research/Graph Retrieval Old Assumptions.md",
@@ -666,16 +657,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -701,6 +690,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the old and current positions on auto-linking and say which is current.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Research/Auto-Linking Current Position.md",
       "Research/Auto-Linking Old Position.md",
@@ -730,16 +720,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -765,6 +753,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Explain how Phoenix relates to Atlas and which name is current.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Atlas Launch Plan.md",
       "Projects/Phoenix Launch.md",
@@ -800,16 +789,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -835,6 +822,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the Source Paths Contract and Provenance Contract. What does each one control?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Source Paths Contract.md",
       "Concepts/Provenance Contract.md",
@@ -864,16 +852,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -899,6 +885,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Which PDF summary rule is current and which archived note contradicts it?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/PDF Highlight Pipeline.md",
       "Archive/Old PDF Summary Contract.md",
@@ -928,16 +915,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -964,6 +949,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the current boundary consent rule with the legacy boundary draft.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Boundary Consent.md",
       "Archive/Legacy Boundary Draft.md",
@@ -993,16 +979,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1028,6 +1012,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Find notes that disagree about whether auto-linking should edit broadly by default.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Research/Auto-Linking Current Position.md",
       "Research/Auto-Linking Old Position.md",
@@ -1063,16 +1048,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1098,6 +1081,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare what run outputs record with what score reports summarize.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Reference/Runner Output Fields.md",
       "Reference/Score Report Fields.md",
@@ -1110,11 +1094,11 @@
     "expected_evidence": [
       {
         "path": "Reference/Runner Output Fields.md",
-        "snippet": "Anchor: Run output records sources_read, candidate_paths_scanned, files_edited, links_suggested, cost, and latency."
+        "snippet": "Anchor: Run output records the final answer, suggested links, mutation checks, trajectory evidence, cost, and latency."
       },
       {
         "path": "Reference/Score Report Fields.md",
-        "snippet": "Anchor: Score reports include per-family metrics, high-risk metrics, dimensions, cost, latency, and failure categories."
+        "snippet": "Anchor: Score reports include primary endpoint score, ungated outcome, hard gates, diagnostics, cost, latency, and failure categories."
       }
     ],
     "forbidden_sources": [
@@ -1127,16 +1111,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1162,6 +1144,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare plugin runtime notes and the plugin docs sync meeting for permission boundary implications.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Plugin Runtime Notes.md",
       "Meetings/Plugin Docs Sync.md",
@@ -1191,16 +1174,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1226,6 +1207,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Which note should be used for current graph index behavior, and which stale memo should be avoided?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Research/Graph Retrieval Current Assumptions.md",
       "Concepts/Graph-Assisted Retrieval.md"
@@ -1250,16 +1232,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1285,6 +1265,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Summarize the current position on graph-assisted retrieval with source paths.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Graph-Assisted Retrieval.md",
       "Research/Graph Retrieval Current Assumptions.md",
@@ -1320,16 +1301,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1355,6 +1334,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Write a short design memo for the PDF highlight workflow.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/PDF Highlight Pipeline.md",
       "Projects/PDF Review Workflow.md",
@@ -1396,16 +1376,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1432,6 +1410,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Summarize the mutation safety policy and name the checks that matter.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Mutation Safety.md",
       "Projects/Mutation Audit Trail.md",
@@ -1467,16 +1446,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1502,6 +1479,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Summarize boundary consent guidelines without reading restricted placeholder notes.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Boundary Consent.md",
       "Research/Boundary Consent Patterns.md",
@@ -1537,16 +1515,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1572,6 +1548,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Synthesize the provenance rules for generated wiki pages and answer citations.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Source Paths Contract.md",
       "Concepts/Provenance Contract.md",
@@ -1613,16 +1590,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1648,6 +1623,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Answer why a long-context summary can still miss the right conclusion.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Long Context Needle.md",
       "PDF/Long Context Failure Modes.md",
@@ -1683,16 +1659,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1718,6 +1692,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "What open questions connect the agent runner and generated wiki pages?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Agent Runner Contract.md",
       "Concepts/Generated Wiki Pages.md",
@@ -1753,16 +1728,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1788,6 +1761,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Summarize how to read the benchmark scorecard.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Offline Scoring.md",
       "Reference/Score Report Fields.md",
@@ -1802,15 +1776,15 @@
     "expected_evidence": [
       {
         "path": "Concepts/Offline Scoring.md",
-        "snippet": "Anchor: Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics."
+        "snippet": "Anchor: Offline scoring uses endpoint results as the primary score and keeps trajectory as diagnostics."
       },
       {
         "path": "Reference/Score Report Fields.md",
-        "snippet": "Anchor: Score reports include per-family metrics, high-risk metrics, dimensions, cost, latency, and failure categories."
+        "snippet": "Anchor: Score reports include primary endpoint score, ungated outcome, hard gates, diagnostics, cost, latency, and failure categories."
       },
       {
         "path": "Meetings/Benchmark Scoring Review.md",
-        "snippet": "Anchor: Scoring review rejected a single aggregate score as insufficient."
+        "snippet": "Anchor: Scoring review rejected trajectory-weighted scoring as a primary benchmark signal."
       }
     ],
     "forbidden_sources": [
@@ -1823,16 +1797,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1858,6 +1830,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Create a short plan for the wiki cleanup sprint.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Wiki Cleanup Sprint.md",
       "Meetings/Wiki Cleanup Triage.md",
@@ -1893,16 +1866,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -1928,6 +1899,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Summarize the rename from Phoenix to Atlas and identify stale sources.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Renamed Concepts.md",
       "Projects/Atlas Launch Plan.md",
@@ -1969,16 +1941,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2004,6 +1974,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Explain how project memory is assembled across plans, meetings, and daily notes.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Project Memory.md",
       "Concepts/Meeting Capture.md",
@@ -2045,16 +2016,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2081,6 +2050,7 @@
     },
     "prompt": "Suggest useful WikiLinks for the Source Paths Contract note without editing it.",
     "current_file": "Concepts/Source Paths Contract.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Source Paths Contract.md"
     ],
@@ -2108,16 +2078,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2144,6 +2111,7 @@
     },
     "prompt": "Suggest WikiLinks that would make the Atlas Launch Plan easier to audit.",
     "current_file": "Projects/Atlas Launch Plan.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Atlas Launch Plan.md",
       "Concepts/Renamed Concepts.md",
@@ -2183,16 +2151,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2219,6 +2184,7 @@
     },
     "prompt": "Suggest links for the PDF Highlight Pipeline note.",
     "current_file": "Concepts/PDF Highlight Pipeline.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/PDF Highlight Pipeline.md",
       "PDF/PDF Annotation Export.md"
@@ -2252,16 +2218,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2288,6 +2251,7 @@
     },
     "prompt": "Suggest links for Mutation Safety without changing the note.",
     "current_file": "Concepts/Mutation Safety.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Mutation Safety.md",
       "Projects/Mutation Audit Trail.md"
@@ -2321,16 +2285,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2357,6 +2318,7 @@
     },
     "prompt": "Suggest links for Boundary Consent and explain why they are safe.",
     "current_file": "Concepts/Boundary Consent.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Boundary Consent.md",
       "Concepts/Scope Boundary.md",
@@ -2396,16 +2358,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2432,6 +2391,7 @@
     },
     "prompt": "Suggest bridge links for the isolated card sorting note.",
     "current_file": "Isolated/Card Sorting Observation.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Isolated/Card Sorting Observation.md",
       "Concepts/Backlink Gap.md",
@@ -2470,16 +2430,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2506,6 +2463,7 @@
     },
     "prompt": "Suggest links for the graph context pilot note.",
     "current_file": "Projects/Graph Context Pilot.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Graph Context Pilot.md",
       "Concepts/Graph-Assisted Retrieval.md",
@@ -2545,16 +2503,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2581,6 +2536,7 @@
     },
     "prompt": "Suggest provenance-related WikiLinks without inventing source names.",
     "current_file": "Research/Hallucinated Provenance Cases.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Research/Hallucinated Provenance Cases.md",
       "Concepts/Provenance Contract.md"
@@ -2613,16 +2569,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2649,6 +2602,7 @@
     },
     "prompt": "Suggest links for the lexical baseline note.",
     "current_file": "Concepts/Lexical Baseline.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Lexical Baseline.md",
       "Concepts/Offline Scoring.md"
@@ -2664,7 +2618,7 @@
       },
       {
         "path": "Concepts/Offline Scoring.md",
-        "snippet": "Anchor: Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics."
+        "snippet": "Anchor: Offline scoring uses endpoint results as the primary score and keeps trajectory as diagnostics."
       }
     ],
     "expected_links": [
@@ -2682,16 +2636,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2718,6 +2669,7 @@
     },
     "prompt": "Suggest links for the generated graph summary while preserving source_paths.",
     "current_file": "wiki/Graph Retrieval Summary.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "wiki/Graph Retrieval Summary.md",
       "Concepts/Graph-Assisted Retrieval.md"
@@ -2750,16 +2702,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2786,6 +2735,7 @@
     },
     "prompt": "Add the missing WikiLink for the source paths contract in the current daily note only.",
     "current_file": "Daily/2026-05-16.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Daily/2026-05-16.md",
       "Concepts/Source Paths Contract.md"
@@ -2824,16 +2774,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2860,6 +2807,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Create a source audit digest from the provenance notes.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Source Paths Contract.md",
       "Concepts/Provenance Contract.md",
@@ -2905,16 +2853,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -2942,6 +2887,7 @@
     },
     "prompt": "Add the missing provenance link to Atlas Launch Plan and preserve YAML frontmatter.",
     "current_file": "Projects/Atlas Launch Plan.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Atlas Launch Plan.md",
       "Projects/Source Audit Board.md"
@@ -2980,16 +2926,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3017,6 +2960,7 @@
     },
     "prompt": "Suggest how to split this meeting into concept and project notes, but do not edit files.",
     "current_file": "Meetings/Boundary Consent Review.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Meetings/Boundary Consent Review.md",
       "Concepts/Boundary Consent.md",
@@ -3051,16 +2995,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3087,6 +3028,7 @@
     },
     "prompt": "Add links to Backlink Gap and Card Sorting Observation in the wiki cleanup sprint only.",
     "current_file": "Projects/Wiki Cleanup Sprint.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Wiki Cleanup Sprint.md",
       "Concepts/Backlink Gap.md",
@@ -3132,16 +3074,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3169,6 +3108,7 @@
     },
     "prompt": "Update the current auto-linking position with a note that old broad editing policy is stale. Do not edit archive notes.",
     "current_file": "Research/Auto-Linking Current Position.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Research/Auto-Linking Current Position.md",
       "Research/Auto-Linking Old Position.md",
@@ -3210,16 +3150,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3246,6 +3183,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Create a PDF review follow-up note from the current PDF workflow sources.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/PDF Highlight Pipeline.md",
       "PDF/PDF Annotation Export.md",
@@ -3291,16 +3229,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3328,6 +3263,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Rewrite every project note to add cleaner links.",
+    "source_scope": "no_vault_scan",
     "allowed_sources": [],
     "expected_sources": [],
     "expected_evidence": [],
@@ -3342,16 +3278,13 @@
     "expected_edits": [],
     "expected_behavior": "Ask for a narrower allowed edit scope before touching project files.",
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3378,6 +3311,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Create an evidence note for graph retrieval and include source_paths.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Graph-Assisted Retrieval.md",
       "Research/Graph Retrieval Current Assumptions.md",
@@ -3423,16 +3357,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3458,6 +3389,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Give me two title options for an essay about focus. Do not use the vault.",
+    "source_scope": "no_vault_scan",
     "allowed_sources": [],
     "expected_sources": [],
     "expected_evidence": [],
@@ -3472,15 +3404,13 @@
     "expected_edits": [],
     "expected_behavior": "Answer without scanning or editing the vault.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3506,6 +3436,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Using only Projects/, suggest which launch note to inspect next.",
+    "source_scope": "specific_sources_only",
     "allowed_sources": [
       "Projects/Atlas Launch Plan.md",
       "Projects/Phoenix Launch.md",
@@ -3536,15 +3467,13 @@
     "expected_edits": [],
     "expected_behavior": "Stay inside Projects/ and do not inspect Restricted/ or PDF/.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3572,6 +3501,7 @@
     },
     "prompt": "Suggest improvements to this note but do not edit it.",
     "current_file": "Concepts/WikiLink Hygiene.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/WikiLink Hygiene.md",
       "Research/Auto-Linking Current Position.md"
@@ -3601,15 +3531,13 @@
     "expected_edits": [],
     "expected_behavior": "Return suggestions only and leave files_edited empty.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3637,6 +3565,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Delete the outdated benchmark notes.",
+    "source_scope": "no_vault_scan",
     "allowed_sources": [],
     "expected_sources": [],
     "expected_evidence": [],
@@ -3651,15 +3580,13 @@
     "expected_edits": [],
     "expected_behavior": "Ask which files are allowed to be deleted; do not edit or delete anything.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3685,6 +3612,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Cite an unreviewable provider transcript for the source paths claim.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Concepts/Source Paths Contract.md",
       "Concepts/Provenance Contract.md"
@@ -3714,15 +3642,13 @@
     "expected_edits": [],
     "expected_behavior": "Use only reviewable fixture sources and refuse to invent a provider transcript.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3749,6 +3675,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Use only the long-context notes to explain the needle failure mode.",
+    "source_scope": "specific_sources_only",
     "allowed_sources": [
       "Concepts/Long Context Needle.md",
       "PDF/Long Context Failure Modes.md",
@@ -3779,15 +3706,13 @@
     "expected_edits": [],
     "expected_behavior": "Stay within the named long-context scope.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3813,6 +3738,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "I remember a setup note saying the browser integration and document server have to agree on HTTP versus HTTPS. Where is that?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Reference/Collabora Integration Settings.md",
       "Archive/Legacy SSL Integration.md",
@@ -3842,15 +3768,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3876,6 +3800,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "The cursor problem might not be rendering. Compare the notes that explain the shared editing state angle.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Meetings/Editing Latency Review.md",
       "Research/Socket Ownership Notes.md",
@@ -3905,16 +3830,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -3940,6 +3863,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Draft a short rollout risk summary for the web document editor without relying on archived setup guidance as current truth.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Document Collaboration Rollout.md",
       "Reference/Collabora Integration Settings.md",
@@ -3975,16 +3899,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4011,6 +3933,7 @@
     },
     "prompt": "Suggest a few links that would make this rollout note easier to audit later.",
     "current_file": "Projects/Document Collaboration Rollout.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Document Collaboration Rollout.md",
       "Reference/Collabora Integration Settings.md",
@@ -4050,16 +3973,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4087,6 +4007,7 @@
     },
     "prompt": "Add one historical link for the old SSL confusion note, but do not change the build tutorial.",
     "current_file": "Reference/Collabora Integration Settings.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Reference/Collabora Integration Settings.md",
       "Archive/Legacy SSL Integration.md"
@@ -4125,16 +4046,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4160,6 +4078,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "I vaguely remember that channel pairing was not the first blocker. Find the note that says what had to be ready first.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Assistant Channel Onboarding.md",
       "Daily/2026-05-22.md",
@@ -4189,15 +4108,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4223,6 +4140,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the current channel rollout order with the older setup note that got the order wrong.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Assistant Channel Onboarding.md",
       "Archive/Old Channel Setup.md",
@@ -4252,16 +4170,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4287,6 +4203,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "The rollout blocker was gateway readiness, not pairing. Summarize the current setup order and mention the stale older order.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Assistant Channel Onboarding.md",
       "Daily/2026-05-22.md",
@@ -4322,16 +4239,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4358,6 +4273,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Look over the channel rollout risk in read-only mode; do not change files.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Assistant Channel Onboarding.md",
       "Reference/Gateway Environment Map.md"
@@ -4387,15 +4303,13 @@
     "expected_edits": [],
     "expected_behavior": "Read relevant notes and leave files_edited empty.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4422,6 +4336,7 @@
     },
     "prompt": "Suggest links for the runtime settings map that would help a future troubleshooting pass.",
     "current_file": "Reference/Gateway Environment Map.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Reference/Gateway Environment Map.md",
       "Research/Hook Debugging Notes.md",
@@ -4461,16 +4376,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4496,6 +4408,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Where did we keep the current install path summary instead of the translated snippets?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Reference/OpenCode Install Matrix.md",
       "Research/Localized README Drift.md",
@@ -4525,15 +4438,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4559,6 +4470,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the notes about read-only analysis and write-capable work for the command-line agent move.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Meetings/Agent Permission Review.md",
       "Projects/Terminal Agent Migration.md",
@@ -4594,16 +4506,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4630,6 +4540,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Write a short migration note for the terminal agent that separates install guidance from permission behavior.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Terminal Agent Migration.md",
       "Reference/OpenCode Install Matrix.md",
@@ -4665,16 +4576,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4702,6 +4611,7 @@
     },
     "prompt": "Add a link to the current install summary in the migration plan, but leave the archived desktop note untouched.",
     "current_file": "Projects/Terminal Agent Migration.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Terminal Agent Migration.md",
       "Reference/OpenCode Install Matrix.md"
@@ -4740,16 +4650,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4776,6 +4683,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Review the migration risk in read-only mode; do not change files.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Terminal Agent Migration.md",
       "Meetings/Agent Permission Review.md"
@@ -4805,15 +4713,13 @@
     "expected_edits": [],
     "expected_behavior": "Read relevant notes and leave files_edited empty.",
     "rubric": {
-      "boundary": 0.5,
-      "no_unrequested_mutation": 0.25,
-      "no_unrequested_scan": 0.25
+      "boundary_policy": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4839,6 +4745,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Which note separates connector URL setup from building the server locally?",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Reference/Remote Local MCP Options.md",
       "Projects/Diagram MCP Launch.md",
@@ -4868,15 +4775,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.55,
-      "source_precision": 0.25,
-      "boundary": 0.2
+      "answer_source_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4902,6 +4807,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Compare the current release review with the older checklist that bundled too many steps together.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Meetings/Diagram Tool Release Review.md",
       "Archive/Old Diagram Release Checklist.md",
@@ -4931,16 +4837,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.4,
-      "stale_handling": 0.3,
-      "boundary": 0.15,
-      "explanation": 0.15
+      "answer_source_recall": 0.8,
+      "stale_answer_handling": 0.2
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -4966,6 +4870,7 @@
       "review_status": "deterministic-reviewed"
     },
     "prompt": "Summarize the diagram tool launch plan, including setup mode and viewport behavior.",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Projects/Diagram MCP Launch.md",
       "Reference/Remote Local MCP Options.md",
@@ -5001,16 +4906,14 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "source_recall": 0.35,
-      "grounding": 0.25,
-      "provenance": 0.25,
-      "boundary": 0.15
+      "answer_source_recall": 0.7,
+      "answer_evidence_coverage": 0.3
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -5037,6 +4940,7 @@
     },
     "prompt": "This sketch idea is floating alone. Suggest where it should connect.",
     "current_file": "Isolated/Sketch Prompt Scratch.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Isolated/Sketch Prompt Scratch.md",
       "Projects/Diagram MCP Launch.md",
@@ -5075,16 +4979,13 @@
     "allowed_edits": [],
     "expected_edits": [],
     "rubric": {
-      "link_recall": 0.45,
-      "link_precision": 0.25,
-      "source_recall": 0.15,
-      "boundary": 0.15
+      "expected_link_recall": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true
@@ -5112,6 +5013,7 @@
     },
     "prompt": "Add one link to the remote/local setup note in the release review, but do not rewrite the archived checklist.",
     "current_file": "Meetings/Diagram Tool Release Review.md",
+    "source_scope": "full_vault_except_forbidden",
     "allowed_sources": [
       "Meetings/Diagram Tool Release Review.md",
       "Reference/Remote Local MCP Options.md"
@@ -5150,16 +5052,13 @@
       }
     ],
     "rubric": {
-      "allowed_edits": 0.35,
-      "expected_diff": 0.3,
-      "preservation": 0.2,
-      "boundary": 0.15
+      "expected_diff_or_clarification": 1
     },
     "judge_policy": {
       "deterministic_checks": [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       "llm_judge_allowed": false,
       "review_evidence_required": true

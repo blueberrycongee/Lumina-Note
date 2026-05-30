@@ -12,7 +12,7 @@ tags:
 ---
 # Score Report Fields
 
-Anchor: Score reports include per-family metrics, high-risk metrics, dimensions, cost, latency, and failure categories.
+Anchor: Score reports include primary endpoint score, ungated outcome, hard gates, diagnostics, cost, latency, and failure categories.
 
 Summary: The report format is intentionally diagnostic rather than leaderboard-oriented.
 

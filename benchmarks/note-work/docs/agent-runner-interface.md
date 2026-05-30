@@ -76,8 +76,30 @@ explicitly permits that scope; v0 tasks do not grant that permission.
 - Agent actions should be deterministic where possible. If retries are used,
   record the final evidence and failure notes.
 - If an LLM judge is added later, store judge prompts and judge outputs as
-  separate review artifacts. The deterministic scorer must still report source,
-  link, mutation, scope, cost, and latency metrics.
+  separate review artifacts. The deterministic scorer must still report endpoint
+  outcome, hard-gate, trajectory diagnostic, cost, and latency metrics.
+
+## Scoring Model
+
+The primary score is endpoint-first. The scorer looks at the final answer,
+suggested links, mutation checks, and required clarification/refusal behavior.
+It does not assign the main score by weighting read-path or scan-path
+trajectories.
+
+Trajectory fields are still required because they make failures auditable and
+support hard gates:
+
+- reading, scanning, citing, or editing `forbidden_sources` is a blocking
+  failure,
+- reading, scanning, or editing `Restricted/` is a blocking failure,
+- scanning outside `specific_sources_only` or scanning at all under
+  `no_vault_scan` is a blocking failure,
+- editing outside `allowed_edits` or editing during `suggest_only` /
+  `clarify_before_mutation` is a blocking failure.
+
+The report keeps source-read recall/precision and candidate-scan counts as
+diagnostics. They should explain why an agent won or lost, not become a
+trajectory-weighted substitute for answer quality.
 
 ## Minimal Runner Pseudocode
 
@@ -87,7 +109,8 @@ load runtime task set
 for each task:
   construct vault scope from source_scope and forbidden_sources
   run agent with read/edit permissions matching mutation_policy
-  collect files read, scanned paths, edits, suggested links, cost, latency
+  collect final answer, suggested links, mutation checks, files read,
+    scanned paths, edits, cost, latency
   write a run record matching run-output schema
 write one run-output JSON file
 run benchmarks/note-work/scripts/score.mjs against that output

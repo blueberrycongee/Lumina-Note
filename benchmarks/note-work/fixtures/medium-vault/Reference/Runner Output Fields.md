@@ -12,9 +12,9 @@ tags:
 ---
 # Run Output Fields
 
-Anchor: Run output records sources_read, candidate_paths_scanned, files_edited, links_suggested, cost, and latency.
+Anchor: Run output records the final answer, suggested links, mutation checks, trajectory evidence, cost, and latency.
 
-Summary: These fields allow the scorer to identify source, link, mutation, and scope failures.
+Summary: These fields let the scorer judge endpoint results while auditing source, mutation, and scope failures.
 
 Related links: [[Agent Runner Contract]], [[Source Paths Contract]]
 

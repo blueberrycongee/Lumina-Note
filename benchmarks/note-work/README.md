@@ -69,7 +69,7 @@ node benchmarks/note-work/scripts/validate.mjs
 1. Add a task record to `tasks/dev.json` using vault-relative paths.
 2. Choose one family: `find`, `search_compare`, `synthesize`, `link`, `mutate`, or `boundary`.
 3. Set `evaluation_tier` to `deterministic_smoke` for harness checks or `dev_realistic` for natural note-work cases.
-4. Fill `expected_sources`, `allowed_sources`, `forbidden_sources`, `mutation_policy`, and `rubric`.
+4. Fill `source_scope`, `expected_sources`, `allowed_sources`, `forbidden_sources`, `mutation_policy`, and an endpoint-oriented `rubric`.
 5. Add `expected_evidence` snippets that appear in the fixture Markdown.
 6. For link tasks, add `expected_links`.
 7. For mutate tasks, add `allowed_edits` and `expected_edits` when edits are allowed. Use `clarify_before_mutation` for destructive or ambiguous requests.
@@ -104,22 +104,29 @@ See `docs/agent-runner-interface.md`. A runner must:
 - operate only inside the fixture vault,
 - honor source scope, forbidden paths, and mutation-policy fields,
 - emit `schemas/run-output.schema.json`,
-- preserve review evidence for sources read, scanned paths, edits, suggested links, cost, and latency.
+- preserve the final answer plus review evidence for sources read, scanned paths, edits, suggested links, cost, and latency.
 
 ## Interpreting Score Reports
 
 Use `reports/example-score-report.json` for automated inspection and
 `reports/example-score-report.md` for review.
 
+The primary score is endpoint-first: final answers, suggested links, mutation
+checks, and required clarification/refusal behavior. Read-path and scan-path
+trajectory fields are diagnostics, except when they prove a hard-gate failure
+such as forbidden-source access, restricted-path access, out-of-scope scanning,
+or illegal edits.
+
 Do not rely on a single aggregate score. The report separates:
 
 - per-family metrics,
 - deterministic smoke versus dev-realistic metrics,
 - high-risk metrics,
-- source discovery,
+- answer source coverage and evidence coverage,
 - link quality,
 - mutation safety,
-- scope and boundary violations,
+- hard-gate scope and boundary violations,
+- source-read and scan diagnostics,
 - cost and latency,
 - failure categories.
 

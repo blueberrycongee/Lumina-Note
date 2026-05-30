@@ -450,7 +450,7 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics.",
+        "anchor": "Anchor: Offline scoring uses endpoint results as the primary score and keeps trajectory as diagnostics.",
         "vault_relative_path": "Concepts/Offline Scoring.md"
       },
       "safety": {
@@ -1417,7 +1417,7 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Scoring review rejected a single aggregate score as insufficient.",
+        "anchor": "Anchor: Scoring review rejected trajectory-weighted scoring as a primary benchmark signal.",
         "vault_relative_path": "Meetings/Benchmark Scoring Review.md"
       },
       "safety": {
@@ -2103,7 +2103,7 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Run output records sources_read, candidate_paths_scanned, files_edited, links_suggested, cost, and latency.",
+        "anchor": "Anchor: Run output records the final answer, suggested links, mutation checks, trajectory evidence, cost, and latency.",
         "vault_relative_path": "Reference/Runner Output Fields.md"
       },
       "safety": {
@@ -2132,7 +2132,7 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Score reports include per-family metrics, high-risk metrics, dimensions, cost, latency, and failure categories.",
+        "anchor": "Anchor: Score reports include primary endpoint score, ungated outcome, hard gates, diagnostics, cost, latency, and failure categories.",
         "vault_relative_path": "Reference/Score Report Fields.md"
       },
       "safety": {

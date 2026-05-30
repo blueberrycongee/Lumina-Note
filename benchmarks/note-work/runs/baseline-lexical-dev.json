@@ -148,7 +148,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 20,
         "estimated_cost_usd": 0
       },
@@ -288,7 +288,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 25,
         "estimated_cost_usd": 0
       },
@@ -428,7 +428,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 19,
         "estimated_cost_usd": 0
       },
@@ -568,7 +568,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10338,
+        "input_tokens": 10351,
         "output_tokens": 20,
         "estimated_cost_usd": 0
       },
@@ -708,7 +708,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 20,
         "estimated_cost_usd": 0
       },
@@ -848,7 +848,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -988,7 +988,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -1128,7 +1128,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -1268,7 +1268,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 23,
         "estimated_cost_usd": 0
       },
@@ -1408,7 +1408,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -1548,7 +1548,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 25,
         "estimated_cost_usd": 0
       },
@@ -1688,7 +1688,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 24,
         "estimated_cost_usd": 0
       },
@@ -1828,7 +1828,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -1968,7 +1968,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -2108,7 +2108,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 24,
         "estimated_cost_usd": 0
       },
@@ -2248,7 +2248,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -2388,7 +2388,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 23,
         "estimated_cost_usd": 0
       },
@@ -2521,14 +2521,14 @@
       "links_suggested": [
         "[[Run Lexical Baseline]]",
         "[[Plugin Docs Sync]]",
-        "[[Runner Output Fields]]",
         "[[Score Report Fields]]",
+        "[[Runner Output Fields]]",
         "[[Agent Runner Contract]]"
       ],
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -2668,7 +2668,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -2807,7 +2807,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10250,
+        "input_tokens": 10263,
         "output_tokens": 24,
         "estimated_cost_usd": 0
       },
@@ -2947,7 +2947,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 25,
         "estimated_cost_usd": 0
       },
@@ -3087,7 +3087,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 23,
         "estimated_cost_usd": 0
       },
@@ -3227,7 +3227,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -3367,7 +3367,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -3507,7 +3507,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10338,
+        "input_tokens": 10351,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -3647,7 +3647,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -3787,7 +3787,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10338,
+        "input_tokens": 10351,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -3797,11 +3797,11 @@
       "task_id": "synthesize-benchmark-scorecard",
       "status": "completed",
       "duration_ms": 138,
-      "answer": "Lexical baseline selected sources: Projects/Offline Benchmark Runner.md, Tutorials/Add A Benchmark Task.md, Meetings/Benchmark Scoring Review.md, PDF/Benchmark Judge Bias Highlights.md, Concepts/Provenance Contract.md.",
+      "answer": "Lexical baseline selected sources: Meetings/Benchmark Scoring Review.md, Projects/Offline Benchmark Runner.md, Tutorials/Add A Benchmark Task.md, PDF/Benchmark Judge Bias Highlights.md, Concepts/Provenance Contract.md.",
       "sources_read": [
+        "/Users/blueberrycongee/Lumina-Note/benchmarks/note-work/fixtures/medium-vault/Meetings/Benchmark Scoring Review.md",
         "/Users/blueberrycongee/Lumina-Note/benchmarks/note-work/fixtures/medium-vault/Projects/Offline Benchmark Runner.md",
         "/Users/blueberrycongee/Lumina-Note/benchmarks/note-work/fixtures/medium-vault/Tutorials/Add A Benchmark Task.md",
-        "/Users/blueberrycongee/Lumina-Note/benchmarks/note-work/fixtures/medium-vault/Meetings/Benchmark Scoring Review.md",
         "/Users/blueberrycongee/Lumina-Note/benchmarks/note-work/fixtures/medium-vault/PDF/Benchmark Judge Bias Highlights.md",
         "/Users/blueberrycongee/Lumina-Note/benchmarks/note-work/fixtures/medium-vault/Concepts/Provenance Contract.md"
       ],
@@ -3927,7 +3927,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -4067,7 +4067,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 23,
         "estimated_cost_usd": 0
       },
@@ -4207,7 +4207,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -4347,7 +4347,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 14,
         "estimated_cost_usd": 0
       },
@@ -4487,7 +4487,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 35,
         "estimated_cost_usd": 0
       },
@@ -4627,7 +4627,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 31,
         "estimated_cost_usd": 0
       },
@@ -4767,7 +4767,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 38,
         "estimated_cost_usd": 0
       },
@@ -4907,7 +4907,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 34,
         "estimated_cost_usd": 0
       },
@@ -5047,7 +5047,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 34,
         "estimated_cost_usd": 0
       },
@@ -5187,7 +5187,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 36,
         "estimated_cost_usd": 0
       },
@@ -5327,7 +5327,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 38,
         "estimated_cost_usd": 0
       },
@@ -5467,7 +5467,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 33,
         "estimated_cost_usd": 0
       },
@@ -5607,7 +5607,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10334,
+        "input_tokens": 10347,
         "output_tokens": 34,
         "estimated_cost_usd": 0
       },
@@ -5747,7 +5747,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10338,
+        "input_tokens": 10351,
         "output_tokens": 42,
         "estimated_cost_usd": 0
       },
@@ -5887,7 +5887,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 34,
         "estimated_cost_usd": 0
       },
@@ -6027,7 +6027,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10334,
+        "input_tokens": 10347,
         "output_tokens": 39,
         "estimated_cost_usd": 0
       },
@@ -6167,7 +6167,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 37,
         "estimated_cost_usd": 0
       },
@@ -6307,7 +6307,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 38,
         "estimated_cost_usd": 0
       },
@@ -6447,7 +6447,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 39,
         "estimated_cost_usd": 0
       },
@@ -6587,7 +6587,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10342,
+        "input_tokens": 10355,
         "output_tokens": 41,
         "estimated_cost_usd": 0
       },
@@ -6727,7 +6727,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 43,
         "estimated_cost_usd": 0
       },
@@ -6890,7 +6890,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 47,
         "estimated_cost_usd": 0
       },
@@ -7085,7 +7085,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10335,
+        "input_tokens": 10348,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -7249,7 +7249,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -7282,7 +7282,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 293,
+        "input_tokens": 294,
         "output_tokens": 18,
         "estimated_cost_usd": 0
       },
@@ -7422,7 +7422,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10342,
+        "input_tokens": 10355,
         "output_tokens": 23,
         "estimated_cost_usd": 0
       },
@@ -7562,7 +7562,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10341,
+        "input_tokens": 10354,
         "output_tokens": 20,
         "estimated_cost_usd": 0
       },
@@ -7702,7 +7702,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10343,
+        "input_tokens": 10356,
         "output_tokens": 24,
         "estimated_cost_usd": 0
       },
@@ -7842,7 +7842,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 36,
         "estimated_cost_usd": 0
       },
@@ -7982,7 +7982,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10342,
+        "input_tokens": 10355,
         "output_tokens": 45,
         "estimated_cost_usd": 0
       },
@@ -8122,7 +8122,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10343,
+        "input_tokens": 10356,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -8262,7 +8262,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10339,
+        "input_tokens": 10352,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -8402,7 +8402,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10344,
+        "input_tokens": 10357,
         "output_tokens": 20,
         "estimated_cost_usd": 0
       },
@@ -8542,7 +8542,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -8682,7 +8682,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 37,
         "estimated_cost_usd": 0
       },
@@ -8822,7 +8822,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10338,
+        "input_tokens": 10351,
         "output_tokens": 24,
         "estimated_cost_usd": 0
       },
@@ -8962,7 +8962,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10341,
+        "input_tokens": 10354,
         "output_tokens": 24,
         "estimated_cost_usd": 0
       },
@@ -9102,7 +9102,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 21,
         "estimated_cost_usd": 0
       },
@@ -9242,7 +9242,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10341,
+        "input_tokens": 10354,
         "output_tokens": 41,
         "estimated_cost_usd": 0
       },
@@ -9382,7 +9382,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10338,
+        "input_tokens": 10351,
         "output_tokens": 22,
         "estimated_cost_usd": 0
       },
@@ -9522,7 +9522,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10337,
+        "input_tokens": 10350,
         "output_tokens": 25,
         "estimated_cost_usd": 0
       },
@@ -9654,15 +9654,15 @@
       "files_edited": [],
       "links_suggested": [
         "[[Diagram Tool Release Review]]",
+        "[[Benchmark Scoring Review]]",
         "[[Agent Permission Review]]",
         "[[Atlas Naming Review]]",
-        "[[Benchmark Scoring Review]]",
         "[[Old Diagram Release Checklist]]"
       ],
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 25,
         "estimated_cost_usd": 0
       },
@@ -9802,7 +9802,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10340,
+        "input_tokens": 10353,
         "output_tokens": 23,
         "estimated_cost_usd": 0
       },
@@ -9942,7 +9942,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10336,
+        "input_tokens": 10349,
         "output_tokens": 36,
         "estimated_cost_usd": 0
       },
@@ -10082,7 +10082,7 @@
       "mutation_checks": [],
       "cost": {
         "tool_calls": 2,
-        "input_tokens": 10343,
+        "input_tokens": 10356,
         "output_tokens": 49,
         "estimated_cost_usd": 0
       },

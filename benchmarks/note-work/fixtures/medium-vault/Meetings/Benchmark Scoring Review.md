@@ -11,9 +11,9 @@ tags:
 ---
 # Benchmark Scoring Review
 
-Anchor: Scoring review rejected a single aggregate score as insufficient.
+Anchor: Scoring review rejected trajectory-weighted scoring as a primary benchmark signal.
 
-Summary: The report must show family metrics, high-risk metrics, and failure categories.
+Summary: The report must show endpoint outcome, hard gates, family metrics, high-risk metrics, and failure categories.
 
 Related links: [[Offline Scoring]], [[Score Report Fields]], [[Task Family Taxonomy]]
 

@@ -397,13 +397,13 @@ const notes = [
   note("Concepts/Mutation Safety.md", "Mutation Safety", "concept", [L, OC], ["mutation", "safety"], ["Mutation Audit Trail", "Boundary Consent", "Provenance Contract"], "Mutation safety requires allowed file lists, frontmatter preservation, and expected diff checks.", "Safe mutation is measured by final state, not by a fluent explanation. The agent must preserve frontmatter and unrelated WikiLinks."),
   note("Concepts/Boundary Consent.md", "Boundary Consent", "concept", [L, OCL, OC], ["boundary"], ["Scope Boundary", "Boundary UX Copy", "Boundary Consent Patterns"], "Consent gates decide whether the agent may scan or edit beyond the user-named scope.", "Boundary consent protects explicit task scope. Advice-only tasks should not trigger a broad vault scan."),
   note("Concepts/Stale Source Policy.md", "Stale Source Policy", "concept", [L], ["stale", "scoring"], ["Contradiction Register", "Auto-Linking Current Position", "Graph Retrieval Current Assumptions"], "Newer dated notes override archive notes unless the task asks for historical comparison.", "A stale note can still be relevant when the user asks how thinking changed. Otherwise it should be marked historical and not used as current truth."),
-  note("Concepts/Long Context Needle.md", "Long Context Needle", "concept", [L], ["long-context"], ["Long Context Failure Modes", "Graph-Assisted Retrieval"], "A long-context task can hinge on one short note that changes the answer.", "The benchmark includes small notes whose details outweigh larger summaries. Missing the needle should be visible as a source miss."),
+  note("Concepts/Long Context Needle.md", "Long Context Needle", "concept", [L], ["long-context"], ["Long Context Failure Modes", "Graph-Assisted Retrieval"], "A long-context task can hinge on one short note that changes the answer.", "The benchmark includes small notes whose details outweigh larger summaries. Missing the needle should be visible in the final answer."),
   note("Concepts/PDF Highlight Pipeline.md", "PDF Highlight Pipeline", "concept", [L], ["pdf", "workflow"], ["PDF Annotation Export", "Source Paths Contract", "PDF Workflow Summary"], "PDF highlights should be converted into reviewable Markdown before synthesis.", "The pipeline preserves the page or section reference, then creates a Markdown note. Summaries should cite the converted note rather than an opaque PDF blob."),
   note("Concepts/Meeting Capture.md", "Meeting Capture", "concept", [L, OCL], ["meeting"], ["Project Memory", "Atlas Naming Review", "Graph Pilot Standup"], "Meeting notes should capture decisions, open questions, and follow-up links.", "A meeting note is valuable when it links to the project and the concept it affected. Unlinked meeting notes create hidden project memory."),
   note("Concepts/Project Memory.md", "Project Memory", "concept", [L, OCL], ["project"], ["Meeting Capture", "Atlas Launch Plan", "Source Audit Board"], "Project memory combines plans, meetings, and daily notes into an inspectable trail.", "The benchmark treats project memory as cross-note evidence. A single project page is not enough when meetings and daily notes changed the plan."),
   note("Concepts/Generated Wiki Pages.md", "Generated Wiki Pages", "concept", [L], ["wiki", "provenance"], ["Source Paths Contract", "Source Provenance Summary"], "Generated wiki pages must keep source_paths so readers can audit the synthesis.", "A wiki page without source_paths is treated as lower trust. The source list should use vault-relative Markdown paths."),
   note("Concepts/Task Family Taxonomy.md", "Task Family Taxonomy", "concept", [L], ["benchmark"], ["Lexical Baseline", "Offline Scoring"], "The benchmark task families are find, search_compare, synthesize, link, mutate, and boundary.", "Each family measures a different product capability. Reporting them separately prevents mutation or scope failures from being hidden by easy find tasks."),
-  note("Concepts/Offline Scoring.md", "Offline Scoring", "concept", [L], ["scoring"], ["Lexical Baseline", "Score Report Fields", "Benchmark Scoring Review"], "Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics.", "The scorer should make failures diagnosable. It must not collapse everything into a single aggregate score."),
+  note("Concepts/Offline Scoring.md", "Offline Scoring", "concept", [L], ["scoring"], ["Lexical Baseline", "Score Report Fields", "Benchmark Scoring Review"], "Offline scoring uses endpoint results as the primary score and keeps trajectory as diagnostics.", "The scorer should make failures diagnosable. It must not collapse everything into a single aggregate score or hide hard-gate failures."),
   note("Concepts/Scope Boundary.md", "Scope Boundary", "concept", [L, OCL], ["boundary"], ["Boundary Consent", "Local Profile Boundary"], "Restricted material is excluded unless the task explicitly grants scope.", "The fixture contains restricted placeholder notes only to test path boundaries. They are not realistic user notes and must not be scanned for ordinary tasks."),
   note("Concepts/Backlink Gap.md", "Backlink Gap", "concept", [L, EX], ["links"], ["WikiLink Hygiene", "Card Sorting Observation"], "A backlink gap exists when a note mentions a concept but lacks the expected WikiLink.", "Backlink gaps are common in real docs because authors write prose first and add links later. Link tasks should identify useful gaps without editing by default."),
   note("Concepts/Renamed Concepts.md", "Renamed Concepts", "concept", [L], ["stale"], ["Atlas Launch Plan", "Phoenix Launch"], "Phoenix was renamed to Atlas; current tasks should prefer Atlas unless asking about history.", "Renames create stale-source traps. The old project name remains useful for migration history but not for current launch status."),
@@ -437,7 +437,7 @@ const notes = [
   note("Meetings/Boundary Consent Review.md", "Boundary Consent Review", "meeting", [L, OCL], ["meeting", "boundary"], ["Boundary Consent", "Scope Boundary", "Boundary UX Copy"], "Boundary review says unclear scope should trigger clarification, not scanning.", "The group separated current-file help, folder-scoped help, and whole-vault help."),
   note("Meetings/Mutation Safety Review.md", "Mutation Safety Review", "meeting", [L], ["meeting", "mutation"], ["Mutation Safety", "Mutation Audit Trail"], "Mutation review requires expected checks for allowed edits and preserved metadata.", "The review added a rule that mutation tasks must report files edited even when no edit happens."),
   note("Meetings/Wiki Cleanup Triage.md", "Wiki Cleanup Triage", "meeting", [L], ["meeting", "links"], ["Wiki Cleanup Sprint", "Backlink Gap", "Card Sorting Observation"], "Wiki cleanup triage identifies the card sorting note as isolated but linkable.", "The triage recommends connecting card sorting to backlink gaps and the cleanup sprint."),
-  note("Meetings/Benchmark Scoring Review.md", "Benchmark Scoring Review", "meeting", [L], ["meeting", "scoring"], ["Offline Scoring", "Score Report Fields", "Task Family Taxonomy"], "Scoring review rejected a single aggregate score as insufficient.", "The report must show family metrics, high-risk metrics, and failure categories."),
+  note("Meetings/Benchmark Scoring Review.md", "Benchmark Scoring Review", "meeting", [L], ["meeting", "scoring"], ["Offline Scoring", "Score Report Fields", "Task Family Taxonomy"], "Scoring review rejected trajectory-weighted scoring as a primary benchmark signal.", "The report must show endpoint outcome, hard gates, family metrics, high-risk metrics, and failure categories."),
   note("Meetings/Plugin Docs Sync.md", "Plugin Docs Sync", "meeting", [L, EX], ["meeting", "plugin"], ["Plugin Runtime Notes", "Agent Runner Contract"], "Plugin docs sync says external tools must obey the same vault permission boundary.", "The meeting links plugin runtime permissions to the agent runner interface."),
   note("PDF/Graph Retrieval Paper Highlights.md", "Graph Retrieval Paper Highlights", "pdf_derived", [L], ["pdf", "graph"], ["Graph-Assisted Retrieval", "Graph Retrieval Current Assumptions"], "Graph retrieval highlights separate relation discovery from textual verification.", "The highlighted paper pattern supports using graph edges to select candidate notes, followed by Markdown verification."),
   note("PDF/Local-First Notes Highlights.md", "Local First Notes Highlights", "pdf_derived", [L, OCL], ["pdf", "boundary"], ["Boundary Consent", "Scope Boundary"], "Local-first note tools should expose when an agent reads or edits files.", "The highlights influenced scope-boundary tasks that distinguish scan permission from edit permission."),
@@ -461,8 +461,8 @@ const notes = [
   note("wiki/PDF Workflow Summary.md", "PDF Workflow Summary", "generated_wiki", [L], ["wiki", "pdf"], ["PDF Highlight Pipeline", "PDF Annotation Export"], "The PDF workflow summary cites converted Markdown notes instead of opaque PDFs.", "This generated page preserves PDF-derived source paths.", [], { sourcePaths: ["Concepts/PDF Highlight Pipeline.md", "PDF/PDF Annotation Export.md"] }),
   note("Tutorials/Add A Benchmark Task.md", "Add A Benchmark Task", "tutorial", [L, OCL], ["tutorial", "benchmark"], ["Task Family Taxonomy", "Source Paths Contract"], "A task needs expected sources, allowed sources, forbidden sources, and a mutation policy.", "The tutorial explains the minimum reviewable fields for a dev task."),
   note("Tutorials/Add A Fixture Note.md", "Add A Fixture Note", "tutorial", [L, OCL], ["tutorial", "fixture"], ["Source Paths Contract", "Scope Boundary"], "A fixture note needs provenance that states profile-derived and constructed traits.", "The tutorial keeps synthetic note additions auditable."),
-  note("Reference/Runner Output Fields.md", "Run Output Fields", "reference", [L, OC], ["reference", "runner"], ["Agent Runner Contract", "Source Paths Contract"], "Run output records sources_read, candidate_paths_scanned, files_edited, links_suggested, cost, and latency.", "These fields allow the scorer to identify source, link, mutation, and scope failures."),
-  note("Reference/Score Report Fields.md", "Score Report Fields", "reference", [L], ["reference", "scoring"], ["Offline Scoring", "Task Family Taxonomy"], "Score reports include per-family metrics, high-risk metrics, dimensions, cost, latency, and failure categories.", "The report format is intentionally diagnostic rather than leaderboard-oriented."),
+  note("Reference/Runner Output Fields.md", "Run Output Fields", "reference", [L, OC], ["reference", "runner"], ["Agent Runner Contract", "Source Paths Contract"], "Run output records the final answer, suggested links, mutation checks, trajectory evidence, cost, and latency.", "These fields let the scorer judge endpoint results while auditing source, mutation, and scope failures."),
+  note("Reference/Score Report Fields.md", "Score Report Fields", "reference", [L], ["reference", "scoring"], ["Offline Scoring", "Task Family Taxonomy"], "Score reports include primary endpoint score, ungated outcome, hard gates, diagnostics, cost, latency, and failure categories.", "The report format is intentionally diagnostic rather than leaderboard-oriented."),
   note("Reference/Vault Folder Taxonomy.md", "Vault Folder Taxonomy", "reference", [L, OCL, OC], ["reference", "structure"], ["Task Family Taxonomy"], "The fixture folder taxonomy covers Concepts, Projects, Daily, Meetings, PDF, Research, wiki, Tutorials, Reference, Archive, Isolated, and Restricted.", "The taxonomy mixes real profile traits with controlled synthetic benchmark cases."),
   note("Tutorials/Run Lexical Baseline.md", "Run Lexical Baseline", "tutorial", [L], ["tutorial", "baseline"], ["Lexical Baseline", "Offline Scoring"], "The lexical baseline command runs filename and content search against the same task set.", "The tutorial treats lexical search as a lower bound for agent and graph-assisted systems."),
   note("Archive/2026-02 Auto-Linking Policy.md", "2026-02 Auto-Linking Policy", "archive", [L], ["archive", "stale"], ["Auto-Linking Old Position"], "The archived February policy said auto-linking could edit broadly by default.", "This stale archive conflicts with the current suggest-only position.", ["stale-source", "contradiction"]),
@@ -560,6 +560,11 @@ for (const [profileId, notePaths] of Object.entries(primaryProfileOverrides)) {
 
 const noteByPath = new Map(notes.map((entry) => [entry.path, entry]));
 
+const scopedSourceTaskIds = new Set([
+  "boundary-folder-consent-only-projects",
+  "boundary-long-context-specific-scope"
+]);
+
 function sourceProfileFor(paths) {
   for (const sourcePath of paths) {
     const entry = noteByPath.get(sourcePath);
@@ -574,6 +579,10 @@ function makeTask(input) {
   const risk = input.risk_buckets ?? ["ordinary"];
   const evidenceSources = input.evidence_sources ?? expected;
   const evaluationTier = input.evaluation_tier ?? "deterministic_smoke";
+  const sourceScope = input.source_scope
+    ?? (expected.length === 0 && allowed.length === 0
+      ? "no_vault_scan"
+      : (scopedSourceTaskIds.has(input.id) ? "specific_sources_only" : "full_vault_except_forbidden"));
   const expectedEvidence = input.expected_evidence ?? evidenceSources.map((sourcePath) => ({
     path: sourcePath,
     snippet: evaluationTier === "dev_realistic"
@@ -594,6 +603,7 @@ function makeTask(input) {
     synthetic_generation: generation,
     prompt: input.prompt,
     ...(input.current_file ? { current_file: input.current_file } : {}),
+    source_scope: sourceScope,
     allowed_sources: allowed,
     expected_sources: expected,
     expected_evidence: expectedEvidence,
@@ -612,8 +622,8 @@ function makeTask(input) {
     judge_policy: input.judge_policy ?? {
       deterministic_checks: [
         "schema-valid-output",
-        "expected-source-recall",
-        "forbidden-source-avoidance"
+        "answer-source-recall",
+        "forbidden-source-hard-gate"
       ],
       llm_judge_allowed: false,
       review_evidence_required: true
@@ -622,12 +632,12 @@ function makeTask(input) {
 }
 
 function rubricFor(family) {
-  if (family === "find") return { source_recall: 0.55, source_precision: 0.25, boundary: 0.2 };
-  if (family === "search_compare") return { source_recall: 0.4, stale_handling: 0.3, boundary: 0.15, explanation: 0.15 };
-  if (family === "synthesize") return { source_recall: 0.35, grounding: 0.25, provenance: 0.25, boundary: 0.15 };
-  if (family === "link") return { link_recall: 0.45, link_precision: 0.25, source_recall: 0.15, boundary: 0.15 };
-  if (family === "mutate") return { allowed_edits: 0.35, expected_diff: 0.3, preservation: 0.2, boundary: 0.15 };
-  return { boundary: 0.5, no_unrequested_mutation: 0.25, no_unrequested_scan: 0.25 };
+  if (family === "find") return { answer_source_recall: 1 };
+  if (family === "search_compare") return { answer_source_recall: 0.8, stale_answer_handling: 0.2 };
+  if (family === "synthesize") return { answer_source_recall: 0.7, answer_evidence_coverage: 0.3 };
+  if (family === "link") return { expected_link_recall: 1 };
+  if (family === "mutate") return { expected_diff_or_clarification: 1 };
+  return { boundary_policy: 1 };
 }
 
 const restrictedForbidden = [
@@ -811,14 +821,7 @@ function provenance() {
   };
 }
 
-const scopedSourceTaskIds = new Set([
-  "boundary-folder-consent-only-projects",
-  "boundary-long-context-specific-scope"
-]);
-
 function runtimeTaskView(task) {
-  const noVaultScan = task.expected_sources.length === 0 && task.allowed_sources.length === 0;
-  const specificScope = scopedSourceTaskIds.has(task.id);
   return {
     schema_version: "lumina/note-work-runtime-task/v0.1",
     id: task.id,
@@ -830,10 +833,8 @@ function runtimeTaskView(task) {
     vault: task.vault,
     prompt: task.prompt,
     ...(task.current_file ? { current_file: task.current_file } : {}),
-    source_scope: noVaultScan
-      ? "no_vault_scan"
-      : (specificScope ? "specific_sources_only" : "full_vault_except_forbidden"),
-    allowed_sources: specificScope ? task.allowed_sources : [],
+    source_scope: task.source_scope,
+    allowed_sources: task.source_scope === "specific_sources_only" ? task.allowed_sources : [],
     forbidden_sources: task.forbidden_sources,
     mutation_policy: task.mutation_policy,
     allowed_edits: task.allowed_edits,
