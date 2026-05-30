@@ -8,16 +8,15 @@ source_profile_ids:
   - profile-opencode-docs-v0
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
-  - privacy
   - boundary
 ---
 # Boundary Consent
 
 Anchor: Consent gates decide whether the agent may scan or edit beyond the user-named scope.
 
-Summary: Boundary consent protects the local-first trust model. Advice-only tasks should not trigger a broad vault scan.
+Summary: Boundary consent protects explicit task scope. Advice-only tasks should not trigger a broad vault scan.
 
-Related links: [[Privacy Boundary]], [[Boundary UX Copy]], [[Boundary Consent Patterns]]
+Related links: [[Scope Boundary]], [[Boundary UX Copy]], [[Boundary Consent Patterns]]
 
 Fixture controls:
 - ordinary
@@ -28,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

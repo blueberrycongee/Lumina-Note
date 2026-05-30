@@ -13,7 +13,7 @@ tags:
 
 Anchor: The benchmark task families are find, search_compare, synthesize, link, mutate, and boundary.
 
-Summary: Each family measures a different product capability. Reporting them separately prevents mutation or privacy failures from being hidden by easy find tasks.
+Summary: Each family measures a different product capability. Reporting them separately prevents mutation or scope failures from being hidden by easy find tasks.
 
 Related links: [[Lexical Baseline]], [[Offline Scoring]]
 
@@ -26,4 +26,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

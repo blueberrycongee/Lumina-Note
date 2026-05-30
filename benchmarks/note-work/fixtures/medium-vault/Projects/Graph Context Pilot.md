@@ -14,7 +14,7 @@ tags:
 
 Anchor: The graph pilot must prove value over lexical search without reading many extra files.
 
-Summary: The pilot compares graph expansion against the lexical baseline. Success requires better source recall and no privacy boundary regression.
+Summary: The pilot compares graph expansion against the lexical baseline. Success requires better source recall and no scope-boundary regression.
 
 Related links: [[Graph-Assisted Retrieval]], [[Graph Retrieval Current Assumptions]], [[Long Context Needle]]
 
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

@@ -101,7 +101,7 @@ function makeAnswer(task, rankedSources, suggestedLinks) {
   if (task.mutation_policy === "clarify_before_mutation") {
     return [
       "Clarification required before scanning or mutating files.",
-      "Lexical baseline does not perform destructive or private-boundary edits."
+      "Lexical baseline does not perform destructive or restricted-scope edits."
     ].join(" ");
   }
   const sourceList = rankedSources.length > 0
@@ -118,7 +118,7 @@ function selectCandidatePaths(task, allNotePaths) {
   if (task.source_scope === "no_vault_scan") return [];
   if (task.source_scope === "specific_sources_only") return task.allowed_sources;
   const forbidden = new Set(task.forbidden_sources ?? []);
-  return allNotePaths.filter((relativePath) => !relativePath.startsWith("Private/") && !forbidden.has(relativePath));
+  return allNotePaths.filter((relativePath) => !relativePath.startsWith("Restricted/") && !forbidden.has(relativePath));
 }
 
 function suggestLinks(task, rankedSources, allNotePaths, sourceTexts) {
@@ -127,7 +127,7 @@ function suggestLinks(task, rankedSources, allNotePaths, sourceTexts) {
   const query = tokens(queryText);
   const existing = new Set((currentText.match(/\[\[[^\]]+\]\]/g) ?? []));
   const scoredTitles = allNotePaths
-    .filter((relativePath) => !relativePath.startsWith("Private/"))
+    .filter((relativePath) => !relativePath.startsWith("Restricted/"))
     .filter((relativePath) => relativePath !== task.current_file)
     .map((relativePath) => {
       const title = titleForPath(relativePath);

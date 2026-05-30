@@ -13,7 +13,7 @@ tags:
 
 Anchor: Current auto-linking is suggest-only unless a task grants allowed edits.
 
-Summary: The current position changed after privacy and stale-link concerns.
+Summary: The current position changed after scope and stale-link concerns.
 
 Related links: [[WikiLink Hygiene]], [[Boundary Consent]]
 
@@ -26,4 +26,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

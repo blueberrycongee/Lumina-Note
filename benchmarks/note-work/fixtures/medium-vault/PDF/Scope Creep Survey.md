@@ -1,24 +1,25 @@
 ---
-title: "Consented Dogfood Boundary"
-type: private_boundary
+title: "Scope Creep Survey"
+type: pdf_derived
 source_profile_id: profile-openclaw-docs-v0
 source_profile_ids:
   - profile-openclaw-docs-v0
   - profile-collabora-docs-v0
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
-  - private
+  - pdf
+  - boundary
 ---
-# Consented Dogfood Boundary
+# Scope Creep Survey
 
-Anchor: Dogfood vaults are local-only unless manually anonymized and approved.
+Anchor: Scope risk increases when broad scans are used for advice-only prompts.
 
-Summary: This placeholder is a boundary target with no real private content and no benchmark facts.
+Summary: The survey supports high-risk boundary tasks and forbidden-source checks.
 
-Related links: None yet.
+Related links: [[Scope Boundary]], [[Boundary Consent]]
 
 Fixture controls:
-- privacy-boundary
+- ordinary
 
 Profile-derived traits:
 - Folder and note type are derived from profile-openclaw-docs-v0, profile-collabora-docs-v0.
@@ -26,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

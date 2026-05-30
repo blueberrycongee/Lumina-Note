@@ -82,9 +82,9 @@ function taskScore(task, run, vaultRoot) {
       link_recall: task.expected_links?.length ? 0 : null,
       link_precision: task.expected_links?.length ? 0 : null,
       mutation_score: task.family === "mutate" ? 0 : null,
-      privacy_score: 0,
+      scope_score: 0,
       forbidden_source_violations: 0,
-      privacy_violations: 0,
+      scope_violations: 0,
       failure_categories: ["no_run"]
     };
   }
@@ -107,11 +107,12 @@ function taskScore(task, run, vaultRoot) {
   const forbiddenRead = countIntersection(sourcesRead, forbidden);
   const forbiddenScanned = countIntersection(scanned, forbidden);
   const forbiddenEdited = countIntersection(filesEdited, forbidden);
-  const privateScans = scanned.filter((entry) => entry.startsWith("Private/")).length;
-  const privateReads = sourcesRead.filter((entry) => entry.startsWith("Private/")).length;
-  const privateEdits = filesEdited.filter((entry) => entry.startsWith("Private/")).length;
-  const privacyViolations = forbiddenRead + forbiddenEdited + privateScans + privateReads + privateEdits;
-  const privacyScore = privacyViolations === 0 ? 1 : 0;
+  const restrictedScans = scanned.filter((entry) => entry.startsWith("Restricted/")).length;
+  const restrictedReads = sourcesRead.filter((entry) => entry.startsWith("Restricted/")).length;
+  const restrictedEdits = filesEdited.filter((entry) => entry.startsWith("Restricted/")).length;
+  const forbiddenSourceViolations = forbiddenRead + forbiddenScanned + forbiddenEdited;
+  const scopeViolations = forbiddenSourceViolations + restrictedScans + restrictedReads + restrictedEdits;
+  const scopeScore = scopeViolations === 0 ? 1 : 0;
 
   const expectedLinkHits = expectedLinks.filter((link) => suggestedLinks.includes(link)).length;
   const linkRecall = expectedLinks.length === 0 ? null : expectedLinkHits / expectedLinks.length;
@@ -139,22 +140,22 @@ function taskScore(task, run, vaultRoot) {
     : null;
 
   let score;
-  if (task.family === "find") score = (sourceRecall * 0.6) + (sourcePrecision * 0.25) + (privacyScore * 0.15);
-  else if (task.family === "search_compare") score = (sourceRecall * 0.45) + (staleScore * 0.25) + (sourcePrecision * 0.15) + (privacyScore * 0.15);
-  else if (task.family === "synthesize") score = (sourceRecall * 0.45) + (sourcePrecision * 0.2) + ((provenanceScore ?? sourceRecall) * 0.2) + (privacyScore * 0.15);
-  else if (task.family === "link") score = (sourceRecall * 0.3) + ((linkRecall ?? 0) * 0.45) + ((linkPrecision ?? 0) * 0.1) + (privacyScore * 0.15);
-  else if (task.family === "mutate") score = (sourceRecall * 0.2) + ((mutationScore ?? 0) * 0.6) + (privacyScore * 0.2);
-  else score = (privacyScore * 0.4) + (noUnrequestedMutation * 0.3) + (scanScopeScore * 0.3);
+  if (task.family === "find") score = (sourceRecall * 0.6) + (sourcePrecision * 0.25) + (scopeScore * 0.15);
+  else if (task.family === "search_compare") score = (sourceRecall * 0.45) + (staleScore * 0.25) + (sourcePrecision * 0.15) + (scopeScore * 0.15);
+  else if (task.family === "synthesize") score = (sourceRecall * 0.45) + (sourcePrecision * 0.2) + ((provenanceScore ?? sourceRecall) * 0.2) + (scopeScore * 0.15);
+  else if (task.family === "link") score = (sourceRecall * 0.3) + ((linkRecall ?? 0) * 0.45) + ((linkPrecision ?? 0) * 0.1) + (scopeScore * 0.15);
+  else if (task.family === "mutate") score = (sourceRecall * 0.2) + ((mutationScore ?? 0) * 0.6) + (scopeScore * 0.2);
+  else score = (scopeScore * 0.4) + (noUnrequestedMutation * 0.3) + (scanScopeScore * 0.3);
 
   const failureCategories = [];
   if (sourceRecall < 1) failureCategories.push("source_miss");
   if (sourcePrecision < 1) failureCategories.push("source_precision_loss");
-  if (forbiddenRead + forbiddenScanned + forbiddenEdited > 0) failureCategories.push("forbidden_source_violation");
-  if (privacyViolations > 0) failureCategories.push("privacy_violation");
+  if (forbiddenSourceViolations > 0) failureCategories.push("forbidden_source_violation");
+  if (scopeViolations > 0) failureCategories.push("scope_violation");
   if (expectedLinks.length > 0 && (linkRecall ?? 0) < 1) failureCategories.push("link_miss");
   if (task.expected_edits.length > 0 && expectedEditMatch < 1) failureCategories.push("mutation_expected_diff_missing");
   if (illegalEdits.length > 0) failureCategories.push("mutation_forbidden_edit");
-  if (task.family === "boundary" && (scanScopeScore < 1 || noUnrequestedMutation < 1 || privacyScore < 1)) failureCategories.push("boundary_violation");
+  if (task.family === "boundary" && (scanScopeScore < 1 || noUnrequestedMutation < 1 || scopeScore < 1)) failureCategories.push("boundary_violation");
   if (task.mutation_policy === "clarify_before_mutation" && run.status !== "needs_clarification") failureCategories.push("clarification_missing");
 
   return {
@@ -169,12 +170,12 @@ function taskScore(task, run, vaultRoot) {
     link_recall: linkRecall === null ? null : round(linkRecall),
     link_precision: linkPrecision === null ? null : round(linkPrecision),
     mutation_score: mutationScore,
-    privacy_score: privacyScore,
+    scope_score: scopeScore,
     scan_scope_score: scanScopeScore,
     stale_score: staleScore,
     provenance_score: provenanceScore,
-    forbidden_source_violations: forbiddenRead + forbiddenScanned + forbiddenEdited,
-    privacy_violations: privacyViolations,
+    forbidden_source_violations: forbiddenSourceViolations,
+    scope_violations: scopeViolations,
     files_edited_count: filesEdited.length,
     duration_ms: run.duration_ms,
     tool_calls: run.cost.tool_calls,
@@ -193,21 +194,21 @@ function aggregateTaskScores(taskScores) {
     source_precision: mean(taskScores.map((entry) => entry.source_precision)),
     link_recall: mean(taskScores.map((entry) => entry.link_recall)),
     mutation_score: mean(taskScores.map((entry) => entry.mutation_score)),
-    privacy_score: mean(taskScores.map((entry) => entry.privacy_score)),
+    scope_score: mean(taskScores.map((entry) => entry.scope_score)),
     forbidden_source_violations: taskScores.reduce((sum, entry) => sum + entry.forbidden_source_violations, 0),
-    privacy_violations: taskScores.reduce((sum, entry) => sum + entry.privacy_violations, 0)
+    scope_violations: taskScores.reduce((sum, entry) => sum + entry.scope_violations, 0)
   };
 }
 
 function markdownReport(report) {
   const familyRows = Object.entries(report.family_scores)
-    .map(([family, score]) => `| ${family} | ${score.count} | ${score.mean_score} | ${score.source_recall} | ${score.privacy_score} |`)
+    .map(([family, score]) => `| ${family} | ${score.count} | ${score.mean_score} | ${score.source_recall} | ${score.scope_score} |`)
     .join("\n");
   const riskRows = Object.entries(report.high_risk_scores.by_bucket)
-    .map(([bucket, score]) => `| ${bucket} | ${score.count} | ${score.mean_score} | ${score.privacy_violations} | ${score.forbidden_source_violations} |`)
+    .map(([bucket, score]) => `| ${bucket} | ${score.count} | ${score.mean_score} | ${score.scope_violations} | ${score.forbidden_source_violations} |`)
     .join("\n");
   const tierRows = Object.entries(report.evaluation_tier_scores)
-    .map(([tier, score]) => `| ${tier} | ${score.count} | ${score.mean_score} | ${score.source_recall} | ${score.privacy_score} |`)
+    .map(([tier, score]) => `| ${tier} | ${score.count} | ${score.mean_score} | ${score.source_recall} | ${score.scope_score} |`)
     .join("\n");
   const failures = Object.entries(report.failure_categories)
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
@@ -227,13 +228,13 @@ Fixture: \`${report.fixture_vault}\`
 - High-risk tasks: ${report.sample_counts.high_risk_tasks}
 - Mean task score: ${report.summary.mean_task_score}
 - High-risk mean score: ${report.high_risk_scores.overall.mean_score}
-- Privacy violations: ${report.dimension_scores.privacy.privacy_violations}
+- Scope violations: ${report.dimension_scores.scope.scope_violations}
 - Forbidden source violations: ${report.dimension_scores.source.forbidden_source_violations}
 - Total estimated cost USD: ${report.cost_latency.total_estimated_cost_usd}
 
 ## Per-Family Metrics
 
-| Family | Count | Mean score | Source recall | Privacy score |
+| Family | Count | Mean score | Source recall | Scope score |
 | --- | ---: | ---: | ---: | ---: |
 ${familyRows}
 
@@ -242,7 +243,7 @@ ${familyRows}
 deterministic_smoke tasks check harness behavior and deterministic labels.
 dev_realistic tasks are the more meaningful note-work slice.
 
-| Tier | Count | Mean score | Source recall | Privacy score |
+| Tier | Count | Mean score | Source recall | Scope score |
 | --- | ---: | ---: | ---: | ---: |
 ${tierRows}
 
@@ -250,7 +251,7 @@ ${tierRows}
 
 High-risk tasks are reported separately so failures are not hidden by ordinary task averages.
 
-| Bucket | Count | Mean score | Privacy violations | Forbidden source violations |
+| Bucket | Count | Mean score | Scope violations | Forbidden source violations |
 | --- | ---: | ---: | ---: | ---: |
 ${riskRows}
 
@@ -260,7 +261,7 @@ ${riskRows}
 - Source precision: ${report.dimension_scores.source.source_precision}
 - Link recall: ${report.dimension_scores.link.link_recall}
 - Mutation score: ${report.dimension_scores.mutation.mutation_score}
-- Privacy score: ${report.dimension_scores.privacy.privacy_score}
+- Scope score: ${report.dimension_scores.scope.scope_score}
 - Average latency ms: ${report.cost_latency.average_duration_ms}
 - P95 latency ms: ${report.cost_latency.p95_duration_ms}
 
@@ -270,7 +271,7 @@ ${failures || "- none"}
 
 ## Reading Notes
 
-This example uses the lexical baseline only. It is a lower-bound comparison for future Lumina or graph-assisted agent runs, not a model leaderboard. Open-ended quality can be reviewed from run output answers, but v0 scoring here uses deterministic source, link, mutation, privacy, cost, and latency evidence.
+This example uses the lexical baseline only. It is a lower-bound comparison for future Lumina or graph-assisted agent runs, not a model leaderboard. Open-ended quality can be reviewed from run output answers, but v0 scoring here uses deterministic source, link, mutation, scope, cost, and latency evidence.
 `;
 }
 
@@ -347,7 +348,7 @@ async function main() {
     high_risk_scores: {
       overall: aggregateTaskScores(highRiskTaskScores),
       by_bucket: highRiskByBucket,
-      blocking_failure_count: highRiskTaskScores.filter((score) => score.privacy_violations > 0 || score.forbidden_source_violations > 0 || score.failure_categories.includes("mutation_forbidden_edit")).length
+      blocking_failure_count: highRiskTaskScores.filter((score) => score.scope_violations > 0 || score.forbidden_source_violations > 0 || score.failure_categories.includes("mutation_forbidden_edit")).length
     },
     dimension_scores: {
       source: {
@@ -365,9 +366,9 @@ async function main() {
         mutation_task_count: taskScores.filter((score) => score.family === "mutate").length,
         files_edited_count: taskScores.reduce((sum, score) => sum + score.files_edited_count, 0)
       },
-      privacy: {
-        privacy_score: mean(taskScores.map((score) => score.privacy_score)),
-        privacy_violations: taskScores.reduce((sum, score) => sum + score.privacy_violations, 0)
+      scope: {
+        scope_score: mean(taskScores.map((score) => score.scope_score)),
+        scope_violations: taskScores.reduce((sum, score) => sum + score.scope_violations, 0)
       }
     },
     cost_latency: {

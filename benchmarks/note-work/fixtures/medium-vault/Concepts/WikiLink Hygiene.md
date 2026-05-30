@@ -13,7 +13,7 @@ tags:
 
 Anchor: WikiLinks should be suggested first and applied only inside allowed edit scopes.
 
-Summary: The current policy prefers link suggestions unless the task explicitly allows edits. Bulk auto-linking is risky because stale or private notes can pollute the graph.
+Summary: The current policy prefers link suggestions unless the task explicitly allows edits. Bulk auto-linking is risky because stale or restricted notes can pollute the graph.
 
 Related links: [[Backlink Gap]], [[Auto-Linking Current Position]], [[Wiki Cleanup Sprint]]
 
@@ -26,4 +26,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

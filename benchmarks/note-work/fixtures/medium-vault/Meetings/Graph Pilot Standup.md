@@ -12,7 +12,7 @@ tags:
 ---
 # Graph Pilot Standup
 
-Anchor: The graph standup requires source recall to improve without broad private scans.
+Anchor: The graph standup requires source recall to improve without broad scans.
 
 Summary: The team agreed that graph traversal is useful only when it improves read-source quality.
 
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

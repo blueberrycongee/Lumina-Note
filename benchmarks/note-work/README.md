@@ -3,7 +3,7 @@
 This directory contains a runnable, reviewable v0 benchmark for note work in
 Lumina. It is intentionally small enough to inspect locally and large enough to
 exercise source discovery, synthesis, link recommendation, safe mutation, and
-privacy boundaries.
+explicit scope boundaries.
 
 The methodology source of truth is
 `docs/note-work-benchmark-methodology.md`.
@@ -45,8 +45,8 @@ node benchmarks/note-work/scripts/validate.mjs
 
 1. Inspect a real public, licensed, project-committed, anonymized, or consented local knowledge base.
 2. Add a profile JSON under `profiles/` that matches `schemas/profile.schema.json`.
-3. Record source URL or local source, visibility, license or consent, profiled paths, folder taxonomy, note type mix, link/tag/backlink patterns, stale/duplicate/contradiction patterns, and privacy boundary.
-4. Do not commit raw private notes, provider payloads, secrets, hidden prompts, or reversible anonymization.
+3. Record source URL or local source, visibility, license or consent, profiled paths, folder taxonomy, note type mix, link/tag/backlink patterns, stale/duplicate/contradiction patterns, and data-exclusion boundary.
+4. Do not commit raw sensitive local notes, provider payloads, secrets, hidden prompts, or reversible anonymization.
 5. Add the profile path to `benchmark.manifest.json`.
 6. Run `npm run note-work:validate`.
 
@@ -61,7 +61,7 @@ node benchmarks/note-work/scripts/validate.mjs
    - constructed synthetic controls
    - deterministic gold-label anchor
    - safety flags set to false
-4. Keep private boundary notes as obvious placeholders with no real private content.
+4. Keep restricted boundary notes as obvious placeholders with no real sensitive content.
 5. Run `npm run note-work:validate`.
 
 ## Adding A Task
@@ -73,7 +73,7 @@ node benchmarks/note-work/scripts/validate.mjs
 5. Add `expected_evidence` snippets that appear in the fixture Markdown.
 6. For link tasks, add `expected_links`.
 7. For mutate tasks, add `allowed_edits` and `expected_edits` when edits are allowed. Use `clarify_before_mutation` for destructive or ambiguous requests.
-8. Mark high-risk tasks with `high_risk: true` and risk buckets such as `privacy`, `mutation`, `stale-source`, `long-context`, `hallucinated-provenance`, or `boundary`.
+8. Mark high-risk tasks with `high_risk: true` and risk buckets such as `mutation`, `stale-source`, `long-context`, `hallucinated-provenance`, `destructive-edit`, or `boundary`.
 9. Regenerate `tasks/dev.runtime.json` with `npm run note-work:generate`. Do not hand-copy gold labels into the runtime view.
 10. Run `npm run note-work:validate`.
 
@@ -91,7 +91,7 @@ graph-assisted systems must emit the same run-output schema so the same scorer
 can compare them.
 
 The baseline reads `tasks/dev.runtime.json`, not the gold task file. For normal
-tasks it searches the full fixture vault minus `Private/` and explicit
+tasks it searches the full fixture vault minus `Restricted/` and explicit
 `forbidden_sources`; it does not use `allowed_sources` as a candidate whitelist.
 Only `source_scope: no_vault_scan` and `source_scope: specific_sources_only`
 runtime tasks narrow the candidate set.
@@ -119,7 +119,7 @@ Do not rely on a single aggregate score. The report separates:
 - source discovery,
 - link quality,
 - mutation safety,
-- privacy and boundary violations,
+- scope and boundary violations,
 - cost and latency,
 - failure categories.
 
@@ -130,12 +130,12 @@ because ordinary tasks have a higher average.
 scorers work. Use `dev_realistic` results when judging whether search behavior
 is improving.
 
-## Privacy, Provenance, And Reporting Constraints
+## Data Safety, Provenance, And Reporting Constraints
 
 The constraints come from `docs/note-work-benchmark-methodology.md`:
 
-- Real profiles must record source, visibility, license or consent, profiled paths, structure, and privacy boundary.
+- Real profiles must record source, visibility, license or consent, profiled paths, structure, and data-exclusion boundary.
 - Synthetic fixture notes must record provenance and distinguish profile-derived traits from constructed controls.
 - Gold labels must be checkable from fixture Markdown and deterministic validation.
 - LLM judge output, if added later, must be saved as review evidence and must not be silently folded into a single score.
-- Raw private notes, provider payloads, secrets, and reversible anonymization must never be committed.
+- Raw sensitive local notes, provider payloads, secrets, and reversible anonymization must never be committed.

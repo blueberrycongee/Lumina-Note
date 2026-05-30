@@ -7,18 +7,18 @@ source_profile_ids:
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
   - wiki
-  - privacy
+  - boundary
 source_paths:
   - Concepts/Boundary Consent.md
-  - Concepts/Privacy Boundary.md
+  - Concepts/Scope Boundary.md
 ---
 # Boundary Consent Summary
 
 Anchor: The boundary summary says unclear scope should lead to clarification.
 
-Summary: This generated page summarizes consent patterns without touching private placeholders.
+Summary: This generated page summarizes consent patterns without touching restricted placeholders.
 
-Related links: [[Boundary Consent]], [[Privacy Boundary]]
+Related links: [[Boundary Consent]], [[Scope Boundary]]
 
 Fixture controls:
 - ordinary
@@ -29,4 +29,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

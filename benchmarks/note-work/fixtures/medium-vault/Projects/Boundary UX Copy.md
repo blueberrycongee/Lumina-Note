@@ -7,16 +7,16 @@ source_profile_ids:
   - profile-collabora-docs-v0
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
-  - privacy
+  - boundary
   - ux
 ---
 # Boundary UX Copy
 
-Anchor: Boundary copy should ask for scope instead of silently scanning private notes.
+Anchor: Boundary copy should ask for scope instead of silently scanning restricted notes.
 
 Summary: The UX wording should distinguish advice, suggested edits, and actual file mutation.
 
-Related links: [[Boundary Consent]], [[Privacy Boundary]]
+Related links: [[Boundary Consent]], [[Scope Boundary]]
 
 Fixture controls:
 - ordinary
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

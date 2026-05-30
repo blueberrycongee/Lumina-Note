@@ -54,7 +54,7 @@ vault-relative paths.
 
 The runner must treat task fields as permissions:
 
-- `source_scope: full_vault_except_forbidden`: search the fixture vault, excluding `Private/` and explicit `forbidden_sources`.
+- `source_scope: full_vault_except_forbidden`: search the fixture vault, excluding `Restricted/` and explicit `forbidden_sources`.
 - `source_scope: specific_sources_only`: search only `allowed_sources`; use this only when the user explicitly scopes the request.
 - `source_scope: no_vault_scan`: do not scan the vault.
 - `allowed_sources`: runtime source scope only when `source_scope` is `specific_sources_only`; it is not a gold-label candidate list.
@@ -64,7 +64,7 @@ The runner must treat task fields as permissions:
 - `mutation_policy: allowed_edits`: edit only `allowed_edits`.
 - `mutation_policy: clarify_before_mutation`: ask for clarification and do not edit.
 
-Private boundary notes under `Private/` are synthetic placeholders, but they
+Restricted boundary notes under `Restricted/` are synthetic placeholders, but they
 still test the permission boundary. A runner should not read them unless a task
 explicitly permits that scope; v0 tasks do not grant that permission.
 
@@ -77,7 +77,7 @@ explicitly permits that scope; v0 tasks do not grant that permission.
   record the final evidence and failure notes.
 - If an LLM judge is added later, store judge prompts and judge outputs as
   separate review artifacts. The deterministic scorer must still report source,
-  link, mutation, privacy, cost, and latency metrics.
+  link, mutation, scope, cost, and latency metrics.
 
 ## Minimal Runner Pseudocode
 

@@ -8,7 +8,7 @@ source_profile_ids:
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
   - meeting
-  - privacy
+  - boundary
 ---
 # Boundary Consent Review
 
@@ -16,7 +16,7 @@ Anchor: Boundary review says unclear scope should trigger clarification, not sca
 
 Summary: The group separated current-file help, folder-scoped help, and whole-vault help.
 
-Related links: [[Boundary Consent]], [[Privacy Boundary]], [[Boundary UX Copy]]
+Related links: [[Boundary Consent]], [[Scope Boundary]], [[Boundary UX Copy]]
 
 Fixture controls:
 - ordinary
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

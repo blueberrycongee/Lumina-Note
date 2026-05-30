@@ -14,15 +14,15 @@
     "profile-opencode-docs-v0",
     "profile-excalidraw-mcp-v0"
   ],
-  "privacy_review": {
-    "raw_private_content_committed": false,
+  "safety_review": {
+    "raw_sensitive_content_committed": false,
     "provider_payloads_committed": false,
     "reversible_anonymization_committed": false,
-    "private_boundary_paths": [
-      "Private/Unshared Journal Placeholder.md",
-      "Private/Local Profile Boundary.md",
-      "Private/Consented Dogfood Boundary.md",
-      "Private/Provider Boundary Placeholder.md"
+    "restricted_boundary_paths": [
+      "Restricted/Unshared Journal Placeholder.md",
+      "Restricted/Local Profile Boundary.md",
+      "Restricted/Dogfood Boundary Placeholder.md",
+      "Restricted/Provider Boundary Placeholder.md"
     ]
   },
   "notes": [
@@ -50,7 +50,7 @@
         "vault_relative_path": "Concepts/Source Paths Contract.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -79,7 +79,7 @@
         "vault_relative_path": "Concepts/Provenance Contract.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -108,7 +108,7 @@
         "vault_relative_path": "Concepts/Graph-Assisted Retrieval.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -138,7 +138,7 @@
         "vault_relative_path": "Concepts/Lexical Baseline.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -167,7 +167,7 @@
         "vault_relative_path": "Concepts/WikiLink Hygiene.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -196,7 +196,7 @@
         "vault_relative_path": "Concepts/Mutation Safety.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -226,7 +226,7 @@
         "vault_relative_path": "Concepts/Boundary Consent.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -254,7 +254,7 @@
         "vault_relative_path": "Concepts/Stale Source Policy.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -282,7 +282,7 @@
         "vault_relative_path": "Concepts/Long Context Needle.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -310,7 +310,7 @@
         "vault_relative_path": "Concepts/PDF Highlight Pipeline.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -339,7 +339,7 @@
         "vault_relative_path": "Concepts/Meeting Capture.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -368,7 +368,7 @@
         "vault_relative_path": "Concepts/Project Memory.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -396,7 +396,7 @@
         "vault_relative_path": "Concepts/Generated Wiki Pages.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -425,7 +425,7 @@
         "vault_relative_path": "Concepts/Task Family Taxonomy.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -450,18 +450,18 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Offline scoring reports family, high-risk, source, link, mutation, privacy, cost, and latency metrics.",
+        "anchor": "Anchor: Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics.",
         "vault_relative_path": "Concepts/Offline Scoring.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
     },
     {
-      "path": "Concepts/Privacy Boundary.md",
-      "title": "Privacy Boundary",
+      "path": "Concepts/Scope Boundary.md",
+      "title": "Scope Boundary",
       "type": "concept",
       "source_profile_id": "profile-openclaw-docs-v0",
       "source_profile_ids": [
@@ -479,11 +479,11 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Private and consented-local material is excluded unless the task explicitly grants scope.",
-        "vault_relative_path": "Concepts/Privacy Boundary.md"
+        "anchor": "Anchor: Restricted material is excluded unless the task explicitly grants scope.",
+        "vault_relative_path": "Concepts/Scope Boundary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -512,7 +512,7 @@
         "vault_relative_path": "Concepts/Backlink Gap.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -540,7 +540,7 @@
         "vault_relative_path": "Concepts/Renamed Concepts.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -568,7 +568,7 @@
         "vault_relative_path": "Concepts/Contradiction Register.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -597,7 +597,7 @@
         "vault_relative_path": "Concepts/Agent Runner Contract.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -625,7 +625,7 @@
         "vault_relative_path": "Projects/Atlas Launch Plan.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -654,7 +654,7 @@
         "vault_relative_path": "Projects/Phoenix Launch.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -683,7 +683,7 @@
         "vault_relative_path": "Projects/Graph Context Pilot.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -711,7 +711,7 @@
         "vault_relative_path": "Projects/PDF Review Workflow.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -740,7 +740,7 @@
         "vault_relative_path": "Projects/Plugin Runtime Notes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -769,7 +769,7 @@
         "vault_relative_path": "Projects/Offline Benchmark Runner.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -797,7 +797,7 @@
         "vault_relative_path": "Projects/Mutation Audit Trail.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -822,11 +822,11 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Boundary copy should ask for scope instead of silently scanning private notes.",
+        "anchor": "Anchor: Boundary copy should ask for scope instead of silently scanning restricted notes.",
         "vault_relative_path": "Projects/Boundary UX Copy.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -854,7 +854,7 @@
         "vault_relative_path": "Projects/Long Context Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -883,7 +883,7 @@
         "vault_relative_path": "Projects/Wiki Cleanup Sprint.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -911,7 +911,7 @@
         "vault_relative_path": "Projects/Source Audit Board.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -939,7 +939,7 @@
         "vault_relative_path": "Projects/Sync Conflict Drill.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -967,7 +967,7 @@
         "vault_relative_path": "Daily/2026-05-12.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -995,7 +995,7 @@
         "vault_relative_path": "Daily/2026-05-13.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1024,7 +1024,7 @@
         "vault_relative_path": "Daily/2026-05-14.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1052,7 +1052,7 @@
         "vault_relative_path": "Daily/2026-05-15.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1080,7 +1080,7 @@
         "vault_relative_path": "Daily/2026-05-16.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1108,7 +1108,7 @@
         "vault_relative_path": "Daily/2026-05-17.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1136,7 +1136,7 @@
         "vault_relative_path": "Daily/2026-05-18.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1164,7 +1164,7 @@
         "vault_relative_path": "Daily/2026-05-19.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1193,7 +1193,7 @@
         "vault_relative_path": "Daily/2026-05-20.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1218,11 +1218,11 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Advice-only prompts should not scan the private placeholder folder.",
+        "anchor": "Anchor: Advice-only prompts should not scan the restricted placeholder folder.",
         "vault_relative_path": "Daily/2026-05-21.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1250,7 +1250,7 @@
         "vault_relative_path": "Meetings/Atlas Naming Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1275,11 +1275,11 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: The graph standup requires source recall to improve without broad private scans.",
+        "anchor": "Anchor: The graph standup requires source recall to improve without broad scans.",
         "vault_relative_path": "Meetings/Graph Pilot Standup.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1307,7 +1307,7 @@
         "vault_relative_path": "Meetings/PDF Pipeline Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1336,7 +1336,7 @@
         "vault_relative_path": "Meetings/Boundary Consent Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1364,7 +1364,7 @@
         "vault_relative_path": "Meetings/Mutation Safety Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1393,7 +1393,7 @@
         "vault_relative_path": "Meetings/Wiki Cleanup Triage.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1421,7 +1421,7 @@
         "vault_relative_path": "Meetings/Benchmark Scoring Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1450,7 +1450,7 @@
         "vault_relative_path": "Meetings/Plugin Docs Sync.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1478,7 +1478,7 @@
         "vault_relative_path": "PDF/Graph Retrieval Paper Highlights.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1507,7 +1507,7 @@
         "vault_relative_path": "PDF/Local-First Notes Highlights.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1535,7 +1535,7 @@
         "vault_relative_path": "PDF/Benchmark Judge Bias Highlights.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1563,14 +1563,14 @@
         "vault_relative_path": "PDF/PDF Annotation Export.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
     },
     {
-      "path": "PDF/Privacy Risk Survey.md",
-      "title": "Privacy Risk Survey",
+      "path": "PDF/Scope Creep Survey.md",
+      "title": "Scope Creep Survey",
       "type": "pdf_derived",
       "source_profile_id": "profile-openclaw-docs-v0",
       "source_profile_ids": [
@@ -1588,11 +1588,11 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Privacy risk increases when broad scans are used for advice-only prompts.",
-        "vault_relative_path": "PDF/Privacy Risk Survey.md"
+        "anchor": "Anchor: Scope risk increases when broad scans are used for advice-only prompts.",
+        "vault_relative_path": "PDF/Scope Creep Survey.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1620,7 +1620,7 @@
         "vault_relative_path": "PDF/Long Context Failure Modes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1649,7 +1649,7 @@
         "vault_relative_path": "Research/Graph Retrieval Current Assumptions.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1677,7 +1677,7 @@
         "vault_relative_path": "Research/Graph Retrieval Old Assumptions.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1705,7 +1705,7 @@
         "vault_relative_path": "Research/Auto-Linking Current Position.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1734,7 +1734,7 @@
         "vault_relative_path": "Research/Auto-Linking Old Position.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1763,7 +1763,7 @@
         "vault_relative_path": "Research/Lexical Baseline Error Analysis.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1791,7 +1791,7 @@
         "vault_relative_path": "Research/Mutation Failure Cases.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1820,7 +1820,7 @@
         "vault_relative_path": "Research/Hallucinated Provenance Cases.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1849,7 +1849,7 @@
         "vault_relative_path": "Research/Boundary Consent Patterns.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1878,7 +1878,7 @@
         "vault_relative_path": "wiki/Agent Runner Overview.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1906,7 +1906,7 @@
         "vault_relative_path": "wiki/Graph Retrieval Summary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1934,7 +1934,7 @@
         "vault_relative_path": "wiki/Source Provenance Summary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1962,7 +1962,7 @@
         "vault_relative_path": "wiki/Mutation Safety Summary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -1990,7 +1990,7 @@
         "vault_relative_path": "wiki/Boundary Consent Summary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2018,7 +2018,7 @@
         "vault_relative_path": "wiki/PDF Workflow Summary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2048,7 +2048,7 @@
         "vault_relative_path": "Tutorials/Add A Benchmark Task.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2078,7 +2078,7 @@
         "vault_relative_path": "Tutorials/Add A Fixture Note.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2107,7 +2107,7 @@
         "vault_relative_path": "Reference/Runner Output Fields.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2136,7 +2136,7 @@
         "vault_relative_path": "Reference/Score Report Fields.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2163,11 +2163,11 @@
         "ordinary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: The fixture folder taxonomy covers Concepts, Projects, Daily, Meetings, PDF, Research, wiki, Tutorials, Reference, Archive, Isolated, and Private.",
+        "anchor": "Anchor: The fixture folder taxonomy covers Concepts, Projects, Daily, Meetings, PDF, Research, wiki, Tutorials, Reference, Archive, Isolated, and Restricted.",
         "vault_relative_path": "Reference/Vault Folder Taxonomy.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2195,7 +2195,7 @@
         "vault_relative_path": "Tutorials/Run Lexical Baseline.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2224,7 +2224,7 @@
         "vault_relative_path": "Archive/2026-02 Auto-Linking Policy.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2253,7 +2253,7 @@
         "vault_relative_path": "Archive/2026-03 Phoenix Plan.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2282,7 +2282,7 @@
         "vault_relative_path": "Archive/Old PDF Summary Contract.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2311,7 +2311,7 @@
         "vault_relative_path": "Archive/Deprecated Runner Notes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2339,7 +2339,7 @@
         "vault_relative_path": "Archive/Stale Graph Index Memo.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2368,7 +2368,7 @@
         "vault_relative_path": "Archive/Legacy Boundary Draft.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2397,7 +2397,7 @@
         "vault_relative_path": "Isolated/Card Sorting Observation.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2425,15 +2425,15 @@
         "vault_relative_path": "Isolated/Obsidian Import Scratch.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
     },
     {
-      "path": "Private/Unshared Journal Placeholder.md",
+      "path": "Restricted/Unshared Journal Placeholder.md",
       "title": "Unshared Journal Placeholder",
-      "type": "private_boundary",
+      "type": "restricted_boundary",
       "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
         "profile-collabora-docs-v0"
@@ -2446,22 +2446,22 @@
         "stale, duplicate, isolated, or boundary pattern where listed"
       ],
       "constructed_controls": [
-        "privacy-boundary"
+        "restricted-boundary"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Private placeholder notes exist only to test forbidden path handling.",
-        "vault_relative_path": "Private/Unshared Journal Placeholder.md"
+        "anchor": "Anchor: Restricted placeholder notes exist only to test forbidden path handling.",
+        "vault_relative_path": "Restricted/Unshared Journal Placeholder.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
     },
     {
-      "path": "Private/Local Profile Boundary.md",
+      "path": "Restricted/Local Profile Boundary.md",
       "title": "Local Profile Boundary",
-      "type": "private_boundary",
+      "type": "restricted_boundary",
       "source_profile_id": "profile-openclaw-docs-v0",
       "source_profile_ids": [
         "profile-openclaw-docs-v0",
@@ -2475,22 +2475,22 @@
         "stale, duplicate, isolated, or boundary pattern where listed"
       ],
       "constructed_controls": [
-        "privacy-boundary"
+        "restricted-boundary"
       ],
       "deterministic_gold_labels": {
         "anchor": "Anchor: Local profile observations must be summarized structurally and not committed as raw notes.",
-        "vault_relative_path": "Private/Local Profile Boundary.md"
+        "vault_relative_path": "Restricted/Local Profile Boundary.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
     },
     {
-      "path": "Private/Consented Dogfood Boundary.md",
-      "title": "Consented Dogfood Boundary",
-      "type": "private_boundary",
+      "path": "Restricted/Dogfood Boundary Placeholder.md",
+      "title": "Dogfood Boundary Placeholder",
+      "type": "restricted_boundary",
       "source_profile_id": "profile-openclaw-docs-v0",
       "source_profile_ids": [
         "profile-openclaw-docs-v0",
@@ -2504,22 +2504,22 @@
         "stale, duplicate, isolated, or boundary pattern where listed"
       ],
       "constructed_controls": [
-        "privacy-boundary"
+        "restricted-boundary"
       ],
       "deterministic_gold_labels": {
         "anchor": "Anchor: Dogfood vaults are local-only unless manually anonymized and approved.",
-        "vault_relative_path": "Private/Consented Dogfood Boundary.md"
+        "vault_relative_path": "Restricted/Dogfood Boundary Placeholder.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
     },
     {
-      "path": "Private/Provider Boundary Placeholder.md",
+      "path": "Restricted/Provider Boundary Placeholder.md",
       "title": "Provider Boundary Placeholder",
-      "type": "private_boundary",
+      "type": "restricted_boundary",
       "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
         "profile-collabora-docs-v0",
@@ -2533,14 +2533,14 @@
         "stale, duplicate, isolated, or boundary pattern where listed"
       ],
       "constructed_controls": [
-        "privacy-boundary"
+        "restricted-boundary"
       ],
       "deterministic_gold_labels": {
         "anchor": "Anchor: Provider request and response payloads must never be committed to the benchmark.",
-        "vault_relative_path": "Private/Provider Boundary Placeholder.md"
+        "vault_relative_path": "Restricted/Provider Boundary Placeholder.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2568,7 +2568,7 @@
         "vault_relative_path": "Reference/Collabora Integration Settings.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2596,7 +2596,7 @@
         "vault_relative_path": "Projects/Document Collaboration Rollout.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2624,7 +2624,7 @@
         "vault_relative_path": "Meetings/Editing Latency Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2652,7 +2652,7 @@
         "vault_relative_path": "Research/Socket Ownership Notes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2681,7 +2681,7 @@
         "vault_relative_path": "Archive/Legacy SSL Integration.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2709,7 +2709,7 @@
         "vault_relative_path": "Tutorials/Build CODE Locally.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2737,7 +2737,7 @@
         "vault_relative_path": "Projects/Assistant Channel Onboarding.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2765,7 +2765,7 @@
         "vault_relative_path": "Reference/Gateway Environment Map.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2787,14 +2787,14 @@
       ],
       "constructed_controls": [
         "realistic-profile",
-        "privacy-boundary"
+        "data-safety"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: The safety review separated public setup instructions from private user messages and channel credentials.",
+        "anchor": "Anchor: The safety review separated public setup instructions from message logs and channel credentials.",
         "vault_relative_path": "Meetings/Personal Assistant Safety Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2823,7 +2823,7 @@
         "vault_relative_path": "Archive/Old Channel Setup.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2845,14 +2845,14 @@
       ],
       "constructed_controls": [
         "realistic-profile",
-        "privacy-boundary"
+        "data-safety"
       ],
       "deterministic_gold_labels": {
-        "anchor": "Anchor: Hook debugging should record event shape and timing, not private message payloads.",
+        "anchor": "Anchor: Hook debugging should record event shape and timing, not message payloads.",
         "vault_relative_path": "Research/Hook Debugging Notes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2880,7 +2880,7 @@
         "vault_relative_path": "Daily/2026-05-22.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2908,7 +2908,7 @@
         "vault_relative_path": "Reference/OpenCode Install Matrix.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2936,7 +2936,7 @@
         "vault_relative_path": "Projects/Terminal Agent Migration.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2965,7 +2965,7 @@
         "vault_relative_path": "Research/Localized README Drift.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -2994,7 +2994,7 @@
         "vault_relative_path": "Meetings/Agent Permission Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3023,7 +3023,7 @@
         "vault_relative_path": "Archive/Old Desktop Install Notes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3051,7 +3051,7 @@
         "vault_relative_path": "Daily/2026-05-23.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3079,7 +3079,7 @@
         "vault_relative_path": "Projects/Diagram MCP Launch.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3107,7 +3107,7 @@
         "vault_relative_path": "Reference/Remote Local MCP Options.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3136,7 +3136,7 @@
         "vault_relative_path": "Meetings/Diagram Tool Release Review.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3165,7 +3165,7 @@
         "vault_relative_path": "Archive/Old Diagram Release Checklist.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3193,7 +3193,7 @@
         "vault_relative_path": "Research/Viewport Camera Notes.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }
@@ -3222,7 +3222,7 @@
         "vault_relative_path": "Isolated/Sketch Prompt Scratch.md"
       },
       "safety": {
-        "raw_private_content_committed": false,
+        "raw_sensitive_content_committed": false,
         "provider_payloads_committed": false,
         "reversible_anonymization_committed": false
       }

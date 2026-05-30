@@ -14,7 +14,7 @@ tags:
 ---
 # Vault Folder Taxonomy
 
-Anchor: The fixture folder taxonomy covers Concepts, Projects, Daily, Meetings, PDF, Research, wiki, Tutorials, Reference, Archive, Isolated, and Private.
+Anchor: The fixture folder taxonomy covers Concepts, Projects, Daily, Meetings, PDF, Research, wiki, Tutorials, Reference, Archive, Isolated, and Restricted.
 
 Summary: The taxonomy mixes real profile traits with controlled synthetic benchmark cases.
 
@@ -29,4 +29,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

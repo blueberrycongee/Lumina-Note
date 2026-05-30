@@ -13,7 +13,7 @@ tags:
 
 Anchor: The sketch prompt scratch note has no links but belongs near diagram launch and viewport notes.
 
-Summary: This isolated note exists to test whether a sparse tool idea can be connected without inventing private data.
+Summary: This isolated note exists to test whether a sparse tool idea can be connected without inventing data.
 
 Related links: None yet.
 
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

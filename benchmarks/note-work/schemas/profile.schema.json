@@ -71,7 +71,7 @@
         "wikilink_patterns",
         "backlink_patterns",
         "stale_contradictory_duplicated_patterns",
-        "privacy_boundary",
+        "data_exclusion_boundary",
         "task_pattern_examples"
       ],
       "properties": {
@@ -101,7 +101,7 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
-        "privacy_boundary": {
+        "data_exclusion_boundary": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "minItems": 1
@@ -126,13 +126,13 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "raw_private_content_committed",
+        "raw_sensitive_content_committed",
         "provider_payloads_committed",
         "reversible_anonymization_committed",
         "known_exclusions"
       ],
       "properties": {
-        "raw_private_content_committed": { "const": false },
+        "raw_sensitive_content_committed": { "const": false },
         "provider_payloads_committed": { "const": false },
         "reversible_anonymization_committed": { "const": false },
         "known_exclusions": {

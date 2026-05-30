@@ -14,7 +14,7 @@ tags:
 
 Anchor: Deprecated runner notes omitted candidate_paths_scanned from run output.
 
-Summary: The current runner contract includes scan evidence for privacy review.
+Summary: The current runner contract includes scan evidence for scope review.
 
 Related links: [[Agent Runner Contract]]
 
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

@@ -17,7 +17,7 @@ Anchor: A fixture note needs provenance that states profile-derived and construc
 
 Summary: The tutorial keeps synthetic note additions auditable.
 
-Related links: [[Source Paths Contract]], [[Privacy Boundary]]
+Related links: [[Source Paths Contract]], [[Scope Boundary]]
 
 Fixture controls:
 - ordinary
@@ -28,4 +28,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

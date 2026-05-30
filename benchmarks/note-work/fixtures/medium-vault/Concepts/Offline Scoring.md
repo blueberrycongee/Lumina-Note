@@ -11,7 +11,7 @@ tags:
 ---
 # Offline Scoring
 
-Anchor: Offline scoring reports family, high-risk, source, link, mutation, privacy, cost, and latency metrics.
+Anchor: Offline scoring reports family, high-risk, source, link, mutation, scope, cost, and latency metrics.
 
 Summary: The scorer should make failures diagnosable. It must not collapse everything into a single aggregate score.
 
@@ -26,4 +26,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

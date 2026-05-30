@@ -8,15 +8,15 @@ source_profile_ids:
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
   - pdf
-  - privacy
+  - boundary
 ---
 # Local First Notes Highlights
 
 Anchor: Local-first note tools should expose when an agent reads or edits files.
 
-Summary: The highlights influenced privacy boundary tasks that distinguish scan permission from edit permission.
+Summary: The highlights influenced scope-boundary tasks that distinguish scan permission from edit permission.
 
-Related links: [[Boundary Consent]], [[Privacy Boundary]]
+Related links: [[Boundary Consent]], [[Scope Boundary]]
 
 Fixture controls:
 - ordinary
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

@@ -14,7 +14,7 @@ tags:
 
 Anchor: Run output records sources_read, candidate_paths_scanned, files_edited, links_suggested, cost, and latency.
 
-Summary: These fields allow the scorer to identify source, link, mutation, and privacy failures.
+Summary: These fields allow the scorer to identify source, link, mutation, and scope failures.
 
 Related links: [[Agent Runner Contract]], [[Source Paths Contract]]
 
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

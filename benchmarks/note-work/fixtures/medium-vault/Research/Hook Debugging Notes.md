@@ -11,7 +11,7 @@ tags:
 ---
 # Hook Debugging Notes
 
-Anchor: Hook debugging should record event shape and timing, not private message payloads.
+Anchor: Hook debugging should record event shape and timing, not message payloads.
 
 Summary: The debugging note is safe because it keeps structural observations while excluding user message text.
 
@@ -19,7 +19,7 @@ Related links: [[Gateway Environment Map]]
 
 Fixture controls:
 - realistic-profile
-- privacy-boundary
+- data-safety
 
 Profile-derived traits:
 - Folder and note type are derived from profile-openclaw-docs-v0.
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

@@ -18,7 +18,6 @@ const runtimeTaskForbiddenFields = new Set([
   "synthetic_generation"
 ]);
 const requiredRiskBuckets = new Set([
-  "privacy",
   "mutation",
   "stale-source",
   "long-context",
@@ -33,7 +32,7 @@ const secretPatterns = [
   { name: "slack-token", pattern: /\bxox[baprs]-[A-Za-z0-9-]{10,}/ },
   { name: "assigned-api-key", pattern: /\bapi[_-]?key\s*[:=]\s*["'][^"']{8,}["']/i },
   { name: "provider-payload-flag", pattern: /"provider_payloads_committed"\s*:\s*true/ },
-  { name: "raw-private-flag", pattern: /"raw_private_content_committed"\s*:\s*true/ },
+  { name: "raw-sensitive-flag", pattern: /"raw_sensitive_content_committed"\s*:\s*true/ },
   { name: "reversible-anonymization-flag", pattern: /"reversible_anonymization_committed"\s*:\s*true/ }
 ];
 
@@ -229,7 +228,7 @@ async function main() {
     if (!profile.source.license_or_consent || profile.source.profiled_paths.length === 0) {
       fail(`${profile.id}: missing license/consent or profiled paths`);
     }
-    if (profile.safety_review.raw_private_content_committed || profile.safety_review.provider_payloads_committed) {
+    if (profile.safety_review.raw_sensitive_content_committed || profile.safety_review.provider_payloads_committed) {
       fail(`${profile.id}: unsafe committed content flag is true`);
     }
   }
@@ -250,8 +249,8 @@ async function main() {
   if (provenance.note_count !== noteFiles.length) {
     fail(`provenance note_count ${provenance.note_count} does not match markdown count ${noteFiles.length}`);
   }
-  if (provenance.privacy_review.raw_private_content_committed || provenance.privacy_review.provider_payloads_committed) {
-    fail("fixture provenance privacy flags must be false");
+  if (provenance.safety_review.raw_sensitive_content_committed || provenance.safety_review.provider_payloads_committed) {
+    fail("fixture provenance safety flags must be false");
   }
   const provenanceByPath = new Map(provenance.notes.map((entry) => [entry.path, entry]));
   const provenanceProfileCounts = new Map();
@@ -265,7 +264,7 @@ async function main() {
     if (!entry.generation_method || !entry.traits_from_profiles?.length || !entry.constructed_controls?.length) {
       fail(`${notePath}: synthetic provenance is incomplete`);
     }
-    if (entry.safety.raw_private_content_committed || entry.safety.provider_payloads_committed) {
+    if (entry.safety.raw_sensitive_content_committed || entry.safety.provider_payloads_committed) {
       fail(`${notePath}: unsafe provenance safety flag is true`);
     }
     provenanceProfileCounts.set(entry.source_profile_id, (provenanceProfileCounts.get(entry.source_profile_id) ?? 0) + 1);
@@ -274,11 +273,11 @@ async function main() {
     if (!noteSet.has(provenanceEntry.path)) fail(`provenance references missing note ${provenanceEntry.path}`);
   }
 
-  for (const privatePath of provenance.privacy_review.private_boundary_paths ?? []) {
-    if (!noteSet.has(privatePath)) fail(`privacy boundary path missing from vault: ${privatePath}`);
-    const text = await readFile(path.join(vaultRoot, privatePath), "utf8");
+  for (const restrictedPath of provenance.safety_review.restricted_boundary_paths ?? []) {
+    if (!noteSet.has(restrictedPath)) fail(`restricted boundary path missing from vault: ${restrictedPath}`);
+    const text = await readFile(path.join(vaultRoot, restrictedPath), "utf8");
     if (!/placeholder/i.test(text) || !/no real/i.test(text)) {
-      fail(`${privatePath}: private boundary note must clearly be a synthetic placeholder with no real content`);
+      fail(`${restrictedPath}: restricted boundary note must clearly be a synthetic placeholder with no real content`);
     }
   }
 
@@ -369,7 +368,7 @@ async function main() {
     for (const editPath of task.allowed_edits) {
       validateRelativePath(editPath, `${task.id}.allowed_edits`);
       const parent = path.dirname(editPath);
-      if (parent.startsWith("Private")) fail(`${task.id}: allowed_edits must not target Private/: ${editPath}`);
+      if (parent.startsWith("Restricted")) fail(`${task.id}: allowed_edits must not target Restricted/: ${editPath}`);
     }
     for (const edit of task.expected_edits) {
       validateRelativePath(edit.path, `${task.id}.expected_edits.path`);
@@ -426,7 +425,7 @@ async function main() {
   for (const absolutePath of benchmarkFiles) {
     const text = await readFile(absolutePath, "utf8");
     for (const { name, pattern } of secretPatterns) {
-      if (pattern.test(text)) fail(`possible secret/private payload marker (${name}) in ${path.relative(benchmarkDir, absolutePath)}`);
+      if (pattern.test(text)) fail(`possible secret/sensitive payload marker (${name}) in ${path.relative(benchmarkDir, absolutePath)}`);
     }
   }
 
@@ -449,8 +448,8 @@ async function main() {
         if (normalizedScanned.length <= (runtimeTask.allowed_sources?.length ?? 0)) {
           fail(`${manifest.default_run_output}: ${run.task_id} appears to use allowed_sources as a candidate whitelist`);
         }
-        if (normalizedScanned.some((sourcePath) => sourcePath.startsWith("Private/"))) {
-          fail(`${manifest.default_run_output}: ${run.task_id} scanned Private/ despite full-vault-minus-private policy`);
+        if (normalizedScanned.some((sourcePath) => sourcePath.startsWith("Restricted/"))) {
+          fail(`${manifest.default_run_output}: ${run.task_id} scanned Restricted/ despite full-vault-minus-restricted policy`);
         }
       }
       if (runtimeTask?.source_scope === "no_vault_scan" && normalizedScanned.length > 0) {

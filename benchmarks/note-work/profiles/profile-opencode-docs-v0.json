@@ -52,7 +52,7 @@
       "Install instructions are duplicated across package managers.",
       "Agent permission wording appears in several places."
     ],
-    "privacy_boundary": [
+    "data_exclusion_boundary": [
       "Public agent docs contain no local task transcripts.",
       "Benchmark agent-runner outputs must avoid hidden prompts and raw provider data."
     ],
@@ -73,7 +73,7 @@
     "Duplicate and stale source patterns."
   ],
   "safety_review": {
-    "raw_private_content_committed": false,
+    "raw_sensitive_content_committed": false,
     "provider_payloads_committed": false,
     "reversible_anonymization_committed": false,
     "known_exclusions": [

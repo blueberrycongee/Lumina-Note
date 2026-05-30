@@ -48,7 +48,7 @@
       "Remote and local install modes can conflict if merged carelessly.",
       "Release checklist commands are easy to mutate destructively."
     ],
-    "privacy_boundary": [
+    "data_exclusion_boundary": [
       "Public tool docs include no user vault content.",
       "Benchmark visual/tool notes should remain synthetic and non-sensitive."
     ],
@@ -69,7 +69,7 @@
     "Tool boundary and release-safety tasks."
   ],
   "safety_review": {
-    "raw_private_content_committed": false,
+    "raw_sensitive_content_committed": false,
     "provider_payloads_committed": false,
     "reversible_anonymization_committed": false,
     "known_exclusions": [

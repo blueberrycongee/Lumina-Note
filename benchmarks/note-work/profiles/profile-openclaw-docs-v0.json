@@ -52,8 +52,8 @@
       "Install paths differ across channel and deployment pages.",
       "Operational docs can lag behind root-level product positioning."
     ],
-    "privacy_boundary": [
-      "Public docs may describe personal assistant workflows but do not include private user messages.",
+    "data_exclusion_boundary": [
+      "Public docs may describe personal assistant workflows but do not include user message logs.",
       "Benchmark fixture must not create realistic personal conversations or contact data."
     ],
     "task_pattern_examples": [
@@ -65,19 +65,19 @@
   "workflow_templates": [
     "Locate operational instructions across many small docs.",
     "Compare stale quick-start guidance against current topic docs.",
-    "Summarize a personal assistant workflow without exposing user content."
+    "Summarize a personal assistant workflow without inventing user content."
   ],
   "fixture_influence": [
     "Tutorial and reference notes under Tutorials/ and Reference/.",
-    "Boundary tasks about personal data and consent.",
+    "Scope-boundary tasks about runtime setup and consent.",
     "Near-duplicate setup guidance in project and archive notes."
   ],
   "safety_review": {
-    "raw_private_content_committed": false,
+    "raw_sensitive_content_committed": false,
     "provider_payloads_committed": false,
     "reversible_anonymization_committed": false,
     "known_exclusions": [
-      "No private messages",
+      "No user message logs",
       "No channel credentials",
       "No user contact data"
     ]

@@ -8,7 +8,7 @@ source_profile_ids:
 synthetic_generation: note-work-fixture-generator-v0.2
 tags:
   - research
-  - privacy
+  - boundary
 ---
 # Boundary Consent Patterns
 
@@ -16,7 +16,7 @@ Anchor: Boundary consent patterns include no-scan advice, folder scope, and clar
 
 Summary: The research note maps user phrasing to permission boundaries.
 
-Related links: [[Boundary Consent]], [[Privacy Boundary]]
+Related links: [[Boundary Consent]], [[Scope Boundary]]
 
 Fixture controls:
 - ordinary
@@ -27,4 +27,4 @@ Profile-derived traits:
 
 Deterministic review:
 - Gold labels can cite the Anchor line and this vault-relative path.
-- No raw private note text or provider payload is included.
+- No raw sensitive local note text or provider payload is included.

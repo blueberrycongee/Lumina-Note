@@ -59,9 +59,9 @@
       "Developer notes can lag behind current subsystem behavior.",
       "Policy docs and templates duplicate contribution requirements in different forms."
     ],
-    "privacy_boundary": [
+    "data_exclusion_boundary": [
       "Public project docs contain no local user vault notes.",
-      "Benchmark uses structure only and does not copy private deployment configuration.",
+      "Benchmark uses structure only and does not copy sensitive deployment configuration.",
       "No issue metadata, credentials, or local integration endpoints are committed."
     ],
     "task_pattern_examples": [
@@ -78,10 +78,10 @@
   "fixture_influence": [
     "Root/reference/tutorial/developer-note structure in the fixture.",
     "Generated wiki pages with source_paths frontmatter.",
-    "Boundary tasks around public docs versus private local configuration."
+    "Scope-boundary tasks around public docs versus restricted local configuration."
   ],
   "safety_review": {
-    "raw_private_content_committed": false,
+    "raw_sensitive_content_committed": false,
     "provider_payloads_committed": false,
     "reversible_anonymization_committed": false,
     "known_exclusions": [

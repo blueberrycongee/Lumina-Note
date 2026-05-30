@@ -33,7 +33,7 @@
         "boundary"
       ]
     },
-    "task_set": { "enum": ["dev", "private-test", "live-eval"] },
+    "task_set": { "enum": ["dev", "heldout-test", "live-eval"] },
     "evaluation_tier": {
       "enum": ["deterministic_smoke", "dev_realistic"]
     },
@@ -43,7 +43,6 @@
       "items": {
         "enum": [
           "ordinary",
-          "privacy",
           "mutation",
           "stale-source",
           "long-context",
