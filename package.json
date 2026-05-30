@@ -37,6 +37,7 @@
     "note-work:generate": "node benchmarks/note-work/scripts/generate-fixture.mjs",
     "note-work:validate": "node benchmarks/note-work/scripts/validate.mjs",
     "note-work:baseline": "node benchmarks/note-work/scripts/run-lexical-baseline.mjs",
+    "note-work:agent": "node benchmarks/note-work/scripts/run-opencode-agent.mjs",
     "note-work:score": "node benchmarks/note-work/scripts/score.mjs",
     "bench": "vitest bench",
     "bench:run": "vitest bench --run"
