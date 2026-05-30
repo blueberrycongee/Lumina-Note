@@ -88,6 +88,10 @@ describe('WikiSynthesizer (opencode-backed)', () => {
     expect(calls).toHaveLength(2)
     expect(calls[0].url).toContain('/session?directory=')
     expect(calls[1].url).toContain('/session/sess_test/message')
+    expect(calls[1].url).toContain(`directory=${encodeURIComponent(vault)}`)
+    expect(
+      (calls[1].init?.headers as Record<string, string>)['x-opencode-directory'],
+    ).toBe(vault)
     const body = JSON.parse(String(calls[1].init?.body))
     expect(body.agent).toBe('wiki-sync')
     expect(body.parts).toHaveLength(1)

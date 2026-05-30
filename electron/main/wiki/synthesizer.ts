@@ -87,7 +87,13 @@ export class WikiSynthesizer {
     try {
       sessionId = await createSession(info, this.opts.vaultPath)
       const taskMessage = buildTaskMessage(this.opts.vaultPath, relPath, sourceContent)
-      await runPrompt(info, sessionId, taskMessage, this.opts.timeoutMs)
+      await runPrompt(
+        info,
+        sessionId,
+        taskMessage,
+        this.opts.timeoutMs,
+        this.opts.vaultPath,
+      )
     } catch (err) {
       return {
         ok: false,
@@ -146,6 +152,7 @@ async function runPrompt(
   sessionId: string,
   text: string,
   timeoutMs: number,
+  vaultPath: string,
 ): Promise<void> {
   // Use the synchronous /session/{id}/message endpoint (SDK calls this
   // session.prompt) — it blocks until the agent run completes. Faster
@@ -154,13 +161,13 @@ async function runPrompt(
   const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
     const res = await fetch(
-      `${info.url.replace(/\/$/, '')}/session/${encodeURIComponent(sessionId)}/message`,
+      `${info.url.replace(/\/$/, '')}/session/${encodeURIComponent(sessionId)}/message?directory=${encodeURIComponent(vaultPath)}`,
       {
         method: 'POST',
         headers: {
           authorization: authHeader(info),
           'Content-Type': 'application/json',
-          'x-opencode-directory': '',
+          'x-opencode-directory': vaultPath,
         },
         body: JSON.stringify({
           agent: 'wiki-sync',

@@ -60,6 +60,18 @@ function stubFetchOk(): void {
   vi.stubGlobal('fetch', stub)
 }
 
+async function waitForCondition(
+  predicate: () => boolean,
+  timeoutMs = 1000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (predicate()) return
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+  throw new Error('condition was not met before timeout')
+}
+
 describe('WikiManager.bind / start / stop', () => {
   it('bind returns the bound vault and reuses on same path', async () => {
     const mgr = buildManager()
@@ -104,6 +116,21 @@ describe('WikiManager.rebuild', () => {
 })
 
 describe('WikiManager.synthesizeNote', () => {
+  it('drains synthesize-needed trigger batches into the synthesizer', async () => {
+    writeNote('a.md', 'wisdom')
+    stubFetchOk()
+    const mgr = buildManager(FAKE_INFO)
+    const bound = await mgr.bind(vault)
+    bound.state.updateNoteState('a.md', { lastModifiedAt: 1 })
+
+    bound.trigger.runScan()
+
+    await waitForCondition(
+      () => Boolean(bound.state.getNoteState('a.md')?.lastSyncedHash),
+    )
+    expect(bound.state.getNoteState('a.md')?.lastSyncedHash).toBeTruthy()
+  })
+
   it('returns ok:false when opencode server is not ready', async () => {
     writeNote('a.md', 'content')
     const mgr = buildManager(null)

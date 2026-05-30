@@ -53,6 +53,9 @@ export class WikiManager {
   private readonly opts: Required<Pick<WikiManagerOptions, 'settings' | 'now' | 'serverInfoResolver'>>
   private bound: BoundWiki | null = null
   private currentBatch: { aborted: boolean } | null = null
+  private autoSyncGeneration = 0
+  private autoSyncRunning = false
+  private autoSyncQueue = new Set<string>()
 
   constructor(options: WikiManagerOptions) {
     this.opts = {
@@ -68,6 +71,7 @@ export class WikiManager {
     if (this.bound) {
       await this.bound.trigger.stop().catch(() => undefined)
     }
+    const generation = this.invalidateAutoSynthesis()
     const settings = this.opts.settings.get()
     const state = new WikiState(vaultPath)
     const trigger = new WikiTrigger({
@@ -77,6 +81,12 @@ export class WikiManager {
       scanIntervalMs: settings.scanIntervalMs,
       excludeGlobs: settings.excludeGlobs,
       now: this.opts.now,
+    })
+    trigger.on('synthesize-needed', (notes: { relPath: string }[]) => {
+      this.enqueueAutoSynthesis(
+        generation,
+        notes.map((note) => note.relPath),
+      )
     })
     this.bound = {
       vaultPath,
@@ -100,8 +110,8 @@ export class WikiManager {
   }
 
   async stop(): Promise<void> {
+    this.invalidateAutoSynthesis()
     if (this.bound) await this.bound.trigger.stop().catch(() => undefined)
-    if (this.currentBatch) this.currentBatch.aborted = true
   }
 
   /**
@@ -163,6 +173,47 @@ export class WikiManager {
     }
     return this.bound
   }
+
+  private enqueueAutoSynthesis(generation: number, relPaths: string[]): void {
+    if (generation !== this.autoSyncGeneration) return
+    for (const relPath of relPaths) {
+      this.autoSyncQueue.add(relPath)
+    }
+    if (this.autoSyncRunning) return
+    this.autoSyncRunning = true
+    void this.drainAutoSynthesis(generation)
+  }
+
+  private async drainAutoSynthesis(generation: number): Promise<void> {
+    try {
+      while (
+        generation === this.autoSyncGeneration &&
+        this.autoSyncQueue.size > 0
+      ) {
+        const relPath = this.autoSyncQueue.values().next().value
+        if (!relPath) break
+        this.autoSyncQueue.delete(relPath)
+        const result = await this.synthesizeNote(relPath)
+        if (!result.ok && generation === this.autoSyncGeneration) {
+          console.warn(
+            `[wiki-manager] synthesize ${relPath} failed: ${result.error ?? 'unknown error'}`,
+          )
+        }
+      }
+    } finally {
+      if (generation === this.autoSyncGeneration) {
+        this.autoSyncRunning = false
+      }
+    }
+  }
+
+  private invalidateAutoSynthesis(): number {
+    this.autoSyncGeneration += 1
+    this.autoSyncQueue.clear()
+    this.autoSyncRunning = false
+    if (this.currentBatch) this.currentBatch.aborted = true
+    return this.autoSyncGeneration
+  }
 }
 
 /**
@@ -211,4 +262,3 @@ async function listAllMarkdown(vaultPath: string): Promise<string[]> {
   await walk(vaultPath, '')
   return out
 }
-
