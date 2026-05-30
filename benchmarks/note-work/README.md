@@ -31,7 +31,7 @@ node benchmarks/note-work/scripts/validate.mjs
 ## Artifacts
 
 - `schemas/`: versioned schemas for profiles, tasks, run outputs, and score reports.
-- `profiles/`: safe real-knowledge-base profiles derived from public, licensed, or project-committed docs.
+- `profiles/`: safe real-knowledge-base profiles. v0 uses external licensed documentation snapshots only: Collabora Online, OpenClaw, OpenCode, and Excalidraw MCP.
 - `fixtures/medium-vault/`: synthetic Markdown vault derived from those profiles.
 - `fixtures/medium-vault.provenance.json`: per-note synthetic provenance and safety review.
 - `tasks/dev.json`: visible dev task set.

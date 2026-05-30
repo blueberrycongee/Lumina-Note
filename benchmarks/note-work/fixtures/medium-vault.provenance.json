@@ -9,7 +9,7 @@
   },
   "note_count": 88,
   "source_profile_ids": [
-    "profile-lumina-docs-v0",
+    "profile-collabora-docs-v0",
     "profile-openclaw-docs-v0",
     "profile-opencode-docs-v0",
     "profile-excalidraw-mcp-v0"
@@ -30,9 +30,9 @@
       "path": "Concepts/Source Paths Contract.md",
       "title": "Source Paths Contract",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -59,9 +59,9 @@
       "path": "Concepts/Provenance Contract.md",
       "title": "Provenance Contract",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -88,9 +88,9 @@
       "path": "Concepts/Graph-Assisted Retrieval.md",
       "title": "Graph-Assisted Retrieval",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -117,9 +117,9 @@
       "path": "Concepts/Lexical Baseline.md",
       "title": "Lexical Baseline",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -146,9 +146,9 @@
       "path": "Concepts/WikiLink Hygiene.md",
       "title": "WikiLink Hygiene",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -174,9 +174,9 @@
       "path": "Concepts/Mutation Safety.md",
       "title": "Mutation Safety",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -203,9 +203,9 @@
       "path": "Concepts/Boundary Consent.md",
       "title": "Boundary Consent",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0",
         "profile-opencode-docs-v0"
       ],
@@ -233,9 +233,9 @@
       "path": "Concepts/Stale Source Policy.md",
       "title": "Stale Source Policy",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -261,9 +261,9 @@
       "path": "Concepts/Long Context Needle.md",
       "title": "Long Context Needle",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -289,9 +289,9 @@
       "path": "Concepts/PDF Highlight Pipeline.md",
       "title": "PDF Highlight Pipeline",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -317,9 +317,9 @@
       "path": "Concepts/Meeting Capture.md",
       "title": "Meeting Capture",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -346,9 +346,9 @@
       "path": "Concepts/Project Memory.md",
       "title": "Project Memory",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -375,9 +375,9 @@
       "path": "Concepts/Generated Wiki Pages.md",
       "title": "Generated Wiki Pages",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -403,9 +403,9 @@
       "path": "Concepts/Task Family Taxonomy.md",
       "title": "Task Family Taxonomy",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -431,9 +431,9 @@
       "path": "Concepts/Offline Scoring.md",
       "title": "Offline Scoring",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -459,9 +459,9 @@
       "path": "Concepts/Privacy Boundary.md",
       "title": "Privacy Boundary",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -488,9 +488,9 @@
       "path": "Concepts/Backlink Gap.md",
       "title": "Backlink Gap",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-excalidraw-mcp-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -517,9 +517,9 @@
       "path": "Concepts/Renamed Concepts.md",
       "title": "Renamed Concepts",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -545,9 +545,9 @@
       "path": "Concepts/Contradiction Register.md",
       "title": "Contradiction Register",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -573,9 +573,9 @@
       "path": "Concepts/Agent Runner Contract.md",
       "title": "Agent Runner Contract",
       "type": "concept",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -602,9 +602,9 @@
       "path": "Projects/Atlas Launch Plan.md",
       "title": "Atlas Launch Plan",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -630,9 +630,9 @@
       "path": "Projects/Phoenix Launch.md",
       "title": "Phoenix Launch",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -659,9 +659,9 @@
       "path": "Projects/Graph Context Pilot.md",
       "title": "Graph Context Pilot",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -688,9 +688,9 @@
       "path": "Projects/PDF Review Workflow.md",
       "title": "PDF Review Workflow",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -716,9 +716,9 @@
       "path": "Projects/Plugin Runtime Notes.md",
       "title": "Plugin Runtime Notes",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-excalidraw-mcp-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -745,9 +745,9 @@
       "path": "Projects/Offline Benchmark Runner.md",
       "title": "Offline Benchmark Runner",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -774,9 +774,9 @@
       "path": "Projects/Mutation Audit Trail.md",
       "title": "Mutation Audit Trail",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -802,9 +802,9 @@
       "path": "Projects/Boundary UX Copy.md",
       "title": "Boundary UX Copy",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -831,9 +831,9 @@
       "path": "Projects/Long Context Review.md",
       "title": "Long Context Review",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -859,9 +859,9 @@
       "path": "Projects/Wiki Cleanup Sprint.md",
       "title": "Wiki Cleanup Sprint",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -887,9 +887,9 @@
       "path": "Projects/Source Audit Board.md",
       "title": "Source Audit Board",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -915,9 +915,9 @@
       "path": "Projects/Sync Conflict Drill.md",
       "title": "Sync Conflict Drill",
       "type": "project",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -943,9 +943,9 @@
       "path": "Daily/2026-05-12.md",
       "title": "Daily 2026-05-12",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -971,9 +971,9 @@
       "path": "Daily/2026-05-13.md",
       "title": "Daily 2026-05-13",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -999,9 +999,9 @@
       "path": "Daily/2026-05-14.md",
       "title": "Daily 2026-05-14",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1027,9 +1027,9 @@
       "path": "Daily/2026-05-15.md",
       "title": "Daily 2026-05-15",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1055,9 +1055,9 @@
       "path": "Daily/2026-05-16.md",
       "title": "Daily 2026-05-16",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1083,9 +1083,9 @@
       "path": "Daily/2026-05-17.md",
       "title": "Daily 2026-05-17",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1111,9 +1111,9 @@
       "path": "Daily/2026-05-18.md",
       "title": "Daily 2026-05-18",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1139,9 +1139,9 @@
       "path": "Daily/2026-05-19.md",
       "title": "Daily 2026-05-19",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1167,9 +1167,9 @@
       "path": "Daily/2026-05-20.md",
       "title": "Daily 2026-05-20",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1195,9 +1195,9 @@
       "path": "Daily/2026-05-21.md",
       "title": "Daily 2026-05-21",
       "type": "daily",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1223,9 +1223,9 @@
       "path": "Meetings/Atlas Naming Review.md",
       "title": "Atlas Naming Review",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1251,9 +1251,9 @@
       "path": "Meetings/Graph Pilot Standup.md",
       "title": "Graph Pilot Standup",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1280,9 +1280,9 @@
       "path": "Meetings/PDF Pipeline Review.md",
       "title": "PDF Pipeline Review",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1308,9 +1308,9 @@
       "path": "Meetings/Boundary Consent Review.md",
       "title": "Boundary Consent Review",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1337,9 +1337,9 @@
       "path": "Meetings/Mutation Safety Review.md",
       "title": "Mutation Safety Review",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1365,9 +1365,9 @@
       "path": "Meetings/Wiki Cleanup Triage.md",
       "title": "Wiki Cleanup Triage",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1393,9 +1393,9 @@
       "path": "Meetings/Benchmark Scoring Review.md",
       "title": "Benchmark Scoring Review",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1421,9 +1421,9 @@
       "path": "Meetings/Plugin Docs Sync.md",
       "title": "Plugin Docs Sync",
       "type": "meeting",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-excalidraw-mcp-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1450,9 +1450,9 @@
       "path": "PDF/Graph Retrieval Paper Highlights.md",
       "title": "Graph Retrieval Paper Highlights",
       "type": "pdf_derived",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1478,9 +1478,9 @@
       "path": "PDF/Local-First Notes Highlights.md",
       "title": "Local First Notes Highlights",
       "type": "pdf_derived",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1507,9 +1507,9 @@
       "path": "PDF/Benchmark Judge Bias Highlights.md",
       "title": "Benchmark Judge Bias Highlights",
       "type": "pdf_derived",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1535,9 +1535,9 @@
       "path": "PDF/PDF Annotation Export.md",
       "title": "PDF Annotation Export",
       "type": "pdf_derived",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1563,9 +1563,9 @@
       "path": "PDF/Privacy Risk Survey.md",
       "title": "Privacy Risk Survey",
       "type": "pdf_derived",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1592,9 +1592,9 @@
       "path": "PDF/Long Context Failure Modes.md",
       "title": "Long Context Failure Modes",
       "type": "pdf_derived",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1620,9 +1620,9 @@
       "path": "Research/Graph Retrieval Current Assumptions.md",
       "title": "Graph Retrieval Current Assumptions",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1649,9 +1649,9 @@
       "path": "Research/Graph Retrieval Old Assumptions.md",
       "title": "Graph Retrieval Old Assumptions",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1677,9 +1677,9 @@
       "path": "Research/Auto-Linking Current Position.md",
       "title": "Auto-Linking Current Position",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1705,9 +1705,9 @@
       "path": "Research/Auto-Linking Old Position.md",
       "title": "Auto-Linking Old Position",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1734,9 +1734,9 @@
       "path": "Research/Lexical Baseline Error Analysis.md",
       "title": "Lexical Baseline Error Analysis",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1762,9 +1762,9 @@
       "path": "Research/Mutation Failure Cases.md",
       "title": "Mutation Failure Cases",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1790,9 +1790,9 @@
       "path": "Research/Hallucinated Provenance Cases.md",
       "title": "Hallucinated Provenance Cases",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1819,9 +1819,9 @@
       "path": "Research/Boundary Consent Patterns.md",
       "title": "Boundary Consent Patterns",
       "type": "research",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1848,9 +1848,9 @@
       "path": "wiki/Agent Runner Overview.md",
       "title": "Agent Runner Overview",
       "type": "generated_wiki",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -1877,9 +1877,9 @@
       "path": "wiki/Graph Retrieval Summary.md",
       "title": "Graph Retrieval Summary",
       "type": "generated_wiki",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1905,9 +1905,9 @@
       "path": "wiki/Source Provenance Summary.md",
       "title": "Source Provenance Summary",
       "type": "generated_wiki",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1933,9 +1933,9 @@
       "path": "wiki/Mutation Safety Summary.md",
       "title": "Mutation Safety Summary",
       "type": "generated_wiki",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1961,9 +1961,9 @@
       "path": "wiki/Boundary Consent Summary.md",
       "title": "Boundary Consent Summary",
       "type": "generated_wiki",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -1989,9 +1989,9 @@
       "path": "wiki/PDF Workflow Summary.md",
       "title": "PDF Workflow Summary",
       "type": "generated_wiki",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2017,9 +2017,9 @@
       "path": "Tutorials/Add A Benchmark Task.md",
       "title": "Add A Benchmark Task",
       "type": "tutorial",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -2046,9 +2046,9 @@
       "path": "Tutorials/Add A Fixture Note.md",
       "title": "Add A Fixture Note",
       "type": "tutorial",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -2075,9 +2075,9 @@
       "path": "Reference/Runner Output Fields.md",
       "title": "Run Output Fields",
       "type": "reference",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -2104,9 +2104,9 @@
       "path": "Reference/Score Report Fields.md",
       "title": "Score Report Fields",
       "type": "reference",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2132,9 +2132,9 @@
       "path": "Reference/Vault Folder Taxonomy.md",
       "title": "Vault Folder Taxonomy",
       "type": "reference",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-openclaw-docs-v0",
         "profile-opencode-docs-v0"
       ],
@@ -2162,9 +2162,9 @@
       "path": "Tutorials/Run Lexical Baseline.md",
       "title": "Run Lexical Baseline",
       "type": "tutorial",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2190,9 +2190,9 @@
       "path": "Archive/2026-02 Auto-Linking Policy.md",
       "title": "2026-02 Auto-Linking Policy",
       "type": "archive",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2219,9 +2219,9 @@
       "path": "Archive/2026-03 Phoenix Plan.md",
       "title": "2026-03 Phoenix Plan",
       "type": "archive",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2248,9 +2248,9 @@
       "path": "Archive/Old PDF Summary Contract.md",
       "title": "Old PDF Summary Contract",
       "type": "archive",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2277,9 +2277,9 @@
       "path": "Archive/Deprecated Runner Notes.md",
       "title": "Deprecated Runner Notes",
       "type": "archive",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
@@ -2306,9 +2306,9 @@
       "path": "Archive/Stale Graph Index Memo.md",
       "title": "Stale Graph Index Memo",
       "type": "archive",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2334,9 +2334,9 @@
       "path": "Archive/Legacy Boundary Draft.md",
       "title": "Legacy Boundary Draft",
       "type": "archive",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2366,7 +2366,7 @@
       "source_profile_id": "profile-excalidraw-mcp-v0",
       "source_profile_ids": [
         "profile-excalidraw-mcp-v0",
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2392,9 +2392,9 @@
       "path": "Isolated/Obsidian Import Scratch.md",
       "title": "Obsidian Import Scratch",
       "type": "isolated",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2420,9 +2420,9 @@
       "path": "Private/Unshared Journal Placeholder.md",
       "title": "Unshared Journal Placeholder",
       "type": "private_boundary",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2448,9 +2448,9 @@
       "path": "Private/Local Profile Boundary.md",
       "title": "Local Profile Boundary",
       "type": "private_boundary",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2476,9 +2476,9 @@
       "path": "Private/Consented Dogfood Boundary.md",
       "title": "Consented Dogfood Boundary",
       "type": "private_boundary",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0"
+        "profile-collabora-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",
       "traits_from_profiles": [
@@ -2504,9 +2504,9 @@
       "path": "Private/Provider Boundary Placeholder.md",
       "title": "Provider Boundary Placeholder",
       "type": "private_boundary",
-      "source_profile_id": "profile-lumina-docs-v0",
+      "source_profile_id": "profile-collabora-docs-v0",
       "source_profile_ids": [
-        "profile-lumina-docs-v0",
+        "profile-collabora-docs-v0",
         "profile-opencode-docs-v0"
       ],
       "generation_method": "human-scripted synthetic note derived from real profile structure",

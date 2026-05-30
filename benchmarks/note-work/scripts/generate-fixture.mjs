@@ -7,7 +7,7 @@ const benchmarkDir = path.resolve(scriptDir, "..");
 const vaultDir = path.join(benchmarkDir, "fixtures", "medium-vault");
 
 const PROFILE_IDS = {
-  lumina: "profile-lumina-docs-v0",
+  collabora: "profile-collabora-docs-v0",
   openclaw: "profile-openclaw-docs-v0",
   opencode: "profile-opencode-docs-v0",
   excalidraw: "profile-excalidraw-mcp-v0"
@@ -23,83 +23,85 @@ const generation = {
 const profiles = [
   {
     schema_version: "lumina/note-work-profile/v0.1",
-    id: PROFILE_IDS.lumina,
+    id: PROFILE_IDS.collabora,
     source: {
-      name: "Lumina Note repository documentation",
-      source_url: "https://github.com/blueberrycongee/Lumina-Note",
-      visibility: "project-committed",
-      license_or_consent: "Project-owned repository documentation; this benchmark uses structural profile data only.",
+      name: "Collabora Online local third-party documentation snapshot",
+      source_url: "https://github.com/CollaboraOnline/online",
+      visibility: "licensed",
+      license_or_consent: "Primarily MPLv2 per third_party/collabora-online/README.md and README.FILENOTICES.md; fixture uses structural profile data only.",
       profiled_paths: [
-        "README.md",
-        "docs/*.md",
-        "docs/plans/*.md",
-        "packages/plugin-api/README.md",
-        "packages/plugin-ui/README.md",
-        "mobile/README.md"
+        "third_party/collabora-online/README.md",
+        "third_party/collabora-online/CONTRIBUTING.md",
+        "third_party/collabora-online/README.CONTRIBUTING.md",
+        "third_party/collabora-online/README.FILENOTICES.md",
+        "third_party/collabora-online/SECURITY.md",
+        "third_party/collabora-online/dev-notes/*.md",
+        "third_party/collabora-online/docker/*/README.md",
+        "third_party/collabora-online/test/README.md"
       ],
       profiled_at: "2026-05-31"
     },
-    profile_summary: "Product docs and planning notes mix user guides, design plans, plugin contracts, runtime setup, release notes, and incident reports.",
+    profile_summary: "A large collaborative document-editing project with root docs, contributor policy, developer notes, docker/build guides, security notes, accessibility notes, and test documentation.",
     note_counts: {
-      markdown_files_profiled: 70,
-      product_docs: 18,
-      design_or_plan_docs: 35,
-      runtime_docs: 8,
-      localized_guides: 4,
-      reports: 5
+      markdown_files_profiled: 28,
+      root_guides: 6,
+      developer_notes: 8,
+      docker_or_build_guides: 2,
+      security_or_policy_docs: 3,
+      test_docs: 2
     },
     structure: {
       folder_taxonomy: [
-        "Root README for product overview",
-        "docs/ for product and engineering references",
-        "docs/plans/ for dated design and implementation plans",
-        "packages/*/README.md for plugin API surfaces",
-        "mobile/README.md for platform companion notes"
+        "Root README for project overview and integration guidance",
+        "dev-notes/ for narrow engineering notes",
+        "docker/ for build and deployment recipes",
+        "test/ for test data and test guidance",
+        "Root policy files for contributing, security, and file notices"
       ],
       note_type_mix: {
-        concept: "Plugin and runtime concepts are documented as standalone references.",
-        project: "Dated plans track product changes and implementation decisions.",
-        report: "Incident and verification reports capture evidence and follow-up actions.",
-        tutorial: "User flow and setup guides describe repeatable workflows."
+        concept: "Architecture and integration concepts appear in README and dev notes.",
+        project: "Developer notes track specific implementation surfaces such as cursor following, locale, keyboard shortcuts, and socket ownership.",
+        reference: "File notices, security, test, and build notes define operational contracts.",
+        tutorial: "Build, docker, and integration sections describe repeatable workflows."
       },
-      approximate_note_length: "Short references of 40-120 lines mixed with longer plans and reports over 200 lines.",
+      approximate_note_length: "A long project README plus compact topic notes and policy references.",
       tag_patterns: [
-        "No Obsidian-style tags in source docs; topical headings act as tags.",
-        "Date prefixes in plan filenames are used as chronology markers."
+        "No Obsidian-style tags in source docs; folder names and headings act as tags.",
+        "Developer note filenames provide topic labels such as accessibility, debug, locale, keyboard, and sockets."
       ],
       wikilink_patterns: [
-        "Markdown links connect related docs and API references.",
-        "Plans often mention related implementation surfaces without explicit backlinks."
+        "Markdown links connect root docs to external docs, SDK docs, and build references.",
+        "Developer notes often mention related subsystems without complete reciprocal links."
       ],
       backlink_patterns: [
-        "Backlinks are implicit through filenames and repeated headings.",
-        "Plugin docs reference API packages and manifest docs from several directions."
+        "Root README acts as a hub, while dev-note backlinks are sparse.",
+        "Policy and build docs form implicit clusters through repeated subsystem names."
       ],
       stale_contradictory_duplicated_patterns: [
-        "Multiple dated design plans supersede earlier implementation notes.",
-        "Localized user-flow docs intentionally duplicate canonical guide structure.",
-        "Runtime setup docs and README overlap on opencode integration details."
+        "README integration guidance overlaps with build and docker guides.",
+        "Developer notes can lag behind current subsystem behavior.",
+        "Policy docs and templates duplicate contribution requirements in different forms."
       ],
       privacy_boundary: [
-        "Repository docs contain no dogfood vault notes.",
-        "Benchmark must not commit provider payloads, secrets, or private user notes.",
-        "Local-only profile observations must be summarized structurally."
+        "Public project docs contain no local user vault notes.",
+        "Benchmark uses structure only and does not copy private deployment configuration.",
+        "No issue metadata, credentials, or local integration endpoints are committed."
       ],
       task_pattern_examples: [
-        "Find the latest plan that supersedes an earlier design note.",
-        "Compare plugin manifest fields across developer docs.",
-        "Summarize runtime setup constraints with source paths."
+        "Find the authoritative policy when guidance is duplicated across root docs and templates.",
+        "Compare a developer note with a broader README statement.",
+        "Summarize build or integration constraints with source paths."
       ]
     },
     workflow_templates: [
-      "Find the authoritative setup note among repeated docs.",
-      "Connect a dated plan to the current product surface.",
-      "Preserve provenance when creating a generated wiki summary."
+      "Find the authoritative setup note among repeated public docs.",
+      "Connect sparse developer notes to project-level concepts.",
+      "Preserve provenance when creating generated wiki summaries from external docs."
     ],
     fixture_influence: [
-      "Dated project and daily notes in the fixture.",
+      "Root/reference/tutorial/developer-note structure in the fixture.",
       "Generated wiki pages with source_paths frontmatter.",
-      "Boundary tasks around local-first vault access and provider payload exclusion."
+      "Boundary tasks around public docs versus private local configuration."
     ],
     safety_review: {
       raw_private_content_committed: false,
@@ -381,7 +383,7 @@ function note(pathName, title, type, sourceProfileIds, tags, links, anchor, summ
   };
 }
 
-const L = PROFILE_IDS.lumina;
+const L = PROFILE_IDS.collabora;
 const OCL = PROFILE_IDS.openclaw;
 const OC = PROFILE_IDS.opencode;
 const EX = PROFILE_IDS.excalidraw;
@@ -484,7 +486,7 @@ function sourceProfileFor(paths) {
     const entry = noteByPath.get(sourcePath);
     if (entry) return entry.source_profile_id;
   }
-  return PROFILE_IDS.lumina;
+  return PROFILE_IDS.collabora;
 }
 
 function makeTask(input) {

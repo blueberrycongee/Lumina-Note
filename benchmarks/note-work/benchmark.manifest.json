@@ -13,7 +13,7 @@
     "score_report": "schemas/score-report.schema.json"
   },
   "profiles": [
-    "profiles/profile-lumina-docs-v0.json",
+    "profiles/profile-collabora-docs-v0.json",
     "profiles/profile-openclaw-docs-v0.json",
     "profiles/profile-opencode-docs-v0.json",
     "profiles/profile-excalidraw-mcp-v0.json"

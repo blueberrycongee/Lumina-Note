@@ -4,7 +4,7 @@ type: isolated
 source_profile_id: profile-excalidraw-mcp-v0
 source_profile_ids:
   - profile-excalidraw-mcp-v0
-  - profile-lumina-docs-v0
+  - profile-collabora-docs-v0
 synthetic_generation: note-work-fixture-generator-v0.1
 tags:
   - isolated
@@ -22,7 +22,7 @@ Fixture controls:
 - isolated-note
 
 Profile-derived traits:
-- Folder and note type are derived from profile-excalidraw-mcp-v0, profile-lumina-docs-v0.
+- Folder and note type are derived from profile-excalidraw-mcp-v0, profile-collabora-docs-v0.
 - Link, stale, duplicate, or boundary structure is synthetic and reviewable.
 
 Deterministic review:

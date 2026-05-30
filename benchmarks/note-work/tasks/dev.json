@@ -10,7 +10,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -73,7 +73,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -136,7 +136,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -193,7 +193,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -308,7 +308,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -371,7 +371,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -433,7 +433,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -495,7 +495,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -557,7 +557,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -619,7 +619,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -682,7 +682,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -745,7 +745,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -814,7 +814,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -877,7 +877,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -942,7 +942,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1005,7 +1005,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1074,7 +1074,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1137,7 +1137,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1200,7 +1200,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1258,7 +1258,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1327,7 +1327,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1403,7 +1403,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1473,7 +1473,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1542,7 +1542,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1617,7 +1617,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1686,7 +1686,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1755,7 +1755,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1824,7 +1824,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1893,7 +1893,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -1969,7 +1969,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2038,7 +2038,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2113,7 +2113,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2175,7 +2175,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2249,7 +2249,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2317,7 +2317,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2386,7 +2386,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2533,7 +2533,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2607,7 +2607,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2674,7 +2674,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2742,7 +2742,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2809,7 +2809,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2883,7 +2883,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -2963,7 +2963,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3038,7 +3038,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3087,7 +3087,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3156,7 +3156,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3237,7 +3237,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3314,7 +3314,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3395,7 +3395,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3444,7 +3444,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3523,7 +3523,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3571,7 +3571,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3635,7 +3635,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3699,7 +3699,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3748,7 +3748,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3796,7 +3796,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3859,7 +3859,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
@@ -3923,7 +3923,7 @@
     ],
     "vault": "medium-synthetic-v0",
     "data_origin": "real_profile_derived_synthetic",
-    "source_profile_id": "profile-lumina-docs-v0",
+    "source_profile_id": "profile-collabora-docs-v0",
     "synthetic_generation": {
       "is_synthetic": true,
       "generator": "codex-scripted-fixture",
