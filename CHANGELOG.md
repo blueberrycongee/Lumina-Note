@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.10] - 2026-05-30
+
+本次补丁版本修复 GitHub Release 资产命名和更新 feed 不一致导致的 macOS 应用内更新 404。
+
+### 修复
+- **macOS 更新下载 404 修复**：固定 electron-builder 的发布产物命名，避免 GitHub 上传时改写空格导致 `latest-mac.yml` 指向不存在的文件。
+
+### 内部
+- **Release 资产校验**：发布上传前校验 `latest*.yml` 中引用的资产都存在，并限制上传文件名为 GitHub-safe 格式，避免同类问题再次进入正式 Release。
+
 ## [1.4.9] - 2026-05-30
 
 本次补丁版本修复保存冲突误报，并收敛生产环境日志输出，降低用户正常使用时的噪声。
