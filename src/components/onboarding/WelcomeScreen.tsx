@@ -121,7 +121,7 @@ export function WelcomeScreen({
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left sidebar: Recent vaults */}
-          <div className="w-[320px] shrink-0 border-r border-border bg-muted flex flex-col">
+          <div className="w-[320px] shrink-0 border-r border-border flex flex-col">
             <RecentVaultList
               vaults={vaults}
               onSelect={(path) => onOpenVault(path)}
