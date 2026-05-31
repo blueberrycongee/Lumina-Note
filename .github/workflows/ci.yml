@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload frontend test report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vitest-junit
           path: reports/vitest/junit.xml
