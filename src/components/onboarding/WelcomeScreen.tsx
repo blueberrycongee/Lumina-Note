@@ -132,130 +132,127 @@ export function WelcomeScreen({
 
           {/* Right pane */}
           <div className="flex-1 flex items-center justify-center px-10 py-10 overflow-y-auto">
-            <AnimatePresence mode="wait">
-              {view === "welcome" ? (
-                <motion.div
-                  key="welcome"
-                  variants={containerVariants}
-                  initial={prefersReducedMotion ? "visible" : "hidden"}
-                  animate="visible"
-                  exit={
-                    prefersReducedMotion
-                      ? {}
-                      : { opacity: 0, transition: { duration: 0.15 } }
-                  }
-                  className="flex w-full max-w-[560px] -translate-y-7 flex-col"
-                >
-                  {/* Logo */}
-                  <motion.div
-                    variants={fadeUpVariants}
-                    className="-translate-y-11 mb-[76px] flex items-center gap-[22px]"
-                  >
-                    <img
-                      src={logoUrl}
-                      alt="Lumina Note"
-                      className="h-[68px] w-[68px] rounded-ui-xl"
-                    />
+            <motion.div
+              variants={containerVariants}
+              initial={prefersReducedMotion ? "visible" : "hidden"}
+              animate="visible"
+              className="flex w-full max-w-[560px] -translate-y-7 flex-col"
+            >
+              {/* Logo */}
+              <motion.div
+                variants={fadeUpVariants}
+                className="-translate-y-11 mb-[76px] flex items-center gap-[22px]"
+              >
+                <img
+                  src={logoUrl}
+                  alt="Lumina Note"
+                  className="h-[68px] w-[68px] rounded-ui-xl"
+                />
 
-                    {/* Title */}
-                    <h1 className="text-[36px] font-semibold leading-tight tracking-normal text-foreground">
-                      {t.welcome.title}
-                    </h1>
-                  </motion.div>
+                {/* Title */}
+                <h1 className="text-[36px] font-semibold leading-tight tracking-normal text-foreground">
+                  {t.welcome.title}
+                </h1>
+              </motion.div>
 
-                  {/* Action cards */}
-                  <motion.div
-                    variants={fadeUpVariants}
-                    className="w-full flex flex-col gap-[18px]"
-                  >
-                    <ActionCard
-                      icon={FolderOpen}
-                      title={t.welcome.openFolder}
-                      action={{
-                        label: t.common.open,
-                        variant: "primary",
-                        onClick: handleOpenExisting,
-                      }}
-                    />
-                    {onCreateVault && (
+              <div className="min-h-[150px]">
+                <AnimatePresence mode="wait">
+                  {view === "welcome" ? (
+                    <motion.div
+                      key="welcome"
+                      variants={fadeUpVariants}
+                      initial={prefersReducedMotion ? "visible" : "hidden"}
+                      animate="visible"
+                      exit={
+                        prefersReducedMotion
+                          ? {}
+                          : { opacity: 0, transition: { duration: 0.15 } }
+                      }
+                      className="w-full flex flex-col gap-[18px]"
+                    >
                       <ActionCard
-                        icon={FolderPlus}
-                        title={t.welcome.createVault}
+                        icon={FolderOpen}
+                        title={t.welcome.openFolder}
                         action={{
-                          label: t.welcome.newVaultButton,
-                          variant: "secondary",
-                          onClick: handleShowCreate,
+                          label: t.common.open,
+                          variant: "primary",
+                          onClick: handleOpenExisting,
                         }}
                       />
-                    )}
-                  </motion.div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="create"
-                  variants={viewVariants}
-                  initial={prefersReducedMotion ? "center" : "enter"}
-                  animate="center"
-                  exit={
-                    prefersReducedMotion
-                      ? {}
-                      : { opacity: 0, transition: { duration: 0.15 } }
-                  }
-                  transition={{ duration: 0.2, ease: [0.2, 0.9, 0.1, 1] }}
-                  className="flex flex-col items-center gap-6 w-full max-w-[560px] -translate-y-7"
-                >
-                  {/* Back button */}
-                  <div className="w-full">
-                    <button
-                      onClick={handleBack}
-                      className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      {onCreateVault && (
+                        <ActionCard
+                          icon={FolderPlus}
+                          title={t.welcome.createVault}
+                          action={{
+                            label: t.welcome.newVaultButton,
+                            variant: "secondary",
+                            onClick: handleShowCreate,
+                          }}
+                        />
+                      )}
+                    </motion.div>
+                  ) : (
+                    <motion.form
+                      key="create"
+                      onSubmit={handleCreateSubmit}
+                      variants={viewVariants}
+                      initial={prefersReducedMotion ? "center" : "enter"}
+                      animate="center"
+                      exit={
+                        prefersReducedMotion
+                          ? {}
+                          : { opacity: 0, transition: { duration: 0.15 } }
+                      }
+                      transition={{ duration: 0.2, ease: [0.2, 0.9, 0.1, 1] }}
+                      className="w-full rounded-ui-xl bg-muted/55 p-3"
                     >
-                      <ArrowLeft className="w-4 h-4" />
-                      {t.common.cancel}
-                    </button>
-                  </div>
+                      <div className="mb-3 flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <FolderPlus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <h2 className="text-base font-semibold leading-6 tracking-normal text-foreground">
+                              {t.welcome.createVault}
+                            </h2>
+                          </div>
+                          <p className="mt-1 max-w-[420px] text-sm text-muted-foreground">
+                            {t.welcome.createVaultDesc}
+                          </p>
+                        </div>
 
-                  {/* Icon */}
-                  <div className="w-16 h-16 rounded-ui-lg bg-accent flex items-center justify-center">
-                    <FolderPlus className="w-8 h-8 text-primary" />
-                  </div>
+                        <button
+                          type="button"
+                          onClick={handleBack}
+                          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-ui-md px-2 text-sm text-muted-foreground transition-colors hover:bg-background/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                          {t.common.cancel}
+                        </button>
+                      </div>
 
-                  {/* Title */}
-                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                    {t.welcome.createVault}
-                  </h2>
-
-                  {/* Description */}
-                  <p className="text-sm text-muted-foreground text-center max-w-[360px] -mt-2">
-                    {t.welcome.createVaultDesc}
-                  </p>
-
-                  {/* Form */}
-                  <form
-                    onSubmit={handleCreateSubmit}
-                    className="w-full flex flex-col gap-3"
-                  >
-                    <input
-                      type="text"
-                      value={vaultName}
-                      onChange={(e) => setVaultName(e.target.value)}
-                      placeholder={t.welcome.vaultNamePlaceholder}
-                      className="w-full h-11 px-4 rounded-ui-lg border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                      autoFocus
-                    />
-                    <Button
-                      variant="primary"
-                      size="md"
-                      type="submit"
-                      disabled={!vaultName.trim()}
-                      className="w-full"
-                    >
-                      {t.common.create}
-                    </Button>
-                  </form>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                      <div className="flex h-11 w-full items-center gap-2 rounded-ui-lg bg-background px-2 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.58)]">
+                        <input
+                          type="text"
+                          value={vaultName}
+                          onChange={(e) => setVaultName(e.target.value)}
+                          placeholder={t.welcome.vaultNamePlaceholder}
+                          className="h-full min-w-0 flex-1 appearance-none border-0 bg-transparent px-1 text-sm text-foreground placeholder:text-muted-foreground outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none"
+                          autoFocus
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          type="submit"
+                          disabled={!vaultName.trim()}
+                          className="h-8 shrink-0 px-4"
+                        >
+                          {t.common.create}
+                        </Button>
+                      </div>
+                    </motion.form>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>

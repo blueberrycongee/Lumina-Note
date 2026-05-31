@@ -287,7 +287,7 @@ Use these criteria to decide whether a benchmark change is worth adding:
    discovery, grounded synthesis, useful link creation, or safe mutation. If a
    failure cannot be interpreted, the task is underspecified.
 2. **Representativeness.** The task should resemble a real note-work job, real
-   failure mode, or high-risk boundary case.
+   failure mode, or high-risk guardrail case.
 3. **Discriminativeness.** The task should separate systems. If every system
    passes or every system fails, keep it only as a smoke test or redesign it.
 4. **Reliability.** Reruns should not swing wildly because of prompt wording,
@@ -358,7 +358,14 @@ questions, produces the gold answers, and judges the run. Synthetic tasks should
 be checked by deterministic validators, human review, or independent evidence
 from the fixture.
 
-## Task Families
+## Core Task Families
+
+Task families should describe the user's knowledge-management job. They should
+not mix in implementation safeguards as if those safeguards were user goals.
+Privacy, permission scope, consent, destructive-edit handling, and provider
+payload handling are cross-cutting guardrails. They should be evaluated on top
+of every relevant task family and reported as a separate risk slice, not treated
+as a central note-work task type.
 
 ### 1. Find
 
@@ -447,24 +454,28 @@ Primary metrics:
 - expected diff checks
 - provenance fields present
 
-### 6. Boundary And Consent
+## Cross-Cutting Guardrails
 
-Tests whether the agent respects Lumina's local-first trust model.
+Guardrails are not standalone user task types. They are constraints on how the
+agent performs find, search/compare, synthesize, link, and mutate tasks.
 
-Examples:
+The benchmark should track guardrails such as:
 
-- User asks a general writing question while a vault is open: the agent should
-  not scan the vault.
-- User asks for suggestions only: the agent should not edit files.
-- User references one folder: the agent should not inspect unrelated private
-  folders unless needed and justified.
+- **Scope compliance.** Use only the files, folders, or current-note context the
+  user granted for the task.
+- **Consent before mutation.** Do not edit, delete, move, or broadly rewrite
+  notes unless the task clearly grants that action and scope.
+- **Protected source handling.** Do not read, cite, scan, or summarize protected
+  folders or provider payloads unless the task explicitly grants that scope.
+- **Clarification behavior.** Ask before acting when the task is underspecified
+  and the next step would broaden search or mutate files.
+- **Report hygiene.** Do not write private note text, provider payloads,
+  hidden prompts, credentials, or reversible anonymization into committed
+  benchmark artifacts.
 
-Primary metrics:
-
-- no unrequested vault scan
-- no unrequested mutation
-- forbidden path avoidance
-- correct clarification behavior
+Guardrail cases can be implemented as dedicated regression tasks when needed,
+but reports should label them as guardrail or high-risk checks. They should not
+define the center of the benchmark.
 
 ### High-Risk Oversampling
 
@@ -579,8 +590,8 @@ Build benchmark data from several sources, in this order:
 3. Real failure cases anonymized into regression tasks.
 4. Synthetic fixture tasks derived from real-vault profiles for deterministic
    coverage.
-5. Expert-written edge cases for privacy, mutation safety, stale notes, and
-   long-context omissions.
+5. Expert-written edge cases for mutation safety, stale notes, long-context
+   omissions, scope, consent, and protected-source handling.
 6. Synthetic variants and paraphrases to fill holes after the above sources are
    covered.
 
@@ -899,13 +910,15 @@ The ideal completed goal should leave these artifacts:
    informed the benchmark fixture.
 3. **Inspectable fixture vault.** A committed synthetic or public fixture vault
    with enough realistic structure to exercise note search, synthesis, links,
-   stale notes, contradictions, and mutation boundaries.
+   stale notes, contradictions, and safe mutation.
 4. **Task set.** A committed dev task set covering find, search/compare,
-   synthesize, link, mutate, and boundary tasks, with explicit expected sources,
-   expected links or diffs, forbidden sources, and scoring weights.
-5. **High-risk slice.** A separately labeled set of privacy, destructive-edit,
-   stale-source, long-context, and hallucinated-provenance cases. This slice
-   must be reported separately from ordinary task performance.
+   synthesize, link, and mutate tasks, with explicit expected sources, expected
+   links or diffs, forbidden sources, guardrail constraints, and scoring
+   weights.
+5. **High-risk and guardrail slice.** A separately labeled set of
+   destructive-edit, stale-source, long-context, hallucinated-provenance, scope,
+   consent, and protected-source cases. This slice must be reported separately
+   from ordinary task performance.
 6. **Deterministic validation.** A command that validates benchmark schemas,
    fixture paths, expected sources, forbidden paths, and basic fixture
    consistency.
@@ -948,10 +961,11 @@ Build the first version in this order:
    committed.
 4. Tiny synthetic vault with 20 to 40 notes, derived from or calibrated against
    the real-vault profiles.
-5. 25 to 40 dev tasks across find, search/compare, synthesize, link, mutate, and
-   boundary.
-6. A small high-risk bucket with privacy, mutation, stale-note, and
-   long-context cases.
+5. 25 to 40 dev tasks across find, search/compare, synthesize, link, and
+   mutate.
+6. A small high-risk and guardrail bucket with mutation, stale-note,
+   long-context, hallucinated-provenance, scope, consent, and protected-source
+   cases.
 7. Deterministic validator for task files, fixture paths, and profile metadata.
 8. Offline scorer for run outputs.
 9. One baseline runner for lexical search.
@@ -978,7 +992,7 @@ The benchmark is probably wrong if:
 - graph-assisted runs win only by reading far more files
 - results are reported without sample counts or uncertainty
 - the fixture is too clean and lacks stale, ambiguous, or contradictory notes
-- high-risk boundary tasks are too rare to affect release decisions
+- high-risk guardrail checks are too rare to affect release decisions
 - task labels are not reviewed
 - prompt paraphrases change the intended answer
 - the score does not correlate with manual acceptance on dogfood tasks
