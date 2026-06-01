@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.11] - 2026-06-01
+
+本次补丁版本修复 PDF 加载失败，并将 Cmd+P / Cmd+K 两套命令面板合并为单一入口，附带欢迎页 UI 收敛与若干内部 CI 改进。
+
+### 修复
+- **PDF 加载失败修复**：`pdfjs-dist` 锁到与 `react-pdf` 一致的 `5.4.296`，避免 pnpm 提升到 `5.7.x` 后 worker 与主线程版本错位（`The API version "5.4.296" does not match the Worker version "5.7.284"`），任意 PDF 打开即报错的回归。
+- **命令面板 hover 可见性**：合并后的命令面板在图片皮肤下保持稳定的 hover 背景（沿用 `Row` 原语的 `hover:bg-foreground/5`），避免低对比度主题下无视觉反馈。
+
+### 改进
+- **命令面板合并为单一入口**：移除独立的 Cmd+K 命令面板，仅保留 Cmd+P；i18n 命名空间从 `commandPalette` 统一为 `commandMenu`，四个 locale 同步对齐。
+- **欢迎页 UI 收敛**：移除冗余的引导元素，减少初次启动的视觉噪声。
+
+### 内部
+- **CI 触发与测试报告**：补充手动 / 定时触发的 CI 工作流，并上传测试报告为 artifact，便于回归追踪。
+- **CI workflow 默认值加固**：收紧权限与默认分支路径，避免历史默认值在 fork / PR 上的副作用。
+
 ## [1.4.10] - 2026-05-30
 
 本次补丁版本修复 GitHub Release 资产命名和更新 feed 不一致导致的 macOS 应用内更新 404。
