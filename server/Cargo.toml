@@ -27,7 +27,7 @@ tower-http = { version = "0.4", features = ["trace", "request-id"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4"] }
-yrs = "0.21"
+yrs = "0.25"
 urlencoding = "2.1"
 
 [dev-dependencies]
