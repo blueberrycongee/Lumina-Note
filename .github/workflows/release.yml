@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -45,7 +45,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -85,7 +85,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -131,7 +131,7 @@ jobs:
       # every release. Bumping opencode = update this `ref` and verify
       # locally with `npm run opencode:smoke`.
       - name: Checkout opencode at pinned commit
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: anomalyco/opencode
           ref: 6aa475fcac39cacda4730142314985c64b200bb5
