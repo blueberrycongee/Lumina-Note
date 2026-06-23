@@ -33,6 +33,7 @@ export type ProviderId =
   | 'mimo'
   | 'groq'
   | 'openrouter'
+  | 'requesty'
   | 'ollama'
   | 'openai-compatible'
 
@@ -199,6 +200,23 @@ const entries: ProviderEntry[] = [
       const factory = createOpenRouter({
         apiKey: settings.apiKey ?? '',
         baseURL: settings.baseUrl,
+        headers: settings.headers,
+      })
+      return factory(modelId)
+    },
+  },
+  {
+    id: 'requesty',
+    label: 'Requesty',
+    description: 'OpenAI 协议兼容的 LLM 聚合网关',
+    requiresApiKey: true,
+    supportsBaseUrl: true,
+    defaultBaseUrl: 'https://router.requesty.ai/v1',
+    createModel(settings, modelId) {
+      const factory = createOpenAICompatible({
+        name: 'requesty',
+        apiKey: settings.apiKey ?? '',
+        baseURL: settings.baseUrl ?? 'https://router.requesty.ai/v1',
         headers: settings.headers,
       })
       return factory(modelId)
