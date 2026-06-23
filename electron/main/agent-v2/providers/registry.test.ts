@@ -9,7 +9,7 @@ import {
 } from './registry.js'
 
 describe('providers/registry', () => {
-  it('lists all 11 built-in top-level providers', () => {
+  it('lists all 12 built-in top-level providers', () => {
     const providers = listProviders()
     const ids = providers.map((p) => p.id).sort()
     expect(ids).toEqual(
@@ -25,6 +25,7 @@ describe('providers/registry', () => {
         'openai',
         'openai-compatible',
         'openrouter',
+        'requesty',
       ].sort(),
     )
   })

@@ -120,6 +120,7 @@ const PROVIDER_ID_MAP: Partial<Record<ProviderId, string>> = {
   mimo: "xiaomi",
   groq: "groq",
   openrouter: "openrouter",
+  requesty: "requesty",
   ollama: "ollama",
   "openai-compatible": OPENCODE_CUSTOM_PROVIDER_ID,
 };
@@ -235,6 +236,13 @@ const CATALOG_MODELS: Partial<Record<ProviderId, string[]>> = {
     "moonshotai/kimi-k2.6",
     "deepseek/deepseek-r1",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
+  ],
+  requesty: [
+    "openai/gpt-4o-mini",
+    "openai/gpt-4o",
+    "anthropic/claude-opus-4.7",
+    "google/gemini-3.1-pro",
+    "deepseek/deepseek-r1",
   ],
   ollama: [
     "llama3.3",
