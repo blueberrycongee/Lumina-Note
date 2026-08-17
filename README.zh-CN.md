@@ -141,4 +141,4 @@ opencode 设置见 [`docs/agent-runtime-setup.md`](docs/agent-runtime-setup.md)�
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=blueberrycongee/Lumina-Note&type=Date)](https://star-history.com/#blueberrycongee/Lumina-Note&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=blueberrycongee/Lumina-Note&type=Date)](https://star-history.dera.page/#blueberrycongee/Lumina-Note&Date)
