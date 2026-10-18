@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod'
+import type { SearchConfig } from './search.js'
 
 export interface AskInput {
   permission: string
@@ -65,6 +66,7 @@ export const tool: ToolHelper = Object.assign(
 ) as ToolHelper
 
 export interface Hooks {
+  config?: (config: SearchConfig) => Promise<void>
   tool?: Record<string, ToolDefinition>
   "chat.params"?: (
     input: {

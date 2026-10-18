@@ -133,3 +133,43 @@ pointing at a mirror that bun's newer versions can't parse. Use
 `thirdparty/opencode/node_modules/.bun/node_modules/@lydell/node-pty-*`
 is missing. Either step 3 didn't finish or you're running a packaged
 build (not yet supported, see the TODO).
+
+
+## Web research in the agent
+
+With a fresh agent configuration, Lumina connects to
+[Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)
+for web search and page fetching. Search uses Fast mode, with no account or
+API key required. Ask the AI panel to research a current topic or read a URL;
+the tools are `lumina_parallel_web_search` and `lumina_parallel_web_fetch`.
+Lumina asks for permission before using these tools unless you enabled automatic
+tool approval. The background wiki agent cannot use them.
+
+The default is added by Lumina's plugin after opencode merges its configuration.
+An existing `mcp` map, explicit `websearch`/`webfetch` settings or permission
+rules, `OPENCODE_ENABLE_EXA=1` (or `true`), `EXA_API_KEY`, or
+`PARALLEL_API_KEY` preserves your existing search setup. The experimental Exa
+flags (`OPENCODE_EXPERIMENTAL` and `OPENCODE_EXPERIMENTAL_EXA`) do too. Lumina does not switch
+to Parallel when a configured service fails. Model provider selections and
+credentials remain managed by **Settings -> AI**.
+
+To disable the default, add this to the embedded runtime's `opencode.json`
+under `<Lumina user data>/opencode-runtime/config/opencode/` and restart Lumina:
+
+```json
+{
+  "mcp": {
+    "lumina_parallel": { "enabled": false }
+  }
+}
+```
+
+This is Lumina's isolated configuration directory, separate from the opencode
+CLI and vault project configuration. Existing custom MCP configurations are
+used as written, including their URLs, credentials, timeouts and enabled flags.
+Agent-specific web tool denials also apply to the default MCP tools; scoped URL
+or query permission rules conservatively deny the corresponding MCP tool.
+
+The anonymous service has usage limits and can return quota or service errors.
+Requests time out after 30 seconds. Lumina reports failures through the agent's
+normal tool-result flow so the assistant can explain an unavailable search.

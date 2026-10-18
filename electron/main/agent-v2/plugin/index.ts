@@ -16,6 +16,8 @@
 
 import fs from 'node:fs/promises'
 
+import { configureSearchMcp } from './search.js'
+
 import {
   getLuminaPluginContext,
   type PluginImageProviderId,
@@ -73,6 +75,9 @@ export function clampLuminaChatMaxOutputTokens(
 
 const pluginFn: Plugin = async () => {
   return {
+    config: async (config) => {
+      configureSearchMcp(config)
+    },
     'chat.params': async (input, output) => {
       clampLuminaChatMaxOutputTokens(input, output)
     },
